@@ -20,14 +20,22 @@ static func normalize_state(source: Dictionary) -> Dictionary:
 	var match_state := match_value as Dictionary if match_value is Dictionary else {}
 	var party_value = match_state.get("party", source.get("party", {}))
 	var party := party_value as Dictionary if party_value is Dictionary else {}
+	var active := bool(match_state.get("active", source.get("matching", false)))
+	var match_status := str(
+		match_state.get("status", "searching" if active else "idle")
+	).strip_edges().to_lower()
+	var matching_context := active or match_status == "full"
 	var npc_members := _dictionary_array(
 		match_state.get("npcMembers", source.get("npcMembers", []))
 	)
-	var members := _authoritative_member_rows(party, npc_members)
-	if members.is_empty():
+	var has_authoritative_rows := (
+		party.get("members", null) is Array
+		or match_state.has("npcMembers")
+		or source.has("npcMembers")
+	)
+	var members := _authoritative_member_rows(party, npc_members, matching_context)
+	if members.is_empty() and not has_authoritative_rows:
 		members = _dictionary_array(match_state.get("members", []))
-	var active := bool(match_state.get("active", source.get("matching", false)))
-	var match_status := str(match_state.get("status", "searching" if active else "idle")).strip_edges().to_lower()
 	var max_members := clampi(
 		int(match_state.get("maxMembers", PARTY_MAX_MEMBERS)),
 		1,
@@ -35,8 +43,13 @@ static func normalize_state(source: Dictionary) -> Dictionary:
 	)
 	var human_default := _count_kind(members, "human")
 	var npc_default := _count_kind(members, "npc")
+	var human_count_value = (
+		match_state.get("humanCount", human_default)
+		if matching_context
+		else party.get("memberCount", human_default)
+	)
 	var human_count := clampi(
-		int(match_state.get("humanCount", party.get("memberCount", human_default))),
+		int(human_count_value),
 		0,
 		max_members
 	)
@@ -110,11 +123,26 @@ static func member_rows(match_state: Dictionary) -> Array[Dictionary]:
 		var kind := str(member.get("kind", "human")).strip_edges().to_lower()
 		if kind not in ["human", "npc"]:
 			kind = "human"
+		var details_pending := bool(member.get("detailsPending", false))
+		var display_name := str(member.get("name", "")).strip_edges()
+		var level := int(member.get("level", 0))
+		if kind == "human":
+			if display_name == "":
+				display_name = "队友信息同步中"
+				details_pending = true
+			if level <= 0:
+				level = 0
+				details_pending = true
+		else:
+			if display_name == "":
+				display_name = "陪练NPC"
+			level = maxi(1, level)
 		rows.append({
 			"kind": kind,
-			"name": str(member.get("name", "冒险者" if kind == "human" else "陪练NPC")),
-			"level": maxi(1, int(member.get("level", 1))),
+			"name": display_name,
+			"level": level,
 			"leader": bool(member.get("leader", false)),
+			"detailsPending": details_pending,
 		})
 	var expected_humans := clampi(int(match_state.get("humanCount", 0)), 0, max_members)
 	var expected_npcs := clampi(int(match_state.get("npcCount", 0)), 0, max_members - expected_humans)
@@ -126,13 +154,31 @@ static func member_rows(match_state: Dictionary) -> Array[Dictionary]:
 		else:
 			actual_humans += 1
 	while actual_humans < expected_humans and rows.size() < max_members:
-		rows.append({"kind": "human", "name": "真人队友", "level": 1, "leader": rows.is_empty()})
+		rows.append({
+			"kind": "human",
+			"name": "队友信息同步中",
+			"level": 0,
+			"leader": rows.is_empty(),
+			"detailsPending": true,
+		})
 		actual_humans += 1
 	while actual_npcs < expected_npcs and rows.size() < max_members:
-		rows.append({"kind": "npc", "name": "陪练NPC", "level": 1, "leader": false})
+		rows.append({
+			"kind": "npc",
+			"name": "陪练NPC",
+			"level": 1,
+			"leader": false,
+			"detailsPending": false,
+		})
 		actual_npcs += 1
 	while rows.size() < max_members:
-		rows.append({"kind": "empty", "name": "等待加入", "level": 0, "leader": false})
+		rows.append({
+			"kind": "empty",
+			"name": "等待加入",
+			"level": 0,
+			"leader": false,
+			"detailsPending": false,
+		})
 	return rows
 
 
@@ -147,7 +193,8 @@ static func _dictionary_array(value) -> Array[Dictionary]:
 
 static func _authoritative_member_rows(
 	party: Dictionary,
-	npc_members: Array[Dictionary]
+	npc_members: Array[Dictionary],
+	online_only: bool
 ) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var leader_account_id := str(party.get("leaderAccountId", "")).strip_edges()
@@ -155,16 +202,29 @@ static func _authoritative_member_rows(
 		if not (raw_member is Dictionary):
 			continue
 		var member := raw_member as Dictionary
+		if online_only and member.has("online") and not bool(member.get("online", false)):
+			continue
 		var account_id := str(member.get("accountId", "")).strip_edges()
 		var snapshot_value = member.get("teamSnapshot", {})
 		var snapshot := snapshot_value as Dictionary if snapshot_value is Dictionary else {}
 		var player_value = snapshot.get("player", {})
 		var player := player_value as Dictionary if player_value is Dictionary else {}
+		var display_name := str(member.get("displayName", "")).strip_edges()
+		if display_name == "":
+			display_name = str(member.get("username", "")).strip_edges()
+		var level := int(
+			player.get(
+				"level",
+				snapshot.get("playerLevel", member.get("level", 0))
+			)
+		)
+		var details_pending := display_name == "" or level <= 0
 		result.append({
 			"kind": "human",
-			"name": str(member.get("displayName", member.get("username", "冒险者"))).strip_edges(),
-			"level": maxi(1, int(player.get("level", 1))),
+			"name": display_name if display_name != "" else "队友信息同步中",
+			"level": maxi(0, level),
 			"leader": str(member.get("role", "")) == "leader" or (account_id != "" and account_id == leader_account_id),
+			"detailsPending": details_pending,
 		})
 	for npc in npc_members:
 		result.append({
@@ -172,6 +232,7 @@ static func _authoritative_member_rows(
 			"name": str(npc.get("displayName", "陪练NPC")).strip_edges(),
 			"level": maxi(1, int(npc.get("level", 1))),
 			"leader": false,
+			"detailsPending": false,
 		})
 	return result
 

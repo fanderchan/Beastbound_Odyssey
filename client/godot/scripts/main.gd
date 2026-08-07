@@ -127,6 +127,9 @@ const CharacterEntryOwnerReviewCapture := preload(
 const PlayerCharacterOwnerReviewCapture := preload(
 	"res://scripts/qa/player_character_owner_review_capture.gd"
 )
+const HangMatchmakingWorldHudOwnerReviewCapture := preload(
+	"res://scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd"
+)
 const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
 const PetBattleReviewLab := preload("res://scripts/qa/pet_battle_review_lab.gd")
 const PetBattleReviewLabCheck := preload("res://scripts/qa/pet_battle_review_lab_check.gd")
@@ -673,6 +676,12 @@ var party_state_poll_elapsed: float = 0.0
 var hang_matchmaking_controller
 var hang_matchmaking_panel: Control
 var hang_matchmaking_world_status: Control
+var world_hud_awakened_view: Control
+var world_hud_party_roster_view: Control
+var world_hud_active_side_tab: String = "task"
+var world_hud_last_match_status: String = ""
+var world_hud_roster_signature: String = ""
+var world_hud_minimap_map_id: String = ""
 var hang_matchmaking_panel_pending: bool = false
 var hang_matchmaking_status_text: String = ""
 var hang_matchmaking_pending_route: Dictionary = {}
@@ -1063,6 +1072,7 @@ var backpack_awakened_owner_review_capture: bool = false
 var market_awakened_owner_review_capture: bool = false
 var character_entry_owner_review_capture: bool = false
 var player_character_owner_review_capture: bool = false
+var hang_matchmaking_world_hud_owner_review_capture: bool = false
 var pet_action_art_preview: bool = false
 var battle_visual_review_scenario: String = ""
 var audio_impact_review_preview: bool = false
@@ -2013,6 +2023,8 @@ func _ready() -> void:
 		call_deferred("_run_character_entry_owner_review_capture")
 	elif player_character_owner_review_capture:
 		call_deferred("_run_player_character_owner_review_capture")
+	elif hang_matchmaking_world_hud_owner_review_capture:
+		call_deferred("_run_hang_matchmaking_world_hud_owner_review_capture")
 	elif pet_action_art_preview:
 		call_deferred("_run_pet_action_art_preview")
 	elif battle_visual_review_scenario != "":
@@ -2252,6 +2264,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or MarketAwakenedOwnerReviewCapture.is_flag(normalized)
 		or normalized == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG
+		or normalized == "--hang-matchmaking-world-hud-owner-review-capture"
 		or normalized == "--server-step-world-move"
 	)
 
@@ -2871,6 +2884,8 @@ func _apply_preview_window_args() -> void:
 			character_entry_owner_review_capture = true
 		elif arg == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG:
 			player_character_owner_review_capture = true
+		elif arg == "--hang-matchmaking-world-hud-owner-review-capture":
+			hang_matchmaking_world_hud_owner_review_capture = true
 		elif arg == "--pet-action-art-preview":
 			pet_action_art_preview = true
 		elif arg.begins_with("--battle-visual-review="):
@@ -4113,6 +4128,10 @@ func _run_character_entry_owner_review_capture() -> void:
 
 func _run_player_character_owner_review_capture() -> void:
 	await PlayerCharacterOwnerReviewCapture.new(self).run()
+
+
+func _run_hang_matchmaking_world_hud_owner_review_capture() -> void:
+	await HangMatchmakingWorldHudOwnerReviewCapture.new(self).run()
 
 
 func _run_pet_action_art_preview() -> void:
@@ -8598,7 +8617,7 @@ func _update_world_hud_if_needed(delta: float, force: bool = false) -> void:
 func _world_hud_signature() -> String:
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and not map_data.is_empty() else Vector2i.ZERO
 	var partner_count := 0
-	var party_other_count := _current_party_other_members_for_battle().size()
+	var party_other_count: int = _panel_flow()._current_party_other_member_count_for_hud()
 	return "%s|%s|%s|%s|%s|%s|%d,%d|%d|%d|%s|%s|%s" % [
 		current_map_id,
 		_movement_status_name(),
@@ -14511,6 +14530,8 @@ func _layout_hud() -> void:
 			if battle_auto_stop_button != null:
 				battle_auto_stop_button.visible = false
 
+	_panel_flow()._layout_world_hud_awakened(viewport_size, world_menu_open)
+
 	if player != null:
 		player.set_movement_bounds(_player_movement_bounds())
 	if game_camera != null:
@@ -14565,6 +14586,7 @@ func _update_hud_text(force: bool = false) -> void:
 		hud_task_route_signature_cache = route_signature
 		_refresh_task_route_button()
 	_perf_add("hud_route", route_start)
+	_panel_flow()._refresh_world_hud_awakened(force)
 	_sync_world_hud_signature_after_text_update()
 
 

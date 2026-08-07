@@ -1,0 +1,1541 @@
+{
+  "schemaVersion": 1,
+  "packageId": "world_hud_awakened_v1",
+  "title": "万兽纪元觉醒式世界HUD原创图标包",
+  "auditedAt": "2026-08-08",
+  "ownership": "OpenAI ImageGen original for Beastbound",
+  "authorization": {
+    "sourceType": "project_original_openai_imagegen",
+    "usageScope": "Beastbound Odyssey project runtime and derivative production under applicable OpenAI terms",
+    "externalThirdPartyAssetEmbedded": false,
+    "exclusiveCopyrightClaim": false
+  },
+  "runtimeEnabled": true,
+  "ownerReviewStatus": "owner_review_pending",
+  "target": {
+    "platform": "PC",
+    "viewport": "1280x720",
+    "runtimeDirectory": "runtime/icons"
+  },
+  "referencePolicy": {
+    "use": "layout hierarchy, anchor density and material direction only",
+    "externalPixelsEmbedded": false,
+    "externalIconCopied": false,
+    "externalTrademarkCopied": false,
+    "statement": "外部主界面截图只用于理解成熟HUD层级与材质方向；本包未复制、裁切、描摹或嵌入参考游戏的像素、图标、角色、标志、商标、文字、红点或数值。"
+  },
+  "generationPolicy": {
+    "method": "OpenAI ImageGen original raster generation on green chroma-key background",
+    "promptRecord": "generation-prompts.md",
+    "promptProvenance": "normalized_reconstruction_not_verbatim",
+    "sourceCanvas": "1254x1254 RGB8",
+    "runtimeCanvas": "128x128 RGBA8",
+    "derivation": "chroma-key removal, green edge cleanup, alpha-bound normalization, proportional resize and transparent-canvas centering"
+  },
+  "replacementPolicy": {
+    "rule": "先替换同名source/generated源，再派生同名runtime/icons成品；保留用途和运行时路径，重新核对尺寸、Alpha、字节数与SHA-256并同步本清单。",
+    "ownerAcceptance": "新运行图在项目所有者观看冻结1x实机视频并明确通过前保持owner_review_pending。"
+  },
+  "assets": [
+    {
+      "assetId": "account_source",
+      "iconId": "account",
+      "role": "source",
+      "responsibility": "角色与账号入口的原创猎人头像徽章生成源",
+      "relativePath": "source/generated/account_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2087227,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "f6b497901d696d0bdfa09ae8aee2edf3fa389e3ae20cc3ab90d700593c64262a",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "account_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/account_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/account.png"
+    },
+    {
+      "assetId": "account_runtime",
+      "iconId": "account",
+      "role": "runtime",
+      "responsibility": "角色与账号入口图标",
+      "relativePath": "runtime/icons/account.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 25623,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "d50b72f6bfe0ec98629996e42583fc04b1a66ff24b6918ae7aadb4db7d20de73",
+      "derivedFrom": "account_source",
+      "authorization": "inherits_account_source",
+      "replacementSourcePath": "source/generated/account_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/account.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "auto_source",
+      "iconId": "auto",
+      "role": "source",
+      "responsibility": "自动设置入口的三叶旋转图腾生成源",
+      "relativePath": "source/generated/auto_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1655276,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "e605ad12a7d26d81921a39702ef8293900b2f9ab7b6ba0230d73ebe4e29aadcb",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "auto_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/auto_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/auto.png"
+    },
+    {
+      "assetId": "auto_runtime",
+      "iconId": "auto",
+      "role": "runtime",
+      "responsibility": "自动战斗设置入口图标",
+      "relativePath": "runtime/icons/auto.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 24864,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "92031e7970a0ff86c79a2d4c8a2d58ce8f3fd88aa7a2113fc879b62f8005d18e",
+      "derivedFrom": "auto_source",
+      "authorization": "inherits_auto_source",
+      "replacementSourcePath": "source/generated/auto_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/auto.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "backpack_source",
+      "iconId": "backpack",
+      "role": "source",
+      "responsibility": "背包入口的皮革冒险背包生成源",
+      "relativePath": "source/generated/backpack_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1234504,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "2950f46703bb06e7dafaca085d31b5f8ab903dcd9458b9166c4031584373a561",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "backpack_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/backpack_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/backpack.png"
+    },
+    {
+      "assetId": "backpack_runtime",
+      "iconId": "backpack",
+      "role": "runtime",
+      "responsibility": "背包入口图标",
+      "relativePath": "runtime/icons/backpack.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 21302,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "0518dab7bd59645282d6574ec5d83da60e9530b7ef0a166774fef4d2d99a6f7d",
+      "derivedFrom": "backpack_source",
+      "authorization": "inherits_backpack_source",
+      "replacementSourcePath": "source/generated/backpack_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/backpack.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "chat_source",
+      "iconId": "chat",
+      "role": "source",
+      "responsibility": "聊天入口的双层空白卷纸生成源",
+      "relativePath": "source/generated/chat_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1594020,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "da86a49480c637008eec39ba8ef26f5fd8266313fac06ea974d19077faf52e96",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "chat_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/chat_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/chat.png"
+    },
+    {
+      "assetId": "chat_runtime",
+      "iconId": "chat",
+      "role": "runtime",
+      "responsibility": "聊天与世界消息入口图标",
+      "relativePath": "runtime/icons/chat.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 18317,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "300d81f188a310dd74b33095abedfdf69429420598b7fe6d112b067fbd743b20",
+      "derivedFrom": "chat_source",
+      "authorization": "inherits_chat_source",
+      "replacementSourcePath": "source/generated/chat_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/chat.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "collapse_source",
+      "iconId": "collapse",
+      "role": "source",
+      "responsibility": "HUD收起入口的双下箭头浮雕生成源",
+      "relativePath": "source/generated/collapse_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1542392,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "9a865813fdc7b279718c81f32344bd2bdc7801bc068a7dd41cb6f9de20f8314f",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "collapse_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/collapse_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/collapse.png"
+    },
+    {
+      "assetId": "collapse_runtime",
+      "iconId": "collapse",
+      "role": "runtime",
+      "responsibility": "收起完整世界HUD的入口图标",
+      "relativePath": "runtime/icons/collapse.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 23174,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "353d9eafb1babc281a868ad915e01d2f872ee8f449cf0adf32caf10e44411b9b",
+      "derivedFrom": "collapse_source",
+      "authorization": "inherits_collapse_source",
+      "replacementSourcePath": "source/generated/collapse_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/collapse.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "equipment_source",
+      "iconId": "equipment",
+      "role": "source",
+      "responsibility": "装备入口的石锤与原始工具组合生成源",
+      "relativePath": "source/generated/equipment_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1853816,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "92162661d58b3d1309b8ad64e4dfa49085f8455f2cf7ee03a5ebfba7b26fc813",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "equipment_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/equipment_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/equipment.png"
+    },
+    {
+      "assetId": "equipment_runtime",
+      "iconId": "equipment",
+      "role": "runtime",
+      "responsibility": "装备入口图标",
+      "relativePath": "runtime/icons/equipment.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 20075,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "02e40bb415f17de5dd15490788412aebb8d45dbb7e867f904440dbd2718bd1bc",
+      "derivedFrom": "equipment_source",
+      "authorization": "inherits_equipment_source",
+      "replacementSourcePath": "source/generated/equipment_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/equipment.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_account_source",
+      "iconId": "event_account",
+      "role": "source",
+      "responsibility": "活动列角色与账号入口的猎人身份卷轴徽章生成源",
+      "relativePath": "source/generated/event_account_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2072786,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "f9ea3d6727edcc493834b07095b113b2a03faf4ab939095c521afe3b456cae34",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_account_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_account_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_account.png"
+    },
+    {
+      "assetId": "event_account_runtime",
+      "iconId": "event_account",
+      "role": "runtime",
+      "responsibility": "活动列角色与账号入口的猎人身份卷轴徽章运行图标",
+      "relativePath": "runtime/icons/event_account.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 30406,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "de74d64c07c1a36f99556ff604c812d65b95526da29328b09a3731a96cd6f3e3",
+      "derivedFrom": "event_account_source",
+      "authorization": "inherits_event_account_source",
+      "replacementSourcePath": "source/generated/event_account_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_account.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_auto_source",
+      "iconId": "event_auto",
+      "role": "source",
+      "responsibility": "活动列自动设置入口的水火循环图腾生成源",
+      "relativePath": "source/generated/event_auto_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1671601,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "1217057942c3fd90f1d9e82baae84901f7f5a00eb72df87ce932e61515cc2756",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_auto_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_auto_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_auto.png"
+    },
+    {
+      "assetId": "event_auto_runtime",
+      "iconId": "event_auto",
+      "role": "runtime",
+      "responsibility": "活动列自动设置入口的水火循环图腾运行图标",
+      "relativePath": "runtime/icons/event_auto.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 28036,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "548775477c528da304fcf179640c5c30da16a7d48890a2d83f4c75812a8f1513",
+      "derivedFrom": "event_auto_source",
+      "authorization": "inherits_event_auto_source",
+      "replacementSourcePath": "source/generated/event_auto_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_auto.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_backpack_source",
+      "iconId": "event_backpack",
+      "role": "source",
+      "responsibility": "活动列背包入口的满载皮革行囊徽章生成源",
+      "relativePath": "source/generated/event_backpack_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2455916,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "99451e0ecd90501159385e77151a017ee0747c527bd37c5a5bbafd9ff874d0fd",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_backpack_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_backpack_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_backpack.png"
+    },
+    {
+      "assetId": "event_backpack_runtime",
+      "iconId": "event_backpack",
+      "role": "runtime",
+      "responsibility": "活动列背包入口的满载皮革行囊徽章运行图标",
+      "relativePath": "runtime/icons/event_backpack.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 29276,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "d8a764ec190e923d62b19758ff8ec243006d7a5c568a2c85f1b99fd4851a57b7",
+      "derivedFrom": "event_backpack_source",
+      "authorization": "inherits_event_backpack_source",
+      "replacementSourcePath": "source/generated/event_backpack_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_backpack.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_character_source",
+      "iconId": "event_character",
+      "role": "source",
+      "responsibility": "活动列角色入口的猎人肖像盾徽生成源",
+      "relativePath": "source/generated/event_character_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2127422,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "a9c6c36639bf7d4dcd13a4a8e832ef004773335e0b8dc85423a2a8b0ade3c6b9",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_character_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_character_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_character.png"
+    },
+    {
+      "assetId": "event_character_runtime",
+      "iconId": "event_character",
+      "role": "runtime",
+      "responsibility": "活动列角色入口的猎人肖像盾徽运行图标",
+      "relativePath": "runtime/icons/event_character.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 25627,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "59a6845a0ec3d611010a39ebf69e6ebff15263a8440082cbede132401fa81eb5",
+      "derivedFrom": "event_character_source",
+      "authorization": "inherits_event_character_source",
+      "replacementSourcePath": "source/generated/event_character_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_character.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_codex_source",
+      "iconId": "event_codex",
+      "role": "source",
+      "responsibility": "活动列图鉴与攻略入口的爪印蓝册徽章生成源",
+      "relativePath": "source/generated/event_codex_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1637265,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "248e558448fe0ab5a24c3fd4f6e4bcc1915a39b4d07facee82190fe20b48d40f",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_codex_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_codex_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_codex.png"
+    },
+    {
+      "assetId": "event_codex_runtime",
+      "iconId": "event_codex",
+      "role": "runtime",
+      "responsibility": "活动列图鉴与攻略入口的爪印蓝册徽章运行图标",
+      "relativePath": "runtime/icons/event_codex.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 26637,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "71501d106728c6222b5f66ebd51da6200d4820acdcc1c0eef98ddc9ed904040c",
+      "derivedFrom": "event_codex_source",
+      "authorization": "inherits_event_codex_source",
+      "replacementSourcePath": "source/generated/event_codex_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_codex.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_equipment_source",
+      "iconId": "event_equipment",
+      "role": "source",
+      "responsibility": "活动列装备与锻造入口的火山宝石铁砧徽章生成源",
+      "relativePath": "source/generated/event_equipment_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2250210,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "54f30349a6dd80c924743280087c5de2f0d5cb3bed74d74e7fcfa6c014826b98",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_equipment_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_equipment_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_equipment.png"
+    },
+    {
+      "assetId": "event_equipment_runtime",
+      "iconId": "event_equipment",
+      "role": "runtime",
+      "responsibility": "活动列装备与锻造入口的火山宝石铁砧徽章运行图标",
+      "relativePath": "runtime/icons/event_equipment.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 33127,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "5e05016270d7b4e33b2031fa67a543bcdccc9a2c9af9e1775b87a350c4f2b535",
+      "derivedFrom": "event_equipment_source",
+      "authorization": "inherits_event_equipment_source",
+      "replacementSourcePath": "source/generated/event_equipment_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_equipment.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_family_source",
+      "iconId": "event_family",
+      "role": "source",
+      "responsibility": "活动列家族入口的三面部族面具徽章生成源",
+      "relativePath": "source/generated/event_family_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1656855,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "9e3a2ea1cee7985aacaa3831fb690dca5eb8edebf36bb7cc106a75773511128e",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_family_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_family_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_family.png"
+    },
+    {
+      "assetId": "event_family_runtime",
+      "iconId": "event_family",
+      "role": "runtime",
+      "responsibility": "活动列家族入口的三面部族面具徽章运行图标",
+      "relativePath": "runtime/icons/event_family.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 28780,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "e6aeb32cd01c67c5bebf1a0c088790225b4f6daacf6557d622bdac1ce14a9ced",
+      "derivedFrom": "event_family_source",
+      "authorization": "inherits_event_family_source",
+      "replacementSourcePath": "source/generated/event_family_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_family.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_mailbox_source",
+      "iconId": "event_mailbox",
+      "role": "source",
+      "responsibility": "活动列邮箱入口的羽毛封蜡卷纸徽章生成源",
+      "relativePath": "source/generated/event_mailbox_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2252916,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "25c4be221fe1d36c69adccebdde83430afe0d856a404fa9a64fb38aa1db08978",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_mailbox_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_mailbox_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_mailbox.png"
+    },
+    {
+      "assetId": "event_mailbox_runtime",
+      "iconId": "event_mailbox",
+      "role": "runtime",
+      "responsibility": "活动列邮箱入口的羽毛封蜡卷纸徽章运行图标",
+      "relativePath": "runtime/icons/event_mailbox.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 31260,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "3ec894d39d69d497fa7dde9de17b24c208f9478f83a745b4227c6003079ed7be",
+      "derivedFrom": "event_mailbox_source",
+      "authorization": "inherits_event_mailbox_source",
+      "replacementSourcePath": "source/generated/event_mailbox_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_mailbox.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_market_source",
+      "iconId": "event_market",
+      "role": "source",
+      "responsibility": "活动列交易所入口的贝壳天平徽章生成源",
+      "relativePath": "source/generated/event_market_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1999537,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "20d254c0479c8d5625ba86c1bf97efced8aa2527ccf30d2bc76d7d83e5ed23e1",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_market_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_market_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_market.png"
+    },
+    {
+      "assetId": "event_market_runtime",
+      "iconId": "event_market",
+      "role": "runtime",
+      "responsibility": "活动列交易所入口的贝壳天平徽章运行图标",
+      "relativePath": "runtime/icons/event_market.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 32616,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "e40f127cd5f44b56b15d6ed90b8b8910307fd6d3c0e7574b051503d852d75833",
+      "derivedFrom": "event_market_source",
+      "authorization": "inherits_event_market_source",
+      "replacementSourcePath": "source/generated/event_market_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_market.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_party_source",
+      "iconId": "event_party",
+      "role": "source",
+      "responsibility": "活动列队伍入口的三只伙伴面具徽章生成源",
+      "relativePath": "source/generated/event_party_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2276748,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "15102e0de5150159e801c604596c7d5b051c4566baf406fa90830a5dd2e65d76",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_party_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_party_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_party.png"
+    },
+    {
+      "assetId": "event_party_runtime",
+      "iconId": "event_party",
+      "role": "runtime",
+      "responsibility": "活动列队伍入口的三只伙伴面具徽章运行图标",
+      "relativePath": "runtime/icons/event_party.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 33252,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "9965af48e977d07344f863936698494370a3ad9ae55bfba1cc3188fe90e33ae3",
+      "derivedFrom": "event_party_source",
+      "authorization": "inherits_event_party_source",
+      "replacementSourcePath": "source/generated/event_party_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_party.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_pet_source",
+      "iconId": "event_pet",
+      "role": "source",
+      "responsibility": "活动列宠物入口的彩纹兽蛋与爪印徽章生成源",
+      "relativePath": "source/generated/event_pet_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2398174,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "28d8196ff28ff0b9e490f51ff278d8042d638f84526167f0d119725cdc8c11ba",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_pet_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_pet_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_pet.png"
+    },
+    {
+      "assetId": "event_pet_runtime",
+      "iconId": "event_pet",
+      "role": "runtime",
+      "responsibility": "活动列宠物入口的彩纹兽蛋与爪印徽章运行图标",
+      "relativePath": "runtime/icons/event_pet.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 27975,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "407a9222653666c5ac7b0dcf0f14f8b03a04f6fa794a515ee532873bb5d25208",
+      "derivedFrom": "event_pet_source",
+      "authorization": "inherits_event_pet_source",
+      "replacementSourcePath": "source/generated/event_pet_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_pet.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "event_quest_source",
+      "iconId": "event_quest",
+      "role": "source",
+      "responsibility": "活动列任务入口的卷纸指南针徽章生成源",
+      "relativePath": "source/generated/event_quest_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2003255,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "764f69cfb4b9d5d22d70f60a47598aaba86b09c1caa8e605f274edbba24b09c0",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "event_quest_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/event_quest_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_quest.png"
+    },
+    {
+      "assetId": "event_quest_runtime",
+      "iconId": "event_quest",
+      "role": "runtime",
+      "responsibility": "活动列任务入口的卷纸指南针徽章运行图标",
+      "relativePath": "runtime/icons/event_quest.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 28478,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "d66f9deb9443f674b67853c4ad4cbbbfaea5dbecfe78530a146aa7fc2e70ecc8",
+      "derivedFrom": "event_quest_source",
+      "authorization": "inherits_event_quest_source",
+      "replacementSourcePath": "source/generated/event_quest_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/event_quest.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "family_source",
+      "iconId": "family",
+      "role": "source",
+      "responsibility": "家族入口的部族图腾与旗帜生成源",
+      "relativePath": "source/generated/family_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1354161,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "81ace0b55b7ffc8920ba4c968d2ce634b909bc911f91a801e300a41fb19267d7",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "family_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/family_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/family.png"
+    },
+    {
+      "assetId": "family_runtime",
+      "iconId": "family",
+      "role": "runtime",
+      "responsibility": "家族入口图标",
+      "relativePath": "runtime/icons/family.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 18651,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "a78556cc8db12e2007e33413c93d66c231c8ff12b95411fc8dc643a4d8a77e2d",
+      "derivedFrom": "family_source",
+      "authorization": "inherits_family_source",
+      "replacementSourcePath": "source/generated/family_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/family.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "hang_source",
+      "iconId": "hang",
+      "role": "source",
+      "responsibility": "挂机入口的营火与叶羽休息徽章生成源",
+      "relativePath": "source/generated/hang_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1211440,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "502fe291f0e2cf9312fc87d479a7ad052081ac32ab8e5180d2a4614ddaa0866b",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "hang_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/hang_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/hang.png"
+    },
+    {
+      "assetId": "hang_runtime",
+      "iconId": "hang",
+      "role": "runtime",
+      "responsibility": "挂机／停止挂机入口图标",
+      "relativePath": "runtime/icons/hang.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 22019,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "73a3fc3e892e6fbca0e223a6e40c3137684eca04fb7b6b1121e70e3c1dd6ad55",
+      "derivedFrom": "hang_source",
+      "authorization": "inherits_hang_source",
+      "replacementSourcePath": "source/generated/hang_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/hang.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "mailbox_source",
+      "iconId": "mailbox",
+      "role": "source",
+      "responsibility": "邮箱入口的缝制皮革信袋生成源",
+      "relativePath": "source/generated/mailbox_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1367852,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "eaf9b35dc153dccfc2f6890dc423f14f79b3f280d40cc3b3a9fdb48582e11c1b",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "mailbox_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/mailbox_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/mailbox.png"
+    },
+    {
+      "assetId": "mailbox_runtime",
+      "iconId": "mailbox",
+      "role": "runtime",
+      "responsibility": "邮箱入口图标，不携带虚构未读红点",
+      "relativePath": "runtime/icons/mailbox.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 22288,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "15adbf94d368c7c3f2839bf888799e9f91047573e45e1a1b62aa557120b50e20",
+      "derivedFrom": "mailbox_source",
+      "authorization": "inherits_mailbox_source",
+      "replacementSourcePath": "source/generated/mailbox_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/mailbox.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "map_source",
+      "iconId": "map",
+      "role": "source",
+      "responsibility": "地图入口的卷轴与石质方位标记生成源",
+      "relativePath": "source/generated/map_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1233819,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "2012bfaa6d2d293898f88387accce9c02b9ce8536f8d4ae65d720ab16d58517e",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "map_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/map_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/map.png"
+    },
+    {
+      "assetId": "map_runtime",
+      "iconId": "map",
+      "role": "runtime",
+      "responsibility": "地图入口图标",
+      "relativePath": "runtime/icons/map.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 19366,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "fdd24408da740f30d6a9eb712e932935bc46321a82dbc3b4d76a5769f72b9f78",
+      "derivedFrom": "map_source",
+      "authorization": "inherits_map_source",
+      "replacementSourcePath": "source/generated/map_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/map.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "market_source",
+      "iconId": "market",
+      "role": "source",
+      "responsibility": "交易所入口的原始木制天平生成源",
+      "relativePath": "source/generated/market_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 891547,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "134edcb67f3579dc7eead2cf1a21ad5dd389ff66f6b4ca9079bff25f676ef02e",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "market_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/market_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/market.png"
+    },
+    {
+      "assetId": "market_runtime",
+      "iconId": "market",
+      "role": "runtime",
+      "responsibility": "交易所入口图标，不携带虚构货币或价格",
+      "relativePath": "runtime/icons/market.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 19007,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "65fb7283fb38722f34fd271d2742ee380c5abc725587865c308f0c9f5a67cd73",
+      "derivedFrom": "market_source",
+      "authorization": "inherits_market_source",
+      "replacementSourcePath": "source/generated/market_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/market.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "more_source",
+      "iconId": "more",
+      "role": "source",
+      "responsibility": "更多入口的四格部族材料徽章生成源",
+      "relativePath": "source/generated/more_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1674986,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "21a7975e864c5fa83618f0abb3fad51122da645398ef1549499fac2a305557be",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "more_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/more_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/more.png"
+    },
+    {
+      "assetId": "more_runtime",
+      "iconId": "more",
+      "role": "runtime",
+      "responsibility": "更多功能抽屉入口图标",
+      "relativePath": "runtime/icons/more.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 24310,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "6f91bc46b815399d687f4a42836c6e337a96ed5cf6e9e9b1818c56c338fbcb4f",
+      "derivedFrom": "more_source",
+      "authorization": "inherits_more_source",
+      "replacementSourcePath": "source/generated/more_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/more.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "party_source",
+      "iconId": "party",
+      "role": "source",
+      "responsibility": "队伍入口的三枚原创部族面具生成源",
+      "relativePath": "source/generated/party_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1558108,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "86cfb591472d8e00461a9e285e25310ad90f1cf8ec21d933a9aa14c0e8c6e9f3",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "party_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/party_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/party.png"
+    },
+    {
+      "assetId": "party_runtime",
+      "iconId": "party",
+      "role": "runtime",
+      "responsibility": "队伍入口图标",
+      "relativePath": "runtime/icons/party.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 19238,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "5ab9ed9f519b0198ddcd1207a9982177459bff9a86a57c59e690fb3579cd4f96",
+      "derivedFrom": "party_source",
+      "authorization": "inherits_party_source",
+      "replacementSourcePath": "source/generated/party_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/party.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "quest_source",
+      "iconId": "quest",
+      "role": "source",
+      "responsibility": "任务入口的目标图腾卷轴生成源",
+      "relativePath": "source/generated/quest_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1923762,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "7b489c66929f8c4b98a487991b348918d0ac23e866d5f699280f1114e692250b",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "quest_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/quest_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/quest.png"
+    },
+    {
+      "assetId": "quest_runtime",
+      "iconId": "quest",
+      "role": "runtime",
+      "responsibility": "任务入口和任务页签图标",
+      "relativePath": "runtime/icons/quest.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 20812,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "c5f5d8c2b0218bf96a670b9bcbf97d6bde3659843f46a1898338c19fde67e832",
+      "derivedFrom": "quest_source",
+      "authorization": "inherits_quest_source",
+      "replacementSourcePath": "source/generated/quest_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/quest.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "top_classic_source",
+      "iconId": "top_classic",
+      "role": "source",
+      "responsibility": "顶部经典任务入口的石制星芒圆牌生成源",
+      "relativePath": "source/generated/top_classic_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2348094,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "16683646b6142baa2d592db0e2a40cf474d820efccf706ca7436bac2d94db878",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "top_classic_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/top_classic_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_classic.png"
+    },
+    {
+      "assetId": "top_classic_runtime",
+      "iconId": "top_classic",
+      "role": "runtime",
+      "responsibility": "顶部经典任务入口的石制星芒圆牌运行图标",
+      "relativePath": "runtime/icons/top_classic.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 30158,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "ae9f500f175053d6810265cc60b11aa1a06815d97b7c328b7df65f2d2a1b6df1",
+      "derivedFrom": "top_classic_source",
+      "authorization": "inherits_top_classic_source",
+      "replacementSourcePath": "source/generated/top_classic_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_classic.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "top_guide_source",
+      "iconId": "top_guide",
+      "role": "source",
+      "responsibility": "顶部攻略入口的锁扣石边图册生成源",
+      "relativePath": "source/generated/top_guide_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2079305,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "4ac847984dfc76916c5a1a955cce834cba1157c7f85befe3ec9484535d616ab9",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "top_guide_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/top_guide_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_guide.png"
+    },
+    {
+      "assetId": "top_guide_runtime",
+      "iconId": "top_guide",
+      "role": "runtime",
+      "responsibility": "顶部攻略入口的锁扣石边图册运行图标",
+      "relativePath": "runtime/icons/top_guide.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 26836,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "11d79cc1ce01e1d7c4d2e274e39a427cefd12365dd1ca4ccd5d8d654536149bd",
+      "derivedFrom": "top_guide_source",
+      "authorization": "inherits_top_guide_source",
+      "replacementSourcePath": "source/generated/top_guide_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_guide.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "top_hang_source",
+      "iconId": "top_hang",
+      "role": "source",
+      "responsibility": "顶部挂机入口的月牙营火与交叉工具圆牌生成源",
+      "relativePath": "source/generated/top_hang_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1983045,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "7363d6671e2fd600f184ca217c74bf47380ec6e4a0f75a0d876a6bc7cb9a5e0e",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "top_hang_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/top_hang_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_hang.png"
+    },
+    {
+      "assetId": "top_hang_runtime",
+      "iconId": "top_hang",
+      "role": "runtime",
+      "responsibility": "顶部挂机入口的月牙营火与交叉工具圆牌运行图标",
+      "relativePath": "runtime/icons/top_hang.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 25072,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "24ec214cee95c33fbee18a7877f0c14abd5b8b01074e2eec970323460550e55f",
+      "derivedFrom": "top_hang_source",
+      "authorization": "inherits_top_hang_source",
+      "replacementSourcePath": "source/generated/top_hang_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_hang.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "top_more_source",
+      "iconId": "top_more",
+      "role": "source",
+      "responsibility": "顶部更多入口的双左箭头石雕生成源",
+      "relativePath": "source/generated/top_more_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2131136,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "2b6e3d6e904702c44bd2b5468ac1e15af9fa60c9266b7e8d4ed688f70ee81ead",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "top_more_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/top_more_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_more.png"
+    },
+    {
+      "assetId": "top_more_runtime",
+      "iconId": "top_more",
+      "role": "runtime",
+      "responsibility": "顶部更多入口的双左箭头石雕运行图标",
+      "relativePath": "runtime/icons/top_more.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 25616,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "4ab58ef03a7bc0a4ca54dfd7e113640c36262847f71778cf4dcbfa441f14a4d2",
+      "derivedFrom": "top_more_source",
+      "authorization": "inherits_top_more_source",
+      "replacementSourcePath": "source/generated/top_more_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_more.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "top_pet_source",
+      "iconId": "top_pet",
+      "role": "source",
+      "responsibility": "顶部抓宠入口的爪印石牌生成源",
+      "relativePath": "source/generated/top_pet_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2084057,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "dd5aca9be1c3243dc54fb81eb0f5011dc893e1ccc5f22f6bcf576585c9515b02",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "top_pet_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/top_pet_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_pet.png"
+    },
+    {
+      "assetId": "top_pet_runtime",
+      "iconId": "top_pet",
+      "role": "runtime",
+      "responsibility": "顶部抓宠入口的爪印石牌运行图标",
+      "relativePath": "runtime/icons/top_pet.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 23981,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "7d6dcdabe40947a4abfa24f7112a16f33330dadf280f81254f0afd42fdf49145",
+      "derivedFrom": "top_pet_source",
+      "authorization": "inherits_top_pet_source",
+      "replacementSourcePath": "source/generated/top_pet_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_pet.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "top_quest_source",
+      "iconId": "top_quest",
+      "role": "source",
+      "responsibility": "顶部活动与任务入口的感叹号卷纸圆牌生成源",
+      "relativePath": "source/generated/top_quest_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 1973325,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "c01d769a6afc5916b44e3cca91363589d319f2df7aabbe5c89e81c37062f6b83",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "top_quest_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/top_quest_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_quest.png"
+    },
+    {
+      "assetId": "top_quest_runtime",
+      "iconId": "top_quest",
+      "role": "runtime",
+      "responsibility": "顶部活动与任务入口的感叹号卷纸圆牌运行图标",
+      "relativePath": "runtime/icons/top_quest.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 26268,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "30f0f12042d2d245abefedf906e190aa14c66033cd31f3ea2482322870ce9443",
+      "derivedFrom": "top_quest_source",
+      "authorization": "inherits_top_quest_source",
+      "replacementSourcePath": "source/generated/top_quest_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_quest.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "assetId": "top_strengthen_source",
+      "iconId": "top_strengthen",
+      "role": "source",
+      "responsibility": "顶部变强入口的握持石锤圆牌生成源",
+      "relativePath": "source/generated/top_strengthen_raw_chroma.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "bytes": 2212658,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "1fe90aaae0c9798c7af9ec5e57f9db5438dd34a835131907ea8a4f340f2eefe4",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generation": {
+        "promptId": "top_strengthen_raw_chroma_normalized",
+        "promptProvenance": "normalized_reconstruction_not_verbatim"
+      },
+      "replacementSourcePath": "source/generated/top_strengthen_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_strengthen.png"
+    },
+    {
+      "assetId": "top_strengthen_runtime",
+      "iconId": "top_strengthen",
+      "role": "runtime",
+      "responsibility": "顶部变强入口的握持石锤圆牌运行图标",
+      "relativePath": "runtime/icons/top_strengthen.png",
+      "mediaType": "image/png",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "bytes": 26833,
+      "pixelFormat": "RGBA8",
+      "hasAlpha": true,
+      "sha256": "42ee806e82852ca2adc1ca897e485c71c3e89dd46006457a148fb1cc85025a8b",
+      "derivedFrom": "top_strengthen_source",
+      "authorization": "inherits_top_strengthen_source",
+      "replacementSourcePath": "source/generated/top_strengthen_raw_chroma.png",
+      "replacementOutputPath": "runtime/icons/top_strengthen.png",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    }
+  ],
+  "audit": {
+    "script": "tools/audit_world_hud_awakened_assets.py",
+    "report": "client/godot/assets/ui/world_hud_awakened_v1/audit-report.json",
+    "iconCount": 33,
+    "sourceCount": 33,
+    "runtimeCount": 33,
+    "manifestAssetCount": 66,
+    "runtimeConsumer": "client/godot/scripts/ui/world_hud_awakened_visual_skin.gd",
+    "activeRuntimeIconCount": 30,
+    "reservedRuntimeIconIds": [
+      "event_equipment",
+      "event_mailbox",
+      "event_market"
+    ]
+  }
+}

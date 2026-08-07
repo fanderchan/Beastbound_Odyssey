@@ -91,6 +91,18 @@ const HangMatchmakingAwakenedPanel := preload(
 const HangMatchmakingWorldStatus := preload(
 	"res://scripts/ui/hang_matchmaking_world_status.gd"
 )
+const WorldHudAwakenedPresenter := preload(
+	"res://scripts/ui/world_hud_awakened_presenter.gd"
+)
+const WorldHudAwakenedView := preload(
+	"res://scripts/ui/world_hud_awakened_view.gd"
+)
+const WorldHudPartyRosterPresenter := preload(
+	"res://scripts/ui/world_hud_party_roster_presenter.gd"
+)
+const WorldHudPartyRosterView := preload(
+	"res://scripts/ui/world_hud_party_roster_view.gd"
+)
 const CharacterManagementPresenter := preload(
 	"res://scripts/ui/character_management_presenter.gd"
 )
@@ -8427,6 +8439,7 @@ func _build_hud() -> void:
 	battle_message_box.add_child(battle_log_label)
 	hud_root.add_child(battle_message_panel)
 	_build_hang_matchmaking_ui()
+	_build_world_hud_awakened()
 	_register_hud_panels()
 
 
@@ -8455,6 +8468,7 @@ func _build_hang_matchmaking_ui() -> void:
 	panel.match_requested.connect(_on_hang_matchmaking_match_requested)
 	panel.travel_requested.connect(_on_hang_matchmaking_travel_requested)
 	panel.cancel_requested.connect(_on_hang_matchmaking_cancel_requested)
+	panel.stop_requested.connect(_on_hang_matchmaking_stop_requested)
 	panel.close_requested.connect(_close_hang_matchmaking_panel)
 	hud_root.add_child(panel)
 	host.hang_matchmaking_panel = panel
@@ -8468,6 +8482,229 @@ func _build_hang_matchmaking_ui() -> void:
 	)
 	hud_root.add_child(world_status)
 	host.hang_matchmaking_world_status = world_status
+
+
+func _build_world_hud_awakened() -> void:
+	var awakened := WorldHudAwakenedView.new()
+	awakened.z_index = 19
+	hud_root.add_child(awakened)
+	var mounted := awakened.mount_existing_controls({
+		"topPanel": top_panel,
+		"sidePanel": side_panel,
+		"battleMessagePanel": battle_message_panel,
+		"actionBar": action_bar,
+		"statusLabel": status_label,
+		"versionLabel": version_label,
+		"detailLabel": detail_label,
+		"taskRouteButton": task_route_button,
+		"battleLogLabel": battle_log_label,
+		"actionBarCollapseButton": action_bar_collapse_button,
+		"buttons": {
+			"hang": stop_button,
+			"character": player_status_menu_button,
+			"backpack": bag_menu_button,
+			"equipment": equipment_menu_button,
+			"pet": pet_menu_button,
+			"codex": codex_menu_button,
+			"quest": quest_menu_button,
+			"map": map_menu_button,
+			"chat": chat_menu_button,
+			"party": party_menu_button,
+			"family": family_menu_button,
+			"market": market_menu_button,
+			"mailbox": mailbox_menu_button,
+			"auto": auto_settings_menu_button,
+			"account": account_menu_button,
+			"gm": qa_menu_button,
+		},
+	})
+	if not bool(mounted.get("ok", false)):
+		push_error("WorldHudAwakenedView mount failed: %s" % JSON.stringify(mounted))
+		awakened.queue_free()
+		return
+	host.world_hud_awakened_view = awakened
+	var side_surface := awakened.find_child("WorldHudSideSurface", true, false) as Control
+	var task_body := awakened.find_child("WorldHudTaskBody", true, false) as Control
+	if side_surface == null or task_body == null:
+		push_error("WorldHudAwakenedView party roster mount points are missing")
+		return
+	var hidden_legacy_tabs := Control.new()
+	hidden_legacy_tabs.name = "WorldHudLegacySideTabsRetired"
+	hidden_legacy_tabs.visible = false
+	hidden_legacy_tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	side_surface.add_child(hidden_legacy_tabs)
+	for legacy_tab_name in ["WorldHudTaskTab", "WorldHudPartyTab"]:
+		var legacy_tab := awakened.find_child(legacy_tab_name, true, false) as Control
+		if legacy_tab == null:
+			continue
+		var legacy_parent := legacy_tab.get_parent()
+		if legacy_parent != null:
+			legacy_parent.remove_child(legacy_tab)
+		hidden_legacy_tabs.add_child(legacy_tab)
+	var roster := WorldHudPartyRosterView.new()
+	roster.name = "WorldHudFormalPartyRoster"
+	roster.position = Vector2(0.0, 108.0)
+	roster.size = Vector2(206.0, 402.0)
+	roster.z_index = 2
+	side_surface.add_child(roster)
+	roster.prepare()
+	roster.set_task_content(task_body)
+	roster.tab_changed.connect(_on_world_hud_side_tab_changed)
+	roster.match_detail_requested.connect(_on_world_hud_match_detail_requested)
+	roster.cancel_match_requested.connect(_on_hang_matchmaking_cancel_requested)
+	host.world_hud_party_roster_view = roster
+	if party_roster_panel != null:
+		party_roster_panel.visible = false
+	if host.hang_matchmaking_world_status != null:
+		host.hang_matchmaking_world_status.visible = false
+	_refresh_world_hud_awakened(true)
+	_refresh_world_hud_party_roster(true)
+
+
+func _refresh_world_hud_awakened(_force: bool = false) -> void:
+	if host.world_hud_awakened_view == null or player == null:
+		return
+	var awakened := host.world_hud_awakened_view as WorldHudAwakenedView
+	var player_cell := (
+		IsoMapModel.world_to_grid(map_data, player.global_position)
+		if not map_data.is_empty()
+		else Vector2i.ZERO
+	)
+	var presented := WorldHudAwakenedPresenter.combined_state(player_profile, {
+		"mapData": map_data,
+		"playerCell": player_cell,
+		"playerWorldPosition": player.global_position,
+		"taskText": (
+			detail_label.text
+			if detail_label != null
+			else host.task_tracker_hud_prefix_cache
+		),
+		"partyState": party_current_state,
+		"chatMessages": chat_messages,
+		"accountAuthenticated": account_authenticated,
+		"gmToolsVisible": _can_use_gm_tools(),
+		"battleActive": battle_active,
+	})
+	presented["activeSideTab"] = host.world_hud_active_side_tab
+	awakened.apply_view_state(presented)
+	if host.world_hud_minimap_map_id != current_map_id and not map_data.is_empty():
+		awakened.configure_minimap(
+			host.map_visual_render_state,
+			host._map_world_bounds(),
+			IsoMapModel.grid_size(map_data)
+		)
+		host.world_hud_minimap_map_id = current_map_id
+	if party_roster_panel != null:
+		party_roster_panel.visible = false
+	if host.hang_matchmaking_world_status != null:
+		host.hang_matchmaking_world_status.visible = false
+	_refresh_world_hud_party_roster()
+
+
+func _refresh_world_hud_party_roster(force: bool = false) -> void:
+	if host.world_hud_party_roster_view == null:
+		return
+	var match_state := HangMatchmakingClientModel.empty_state()
+	if host.hang_matchmaking_controller != null:
+		match_state = host.hang_matchmaking_controller.current_state()
+	else:
+		match_state = match_state.duplicate(true)
+	var match_status := str(match_state.get("status", "idle")).strip_edges().to_lower()
+	var matching_visible := bool(match_state.get("active", false)) or match_status == "full"
+	var current_party = party_current_state.get("party", {})
+	# While matching, the controller snapshot owns the exact human/NPC roster.
+	# Even an empty controller party is authoritative: filling it from an older
+	# ordinary-party cache could turn 1真人+4NPC into five stale humans.
+	if (
+		current_party is Dictionary
+		and not (current_party as Dictionary).is_empty()
+		and not matching_visible
+	):
+		match_state["party"] = (current_party as Dictionary).duplicate(true)
+	if matching_visible and match_status != host.world_hud_last_match_status:
+		host.world_hud_active_side_tab = "party"
+	host.world_hud_last_match_status = match_status if matching_visible else ""
+	var task_text: String = str(
+		detail_label.text
+		if detail_label != null
+		else host.task_tracker_hud_prefix_cache
+	)
+	var signature := "%s|%s|%s|%s|%s|%s|%s|%s" % [
+		host.world_hud_active_side_tab,
+		match_status,
+		str(match_state.get("stateRevision", 0)),
+		str(match_state.get("humanCount", 0)),
+		str(match_state.get("npcCount", 0)),
+		str(match_state.get("party", {})),
+		str(match_state.get("npcMembers", [])),
+		task_text,
+	]
+	if not force and signature == host.world_hud_roster_signature:
+		return
+	host.world_hud_roster_signature = signature
+	var player_value = player_profile.get("player", {})
+	var profile_player := player_value as Dictionary if player_value is Dictionary else {}
+	var identity := {
+		"accountId": str(current_account_session.get("accountId", "")),
+		"displayName": str(profile_player.get("name", "")),
+		"appearanceId": str(profile_player.get("appearanceId", "")),
+		"rebirthCount": player_profile.get(PlayerProgressModel.REBIRTH_COUNT_KEY, null),
+		"elements": profile_player.get("elements", {}),
+	}
+	var roster := host.world_hud_party_roster_view as WorldHudPartyRosterView
+	roster.apply_state(WorldHudPartyRosterPresenter.present({
+		"activeTab": host.world_hud_active_side_tab,
+		"taskText": task_text,
+		"match": match_state,
+	}, identity))
+
+
+func _on_world_hud_side_tab_changed(tab_id: String) -> void:
+	if tab_id not in ["task", "party"]:
+		return
+	host.world_hud_active_side_tab = tab_id
+	_refresh_world_hud_party_roster(true)
+
+
+func _on_world_hud_match_detail_requested() -> void:
+	_open_hang_matchmaking_panel()
+
+
+func _layout_world_hud_awakened(viewport_size: Vector2, world_menu_open: bool) -> void:
+	if host.world_hud_awakened_view == null:
+		return
+	var awakened := host.world_hud_awakened_view as WorldHudAwakenedView
+	var roster := host.world_hud_party_roster_view as WorldHudPartyRosterView
+	var task_body := awakened.find_child("WorldHudTaskBody", true, false) as Control
+	if (
+		roster != null
+		and task_body != null
+		and task_body.get_parent() == roster.task_content_parent()
+	):
+		# The copied WorldHud still lays out its original task body.  Temporarily
+		# clear the embedded full-rect anchors so that pass remains warning-free;
+		# the formal roster owns the final rect immediately below.
+		task_body.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	awakened.apply_layout(viewport_size, {
+		"worldMenuOpen": world_menu_open,
+		"battleActive": battle_active,
+		"collapsed": action_bar_collapsed,
+		"showTop": top_panel != null and top_panel.visible and not battle_active,
+		"showSide": side_panel != null and side_panel.visible,
+		"showMessage": battle_message_panel != null and battle_message_panel.visible,
+		"showAction": action_bar != null and action_bar.visible and not battle_active,
+		"messageExpanded": battle_message_expanded,
+	})
+	if roster != null:
+		roster.position = Vector2(0.0, 108.0)
+		roster.size = Vector2(206.0, 402.0)
+		if task_body != null and task_body.get_parent() == roster.task_content_parent():
+			task_body.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			task_body.position = Vector2.ZERO
+	if party_roster_panel != null:
+		party_roster_panel.visible = false
+	if host.hang_matchmaking_world_status != null:
+		host.hang_matchmaking_world_status.visible = false
 
 func _build_market_panel() -> void:
 	var awakened_view = MarketAwakenedPanel.new()
@@ -18194,6 +18431,9 @@ func _begin_hang_matchmaking_route(route_id: String, mode: String) -> void:
 	if target.is_empty():
 		_set_world_log_message("暂时找不到前往该练级区域的路线。")
 		return
+	if mode == "match":
+		host.world_hud_active_side_tab = "party"
+		_refresh_world_hud_party_roster(true)
 	host.hang_matchmaking_pending_route = route.duplicate(true)
 	host.hang_matchmaking_pending_mode = mode
 	host.hang_matchmaking_route_check_elapsed = 0.2
@@ -18230,6 +18470,12 @@ func _on_hang_matchmaking_cancel_requested() -> void:
 	if not host.hang_matchmaking_controller.request_cancel():
 		_set_world_log_message("匹配请求正在处理中，请稍候。")
 	_refresh_hang_matchmaking_views()
+
+
+func _on_hang_matchmaking_stop_requested() -> void:
+	host._stop_hang_activity("挂机已停止。", true, true)
+	_refresh_hang_matchmaking_views()
+	host._layout_hud()
 
 
 func _cancel_hang_matchmaking_for_stop() -> void:
@@ -18292,16 +18538,17 @@ func _refresh_hang_matchmaking_views() -> void:
 	var state := HangMatchmakingClientModel.empty_state()
 	if host.hang_matchmaking_controller != null:
 		state = host.hang_matchmaking_controller.current_state()
-	if host.hang_matchmaking_world_status != null:
-		host.hang_matchmaking_world_status.apply_state(
-			state,
-			_hang_activity_active() or bool(
-				PlayerProgressModel.hang_session(player_profile).get(
-					HangSettingsModel.SESSION_ENABLED_KEY,
-					false
-				)
-			)
+	var hang_active := _hang_activity_active() or bool(
+		PlayerProgressModel.hang_session(player_profile).get(
+			HangSettingsModel.SESSION_ENABLED_KEY,
+			false
 		)
+	)
+	if host.world_hud_awakened_view != null and host.hang_matchmaking_world_status != null:
+		host.hang_matchmaking_world_status.visible = false
+	elif host.hang_matchmaking_world_status != null:
+		host.hang_matchmaking_world_status.apply_state(state, hang_active)
+	_refresh_world_hud_party_roster()
 	if host.hang_matchmaking_panel == null:
 		return
 	var panel := host.hang_matchmaking_panel as HangMatchmakingAwakenedPanel
@@ -18314,19 +18561,71 @@ func _refresh_hang_matchmaking_views() -> void:
 	var party := state.get("party", {}) as Dictionary if state.get("party", {}) is Dictionary else {}
 	var members: Array[Dictionary] = []
 	var leader_account_id := str(party.get("leaderAccountId", ""))
+	var authoritative_human_count := clampi(int(state.get("humanCount", 0)), 0, 5)
+	var rendered_human_count := 0
 	for value in party.get("members", []):
 		if not (value is Dictionary):
 			continue
 		var member := value as Dictionary
+		if matching_summary_visible and not bool(member.get("online", true)):
+			continue
+		if matching_summary_visible and rendered_human_count >= authoritative_human_count:
+			break
+		var team_snapshot_value = member.get("teamSnapshot", {})
+		var team_snapshot := (
+			team_snapshot_value as Dictionary
+			if team_snapshot_value is Dictionary
+			else {}
+		)
+		var team_player_value = team_snapshot.get("player", {})
+		var team_player := (
+			team_player_value as Dictionary
+			if team_player_value is Dictionary
+			else {}
+		)
+		var member_name := str(
+			member.get(
+				"displayName",
+				member.get("username", team_player.get("name", ""))
+			)
+		).strip_edges()
+		var member_level := int(
+			team_player.get(
+				"level",
+				team_snapshot.get(
+					"playerLevel",
+					member.get("level", member.get("playerLevel", 0))
+				)
+			)
+		)
 		members.append({
 			"kind": "human",
-			"name": str(member.get("displayName", member.get("username", "真人队友"))),
-			"level": maxi(1, int(member.get("level", member.get("playerLevel", 1)))),
+			"name": member_name if member_name != "" else "队友信息同步中",
+			"level": maxi(0, member_level),
 			"leader": str(member.get("accountId", "")) == leader_account_id,
+			"detailsPending": member_name == "" or member_level <= 0,
 		})
+		rendered_human_count += 1
+	while matching_summary_visible and rendered_human_count < authoritative_human_count:
+		members.append({
+			"kind": "human",
+			"name": "队友信息同步中",
+			"level": 0,
+			"leader": false,
+			"detailsPending": true,
+		})
+		rendered_human_count += 1
+	var authoritative_npc_count := clampi(
+		int(state.get("npcCount", 0)),
+		0,
+		5 - authoritative_human_count
+	)
+	var rendered_npc_count := 0
 	for value in state.get("npcMembers", []):
 		if not (value is Dictionary):
 			continue
+		if matching_summary_visible and rendered_npc_count >= authoritative_npc_count:
+			break
 		var npc := value as Dictionary
 		members.append({
 			"kind": "npc",
@@ -18334,6 +18633,7 @@ func _refresh_hang_matchmaking_views() -> void:
 			"level": maxi(1, int(npc.get("level", 1))),
 			"leader": false,
 		})
+		rendered_npc_count += 1
 	var listings: Array[Dictionary] = []
 	for value in state.get("listings", []):
 		if not (value is Dictionary):
@@ -18346,6 +18646,7 @@ func _refresh_hang_matchmaking_views() -> void:
 	panel.apply_state({
 		"viewMode": "matching" if matching_summary_visible else current_view,
 		"pending": host.hang_matchmaking_panel_pending or not host.hang_matchmaking_pending_route.is_empty(),
+		"hangActive": hang_active,
 		"statusText": host.hang_matchmaking_status_text,
 		"selectedRouteId": selected_route_id,
 		"match": {
@@ -19128,6 +19429,11 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 func _refresh_party_roster_hud(update_layout: bool = true) -> void:
 	if party_roster_panel == null or party_roster_container == null:
 		return
+	if host.world_hud_awakened_view != null:
+		party_roster_panel.set_meta("has_party", false)
+		party_roster_panel.visible = false
+		_refresh_world_hud_party_roster()
+		return
 	_clear_container_children(party_roster_container)
 	var members = _current_party_members()
 	party_roster_panel.set_meta("has_party", members.size() > 0)
@@ -19399,6 +19705,25 @@ func _current_party_other_members_for_battle() -> Array[Dictionary]:
 			continue
 		result.append(member)
 		if result.size() >= BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size():
+			break
+	return result
+
+
+func _current_party_other_member_count_for_hud() -> int:
+	var party_value = party_current_state.get("party", null)
+	if not (party_value is Dictionary):
+		return 0
+	var raw_members = (party_value as Dictionary).get("members", [])
+	if not (raw_members is Array):
+		return 0
+	var result := 0
+	for raw_member in raw_members as Array:
+		if not (raw_member is Dictionary):
+			continue
+		if _party_member_is_current_player(raw_member as Dictionary):
+			continue
+		result += 1
+		if result >= BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size():
 			break
 	return result
 

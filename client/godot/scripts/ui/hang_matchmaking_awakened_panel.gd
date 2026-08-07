@@ -13,6 +13,7 @@ signal immediate_requested(route_id: String)
 signal match_requested(route_id: String)
 signal travel_requested(route_id: String)
 signal cancel_requested
+signal stop_requested
 signal close_requested
 
 const CANVAS_SIZE := Vector2(1280.0, 720.0)
@@ -25,6 +26,7 @@ var browse_tab_button: Button
 var party_tab_button: Button
 var primary_button: Button
 var cancel_button: Button
+var stop_button: Button
 
 var route_buttons: Dictionary = {}
 var party_route_buttons: Dictionary = {}
@@ -38,6 +40,7 @@ var _player_level := 1
 var _selected_route_id := ""
 var _view_mode := VIEW_BROWSE
 var _pending := false
+var _hang_active := false
 var _state: Dictionary = HangMatchmakingPresenter.normalize_state({})
 
 var _browse_group: Control
@@ -110,6 +113,7 @@ func configure_routes(
 
 func apply_state(state: Dictionary) -> void:
 	_ensure_built()
+	_hang_active = bool(state.get("hangActive", false))
 	_state = HangMatchmakingPresenter.normalize_state(state)
 	_pending = bool(_state.get("pending", false))
 	var state_route_id := str(_state.get("selectedRouteId", "")).strip_edges()
@@ -187,6 +191,8 @@ func debug_snapshot() -> Dictionary:
 		"listingReferenceCount": listing_reference_labels.size(),
 		"selectedRouteId": _selected_route_id,
 		"pending": _pending,
+		"hangActive": _hang_active,
+		"stopVisible": stop_button != null and stop_button.visible,
 		"choiceVisible": _choice_scrim != null and _choice_scrim.visible,
 		"matching": bool(match_state.get("active", false)),
 		"matchStatus": str(match_state.get("status", "idle")),
@@ -203,7 +209,7 @@ func self_check() -> Dictionary:
 		errors.append("挂机匹配画布不是 1280×720")
 	if _canvas == null or _canvas.custom_minimum_size != CANVAS_SIZE:
 		errors.append("挂机匹配缺少固定主画布")
-	if close_button == null or primary_button == null or browse_tab_button == null or party_tab_button == null:
+	if close_button == null or primary_button == null or browse_tab_button == null or party_tab_button == null or stop_button == null:
 		errors.append("挂机匹配缺少主交互按钮")
 	if _routes.size() != route_buttons.size():
 		errors.append("挂机区域卡片没有完整投影")
@@ -272,6 +278,18 @@ func _build_header() -> void:
 	subtitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	HangMatchmakingAwakenedVisualSkin.apply_body(subtitle, 15, true)
 	_canvas.add_child(subtitle)
+
+	stop_button = Button.new()
+	stop_button.name = "HangMatchStopButton"
+	stop_button.text = "停止挂机"
+	stop_button.position = Vector2(625.0, 10.0)
+	stop_button.size = Vector2(160.0, 50.0)
+	stop_button.visible = false
+	stop_button.pressed.connect(func() -> void:
+		if _hang_active and not _pending:
+			stop_requested.emit()
+	)
+	_canvas.add_child(stop_button)
 
 	browse_tab_button = Button.new()
 	browse_tab_button.name = "HangMatchBrowseTab"
@@ -1097,6 +1115,8 @@ func _member_slot(member: Dictionary) -> PanelContainer:
 		detail.text = "寻找真人中"
 	elif kind == "npc":
 		detail.text = "临时补位 · 真人优先"
+	elif bool(member.get("detailsPending", false)) or int(member.get("level", 0)) <= 0:
+		detail.text = "资料同步中"
 	else:
 		detail.text = "Lv%d%s" % [int(member.get("level", 1)), " · 队长" if bool(member.get("leader", false)) else ""]
 	HangMatchmakingAwakenedVisualSkin.apply_body(detail, 13, true)
@@ -1107,6 +1127,13 @@ func _member_slot(member: Dictionary) -> PanelContainer:
 func _render_view_mode() -> void:
 	if _browse_group == null:
 		return
+	stop_button.visible = _hang_active
+	HangMatchmakingAwakenedVisualSkin.apply_action_button(
+		stop_button,
+		false,
+		true,
+		_pending or not _hang_active
+	)
 	_browse_group.visible = _view_mode == VIEW_BROWSE
 	_party_group.visible = _view_mode == VIEW_PARTY
 	_matching_group.visible = _view_mode == VIEW_MATCHING

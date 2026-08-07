@@ -27,6 +27,7 @@ var _immediate_events: Array[String] = []
 var _match_events: Array[String] = []
 var _travel_events: Array[String] = []
 var _cancel_count := 0
+var _stop_count := 0
 var _close_count := 0
 var _capture_dir := ""
 var _panel: HangMatchmakingAwakenedPanel
@@ -76,6 +77,7 @@ func _run() -> void:
 	await _settle()
 
 	_append_layout_errors()
+	_expect(not _panel.stop_button.visible, "未挂机时错误显示停止挂机按钮")
 	_append_visible_text_errors("区域选择页")
 	await _capture("hang-match-browse-1280x720.png")
 	await _check_start_choice()
@@ -89,6 +91,14 @@ func _run() -> void:
 	await _settle()
 	await _real_left_click(_panel.cancel_button)
 	_expect(_cancel_count == 1, "取消匹配没有发出一次取消事件")
+
+	var active_browse_state := _browse_state()
+	active_browse_state["hangActive"] = true
+	_panel.apply_state(active_browse_state)
+	await _settle()
+	_expect(_panel.stop_button.visible and not _panel.stop_button.disabled, "挂机中没有显示可用的正式停止入口")
+	await _real_left_click(_panel.stop_button)
+	_expect(_stop_count == 1, "停止挂机没有发出一次停止事件")
 
 	_panel.apply_state(_browse_state())
 	await _settle()
@@ -106,6 +116,7 @@ func _run() -> void:
 		"matchEvents": _match_events,
 		"travelEvents": _travel_events,
 		"cancelCount": _cancel_count,
+		"stopCount": _stop_count,
 		"closeCount": _close_count,
 		"snapshot": _panel.debug_snapshot(),
 		"captureDirectory": _capture_dir,
@@ -123,6 +134,7 @@ func _connect_signals() -> void:
 	_panel.match_requested.connect(func(route_id: String) -> void: _match_events.append(route_id))
 	_panel.travel_requested.connect(func(route_id: String) -> void: _travel_events.append(route_id))
 	_panel.cancel_requested.connect(func() -> void: _cancel_count += 1)
+	_panel.stop_requested.connect(func() -> void: _stop_count += 1)
 	_panel.close_requested.connect(func() -> void: _close_count += 1)
 
 
@@ -135,6 +147,7 @@ func _append_layout_errors() -> void:
 		_expect(canvas.size == Vector2(VIEWPORT_SIZE), "挂机匹配主画布尺寸错误")
 	_expect(_panel.route_buttons.size() >= 6, "挂机匹配没有显示完整区域卡片")
 	_expect(_panel.primary_button != null, "挂机匹配缺少主操作按钮")
+	_expect(_panel.stop_button != null and _panel.stop_button.name == "HangMatchStopButton", "挂机匹配缺少稳定的正式停止按钮")
 	_expect(_panel.close_button != null, "挂机匹配缺少关闭按钮")
 	for route_id in _panel.route_buttons:
 		var button := _panel.route_buttons.get(route_id) as Button
@@ -206,6 +219,21 @@ func _check_party_page() -> void:
 
 
 func _check_authoritative_matching_state() -> void:
+	var idle_transport := HangMatchmakingPresenter.normalize_state({
+		"match": {
+			"active": false,
+			"status": "idle",
+			"humanCount": 1,
+			"npcCount": 0,
+			"party": {},
+		},
+	})
+	var idle_transport_match := idle_transport.get("match", {}) as Dictionary
+	_expect(
+		int(idle_transport_match.get("humanCount", -1)) == 0
+			and HangMatchmakingPresenter.member_rows(idle_transport_match)[0].get("kind", "") == "empty",
+		"空闲无队伍传输态错误虚构了一名真人队友"
+	)
 	_panel.apply_state(_matching_state())
 	await _settle()
 	var snapshot := _panel.debug_snapshot()
@@ -218,6 +246,65 @@ func _check_authoritative_matching_state() -> void:
 	_expect("真人 2" in visible_text, "匹配页没有明确显示真人数量")
 	_expect("服务端提示：约 5 秒后" in visible_text, "npcFillInMs 没有转换为服务端剩余秒提示")
 	_expect("旧陪练" not in visible_text and "陪练伙伴" not in visible_text, "匹配页仍暴露旧手工陪练功能")
+	var normal_match := (
+		HangMatchmakingPresenter.normalize_state(_matching_state()).get("match", {})
+		as Dictionary
+	)
+	var normal_rows := HangMatchmakingPresenter.member_rows(normal_match)
+	_expect(
+		normal_rows.size() == 5
+			and str(normal_rows[0].get("name", "")) == "岚"
+			and int(normal_rows[0].get("level", 0)) == 14
+			and not bool(normal_rows[0].get("detailsPending", true)),
+		"完整真人资料被匹配投影错误改写"
+	)
+
+	var truth_state := _matching_truth_state()
+	var truth_match := (
+		HangMatchmakingPresenter.normalize_state(truth_state).get("match", {})
+		as Dictionary
+	)
+	var truth_rows := HangMatchmakingPresenter.member_rows(truth_match)
+	var human_rows: Array[Dictionary] = []
+	for row in truth_rows:
+		if str(row.get("kind", "")) == "human":
+			human_rows.append(row)
+	_expect(human_rows.size() == 2, "匹配状态没有按权威真人数量投影两名真人")
+	_expect(
+		human_rows.size() >= 1
+			and str(human_rows[0].get("name", "")) == "篝火"
+			and int(human_rows[0].get("level", 0)) == 16,
+		"在线真人的完整资料没有保持原值"
+	)
+	_expect(
+		human_rows.size() >= 2
+			and str(human_rows[1].get("name", "")) == "队友信息同步中"
+			and int(human_rows[1].get("level", -1)) == 0
+			and bool(human_rows[1].get("detailsPending", false)),
+		"缺少权威资料的真人没有使用中性同步状态"
+	)
+	for row in truth_rows:
+		_expect(str(row.get("name", "")) != "离线旅人", "匹配状态仍显示 online=false 的真人")
+		_expect(str(row.get("name", "")) not in ["真人队友", "冒险者"], "匹配状态仍伪造真人姓名")
+		if bool(row.get("detailsPending", false)):
+			_expect(int(row.get("level", -1)) == 0, "资料待同步真人仍伪造 Lv1")
+	var full_truth_state := truth_state.duplicate(true)
+	var full_truth_source := full_truth_state.get("match", {}) as Dictionary
+	full_truth_source["active"] = false
+	full_truth_source["status"] = "full"
+	var full_truth_match := (
+		HangMatchmakingPresenter.normalize_state(full_truth_state).get("match", {})
+		as Dictionary
+	)
+	for row in HangMatchmakingPresenter.member_rows(full_truth_match):
+		_expect(str(row.get("name", "")) != "离线旅人", "full 状态仍显示 online=false 的真人")
+	_panel.apply_state(truth_state)
+	await _settle()
+	var truth_text := _visible_text(_panel)
+	_expect("离线旅人" not in truth_text, "正式匹配页仍渲染离线真人")
+	_expect("队友信息同步中" in truth_text and "资料同步中" in truth_text, "正式匹配页没有显示资料同步状态")
+	_panel.apply_state(_matching_state())
+	await _settle()
 
 
 func _check_npc_filled_and_full_statuses() -> void:
@@ -342,7 +429,7 @@ func _full_state() -> Dictionary:
 	for index in range(3):
 		members.append({
 			"accountId": "fixture-full-%d" % index,
-			"displayName": "真人队友%d" % (index + 3),
+			"displayName": ["岫石", "苔岚", "火绒"][index],
 			"role": "member",
 			"teamSnapshot": {"player": {"level": 14}},
 		})
@@ -351,6 +438,46 @@ func _full_state() -> Dictionary:
 	match_state["party"] = party
 	state["match"] = match_state
 	return state
+
+
+func _matching_truth_state() -> Dictionary:
+	return {
+		"selectedRouteId": "mistcap_growth",
+		"match": {
+			"active": true,
+			"status": "searching",
+			"maxMembers": 5,
+			"humanCount": 2,
+			"npcCount": 0,
+			"party": {
+				"leaderAccountId": "fixture-online",
+				"memberCount": 3,
+				"members": [
+					{
+						"accountId": "fixture-online",
+						"displayName": "篝火",
+						"role": "leader",
+						"online": true,
+						"teamSnapshot": {"player": {"level": 16}},
+					},
+					{
+						"accountId": "fixture-offline",
+						"displayName": "离线旅人",
+						"role": "member",
+						"online": false,
+						"teamSnapshot": {"player": {"level": 99}},
+					},
+					{
+						"accountId": "fixture-pending",
+						"role": "member",
+						"online": true,
+						"teamSnapshot": {"player": {}},
+					},
+				],
+			},
+			"npcMembers": [],
+		},
+	}
 
 
 func _npc_filled_state() -> Dictionary:

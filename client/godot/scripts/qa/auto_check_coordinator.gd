@@ -4192,17 +4192,23 @@ func _run_auto_hang_matchmaking_check() -> void:
 		and real_controller != null
 		and host.hang_matchmaking_panel != null
 		and host.hang_matchmaking_world_status != null
+		and host.world_hud_awakened_view != null
+		and host.world_hud_party_roster_view != null
 	)
 	var panel_contract_ok := false
 	var start_choice_ok := false
 	var matching_ok := false
+	var local_rebirth_projection_ok := false
 	var revision_dedupe_ok := false
 	var npc_filled_ok := false
 	var replacement_ok := false
+	var active_snapshot_priority_ok := false
+	var full_empty_snapshot_priority_ok := false
 	var full_ok := false
 	var party_update_refresh_ok := false
 	var matching_resumed_ok := false
 	var auto_battle_strategy_ok := false
+	var battle_hud_visibility_ok := false
 	var cancel_click_ok := false
 	var cancel_keeps_hang_ok := false
 	var close_click_ok := false
@@ -4212,9 +4218,11 @@ func _run_auto_hang_matchmaking_check() -> void:
 	if ui_ready:
 		host.current_account_session = {
 			"authSource": "local_qa_check",
+			"accountId": "qa_hang_human_1",
 			"username": "hang_matchmaking_check",
 		}
 		host.player_profile = PlayerProgressModel.default_profile()
+		host.player_profile[PlayerProgressModel.REBIRTH_COUNT_KEY] = 2
 		var auto_battle_zone: Dictionary = {}
 		var encounter_zones: Array = EncounterModel.encounter_zones(host.map_data)
 		if not encounter_zones.is_empty() and host.player != null:
@@ -4268,7 +4276,7 @@ func _run_auto_hang_matchmaking_check() -> void:
 		host.hang_matchmaking_pending_route.clear()
 		host.hang_matchmaking_pending_mode = ""
 		host._clear_navigation_state()
-		host._open_hang_matchmaking_panel()
+		host._close_hang_matchmaking_panel()
 		await host.get_tree().process_frame
 		await host.get_tree().process_frame
 
@@ -4288,17 +4296,24 @@ func _run_auto_hang_matchmaking_check() -> void:
 		)
 		await host.get_tree().process_frame
 		var matching_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
-		var matching_panel := matching_snapshot.get("panel", {}) as Dictionary
+		var matching_roster := _hang_matchmaking_check_formal_hud_snapshot()
+		local_rebirth_projection_ok = (
+			_hang_matchmaking_check_first_level_text() == "2转8级"
+		)
 		matching_ok = (
 			bool(matching_apply.get("accepted", false))
 			and bool(matching_apply.get("changed", false))
-			and str(matching_panel.get("viewMode", "")) == "matching"
-			and str(matching_panel.get("matchStatus", "")) == HangMatchmakingClientModel.STATUS_MATCHING
-			and int(matching_panel.get("humanCount", -1)) == 1
-			and int(matching_panel.get("npcCount", -1)) == 0
-			and int(matching_panel.get("emptyCount", -1)) == 4
-			and bool(matching_snapshot.get("worldStatusVisible", false))
+			and str((matching_snapshot.get("matchState", {}) as Dictionary).get("status", "")) == HangMatchmakingClientModel.STATUS_MATCHING
+			and _hang_matchmaking_check_roster_counts(matching_roster, 1, 0, 4)
+			and str(matching_roster.get("activeTab", "")) == "party"
+			and str(matching_roster.get("statusText", "")) == "真人优先匹配中"
+			and bool(matching_roster.get("cancelVisible", false))
+			and bool(matching_roster.get("formalWorldHudReady", false))
+			and not bool(matching_snapshot.get("panelVisible", true))
+			and not bool(matching_snapshot.get("worldStatusVisible", true))
 		)
+		if not matching_ok:
+			print("hang matchmaking formal matching debug: %s" % JSON.stringify(matching_roster))
 
 		var npc_filled_state := _hang_matchmaking_check_state(
 			20,
@@ -4309,13 +4324,14 @@ func _run_auto_hang_matchmaking_check() -> void:
 		var npc_filled_apply: Dictionary = host._debug_apply_hang_matchmaking_state(npc_filled_state)
 		await host.get_tree().process_frame
 		var npc_filled_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
-		var npc_filled_panel := npc_filled_snapshot.get("panel", {}) as Dictionary
+		var npc_filled_roster := _hang_matchmaking_check_formal_hud_snapshot()
 		npc_filled_ok = (
 			bool(npc_filled_apply.get("changed", false))
-			and str(npc_filled_panel.get("matchStatus", "")) == HangMatchmakingClientModel.STATUS_NPC_FILLED
-			and int(npc_filled_panel.get("humanCount", -1)) == 1
-			and int(npc_filled_panel.get("npcCount", -1)) == 4
-			and int(npc_filled_panel.get("emptyCount", -1)) == 0
+			and str((npc_filled_snapshot.get("matchState", {}) as Dictionary).get("status", "")) == HangMatchmakingClientModel.STATUS_NPC_FILLED
+			and _hang_matchmaking_check_roster_counts(npc_filled_roster, 1, 4, 0)
+			and str(npc_filled_roster.get("statusText", "")) == "陪练补位中 · 继续找真人"
+			and bool(npc_filled_roster.get("cancelVisible", false))
+			and not bool(npc_filled_snapshot.get("worldStatusVisible", true))
 		)
 
 		var replacement_state := _hang_matchmaking_check_state(
@@ -4327,13 +4343,101 @@ func _run_auto_hang_matchmaking_check() -> void:
 		var replacement_apply: Dictionary = host._debug_apply_hang_matchmaking_state(replacement_state)
 		await host.get_tree().process_frame
 		var replacement_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
-		var replacement_panel := replacement_snapshot.get("panel", {}) as Dictionary
+		var replacement_roster := _hang_matchmaking_check_formal_hud_snapshot()
 		replacement_ok = (
 			bool(replacement_apply.get("changed", false))
-			and int(replacement_panel.get("humanCount", -1)) == 2
-			and int(replacement_panel.get("npcCount", -1)) == 3
-			and int(replacement_panel.get("emptyCount", -1)) == 0
+			and str((replacement_snapshot.get("matchState", {}) as Dictionary).get("status", "")) == HangMatchmakingClientModel.STATUS_NPC_FILLED
+			and _hang_matchmaking_check_roster_counts(replacement_roster, 2, 3, 0)
+			and str(replacement_roster.get("statusText", "")) == "真人已加入 · 下一场替换陪练"
+			and bool(replacement_roster.get("cancelVisible", false))
+			and not bool(replacement_snapshot.get("worldStatusVisible", true))
 		)
+
+		# A normal party poll can lag behind or race a matchmaking event.  Keep
+		# the active controller snapshot authoritative instead of replacing its
+		# two humans plus three NPCs with this deliberately conflicting roster.
+		var conflicting_party := _hang_matchmaking_check_party(5)
+		var conflicting_members = conflicting_party.get("members", [])
+		if conflicting_members is Array:
+			for index in range((conflicting_members as Array).size()):
+				var conflicting_member = (conflicting_members as Array)[index]
+				if conflicting_member is Dictionary:
+					(conflicting_member as Dictionary)["displayName"] = "普通队伍冲突%d" % (index + 1)
+		host.party_current_state = {
+			"party": conflicting_party,
+			"incomingInvites": [],
+			"maxMembers": HangMatchmakingClientModel.PARTY_MAX_MEMBERS,
+		}
+		host._refresh_party_roster_hud(false)
+		await host.get_tree().process_frame
+		var active_priority_roster := _hang_matchmaking_check_formal_hud_snapshot()
+		var populated_active_snapshot_priority_ok := (
+			_hang_matchmaking_check_roster_counts(active_priority_roster, 2, 3, 0)
+			and not "普通队伍冲突" in str(active_priority_roster.get("rowNames", []))
+			and "真人队友1" in str(active_priority_roster.get("rowNames", []))
+		)
+		if not populated_active_snapshot_priority_ok:
+			print("hang matchmaking active snapshot priority debug: %s" % JSON.stringify(active_priority_roster))
+
+		# An active authoritative snapshot may legitimately omit party details while
+		# retaining exact human/NPC counts.  It must still beat the stale ordinary
+		# five-human cache and render a neutral syncing seat plus four NPCs.
+		var empty_party_authority_state := _hang_matchmaking_check_state(
+			31,
+			HangMatchmakingClientModel.STATUS_NPC_FILLED,
+			1,
+			4
+		)
+		empty_party_authority_state["party"] = {}
+		var empty_party_authority_apply: Dictionary = host._debug_apply_hang_matchmaking_state(
+			empty_party_authority_state
+		)
+		await host.get_tree().process_frame
+		var empty_party_authority_roster := _hang_matchmaking_check_formal_hud_snapshot()
+		var empty_party_names := str(empty_party_authority_roster.get("rowNames", []))
+		var empty_active_snapshot_priority_ok := (
+			bool(empty_party_authority_apply.get("changed", false))
+			and _hang_matchmaking_check_roster_counts(empty_party_authority_roster, 1, 4, 0)
+			and "队友信息同步中" in empty_party_names
+			and not "普通队伍冲突" in empty_party_names
+		)
+		active_snapshot_priority_ok = (
+			populated_active_snapshot_priority_ok
+			and empty_active_snapshot_priority_ok
+		)
+		if not empty_active_snapshot_priority_ok:
+			print("hang matchmaking empty active snapshot priority debug: %s" % JSON.stringify(
+				empty_party_authority_roster
+			))
+
+		var full_empty_authority_state := _hang_matchmaking_check_state(
+			32,
+			HangMatchmakingClientModel.STATUS_FULL,
+			5,
+			0
+		)
+		full_empty_authority_state["party"] = {}
+		var full_empty_authority_apply: Dictionary = host._debug_apply_hang_matchmaking_state(
+			full_empty_authority_state
+		)
+		await host.get_tree().process_frame
+		var full_empty_authority_roster := _hang_matchmaking_check_formal_hud_snapshot()
+		var full_empty_names = full_empty_authority_roster.get("rowNames", [])
+		var full_empty_sync_count := 0
+		if full_empty_names is Array:
+			for raw_name in full_empty_names as Array:
+				if str(raw_name) == "队友信息同步中":
+					full_empty_sync_count += 1
+		full_empty_snapshot_priority_ok = (
+			bool(full_empty_authority_apply.get("changed", false))
+			and _hang_matchmaking_check_roster_counts(full_empty_authority_roster, 5, 0, 0)
+			and full_empty_sync_count == 5
+			and not "普通队伍冲突" in str(full_empty_names)
+		)
+		if not full_empty_snapshot_priority_ok:
+			print("hang matchmaking full empty snapshot priority debug: %s" % JSON.stringify(
+				full_empty_authority_roster
+			))
 
 		var full_state := _hang_matchmaking_check_state(
 			40,
@@ -4344,15 +4448,19 @@ func _run_auto_hang_matchmaking_check() -> void:
 		var full_apply: Dictionary = host._debug_apply_hang_matchmaking_state(full_state)
 		await host.get_tree().process_frame
 		var full_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
-		var full_panel := full_snapshot.get("panel", {}) as Dictionary
+		var full_roster := _hang_matchmaking_check_formal_hud_snapshot()
 		full_ok = (
 			bool(full_apply.get("changed", false))
-			and str(full_panel.get("viewMode", "")) == "matching"
-			and str(full_panel.get("matchStatus", "")) == HangMatchmakingClientModel.STATUS_FULL
-			and int(full_panel.get("humanCount", -1)) == 5
-			and int(full_panel.get("npcCount", -1)) == 0
-			and bool(full_snapshot.get("worldStatusVisible", false))
+			and str((full_snapshot.get("matchState", {}) as Dictionary).get("status", "")) == HangMatchmakingClientModel.STATUS_FULL
+			and _hang_matchmaking_check_roster_counts(full_roster, 5, 0, 0)
+			and str(full_roster.get("statusText", "")) == "真人队伍已满"
+			and bool(full_roster.get("cancelVisible", false))
+			and bool(full_roster.get("formalWorldHudReady", false))
+			and not bool(full_snapshot.get("panelVisible", true))
+			and not bool(full_snapshot.get("worldStatusVisible", true))
 		)
+		if not full_ok:
+			print("hang matchmaking formal full debug: %s" % JSON.stringify(full_roster))
 
 		var refresh_spy := HangMatchmakingRefreshSpy.new()
 		refresh_spy.seed_state(full_state)
@@ -4396,13 +4504,13 @@ func _run_auto_hang_matchmaking_check() -> void:
 		var resumed_apply: Dictionary = host._debug_apply_hang_matchmaking_state(resumed_state)
 		await host.get_tree().process_frame
 		var resumed_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
-		var resumed_panel := resumed_snapshot.get("panel", {}) as Dictionary
+		var resumed_roster := _hang_matchmaking_check_formal_hud_snapshot()
 		matching_resumed_ok = (
 			bool(resumed_apply.get("changed", false))
-			and str(resumed_panel.get("viewMode", "")) == "matching"
-			and str(resumed_panel.get("matchStatus", "")) == HangMatchmakingClientModel.STATUS_MATCHING
-			and int(resumed_panel.get("humanCount", -1)) == 4
-			and int(resumed_panel.get("emptyCount", -1)) == 1
+			and str((resumed_snapshot.get("matchState", {}) as Dictionary).get("status", "")) == HangMatchmakingClientModel.STATUS_MATCHING
+			and _hang_matchmaking_check_roster_counts(resumed_roster, 4, 0, 1)
+			and bool(resumed_roster.get("cancelVisible", false))
+			and not bool(resumed_snapshot.get("worldStatusVisible", true))
 		)
 
 		host._close_hang_matchmaking_panel(false)
@@ -4410,6 +4518,22 @@ func _run_auto_hang_matchmaking_check() -> void:
 		if not auto_battle_zone.is_empty():
 			host._start_battle(BattleModel.create_wild_battle(auto_battle_zone))
 			await host.get_tree().process_frame
+			host._layout_hud()
+			await host.get_tree().process_frame
+			var dock_surface := host.world_hud_awakened_view.find_child(
+				"WorldHudDockSurface",
+				true,
+				false
+			) as Control
+			var battle_hud_hidden: bool = (
+				host.battle_active
+				and not host.top_panel.is_visible_in_tree()
+				and not host.action_bar.is_visible_in_tree()
+				and dock_surface != null
+				and not dock_surface.is_visible_in_tree()
+				and not host.map_menu_button.is_visible_in_tree()
+				and host.battle_message_panel.is_visible_in_tree()
+			)
 			var auto_settings := PlayerProgressModel.auto_battle_settings(host.player_profile)
 			auto_battle_strategy_ok = (
 				host.battle_active
@@ -4421,6 +4545,16 @@ func _run_auto_hang_matchmaking_check() -> void:
 			)
 			host._end_battle()
 			await host.get_tree().process_frame
+			host._layout_hud()
+			await host.get_tree().process_frame
+			battle_hud_visibility_ok = (
+				battle_hud_hidden
+				and not host.battle_active
+				and host.top_panel.is_visible_in_tree()
+				and host.action_bar.is_visible_in_tree()
+				and dock_surface.is_visible_in_tree()
+				and host.map_menu_button.is_visible_in_tree()
+			)
 		host._open_hang_matchmaking_panel()
 		await host.get_tree().process_frame
 		await host.get_tree().process_frame
@@ -4433,10 +4567,7 @@ func _run_auto_hang_matchmaking_check() -> void:
 		host.hang_matchmaking_controller = cancel_spy
 		host.current_account_session = _hang_matchmaking_check_server_session()
 		host._panel_flow()._refresh_hang_matchmaking_views()
-		var cancel_button := _hang_matchmaking_check_button_by_text(
-			host.hang_matchmaking_world_status,
-			"取消匹配"
-		)
+		var cancel_button := host.world_hud_party_roster_view.get("cancel_button") as Button
 		cancel_click_ok = await _hang_matchmaking_check_real_left_click(cancel_button)
 		# Restore the local QA session before another process frame can poll or open a socket.
 		host.current_account_session = {
@@ -4445,31 +4576,60 @@ func _run_auto_hang_matchmaking_check() -> void:
 		}
 		await host.get_tree().process_frame
 		var cancelled_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
+		var cancelled_roster := _hang_matchmaking_check_formal_hud_snapshot()
 		cancel_keeps_hang_ok = (
 			cancel_click_ok
 			and cancel_spy.request_cancel_count == 1
 			and str((cancelled_snapshot.get("matchState", {}) as Dictionary).get("status", "")) == HangMatchmakingClientModel.STATUS_CANCELLED
 			and bool(cancelled_snapshot.get("hangActive", false))
-			and bool(cancelled_snapshot.get("worldStatusVisible", false))
+			and not bool(cancelled_snapshot.get("panelVisible", true))
+			and not bool(cancelled_snapshot.get("worldStatusVisible", true))
+			and not bool(cancelled_roster.get("cancelVisible", true))
+			and bool(cancelled_roster.get("formalWorldHudReady", false))
 		)
 		if not cancel_keeps_hang_ok:
-			print("hang matchmaking cancel debug: %s" % JSON.stringify(cancelled_snapshot))
+			print("hang matchmaking cancel debug: state=%s formal=%s" % [
+				JSON.stringify(cancelled_snapshot),
+				JSON.stringify(cancelled_roster),
+			])
 
-		var stop_button := _hang_matchmaking_check_button_by_text(
-			host.hang_matchmaking_world_status,
-			"停止挂机"
+		# Open the formal matching panel from the restored bottom action bar, then
+		# stop with its own stable button.  Both presses are real cross-frame left
+		# clicks; the retired compact status remains hidden throughout.
+		var hang_entry_click_ok := await _hang_matchmaking_check_real_left_click(
+			host.stop_button
 		)
-		stop_click_ok = await _hang_matchmaking_check_real_left_click(stop_button)
+		var stop_panel_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
+		var formal_stop_button := host.hang_matchmaking_panel.get("stop_button") as Button
+		var formal_stop_ready := (
+			bool(stop_panel_snapshot.get("panelVisible", false))
+			and formal_stop_button != null
+			and formal_stop_button.name == "HangMatchStopButton"
+			and formal_stop_button.is_visible_in_tree()
+			and not bool(stop_panel_snapshot.get("worldStatusVisible", true))
+		)
+		var formal_stop_click_ok := await _hang_matchmaking_check_real_left_click(
+			formal_stop_button
+		)
+		stop_click_ok = (
+			hang_entry_click_ok
+			and formal_stop_ready
+			and formal_stop_click_ok
+		)
 		await host.get_tree().process_frame
 		await host.get_tree().process_frame
 		var stopped_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
+		var stopped_roster := _hang_matchmaking_check_formal_hud_snapshot()
 		stop_hides_ok = (
 			close_click_ok
 			and stop_click_ok
 			and cancel_spy.clear_count >= 1
 			and not bool(stopped_snapshot.get("hangActive", true))
+			and str((stopped_snapshot.get("matchState", {}) as Dictionary).get("status", "")) == HangMatchmakingClientModel.STATUS_IDLE
 			and not bool(stopped_snapshot.get("worldStatusVisible", true))
 			and not bool(stopped_snapshot.get("panelVisible", true))
+			and not bool(stopped_roster.get("cancelVisible", true))
+			and bool(stopped_roster.get("formalWorldHudReady", false))
 		)
 		if not stop_hides_ok:
 			print("hang matchmaking stop debug: %s" % JSON.stringify(stopped_snapshot))
@@ -4491,30 +4651,38 @@ func _run_auto_hang_matchmaking_check() -> void:
 		and panel_contract_ok
 		and start_choice_ok
 		and matching_ok
+		and local_rebirth_projection_ok
 		and revision_dedupe_ok
 		and npc_filled_ok
 		and replacement_ok
+		and active_snapshot_priority_ok
+		and full_empty_snapshot_priority_ok
 		and full_ok
 		and party_update_refresh_ok
 		and matching_resumed_ok
 		and auto_battle_strategy_ok
+		and battle_hud_visibility_ok
 		and cancel_keeps_hang_ok
 		and stop_hides_ok
 	) else "failed"
-	print("hang matchmaking check ready: status=%s client=%s ui=%s panel=%s choice=%s matching=%s dedupe=%s npc_filled=%s replacement=%s full=%s party_update_refresh=%s matching_resumed=%s auto_strategies=%s cancel_click=%s cancel_keeps_hang=%s close_click=%s stop_click=%s stop_hides=%s model_errors=%s" % [
+	print("hang matchmaking check ready: status=%s client=%s ui=%s panel=%s choice=%s matching=%s local_rebirth=%s dedupe=%s npc_filled=%s replacement=%s active_snapshot_priority=%s full_empty_snapshot_priority=%s full=%s party_update_refresh=%s matching_resumed=%s auto_strategies=%s battle_hud=%s cancel_click=%s cancel_keeps_hang=%s close_click=%s stop_click=%s stop_hides=%s model_errors=%s" % [
 		status,
 		str(client_model_ok),
 		str(ui_ready),
 		str(panel_contract_ok),
 		str(start_choice_ok),
 		str(matching_ok),
+		str(local_rebirth_projection_ok),
 		str(revision_dedupe_ok),
 		str(npc_filled_ok),
 		str(replacement_ok),
+		str(active_snapshot_priority_ok),
+		str(full_empty_snapshot_priority_ok),
 		str(full_ok),
 		str(party_update_refresh_ok),
 		str(matching_resumed_ok),
 		str(auto_battle_strategy_ok),
+		str(battle_hud_visibility_ok),
 		str(cancel_click_ok),
 		str(cancel_keeps_hang_ok),
 		str(close_click_ok),
@@ -4603,13 +4771,126 @@ func _hang_matchmaking_check_server_session() -> Dictionary:
 	}
 
 
-func _hang_matchmaking_check_button_by_text(root: Node, text_value: String) -> Button:
-	if root == null:
-		return null
-	for value in root.find_children("*", "Button", true, false):
-		if value is Button and (value as Button).text == text_value:
-			return value as Button
-	return null
+func _hang_matchmaking_check_formal_hud_snapshot() -> Dictionary:
+	var result := {
+		"activeTab": "",
+		"rowKinds": [],
+		"statusText": "",
+		"cancelVisible": false,
+		"formalWorldHudReady": false,
+	}
+	var roster := host.world_hud_party_roster_view as Control
+	var awakened := host.world_hud_awakened_view as Control
+	if roster == null or awakened == null:
+		return result
+	var roster_value = roster.call("debug_snapshot")
+	if not (roster_value is Dictionary):
+		return result
+	result.merge((roster_value as Dictionary).duplicate(true), true)
+	var layout_value = awakened.call("layout_contract")
+	if not (layout_value is Dictionary):
+		return result
+	var layout := layout_value as Dictionary
+	var action_rect_value = layout.get("actionBarRect", Rect2())
+	var action_rect := action_rect_value as Rect2 if action_rect_value is Rect2 else Rect2()
+	var viewport_size: Vector2 = host.get_viewport().get_visible_rect().size
+	var action_rect_ok: bool = (
+		action_rect.size.x >= viewport_size.x * 0.4
+		and action_rect.size.y >= viewport_size.y * 0.2
+		and action_rect.position.x >= viewport_size.x * 0.4
+		and action_rect.position.y >= viewport_size.y * 0.65
+		and action_rect.end.x <= viewport_size.x + 2.0
+		and action_rect.end.y <= viewport_size.y + 2.0
+	)
+	var fixed_row := awakened.find_child("WorldHudFixedEntries", true, false) as Control
+	var bottom_slots_ok := fixed_row != null and fixed_row.is_visible_in_tree()
+	if bottom_slots_ok:
+		# 设置、家族、买卖、打造、图鉴、宠物、角色、挂机。
+		bottom_slots_ok = fixed_row.get_child_count() == 8
+		for child in fixed_row.get_children():
+			if not (child is Control) or not (child as Control).is_visible_in_tree():
+				bottom_slots_ok = false
+				break
+	var floating_slots_ok := true
+	var floating_slot_states: Dictionary = {}
+	for slot_name in [
+		"WorldHudIconSlotMailbox",
+		"WorldHudBackpackFloating",
+		"WorldHudCollapseSlot",
+	]:
+		var slot := awakened.find_child(slot_name, true, false) as Control
+		floating_slot_states[slot_name] = {
+			"found": slot != null,
+			"visible": slot != null and slot.is_visible_in_tree(),
+			"rect": slot.get_global_rect() if slot != null else Rect2(),
+		}
+		if slot == null or not slot.is_visible_in_tree():
+			floating_slots_ok = false
+	result["awakenedVisible"] = awakened.is_visible_in_tree()
+	result["rosterVisible"] = roster.is_visible_in_tree()
+	result["layoutMounted"] = bool(layout.get("mounted", false))
+	result["layoutCollapsed"] = bool(layout.get("collapsed", true))
+	result["actionRect"] = action_rect
+	result["actionRectOk"] = action_rect_ok
+	result["bottomSlotsOk"] = bottom_slots_ok
+	result["floatingSlotsOk"] = floating_slots_ok
+	result["floatingSlotStates"] = floating_slot_states
+	result["legacyRosterHidden"] = (
+		host.party_roster_panel == null
+		or not host.party_roster_panel.visible
+	)
+	result["legacyWorldStatusHidden"] = (
+		host.hang_matchmaking_world_status == null
+		or not host.hang_matchmaking_world_status.visible
+	)
+	result["formalWorldHudReady"] = (
+		bool(result.get("rosterVisible", false))
+		and bool(result.get("awakenedVisible", false))
+		and bool(result.get("layoutMounted", false))
+		and not bool(result.get("layoutCollapsed", true))
+		and action_rect_ok
+		and bottom_slots_ok
+		and floating_slots_ok
+		and bool(result.get("legacyRosterHidden", false))
+		and bool(result.get("legacyWorldStatusHidden", false))
+	)
+	return result
+
+
+func _hang_matchmaking_check_roster_counts(
+	snapshot: Dictionary,
+	human_count: int,
+	npc_count: int,
+	empty_count: int
+) -> bool:
+	var raw_kinds = snapshot.get("rowKinds", [])
+	if not (raw_kinds is Array) or (raw_kinds as Array).size() != HangMatchmakingClientModel.PARTY_MAX_MEMBERS:
+		return false
+	var counts := {"human": 0, "npc": 0, "empty": 0}
+	for value in raw_kinds as Array:
+		var kind := str(value)
+		if not counts.has(kind):
+			return false
+		counts[kind] = int(counts.get(kind, 0)) + 1
+	return (
+		int(counts.get("human", 0)) == human_count
+		and int(counts.get("npc", 0)) == npc_count
+		and int(counts.get("empty", 0)) == empty_count
+	)
+
+
+func _hang_matchmaking_check_first_level_text() -> String:
+	if host.world_hud_party_roster_view == null:
+		return ""
+	var first_card := host.world_hud_party_roster_view.find_child(
+		"WorldHudPartyMember1",
+		true,
+		false
+	) as Control
+	if first_card == null:
+		return ""
+	var level_label := first_card.find_child("LevelText", true, false) as Label
+	return level_label.text if level_label != null else ""
 
 
 func _hang_matchmaking_check_real_left_click(control: Control) -> bool:

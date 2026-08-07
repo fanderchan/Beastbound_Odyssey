@@ -527,3 +527,116 @@ final result: passed
 `ownerReviewStatus=pending`；本结论只代表工程 Design QA 通过，不替代项目所有者观看与审美接受。
 
 final result: passed
+
+---
+
+# Phase 395 Design QA：正式世界 HUD 与右侧五席组队页
+
+## Findings
+
+- 结论：`P0=0 / P1=0 / P2=0`。
+- P0：无。
+- P1：无。组队页只消费 Phase 394 的权威匹配／party state；真人、NPC 陪练与空位分离，
+  不制造账号、在线人口、奖励资格或额外服务端 mutation，协议版本不变。
+- P2：无。参考图要求的右侧“任务／组队”双页签、五张纵向卡、匹配后回世界和完整底部
+  功能栏均进入真实 `Main.tscn`；战斗时世界 HUD 隐藏、退战后恢复；旧灰色 roster／status
+  永久隐藏，正常画面无 QA、接口、account ID 或工程计数器。
+
+## Comparison target and result
+
+- 比较目标为项目所有者提供的世界场景右侧五席组队参考图：正式页签与纵向队员卡应处于世界
+  HUD 内，底部邮箱、背包和功能入口必须保留；不是把匹配页或程序面板盖在世界上。
+- Beastbound 保留原创深棕／铜金视觉和自有图标，只借鉴信息架构。真人只显示权威名字、等级、
+  头像和存在的元素；参考侧栏本身不展示 HP，因此本阶段不额外增加血条；缺失的转生、
+  NPC 元素与在线数均不伪造。
+- 参考／实机同屏图：
+  `.run/evidence/phase395_hang_matchmaking_world_hud_owner_review/phase395-final-owner-review-v5-20260808/reference-vs-implementation.png`，
+  SHA-256 `c3c8c2516d8bb4518000d9e10caaec32c4739f026c44ac31c7cc8a0f4212ae78`。
+
+## Required fidelity surfaces
+
+- Layout：右侧固定“任务／组队”双页签；组队页五席纵排；完整底部功能栏持续贴底且不被旧
+  状态块覆盖。
+- Hierarchy：真人、明确标注的 NPC 陪练、等待空位和“下一场替换陪练”形成真实层级；NPC
+  不能靠真人头像或虚假转生／元素伪装。
+- Flow：选路线与匹配前置页结束后自动回世界并选中组队；任务／组队可左键切换；取消匹配
+  继续挂机，正式停止后才结束挂机并回世界。
+- Continuity：普通 party update、matching、npc_filled、replacement、full、cancelled 和 stop
+  均刷新同一个正式 roster 实例；底栏、邮箱、背包与收起入口不丢失。
+- Battle boundary：进入战斗统一隐藏世界顶栏、左侧入口、右栏和底栏，退出战斗恢复同一个
+  世界 HUD 与队伍投影，不允许战斗继续显示地图功能。
+- Cleanup：旧 `party_roster_panel` 与 `HangMatchmakingWorldStatus` 在所有刷新路径保持隐藏，
+  不允许事件回调重新显示。
+- Truth：空闲空队不伪造真人；active/full 的空控制器快照均压过过期普通队伍；匹配过滤离线
+  真人并按账号判本地身份；待同步真人与无权威头像成员保持中性。全屏路线／开始页使用同一
+  生产真值，不另造“真人队友”或 `Lv0`。这些是录前与同步阶段的 check-only 硬门，不是
+  十章成片中的玩家可见章节或 QA 叠层。
+
+## Engineering and media evidence
+
+- Godot 解析、world HUD presenter／view、五席 roster、挂机面板 focused checks 全部通过；
+  最新 `.run/godot_auto_checks/2026-08-07T21-53-46-564Z.log` 的
+  `--auto-hang-matchmaking-check` 为 `2/2 PASS`，其中 `battle_hud=true`。
+- `auth-hang-matchmaking.test.js` 为 `13/13 PASS`；本阶段不改服务端或协议。
+- world HUD 资源严格审计为 `source=33 / runtime=33 / manifest=66`；审计单测 `4/4 PASS`，
+  审计与录像工具 Python 定向单测合计 `10/10 PASS`。
+- 代码审查最终为 `P0=0 / P1=0 / P2=0`。最终真实 `Main.tscn` 视频为
+  `20.933333s / 628` 帧、
+  `1280×720 / 30 FPS / 1.00×`，H.264 `yuv420p`／AAC 48kHz 双声道且全片解码；十章
+  共 9 次跨帧左键。MP4 SHA-256：
+  `7b77751c01e4bb7a8813201c16d55914bd49ef219f9635b53088c7933a5aac06`；联系表 SHA-256：
+  `c886aad59d0acdd4c6bbc1c59c02b403a5e4f159752726d9e917cde9829bbdf1`。
+- `godot-recording.log` 的 `WARNING`、`ERROR` 与 `leak` 均为零，SHA-256
+  `57b1b2e92543da2e5aaa93bd09d9f33531e9bf8bb6d7e6b5fb70401221c1b1ae`；`SHA256SUMS`
+  SHA-256 为 `644cda7741200e438489d6fc72c52ed99280f19df8a907ab911469aa2596b9e2`。清单不含后写
+  `summary.json`，摘要另以 SHA-256
+  `d40ae0560e13e30d43a32df8aa9960a7dc352860077767fe3994eee019422aa9` 单列。
+- `serverWrites=0` 只是摘要的捕获合同声明：工具未启后端、未访问 MySQL、禁用正常档案保存，
+  结束态无 HTTP 连接；它不是 HTTP 请求或服务端写入计数器，不能作为真实服务端零写入证明。
+- detached source attestation：
+  `.run/evidence/phase395_hang_matchmaking_world_hud_owner_review/phase395-final-owner-review-v5-20260808/source-attestation.json`，
+  SHA-256 `cedd453c335c14aab13c7a6ce064df424ca116cfc5388ebc66035974af62bd5d`。
+  它锁定 `93` 条录制关键路径（21 个脚本／工具及 72 个非 `.import`／`.uid` 资源包文件）；
+  `93/93` mtime 均早于录制边界，资源树 SHA-256
+  `bd6c913e7065ac1baf024660c169cf07a5633c4dedf555e44790e0c113fb4a21`，scoped diff SHA-256
+  `65b625be47bc5e2acbb647bfd64e51167ec37c82b2970259f99b146ec915b717`，状态为
+  `passed_with_explicit_post_run_boundary`。
+- 外层清单：
+  `.run/evidence/phase395_hang_matchmaking_world_hud_owner_review/phase395-final-owner-review-v5-20260808/OUTER-SHA256SUMS`，
+  `33/33 PASS`，SHA-256
+  `dc3fb9efe6d242e95c47b2c1229a0d2f469c49339eed44af686e48ab07a3a1bc`；它补充覆盖后写摘要、
+  参考同屏和 detached attestation。
+- 独立 idle 在正常 30 FPS 世界空闲路径稳定 `29.8..30.0 FPS`，后 10 秒
+  `process_total` 平均 `0.355ms`（`0.22..0.43ms`）、CPU 平均 `1.71%`；真实跨帧移动
+  `status=ok / path_len=11`，稳定约 60 FPS，`process_total` 平均 `0.711ms`
+  （`0.49..1.27ms`）、CPU 平均 `5.64%`。
+- 连续点击为 `accepted=35 / resolved=11 / applied=11 / screen_matches=35 / mismatches=0`，
+  输入平均／最大 `1/3us`，移动、合并、停稳、最终目标均为真；三个性能进程无
+  ERROR／SCRIPT ERROR／WARNING 或进程残留。MovieWriter 不冒充稳态性能证明。
+
+## P3 observations
+
+- [P3] 最终录像是隔离、确定性的真实 Main／PFC 流程，注入 controller 且只记录结束态无
+  HTTP 连接；不冒充真实多客户端真人匹配。真实 MySQL fault injection 未在本阶段做。
+- [P3] detached source attestation 是录后 SHA／mtime 绑定，不是录制进程内工件，也没有密码学
+  可信时间戳；内层 `SHA256SUMS` 不含后写 `summary.json`，外层清单已补充覆盖，两种边界保持
+  分开陈述。
+- [P3] 非阻断代码债：正式 HUD mount 中途失败时局部回滚仍可更完整；roster 刷新仍依赖
+  legacy node 存在；同图热替换 render-state 时 minimap 不会立即重配。
+- [P3] 项目所有者尚未观看纠正版，`ownerReviewStatus=pending`；不能冒充视觉批准或 broad
+  P2.2 完成。
+
+## Comparison history
+
+| 轮次 | 发现 | 修复 | 复核证据 |
+| --- | --- | --- | --- |
+| 用户反馈 | P2：旧录屏用灰色程序 roster，匹配后未展示正式世界 HUD，底部右侧既有功能栏看似丢失 | 将组队作为正式世界 HUD 内嵌页签，匹配后回世界；旧 roster／status 永久隐藏 | 真实 Main 十章视频、五席和完整底栏断言 |
+| Truth pass | P2：空闲／active／full 空快照、离线成员、同名异账号和待同步资料可能被旧缓存或 UI fallback 伪装成真人 | 空闲不补人；active/full 控制器快照优先；匹配过滤离线真人并按账号判身份；缺资料与头像保持中性，全屏页复用生产真值 | 四组 truth gates 与 fullscreen production truth 的录前／同步 check-only 硬门全过，不作为视频章节 |
+| Flow pass | P2：取消匹配与停止挂机若共用旧状态按钮会继续暴露工程 UI | 右栏正式取消只结束匹配；底栏进入正式挂机页后再停止 | 9 次跨帧左键、auto `2/2` |
+| Battle pass | P2：世界地图 HUD 曾可能留在战斗中 | 进入战斗隐藏世界 HUD，退出后恢复同一实例与状态 | auto `battle_hud=true` |
+| Evidence binding | P2：原始内层清单未覆盖后写摘要、参考同屏，也未绑定录制关键源码 | 增加 detached 93 路径 source attestation 与 33 项外层清单，保留录后／无可信时间戳边界 | source tree、scoped diff、attestation 与 outer manifest SHA 固定，外层 `33/33 PASS` |
+| Final | 未发现剩余 P0、P1、P2；保留真实联机／MySQL、录后 attestation 边界与三项非阻断工程债 | 无进一步产品改动 | Godot、Node、资源、Python、录制、性能和媒体门禁通过 |
+
+`ownerReviewStatus=pending`；本结论只代表工程与媒体 Design QA 通过，等待项目所有者观看纠正版。
+
+final result: passed

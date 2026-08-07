@@ -1,0 +1,710 @@
+{
+  "schemaVersion": 1,
+  "packageId": "world_hud_awakened_v1",
+  "status": "passed",
+  "auditedAt": "2026-08-08",
+  "contract": {
+    "iconCount": 33,
+    "sourceCount": 33,
+    "runtimeCount": 33,
+    "manifestAssetCount": 66,
+    "topIconCount": 7,
+    "eventIconCount": 12,
+    "trackedForbiddenSidecarCount": 0
+  },
+  "runtimeReferences": {
+    "source": "client/godot/scripts/ui/world_hud_awakened_visual_skin.gd",
+    "activeIconCount": 30,
+    "activeIconIds": [
+      "account",
+      "auto",
+      "backpack",
+      "chat",
+      "collapse",
+      "equipment",
+      "event_account",
+      "event_auto",
+      "event_backpack",
+      "event_character",
+      "event_codex",
+      "event_family",
+      "event_party",
+      "event_pet",
+      "event_quest",
+      "family",
+      "hang",
+      "mailbox",
+      "map",
+      "market",
+      "more",
+      "party",
+      "quest",
+      "top_classic",
+      "top_guide",
+      "top_hang",
+      "top_more",
+      "top_pet",
+      "top_quest",
+      "top_strengthen"
+    ],
+    "reservedIconCount": 3,
+    "reservedIconIds": [
+      "event_equipment",
+      "event_mailbox",
+      "event_market"
+    ]
+  },
+  "documents": {
+    "manifest": {
+      "path": "client/godot/assets/ui/world_hud_awakened_v1/asset-manifest.json",
+      "sha256": "3d626f72d52248c6ccc5f14177c73b342ac2f35bfc2baa48408d4bcfdad5858e"
+    },
+    "ownership": {
+      "path": "client/godot/assets/ui/world_hud_awakened_v1/source-and-ownership.md",
+      "sha256": "d19589744557fa77591a3feeb1466b7be672e5341b03c2711287f059c5255420"
+    },
+    "prompts": {
+      "path": "client/godot/assets/ui/world_hud_awakened_v1/generation-prompts.md",
+      "sha256": "9db8781134842054e5adc09e12bbf58ee17005c51cb283f6548fa91478e72f1d"
+    },
+    "ignore": {
+      "path": "client/godot/assets/ui/world_hud_awakened_v1/.gitignore",
+      "sha256": "11a6aa96623006b92021d8cf4ce0fdad87548bd02f42ed4b21f86595776093a5"
+    },
+    "sourceGodotIgnore": {
+      "path": "client/godot/assets/ui/world_hud_awakened_v1/source/.gdignore",
+      "sha256": "70d37061e82beca4b51b5ba677467d61bbdfa7732520d4e0a28a25f213b5f919"
+    }
+  },
+  "files": [
+    {
+      "iconId": "account",
+      "source": {
+        "relativePath": "source/generated/account_raw_chroma.png",
+        "bytes": 2087227,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "f6b497901d696d0bdfa09ae8aee2edf3fa389e3ae20cc3ab90d700593c64262a"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/account.png",
+        "bytes": 25623,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "d50b72f6bfe0ec98629996e42583fc04b1a66ff24b6918ae7aadb4db7d20de73"
+      }
+    },
+    {
+      "iconId": "auto",
+      "source": {
+        "relativePath": "source/generated/auto_raw_chroma.png",
+        "bytes": 1655276,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "e605ad12a7d26d81921a39702ef8293900b2f9ab7b6ba0230d73ebe4e29aadcb"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/auto.png",
+        "bytes": 24864,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "92031e7970a0ff86c79a2d4c8a2d58ce8f3fd88aa7a2113fc879b62f8005d18e"
+      }
+    },
+    {
+      "iconId": "backpack",
+      "source": {
+        "relativePath": "source/generated/backpack_raw_chroma.png",
+        "bytes": 1234504,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "2950f46703bb06e7dafaca085d31b5f8ab903dcd9458b9166c4031584373a561"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/backpack.png",
+        "bytes": 21302,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "0518dab7bd59645282d6574ec5d83da60e9530b7ef0a166774fef4d2d99a6f7d"
+      }
+    },
+    {
+      "iconId": "chat",
+      "source": {
+        "relativePath": "source/generated/chat_raw_chroma.png",
+        "bytes": 1594020,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "da86a49480c637008eec39ba8ef26f5fd8266313fac06ea974d19077faf52e96"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/chat.png",
+        "bytes": 18317,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "300d81f188a310dd74b33095abedfdf69429420598b7fe6d112b067fbd743b20"
+      }
+    },
+    {
+      "iconId": "collapse",
+      "source": {
+        "relativePath": "source/generated/collapse_raw_chroma.png",
+        "bytes": 1542392,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "9a865813fdc7b279718c81f32344bd2bdc7801bc068a7dd41cb6f9de20f8314f"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/collapse.png",
+        "bytes": 23174,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "353d9eafb1babc281a868ad915e01d2f872ee8f449cf0adf32caf10e44411b9b"
+      }
+    },
+    {
+      "iconId": "equipment",
+      "source": {
+        "relativePath": "source/generated/equipment_raw_chroma.png",
+        "bytes": 1853816,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "92162661d58b3d1309b8ad64e4dfa49085f8455f2cf7ee03a5ebfba7b26fc813"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/equipment.png",
+        "bytes": 20075,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "02e40bb415f17de5dd15490788412aebb8d45dbb7e867f904440dbd2718bd1bc"
+      }
+    },
+    {
+      "iconId": "event_account",
+      "source": {
+        "relativePath": "source/generated/event_account_raw_chroma.png",
+        "bytes": 2072786,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "f9ea3d6727edcc493834b07095b113b2a03faf4ab939095c521afe3b456cae34"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_account.png",
+        "bytes": 30406,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "de74d64c07c1a36f99556ff604c812d65b95526da29328b09a3731a96cd6f3e3"
+      }
+    },
+    {
+      "iconId": "event_auto",
+      "source": {
+        "relativePath": "source/generated/event_auto_raw_chroma.png",
+        "bytes": 1671601,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "1217057942c3fd90f1d9e82baae84901f7f5a00eb72df87ce932e61515cc2756"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_auto.png",
+        "bytes": 28036,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "548775477c528da304fcf179640c5c30da16a7d48890a2d83f4c75812a8f1513"
+      }
+    },
+    {
+      "iconId": "event_backpack",
+      "source": {
+        "relativePath": "source/generated/event_backpack_raw_chroma.png",
+        "bytes": 2455916,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "99451e0ecd90501159385e77151a017ee0747c527bd37c5a5bbafd9ff874d0fd"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_backpack.png",
+        "bytes": 29276,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "d8a764ec190e923d62b19758ff8ec243006d7a5c568a2c85f1b99fd4851a57b7"
+      }
+    },
+    {
+      "iconId": "event_character",
+      "source": {
+        "relativePath": "source/generated/event_character_raw_chroma.png",
+        "bytes": 2127422,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "a9c6c36639bf7d4dcd13a4a8e832ef004773335e0b8dc85423a2a8b0ade3c6b9"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_character.png",
+        "bytes": 25627,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "59a6845a0ec3d611010a39ebf69e6ebff15263a8440082cbede132401fa81eb5"
+      }
+    },
+    {
+      "iconId": "event_codex",
+      "source": {
+        "relativePath": "source/generated/event_codex_raw_chroma.png",
+        "bytes": 1637265,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "248e558448fe0ab5a24c3fd4f6e4bcc1915a39b4d07facee82190fe20b48d40f"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_codex.png",
+        "bytes": 26637,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "71501d106728c6222b5f66ebd51da6200d4820acdcc1c0eef98ddc9ed904040c"
+      }
+    },
+    {
+      "iconId": "event_equipment",
+      "source": {
+        "relativePath": "source/generated/event_equipment_raw_chroma.png",
+        "bytes": 2250210,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "54f30349a6dd80c924743280087c5de2f0d5cb3bed74d74e7fcfa6c014826b98"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_equipment.png",
+        "bytes": 33127,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "5e05016270d7b4e33b2031fa67a543bcdccc9a2c9af9e1775b87a350c4f2b535"
+      }
+    },
+    {
+      "iconId": "event_family",
+      "source": {
+        "relativePath": "source/generated/event_family_raw_chroma.png",
+        "bytes": 1656855,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "9e3a2ea1cee7985aacaa3831fb690dca5eb8edebf36bb7cc106a75773511128e"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_family.png",
+        "bytes": 28780,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "e6aeb32cd01c67c5bebf1a0c088790225b4f6daacf6557d622bdac1ce14a9ced"
+      }
+    },
+    {
+      "iconId": "event_mailbox",
+      "source": {
+        "relativePath": "source/generated/event_mailbox_raw_chroma.png",
+        "bytes": 2252916,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "25c4be221fe1d36c69adccebdde83430afe0d856a404fa9a64fb38aa1db08978"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_mailbox.png",
+        "bytes": 31260,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "3ec894d39d69d497fa7dde9de17b24c208f9478f83a745b4227c6003079ed7be"
+      }
+    },
+    {
+      "iconId": "event_market",
+      "source": {
+        "relativePath": "source/generated/event_market_raw_chroma.png",
+        "bytes": 1999537,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "20d254c0479c8d5625ba86c1bf97efced8aa2527ccf30d2bc76d7d83e5ed23e1"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_market.png",
+        "bytes": 32616,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "e40f127cd5f44b56b15d6ed90b8b8910307fd6d3c0e7574b051503d852d75833"
+      }
+    },
+    {
+      "iconId": "event_party",
+      "source": {
+        "relativePath": "source/generated/event_party_raw_chroma.png",
+        "bytes": 2276748,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "15102e0de5150159e801c604596c7d5b051c4566baf406fa90830a5dd2e65d76"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_party.png",
+        "bytes": 33252,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "9965af48e977d07344f863936698494370a3ad9ae55bfba1cc3188fe90e33ae3"
+      }
+    },
+    {
+      "iconId": "event_pet",
+      "source": {
+        "relativePath": "source/generated/event_pet_raw_chroma.png",
+        "bytes": 2398174,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "28d8196ff28ff0b9e490f51ff278d8042d638f84526167f0d119725cdc8c11ba"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_pet.png",
+        "bytes": 27975,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "407a9222653666c5ac7b0dcf0f14f8b03a04f6fa794a515ee532873bb5d25208"
+      }
+    },
+    {
+      "iconId": "event_quest",
+      "source": {
+        "relativePath": "source/generated/event_quest_raw_chroma.png",
+        "bytes": 2003255,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "764f69cfb4b9d5d22d70f60a47598aaba86b09c1caa8e605f274edbba24b09c0"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/event_quest.png",
+        "bytes": 28478,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "d66f9deb9443f674b67853c4ad4cbbbfaea5dbecfe78530a146aa7fc2e70ecc8"
+      }
+    },
+    {
+      "iconId": "family",
+      "source": {
+        "relativePath": "source/generated/family_raw_chroma.png",
+        "bytes": 1354161,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "81ace0b55b7ffc8920ba4c968d2ce634b909bc911f91a801e300a41fb19267d7"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/family.png",
+        "bytes": 18651,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "a78556cc8db12e2007e33413c93d66c231c8ff12b95411fc8dc643a4d8a77e2d"
+      }
+    },
+    {
+      "iconId": "hang",
+      "source": {
+        "relativePath": "source/generated/hang_raw_chroma.png",
+        "bytes": 1211440,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "502fe291f0e2cf9312fc87d479a7ad052081ac32ab8e5180d2a4614ddaa0866b"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/hang.png",
+        "bytes": 22019,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "73a3fc3e892e6fbca0e223a6e40c3137684eca04fb7b6b1121e70e3c1dd6ad55"
+      }
+    },
+    {
+      "iconId": "mailbox",
+      "source": {
+        "relativePath": "source/generated/mailbox_raw_chroma.png",
+        "bytes": 1367852,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "eaf9b35dc153dccfc2f6890dc423f14f79b3f280d40cc3b3a9fdb48582e11c1b"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/mailbox.png",
+        "bytes": 22288,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "15adbf94d368c7c3f2839bf888799e9f91047573e45e1a1b62aa557120b50e20"
+      }
+    },
+    {
+      "iconId": "map",
+      "source": {
+        "relativePath": "source/generated/map_raw_chroma.png",
+        "bytes": 1233819,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "2012bfaa6d2d293898f88387accce9c02b9ce8536f8d4ae65d720ab16d58517e"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/map.png",
+        "bytes": 19366,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "fdd24408da740f30d6a9eb712e932935bc46321a82dbc3b4d76a5769f72b9f78"
+      }
+    },
+    {
+      "iconId": "market",
+      "source": {
+        "relativePath": "source/generated/market_raw_chroma.png",
+        "bytes": 891547,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "134edcb67f3579dc7eead2cf1a21ad5dd389ff66f6b4ca9079bff25f676ef02e"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/market.png",
+        "bytes": 19007,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "65fb7283fb38722f34fd271d2742ee380c5abc725587865c308f0c9f5a67cd73"
+      }
+    },
+    {
+      "iconId": "more",
+      "source": {
+        "relativePath": "source/generated/more_raw_chroma.png",
+        "bytes": 1674986,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "21a7975e864c5fa83618f0abb3fad51122da645398ef1549499fac2a305557be"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/more.png",
+        "bytes": 24310,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "6f91bc46b815399d687f4a42836c6e337a96ed5cf6e9e9b1818c56c338fbcb4f"
+      }
+    },
+    {
+      "iconId": "party",
+      "source": {
+        "relativePath": "source/generated/party_raw_chroma.png",
+        "bytes": 1558108,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "86cfb591472d8e00461a9e285e25310ad90f1cf8ec21d933a9aa14c0e8c6e9f3"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/party.png",
+        "bytes": 19238,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "5ab9ed9f519b0198ddcd1207a9982177459bff9a86a57c59e690fb3579cd4f96"
+      }
+    },
+    {
+      "iconId": "quest",
+      "source": {
+        "relativePath": "source/generated/quest_raw_chroma.png",
+        "bytes": 1923762,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "7b489c66929f8c4b98a487991b348918d0ac23e866d5f699280f1114e692250b"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/quest.png",
+        "bytes": 20812,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "c5f5d8c2b0218bf96a670b9bcbf97d6bde3659843f46a1898338c19fde67e832"
+      }
+    },
+    {
+      "iconId": "top_classic",
+      "source": {
+        "relativePath": "source/generated/top_classic_raw_chroma.png",
+        "bytes": 2348094,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "16683646b6142baa2d592db0e2a40cf474d820efccf706ca7436bac2d94db878"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/top_classic.png",
+        "bytes": 30158,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "ae9f500f175053d6810265cc60b11aa1a06815d97b7c328b7df65f2d2a1b6df1"
+      }
+    },
+    {
+      "iconId": "top_guide",
+      "source": {
+        "relativePath": "source/generated/top_guide_raw_chroma.png",
+        "bytes": 2079305,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "4ac847984dfc76916c5a1a955cce834cba1157c7f85befe3ec9484535d616ab9"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/top_guide.png",
+        "bytes": 26836,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "11d79cc1ce01e1d7c4d2e274e39a427cefd12365dd1ca4ccd5d8d654536149bd"
+      }
+    },
+    {
+      "iconId": "top_hang",
+      "source": {
+        "relativePath": "source/generated/top_hang_raw_chroma.png",
+        "bytes": 1983045,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "7363d6671e2fd600f184ca217c74bf47380ec6e4a0f75a0d876a6bc7cb9a5e0e"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/top_hang.png",
+        "bytes": 25072,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "24ec214cee95c33fbee18a7877f0c14abd5b8b01074e2eec970323460550e55f"
+      }
+    },
+    {
+      "iconId": "top_more",
+      "source": {
+        "relativePath": "source/generated/top_more_raw_chroma.png",
+        "bytes": 2131136,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "2b6e3d6e904702c44bd2b5468ac1e15af9fa60c9266b7e8d4ed688f70ee81ead"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/top_more.png",
+        "bytes": 25616,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "4ab58ef03a7bc0a4ca54dfd7e113640c36262847f71778cf4dcbfa441f14a4d2"
+      }
+    },
+    {
+      "iconId": "top_pet",
+      "source": {
+        "relativePath": "source/generated/top_pet_raw_chroma.png",
+        "bytes": 2084057,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "dd5aca9be1c3243dc54fb81eb0f5011dc893e1ccc5f22f6bcf576585c9515b02"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/top_pet.png",
+        "bytes": 23981,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "7d6dcdabe40947a4abfa24f7112a16f33330dadf280f81254f0afd42fdf49145"
+      }
+    },
+    {
+      "iconId": "top_quest",
+      "source": {
+        "relativePath": "source/generated/top_quest_raw_chroma.png",
+        "bytes": 1973325,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "c01d769a6afc5916b44e3cca91363589d319f2df7aabbe5c89e81c37062f6b83"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/top_quest.png",
+        "bytes": 26268,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "30f0f12042d2d245abefedf906e190aa14c66033cd31f3ea2482322870ce9443"
+      }
+    },
+    {
+      "iconId": "top_strengthen",
+      "source": {
+        "relativePath": "source/generated/top_strengthen_raw_chroma.png",
+        "bytes": 2212658,
+        "width": 1254,
+        "height": 1254,
+        "pixelFormat": "RGB8",
+        "sha256": "1fe90aaae0c9798c7af9ec5e57f9db5438dd34a835131907ea8a4f340f2eefe4"
+      },
+      "runtime": {
+        "relativePath": "runtime/icons/top_strengthen.png",
+        "bytes": 26833,
+        "width": 128,
+        "height": 128,
+        "pixelFormat": "RGBA8",
+        "sha256": "42ee806e82852ca2adc1ca897e485c71c3e89dd46006457a148fb1cc85025a8b"
+      }
+    }
+  ],
+  "inventorySha256": "5a41c6cef2202ab911640fd5407165de48f58c52d9e82b8a4d9690ca4ce8d6b9",
+  "errors": []
+}
