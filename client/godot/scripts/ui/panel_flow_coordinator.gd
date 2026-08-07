@@ -72,6 +72,7 @@ const BackpackAwakenedPanelView := preload("res://scripts/ui/backpack_awakened_p
 const BackpackAwakenedVisualSkin := preload(
 	"res://scripts/ui/backpack_awakened_visual_skin.gd"
 )
+const MarketAwakenedPanel := preload("res://scripts/ui/market_awakened_panel.gd")
 const CharacterManagementPresenter := preload(
 	"res://scripts/ui/character_management_presenter.gd"
 )
@@ -335,6 +336,7 @@ var _pet_level_one_radar: Control
 var _pet_level_one_radar_title: Label
 var _pet_growth_radar_title: Label
 var market_http_retry_state = IdempotentHttpRetryState.new()
+var market_sell_selected_source_key: String = ""
 var mailbox_http_retry_state = IdempotentHttpRetryState.new()
 var bank_http_retry_state = IdempotentHttpRetryState.new()
 var market_http_retry_generation: int = 0
@@ -8642,174 +8644,58 @@ func _build_hud() -> void:
 	_register_hud_panels()
 
 func _build_market_panel() -> void:
-	market_panel = _panel_container("MarketPanel")
+	var awakened_view = MarketAwakenedPanel.new()
+	awakened_view.prepare()
+	market_panel = awakened_view
 	market_panel.visible = false
 	market_panel.z_index = 24
-	var market_column = VBoxContainer.new()
-	market_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	market_column.add_theme_constant_override("separation", 8)
-	market_panel.add_child(market_column)
 
-	var market_header = HBoxContainer.new()
-	market_header.add_theme_constant_override("separation", 10)
-	market_column.add_child(market_header)
-	var market_heading = HBoxContainer.new()
-	market_heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_heading.add_theme_constant_override("separation", 16)
-	market_header.add_child(market_heading)
-	var market_title = Label.new()
-	market_title.text = "买卖"
-	market_title.add_theme_font_size_override("font_size", 21)
-	market_title.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	market_heading.add_child(market_title)
-	market_wallet_label = Label.new()
-	market_wallet_label.text = ""
-	market_wallet_label.add_theme_font_size_override("font_size", 16)
-	market_wallet_label.add_theme_color_override("font_color", Color(0.88, 0.94, 0.88, 1.0))
-	market_wallet_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_heading.add_child(market_wallet_label)
-	market_refresh_button = Button.new()
-	market_refresh_button.text = "刷新"
-	market_refresh_button.custom_minimum_size = Vector2(80, 44)
-	market_refresh_button.pressed.connect(_request_market_state)
-	market_header.add_child(market_refresh_button)
-	market_close_button = Button.new()
-	market_close_button.text = "关闭"
-	market_close_button.custom_minimum_size = Vector2(92, 44)
-	market_close_button.pressed.connect(_close_market_panel)
-	market_header.add_child(market_close_button)
+	market_wallet_label = awakened_view.wallet_label
+	market_status_label = awakened_view.status_label
+	market_refresh_button = awakened_view.refresh_button
+	market_close_button = awakened_view.close_button
+	market_buy_tab_button = awakened_view.buy_tab_button
+	market_sell_tab_button = awakened_view.sell_tab_button
+	market_mine_tab_button = awakened_view.mine_tab_button
+	market_buy_button = awakened_view.buy_button
+	market_cancel_button = awakened_view.cancel_button
+	market_sell_count_spinbox = awakened_view.sell_count_spinbox
+	market_sell_currency_option = awakened_view.sell_currency_option
+	market_sell_unit_price_spinbox = awakened_view.sell_unit_price_spinbox
+	market_sell_button = awakened_view.sell_button
+	market_http_request = awakened_view.http_request
+	market_listing_buttons = awakened_view.listing_buttons
+	market_detail_label = awakened_view.find_child("MarketDetailText", true, false) as RichTextLabel
+	market_sell_summary_label = awakened_view.find_child("MarketSellSummaryLabel", true, false) as Label
 
-	var market_tabs = HBoxContainer.new()
-	market_tabs.add_theme_constant_override("separation", 8)
-	market_column.add_child(market_tabs)
-	market_buy_tab_button = _market_tab_button("买入", "buy")
-	market_sell_tab_button = _market_tab_button("出售", "sell")
-	market_mine_tab_button = _market_tab_button("我的挂单", "mine")
-	market_tabs.add_child(market_buy_tab_button)
-	market_tabs.add_child(market_sell_tab_button)
-	market_tabs.add_child(market_mine_tab_button)
-
-	var market_body = HBoxContainer.new()
-	market_body.add_theme_constant_override("separation", 10)
-	market_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	market_column.add_child(market_body)
-	var market_list_scroll = ScrollContainer.new()
-	market_list_scroll.custom_minimum_size = Vector2(290, 0)
-	market_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	market_body.add_child(market_list_scroll)
-	market_list_container = VBoxContainer.new()
-	market_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_list_container.add_theme_constant_override("separation", 7)
-	market_list_scroll.add_child(market_list_container)
-
-	var market_detail_column = VBoxContainer.new()
-	market_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	market_detail_column.add_theme_constant_override("separation", 8)
-	market_body.add_child(market_detail_column)
-	var market_detail_scroll = ScrollContainer.new()
-	market_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	market_detail_column.add_child(market_detail_scroll)
-	market_detail_label = RichTextLabel.new()
-	market_detail_label.bbcode_enabled = false
-	market_detail_label.fit_content = true
-	market_detail_label.scroll_active = false
-	market_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	market_detail_label.add_theme_font_size_override("font_size", 16)
-	market_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_detail_scroll.add_child(market_detail_label)
-
+	# Keep only the smallest hidden compatibility surface used by older focused checks.
+	# Player interaction and presentation exclusively use MarketAwakenedPanel.
 	market_sell_form_container = VBoxContainer.new()
-	market_sell_form_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_sell_form_container.add_theme_constant_override("separation", 7)
-	market_detail_column.add_child(market_sell_form_container)
-	var sell_item_row = HBoxContainer.new()
-	sell_item_row.add_theme_constant_override("separation", 6)
-	market_sell_form_container.add_child(sell_item_row)
+	market_sell_form_container.name = "MarketLegacyCompatibility"
+	market_sell_form_container.visible = false
+	market_sell_form_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	market_panel.add_child(market_sell_form_container)
+	market_list_container = VBoxContainer.new()
+	market_list_container.name = "MarketLegacyListingProxy"
+	market_sell_form_container.add_child(market_list_container)
 	market_sell_item_option = OptionButton.new()
-	market_sell_item_option.custom_minimum_size = Vector2(0, 40)
-	market_sell_item_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_sell_item_option.item_selected.connect(func(_index: int) -> void:
-		_refresh_market_sell_form()
-	)
-	sell_item_row.add_child(market_sell_item_option)
-	market_sell_count_spinbox = SpinBox.new()
-	market_sell_count_spinbox.min_value = 1.0
-	market_sell_count_spinbox.max_value = 1.0
-	market_sell_count_spinbox.step = 1.0
-	market_sell_count_spinbox.rounded = true
-	market_sell_count_spinbox.custom_minimum_size = Vector2(86, 40)
-	market_sell_count_spinbox.value_changed.connect(func(_value: float) -> void:
-		_refresh_market_sell_form()
-	)
-	sell_item_row.add_child(market_sell_count_spinbox)
-	var sell_price_row = HBoxContainer.new()
-	sell_price_row.add_theme_constant_override("separation", 6)
-	market_sell_form_container.add_child(sell_price_row)
-	market_sell_currency_option = OptionButton.new()
-	market_sell_currency_option.custom_minimum_size = Vector2(96, 40)
-	market_sell_currency_option.add_item("石币")
-	market_sell_currency_option.set_item_metadata(0, "stoneCoins")
-	market_sell_currency_option.add_item("钻石")
-	market_sell_currency_option.set_item_metadata(1, "diamonds")
-	market_sell_currency_option.item_selected.connect(func(_index: int) -> void:
-		_refresh_market_sell_form()
-	)
-	sell_price_row.add_child(market_sell_currency_option)
-	market_sell_unit_price_spinbox = SpinBox.new()
-	market_sell_unit_price_spinbox.min_value = 1.0
-	market_sell_unit_price_spinbox.max_value = 999999.0
-	market_sell_unit_price_spinbox.step = 1.0
-	market_sell_unit_price_spinbox.rounded = true
-	market_sell_unit_price_spinbox.custom_minimum_size = Vector2(0, 40)
-	market_sell_unit_price_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_sell_unit_price_spinbox.value = 20.0
-	market_sell_unit_price_spinbox.value_changed.connect(func(_value: float) -> void:
-		_refresh_market_sell_form()
-	)
-	sell_price_row.add_child(market_sell_unit_price_spinbox)
-	market_sell_summary_label = Label.new()
-	market_sell_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	market_sell_summary_label.add_theme_font_size_override("font_size", 14)
-	market_sell_summary_label.add_theme_color_override("font_color", Color(0.80, 0.88, 0.80, 1.0))
-	market_sell_summary_label.custom_minimum_size = Vector2(0, 44)
-	market_sell_form_container.add_child(market_sell_summary_label)
-	market_sell_button = Button.new()
-	market_sell_button.text = "上架出售"
-	market_sell_button.custom_minimum_size = Vector2(0, 46)
-	market_sell_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_sell_button.pressed.connect(_on_market_sell_pressed)
-	market_sell_form_container.add_child(market_sell_button)
+	market_sell_item_option.name = "MarketLegacySellSelectionProxy"
+	market_sell_form_container.add_child(market_sell_item_option)
 
-	var market_action_row = HBoxContainer.new()
-	market_action_row.add_theme_constant_override("separation", 8)
-	market_detail_column.add_child(market_action_row)
-	market_buy_button = Button.new()
-	market_buy_button.text = "购买"
-	market_buy_button.custom_minimum_size = Vector2(0, 46)
-	market_buy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_buy_button.pressed.connect(_on_market_buy_pressed)
-	market_action_row.add_child(market_buy_button)
-	market_cancel_button = Button.new()
-	market_cancel_button.text = "下架"
-	market_cancel_button.custom_minimum_size = Vector2(0, 46)
-	market_cancel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	market_cancel_button.pressed.connect(_on_market_cancel_pressed)
-	market_action_row.add_child(market_cancel_button)
-	market_status_label = Label.new()
-	market_status_label.text = ""
-	market_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	market_status_label.add_theme_font_size_override("font_size", 14)
-	market_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
-	market_status_label.custom_minimum_size = Vector2(0, 32)
-	market_detail_column.add_child(market_status_label)
-
-	market_http_request = HTTPRequest.new()
-	market_http_request.timeout = 8.0
-	market_panel.add_child(market_http_request)
+	awakened_view.close_requested.connect(_close_market_panel)
+	awakened_view.refresh_requested.connect(_request_market_state)
+	awakened_view.mode_requested.connect(_set_market_mode)
+	awakened_view.category_requested.connect(_on_market_local_filter_changed)
+	awakened_view.search_changed.connect(_on_market_local_search_changed)
+	awakened_view.sort_requested.connect(_on_market_local_filter_changed)
+	awakened_view.listing_selected.connect(_select_market_listing)
+	awakened_view.sell_source_selected.connect(_on_market_sell_source_selected)
+	awakened_view.sell_count_changed.connect(_on_market_sell_draft_changed)
+	awakened_view.sell_currency_changed.connect(_on_market_sell_draft_changed)
+	awakened_view.sell_unit_price_changed.connect(_on_market_sell_draft_changed)
+	awakened_view.buy_requested.connect(_on_market_buy_pressed)
+	awakened_view.sell_requested.connect(_on_market_sell_pressed)
+	awakened_view.cancel_requested.connect(_on_market_cancel_pressed)
 	hud_root.add_child(market_panel)
 
 
@@ -20325,79 +20211,136 @@ func _set_market_mode(mode: String) -> void:
 	_refresh_market_panel()
 
 func _refresh_market_panel() -> void:
-	if market_panel == null or market_list_container == null or market_detail_label == null:
+	if market_panel == null or not market_panel.has_method("apply_view_state"):
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
-	var has_server = _is_server_account_session()
-	if market_buy_tab_button != null:
-		market_buy_tab_button.button_pressed = market_mode == "buy"
-		market_buy_tab_button.disabled = market_request_pending
-	if market_sell_tab_button != null:
-		market_sell_tab_button.button_pressed = market_mode == "sell"
-		market_sell_tab_button.disabled = market_request_pending
-	if market_mine_tab_button != null:
-		market_mine_tab_button.button_pressed = market_mode == "mine"
-		market_mine_tab_button.disabled = market_request_pending
-	if market_wallet_label != null:
-		market_wallet_label.text = _market_wallet_text()
-	var visible_listings := _market_visible_listings()
-	var listing_display_rows := EquipmentEscrowClientModel.market_listing_rows(visible_listings)
-	var selected_exists = false
-	for listing in visible_listings:
-		if str(listing.get("listingId", "")) == market_selected_listing_id:
-			selected_exists = true
-			break
-	if not selected_exists:
-		market_selected_listing_id = str(visible_listings[0].get("listingId", "")) if not visible_listings.is_empty() else ""
-	for child in market_list_container.get_children():
-		child.queue_free()
-	market_listing_buttons.clear()
-	if visible_listings.is_empty():
-		var empty_label = Label.new()
-		empty_label.add_theme_font_size_override("font_size", 16)
-		empty_label.text = _market_empty_list_text()
-		market_list_container.add_child(empty_label)
-	else:
-		for listing_index in range(visible_listings.size()):
-			var listing := visible_listings[listing_index]
-			var display_row := listing_display_rows[listing_index] if listing_index < listing_display_rows.size() else {}
-			var listing_id = str(listing.get("listingId", ""))
-			var button = Button.new()
-			button.text = _market_listing_button_text(listing, display_row)
-			button.toggle_mode = true
-			button.button_pressed = listing_id == market_selected_listing_id
-			button.custom_minimum_size = Vector2(0, 78)
-			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			button.add_theme_font_size_override("font_size", 14)
-			var captured_id = listing_id
-			button.pressed.connect(func() -> void:
-				_select_market_listing(captured_id)
-			)
-			market_list_container.add_child(button)
-			market_listing_buttons[listing_id] = button
+	var has_server := _is_server_account_session()
+	var buy_listings := _market_listings_for_mode("buy")
+	var mine_listings := _market_listings_for_mode("mine")
+	var active_listings := buy_listings if market_mode == "buy" else mine_listings
+	if market_mode == "sell":
+		active_listings = []
+	if not _market_listing_array_has_id(active_listings, market_selected_listing_id):
+		market_selected_listing_id = (
+			str(active_listings[0].get("listingId", ""))
+			if not active_listings.is_empty()
+			else ""
+		)
+
+	var sell_sources := EquipmentEscrowClientModel.market_sell_rows(player_profile)
+	var selected_sell_row := _market_sell_source_by_key(
+		sell_sources, market_sell_selected_source_key
+	)
+	if selected_sell_row.is_empty() or not bool(selected_sell_row.get("valid", false)):
+		market_sell_selected_source_key = _market_first_valid_sell_source_key(sell_sources)
+		selected_sell_row = _market_sell_source_by_key(
+			sell_sources, market_sell_selected_source_key
+		)
+	_sync_market_legacy_sell_proxy(sell_sources, market_sell_selected_source_key)
+
+	var current_count := 1
+	var current_unit_price := 20
+	var current_currency := "stoneCoins"
+	if market_sell_count_spinbox != null:
+		current_count = maxi(1, int(market_sell_count_spinbox.value))
+	if market_sell_unit_price_spinbox != null:
+		current_unit_price = maxi(1, int(market_sell_unit_price_spinbox.value))
+	if market_sell_currency_option != null:
+		current_currency = _market_sell_currency()
+	var is_equipment := (
+		str(selected_sell_row.get("rowKind", ""))
+		== EquipmentEscrowClientModel.ROW_EQUIPMENT_INSTANCE
+	)
+	var holding_count := maxi(0, int(selected_sell_row.get("count", 0)))
+	var sell_count_max := 1 if is_equipment else mini(holding_count, 999)
+	current_count = 1 if is_equipment else clampi(
+		current_count, 1, maxi(1, sell_count_max)
+	)
+	var sell_summary := _market_sell_summary_text(
+		selected_sell_row, current_count, current_unit_price, current_currency
+	)
 	var selected := _market_selected_listing()
-	var selected_display: Dictionary = {}
-	for listing_index in range(visible_listings.size()):
-		if str(visible_listings[listing_index].get("listingId", "")) == market_selected_listing_id:
-			selected_display = listing_display_rows[listing_index] if listing_index < listing_display_rows.size() else {}
-			break
-	market_detail_label.text = _market_detail_text(selected, selected_display)
-	var selected_is_safe := not selected.is_empty() and bool(selected_display.get("valid", false))
-	if market_sell_form_container != null:
-		market_sell_form_container.visible = market_mode == "sell"
-	if market_buy_button != null:
-		market_buy_button.visible = market_mode == "buy"
-		market_buy_button.disabled = market_request_pending or not has_server or not selected_is_safe or _market_listing_is_mine(selected)
-	if market_cancel_button != null:
-		market_cancel_button.visible = market_mode != "buy"
-		market_cancel_button.disabled = market_request_pending or not has_server or not selected_is_safe or not _market_listing_is_mine(selected)
-	if market_refresh_button != null:
-		market_refresh_button.disabled = market_request_pending or not has_server
-	if market_close_button != null:
-		market_close_button.disabled = market_request_pending
-	if market_status_label != null and not has_server:
-		market_status_label.text = "需要服务器账号登录。"
-	_refresh_market_sell_form()
+	var selected_display := _market_awakened_display_row_by_id(
+		_market_awakened_listing_rows(active_listings), market_selected_listing_id
+	)
+	var selected_is_safe := (
+		not selected.is_empty() and bool(selected_display.get("valid", false))
+	)
+	var status_text: String = market_status_label.text if market_status_label != null else ""
+	if not has_server:
+		status_text = "需要服务器账号登录。"
+	var snapshot: Dictionary = {}
+	if market_panel.has_method("ui_snapshot"):
+		var snapshot_value = market_panel.call("ui_snapshot")
+		if snapshot_value is Dictionary:
+			snapshot = (snapshot_value as Dictionary).duplicate(true)
+	var state := {
+		"mode": market_mode,
+		"pending": market_request_pending,
+		"hasServer": has_server,
+		"walletText": _market_wallet_text(),
+		"statusText": status_text,
+		"buyListings": _market_awakened_listing_rows(buy_listings),
+		"mineListings": _market_awakened_listing_rows(mine_listings),
+		"sellSources": sell_sources,
+		"selectedListingId": market_selected_listing_id,
+		"selectedSellKey": market_sell_selected_source_key,
+		"selectedCategoryId": str(snapshot.get("selectedCategoryId", "all")),
+		"searchText": str(snapshot.get("searchText", "")),
+		"sortId": str(snapshot.get("sortId", "latest")),
+		"categories": [
+			{"id": "all", "label": "全部"},
+			{"id": "equipment", "label": "装备"},
+			{"id": "item", "label": "道具"},
+		],
+		"sellCount": current_count,
+		"sellCountMax": maxi(1, sell_count_max),
+		"sellCountEditable": (
+			not is_equipment
+			and bool(selected_sell_row.get("valid", false))
+			and sell_count_max > 0
+			and has_server
+		),
+		"sellCurrency": current_currency,
+		"sellCurrencies": [
+			{"id": "stoneCoins", "label": "石币"},
+			{"id": "diamonds", "label": "钻石"},
+		],
+		"sellUnitPrice": current_unit_price,
+		"sellUnitPriceMin": 1,
+		"sellUnitPriceMax": 999999,
+		"sellUnitPriceEditable": (
+			bool(selected_sell_row.get("valid", false)) and has_server
+		),
+		"sellSummaryText": sell_summary,
+		"canRefresh": has_server and not market_request_pending,
+		"canBuy": (
+			has_server
+			and selected_is_safe
+			and not _market_listing_is_mine(selected)
+		),
+		"canCancel": (
+			has_server
+			and selected_is_safe
+			and _market_listing_is_mine(selected)
+		),
+		"canSell": (
+			has_server
+			and bool(selected_sell_row.get("valid", false))
+			and sell_count_max > 0
+			and current_unit_price > 0
+		),
+	}
+	market_panel.call("apply_view_state", state)
+	market_listing_buttons = market_panel.listing_buttons
+	market_detail_label = market_panel.find_child(
+		"MarketDetailText", true, false
+	) as RichTextLabel
+	market_sell_summary_label = market_panel.find_child(
+		"MarketSellSummaryLabel", true, false
+	) as Label
+	if market_detail_label != null and selected.is_empty() and market_mode != "sell":
+		market_detail_label.text = _market_detail_text({}, {})
 
 func _market_empty_list_text() -> String:
 	match market_mode:
@@ -20413,18 +20356,182 @@ func _select_market_listing(listing_id: String) -> void:
 	market_selected_listing_id = listing_id
 	_refresh_market_panel()
 
+func _on_market_local_filter_changed(_value: String) -> void:
+	_market_sync_selection_from_awakened_view()
+
+func _on_market_local_search_changed(_value: String) -> void:
+	_market_sync_selection_from_awakened_view()
+
+func _market_sync_selection_from_awakened_view() -> void:
+	if market_panel == null or not market_panel.has_method("selected_listing_id"):
+		return
+	market_selected_listing_id = str(
+		market_panel.call("selected_listing_id")
+	).strip_edges()
+
+func _on_market_sell_source_selected(selection_key: String) -> void:
+	market_sell_selected_source_key = selection_key.strip_edges()
+	_refresh_market_panel()
+
+func _on_market_sell_draft_changed(_value = null) -> void:
+	_refresh_market_panel()
+
 func _market_visible_listings() -> Array[Dictionary]:
+	return _market_listings_for_mode(market_mode)
+
+func _market_listings_for_mode(mode: String) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	var self_account_id = str(current_account_session.get("accountId", "")).strip_edges()
-	var source = market_my_listings if market_mode != "buy" else market_listings
+	var source = market_listings if mode == "buy" else market_my_listings
 	for value in source:
 		if not (value is Dictionary):
 			continue
 		var listing := (value as Dictionary).duplicate(true)
-		if market_mode == "buy" and self_account_id != "" and str(listing.get("sellerAccountId", "")) == self_account_id:
+		if mode == "buy" and self_account_id != "" and str(listing.get("sellerAccountId", "")) == self_account_id:
 			continue
 		rows.append(listing)
 	return rows
+
+func _market_listing_array_has_id(rows: Array[Dictionary], listing_id: String) -> bool:
+	if listing_id == "":
+		return false
+	for row in rows:
+		if str(row.get("listingId", "")) == listing_id:
+			return true
+	return false
+
+func _market_awakened_listing_rows(listings: Array[Dictionary]) -> Array[Dictionary]:
+	var safe_rows := EquipmentEscrowClientModel.market_listing_rows(listings)
+	var result: Array[Dictionary] = []
+	for index in range(listings.size()):
+		var listing := listings[index]
+		var row: Dictionary = (
+			safe_rows[index].duplicate(true) if index < safe_rows.size() else {}
+		)
+		for key in [
+			"listingId",
+			"itemId",
+			"count",
+			"unitPrice",
+			"totalPrice",
+			"currency",
+			"currencyLabel",
+			"taxBps",
+			"estimatedTax",
+			"sellerReceives",
+			"createdAt",
+			"sellerKind",
+		]:
+			if listing.has(key):
+				row[key] = listing.get(key)
+		var listing_label := str(listing.get("itemLabel", "")).strip_edges()
+		if listing_label != "" and str(row.get("itemLabel", "")).strip_edges() == "":
+			row["itemLabel"] = listing_label
+		var seller := str(listing.get("sellerDisplayName", "")).strip_edges()
+		if seller == "":
+			seller = str(listing.get("sellerUsername", "")).strip_edges()
+		row["sellerLabel"] = seller if seller != "" else "未知"
+		row["currencyLabel"] = _market_currency_label(
+			str(row.get("currency", "stoneCoins"))
+		)
+		var is_equipment := (
+			str(row.get("rowKind", ""))
+			== EquipmentEscrowClientModel.ROW_EQUIPMENT_ENVELOPE
+		)
+		row["categoryId"] = "equipment" if is_equipment else "item"
+		row["categoryLabel"] = "装备" if is_equipment else "道具"
+		row["detailText"] = _market_awakened_listing_detail_text(listing, row)
+		result.append(row)
+	return result
+
+func _market_awakened_display_row_by_id(
+	rows: Array[Dictionary], listing_id: String
+) -> Dictionary:
+	for row in rows:
+		if str(row.get("listingId", "")) == listing_id:
+			return row.duplicate(true)
+	return {}
+
+func _market_awakened_listing_detail_text(
+	listing: Dictionary, display_row: Dictionary
+) -> String:
+	if not bool(display_row.get("valid", false)):
+		return str(display_row.get("error", "挂单资料异常，暂不可操作。"))
+	var lines: Array[String] = []
+	var state_summary := str(display_row.get("stateSummary", "")).strip_edges()
+	if state_summary != "":
+		lines.append(
+			"装备状态：%s" % state_summary
+			if str(display_row.get("rowKind", "")) == EquipmentEscrowClientModel.ROW_EQUIPMENT_ENVELOPE
+			else state_summary
+		)
+	var detail_lines = display_row.get("detailLines", [])
+	if detail_lines is Array:
+		for value in detail_lines as Array:
+			var line := str(value).strip_edges()
+			if line != "" and not lines.has(line):
+				lines.append(line)
+	var count := maxi(1, int(listing.get("count", 1)))
+	var unit_price := maxi(0, int(listing.get("unitPrice", 0)))
+	var total := maxi(0, int(listing.get("totalPrice", unit_price * count)))
+	var currency_label := _market_currency_label(
+		str(listing.get("currency", "stoneCoins"))
+	)
+	var tax := maxi(0, int(listing.get("estimatedTax", 0)))
+	var receives := maxi(0, int(listing.get("sellerReceives", total - tax)))
+	lines.append("数量：%d" % count)
+	lines.append("单价：%d%s" % [unit_price, currency_label])
+	lines.append("合计：%d%s" % [total, currency_label])
+	lines.append("预计税费：%d%s" % [tax, currency_label])
+	lines.append("预计到手：%d%s" % [receives, currency_label])
+	lines.append("成交后实收货款通过邮箱附件发放。")
+	return "\n".join(lines)
+
+func _market_first_valid_sell_source_key(rows: Array[Dictionary]) -> String:
+	for row in rows:
+		var key := str(row.get("selectionKey", "")).strip_edges()
+		if key != "" and bool(row.get("valid", false)):
+			return key
+	return ""
+
+func _market_sell_source_by_key(
+	rows: Array[Dictionary], selection_key: String
+) -> Dictionary:
+	if selection_key == "":
+		return {}
+	for row in rows:
+		if str(row.get("selectionKey", "")) == selection_key:
+			return row.duplicate(true)
+	return {}
+
+func _sync_market_legacy_sell_proxy(
+	rows: Array[Dictionary], selection_key: String
+) -> void:
+	if market_sell_item_option == null:
+		return
+	market_sell_item_option.set_block_signals(true)
+	market_sell_item_option.clear()
+	var selected_index := -1
+	for row in rows:
+		var valid := bool(row.get("valid", false))
+		var option_text := str(row.get("selectionLabel", "")).strip_edges()
+		if option_text == "":
+			option_text = str(row.get("error", "物品资料异常"))
+		market_sell_item_option.add_item(option_text)
+		var index: int = market_sell_item_option.item_count - 1
+		market_sell_item_option.set_item_metadata(index, row.duplicate(true))
+		market_sell_item_option.set_item_disabled(index, not valid)
+		if str(row.get("selectionKey", "")) == selection_key:
+			selected_index = index
+	if market_sell_item_option.item_count == 0:
+		market_sell_item_option.add_item("背包没有可出售物品")
+		market_sell_item_option.set_item_metadata(0, {})
+		market_sell_item_option.set_item_disabled(0, true)
+		selected_index = 0
+	elif selected_index < 0:
+		selected_index = 0
+	market_sell_item_option.select(selected_index)
+	market_sell_item_option.set_block_signals(false)
 
 func _market_selected_listing() -> Dictionary:
 	if market_selected_listing_id == "":
@@ -20527,94 +20634,69 @@ func _market_listing_summary_text(listing: Dictionary) -> String:
 	return "\n".join(lines)
 
 func _refresh_market_sell_form() -> void:
-	if market_sell_item_option == null or market_sell_count_spinbox == null or market_sell_unit_price_spinbox == null:
-		return
-	var has_server = _is_server_account_session()
-	var previous_row := _market_sell_row()
-	var previous_key := str(previous_row.get("selectionKey", ""))
-	market_sell_item_option.set_block_signals(true)
-	market_sell_item_option.clear()
-	var selected_index := -1
-	var first_valid_index := -1
-	var source_rows := EquipmentEscrowClientModel.market_sell_rows(player_profile)
-	for source_row in source_rows:
-		var valid := bool(source_row.get("valid", false))
-		var option_text := str(source_row.get("selectionLabel", "")).strip_edges()
-		if option_text == "":
-			option_text = str(source_row.get("error", "物品资料异常"))
-		if not valid:
-			option_text = "⚠ %s" % option_text
-		market_sell_item_option.add_item(option_text)
-		var index = market_sell_item_option.item_count - 1
-		market_sell_item_option.set_item_metadata(index, source_row.duplicate(true))
-		market_sell_item_option.set_item_disabled(index, not valid)
-		if valid and first_valid_index < 0:
-			first_valid_index = index
-		if valid and previous_key != "" and str(source_row.get("selectionKey", "")) == previous_key:
-			selected_index = index
-	if first_valid_index < 0:
-		market_sell_item_option.add_item("背包没有可出售物品")
-		var empty_index: int = int(market_sell_item_option.item_count) - 1
-		market_sell_item_option.set_item_metadata(empty_index, {})
-		market_sell_item_option.set_item_disabled(empty_index, true)
-		selected_index = empty_index
-	elif selected_index < 0:
-		selected_index = first_valid_index
-	market_sell_item_option.select(selected_index)
-	market_sell_item_option.disabled = market_request_pending or not has_server or first_valid_index < 0
-	market_sell_item_option.set_block_signals(false)
-	var selected_row := _market_sell_row()
-	var source_valid := bool(selected_row.get("valid", false))
-	var item_id := str(selected_row.get("itemId", ""))
-	var is_equipment := str(selected_row.get("rowKind", "")) == EquipmentEscrowClientModel.ROW_EQUIPMENT_INSTANCE
-	var max_count := maxi(0, int(selected_row.get("count", 0)))
-	market_sell_count_spinbox.set_block_signals(true)
-	market_sell_count_spinbox.max_value = 1.0 if is_equipment else maxf(1.0, float(max_count))
-	market_sell_count_spinbox.value = 1.0 if is_equipment else clampf(market_sell_count_spinbox.value, 1.0, market_sell_count_spinbox.max_value)
-	market_sell_count_spinbox.editable = not is_equipment and not market_request_pending and has_server and source_valid and max_count > 0
-	market_sell_count_spinbox.set_block_signals(false)
-	if market_sell_currency_option != null:
-		market_sell_currency_option.disabled = market_request_pending or not has_server or not source_valid
-	market_sell_unit_price_spinbox.editable = not market_request_pending and has_server and source_valid
-	var count := 1 if is_equipment else int(market_sell_count_spinbox.value)
-	var unit_price = int(market_sell_unit_price_spinbox.value)
-	var total = count * unit_price
-	var currency = _market_sell_currency()
-	var currency_label = _market_currency_label(currency)
-	var tax_bps = _market_tax_bps_for_item(item_id)
-	var tax = _market_tax_for_total(total, tax_bps)
-	var receives = maxi(0, total - tax)
-	if market_sell_summary_label != null:
-		if not source_valid:
-			market_sell_summary_label.text = str(selected_row.get("error", "请选择可出售物品。"))
-		elif is_equipment:
-			market_sell_summary_label.text = "%s\n合计 %d%s，税 %d%s，到手 %d%s" % [
-				str(selected_row.get("selectionLabel", "装备实例")),
-				total,
-				currency_label,
-				tax,
-				currency_label,
-				receives,
-				currency_label,
-			]
-		else:
-			market_sell_summary_label.text = "合计 %d%s，税 %d%s，到手 %d%s" % [total, currency_label, tax, currency_label, receives, currency_label]
-	if market_sell_button != null:
-		market_sell_button.disabled = market_request_pending or not has_server or not source_valid or max_count <= 0 or unit_price <= 0
+	if market_sell_item_option != null:
+		var selected_index := int(market_sell_item_option.selected)
+		if selected_index >= 0 and selected_index < market_sell_item_option.item_count:
+			var metadata = market_sell_item_option.get_item_metadata(selected_index)
+			if metadata is Dictionary:
+				var selected_key := str(
+					(metadata as Dictionary).get("selectionKey", "")
+				).strip_edges()
+				if selected_key != "":
+					market_sell_selected_source_key = selected_key
+	_refresh_market_panel()
 
 func _market_sell_row() -> Dictionary:
-	if market_sell_item_option == null:
-		return {}
-	var selected_index: int = int(market_sell_item_option.selected)
-	if selected_index < 0 or selected_index >= market_sell_item_option.item_count:
-		return {}
-	var metadata = market_sell_item_option.get_item_metadata(selected_index)
-	return (metadata as Dictionary).duplicate(true) if metadata is Dictionary else {}
+	return _market_sell_source_by_key(
+		EquipmentEscrowClientModel.market_sell_rows(player_profile),
+		market_sell_selected_source_key
+	)
 
 func _market_sell_item_id() -> String:
 	return str(_market_sell_row().get("itemId", ""))
 
+func _market_sell_summary_text(
+	source_row: Dictionary,
+	count: int,
+	unit_price: int,
+	currency: String
+) -> String:
+	if source_row.is_empty():
+		return "选择物品后显示税费与预计到手。"
+	if not bool(source_row.get("valid", false)):
+		return str(source_row.get("error", "请选择可出售物品。"))
+	var total := maxi(0, count * unit_price)
+	var currency_label := _market_currency_label(currency)
+	var tax_bps := _market_tax_bps_for_item(str(source_row.get("itemId", "")))
+	var tax := _market_tax_for_total(total, tax_bps)
+	var receives := maxi(0, total - tax)
+	var lines: Array[String] = []
+	if (
+		str(source_row.get("rowKind", ""))
+		== EquipmentEscrowClientModel.ROW_EQUIPMENT_INSTANCE
+	):
+		lines.append(str(source_row.get("selectionLabel", "装备实例")))
+	lines.append("合计：%d%s" % [total, currency_label])
+	lines.append(
+		"预计税费：%d%s（%s）  预计到手：%d%s"
+		% [
+			tax,
+			currency_label,
+			_market_tax_rate_text(tax_bps),
+			receives,
+			currency_label,
+		]
+	)
+	lines.append("成交后实收货款通过邮箱附件发放。")
+	return "\n".join(lines)
+
 func _market_sell_currency() -> String:
+	if market_panel != null and market_panel.has_method("selected_sell_currency"):
+		var panel_currency := str(
+			market_panel.call("selected_sell_currency")
+		).strip_edges()
+		if panel_currency == "diamonds":
+			return "diamonds"
 	if market_sell_currency_option == null:
 		return "stoneCoins"
 	var selected_index = market_sell_currency_option.selected

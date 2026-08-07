@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "assetBundleId": "market_awakened_v1",
+  "purpose": "Original 1280x720 marketplace UI backdrop for the Beastbound Odyssey Godot client.",
+  "runtimeAssets": [
+    {
+      "path": "res://assets/ui/market_awakened_v1/runtime/market_backdrop_1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "sha256": "d553a35b6e6b6a1cccd360a82f45fcc3cb5fa4386eeb609c923ac9987682d51b"
+    },
+    {
+      "path": "res://assets/ui/market_awakened_v1/runtime/market_header_icon.png",
+      "width": 128,
+      "height": 128,
+      "sha256": "65fb7283fb38722f34fd271d2742ee380c5abc725587865c308f0c9f5a67cd73"
+    }
+  ],
+  "sourceAssets": [
+    {
+      "path": "res://assets/ui/market_awakened_v1/source/market_backdrop_raw.png",
+      "sha256": "7adc41009686582983aee8e7a52f735067cdd8f8c8fd5b70f34f073128ac408d"
+    },
+    {
+      "path": "res://assets/ui/market_awakened_v1/source/market_header_icon_raw_chroma.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "134edcb67f3579dc7eead2cf1a21ad5dd389ff66f6b4ca9079bff25f676ef02e"
+    }
+  ]
+}

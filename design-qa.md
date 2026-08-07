@@ -280,3 +280,101 @@ final result: passed
   后端且未写玩家存档。
 
 final result: passed
+
+# Phase 392 Design QA：觉醒式交易所全屏三态
+
+## Findings
+
+- P0：无。
+- P1：无。
+- P2：无。真实 `Main.tscn` 的购买、出售、我的挂单三态均完整落在 `1280×720`；标题、
+  货币、关闭、页签、分类、商品／背包卡、详情、上架表单、确认层和主动作没有越界、截断、
+  相互遮挡或输入穿透。商品和装备均使用正式 item icon，没有 emoji、字符画、截图裁片、
+  假图标或玩家不可理解的程序字段。
+- [P3] 第三页签和左侧分类少于参考图。
+  - Location：顶部第三页签、购买／我的挂单左侧导航。
+  - Evidence：同屏图上排是“购买／出售／公示”及装备、宠物、宠物装备、宠技等分类；
+    下排实机只显示“购买／出售／我的挂单”和“全部／装备／道具”。
+  - Impact：视觉密度更低，但每个入口都有真实服务合同，不会把宠物交易、公示、预购、
+    竞价或收藏伪装成已实现功能。
+  - Fix：本轮保留。只有服务端建立对应权威合同后才增加页签或分类。
+- [P3] Beastbound 的外框比参考图更深、更具丛林集市质感。
+  - Location：全屏外框、底部货车／货箱和中央羊皮纸四周。
+  - Evidence：参考图为轻薄木架与大面积浅灰纸张；实机为原创竹木梁、藤叶、暗色货摊和
+    暖白羊皮纸，三态结构仍保持同样的顶部页签、左导航、中央列表和右详情顺序。
+  - Impact：材质对比更强但阅读区仍明亮，形成 Beastbound 自有视觉身份，不复制商业参考
+    像素。
+  - Fix：保留原创 `market_awakened_v1`；若所有者反馈长期阅读过暗，再只调整外框亮度，
+    不更换真实控件层级。
+- [P3] 出售页没有照搬“背包 + 六个挂单槽”的双栏密度。
+  - Location：出售态中央和右侧。
+  - Evidence：参考图用左侧物品格和右侧六个空挂单槽；实机用“可上架物品／上架预览／
+    填写上架信息”三段，并在同屏显示数量、币种、单价、合计、动态预计税费和预计到手。
+  - Impact：一次只编辑一个真实挂单，信息密度较低，但精确装备实例、最大 999 堆叠和
+    成交邮件回款都能在提交前读清。
+  - Fix：保持当前单挂单确认流；本项目没有批量挂单合同，不为填满六个槽伪造状态。
+
+## Comparison target
+
+- 购买参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-c9ab28e4-e0fd-4d92-823f-a0e44307915d.jpg`；
+- 出售参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-e3eaa49f-8604-4f7e-8d09-83756b7d1c2f.jpg`；
+- 公示参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-7d80efd8-7b88-43c8-9d2b-a2557d42b0a6.jpg`；
+- 三张源图均为 `2622×1206`，按宽等比缩放为约 `640×294` 后置于 `640×360` 比较格，
+  没有拉伸成 `16:9`；下排三张实现均来自真实 `Main.tscn`、Metal、原生
+  `1280×720 / 1.00×` 内容像素，再等比缩到 `640×360` 组成同屏图。
+- 比较范围是页面层级、阅读顺序、控件密度、材质与三态一致性；不要求复制参考资产、
+  商标、宠物交易、公示机制、数值或货币系统。
+
+## Comparison evidence
+
+- 三参考／三实机状态同屏：
+  `.run/evidence/phase392_market_design_qa/reference-vs-real-main-3state.png`；
+- 同屏图为 `1920×720`，上排依次是购买／出售／公示参考，下排依次是购买／出售／我的
+  挂单实机；SHA-256：
+  `8484d1cceb633a3097d2011397ec003623b67b75547acabd2e0b0804b041c3f7`。
+- 最终视频：
+  `.run/evidence/phase392_market_awakened_owner_review/phase392-market-awakened-final/market-awakened-owner-review-1x.mp4`；
+- 联系表：
+  `.run/evidence/phase392_market_awakened_owner_review/phase392-market-awakened-final/contact-sheet.png`。
+
+## Required fidelity surfaces
+
+- Layout：顶部标题／货币／关闭，纸面内三页签，左侧分类，中部卡片列表，右侧详情或表单，
+  底部状态与主动作形成稳定阅读顺序；三态切换不移动整个页面框架。
+- Typography：中文页签、分类、商品名称、价格、税费、数量和玩家提示清楚可读；没有乱码、
+  系统内部字段或过量调试说明。
+- Materials：原创竹木、藤叶、羊皮纸、货车与货箱保持统一；底板无烘焙文字、商品、按钮或
+  商标，全部交互由 Godot 真控件渲染。
+- Icons：商品卡和详情使用仓库正式 item icon；装备实例仍显示精确强化、耐久和属性摘要，
+  不按同 `itemId` 折叠为假同一件。
+- Truth：只显示购买、出售、我的挂单、全部、装备和道具；石币／钻石、动态税费、预计到手
+  与邮件回款均来自既有真实合同，不硬编码参考图的固定 15% 或三种货币。
+- Controls：分类、搜索、排序、页签、商品／背包卡、数量、币种、单价、购买、上架、下架、
+  确认、取消和关闭均可左键完成；确认层在同一页面内，背景状态不会误触。
+- Safety：正常玩家界面不显示 `listingId`、`itemId`、`instanceId`、schema、接口名、测试标志
+  或 agent／QA 文案；客户端不在权威成功回执前乐观改钱包、背包或挂单。
+
+## Interaction and evidence
+
+- 聚焦面板检查 `PASS`；三态、分类／搜索／排序、正式图标、税费预览、确认层、空状态、
+  全视口边界和真实左键事件均通过。
+- Godot 最终定向组合 `4/4`：解析、装备实例、市场和 PanelRegistry；市场回归继续覆盖普通
+  物与精确装备上架、公开装备安全投影、重复／旧版信封拦截及 buy/cancel 只提交
+  `listingId`。
+- 真实 `Main.tscn` 九章视频为 `23.133333s / 694` 帧、`1280×720 / 30 FPS / 1.00×`、
+  H.264 `yuv420p`、AAC 48kHz 双声道，完整音视频解码通过；MP4 SHA-256：
+  `8e670e9d3f0777ad74c57c000ade0efd5ecad9a817a1eb19d7c9410b6d586654`。
+- 录像使用隔离档案，不连接后端／MySQL、不提交资产写入；它证明页面和交互，不冒充生产
+  成交。
+- 同一九章流程的 22 个性能样本为 `process_total=0.06..0.11ms`；独立跨帧移动和 37 次鼠标
+  连点检查均为 `status=ok`，移动热身后保持 `60 FPS`，未出现 UI 穿透或目标不收敛。
+
+项目所有者观看本轮视频后反馈“勉强还可以吧”，本阶段记为
+`ownerReviewStatus=owner_accepted_with_reservation`；当前工程比较无 P0、P1、P2。
+
+final result: passed
+
+---

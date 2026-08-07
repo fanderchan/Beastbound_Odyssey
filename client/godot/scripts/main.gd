@@ -118,6 +118,9 @@ const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd
 const BackpackAwakenedOwnerReviewCapture := preload(
 	"res://scripts/qa/backpack_awakened_owner_review_capture.gd"
 )
+const MarketAwakenedOwnerReviewCapture := preload(
+	"res://scripts/qa/market_awakened_owner_review_capture.gd"
+)
 const CharacterEntryOwnerReviewCapture := preload(
 	"res://scripts/qa/character_entry_owner_review_capture.gd"
 )
@@ -1058,6 +1061,7 @@ var equipment_spirit_preview: bool = false
 var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
 var backpack_awakened_owner_review_capture: bool = false
+var market_awakened_owner_review_capture: bool = false
 var character_entry_owner_review_capture: bool = false
 var player_character_owner_review_capture: bool = false
 var pet_action_art_preview: bool = false
@@ -2005,6 +2009,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_management_preview")
 	elif backpack_awakened_owner_review_capture:
 		call_deferred("_run_backpack_awakened_owner_review_capture")
+	elif market_awakened_owner_review_capture:
+		call_deferred("_run_market_awakened_owner_review_capture")
 	elif character_entry_owner_review_capture:
 		call_deferred("_run_character_entry_owner_review_capture")
 	elif player_character_owner_review_capture:
@@ -2247,6 +2253,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == MapVisualReviewCapture.CAPTURE_FLAG
 		or normalized == NpcMainReviewCapture.CAPTURE_FLAG
 		or normalized == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG
+		or MarketAwakenedOwnerReviewCapture.is_flag(normalized)
 		or normalized == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == "--server-step-world-move"
@@ -2862,6 +2869,8 @@ func _apply_preview_window_args() -> void:
 			pet_management_preview = true
 		elif arg == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG:
 			backpack_awakened_owner_review_capture = true
+		elif MarketAwakenedOwnerReviewCapture.is_flag(arg):
+			market_awakened_owner_review_capture = true
 		elif arg == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG:
 			character_entry_owner_review_capture = true
 		elif arg == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG:
@@ -4102,6 +4111,10 @@ func _run_pet_management_preview() -> void:
 
 func _run_backpack_awakened_owner_review_capture() -> void:
 	await BackpackAwakenedOwnerReviewCapture.new(self).run()
+
+
+func _run_market_awakened_owner_review_capture() -> void:
+	await MarketAwakenedOwnerReviewCapture.new(self).run()
 
 
 func _run_character_entry_owner_review_capture() -> void:
@@ -14351,13 +14364,16 @@ func _layout_hud() -> void:
 			action_bar.visible = false
 
 	if market_panel != null:
-		var market_width: float = minf(viewport_size.x - margin * 2.0, 760.0)
-		var market_height: float = minf(panel_available_height, 520.0)
-		market_width = maxf(minf(520.0, viewport_size.x - margin * 2.0), market_width)
-		market_height = maxf(minf(380.0, panel_available_height), market_height)
-		var market_panel_y = minf(maxf(panel_top_y, (viewport_size.y - market_height) * 0.5), viewport_size.y - market_height - margin)
-		market_panel.position = Vector2((viewport_size.x - market_width) * 0.5, market_panel_y)
-		market_panel.size = Vector2(market_width, market_height)
+		if market_panel.has_method("is_awakened_market_panel"):
+			market_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		else:
+			var market_width: float = minf(viewport_size.x - margin * 2.0, 760.0)
+			var market_height: float = minf(panel_available_height, 520.0)
+			market_width = maxf(minf(520.0, viewport_size.x - margin * 2.0), market_width)
+			market_height = maxf(minf(380.0, panel_available_height), market_height)
+			var market_panel_y = minf(maxf(panel_top_y, (viewport_size.y - market_height) * 0.5), viewport_size.y - market_height - margin)
+			market_panel.position = Vector2((viewport_size.x - market_width) * 0.5, market_panel_y)
+			market_panel.size = Vector2(market_width, market_height)
 		if battle_active:
 			market_panel.visible = false
 		if market_panel.visible and action_bar != null:
