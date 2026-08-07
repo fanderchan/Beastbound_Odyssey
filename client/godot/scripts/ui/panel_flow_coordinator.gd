@@ -22,6 +22,12 @@ const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_ca
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
 const BattleResultReceiptModel := preload("res://scripts/progression/battle_result_receipt_model.gd")
+const BattleOutcomePresentationModel := preload(
+	"res://scripts/ui/battle_outcome_presentation_model.gd"
+)
+const BattleOutcomeFloatOverlay := preload(
+	"res://scripts/ui/battle_outcome_float_overlay.gd"
+)
 const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_settings_model.gd")
 const AutoCaptureFilterModel := preload("res://scripts/progression/auto_capture_filter_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
@@ -331,6 +337,7 @@ var _pet_evolution_quote_generation: int = 0
 var _pet_evolution_status_message: String = ""
 var _pet_evolution_pending_operations: Dictionary = {}
 var _pet_evolution_sequence_player
+var _battle_outcome_float_overlay
 var _pet_growth_radar_row: HBoxContainer
 var _pet_level_one_radar: Control
 var _pet_level_one_radar_title: Label
@@ -5886,6 +5893,8 @@ func _build_hud() -> void:
 	hud_root.theme = _build_theme()
 	hud_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	canvas_layer.add_child(hud_root)
+	_battle_outcome_float_overlay = BattleOutcomeFloatOverlay.new()
+	hud_root.add_child(_battle_outcome_float_overlay)
 	_pet_evolution_sequence_player = PetEvolutionSequencePlayer.new()
 	_pet_evolution_sequence_player.mount(hud_root, Callable(host, "_audio_play_cue"))
 
@@ -9880,7 +9889,14 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	if message == "":
 		message = "战斗已结束。" if is_party_pve else ("庄园战已结束。" if is_manor_war else "切磋已结束。")
 	var log_message = _server_party_pve_result_log_message(closed_room, message) if is_party_pve else message
-	var result_key = _server_battle_result_key(closed_room)
+	var result_key = _server_party_pve_result_key(closed_room) if is_party_pve else _server_battle_result_key(closed_room)
+	var outcome_view := {}
+	if is_party_pve and result_key == "victory":
+		outcome_view = BattleOutcomePresentationModel.build_view(
+			closed_room,
+			str(current_account_session.get("accountId", "")).strip_edges(),
+			result_key
+		)
 	var hang_result = _apply_server_battle_hang_writeback(closed_room)
 	var manual_hang_stop_after_battle = host._consume_hang_stop_after_battle_request()
 	if manual_hang_stop_after_battle:
@@ -9908,6 +9924,8 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	_set_world_log_message(log_message)
 	if not is_party_pve:
 		_open_battle_result_panel(closed_room, result_key, message, "庄园战" if is_manor_war else "切磋")
+	elif result_key == "victory":
+		_present_battle_outcome_float(outcome_view)
 	else:
 		_open_battle_result_panel(closed_room, result_key, log_message, "战斗", false)
 	_queue_server_profile_pull()
@@ -10009,6 +10027,21 @@ func _server_battle_result_key(room: Dictionary) -> String:
 	if reason == "timeout" and _server_battle_result_loser_contains_self(result):
 		return "timeout"
 	return "server"
+
+func _server_party_pve_result_key(room: Dictionary) -> String:
+	var result = _server_battle_result_payload(room)
+	var reason = str(result.get("reason", room.get("closeReason", ""))).strip_edges()
+	if reason == "escape":
+		return "escape"
+	if reason == "timeout" or reason == "disconnect_timeout":
+		return "timeout"
+	if reason == "leave":
+		return "defeat"
+	if _server_battle_result_loser_contains_self(result):
+		return "defeat"
+	if _server_party_pve_has_living_enemy(room):
+		return "defeat"
+	return "victory"
 
 func _server_battle_result_loser_contains_self(result: Dictionary) -> bool:
 	var self_account_id = str(current_account_session.get("accountId", "")).strip_edges()
@@ -10319,6 +10352,24 @@ func _server_party_pve_has_living_enemy(room: Dictionary) -> bool:
 		if str(actor.get("side", "")).strip_edges() == BattleModel.SIDE_ENEMY and int(actor.get("hp", 0)) > 0:
 			return true
 	return false
+
+func _present_battle_outcome_float(view_state: Dictionary, timing_scale: float = 1.0) -> bool:
+	if _battle_outcome_float_overlay == null or not is_instance_valid(_battle_outcome_float_overlay):
+		return false
+	return bool(_battle_outcome_float_overlay.present(view_state, timing_scale))
+
+func _battle_outcome_overlay_snapshot() -> Dictionary:
+	if _battle_outcome_float_overlay == null or not is_instance_valid(_battle_outcome_float_overlay):
+		return {}
+	return _battle_outcome_float_overlay.snapshot()
+
+func _dismiss_battle_outcome_float(clear_seen: bool = false) -> void:
+	if _battle_outcome_float_overlay == null or not is_instance_valid(_battle_outcome_float_overlay):
+		return
+	_battle_outcome_float_overlay.dismiss(clear_seen)
+
+func _dismiss_battle_outcome_overlay(clear_seen: bool = false) -> void:
+	_dismiss_battle_outcome_float(clear_seen)
 
 func _open_battle_result_panel(room: Dictionary, result_key: String, message: String, title_prefix: String = "切磋", include_opponent: bool = true) -> void:
 	if battle_result_panel == null:

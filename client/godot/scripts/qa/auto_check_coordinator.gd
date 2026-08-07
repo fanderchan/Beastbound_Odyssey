@@ -24374,16 +24374,49 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		"reason": "defeat",
 		"winnerAccountId": "acc_b",
 		"loserAccountIds": [],
+		"battleRecordId": "battle_record_target_mapping_pve",
 	}
 	pve_battle["profileWriteback"] = {
 		"profiles": [{
 			"accountId": "acc_b",
 			"exp": {
 				"amount": 286,
-				"player": {"name": "高等级猎人", "amount": 110, "baseAmount": 100, "partyBonusPercent": 10},
-				"ridePets": [{"name": "骑宠布伊", "amount": 66, "baseAmount": 60, "partyBonusPercent": 10}],
-				"pets": [{"name": "出战布伊", "amount": 110, "baseAmount": 100, "partyBonusPercent": 10}],
+				"player": {
+					"name": "高等级猎人",
+					"amount": 110,
+					"baseAmount": 100,
+					"partyBonusPercent": 10,
+					"beforeLevel": 31,
+					"level": 31,
+					"levelsGained": 0,
+				},
+				"ridePets": [{
+					"petInstanceId": "ride_pet_target_mapping",
+					"name": "骑宠布伊",
+					"amount": 66,
+					"baseAmount": 60,
+					"partyBonusPercent": 10,
+					"beforeLevel": 10,
+					"level": 11,
+					"levelsGained": 1,
+				}],
+				"pets": [{
+					"petInstanceId": "battle_pet_target_mapping",
+					"name": "出战布伊",
+					"amount": 110,
+					"baseAmount": 100,
+					"partyBonusPercent": 10,
+					"beforeLevel": 10,
+					"level": 10,
+					"levelsGained": 0,
+				}],
 				"trainingPartners": [],
+			},
+			"rewards": {
+				"stoneCoins": 321,
+				"addedItems": [{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 2}],
+				"mailedItems": [{"itemId": BattleModel.CAPTURE_TOOL_NET, "count": 1}],
+				"lostItems": [],
 			},
 		}],
 		"skippedProfiles": [{
@@ -24392,26 +24425,86 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		}],
 	}
 	pve_closed_room["battle"] = pve_battle
+	host._panel_flow()._dismiss_battle_outcome_float()
 	if host.battle_result_panel != null:
 		host.battle_result_panel.visible = false
 	var pve_result = host._finish_server_battle_from_closed_room(pve_closed_room)
 	var pve_message = str(pve_result.get("message", ""))
-	var pve_result_title = host.battle_result_title_label.text if host.battle_result_title_label != null else ""
-	var pve_result_detail = host.battle_result_detail_label.text if host.battle_result_detail_label != null else ""
-	var pve_popup_ok = (
-		host.battle_result_panel != null
-		and host.battle_result_panel.visible
-		and pve_result_title == "战斗胜利"
-		and pve_result_detail.find("战斗胜利。") >= 0
-		and pve_result_detail.find("人物 高等级猎人 获得 110 点经验（基础100，组队+10%）。") >= 0
-		and pve_result_detail.find("骑宠 骑宠布伊 获得 66 点经验（基础60，组队+10%）。") >= 0
-		and pve_result_detail.find("宠物 出战布伊 获得 110 点经验（基础100，组队+10%）。") >= 0
-		and pve_result_detail.find("本次战斗结果未写入服务器，请重新登录后确认。") >= 0
-		and pve_result_detail.find("对手：") < 0
-		and pve_result_title.find("切磋") < 0
+	var pve_outcome_snapshot: Dictionary = {}
+	for _pve_overlay_frame in range(4):
+		await host.get_tree().process_frame
+		pve_outcome_snapshot = host._panel_flow()._battle_outcome_overlay_snapshot()
+		if bool(pve_outcome_snapshot.get("visible", false)):
+			break
+	var pve_outcome_view = pve_outcome_snapshot.get("view", {}) as Dictionary if pve_outcome_snapshot.get("view", {}) is Dictionary else {}
+	var pve_reward_rows: Array = pve_outcome_view.get("rewardRows", []) if pve_outcome_view.get("rewardRows", []) is Array else []
+	var pve_warning_rows: Array = pve_outcome_view.get("warningRows", []) if pve_outcome_view.get("warningRows", []) is Array else []
+	var pve_exp_roles: Array[String] = []
+	var pve_exp_texts: Array[String] = []
+	var pve_level_up_highlight_ok = false
+	var pve_stone_coins_ok = false
+	var pve_added_item_ok = false
+	var pve_mailed_item_ok = false
+	for row_value in pve_reward_rows:
+		if not (row_value is Dictionary):
+			continue
+		var row = row_value as Dictionary
+		match str(row.get("kind", "")):
+			"exp":
+				pve_exp_roles.append(str(row.get("role", "")))
+				pve_exp_texts.append(str(row.get("text", "")))
+			"level_up":
+				pve_level_up_highlight_ok = (
+					pve_level_up_highlight_ok
+					or (
+						str(row.get("role", "")) == "ride_pet"
+						and int(row.get("level", 0)) == 11
+						and int(row.get("levelsGained", 0)) == 1
+						and bool(row.get("isLevelUp", false))
+					)
+				)
+			"currency":
+				pve_stone_coins_ok = int(row.get("amount", 0)) == 321
+			"item":
+				pve_added_item_ok = (
+					str(row.get("itemId", "")) == BattleModel.ITEM_MEAT_SMALL
+					and int(row.get("amount", 0)) == 2
+				)
+			"mail":
+				pve_mailed_item_ok = (
+					str(row.get("itemId", "")) == BattleModel.CAPTURE_TOOL_NET
+					and int(row.get("amount", 0)) == 1
+					and str(row.get("text", "")).find("已发邮箱") >= 0
+				)
+	var pve_warning_ok = false
+	for warning_value in pve_warning_rows:
+		if warning_value is Dictionary:
+			var warning = warning_value as Dictionary
+			pve_warning_ok = pve_warning_ok or (
+				str(warning.get("kind", "")) == "writeback"
+				and str(warning.get("text", "")).find("未写入服务器") >= 0
+			)
+	var pve_outcome_overlay_ok = (
+		str(pve_result.get("result", "")) == "victory"
+		and host.battle_result_panel != null
+		and not host.battle_result_panel.visible
+		and bool(pve_outcome_snapshot.get("visible", false))
+		and bool(pve_outcome_snapshot.get("mouseFilterIgnore", false))
+		and str(pve_outcome_snapshot.get("lastOutcomeId", "")) == "battle_record_target_mapping_pve:acc_b"
+		and str(pve_outcome_view.get("outcomeId", "")) == "battle_record_target_mapping_pve:acc_b"
+		and str(pve_outcome_view.get("title", "")) == "战斗胜利"
+		and pve_exp_roles == ["player", "ride_pet", "battle_pet"]
+		and pve_exp_texts == [
+			"高等级猎人获得了110经验",
+			"骑宠布伊获得了66经验",
+			"出战布伊获得了110经验",
+		]
+		and pve_level_up_highlight_ok
+		and pve_stone_coins_ok
+		and pve_added_item_ok
+		and pve_mailed_item_ok
+		and pve_warning_ok
 	)
-	if pve_popup_ok:
-		host._close_battle_result_panel(false)
 	var pve_message_ok = (
 		pve_message.find("战斗胜利。") >= 0
 		and pve_message.find("人物 高等级猎人 获得 110 点经验（基础100，组队+10%）。") >= 0
@@ -24420,6 +24513,54 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and pve_message.find("本次战斗结果未写入服务器，请重新登录后确认。") >= 0
 		and host.world_log_message == pve_message
 	)
+	var pve_seen_count_before_duplicate = int(pve_outcome_snapshot.get("seenCount", 0))
+	host._panel_flow()._dismiss_battle_outcome_float()
+	var pve_duplicate_result = host._finish_server_battle_from_closed_room(pve_closed_room)
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	var pve_duplicate_snapshot: Dictionary = host._panel_flow()._battle_outcome_overlay_snapshot()
+	var pve_outcome_dedupe_ok = (
+		str(pve_duplicate_result.get("result", "")) == "victory"
+		and not bool(pve_duplicate_snapshot.get("visible", true))
+		and str(pve_duplicate_snapshot.get("lastOutcomeId", "")) == "battle_record_target_mapping_pve:acc_b"
+		and int(pve_duplicate_snapshot.get("seenCount", 0)) == pve_seen_count_before_duplicate
+	)
+	var teammate_pve_closed_room = pve_closed_room.duplicate(true)
+	teammate_pve_closed_room["roomId"] = "target_mapping_teammate_victory_room"
+	var teammate_pve_battle = (teammate_pve_closed_room.get("battle", {}) as Dictionary).duplicate(true)
+	var teammate_pve_actors: Array = (teammate_pve_battle.get("actors", []) as Array).duplicate(true)
+	teammate_pve_actors.append({
+		"actorId": "actor_c_player",
+		"accountId": "acc_c",
+		"username": "surviving_teammate",
+		"displayName": "存活队长",
+		"side": "ally",
+		"kind": "player",
+		"hp": 96,
+		"maxHp": 120,
+	})
+	teammate_pve_battle["actors"] = teammate_pve_actors
+	var teammate_pve_result_payload = (teammate_pve_battle.get("result", {}) as Dictionary).duplicate(true)
+	teammate_pve_result_payload["winnerAccountId"] = "acc_c"
+	teammate_pve_result_payload["loserAccountIds"] = []
+	teammate_pve_result_payload["battleRecordId"] = "battle_record_target_mapping_teammate_victory"
+	teammate_pve_battle["result"] = teammate_pve_result_payload
+	teammate_pve_closed_room["battle"] = teammate_pve_battle
+	var teammate_pve_result = host._finish_server_battle_from_closed_room(teammate_pve_closed_room)
+	var teammate_pve_snapshot: Dictionary = {}
+	for _teammate_overlay_frame in range(4):
+		await host.get_tree().process_frame
+		teammate_pve_snapshot = host._panel_flow()._battle_outcome_overlay_snapshot()
+		if bool(teammate_pve_snapshot.get("visible", false)):
+			break
+	var teammate_pve_view = teammate_pve_snapshot.get("view", {}) as Dictionary if teammate_pve_snapshot.get("view", {}) is Dictionary else {}
+	var teammate_pve_victory_ok = (
+		str(teammate_pve_result.get("result", "")) == "victory"
+		and str(teammate_pve_result.get("message", "")).find("战斗胜利。") >= 0
+		and bool(teammate_pve_snapshot.get("visible", false))
+		and str(teammate_pve_view.get("outcomeId", "")) == "battle_record_target_mapping_teammate_victory:acc_b"
+	)
+	host._panel_flow()._dismiss_battle_outcome_float()
 	var zero_exp_line_ok = host._server_battle_exp_log_line("人物", {
 		"name": "普通测试号",
 		"amount": 0,
@@ -24556,6 +24697,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and host.world_log_message.find("宠物 出战布伊 获得 110 点经验（基础100，组队+10%）。") >= 0
 		and host.world_log_message.find("队伍战斗已结束") < 0
 	)
+	host._panel_flow()._dismiss_battle_outcome_float()
 	var duel_hang_session = {
 		HangSettingsModel.SESSION_ENABLED_KEY: true,
 		HangSettingsModel.SESSION_MODE_KEY: "walk",
@@ -24607,8 +24749,8 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and str(duel_hang_after.get(HangSettingsModel.SESSION_LAST_STOP_REASON_KEY, "")) == "low_hp"
 		and not host.hang_mode_active
 	)
-	var status = "ok" if converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and transport_helper_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_singleflight_guard_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_popup_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
-	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s transport=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_singleflight=%s restore_poll_enabled=%s explicit_restore=%s active_poll=%s pve_popup=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_panel=%s closed_text=%s" % [
+	var status = "ok" if converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and transport_helper_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_singleflight_guard_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_outcome_overlay_ok and pve_outcome_dedupe_ok and teammate_pve_victory_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
+	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s transport=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_singleflight=%s restore_poll_enabled=%s explicit_restore=%s active_poll=%s pve_overlay=%s pve_dedupe=%s teammate_victory=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_outcome=%s duplicate_outcome=%s teammate_outcome=%s closed_text=%s" % [
 		status,
 		str(converted_target_ok),
 		str(converted_attacker_ok),
@@ -24624,7 +24766,9 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		str(restore_poll_enabled_ok),
 		str(explicit_restore_start_ok),
 		str(active_poll_gate_ok),
-		str(pve_popup_ok),
+		str(pve_outcome_overlay_ok),
+		str(pve_outcome_dedupe_ok),
+		str(teammate_pve_victory_ok),
 		str(pve_message_ok),
 		str(zero_exp_line_ok),
 		str(closed_event_finished_ok),
@@ -24638,7 +24782,9 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		polled_enemy_player_hp,
 		message.replace("\n", " / "),
 		pve_message.replace("\n", " / "),
-		("%s / %s" % [pve_result_title, pve_result_detail]).replace("\n", " / "),
+		JSON.stringify(pve_outcome_snapshot),
+		JSON.stringify(pve_duplicate_snapshot),
+		JSON.stringify(teammate_pve_snapshot),
 		host.world_log_message.replace("\n", " / "),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)

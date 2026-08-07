@@ -281,6 +281,67 @@ final result: passed
 
 final result: passed
 
+# Phase 393 Design QA：PvE 胜利后的世界奖励上漂
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 世界画面保持可见，胜利标题与最多五条奖励卡位于中央安全区；
+  人物、骑宠、战宠、伙伴经验、人物／宠物升级、石币、背包物品与邮箱物品依次出现，
+  没有越界、截字、程序员字段、通用“确定”弹窗或点击阻断。
+- 工程 Design QA 与动态媒体门禁已通过；项目所有者尚未观看最终 `1×` 视频，因此
+  `ownerReviewStatus=pending`，本结果不代替主观视觉接受。
+
+## Comparison target
+
+- 主要参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-8732b753-37bc-483b-a0ae-4cc94977e89c.jpg`；
+- 最终视频：
+  `.run/evidence/phase393_battle_outcome_owner_review/phase393-video-foundation-smoke-v2/battle-outcome-owner-review-1x.mp4`；
+- 动态联系表：
+  `.run/evidence/phase393_battle_outcome_owner_review/phase393-video-foundation-smoke-v2/contact-sheet.png`；
+- 代表性满队列帧：
+  `.run/evidence/phase393_battle_outcome_owner_review/phase393-video-foundation-smoke-v2/keyframes/frame-06.png`。
+- 参考图的“新功能开启：世界首领”按项目所有者说明属于干扰项，不纳入 fidelity surface；
+  比较只关注回到世界、奖励文字居中出现、逐条上移与自动收敛。
+
+## Required fidelity surfaces
+
+- Hierarchy：金色“战斗胜利”先建立结算语义，奖励行在中央下方形成稳定纵向队列；背景
+  世界、任务栏和 HUD 仍可辨认，不把结算改成遮满全屏的程序式报表。
+- Motion：行以固定间隔进入，已有行同步上移，队列完成后整体上漂并淡出；脚本实测
+  `upwardMotionObserved=true / fadeObserved=true / queueCompleted=true`。
+- Typography：经验、普通奖励、升级和警告有独立明度层级，暗褐半透明卡与描边保证在
+  明亮草地上仍可读；最终帧未见中文乱码、裁切或文字碰撞。
+- Truth：所有行从当前账号的权威 `profileWriteback` 投影；同一骑宠／战宠实例去重，升级
+  只认 `levelsGained/level`，物品显示玩家名称而非 raw item ID。
+- Controls：浮层为 `MOUSE_FILTER_IGNORE`，自动结束且不要求点击；正常世界左键与挂机流
+  不因结果展示增加新的强制步骤。
+- Viewport：正式目标是 PC `1280×720`；没有把移动端、竖屏或触控专属布局冒充已完成。
+
+## Intentional differences and P3 observations
+
+- [P3] 参考图把奖励字叠在“新功能开启”大遮罩上；Beastbound 按明确需求移除该干扰项，
+  使用独立胜利标题和暗褐奖励卡，优先保证不同地图亮度下的可读性。
+- [P3] 参考画面同时只露出少量细条；实机为覆盖人物、骑宠、战宠、伙伴与物品，将队列
+  上限设为五行，旧行上移退出，避免十一项一次性铺满屏幕。
+- [P3] 本阶段只改服务端组队 PvE 胜利；失败、逃跑、超时、切磋和庄园战仍保留既有结果
+  框，因为这些流程还可能需要损失或对手信息，不能凭一张胜利参考图一并改写。
+
+## Comparison history
+
+| 轮次 | 发现 | 修复 | 复核证据 |
+| --- | --- | --- | --- |
+| 合同审计 | P1：原组队 PvE 胜利在清掉战斗场景后打开固定 `420×184` 通用确认框；actor 战斗漂字又随 `_end_battle` 清空，不能承担世界结算 | 在清场前冻结权威 view-state，清场回世界后交给独立鼠标穿透浮层 | `--auto-server-battle-target-mapping-check`：`pve_overlay=true` |
+| Pass 1 | P1：服务器 `reason="defeat"` 也可能代表敌方被击败，按 reason 会把队友胜利误判为本人失败 | 保留敌方存活与本人 loser 判定，并增加存活队友成为 winner 的回归 | `teammate_victory=true` |
+| Pass 1 | P2：关闭房间或重复事件可能重放同一组文字；同宠同时作为骑宠与战宠会重复经验 | 使用 `battleRecordId:accountId` 去重 outcome，并按宠物稳定实例 ID 去重经验 | `pve_dedupe=true`、Presenter 自检通过 |
+| Final | 未发现剩余 P0、P1、P2；保留三项有产品边界依据的 P3 差异 | 无进一步改动 | 9.533333 秒真实 Main 视频、12 帧联系表、17/17 SHA |
+
+final result: passed
+
+---
+
 # Phase 392 Design QA：觉醒式交易所全屏三态
 
 ## Findings
