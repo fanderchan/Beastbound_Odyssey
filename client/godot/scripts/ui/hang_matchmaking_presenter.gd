@@ -1,0 +1,184 @@
+extends RefCounted
+class_name HangMatchmakingPresenter
+
+const HangMatchmakingRouteCatalog := preload(
+	"res://scripts/ui/hang_matchmaking_route_catalog.gd"
+)
+
+const VIEW_BROWSE := "browse"
+const VIEW_PARTY := "party"
+const VIEW_MATCHING := "matching"
+const PARTY_MAX_MEMBERS := 5
+
+
+static func routes_for_player(current_map_id: String, player_level: int) -> Array[Dictionary]:
+	return HangMatchmakingRouteCatalog.routes_for_player(current_map_id, player_level)
+
+
+static func normalize_state(source: Dictionary) -> Dictionary:
+	var match_value = source.get("match", source.get("matchmaking", {}))
+	var match_state := match_value as Dictionary if match_value is Dictionary else {}
+	var party_value = match_state.get("party", source.get("party", {}))
+	var party := party_value as Dictionary if party_value is Dictionary else {}
+	var npc_members := _dictionary_array(
+		match_state.get("npcMembers", source.get("npcMembers", []))
+	)
+	var members := _authoritative_member_rows(party, npc_members)
+	if members.is_empty():
+		members = _dictionary_array(match_state.get("members", []))
+	var active := bool(match_state.get("active", source.get("matching", false)))
+	var match_status := str(match_state.get("status", "searching" if active else "idle")).strip_edges().to_lower()
+	var max_members := clampi(
+		int(match_state.get("maxMembers", PARTY_MAX_MEMBERS)),
+		1,
+		PARTY_MAX_MEMBERS
+	)
+	var human_default := _count_kind(members, "human")
+	var npc_default := _count_kind(members, "npc")
+	var human_count := clampi(
+		int(match_state.get("humanCount", party.get("memberCount", human_default))),
+		0,
+		max_members
+	)
+	var npc_count := clampi(
+		int(match_state.get("npcCount", npc_default)),
+		0,
+		max_members - human_count
+	)
+	var empty_count := max_members - human_count - npc_count
+	var raw_view := str(source.get("viewMode", "")).strip_edges().to_lower()
+	var view_mode := raw_view if raw_view in [VIEW_BROWSE, VIEW_PARTY, VIEW_MATCHING] else VIEW_BROWSE
+	if active or match_status == "full":
+		view_mode = VIEW_MATCHING
+	return {
+		"viewMode": view_mode,
+		"pending": bool(source.get("pending", source.get("requestPending", false))),
+		"statusText": str(source.get("statusText", "")).strip_edges(),
+		"selectedRouteId": str(source.get("selectedRouteId", "")).strip_edges(),
+		"match": {
+			"active": active,
+			"status": match_status,
+			"humanCount": human_count,
+			"npcCount": npc_count,
+			"emptyCount": empty_count,
+			"maxMembers": max_members,
+			"waitingPlayerCount": maxi(0, int(match_state.get("waitingPlayerCount", 0))),
+			"waitingPartyCount": maxi(0, int(match_state.get("waitingPartyCount", 0))),
+			"npcFillInMs": maxi(0, int(match_state.get("npcFillInMs", 0))),
+			"npcFillInSec": ceili(maxf(0.0, float(match_state.get("npcFillInMs", 0))) / 1000.0),
+			"party": party.duplicate(true),
+			"npcMembers": npc_members,
+			"members": members,
+		},
+		"partyListings": _dictionary_array(
+			source.get("partyListings", source.get("listings", []))
+		),
+	}
+
+
+static func route_by_id(routes: Array[Dictionary], route_id: String) -> Dictionary:
+	var normalized := route_id.strip_edges()
+	for route in routes:
+		if str(route.get("routeId", "")) == normalized:
+			return route
+	return {}
+
+
+static func preferred_route_id(routes: Array[Dictionary]) -> String:
+	for route in routes:
+		if bool(route.get("current", false)) and bool(route.get("recommended", false)):
+			return str(route.get("routeId", ""))
+	for route in routes:
+		if bool(route.get("current", false)):
+			return str(route.get("routeId", ""))
+	for route in routes:
+		if bool(route.get("recommended", false)) and not bool(route.get("locked", false)):
+			return str(route.get("routeId", ""))
+	for route in routes:
+		if not bool(route.get("locked", false)):
+			return str(route.get("routeId", ""))
+	return str(routes[0].get("routeId", "")) if not routes.is_empty() else ""
+
+
+static func member_rows(match_state: Dictionary) -> Array[Dictionary]:
+	var max_members := clampi(int(match_state.get("maxMembers", PARTY_MAX_MEMBERS)), 1, PARTY_MAX_MEMBERS)
+	var rows: Array[Dictionary] = []
+	for raw_member in match_state.get("members", []):
+		if not (raw_member is Dictionary) or rows.size() >= max_members:
+			continue
+		var member := raw_member as Dictionary
+		var kind := str(member.get("kind", "human")).strip_edges().to_lower()
+		if kind not in ["human", "npc"]:
+			kind = "human"
+		rows.append({
+			"kind": kind,
+			"name": str(member.get("name", "冒险者" if kind == "human" else "陪练NPC")),
+			"level": maxi(1, int(member.get("level", 1))),
+			"leader": bool(member.get("leader", false)),
+		})
+	var expected_humans := clampi(int(match_state.get("humanCount", 0)), 0, max_members)
+	var expected_npcs := clampi(int(match_state.get("npcCount", 0)), 0, max_members - expected_humans)
+	var actual_humans := 0
+	var actual_npcs := 0
+	for row in rows:
+		if str(row.get("kind", "")) == "npc":
+			actual_npcs += 1
+		else:
+			actual_humans += 1
+	while actual_humans < expected_humans and rows.size() < max_members:
+		rows.append({"kind": "human", "name": "真人队友", "level": 1, "leader": rows.is_empty()})
+		actual_humans += 1
+	while actual_npcs < expected_npcs and rows.size() < max_members:
+		rows.append({"kind": "npc", "name": "陪练NPC", "level": 1, "leader": false})
+		actual_npcs += 1
+	while rows.size() < max_members:
+		rows.append({"kind": "empty", "name": "等待加入", "level": 0, "leader": false})
+	return rows
+
+
+static func _dictionary_array(value) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if value is Array:
+		for raw_value in value as Array:
+			if raw_value is Dictionary:
+				result.append((raw_value as Dictionary).duplicate(true))
+	return result
+
+
+static func _authoritative_member_rows(
+	party: Dictionary,
+	npc_members: Array[Dictionary]
+) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var leader_account_id := str(party.get("leaderAccountId", "")).strip_edges()
+	for raw_member in party.get("members", []):
+		if not (raw_member is Dictionary):
+			continue
+		var member := raw_member as Dictionary
+		var account_id := str(member.get("accountId", "")).strip_edges()
+		var snapshot_value = member.get("teamSnapshot", {})
+		var snapshot := snapshot_value as Dictionary if snapshot_value is Dictionary else {}
+		var player_value = snapshot.get("player", {})
+		var player := player_value as Dictionary if player_value is Dictionary else {}
+		result.append({
+			"kind": "human",
+			"name": str(member.get("displayName", member.get("username", "冒险者"))).strip_edges(),
+			"level": maxi(1, int(player.get("level", 1))),
+			"leader": str(member.get("role", "")) == "leader" or (account_id != "" and account_id == leader_account_id),
+		})
+	for npc in npc_members:
+		result.append({
+			"kind": "npc",
+			"name": str(npc.get("displayName", "陪练NPC")).strip_edges(),
+			"level": maxi(1, int(npc.get("level", 1))),
+			"leader": false,
+		})
+	return result
+
+
+static func _count_kind(rows: Array[Dictionary], kind: String) -> int:
+	var count := 0
+	for row in rows:
+		if str(row.get("kind", "")) == kind:
+			count += 1
+	return count

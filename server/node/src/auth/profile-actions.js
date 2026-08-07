@@ -285,6 +285,18 @@ function createProfileActionsDomain(ctx) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
+    if (action === "training_partner_set_count") {
+      return fail("training_partner_action_retired", "手工陪练伙伴功能已退役，请使用“匹配挂机”；系统会自动安排NPC陪练。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+        result: {
+          action,
+          retired: true,
+          replacement: "hang_matchmaking",
+          schemaVersion: 1,
+        },
+      });
+    }
     const backpackConflict = backpackAssetConflict(profileDoc.profile);
     if (backpackConflict) {
       return fail(backpackConflict.code, backpackConflict.message, {
@@ -311,23 +323,6 @@ function createProfileActionsDomain(ctx) {
         type: "use_world_item",
         itemId: String(actionResult.itemId || params.itemId || "").trim(),
         targetType: String(actionResult.instanceId || params.instanceId || params.petId || "").trim() !== "" ? "pet" : "player",
-        amount: 1,
-        schemaVersion: 1,
-      });
-      if (questProgress.changed && questProgress.message) {
-        questMessages.push(questProgress.message);
-      }
-      if (questProgress.ready && activeQuestAutoClaim(profile)) {
-        const claim = claimActiveQuestToProfile(profile);
-        if (claim.ok && claim.message) {
-          questMessages.push(claim.message);
-        }
-      }
-    }
-    if (action === "training_partner_set_count") {
-      const questProgress = recordQuestEventToProfile(profile, {
-        type: "training_partner_set_count",
-        count: Math.max(0, Math.trunc(Number(actionResult.count || 0))),
         amount: 1,
         schemaVersion: 1,
       });

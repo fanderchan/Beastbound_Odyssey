@@ -86,10 +86,15 @@ const OBJECTIVE_TEMPLATES := {
 		"requiredFields": ["spiritId"],
 		"summary": "在战斗中释放指定精灵，可用 eventType 限定效果。",
 	},
+	"hang_matchmaking_join": {
+		"label": "加入挂机匹配",
+		"eventTypes": ["hang_matchmaking_join"],
+		"summary": "成功加入一次服务端权威挂机匹配，可按路线、地图或遇敌组限定目标。",
+	},
 	"training_partner_count": {
 		"label": "陪练伙伴",
 		"eventTypes": ["training_partner_set_count"],
-		"summary": "队伍中加入指定数量的陪练伙伴。",
+		"summary": "旧任务档案兼容：队伍中加入指定数量的手工陪练伙伴。",
 	},
 	"ride_pet": {
 		"label": "骑乘宠物",
@@ -711,6 +716,18 @@ static func _progress_amount_for_objective(objective: Dictionary, event: Diction
 			if not _matches_string_filter(objective, event, "eventType"):
 				return 0
 			return maxi(1, int(event.get("amount", 1)))
+		"hang_matchmaking_join":
+			if event_type != "hang_matchmaking_join":
+				return 0
+			if int(event.get("amount", 0)) < 1:
+				return 0
+			if not _matches_string_filter(objective, event, "progressionZoneId"):
+				return 0
+			if not _matches_string_filter(objective, event, "mapId"):
+				return 0
+			if not _matches_string_filter(objective, event, "encounterGroupId"):
+				return 0
+			return 1
 		"training_partner_count":
 			if event_type != "training_partner_set_count":
 				return 0

@@ -48,6 +48,7 @@ function createBattleRoomDomain(ctx) {
     isoNow,
     load,
     markBattleConnectionForAccount,
+    matchmakingContextForParty,
     normalizeBattleCommandPayload,
     normalizeUsername,
     now,
@@ -422,6 +423,18 @@ function createBattleRoomDomain(ctx) {
         }
       }
     }
+    const leaderPosition = data.playerPositions[partyLeaderAccountId] || null;
+    const queuedMatchContext = typeof matchmakingContextForParty === "function"
+      ? matchmakingContextForParty(data, activeParty || {
+        leaderAccountId: resolved.account.accountId,
+        memberAccountIds,
+      }, {
+        activeMemberAccountIds: memberAccountIds,
+        mapId: String(leaderPosition && leaderPosition.mapId || ""),
+        encounterGroupId: String(encounter && encounter.groupId || ""),
+      })
+      : null;
+    const matchContext = queuedMatchContext;
     const room = {
       roomId: `battle_room_${randomId()}`,
       mode: BATTLE_MODE_PARTY_PVE,
@@ -434,6 +447,10 @@ function createBattleRoomDomain(ctx) {
       entry,
       participants,
       encounter,
+      matchmaking: Boolean(matchContext),
+      matchQueueId: String(matchContext && matchContext.queueId || ""),
+      matchTarget: matchContext ? clone(matchContext.target) : null,
+      matchBots: matchContext ? clone(matchContext.matchBots) : [],
       createdAt: isoNow(now),
       updatedAt: isoNow(now),
       schemaVersion: 1,

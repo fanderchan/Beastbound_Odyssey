@@ -523,8 +523,14 @@ test("an unselected multi-character session cannot replay a legacy account-only 
   });
   const operationId = "character_legacy_asset_receipt_0001";
   const payload = {
-    action: "training_partner_set_count",
-    payload: {count: 1},
+    action: "record_point_save",
+    payload: {
+      recordPoint: {
+        mapId: "firebud_training_yard",
+        spawnName: "legacy_receipt",
+        label: "旧回执记录点",
+      },
+    },
   };
   const committed = await seedService.invokeDurable(
     "profileAction",
@@ -629,7 +635,16 @@ test("HTTP character routes enforce durable create and rotate into the selected 
     "profileAction",
     [
       registered.session.token,
-      {action: "training_partner_set_count", payload: {count: 1}},
+      {
+        action: "record_point_save",
+        payload: {
+          recordPoint: {
+            mapId: "firebud_training_yard",
+            spawnName: "cross_method_replay",
+            label: "跨方法回执记录点",
+          },
+        },
+      },
     ],
     {
       operationId: createReceipt.operationId,
@@ -710,8 +725,14 @@ test("HTTP character routes enforce durable create and rotate into the selected 
   assert.equal(selectedProfile.profile.player.name, "网络乙");
 
   const profileActionBody = JSON.stringify({
-    action: "training_partner_set_count",
-    payload: {count: 1},
+    action: "record_point_save",
+    payload: {
+      recordPoint: {
+        mapId: "firebud_training_yard",
+        spawnName: "network_second",
+        label: "网络乙记录点",
+      },
+    },
   });
   const actionOnSecond = await fetchJson(`${baseUrl}/profile/action`, {
     method: "POST",
@@ -722,7 +743,7 @@ test("HTTP character routes enforce durable create and rotate into the selected 
     body: profileActionBody,
   });
   assert.equal(actionOnSecond.ok, true);
-  assert.equal(actionOnSecond.profile.trainingPartners.length, 1);
+  assert.equal(actionOnSecond.profile.recordPoint.label, "网络乙记录点");
   const characterReceipt = service.snapshot()
     .mutationReceipts.character_cross_profile_action_0002;
   assert.equal(characterReceipt.scopeKind, "character");
@@ -754,7 +775,7 @@ test("HTTP character routes enforce durable create and rotate into the selected 
   });
   assert.equal(untouchedFirst.ok, true);
   assert.equal(untouchedFirst.profile.player.name, "网络甲");
-  assert.equal(untouchedFirst.profile.trainingPartners.length, 0);
+  assert.notEqual(untouchedFirst.profile.recordPoint.label, "网络乙记录点");
 });
 
 test("HTTP legacy element allocation is authenticated, durable, and replay-safe", async (t) => {

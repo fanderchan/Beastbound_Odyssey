@@ -953,7 +953,7 @@ test("party pve encounters create one shared server room and wait for all player
   const memberPlayer = actors.find((actor) => actor.username === "pvemember" && actor.kind === "player");
   assert.equal(memberPlayer.ridePetInstanceId, "member_ride_pet");
   assert.equal(memberPlayer.ridePetHp, 160);
-  assert.equal(actors.some((actor) => actor.displayName === "队长伙伴"), true);
+  assert.equal(actors.some((actor) => actor.displayName === "队长伙伴"), false);
   assert.equal(encounter.room.battle.requiredActorIds.length, 4);
 
   const leaderPlayer = actors.find((actor) => actor.username === "pveleader" && actor.kind === "player");
@@ -989,7 +989,7 @@ test("party pve encounters create one shared server room and wait for all player
   assert.equal(resolved.room.battle.round, 2);
 });
 
-test("party pve training partners heal their low hp partner pair before attacking", () => {
+test("new party pve rooms freeze legacy training partners outside the battle snapshot", () => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const solo = service.register({"username": "pvehealpartner", "password": "test1234", "displayName": "陪练治疗号"});
   assert.equal(solo.ok, true);
@@ -1084,7 +1084,9 @@ test("party pve training partners heal their low hp partner pair before attackin
   const lowPartner = actors.find((actor) => actor.displayName === "低血伙伴" && actor.kind === "player");
   const petGuardPartner = actors.find((actor) => actor.displayName === "护宠伙伴" && actor.kind === "player");
   const lowPartnerPet = actors.find((actor) => actor.displayName === "低血伙伴宠" && actor.kind === "pet");
-  assert.equal(Boolean(soloPlayer && soloPet && lowPartner && petGuardPartner && lowPartnerPet), true);
+  assert.equal(Boolean(soloPlayer && soloPet), true);
+  assert.equal(Boolean(lowPartner || petGuardPartner || lowPartnerPet), false);
+  assert.deepEqual(encounter.room.participants[0].teamSnapshot.trainingPartners, []);
 
   assert.equal(service.submitBattleCommand(solo.session.token, encounter.room.roomId, {
     "round": 1,
@@ -1098,37 +1100,10 @@ test("party pve training partners heal their low hp partner pair before attackin
   });
   assert.equal(resolved.ok, true);
 
-  const healEvents = resolved.turn.events.filter((event) => event.eventType === "spirit_heal" && event.actionKind === "training_partner_heal");
-  assert.equal(healEvents.length, 2);
-  const selfHeal = healEvents.find((event) => event.actorId === lowPartner.actorId && event.targetActorId === lowPartner.actorId);
-  assert.equal(Boolean(selfHeal), true);
-  assert.equal(selfHeal.spiritId, "spirit_moist_1");
-  assert.equal(selfHeal.hpBefore, 39);
-  assert.equal(selfHeal.heal, 25);
-  assert.equal(selfHeal.healed, 25);
-  assert.equal(selfHeal.hpAfter, 64);
-
-  const petHeal = healEvents.find((event) => event.actorId === petGuardPartner.actorId && event.targetActorId === lowPartnerPet.actorId);
-  assert.equal(Boolean(petHeal), true);
-  assert.equal(petHeal.hpBefore, 47);
-  assert.equal(petHeal.heal, 30);
-  assert.equal(petHeal.healed, 30);
-  assert.equal(petHeal.hpAfter, 77);
-
-  const updatedLowPartner = resolved.room.battle.actors.find((actor) => actor.actorId === lowPartner.actorId);
-  const updatedLowPartnerPet = resolved.room.battle.actors.find((actor) => actor.actorId === lowPartnerPet.actorId);
-  const damageAfterSelfHeal = resolved.turn.events
-    .filter((event) => Number(event.sequence || 0) > Number(selfHeal.sequence || 0))
-    .filter((event) => event.targetActorId === lowPartner.actorId)
-    .reduce((sum, event) => sum + Number(event.damage || 0), 0);
-  const damageAfterPetHeal = resolved.turn.events
-    .filter((event) => Number(event.sequence || 0) > Number(petHeal.sequence || 0))
-    .filter((event) => event.targetActorId === lowPartnerPet.actorId)
-    .reduce((sum, event) => sum + Number(event.damage || 0), 0);
-  assert.equal(updatedLowPartner.hp, Math.max(0, selfHeal.hpAfter - damageAfterSelfHeal));
-  assert.equal(updatedLowPartnerPet.hp, Math.max(0, petHeal.hpAfter - damageAfterPetHeal));
-  assert.equal(resolved.turn.events.some((event) => event.actorId === lowPartner.actorId && event.eventType === "basic_attack"), false);
-  assert.equal(resolved.turn.events.some((event) => event.actorId === petGuardPartner.actorId && event.eventType === "basic_attack"), false);
+  assert.equal(
+    resolved.turn.events.some((event) => String(event.actionKind || "").startsWith("training_partner")),
+    false,
+  );
 });
 
 test("party pve encounters skip offline party members", () => {
@@ -1215,8 +1190,8 @@ test("party pve encounters skip offline party members", () => {
   assert.deepEqual(encounter.room.participants.map((player) => player.username), ["pveofflinea"]);
   assert.deepEqual(encounter.room.battle.requiredAccountIds, [leader.account.accountId]);
   assert.equal(encounter.room.battle.actors.some((actor) => actor.username === "pveofflineb"), false);
-  assert.equal(encounter.room.battle.actors.some((actor) => actor.displayName === "离线替补伙伴"), true);
-  assert.equal(encounter.room.battle.actors.some((actor) => actor.displayName === "替补伙伴布伊"), true);
+  assert.equal(encounter.room.battle.actors.some((actor) => actor.displayName === "离线替补伙伴"), false);
+  assert.equal(encounter.room.battle.actors.some((actor) => actor.displayName === "替补伙伴布伊"), false);
   const partyState = service.getPartyState(leader.session.token);
   assert.equal(partyState.ok, true);
   assert.equal(partyState.party.memberCount, 2);
@@ -1348,7 +1323,7 @@ test("party pve waiting battle removes offline non-leader members and resolves r
   )), true);
 });
 
-test("party pve waiting battle removes offline leader with owned partner actors", () => {
+test("party pve waiting battle removes an offline leader while legacy partners stay frozen", () => {
   let nowMs = Date.parse("2026-02-03T01:15:00.000Z");
   const service = createAuthService({"store": createMemoryAuthStore(), "now": () => nowMs});
   const events = [];
@@ -1434,7 +1409,8 @@ test("party pve waiting battle removes offline leader with owned partner actors"
   const memberPlayer = actors.find((actor) => actor.username === "pveleaderdropb" && actor.kind === "player");
   const memberPet = actors.find((actor) => actor.username === "pveleaderdropb" && actor.kind === "pet");
   const enemy = actors.find((actor) => actor.side === "enemy");
-  assert.equal(Boolean(leaderPlayer && leaderPet && leaderPartner && leaderPartnerPet && memberPlayer && memberPet && enemy), true);
+  assert.equal(Boolean(leaderPlayer && leaderPet && memberPlayer && memberPet && enemy), true);
+  assert.equal(Boolean(leaderPartner || leaderPartnerPet), false);
   assert.equal(service.submitBattleCommand(member.session.token, encounter.room.roomId, {
     "round": 1,
     "actorId": memberPlayer.actorId,
@@ -1477,7 +1453,7 @@ test("party pve waiting battle removes offline leader with owned partner actors"
   const roomUpdate = events.find((event) => event.type === "battle.room_updated" && event.reason === "party_member_offline");
   assert.equal(Boolean(roomUpdate), true);
   assert.deepEqual(roomUpdate.removedAccountIds, [leader.account.accountId]);
-  for (const actor of [leaderPlayer, leaderPet, leaderPartner, leaderPartnerPet]) {
+  for (const actor of [leaderPlayer, leaderPet]) {
     assert.equal(roomUpdate.escapedActorIds.includes(actor.actorId), true);
   }
   assert.equal(roomUpdate.turn.kind, "battle_event_list");

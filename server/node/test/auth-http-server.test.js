@@ -833,7 +833,8 @@ test("HTTP server exposes server-authoritative profile action endpoint", async (
   assert.equal(profileWriteLog.playerId, healed.profileSummary.playerId);
   assert.equal(profileWriteLog.profileRevision, 2);
 
-  const partners = await fetchJson(`${base}/profile/action`, {
+  const beforeRetiredTrainingAction = service.getProfile(registered.session.token);
+  const retiredTrainingAction = await fetchJson(`${base}/profile/action`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${registered.session.token}`},
     "body": JSON.stringify({
@@ -841,10 +842,24 @@ test("HTTP server exposes server-authoritative profile action endpoint", async (
       "payload": {"count": 2},
     }),
   });
-  assert.equal(partners.ok, true);
-  assert.equal(partners.result.count, 2);
-  assert.equal(partners.profile.trainingPartners.length, 2);
-  assert.equal(partners.profile.trainingPartners[0].pet.name, "陪练接口布伊1");
+  assert.equal(retiredTrainingAction.ok, false);
+  assert.equal(retiredTrainingAction.code, "training_partner_action_retired");
+  assert.match(retiredTrainingAction.message, /匹配挂机/);
+  assert.deepEqual(retiredTrainingAction.result, {
+    action: "training_partner_set_count",
+    retired: true,
+    replacement: "hang_matchmaking",
+    schemaVersion: 1,
+  });
+  const afterRetiredTrainingAction = service.getProfile(registered.session.token);
+  assert.equal(
+    afterRetiredTrainingAction.profileSummary.profileRevision,
+    beforeRetiredTrainingAction.profileSummary.profileRevision,
+  );
+  assert.deepEqual(
+    afterRetiredTrainingAction.profile.trainingPartners,
+    beforeRetiredTrainingAction.profile.trainingPartners,
+  );
 
   const invalid = await fetchJson(`${base}/profile/action`, {
     "method": "POST",

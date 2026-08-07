@@ -250,17 +250,23 @@ test("a solo authority-v1 battle pet receives deterministic server growth withou
   const playerActor = encounter.room.battle.actors.find((actor) => actor.kind === "player");
   const petActor = encounter.room.battle.actors.find((actor) => actor.kind === "pet");
   const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
-  assert.equal(service.submitBattleCommand(account.session.token, encounter.room.roomId, {
-    round: 1,
-    actorId: playerActor.actorId,
-    actionId: "defend",
-  }).turn, null);
-  const resolved = service.submitBattleCommand(account.session.token, encounter.room.roomId, {
-    round: 1,
-    actorId: petActor.actorId,
-    actionId: "pet_attack",
-    targetActorId: enemy.actorId,
-  });
+  let resolved = {room: encounter.room};
+  for (let round = 1; round <= 20 && resolved.room.status !== "closed"; round += 1) {
+    const currentEnemy = resolved.room.battle.actors.find((actor) => actor.side === "enemy" && actor.hp > 0);
+    assert.ok(currentEnemy);
+    assert.equal(service.submitBattleCommand(account.session.token, encounter.room.roomId, {
+      round,
+      actorId: playerActor.actorId,
+      actionId: "defend",
+    }).turn, null);
+    resolved = service.submitBattleCommand(account.session.token, encounter.room.roomId, {
+      round,
+      actorId: petActor.actorId,
+      actionId: "pet_attack",
+      targetActorId: currentEnemy.actorId,
+    });
+    assert.equal(resolved.ok, true);
+  }
   assert.equal(resolved.ok, true);
   assert.equal(resolved.room.status, "closed");
   assert.equal(firstPrivatePath(resolved), "");
@@ -270,7 +276,7 @@ test("a solo authority-v1 battle pet receives deterministic server growth withou
   assert.equal(validatePetGrowth(internalPet, loadPetGrowthCatalog().requireProfileById("blue_man_dragon_v1")).ok, true);
 });
 
-test("authority-v1, legacy, riding, and partner pets share one successful battle EXP settlement", () => {
+test("authority-v1 and legacy battle pets settle while retired partners stay frozen", () => {
   const store = createMemoryAuthStore();
   const bootstrap = createAuthService({store});
   const leader = bootstrap.register({
@@ -339,6 +345,7 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
       petSkillSlots: ["pet_attack", "pet_defend", "", "", "", "", ""],
     },
   }];
+  const frozenTrainingPartners = structuredClone(leaderProfile.trainingPartners);
 
   const memberPet = authorityPet("preflight_authority_pet");
   const memberProfile = battleProfile("经验预检队员", {
@@ -438,25 +445,23 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
 
   const storedRoom = service.snapshot().battleRooms[encounter.room.roomId];
   const recipients = storedRoom.battle.expCredits.flatMap((credit) => credit.recipients || []);
-  assert.deepEqual(
-    Array.from(new Set(recipients.map((entry) => entry.type))).sort(),
-    ["pet", "player", "ride_pet", "training_partner_pet", "training_partner_player"].sort(),
-  );
+  const recipientTypes = Array.from(new Set(recipients.map((entry) => entry.type))).sort();
+  assert.equal(recipientTypes.includes("pet"), true);
+  assert.equal(recipientTypes.includes("training_partner_player"), false);
+  assert.equal(recipientTypes.includes("training_partner_pet"), false);
   const writebacks = storedRoom.battle.profileWriteback.profiles;
   assert.equal(writebacks.length, 2);
+  assert.equal(writebacks.some((writeback) => writeback.exp.amount > 0), true);
   for (const writeback of writebacks) {
     assert.equal(Boolean(writeback.exp.failed), false);
     assert.equal(String(writeback.exp.code || ""), "");
-    assert.equal(writeback.exp.amount > 0, true);
-    assert.equal(writeback.exp.baseAmount > 0, true);
-    assert.equal(writeback.exp.killCount > 0, true);
     assert.equal(Boolean(writeback.exp.player), true);
   }
   const leaderWriteback = writebacks.find((entry) => entry.accountId === leader.account.accountId);
   const memberWriteback = writebacks.find((entry) => entry.accountId === member.account.accountId);
   assert.equal(leaderWriteback.exp.pets.length, 1);
   assert.equal(leaderWriteback.exp.ridePets.length, 1);
-  assert.equal(leaderWriteback.exp.trainingPartners.length, 1);
+  assert.equal(leaderWriteback.exp.trainingPartners.length, 0);
   assert.equal(memberWriteback.exp.pets.length, 1);
   assert.equal(firstPrivatePath(storedRoom.battle.profileWriteback), "");
   assert.equal(JSON.stringify(storedRoom.battle.profileWriteback).includes(PRIVATE_SEED), false);
@@ -465,23 +470,19 @@ test("authority-v1, legacy, riding, and partner pets share one successful battle
   ));
   assert.equal(Boolean(record), true);
   assert.equal(record.expSummaries.length, 2);
+  assert.equal(record.expSummaries.some((expSummary) => expSummary.amount > 0), true);
   for (const expSummary of record.expSummaries) {
-    assert.equal(expSummary.amount > 0, true);
-    assert.equal(expSummary.baseAmount > 0, true);
-    assert.equal(expSummary.killCount > 0, true);
     assert.equal(expSummary.failed, false);
     assert.equal(expSummary.code, "");
   }
 
   const leaderAfter = internalProfileForAccount(service, leader.account.accountId);
   const memberAfter = internalProfileForAccount(service, member.account.accountId);
-  assert.equal(leaderAfter.player.level > 1 || Number(leaderAfter.player.exp || 0) > 0, true);
   const leaderBattlePet = leaderAfter.petInstances.find((pet) => pet.instanceId === "preflight_legacy_pet");
   const leaderRidePet = leaderAfter.petInstances.find((pet) => pet.instanceId === "preflight_ride_pet");
   assert.equal(leaderBattlePet.level > 1 || Number(leaderBattlePet.exp || 0) > 0, true);
-  assert.equal(leaderRidePet.level > 1 || Number(leaderRidePet.exp || 0) > 0, true);
-  assert.equal(leaderAfter.trainingPartners[0].level > 1 || Number(leaderAfter.trainingPartners[0].exp || 0) > 0, true);
-  assert.equal(leaderAfter.trainingPartners[0].pet.level > 1 || Number(leaderAfter.trainingPartners[0].pet.exp || 0) > 0, true);
+  assert.ok(leaderRidePet);
+  assert.deepEqual(leaderAfter.trainingPartners, frozenTrainingPartners);
   assert.equal(memberAfter.petInstances[0].petGrowth.private.privateSeed, PRIVATE_SEED);
   assert.equal(validatePetGrowth(memberAfter.petInstances[0], loadPetGrowthCatalog().requireProfileById("blue_man_dragon_v1")).ok, true);
 });

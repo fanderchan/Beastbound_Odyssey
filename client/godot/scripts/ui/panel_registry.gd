@@ -17,6 +17,11 @@ func add_input_blocker(control: Control) -> void:
 		input_blockers.append(control)
 
 
+func add_world_menu_panel(control: Control) -> void:
+	if control != null and not world_menu_panels.has(control):
+		world_menu_panels.append(control)
+
+
 func remove_input_blocker(control: Control) -> void:
 	if control != null:
 		input_blockers.erase(control)
@@ -34,7 +39,7 @@ func point_hits_visible_panel(point: Vector2) -> bool:
 
 func any_world_menu_visible() -> bool:
 	for control_value in world_menu_panels:
-		if control_value is Control and (control_value as Control).visible:
+		if control_value is Control and (control_value as Control).is_visible_in_tree():
 			return true
 	return false
 

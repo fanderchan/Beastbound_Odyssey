@@ -120,6 +120,8 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "questClaim",
   "startHangSession",
   "stopHangSession",
+  "joinHangMatchmaking",
+  "cancelHangMatchmaking",
   "sendMail",
   "markMailRead",
   "claimMailAttachments",
@@ -600,6 +602,15 @@ function createHttpServer(options = {}) {
       if (req.method === "POST" && url.pathname === "/hang/session/stop") {
         return sendResult(res, service.stopHangSession(bearerToken(req), await readJson(req)));
       }
+      if (req.method === "GET" && url.pathname === "/hang/match/state") {
+        return sendResult(res, service.getHangMatchState(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/hang/match/join") {
+        return sendResult(res, service.joinHangMatchmaking(bearerToken(req), await readJson(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/hang/match/cancel") {
+        return sendResult(res, service.cancelHangMatchmaking(bearerToken(req), await readJson(req)));
+      }
       if (req.method === "GET" && url.pathname === "/mail/inbox") {
         const inboxOptions = mailInboxOptionsFromSearchParams(url.searchParams);
         if (!inboxOptions.ok) {
@@ -800,7 +811,11 @@ function createDurableHttpServiceProxy(service, requestContexts) {
         const method = String(req && req.method || "").toUpperCase();
         const pathName = String(req && req.beastboundPath || "");
         const actionId = `${method || "INTERNAL"} ${pathName || String(property)}`;
-        const operationId = String(req && req.headers && req.headers["idempotency-key"] || "").trim();
+        const headerOperationId = String(req && req.headers && req.headers["idempotency-key"] || "").trim();
+        const bodyOperationId = ["joinHangMatchmaking", "cancelHangMatchmaking"].includes(String(property))
+          ? String(args && args[1] && args[1].idempotencyKey || "").trim()
+          : "";
+        const operationId = bodyOperationId || headerOperationId;
         const authToken = req ? bearerToken(req) : "";
         return target.invokeDurable(String(property), args, {
           operationId,

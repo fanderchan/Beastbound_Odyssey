@@ -124,12 +124,6 @@ Open the auto-battle settings preview directly from this directory:
 godot --path . --scene res://scenes/Main.tscn -- --auto-battle-settings-preview
 ```
 
-Open the training-partner grass demo directly from this directory:
-
-```sh
-godot --path . --scene res://scenes/Main.tscn -- --training-partner-demo
-```
-
 Open the hang-up settings preview directly from this directory:
 
 ```sh
@@ -160,7 +154,7 @@ godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1200 -- --
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-pet-target-check
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-spirit-four-check
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-battle-settings-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-training-partner-check
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-hang-settings-check
+godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-hang-matchmaking-check
 godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-gm-10v10-map-check
 ```

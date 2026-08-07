@@ -31,7 +31,7 @@ static func entry_definitions(speed_multiplier: int) -> Array[Dictionary]:
 	entries.append({"id": "open_quest", "label": "任务", "description": "任务详情、奖励、自动寻路"})
 	entries.append({"id": "open_auto_battle", "label": "内挂战斗", "description": "人物/宠物首回合与一般回合策略"})
 	entries.append({"id": "open_auto_capture", "label": "内挂捕捉", "description": "捕捉目标、等级、工具、低战力丢弃"})
-	entries.append({"id": "open_partner", "label": "陪练伙伴", "description": "补满5人5宠测试合击"})
+	entries.append({"id": "open_partner", "label": "挂机匹配", "description": "练级路线、真人优先与NPC补位"})
 	entries.append({"id": "open_pet", "label": "宠物", "description": "队伍、兽栏、图鉴、成长"})
 	entries.append({"id": "open_stable", "label": "兽栏", "description": "GM测试存取，等同站在村内兽栏旁"})
 	entries.append({"id": "open_rebirth_preview", "label": "转生预览", "description": "查看人物转生资格和能力预览"})

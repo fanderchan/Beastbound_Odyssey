@@ -137,6 +137,7 @@ const {
   canonicalDurableReceiptReadView,
 } = require("./auth/durable-receipt-read-model");
 const {createPartyDomain} = require("./auth/party");
+const {createHangMatchmakingDomain} = require("./auth/hang-matchmaking");
 const {createBattleRoomDomain} = require("./auth/battle-room");
 const {battleRoomForMutation} = require("./auth/battle-room-cow");
 const {
@@ -335,6 +336,7 @@ const MAX_SERVICE_EVENTS = 500;
 const MAX_BATTLE_RECORDS = 10000;
 const MAX_BATTLE_TRACE_ROWS = 1200;
 const DURABLE_RECEIPT_PRECHECK_METHODS = new Set([
+  "joinHangMatchmaking",
   "buyMarketListing",
   "cancelMarketListing",
   "claimPetRecovery",
@@ -363,6 +365,8 @@ const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "paidResetPet",
   "evolvePet",
   "fusePets",
+  "joinHangMatchmaking",
+  "cancelHangMatchmaking",
 ]);
 const RUNTIME_ONLY_CANDIDATE_FIELDS = Object.freeze([
   "playerPositions",
@@ -640,6 +644,7 @@ const BATTLE_LOCKED_SERVICE_MUTATIONS = new Set([
   "paidResetPet",
   "evolvePet",
   "fusePets",
+  "joinHangMatchmaking",
   "startHangSession",
   "startOfflineHang",
   "playerRebirth",
@@ -4892,7 +4897,50 @@ function createAuthService(options = {}) {
     ) {
       return fail("idempotency_key_conflict", "这个操作标识已经用于另一项请求，请重新发起操作。");
     }
-    return durableReceiptReplayResult(receipt);
+    const durableReplay = durableReceiptReplayResult(receipt);
+    if (String(methodName || "") === "joinHangMatchmaking") {
+      const restored = hangMatchmaking.restoreCommittedJoinReplay(args[0], args[1], {receipt});
+      if (restored && restored.ok === true) {
+        return {
+          ...durableReplay,
+          ...restored,
+          durableCommit: durableReplay.durableCommit,
+        };
+      }
+    }
+    return durableReplay;
+  }
+
+  function durableReceiptResponseForMethod(methodName, responseValue) {
+    const response = objectOrEmpty(responseValue);
+    if (String(methodName || "") !== "joinHangMatchmaking") {
+      return clone(response);
+    }
+    const state = objectOrEmpty(response.state);
+    const partyId = String(objectOrEmpty(state.party).partyId || "").trim();
+    const target = objectOrEmpty(state.target);
+    // Match queues, listings and NPC snapshots are process-local. The durable
+    // receipt proves only the committed party identity and canonical route;
+    // exact replay rebuilds a fresh runtime queue from those two facts.
+    return {
+      ok: response.ok === true,
+      state: {
+        party: {partyId, schemaVersion: 1},
+        target: {
+          progressionZoneId: String(target.progressionZoneId || ""),
+          mapId: String(target.mapId || ""),
+          encounterGroupId: String(target.encounterGroupId || ""),
+          label: String(target.label || ""),
+          schemaVersion: 1,
+        },
+        schemaVersion: 1,
+      },
+      questMessages: Array.isArray(response.questMessages)
+        ? response.questMessages.map((message) => String(message || "")).filter(Boolean).slice(0, 16)
+        : [],
+      message: String(response.message || ""),
+      durableCommit: clone(objectOrEmpty(response.durableCommit)),
+    };
   }
 
   async function exactDurableReceiptDecision(
@@ -5288,7 +5336,7 @@ function createAuthService(options = {}) {
         } : {}),
         committedAt,
         expiresAt: new Date(receiptNowMs + DURABLE_RECEIPT_TTL_MS).toISOString(),
-        response: clone(response),
+        response: durableReceiptResponseForMethod(methodName, response),
       }, {nowMs: receiptNowMs});
       candidate = normalizeData(candidate, {owned: true});
     }
@@ -5393,6 +5441,21 @@ function createAuthService(options = {}) {
           if (typeof store.clearSaveError === "function") {
             store.clearSaveError();
           }
+          // The exact receipt proves that this request-private candidate was
+          // committed. Its closure-owned matchmaking state and staged live
+          // events are intentionally absent from MySQL, so publish those
+          // effects only after the proof succeeds.
+          publishDurableCandidate(
+            null,
+            load(),
+            transaction.events,
+            // durableReceiptReplayDecision() has already rebuilt the
+            // closure-owned matchmaking queue from the exact committed
+            // receipt. Replaying the request-private queue delta as well would
+            // publish a second queue for the same durable party.
+            methodName === "joinHangMatchmaking" ? [] : transaction.runtimeEffects,
+            {methodName},
+          );
           return decision.result;
         }
         if (
@@ -5849,6 +5912,7 @@ function createAuthService(options = {}) {
     activeBattleRoomForAccount,
     activeOnlinePlayers: (serviceData, nowFn = now) => activeOnlinePlayers(serviceData, nowFn, runtimeActiveSessionIds),
     activeQuestAutoClaim,
+    applyAfterDurableCommit,
     authorizeGmCommand,
     claimActiveQuestToProfile,
     addClaimedMailItemsToActiveBattleRoom: (serviceData, accountId, items) => addClaimedMailItemsToActiveBattleRoom(serviceData, accountId, items, now),
@@ -5895,11 +5959,11 @@ function createAuthService(options = {}) {
     battleEquipmentCatalog,
     battleInviteIsExpired,
     battleBackpackEntryCheck,
-    battleParticipantSnapshot: (serviceData, accountValue, side) => battleParticipantSnapshot(
+    battleParticipantSnapshot: (serviceData, accountValue, side, participantOptions = {}) => battleParticipantSnapshot(
       serviceData,
       accountValue,
       side,
-      battleProjectionOptions,
+      {...battleProjectionOptions, ...participantOptions},
     ),
     battleRecordSummaryAgainst,
     battleRoomBattleStateForMutation: (roomValue, nowFn) => battleRoomBattleStateForMutation(
@@ -6020,6 +6084,7 @@ function createAuthService(options = {}) {
     },
     resolveHangOrigin,
     partyForAccount,
+    hangMatchmakingNpcFillDelayMs: options.hangMatchmakingNpcFillDelayMs,
     partyStatePayload: (serviceData, accountId) => partyStatePayload(serviceData, accountId, {
       now,
       runtimeActiveSessionIds,
@@ -6140,6 +6205,8 @@ function createAuthService(options = {}) {
   const quest = createQuestDomain(domainContext);
   const mailChat = createMailChatDomain(domainContext);
   const party = createPartyDomain(domainContext);
+  const hangMatchmaking = createHangMatchmakingDomain(domainContext);
+  domainContext.matchmakingContextForParty = hangMatchmaking.matchmakingContextForParty;
   const battleRoom = createBattleRoomDomain(domainContext);
   const economy = createEconomyDomain(domainContext);
   const familyManor = createFamilyManorDomain(domainContext);
@@ -6179,7 +6246,19 @@ function createAuthService(options = {}) {
     saveProfile,
     profileAction: profileActions.profileAction,
     startHangSession: profileActions.startHangSession,
-    stopHangSession: profileActions.stopHangSession,
+    stopHangSession: (...args) => {
+      const result = profileActions.stopHangSession(...args);
+      if (!result || result.ok !== true) {
+        return result;
+      }
+      return {
+        ...result,
+        matchState: hangMatchmaking.cancelAfterHangStop(args[0], {reason: "hang_stopped"}),
+      };
+    },
+    getHangMatchState: hangMatchmaking.getState,
+    joinHangMatchmaking: hangMatchmaking.join,
+    cancelHangMatchmaking: hangMatchmaking.cancel,
     offlineHangStatus: offlineHang.status,
     startOfflineHang: offlineHang.start,
     claimOfflineHang: offlineHang.claim,
@@ -8278,6 +8357,14 @@ function publicBattleActor(actor) {
   return {
     actorId: String(actor.actorId || ""),
     accountId: String(actor.accountId || ""),
+    ownerAccountId: String(actor.ownerAccountId || ""),
+    partnerId: String(actor.partnerId || ""),
+    npcId: String(actor.npcId || ""),
+    controller: String(actor.controller || ""),
+    matchmakingNpc: Boolean(actor.matchmakingNpc),
+    rewardEligible: Object.prototype.hasOwnProperty.call(actor, "rewardEligible")
+      ? Boolean(actor.rewardEligible)
+      : true,
     username: String(actor.username || ""),
     displayName: String(actor.displayName || actor.username || ""),
     appearanceId: String(actor.appearanceId || ""),
@@ -8377,7 +8464,10 @@ function battleParticipantSnapshot(data, account, side, options = {}) {
   const profile = profileDoc && profileDoc.profile && typeof profileDoc.profile === "object" ? profileDoc.profile : {};
   const playerSnapshot = battlePlayerSnapshotFromProfile(profile, account);
   const battlePets = battlePetSnapshotsFromProfile(profile, options).slice(0, BATTLE_PET_MAX_PER_PARTICIPANT);
-  const trainingPartners = trainingPartnerSnapshotsFromProfile(profile, options).slice(0, PARTY_MAX_MEMBERS - 1);
+  // Legacy hand-grown training partners remain frozen in old saves, but every
+  // newly-created room starts from real accounts plus explicit runtime match
+  // bots. Never project the legacy profile field into a new battle snapshot.
+  const trainingPartners = [];
   const position = data.playerPositions[account.accountId] || null;
   return {
     accountId: account.accountId,
@@ -11739,33 +11829,142 @@ function partyPveBattleRoomActors(room) {
         }
       });
   });
-  const partnerCandidates = [];
-  for (const participant of participants) {
-    const snapshot = participant && participant.teamSnapshot && typeof participant.teamSnapshot === "object" ? participant.teamSnapshot : {};
-    const partners = Array.isArray(snapshot.trainingPartners) ? snapshot.trainingPartners : [];
-    for (const partner of partners) {
-      if (partner && typeof partner === "object" && !Array.isArray(partner)) {
-        partnerCandidates.push({participant, partner});
-      }
-    }
-  }
+  const matchBots = String(room && room.mode || "") === BATTLE_MODE_PARTY_PVE
+    && Boolean(room && room.matchmaking)
+    && Array.isArray(room && room.matchBots)
+    ? room.matchBots.filter((bot) => bot && typeof bot === "object" && !Array.isArray(bot))
+    : [];
   const availablePartnerSlots = BATTLE_PARTY_PVE_PARTNER_SLOTS.filter((slotNumber) => !usedSlots.has(slotNumber));
-  for (let index = 0; index < availablePartnerSlots.length && index < partnerCandidates.length; index += 1) {
+  for (let index = 0; index < availablePartnerSlots.length && index < matchBots.length; index += 1) {
     const slotNumber = availablePartnerSlots[index];
-    const candidate = partnerCandidates[index];
-    const partnerActor = battleTrainingPartnerActorFromSnapshot(candidate.participant, candidate.partner, index, slotNumber);
-    if (partnerActor.actorId) {
-      actors.push(partnerActor);
+    const bot = matchBots[index];
+    const botActor = battleMatchmakingNpcActorFromSnapshot(bot, index, slotNumber);
+    if (botActor.actorId) {
+      actors.push(botActor);
     }
-    const pet = candidate.partner && candidate.partner.pet && typeof candidate.partner.pet === "object" ? candidate.partner.pet : null;
+    const pet = bot && bot.pet && typeof bot.pet === "object" && !Array.isArray(bot.pet) ? bot.pet : null;
     if (pet) {
-      const petActor = battleTrainingPartnerPetActorFromSnapshot(candidate.participant, candidate.partner, pet, index, slotNumber);
+      const petActor = battleMatchmakingNpcPetActorFromSnapshot(bot, pet, index, slotNumber);
       if (petActor.actorId) {
         actors.push(petActor);
       }
     }
   }
+  // Frozen legacy rooms may already contain partner snapshots. Preserve only
+  // those existing runtime rooms; battleParticipantSnapshot() no longer puts
+  // this profile field into any newly-created room.
+  if (room && room.matchmaking !== true) {
+    const legacyCandidates = [];
+    for (const participant of participants) {
+      const snapshot = participant && participant.teamSnapshot && typeof participant.teamSnapshot === "object"
+        ? participant.teamSnapshot
+        : {};
+      for (const partner of Array.isArray(snapshot.trainingPartners) ? snapshot.trainingPartners : []) {
+        if (partner && typeof partner === "object" && !Array.isArray(partner)) {
+          legacyCandidates.push({participant, partner});
+        }
+      }
+    }
+    for (let index = 0; index < availablePartnerSlots.length && index < legacyCandidates.length; index += 1) {
+      const slotNumber = availablePartnerSlots[index];
+      const candidate = legacyCandidates[index];
+      const partnerActor = battleTrainingPartnerActorFromSnapshot(candidate.participant, candidate.partner, index, slotNumber);
+      if (partnerActor.actorId) {
+        actors.push(partnerActor);
+      }
+      const pet = candidate.partner && candidate.partner.pet && typeof candidate.partner.pet === "object"
+        ? candidate.partner.pet
+        : null;
+      if (pet) {
+        const petActor = battleTrainingPartnerPetActorFromSnapshot(candidate.participant, candidate.partner, pet, index, slotNumber);
+        if (petActor.actorId) {
+          actors.push(petActor);
+        }
+      }
+    }
+  }
   return actors.concat(partyPveEnemyActors(room));
+}
+
+function battleMatchmakingNpcActorFromSnapshot(bot, index, slotNumber) {
+  const npcId = String(bot && bot.npcId || `matchmaking_npc_${index + 1}`).trim();
+  const maxHp = positiveNumber(bot && bot.maxHp, DEFAULT_PLAYER_BATTLE_STATS.maxHp);
+  const hp = clampNumber(bot && bot.hp, 1, maxHp, maxHp);
+  return {
+    actorId: `party_pve_match_npc_${index + 1}_${sanitizeBattleActorIdPart(npcId)}`,
+    accountId: "",
+    ownerAccountId: "",
+    partnerId: "",
+    npcId,
+    controller: "server_ai",
+    matchmakingNpc: true,
+    rewardEligible: false,
+    username: "",
+    displayName: String(bot && bot.displayName || `系统陪练${index + 1}`),
+    side: BATTLE_SIDE_ALLY,
+    kind: BATTLE_ACTOR_KIND_PLAYER,
+    slotId: `${BATTLE_SIDE_ALLY}.back.${slotNumber}`,
+    slotNumber,
+    level: positiveNumber(bot && bot.level, 1),
+    hp,
+    maxHp,
+    speed: positiveNumber(bot && bot.quick, DEFAULT_PLAYER_BATTLE_STATS.quick),
+    attack: positiveNumber(bot && bot.attack, DEFAULT_PLAYER_BATTLE_STATS.attack),
+    defense: positiveNumber(bot && bot.defense, DEFAULT_PLAYER_BATTLE_STATS.defense),
+    elements: battleElementsOrFallback(bot && bot.elements),
+    guarding: false,
+    defeated: hp <= 0,
+    actionState: hp <= 0 ? "down" : "idle",
+    launched: false,
+    revivable: true,
+    schemaVersion: 1,
+  };
+}
+
+function battleMatchmakingNpcPetActorFromSnapshot(bot, pet, index, slotNumber) {
+  const npcId = String(bot && bot.npcId || `matchmaking_npc_${index + 1}`).trim();
+  const maxHp = positiveNumber(pet && pet.maxHp, DEFAULT_PET_BATTLE_STATS.maxHp);
+  const hp = clampNumber(pet && pet.hp, 1, maxHp, maxHp);
+  const petId = String(pet && pet.petId || `${npcId}_pet`).trim();
+  const activeSkillIds = petActiveSkillIdsForSource(pet || {});
+  return {
+    actorId: `party_pve_match_npc_pet_${index + 1}_${sanitizeBattleActorIdPart(petId)}`,
+    accountId: "",
+    ownerAccountId: "",
+    partnerId: "",
+    npcId,
+    controller: "server_ai",
+    matchmakingNpc: true,
+    rewardEligible: false,
+    username: "",
+    displayName: String(pet && pet.displayName || pet && pet.name || "陪练宠物"),
+    side: BATTLE_SIDE_ALLY,
+    kind: BATTLE_ACTOR_KIND_PET,
+    petId,
+    activeInBattle: true,
+    formId: String(pet && (pet.formId || pet.speciesId) || "wuli_normal_orange_fire10"),
+    speciesId: String(pet && (pet.speciesId || pet.formId) || "wuli_normal_orange_fire10"),
+    petState: BATTLE_PET_STATE_BATTLE,
+    slotId: `${BATTLE_SIDE_ALLY}.front.${slotNumber}`,
+    slotNumber,
+    level: positiveNumber(pet && pet.level, 1),
+    hp,
+    maxHp,
+    speed: positiveNumber(pet && pet.quick, DEFAULT_PET_BATTLE_STATS.quick),
+    attack: positiveNumber(pet && pet.attack, DEFAULT_PET_BATTLE_STATS.attack),
+    defense: positiveNumber(pet && pet.defense, DEFAULT_PET_BATTLE_STATS.defense),
+    elements: battlePetElementsFromSource(pet || {}),
+    guarding: false,
+    defeated: hp <= 0,
+    actionState: hp <= 0 ? "down" : "idle",
+    launched: false,
+    revivable: true,
+    activeSkillIds,
+    petSkillSlots: petSkillSlotsForSkillIds(activeSkillIds, pet && pet.petSkillSlots),
+    forgottenSkillIds: uniqueStringArray(pet && pet.forgottenSkillIds),
+    passiveSkillIds: petInstancePassiveSkillIdsForBattleSource(pet || {}),
+    schemaVersion: 1,
+  };
 }
 
 function battleTrainingPartnerActorFromSnapshot(participant, partner, index, slotNumber) {
@@ -11777,6 +11976,8 @@ function battleTrainingPartnerActorFromSnapshot(participant, partner, index, slo
     accountId: "",
     ownerAccountId: String(participant && participant.accountId || ""),
     partnerId,
+    legacyTrainingPartner: true,
+    rewardEligible: false,
     username: "",
     displayName: String(partner.name || `伙伴${index + 1}`),
     side: BATTLE_SIDE_ALLY,
@@ -11815,6 +12016,8 @@ function battleTrainingPartnerPetActorFromSnapshot(participant, partner, pet, in
     accountId: "",
     ownerAccountId: String(participant && participant.accountId || ""),
     partnerId,
+    legacyTrainingPartner: true,
+    rewardEligible: false,
     username: "",
     displayName: String(pet.name || "伙伴宠物"),
     side: BATTLE_SIDE_ALLY,
@@ -13830,8 +14033,13 @@ function partyPveAiCommands(room, battle, round) {
   }
   const commands = [];
   const actors = Array.isArray(battle.actors) ? battle.actors : [];
+  const submittedActorIds = new Set(Object.keys(objectOrEmpty(battle.commands)));
   for (const actor of actors) {
-    if (!actor || Number(actor.hp || 0) <= 0 || String(actor.accountId || "") !== "") {
+    if (!actor || Number(actor.hp || 0) <= 0 || submittedActorIds.has(String(actor.actorId || ""))) {
+      continue;
+    }
+    const humanControlled = String(actor.accountId || "") !== "";
+    if (humanControlled && room.matchmaking !== true) {
       continue;
     }
     const actorSide = String(actor.side || "");
@@ -13845,8 +14053,8 @@ function partyPveAiCommands(room, battle, round) {
         commandId: `battle_ai_${round}_${sanitizeBattleActorIdPart(actor.actorId)}_heal`,
         roomId: room.roomId,
         round,
-        accountId: "",
-        username: "",
+        accountId: String(actor.accountId || ""),
+        username: String(actor.username || ""),
         actorId: actor.actorId,
         actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
         actionId: TRAINING_PARTNER_HEAL_SPIRIT_ID,
@@ -13876,8 +14084,8 @@ function partyPveAiCommands(room, battle, round) {
       commandId: `battle_ai_${round}_${sanitizeBattleActorIdPart(actor.actorId)}`,
       roomId: room.roomId,
       round,
-      accountId: "",
-      username: "",
+      accountId: String(actor.accountId || ""),
+      username: String(actor.username || ""),
       actorId: actor.actorId,
       actorKind: String(actor.kind || BATTLE_ACTOR_KIND_PLAYER),
       actionId: isPetLike ? BATTLE_ACTION_PET_ATTACK : BATTLE_ACTION_ATTACK,
@@ -15603,7 +15811,8 @@ function battleQuestEventsForProfile(room, battle, result, accountId, capturedPe
   const encounter = room && room.encounter && typeof room.encounter === "object" && !Array.isArray(room.encounter) ? room.encounter : {};
   const encounterGroupId = String(encounter.groupId || "");
   const interactionId = String(encounter.interactionId || encounter.sourceInteractionId || "");
-  const partyMemberCount = battleQuestPartyMemberCountForAccount(room, accountId);
+  const partyComposition = battleQuestPartyCompositionForAccount(room, accountId);
+  const partyMemberCount = partyComposition.partyMemberCount;
   for (const event of battleSpiritQuestEventsForProfile(room, battle, accountId, encounterGroupId, interactionId)) {
     events.push(event);
   }
@@ -15613,6 +15822,8 @@ function battleQuestEventsForProfile(room, battle, result, accountId, capturedPe
       encounterGroupId,
       interactionId,
       partyMemberCount,
+      humanPartyMemberCount: partyComposition.humanPartyMemberCount,
+      serverFillerCount: partyComposition.serverFillerCount,
       schemaVersion: 1,
     });
     if (interactionId !== "") {
@@ -15642,23 +15853,23 @@ function battleQuestEventsForProfile(room, battle, result, accountId, capturedPe
   return events;
 }
 
-function battleQuestPartyMemberCountForAccount(room, accountId) {
+function battleQuestPartyCompositionForAccount(room, accountId) {
   if (String(room && room.mode || BATTLE_MODE_DUEL) !== BATTLE_MODE_PARTY_PVE) {
-    return 0;
+    return {partyMemberCount: 0, humanPartyMemberCount: 0, serverFillerCount: 0};
   }
   const participants = Array.isArray(room.participants) ? room.participants : [];
   const humanMemberCount = participants
     .filter((participant) => participant && String(participant.accountId || "") !== "")
     .filter((participant) => String(participant.accountId || "") !== String(accountId || ""))
     .length;
-  const selfParticipant = participants.find((participant) => participant && String(participant.accountId || "") === String(accountId || "")) || null;
-  const snapshot = selfParticipant && selfParticipant.teamSnapshot && typeof selfParticipant.teamSnapshot === "object" && !Array.isArray(selfParticipant.teamSnapshot)
-    ? selfParticipant.teamSnapshot
-    : {};
-  const trainingPartners = Array.isArray(snapshot.trainingPartners)
-    ? snapshot.trainingPartners.filter((partner) => partner && typeof partner === "object" && !Array.isArray(partner))
-    : [];
-  return Math.max(0, humanMemberCount + trainingPartners.length);
+  const matchBotCount = Boolean(room && room.matchmaking) && Array.isArray(room && room.matchBots)
+    ? room.matchBots.filter((bot) => bot && bot.matchmakingNpc === true).length
+    : 0;
+  return {
+    partyMemberCount: Math.max(0, humanMemberCount + matchBotCount),
+    humanPartyMemberCount: Math.max(0, humanMemberCount),
+    serverFillerCount: Math.max(0, matchBotCount),
+  };
 }
 
 function battleSpiritQuestEventsForProfile(room, battle, accountId, encounterGroupId, interactionId) {
@@ -16107,7 +16318,10 @@ function questObjectiveProgressAmountForEvent(objective, event) {
     if (eventType !== "battle_victory" || !questMatchesStringFilter(objective, event, "encounterGroupId")) {
       return 0;
     }
-    if (!questMatchesMinimumNumberFilter(objective, event, "partyMemberCount", "minPartyMemberCount")) {
+    const partyEvent = objective.allowServerFillers === true
+      ? event
+      : {...event, partyMemberCount: event.humanPartyMemberCount ?? event.partyMemberCount};
+    if (!questMatchesMinimumNumberFilter(objective, partyEvent, "partyMemberCount", "minPartyMemberCount")) {
       return 0;
     }
     return 1;
@@ -16207,6 +16421,19 @@ function questObjectiveProgressAmountForEvent(objective, event) {
     if (
       eventType !== "start_hang" ||
       !questMatchesStringFilter(objective, event, "mode")
+    ) {
+      return 0;
+    }
+    return 1;
+  }
+  if (type === "hang_matchmaking_join") {
+    const amount = Math.trunc(Number(event.amount || 0));
+    if (
+      eventType !== "hang_matchmaking_join"
+      || amount < 1
+      || !questMatchesStringFilter(objective, event, "progressionZoneId")
+      || !questMatchesStringFilter(objective, event, "mapId")
+      || !questMatchesStringFilter(objective, event, "encounterGroupId")
     ) {
       return 0;
     }
@@ -17693,23 +17920,16 @@ function battleActorRideEligibleForExp(actor) {
 }
 
 function battlePrimaryExpRecipientForActor(room, actor, target) {
+  if (!actor || actor.matchmakingNpc === true || actor.rewardEligible === false) {
+    return null;
+  }
   const actorKind = String(actor.kind || BATTLE_ACTOR_KIND_PLAYER);
   const ownerAccountId = String(actor.ownerAccountId || "").trim();
   const partnerId = String(actor.partnerId || "").trim();
   if (ownerAccountId !== "" && partnerId !== "") {
-    return battleExpRecipient({
-      type: actorKind === BATTLE_ACTOR_KIND_PET ? "training_partner_pet" : "training_partner_player",
-      accountId: ownerAccountId,
-      actorId: String(actor.actorId || ""),
-      actorKind,
-      petId: String(actor.petId || ""),
-      partnerId,
-      name: String(actor.displayName || "伙伴"),
-      level: Math.max(1, Math.trunc(Number(actor.level || 1))),
-      target,
-      partyBonusRate: battlePartyExpBonusRate(room),
-      humanPlayerCount: battlePartyHumanPlayerCount(room),
-    });
+    // Frozen rooms may still render legacy partner actors for compatibility,
+    // but the retired profile field is never an EXP/economy recipient.
+    return null;
   }
   const accountId = String(actor.accountId || "").trim();
   if (accountId === "") {
@@ -17826,11 +18046,17 @@ function battleExpRewardForProfile(room, battle, accountId) {
   };
   const petAwards = new Map();
   const ridePetAwards = new Map();
-  const partnerAwards = new Map();
   for (const credit of credits) {
     const recipients = Array.isArray(credit && credit.recipients) ? credit.recipients : [];
     for (const recipient of recipients) {
       if (!recipient || String(recipient.accountId || "") !== normalizedAccountId) {
+        continue;
+      }
+      const type = String(recipient.type || "");
+      // Some frozen in-flight rooms may already contain old serialized EXP
+      // credits. Drop those recipients before totals are accumulated so an
+      // old runtime snapshot cannot revive the retired progression system.
+      if (type === "training_partner_player" || type === "training_partner_pet") {
         continue;
       }
       reward.amount += Math.max(0, Math.trunc(Number(recipient.amount || 0)));
@@ -17840,7 +18066,6 @@ function battleExpRewardForProfile(room, battle, accountId) {
       reward.partyBonusAmount += Math.max(0, Math.trunc(Number(recipient.partyBonusAmount || 0)));
       reward.enemyMaxLevel = Math.max(reward.enemyMaxLevel, Math.max(1, Math.trunc(Number(recipient.enemyLevel || credit.enemyLevel || 1))));
       reward.killCount += 1;
-      const type = String(recipient.type || "");
       if (type === "player") {
         reward.player = battleAddExpAward(reward.player, recipient);
       } else if (type === "pet") {
@@ -17853,18 +18078,6 @@ function battleExpRewardForProfile(room, battle, accountId) {
         if (petId !== "") {
           ridePetAwards.set(petId, battleAddExpAward(ridePetAwards.get(petId) || null, recipient));
         }
-      } else if (type === "training_partner_player" || type === "training_partner_pet") {
-        const partnerId = String(recipient.partnerId || "").trim();
-        if (partnerId === "") {
-          continue;
-        }
-        const partnerAward = partnerAwards.get(partnerId) || {partnerId, player: null, pet: null, schemaVersion: 2};
-        if (type === "training_partner_player") {
-          partnerAward.player = battleAddExpAward(partnerAward.player, recipient);
-        } else {
-          partnerAward.pet = battleAddExpAward(partnerAward.pet, recipient);
-        }
-        partnerAwards.set(partnerId, partnerAward);
       }
     }
   }
@@ -17912,35 +18125,9 @@ function battleExpRewardForProfile(room, battle, accountId) {
       }
     }
   }
-  for (const actor of actors) {
-    if (!actor || String(actor.ownerAccountId || "") !== normalizedAccountId) {
-      continue;
-    }
-    const partnerId = String(actor.partnerId || "").trim();
-    if (partnerId === "") {
-      continue;
-    }
-    const partnerAward = partnerAwards.get(partnerId) || {partnerId, player: null, pet: null, schemaVersion: 2};
-    if (String(actor.kind || BATTLE_ACTOR_KIND_PLAYER) === BATTLE_ACTOR_KIND_PET) {
-      if (!partnerAward.pet) {
-        partnerAward.pet = battleZeroExpAward({
-          ...zeroContext,
-          name: String(actor.displayName || "伙伴宠物"),
-          level: actor.level,
-        });
-      }
-    } else if (!partnerAward.player) {
-      partnerAward.player = battleZeroExpAward({
-        ...zeroContext,
-        name: String(actor.displayName || "伙伴"),
-        level: actor.level,
-      });
-    }
-    partnerAwards.set(partnerId, partnerAward);
-  }
   reward.pets = Array.from(petAwards.entries()).map(([petId, award]) => ({petId, ...award}));
   reward.ridePets = Array.from(ridePetAwards.entries()).map(([petId, award]) => ({petId, ...award}));
-  reward.trainingPartners = Array.from(partnerAwards.values());
+  reward.trainingPartners = [];
   return reward;
 }
 
@@ -18071,70 +18258,6 @@ function applyBattleExpRewardToProfile(
   changed = changed || preparedPets.changed;
   summary.pets = preparedPets.publicPets;
   summary.ridePets = preparedPets.publicRidePets;
-
-  const partnerRewards = new Map((Array.isArray(reward.trainingPartners) ? reward.trainingPartners : [])
-    .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
-    .map((entry) => [String(entry.partnerId || "").trim(), entry]));
-  if (Array.isArray(profile.trainingPartners)) {
-    for (let index = 0; index < profile.trainingPartners.length; index += 1) {
-      const partner = profile.trainingPartners[index];
-      if (!partner || typeof partner !== "object" || Array.isArray(partner)) {
-        continue;
-      }
-      const partnerId = String(partner.partnerId || partner.id || `training_partner_${index + 1}`).trim();
-      const partnerReward = partnerRewards.get(partnerId) || null;
-      if (!partnerReward) {
-        continue;
-      }
-      const partnerSummary = {
-        partnerId,
-        player: null,
-        pet: null,
-        schemaVersion: 2,
-      };
-      const playerReward = partnerReward.player && typeof partnerReward.player === "object" && !Array.isArray(partnerReward.player)
-        ? partnerReward.player
-        : null;
-      if (battleExpAwardIsPresent(playerReward)) {
-        const beforeLevel = Math.max(1, Math.trunc(Number(partner.level || 1)));
-        const partnerAward = applyBattleExpToEntry(partner, battleExpAwardAmount(playerReward), MAX_PLAYER_LEVEL, {
-          name: String(partner.name || playerReward.name || `伙伴${index + 1}`),
-        });
-        changed = changed || partnerAward.changed;
-        const afterLevel = Math.max(1, Math.trunc(Number(partner.level || beforeLevel)));
-        if (afterLevel > beforeLevel) {
-          growTrainingPartnerStats(partner, afterLevel - beforeLevel);
-          changed = true;
-        }
-        partnerSummary.player = {
-          ...partnerAward.publicExp,
-          ...publicBattleExpAwardDetails(playerReward),
-        };
-      }
-      const petReward = partnerReward.pet && typeof partnerReward.pet === "object" && !Array.isArray(partnerReward.pet)
-        ? partnerReward.pet
-        : null;
-      if (battleExpAwardIsPresent(petReward) && partner.pet && typeof partner.pet === "object" && !Array.isArray(partner.pet)) {
-        const petBeforeLevel = Math.max(1, Math.trunc(Number(partner.pet.level || 1)));
-        const petAward = applyBattleExpToEntry(partner.pet, battleExpAwardAmount(petReward), MAX_PET_LEVEL, {
-          name: String(partner.pet.name || petReward.name || "伙伴宠物"),
-        });
-        changed = changed || petAward.changed;
-        const petAfterLevel = Math.max(1, Math.trunc(Number(partner.pet.level || petBeforeLevel)));
-        if (petAfterLevel > petBeforeLevel) {
-          growTrainingPartnerPetStats(partner.pet, petAfterLevel - petBeforeLevel);
-          changed = true;
-        }
-        partnerSummary.pet = {
-          ...petAward.publicExp,
-          ...publicBattleExpAwardDetails(petReward),
-        };
-      }
-      if (partnerSummary.player || partnerSummary.pet) {
-        summary.trainingPartners.push(partnerSummary);
-      }
-    }
-  }
 
   return {
     changed,
@@ -21914,15 +22037,41 @@ function expireBattleTimeouts(data, now, options = {}) {
     }
     const disconnectedAccountIds = battleRoomReconnectExpiredAccountIds(room, now);
     let result = null;
-    if (disconnectedAccountIds.length > 0) {
+    if (disconnectedAccountIds.length > 0 && room.matchmaking !== true) {
       result = battleRoomResultForDisconnectTimeout(room, disconnectedAccountIds, now);
-    } else if (battleRoomHasDisconnectedParticipant(room)) {
+    } else if (battleRoomHasDisconnectedParticipant(room) && room.matchmaking !== true) {
       continue;
     } else if (
       String(battle.phase || "") === BATTLE_PHASE_COMMAND &&
       battle.commandDeadlineAt &&
       Date.parse(battle.commandDeadlineAt) <= now()
     ) {
+      if (room.matchmaking === true && String(room.mode || "") === BATTLE_MODE_PARTY_PVE) {
+        room = battleRoomForMutation(data, room);
+        const mutableBattle = battleRoomBattleStateForMutation(room, now, {
+          battleActorRules: options.battleActorRules,
+        });
+        const turn = resolveBattleRoomTurn(data, room, mutableBattle, now, options);
+        data.battleRooms[room.roomId] = room;
+        events.push({
+          type: "battle.turn_resolved",
+          targetAccountIds: room.participantAccountIds.slice(),
+          roomId: room.roomId,
+          round: turn.round,
+          turn: room.battle && room.battle.lastEventList ? room.battle.lastEventList : turn,
+        });
+        if (room.status === BATTLE_ROOM_CLOSED && room.battle && room.battle.result) {
+          events.push({
+            type: "battle.room_closed",
+            targetAccountIds: room.participantAccountIds.slice(),
+            roomId: room.roomId,
+            reason: String(room.closeReason || room.battle.result.reason || "battle_result"),
+            result: publicBattleResult(room.battle.result),
+            room: publicBattleRoom(room),
+          });
+        }
+        continue;
+      }
       result = battleRoomResultForTimeout(room, battle, now);
     }
     if (!result) {
@@ -25556,6 +25705,13 @@ module.exports = {
     battleCaptureCapacityCheck,
     battleSettlementPlayerIdForAccount,
     preflightBattleCaptureShelterSettlement,
+  }),
+  __retiredTrainingPartnerBattleAuthorityForTest: Object.freeze({
+    applyBattleExpRewardToProfile,
+    battleExpRewardForProfile,
+    battlePrimaryExpRecipientForActor,
+    battleTrainingPartnerActorFromSnapshot,
+    battleTrainingPartnerPetActorFromSnapshot,
   }),
   createAuthService,
   createMemoryAuthStore,

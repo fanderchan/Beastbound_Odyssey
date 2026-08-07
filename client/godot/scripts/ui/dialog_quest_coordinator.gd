@@ -49,7 +49,7 @@ func _open_quest_panel() -> void:
 	host._close_map_panel()
 	host._close_chat_panel()
 	host._close_mailbox_panel()
-	host._close_training_partner_panel()
+	host._close_hang_matchmaking_panel(false)
 	host._close_auto_settings_panel()
 	host.quest_panel.visible = true
 	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)

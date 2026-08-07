@@ -23,6 +23,7 @@ const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinato
 const OnlinePresenceCacheModel := preload("res://scripts/net/online_presence_cache_model.gd")
 const ServerEventReconnectModel := preload("res://scripts/net/server_event_reconnect_model.gd")
 const IdempotentHttpRetryState := preload("res://scripts/net/idempotent_http_retry_state.gd")
+const HangMatchmakingClientModel := preload("res://scripts/net/hang_matchmaking_client_model.gd")
 const ServerCaptureFeedbackModel := preload("res://scripts/progression/server_capture_feedback_model.gd")
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BattleRewardCatalog := preload("res://scripts/progression/battle_reward_catalog.gd")
@@ -229,6 +230,62 @@ const HANG_WALK_DIRECTIONS: Array[Vector2i] = [
 	Vector2i(0, 1),
 	Vector2i(0, -1),
 ]
+
+
+class HangMatchmakingRefreshSpy:
+	extends RefCounted
+
+	var request_state_count := 0
+	var request_cancel_count := 0
+	var clear_count := 0
+	var configured_base_url := ""
+	var configured_session_token := ""
+	var _state: Dictionary = HangMatchmakingClientModel.empty_state()
+
+	func seed_state(state: Dictionary) -> void:
+		_state = state.duplicate(true)
+
+	func configure(base_url: String, session_token: String) -> void:
+		configured_base_url = base_url
+		configured_session_token = session_token
+
+	func request_active() -> bool:
+		return false
+
+	func request_state() -> bool:
+		request_state_count += 1
+		return true
+
+	func request_cancel() -> bool:
+		request_cancel_count += 1
+		var cancelled := HangMatchmakingClientModel.empty_state()
+		cancelled["status"] = HangMatchmakingClientModel.STATUS_CANCELLED
+		cancelled["stateRevision"] = int(_state.get("stateRevision", 0)) + 1
+		cancelled["target"] = (
+			(_state.get("target", {}) as Dictionary).duplicate(true)
+			if _state.get("target", {}) is Dictionary
+			else {}
+		)
+		cancelled["humanCount"] = 1
+		cancelled["emptyCount"] = HangMatchmakingClientModel.PARTY_MAX_MEMBERS - 1
+		cancelled["party"] = (
+			(_state.get("party", {}) as Dictionary).duplicate(true)
+			if _state.get("party", {}) is Dictionary
+			else {}
+		)
+		cancelled["message"] = "已取消匹配，挂机继续。"
+		_state = cancelled
+		return true
+
+	func update(_delta: float) -> void:
+		pass
+
+	func clear_local_state() -> void:
+		clear_count += 1
+		_state = HangMatchmakingClientModel.empty_state()
+
+	func current_state() -> Dictionary:
+		return _state.duplicate(true)
 
 var host
 
@@ -4118,272 +4175,477 @@ func _pet_growth_rule_preview_fixture(instance_id: String, name: String, level: 
 		"hp": int(stats.get("maxHp", 1)),
 	}
 
-func _run_auto_training_partner_check() -> void:
+
+func _run_auto_hang_matchmaking_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
-	var test_pet := PlayerProgressModel.create_pet_instance_from_form(
-		"auto_training_pet",
-		"陪练测试布伊",
-		"bui_normal_red_fire10",
-		PlayerProgressModel.PET_STATE_BATTLE,
-		8
+	var client_report := HangMatchmakingClientModel.debug_self_check()
+	var client_model_ok := bool(client_report.get("ok", false))
+	var loaded: bool = bool(host._load_map("firebud_village_gate", "from_training_yard"))
+	var original_session: Dictionary = host.current_account_session.duplicate(true)
+	var original_profile: Dictionary = host.player_profile.duplicate(true)
+	var original_party_state: Dictionary = host.party_current_state.duplicate(true)
+	var original_hang_active: bool = host.hang_mode_active
+	var original_status_text: String = host.hang_matchmaking_status_text
+	var real_controller = host.hang_matchmaking_controller
+	var ui_ready: bool = (
+		loaded
+		and real_controller != null
+		and host.hang_matchmaking_panel != null
+		and host.hang_matchmaking_world_status != null
 	)
-	if not test_pet.is_empty():
-		host.player_profile["petInstances"] = [test_pet]
-		host.player_profile["activePetInstanceId"] = "auto_training_pet"
-		host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
-	host.player_profile = PlayerProgressModel.with_training_partner_count(host.player_profile, 4)
-	var partner_count_ok = PlayerProgressModel.training_partner_count(host.player_profile) == 4
-	var initial_partners = PlayerProgressModel.training_partners(host.player_profile)
-	var clone_attack = int((initial_partners[0] as Dictionary).get("attack", 0)) if not initial_partners.is_empty() else 0
-	var panel_map_loaded = host._load_map("firebud_training_yard")
-	host._open_training_partner_panel()
-	await host.get_tree().process_frame
-	var first_panel_layout_ok = host._training_partner_panel_layout_is_usable()
-	host._close_training_partner_panel()
-	host._open_training_partner_panel()
-	await host.get_tree().process_frame
-	var second_panel_layout_ok = host._training_partner_panel_layout_is_usable()
-	host._close_training_partner_panel()
-	var changed_player_profile = host.player_profile.duplicate(true)
-	var changed_player = changed_player_profile.get("player", {}) as Dictionary
-	changed_player["level"] = 8
-	changed_player_profile["player"] = changed_player
-	changed_player_profile = PlayerProgressModel.normalize_profile(changed_player_profile)
-	var cloned_independent_ok = not initial_partners.is_empty() and int((PlayerProgressModel.training_partners(changed_player_profile)[0] as Dictionary).get("attack", -1)) == clone_attack
-	var server_action_spec = ServerAuthClientModel.profile_action_request("http://127.0.0.1:1234", "token", "training_partner_set_count", {"count": 3})
-	var server_action_body = JSON.parse_string(str(server_action_spec.get("body", "")))
-	var server_action_contract_ok = (
-		server_action_body is Dictionary
-		and str((server_action_body as Dictionary).get("action", "")) == "training_partner_set_count"
-		and (server_action_body as Dictionary).get("payload", {}) is Dictionary
-		and int(((server_action_body as Dictionary).get("payload", {}) as Dictionary).get("count", -1)) == 3
-	)
-	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
-	var zones = EncounterModel.encounter_zones(host.map_data)
-	var danger_zone = host._encounter_zone_by_id("danger_grass") if loaded else {}
-	var zone_found = not danger_zone.is_empty()
-	if loaded and zone_found:
-		host.active_encounter_zone = EncounterModel.zone_with_selected_wild_pet(danger_zone as Dictionary, host.encounter_rng, 10)
-		host.active_encounter_zone["selectedEnemyCount"] = 10
-		host._start_battle(BattleModel.create_training_partner_battle(host.active_encounter_zone, 10))
-		host.battle_state["comboBonusRateBySide"] = {BattleModel.SIDE_ALLY: 1.0}
-		var actors: Array = host.battle_state.get("actors", [])
-		for actor_index in range(actors.size()):
-			if not (actors[actor_index] is Dictionary):
-				continue
-			var actor = (actors[actor_index] as Dictionary).duplicate(true)
-			if str(actor.get("side", "")) == BattleModel.SIDE_ENEMY:
-				actor["quick"] = 1
-				actor["maxHp"] = maxi(460, int(actor.get("maxHp", 80)))
-				actor["hp"] = int(actor.get("maxHp", 460))
-				actors[actor_index] = actor
-		host.battle_state["actors"] = actors
-	var ally_count_ok = host.battle_active and BattleModel.side_actor_count(host.battle_state, BattleModel.SIDE_ALLY) == 10
-	var enemy_count = BattleModel.side_actor_count(host.battle_state, BattleModel.SIDE_ENEMY) if host.battle_active else 0
-	var enemy_count_ok = enemy_count >= 1 and enemy_count <= 10
-	var slots_ok = host.battle_active and BattleModel.occupied_slots_are_unique(host.battle_state)
-	var enemy_order = BattleModel.living_actor_ids(host.battle_state, BattleModel.SIDE_ENEMY)
-	var full_expected_enemy_order: Array[String] = [
-		"enemy_front_1",
-		"enemy_front_2",
-		"enemy_front_3",
-		"enemy_front_4",
-		"enemy_front_5",
-		"enemy_back_1",
-		"enemy_back_2",
-		"enemy_back_3",
-		"enemy_back_4",
-		"enemy_back_5",
-	]
-	var expected_enemy_order: Array[String] = []
-	for index in range(enemy_count):
-		expected_enemy_order.append(full_expected_enemy_order[index])
-	var target_order_ok = enemy_order == expected_enemy_order and BattleModel.living_enemy_id(host.battle_state) == "enemy_front_1"
-	var expected_actor_ids: Array[String] = []
-	for index in range(4):
-		expected_actor_ids.append("ally_training_partner_%d" % [index + 1])
-		expected_actor_ids.append("ally_training_partner_pet_%d" % [index + 1])
-	var actors_present = true
-	for actor_id in expected_actor_ids:
-		if BattleModel.actor_by_id(host.battle_state, actor_id).is_empty():
-			actors_present = false
-	var target_id = BattleModel.living_enemy_id(host.battle_state)
-	var planned_actor_ids: Array[String] = []
-	if target_id != "":
-		var planned_events = BattleModel.build_player_pet_round_events(
-			host.battle_state,
-			{"command": "attack", "targetId": target_id},
-			{"command": "attack", "targetId": target_id}
-		)
-		for event in planned_events:
-			if str(event.get("type", "")) == "combo_attack":
-				for participant_id in event.get("participantIds", []):
-					planned_actor_ids.append(str(participant_id))
-			else:
-				planned_actor_ids.append(str(event.get("attackerId", "")))
-	var planned_ai_ok = planned_actor_ids.has(BattleModel.PLAYER_ACTOR_ID) and planned_actor_ids.has(BattleModel.PLAYER_PET_ID)
-	for actor_id in expected_actor_ids:
-		planned_ai_ok = planned_ai_ok and planned_actor_ids.has(actor_id)
-	host.battle_auto_attack_player_submissions = 0
-	host.battle_auto_attack_pet_submissions = 0
-	host._set_battle_auto_attack_enabled(true, false)
-	var seen_combo = false
-	var seen_partner_actor = false
-	var seen_partner_pet = false
-	for _frame in range(1600):
-		await host.get_tree().process_frame
-		seen_combo = seen_combo or host.battle_last_round_event_types.has("combo_attack") or host.battle_last_event_type == "combo_attack"
-		for actor_id in host.battle_last_round_actor_order:
-			var actor_id_text = str(actor_id)
-			seen_partner_actor = seen_partner_actor or (actor_id_text.begins_with("ally_training_partner_") and not actor_id_text.begins_with("ally_training_partner_pet_"))
-			seen_partner_pet = seen_partner_pet or actor_id_text.begins_with("ally_training_partner_pet_")
-		if seen_combo and seen_partner_actor and seen_partner_pet:
-			break
-	host._set_battle_auto_attack_enabled(false, false)
-	var battle_auto_ok = host.battle_auto_attack_player_submissions >= 1 and host.battle_auto_attack_pet_submissions >= 1
-	var reward_state = host.battle_state.duplicate(true)
-	var reward_actors: Array = reward_state.get("actors", [])
-	for actor_index in range(reward_actors.size()):
-		if not (reward_actors[actor_index] is Dictionary):
-			continue
-		var actor = (reward_actors[actor_index] as Dictionary).duplicate(true)
-		if str(actor.get("side", "")) == BattleModel.SIDE_ENEMY:
-			actor["hp"] = 0
-		reward_actors[actor_index] = actor
-	reward_state["actors"] = reward_actors
-	var reward_result = PlayerProgressModel.apply_battle_result(host.player_profile, reward_state, "victory")
-	var reward_profile = reward_result.get("profile", host.player_profile) as Dictionary
-	var reward_partners = PlayerProgressModel.training_partners(reward_profile)
-	var partner_exp_ok = reward_partners.size() == 4
-	for partner in reward_partners:
-		partner_exp_ok = partner_exp_ok and int(partner.get("level", 1)) > 1
-		var pet = partner.get("pet", {})
-		partner_exp_ok = partner_exp_ok and pet is Dictionary and int((pet as Dictionary).get("level", 1)) > 1
-	var saved_party_state = host.party_current_state.duplicate(true)
-	var saved_session = host.current_account_session.duplicate(true)
-	var saved_profile = host.player_profile.duplicate(true)
-	var mixed_party_team_ok = false
-	var mixed_reward_ok = false
-	if zone_found:
+	var panel_contract_ok := false
+	var start_choice_ok := false
+	var matching_ok := false
+	var revision_dedupe_ok := false
+	var npc_filled_ok := false
+	var replacement_ok := false
+	var full_ok := false
+	var party_update_refresh_ok := false
+	var matching_resumed_ok := false
+	var auto_battle_strategy_ok := false
+	var cancel_click_ok := false
+	var cancel_keeps_hang_ok := false
+	var close_click_ok := false
+	var stop_click_ok := false
+	var stop_hides_ok := false
+
+	if ui_ready:
 		host.current_account_session = {
-			"accountId": "acc_self_party_mix",
-			"username": "self_party_mix",
-			"serverProfileSummary": {"accountId": "acc_self_party_mix"},
+			"authSource": "local_qa_check",
+			"username": "hang_matchmaking_check",
 		}
-		var mixed_profile = PlayerProgressModel.default_profile()
-		var mixed_pet := PlayerProgressModel.create_pet_instance_from_form(
-			"auto_training_mixed_pet",
-			"混队测试布伊",
-			"bui_normal_red_fire10",
-			PlayerProgressModel.PET_STATE_BATTLE,
-			8
+		host.player_profile = PlayerProgressModel.default_profile()
+		var auto_battle_zone: Dictionary = {}
+		var encounter_zones: Array = EncounterModel.encounter_zones(host.map_data)
+		if not encounter_zones.is_empty() and host.player != null:
+			var encounter_zone := encounter_zones[0] as Dictionary
+			auto_battle_zone = encounter_zone.duplicate(true)
+			var hang_cell := EncounterModel.first_walkable_cell(host.map_data, encounter_zone)
+			host.player.global_position = IsoMapModel.grid_to_world(host.map_data, hang_cell)
+		real_controller.clear_local_state()
+		host._set_hang_mode(true)
+		host._open_hang_matchmaking_panel()
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+		var panel_contract: Dictionary = host.hang_matchmaking_panel.self_check()
+		panel_contract_ok = (
+			host.hang_matchmaking_panel.visible
+			and str(panel_contract.get("result", "")) == "PASS"
 		)
-		if not mixed_pet.is_empty():
-			mixed_profile["petInstances"] = [mixed_pet]
-			mixed_profile["activePetInstanceId"] = "auto_training_mixed_pet"
-			mixed_profile = PlayerProgressModel.normalize_profile(mixed_profile)
-		mixed_profile = PlayerProgressModel.with_training_partner_count(mixed_profile, 4)
-		host.player_profile = mixed_profile
+		var immediate_events: Array[String] = []
+		host.hang_matchmaking_panel.immediate_requested.connect(
+			func(route_id: String) -> void: immediate_events.append(route_id),
+			CONNECT_ONE_SHOT
+		)
+		var primary_click_ok := await _hang_matchmaking_check_real_left_click(
+			host.hang_matchmaking_panel.primary_button
+		)
+		var choice_snapshot: Dictionary = host.hang_matchmaking_panel.debug_snapshot()
+		var immediate_button := host.hang_matchmaking_panel.find_child(
+			"HangMatchImmediateButton",
+			true,
+			false
+		) as Button
+		var matched_button := host.hang_matchmaking_panel.find_child(
+			"HangMatchMatchedButton",
+			true,
+			false
+		) as Button
+		var choice_buttons_visible := (
+			immediate_button != null
+			and immediate_button.is_visible_in_tree()
+			and matched_button != null
+			and matched_button.is_visible_in_tree()
+		)
+		var immediate_click_ok := await _hang_matchmaking_check_real_left_click(immediate_button)
+		start_choice_ok = (
+			primary_click_ok
+			and bool(choice_snapshot.get("choiceVisible", false))
+			and choice_buttons_visible
+			and immediate_click_ok
+			and immediate_events == ["firebud_newbie"]
+		)
+		host.hang_matchmaking_pending_route.clear()
+		host.hang_matchmaking_pending_mode = ""
+		host._clear_navigation_state()
+		host._open_hang_matchmaking_panel()
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+
+		var matching_state := _hang_matchmaking_check_state(
+			10,
+			HangMatchmakingClientModel.STATUS_MATCHING,
+			1,
+			0
+		)
+		var matching_apply: Dictionary = host._debug_apply_hang_matchmaking_state(matching_state)
+		var matching_duplicate_apply: Dictionary = host._debug_apply_hang_matchmaking_state(
+			matching_state.duplicate(true)
+		)
+		revision_dedupe_ok = (
+			bool(matching_duplicate_apply.get("accepted", false))
+			and not bool(matching_duplicate_apply.get("changed", true))
+		)
+		await host.get_tree().process_frame
+		var matching_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
+		var matching_panel := matching_snapshot.get("panel", {}) as Dictionary
+		matching_ok = (
+			bool(matching_apply.get("accepted", false))
+			and bool(matching_apply.get("changed", false))
+			and str(matching_panel.get("viewMode", "")) == "matching"
+			and str(matching_panel.get("matchStatus", "")) == HangMatchmakingClientModel.STATUS_MATCHING
+			and int(matching_panel.get("humanCount", -1)) == 1
+			and int(matching_panel.get("npcCount", -1)) == 0
+			and int(matching_panel.get("emptyCount", -1)) == 4
+			and bool(matching_snapshot.get("worldStatusVisible", false))
+		)
+
+		var npc_filled_state := _hang_matchmaking_check_state(
+			20,
+			HangMatchmakingClientModel.STATUS_NPC_FILLED,
+			1,
+			4
+		)
+		var npc_filled_apply: Dictionary = host._debug_apply_hang_matchmaking_state(npc_filled_state)
+		await host.get_tree().process_frame
+		var npc_filled_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
+		var npc_filled_panel := npc_filled_snapshot.get("panel", {}) as Dictionary
+		npc_filled_ok = (
+			bool(npc_filled_apply.get("changed", false))
+			and str(npc_filled_panel.get("matchStatus", "")) == HangMatchmakingClientModel.STATUS_NPC_FILLED
+			and int(npc_filled_panel.get("humanCount", -1)) == 1
+			and int(npc_filled_panel.get("npcCount", -1)) == 4
+			and int(npc_filled_panel.get("emptyCount", -1)) == 0
+		)
+
+		var replacement_state := _hang_matchmaking_check_state(
+			30,
+			HangMatchmakingClientModel.STATUS_NPC_FILLED,
+			2,
+			3
+		)
+		var replacement_apply: Dictionary = host._debug_apply_hang_matchmaking_state(replacement_state)
+		await host.get_tree().process_frame
+		var replacement_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
+		var replacement_panel := replacement_snapshot.get("panel", {}) as Dictionary
+		replacement_ok = (
+			bool(replacement_apply.get("changed", false))
+			and int(replacement_panel.get("humanCount", -1)) == 2
+			and int(replacement_panel.get("npcCount", -1)) == 3
+			and int(replacement_panel.get("emptyCount", -1)) == 0
+		)
+
+		var full_state := _hang_matchmaking_check_state(
+			40,
+			HangMatchmakingClientModel.STATUS_FULL,
+			5,
+			0
+		)
+		var full_apply: Dictionary = host._debug_apply_hang_matchmaking_state(full_state)
+		await host.get_tree().process_frame
+		var full_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
+		var full_panel := full_snapshot.get("panel", {}) as Dictionary
+		full_ok = (
+			bool(full_apply.get("changed", false))
+			and str(full_panel.get("viewMode", "")) == "matching"
+			and str(full_panel.get("matchStatus", "")) == HangMatchmakingClientModel.STATUS_FULL
+			and int(full_panel.get("humanCount", -1)) == 5
+			and int(full_panel.get("npcCount", -1)) == 0
+			and bool(full_snapshot.get("worldStatusVisible", false))
+		)
+
+		var refresh_spy := HangMatchmakingRefreshSpy.new()
+		refresh_spy.seed_state(full_state)
+		var full_party := full_state.get("party", {}) as Dictionary
+		var departed_party := full_party.duplicate(true)
+		var departed_members: Array = (
+			(departed_party.get("members", []) as Array).duplicate(true)
+			if departed_party.get("members", []) is Array
+			else []
+		)
+		if not departed_members.is_empty():
+			departed_members.pop_back()
+		departed_party["members"] = departed_members
+		departed_party["memberCount"] = departed_members.size()
 		host.party_current_state = {
-			"party": {
-				"members": [
-					{"accountId": "acc_self_party_mix", "username": "self_party_mix", "displayName": "自己", "role": "leader"},
-					{
-						"accountId": "acc_remote_party_mix",
-						"username": "remote_party_mix",
-						"displayName": "真人队友",
-						"role": "member",
-						"teamSnapshot": {
-							"playerLevel": 11,
-							"player": {"name": "真人队友", "level": 11, "hp": 150, "maxHp": 150, "attack": 22, "defense": 9, "quick": 73},
-							"battlePets": [{
-								"petId": "remote_pet_mix",
-								"name": "队友布伊",
-								"formId": "bui_normal_red_fire10",
-								"state": BattleModel.PET_STATE_BATTLE,
-								"activeInBattle": true,
-								"level": 11,
-								"hp": 110,
-								"maxHp": 110,
-								"attack": 18,
-								"defense": 8,
-								"quick": 69,
-							}],
-						},
-					},
-				],
-			},
+			"party": full_party.duplicate(true),
 			"incomingInvites": [],
-			"maxMembers": 5,
+			"maxMembers": HangMatchmakingClientModel.PARTY_MAX_MEMBERS,
 		}
-		var mixed_state = host._local_battle_state_with_current_team(BattleModel.create_training_partner_battle(danger_zone as Dictionary, 10))
-		var mixed_partner3 = BattleModel.actor_by_id(mixed_state, "ally_training_partner_3")
-		var mixed_active_ids: Array = mixed_state.get("activeTrainingPartnerIds", []) if mixed_state.get("activeTrainingPartnerIds", []) is Array else []
-		mixed_party_team_ok = (
-			BattleModel.side_actor_count(mixed_state, BattleModel.SIDE_ALLY) == 10
-			and not BattleModel.actor_by_id(mixed_state, "ally_party_member_1").is_empty()
-			and not BattleModel.actor_by_id(mixed_state, "ally_party_member_pet_1").is_empty()
-			and not BattleModel.actor_by_id(mixed_state, "ally_training_partner_1").is_empty()
-			and not BattleModel.actor_by_id(mixed_state, "ally_training_partner_3").is_empty()
-			and BattleModel.actor_by_id(mixed_state, "ally_training_partner_4").is_empty()
-			and str(mixed_partner3.get("slotId", "")) == "ally.back.5"
-			and mixed_active_ids.size() == 3
-			and not mixed_active_ids.has("training_partner_4")
-			and BattleModel.occupied_slots_are_unique(mixed_state)
+		host.hang_matchmaking_controller = refresh_spy
+		host.current_account_session = _hang_matchmaking_check_server_session()
+		host._apply_party_event({"type": "party.update", "party": departed_party})
+		host._apply_party_event({"type": "party.update", "party": departed_party})
+		party_update_refresh_ok = (
+			refresh_spy.request_state_count == 1
+			and refresh_spy.configured_session_token != ""
+			and int((host.party_current_state.get("party", {}) as Dictionary).get("memberCount", -1)) == 4
 		)
-		var mixed_reward_state = mixed_state.duplicate(true)
-		var mixed_reward_actors: Array = mixed_reward_state.get("actors", [])
-		for actor_index in range(mixed_reward_actors.size()):
-			if not (mixed_reward_actors[actor_index] is Dictionary):
-				continue
-			var actor = (mixed_reward_actors[actor_index] as Dictionary).duplicate(true)
-			if str(actor.get("side", "")) == BattleModel.SIDE_ENEMY:
-				actor["hp"] = 0
-			mixed_reward_actors[actor_index] = actor
-		mixed_reward_state["actors"] = mixed_reward_actors
-		var mixed_reward_result = PlayerProgressModel.apply_battle_result(mixed_profile, mixed_reward_state, "victory")
-		var mixed_reward_profile = mixed_reward_result.get("profile", mixed_profile) as Dictionary
-		var mixed_reward_partners = PlayerProgressModel.training_partners(mixed_reward_profile)
-		mixed_reward_ok = mixed_reward_partners.size() == 4
-		for index in range(mixed_reward_partners.size()):
-			var partner = mixed_reward_partners[index]
-			if index < 3:
-				mixed_reward_ok = mixed_reward_ok and int(partner.get("level", 1)) > 1
-			else:
-				mixed_reward_ok = mixed_reward_ok and int(partner.get("level", 1)) == 1
-	host.party_current_state = saved_party_state
-	host.current_account_session = saved_session
-	host.player_profile = saved_profile
-	var panel_layout_ok = panel_map_loaded and first_panel_layout_ok and second_panel_layout_ok
-	var status = "ok" if partner_count_ok and panel_layout_ok and cloned_independent_ok and server_action_contract_ok and loaded and zone_found and ally_count_ok and enemy_count_ok and slots_ok and target_order_ok and actors_present and planned_ai_ok and battle_auto_ok and seen_combo and seen_partner_actor and seen_partner_pet and partner_exp_ok and mixed_party_team_ok and mixed_reward_ok else "failed"
-	print("training partner check ready: status=%s count=%s panel=%s first_panel=%s second_panel=%s clone_independent=%s server_action=%s loaded=%s zone=%s ally10=%s enemy_range=%s enemy_count=%d slots=%s target_order=%s actors=%s planned_ai=%s auto=%s combo=%s partner_actor=%s partner_pet=%s partner_exp=%s mixed_party=%s mixed_reward=%s planned=%s" % [
+		host.hang_matchmaking_controller = real_controller
+		host.current_account_session = {
+			"authSource": "local_qa_check",
+			"username": "hang_matchmaking_check",
+		}
+
+		var resumed_state := _hang_matchmaking_check_state(
+			50,
+			HangMatchmakingClientModel.STATUS_MATCHING,
+			4,
+			0
+		)
+		var resumed_apply: Dictionary = host._debug_apply_hang_matchmaking_state(resumed_state)
+		await host.get_tree().process_frame
+		var resumed_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
+		var resumed_panel := resumed_snapshot.get("panel", {}) as Dictionary
+		matching_resumed_ok = (
+			bool(resumed_apply.get("changed", false))
+			and str(resumed_panel.get("viewMode", "")) == "matching"
+			and str(resumed_panel.get("matchStatus", "")) == HangMatchmakingClientModel.STATUS_MATCHING
+			and int(resumed_panel.get("humanCount", -1)) == 4
+			and int(resumed_panel.get("emptyCount", -1)) == 1
+		)
+
+		host._close_hang_matchmaking_panel(false)
+		host._set_hang_mode(true)
+		if not auto_battle_zone.is_empty():
+			host._start_battle(BattleModel.create_wild_battle(auto_battle_zone))
+			await host.get_tree().process_frame
+			var auto_settings := PlayerProgressModel.auto_battle_settings(host.player_profile)
+			auto_battle_strategy_ok = (
+				host.battle_active
+				and host.battle_auto_attack_enabled
+				and str(auto_settings.get(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY, "")) != ""
+				and str(auto_settings.get(AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY, "")) != ""
+				and int(auto_settings.get(AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY, 0)) >= 1
+				and int(auto_settings.get(AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY, 0)) >= 1
+			)
+			host._end_battle()
+			await host.get_tree().process_frame
+		host._open_hang_matchmaking_panel()
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+
+		var close_button := host.hang_matchmaking_panel.get("close_button") as Button
+		close_click_ok = await _hang_matchmaking_check_real_left_click(close_button)
+		await host.get_tree().process_frame
+		var cancel_spy := HangMatchmakingRefreshSpy.new()
+		cancel_spy.seed_state(resumed_state)
+		host.hang_matchmaking_controller = cancel_spy
+		host.current_account_session = _hang_matchmaking_check_server_session()
+		host._panel_flow()._refresh_hang_matchmaking_views()
+		var cancel_button := _hang_matchmaking_check_button_by_text(
+			host.hang_matchmaking_world_status,
+			"取消匹配"
+		)
+		cancel_click_ok = await _hang_matchmaking_check_real_left_click(cancel_button)
+		# Restore the local QA session before another process frame can poll or open a socket.
+		host.current_account_session = {
+			"authSource": "local_qa_check",
+			"username": "hang_matchmaking_check",
+		}
+		await host.get_tree().process_frame
+		var cancelled_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
+		cancel_keeps_hang_ok = (
+			cancel_click_ok
+			and cancel_spy.request_cancel_count == 1
+			and str((cancelled_snapshot.get("matchState", {}) as Dictionary).get("status", "")) == HangMatchmakingClientModel.STATUS_CANCELLED
+			and bool(cancelled_snapshot.get("hangActive", false))
+			and bool(cancelled_snapshot.get("worldStatusVisible", false))
+		)
+		if not cancel_keeps_hang_ok:
+			print("hang matchmaking cancel debug: %s" % JSON.stringify(cancelled_snapshot))
+
+		var stop_button := _hang_matchmaking_check_button_by_text(
+			host.hang_matchmaking_world_status,
+			"停止挂机"
+		)
+		stop_click_ok = await _hang_matchmaking_check_real_left_click(stop_button)
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+		var stopped_snapshot: Dictionary = host._hang_matchmaking_debug_snapshot()
+		stop_hides_ok = (
+			close_click_ok
+			and stop_click_ok
+			and cancel_spy.clear_count >= 1
+			and not bool(stopped_snapshot.get("hangActive", true))
+			and not bool(stopped_snapshot.get("worldStatusVisible", true))
+			and not bool(stopped_snapshot.get("panelVisible", true))
+		)
+		if not stop_hides_ok:
+			print("hang matchmaking stop debug: %s" % JSON.stringify(stopped_snapshot))
+
+		if host.hang_mode_active:
+			host._stop_hang_activity("", true, false)
+		real_controller.clear_local_state()
+		host.hang_matchmaking_controller = real_controller
+		host.current_account_session = original_session
+		host.player_profile = original_profile
+		host.party_current_state = original_party_state
+		host.hang_matchmaking_status_text = original_status_text
+		host._set_hang_mode(original_hang_active)
+		host._close_hang_matchmaking_panel(false)
+
+	var status := "ok" if (
+		client_model_ok
+		and ui_ready
+		and panel_contract_ok
+		and start_choice_ok
+		and matching_ok
+		and revision_dedupe_ok
+		and npc_filled_ok
+		and replacement_ok
+		and full_ok
+		and party_update_refresh_ok
+		and matching_resumed_ok
+		and auto_battle_strategy_ok
+		and cancel_keeps_hang_ok
+		and stop_hides_ok
+	) else "failed"
+	print("hang matchmaking check ready: status=%s client=%s ui=%s panel=%s choice=%s matching=%s dedupe=%s npc_filled=%s replacement=%s full=%s party_update_refresh=%s matching_resumed=%s auto_strategies=%s cancel_click=%s cancel_keeps_hang=%s close_click=%s stop_click=%s stop_hides=%s model_errors=%s" % [
 		status,
-		str(partner_count_ok),
-		str(panel_layout_ok),
-		str(first_panel_layout_ok),
-		str(second_panel_layout_ok),
-		str(cloned_independent_ok),
-		str(server_action_contract_ok),
-		str(loaded),
-		str(zone_found),
-		str(ally_count_ok),
-		str(enemy_count_ok),
-		enemy_count,
-		str(slots_ok),
-		str(target_order_ok),
-		str(actors_present),
-		str(planned_ai_ok),
-		str(battle_auto_ok),
-		str(seen_combo),
-		str(seen_partner_actor),
-		str(seen_partner_pet),
-		str(partner_exp_ok),
-		str(mixed_party_team_ok),
-		str(mixed_reward_ok),
-		",".join(planned_actor_ids),
+		str(client_model_ok),
+		str(ui_ready),
+		str(panel_contract_ok),
+		str(start_choice_ok),
+		str(matching_ok),
+		str(revision_dedupe_ok),
+		str(npc_filled_ok),
+		str(replacement_ok),
+		str(full_ok),
+		str(party_update_refresh_ok),
+		str(matching_resumed_ok),
+		str(auto_battle_strategy_ok),
+		str(cancel_click_ok),
+		str(cancel_keeps_hang_ok),
+		str(close_click_ok),
+		str(stop_click_ok),
+		str(stop_hides_ok),
+		",".join(client_report.get("errors", [])),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _hang_matchmaking_check_state(
+	revision: int,
+	status: String,
+	human_count: int,
+	npc_count: int
+) -> Dictionary:
+	var max_members := HangMatchmakingClientModel.PARTY_MAX_MEMBERS
+	var active := status in [
+		HangMatchmakingClientModel.STATUS_MATCHING,
+		HangMatchmakingClientModel.STATUS_NPC_FILLED,
+	]
+	var empty_count := maxi(0, max_members - human_count - npc_count)
+	return {
+		"schemaVersion": HangMatchmakingClientModel.SCHEMA_VERSION,
+		"active": active,
+		"status": status,
+		"stateRevision": revision,
+		"queueId": "qa-hang-matchmaking-queue",
+		"target": {
+			"progressionZoneId": "firebud_newbie",
+			"mapId": "firebud_village_gate",
+			"encounterGroupId": "firebud_grass_01",
+			"label": "火芽村入口草丛",
+		},
+		"humanCount": human_count,
+		"npcCount": npc_count,
+		"emptyCount": empty_count,
+		"maxMembers": max_members,
+		"waitingPlayerCount": 2 if active else 0,
+		"waitingPartyCount": 1 if active else 0,
+		"npcFillInMs": 4000 if status == HangMatchmakingClientModel.STATUS_MATCHING else 0,
+		"party": _hang_matchmaking_check_party(human_count),
+		"npcMembers": _hang_matchmaking_check_npcs(npc_count),
+		"listings": [],
+		"message": "挂机匹配状态已更新。",
+		"replayed": false,
+	}
+
+
+func _hang_matchmaking_check_party(human_count: int) -> Dictionary:
+	var members: Array[Dictionary] = []
+	for index in range(maxi(1, human_count)):
+		members.append({
+			"accountId": "qa_hang_human_%d" % (index + 1),
+			"username": "qa_hang_human_%d" % (index + 1),
+			"displayName": "真人队友%d" % (index + 1),
+			"role": "leader" if index == 0 else "member",
+			"level": 8 + index,
+		})
+	return {
+		"partyId": "qa_hang_party",
+		"leaderAccountId": "qa_hang_human_1",
+		"memberCount": members.size(),
+		"maxMembers": HangMatchmakingClientModel.PARTY_MAX_MEMBERS,
+		"members": members,
+	}
+
+
+func _hang_matchmaking_check_npcs(npc_count: int) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for index in range(maxi(0, npc_count)):
+		result.append({
+			"npcId": "qa_hang_npc_%d" % (index + 1),
+			"displayName": "陪练NPC%d" % (index + 1),
+			"level": 8 + index,
+		})
+	return result
+
+
+func _hang_matchmaking_check_server_session() -> Dictionary:
+	return {
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "qa_hang_matchmaking_no_http_token",
+		"serverBaseUrl": "http://127.0.0.1:9",
+		"username": "hang_matchmaking_check",
+	}
+
+
+func _hang_matchmaking_check_button_by_text(root: Node, text_value: String) -> Button:
+	if root == null:
+		return null
+	for value in root.find_children("*", "Button", true, false):
+		if value is Button and (value as Button).text == text_value:
+			return value as Button
+	return null
+
+
+func _hang_matchmaking_check_real_left_click(control: Control) -> bool:
+	if (
+		control == null
+		or not control.is_visible_in_tree()
+		or (control is BaseButton and (control as BaseButton).disabled)
+	):
+		return false
+	var viewport: Viewport = host.get_viewport()
+	var viewport_point := control.get_global_rect().get_center()
+	if viewport == null or not viewport.get_visible_rect().has_point(viewport_point):
+		return false
+	var input_position: Vector2 = viewport.get_screen_transform() * viewport_point
+	var motion := InputEventMouseMotion.new()
+	motion.position = input_position
+	motion.global_position = input_position
+	Input.parse_input_event(motion)
+	await host.get_tree().process_frame
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.position = input_position
+	press.global_position = input_position
+	press.pressed = true
+	Input.parse_input_event(press)
+	await host.get_tree().process_frame
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.position = input_position
+	release.global_position = input_position
+	release.pressed = false
+	Input.parse_input_event(release)
+	await host.get_tree().process_frame
+	return true
+
 
 func _run_auto_battle_formation_check() -> void:
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
@@ -14008,10 +14270,13 @@ func _run_auto_quest_objective_templates_check() -> void:
 		"recommendedLevel": 130,
 		"objective": {"type": "talk", "targetId": "trainer", "count": 1},
 	}
+	var matchmaking_quest := QuestModel.quest_for_id("quest_training_partner_intro")
 	var templates_ok = (
 		QuestModel.supported_objective_types().has("defeat_npc")
 		and QuestModel.supported_objective_types().has("deliver_pet")
 		and QuestModel.supported_objective_types().has("reach_map")
+		and QuestModel.supported_objective_types().has("hang_matchmaking_join")
+		and str(QuestModel.objective_template_for_type("hang_matchmaking_join").get("label", "")) == "加入挂机匹配"
 		and str(QuestModel.objective_template_for_type("battle_pet").get("label", "")) == "设置战斗宠物"
 		and str(QuestModel.objective_template_for_type("equip_item").get("label", "")) == "装备指定装备"
 		and "\n".join(QuestModel.objective_contract_lines()).find("capture_pet：捕捉宠物") >= 0
@@ -14111,6 +14376,22 @@ func _run_auto_quest_objective_templates_check() -> void:
 			"mapId": "shadow_oath_cavern_top",
 		}) == 0
 	)
+	var matchmaking_ok = (
+		str(QuestModel.objective_for(matchmaking_quest).get("type", "")) == "hang_matchmaking_join"
+		and QuestModel.progress_amount_for_event(matchmaking_quest, {
+			"type": "hang_matchmaking_join",
+			"amount": 1,
+		}) == 1
+		and QuestModel.progress_amount_for_event(matchmaking_quest, {
+			"type": "hang_matchmaking_join",
+			"amount": 0,
+		}) == 0
+		and QuestModel.progress_amount_for_event(matchmaking_quest, {
+			"type": "training_partner_set_count",
+			"count": 4,
+			"amount": 1,
+		}) == 0
+	)
 	var level_contract_ok = (
 		QuestModel.raw_title_for(level_quest) == "等级任务"
 		and QuestModel.title_for(level_quest) == "[80] 等级任务"
@@ -14121,7 +14402,7 @@ func _run_auto_quest_objective_templates_check() -> void:
 		and QuestModel.can_accept_at_level(level_quest, 80)
 	)
 	var formal_quests := QuestModel.quests()
-	var formal_levels_ok := formal_quests.size() == 44
+	var formal_levels_ok := formal_quests.size() == 46
 	for formal_quest in formal_quests:
 		formal_levels_ok = (
 			formal_levels_ok
@@ -14149,8 +14430,8 @@ func _run_auto_quest_objective_templates_check() -> void:
 	level_profile["player"] = level_player
 	level_contract_ok = level_contract_ok and PlayerProgressModel.quest_available_for_profile(level_profile, level_quest)
 	var catalog_ok = QuestModel.validation_errors().is_empty()
-	var status = "ok" if templates_ok and defeat_ok and deliver_ok and use_ok and battle_pet_ok and multi_ok and reach_ok and level_contract_ok and catalog_ok else "failed"
-	print("quest objective templates check ready: status=%s templates=%s defeat=%s deliver=%s use=%s battle_pet=%s multi=%s reach=%s level=%s catalog=%s" % [
+	var status = "ok" if templates_ok and defeat_ok and deliver_ok and use_ok and battle_pet_ok and multi_ok and reach_ok and matchmaking_ok and level_contract_ok and catalog_ok else "failed"
+	print("quest objective templates check ready: status=%s templates=%s defeat=%s deliver=%s use=%s battle_pet=%s multi=%s reach=%s matchmaking=%s level=%s catalog=%s" % [
 		status,
 		str(templates_ok),
 		str(defeat_ok),
@@ -14159,6 +14440,7 @@ func _run_auto_quest_objective_templates_check() -> void:
 		str(battle_pet_ok),
 		str(multi_ok),
 		str(reach_ok),
+		str(matchmaking_ok),
 		str(level_contract_ok),
 		str(catalog_ok),
 	])
@@ -16855,22 +17137,19 @@ func _run_auto_quest_chain_check() -> void:
 	profile = chat_claim.get("profile", profile)
 	var chat_tutorial_ok = bool(chat_event.get("ready", false)) and bool(chat_claim.get("ok", false)) and PlayerProgressModel.active_quest_id(profile) == "quest_training_partner_intro"
 
-	var before_partner_coins = PlayerProgressModel.stone_coins(profile)
-	profile = PlayerProgressModel.with_training_partner_count(profile, 1)
-	var training_partner_event = PlayerProgressModel.record_quest_event(profile, {
-		"type": "training_partner_set_count",
-		"count": PlayerProgressModel.training_partner_count(profile),
+	var before_matchmaking_coins = PlayerProgressModel.stone_coins(profile)
+	var matchmaking_event = PlayerProgressModel.record_quest_event(profile, {
+		"type": "hang_matchmaking_join",
 		"amount": 1,
 	})
-	profile = training_partner_event.get("profile", profile)
-	var training_partner_claim = PlayerProgressModel.claim_active_quest(profile)
-	profile = training_partner_claim.get("profile", profile)
-	var training_partner_ok = (
-		bool(training_partner_event.get("ready", false))
-		and bool(training_partner_claim.get("ok", false))
+	profile = matchmaking_event.get("profile", profile)
+	var matchmaking_claim = PlayerProgressModel.claim_active_quest(profile)
+	profile = matchmaking_claim.get("profile", profile)
+	var matchmaking_ok = (
+		bool(matchmaking_event.get("ready", false))
+		and bool(matchmaking_claim.get("ok", false))
 		and PlayerProgressModel.active_quest_id(profile) == "quest_group_brawl"
-		and PlayerProgressModel.training_partner_count(profile) == 1
-		and PlayerProgressModel.stone_coins(profile) == before_partner_coins + 10
+		and PlayerProgressModel.stone_coins(profile) == before_matchmaking_coins + 10
 	)
 
 	var before_group_brawl_coins = PlayerProgressModel.stone_coins(profile)
@@ -16883,7 +17162,7 @@ func _run_auto_quest_chain_check() -> void:
 	var group_brawl_event = PlayerProgressModel.record_quest_event(profile, {
 		"type": "battle_victory",
 		"encounterGroupId": "firebud_grass_danger",
-		"partyMemberCount": PlayerProgressModel.training_partner_count(profile),
+		"partyMemberCount": 1,
 	})
 	profile = group_brawl_event.get("profile", profile)
 	var group_brawl_claim = PlayerProgressModel.claim_active_quest(profile)
@@ -17144,9 +17423,9 @@ func _run_auto_quest_chain_check() -> void:
 			and ui_world_log.find("完成任务「[1] 认识训练师」") >= 0
 			and ui_task_text.find("查看当前任务") >= 0
 		)
-	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and entry_features_ok and bank_ok and stable_ok and riding_ok and battle_pet_hatch_ok and try_riding_ok and battle_pet_binding_ok and battle_pet_reclaim_ok and battle_pet_ok and status_feature_ok and legacy_battle_pet_backfill_ok and buy_ok and use_ok and shop_sell_ok and buy_weapon_ok and equip_ok and equipment_feature_ok and tutorial_grass_ok and grass_random_ok and defeat_guard_ok and victory_ok and hang_market_mail_ok and training_partner_ok and group_brawl_ok and capture_tutorial_ok and capture_ok and closing_features_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
+	var status = "ok" if validation_ok and start_ok and talk_ready_ok and talk_claim_ok and entry_features_ok and bank_ok and stable_ok and riding_ok and battle_pet_hatch_ok and try_riding_ok and battle_pet_binding_ok and battle_pet_reclaim_ok and battle_pet_ok and status_feature_ok and legacy_battle_pet_backfill_ok and buy_ok and use_ok and shop_sell_ok and buy_weapon_ok and equip_ok and equipment_feature_ok and tutorial_grass_ok and grass_random_ok and defeat_guard_ok and victory_ok and hang_market_mail_ok and matchmaking_ok and group_brawl_ok and capture_tutorial_ok and capture_ok and closing_features_ok and rebirth_quest_ok and ui_open_ok and ui_advance_ok else "failed"
 	status = "ok" if status == "ok" and buy_armor_ok and equip_armor_ok and moist_spirit_ok and poison_gear_buy_ok and poison_gear_equip_ok and chat_tutorial_ok and spirit_ok and spirit_hook_ok else "failed"
-	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s battle_pet_hatch=%s try_riding=%s battle_pet_binding=%s battle_pet_reclaim=%s battle_pet=%s legacy_backfill=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s defeat_guard=%s victory=%s partner=%s group_brawl=%s spirit=%s spirit_hook=%s capture_tutorial=%s poison_menu=%s poison_select=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d partners=%d" % [
+	print("quest chain check ready: status=%s validation=%s start=%s talk_ready=%s talk_claim=%s bank=%s stable=%s riding=%s battle_pet_hatch=%s try_riding=%s battle_pet_binding=%s battle_pet_reclaim=%s battle_pet=%s legacy_backfill=%s buy=%s use_meat=%s buy_weapon=%s equip=%s buy_armor=%s equip_armor=%s moist_spirit=%s poison_buy=%s poison_equip=%s tutorial_grass=%s grass_random=%s defeat_guard=%s victory=%s matchmaking=%s group_brawl=%s spirit=%s spirit_hook=%s capture_tutorial=%s poison_menu=%s poison_select=%s capture=%s rebirth_quest=%s ui_open=%s ui_advance=%s ui_active=%s ui_task=%s ui_log=%s final_task=%s coins=%d meat=%d rope=%d net=%d poison_wuli_net=%d battle_egg=%d tiger_egg=%d weapon=%d armor=%d blessed=%d" % [
 		status,
 		str(validation_ok),
 		str(start_ok),
@@ -17174,7 +17453,7 @@ func _run_auto_quest_chain_check() -> void:
 		str(grass_random_ok),
 		str(defeat_guard_ok),
 		str(victory_ok),
-		str(training_partner_ok),
+		str(matchmaking_ok),
 		str(group_brawl_ok),
 		str(spirit_ok),
 		str(spirit_hook_ok),
@@ -17199,7 +17478,6 @@ func _run_auto_quest_chain_check() -> void:
 		PlayerProgressModel.backpack_item_count(profile, "weapon_wooden_club"),
 		PlayerProgressModel.backpack_item_count(profile, "armor_toxin_wrap"),
 		PlayerProgressModel.backpack_item_count(profile, "weapon_blessed_club"),
-		PlayerProgressModel.training_partner_count(profile),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -17726,14 +18004,12 @@ func _run_auto_quest_ui_check() -> void:
 	})
 	var chat_profile: Dictionary = PlayerProgressModel.claim_active_quest(equip_poison_event.get("profile", poison_equip_profile) as Dictionary).get("profile", {})
 	var chat_event = PlayerProgressModel.record_quest_event(chat_profile, {"type": "send_chat", "channel": "nearby"})
-	var training_partner_profile: Dictionary = PlayerProgressModel.claim_active_quest(chat_event.get("profile", {}) as Dictionary).get("profile", {})
-	training_partner_profile = PlayerProgressModel.with_training_partner_count(training_partner_profile, 1)
-	var training_partner_event = PlayerProgressModel.record_quest_event(training_partner_profile, {
-		"type": "training_partner_set_count",
-		"count": PlayerProgressModel.training_partner_count(training_partner_profile),
+	var matchmaking_profile: Dictionary = PlayerProgressModel.claim_active_quest(chat_event.get("profile", {}) as Dictionary).get("profile", {})
+	var matchmaking_event = PlayerProgressModel.record_quest_event(matchmaking_profile, {
+		"type": "hang_matchmaking_join",
 		"amount": 1,
 	})
-	var group_brawl_profile: Dictionary = PlayerProgressModel.claim_active_quest(training_partner_event.get("profile", training_partner_profile) as Dictionary).get("profile", {})
+	var group_brawl_profile: Dictionary = PlayerProgressModel.claim_active_quest(matchmaking_event.get("profile", matchmaking_profile) as Dictionary).get("profile", {})
 	host.player_profile = group_brawl_profile
 	host._clear_navigation_state()
 	host._load_map("firebud_village_gate", "from_training_yard")
@@ -17751,7 +18027,7 @@ func _run_auto_quest_ui_check() -> void:
 	var group_brawl_event = PlayerProgressModel.record_quest_event(group_brawl_profile, {
 		"type": "battle_victory",
 		"encounterGroupId": "firebud_grass_danger",
-		"partyMemberCount": PlayerProgressModel.training_partner_count(group_brawl_profile),
+		"partyMemberCount": 1,
 	})
 	var spirit_profile: Dictionary = PlayerProgressModel.claim_active_quest(group_brawl_event.get("profile", group_brawl_profile) as Dictionary).get("profile", {})
 	host.player_profile = spirit_profile
@@ -18092,7 +18368,7 @@ func _run_auto_task_tracker_route_check() -> void:
 		["quest_claim_market_mail", "mailbox_panel", ""],
 		["quest_market_buy_player", "market_panel", ""],
 		["quest_chat_greeting", "chat_panel", ""],
-		["quest_training_partner_intro", "party_panel", ""],
+		["quest_training_partner_intro", "hang_matchmaking_panel", ""],
 		["quest_open_codex_panel", "tutorial_feature", "codex"],
 		["quest_open_family_panel", "tutorial_feature", "family"],
 		["quest_open_account_panel", "tutorial_feature", "account"],
@@ -27302,11 +27578,10 @@ func _run_auto_qa_panel_check() -> void:
 	host._on_qa_entry_pressed("open_partner")
 	await host.get_tree().process_frame
 	var partner_ok: bool = (
-		host.party_panel != null
-		and host.party_panel.visible
-		and host._panel_flow().party_panel_mode == "partners"
+		host.hang_matchmaking_panel != null
+		and host.hang_matchmaking_panel.visible
 	)
-	host._close_training_partner_panel()
+	host._close_hang_matchmaking_panel()
 	host._open_qa_panel()
 	host._on_qa_entry_pressed("open_pet")
 	await host.get_tree().process_frame

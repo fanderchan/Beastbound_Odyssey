@@ -15,6 +15,12 @@ const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd"
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
+const HangMatchmakingController := preload(
+	"res://scripts/net/hang_matchmaking_controller.gd"
+)
+const HangMatchmakingClientModel := preload(
+	"res://scripts/net/hang_matchmaking_client_model.gd"
+)
 const OnlinePresenceCacheModel := preload("res://scripts/net/online_presence_cache_model.gd")
 const ServerEventReconnectModel := preload("res://scripts/net/server_event_reconnect_model.gd")
 const IdempotentHttpRetryState := preload("res://scripts/net/idempotent_http_retry_state.gd")
@@ -79,6 +85,12 @@ const BackpackAwakenedVisualSkin := preload(
 	"res://scripts/ui/backpack_awakened_visual_skin.gd"
 )
 const MarketAwakenedPanel := preload("res://scripts/ui/market_awakened_panel.gd")
+const HangMatchmakingAwakenedPanel := preload(
+	"res://scripts/ui/hang_matchmaking_awakened_panel.gd"
+)
+const HangMatchmakingWorldStatus := preload(
+	"res://scripts/ui/hang_matchmaking_world_status.gd"
+)
 const CharacterManagementPresenter := preload(
 	"res://scripts/ui/character_management_presenter.gd"
 )
@@ -128,22 +140,9 @@ const PET_PANEL_MAX_SIZE := Vector2(760.0, 468.0)
 const PET_MANAGEMENT_PANEL_MAX_SIZE := Vector2(980.0, 560.0)
 const WORLD_LOG_MAX_LINES := 80
 const CHAT_MAX_MESSAGES := 120
-const PARTY_PANEL_MODE_PARTNERS := "partners"
 const PARTY_PANEL_MODE_PLAYERS := "players"
 
-var party_panel_mode := PARTY_PANEL_MODE_PARTNERS
-var party_partner_tab_button: Button
-var party_player_tab_button: Button
-var party_partner_scroll: ScrollContainer
-var party_partner_section: VBoxContainer
 var party_player_section: Control
-var party_partner_status_label: Label
-var party_partner_slots_container: VBoxContainer
-var party_partner_real_party_label: Label
-var party_partner_add_button: Button
-var party_partner_remove_button: Button
-var party_partner_fill_button: Button
-var party_partner_clear_button: Button
 
 var qa_profile_identity_label: Label
 var qa_profile_status_state: Dictionary = {}
@@ -220,6 +219,7 @@ var server_session_request_tickets: Dictionary = {}
 var server_session_request_callbacks: Dictionary = {}
 var server_event_reset_generation: int = 0
 var server_event_reset_pending_domains: Dictionary = {}
+var hang_matchmaking_state_refresh_dirty: bool = false
 const SERVER_BATTLE_WAITING_POLL_SECONDS := 1.0
 const SERVER_BATTLE_ROOM_RESTORE_POLL_SECONDS := 1.0
 const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
@@ -693,12 +693,6 @@ var mailbox_menu_button:
 		return host.mailbox_menu_button
 	set(value):
 		host.mailbox_menu_button = value
-
-var training_partner_menu_button:
-	get:
-		return host.training_partner_menu_button
-	set(value):
-		host.training_partner_menu_button = value
 
 var auto_settings_menu_button:
 	get:
@@ -3040,54 +3034,6 @@ var server_battle_pending_closed_room:
 	set(value):
 		host.server_battle_pending_closed_room = value
 
-var training_partner_panel:
-	get:
-		return host.training_partner_panel
-	set(value):
-		host.training_partner_panel = value
-
-var training_partner_scroll:
-	get:
-		return host.training_partner_scroll
-	set(value):
-		host.training_partner_scroll = value
-
-var training_partner_label:
-	get:
-		return host.training_partner_label
-	set(value):
-		host.training_partner_label = value
-
-var training_partner_add_button:
-	get:
-		return host.training_partner_add_button
-	set(value):
-		host.training_partner_add_button = value
-
-var training_partner_remove_button:
-	get:
-		return host.training_partner_remove_button
-	set(value):
-		host.training_partner_remove_button = value
-
-var training_partner_fill_button:
-	get:
-		return host.training_partner_fill_button
-	set(value):
-		host.training_partner_fill_button = value
-
-var training_partner_clear_button:
-	get:
-		return host.training_partner_clear_button
-	set(value):
-		host.training_partner_clear_button = value
-
-var training_partner_close_button:
-	get:
-		return host.training_partner_close_button
-	set(value):
-		host.training_partner_close_button = value
-
 var auto_settings_panel:
 	get:
 		return host.auto_settings_panel
@@ -3483,12 +3429,6 @@ var auto_capture_settings_check:
 		return host.auto_capture_settings_check
 	set(value):
 		host.auto_capture_settings_check = value
-
-var auto_training_partner_check:
-	get:
-		return host.auto_training_partner_check
-	set(value):
-		host.auto_training_partner_check = value
 
 var auto_hang_settings_check:
 	get:
@@ -4767,12 +4707,6 @@ var auto_capture_settings_preview:
 		return host.auto_capture_settings_preview
 	set(value):
 		host.auto_capture_settings_preview = value
-
-var training_partner_demo:
-	get:
-		return host.training_partner_demo
-	set(value):
-		host.training_partner_demo = value
 
 var hang_settings_preview:
 	get:
@@ -7258,105 +7192,6 @@ func _build_hud() -> void:
 	party_close_button.pressed.connect(_close_party_panel)
 	party_header.add_child(party_close_button)
 
-	var party_tab_row = HBoxContainer.new()
-	party_tab_row.add_theme_constant_override("separation", 8)
-	party_column.add_child(party_tab_row)
-	party_partner_tab_button = Button.new()
-	party_partner_tab_button.text = "陪练伙伴"
-	party_partner_tab_button.toggle_mode = true
-	party_partner_tab_button.custom_minimum_size = Vector2(140, 42)
-	party_partner_tab_button.pressed.connect(func() -> void:
-		_set_party_panel_mode(PARTY_PANEL_MODE_PARTNERS)
-	)
-	party_tab_row.add_child(party_partner_tab_button)
-	party_player_tab_button = Button.new()
-	party_player_tab_button.text = "真人组队"
-	party_player_tab_button.toggle_mode = true
-	party_player_tab_button.custom_minimum_size = Vector2(140, 42)
-	party_player_tab_button.pressed.connect(func() -> void:
-		_set_party_panel_mode(PARTY_PANEL_MODE_PLAYERS)
-		_request_party_state()
-	)
-	party_tab_row.add_child(party_player_tab_button)
-
-	party_partner_scroll = ScrollContainer.new()
-	party_partner_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	party_partner_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	party_partner_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	party_partner_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	party_column.add_child(party_partner_scroll)
-	party_partner_section = VBoxContainer.new()
-	party_partner_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	party_partner_section.size_flags_vertical = Control.SIZE_FILL
-	party_partner_section.add_theme_constant_override("separation", 7)
-	party_partner_scroll.add_child(party_partner_section)
-	party_partner_status_label = Label.new()
-	party_partner_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	party_partner_status_label.add_theme_font_size_override("font_size", 15)
-	party_partner_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
-	party_partner_section.add_child(party_partner_status_label)
-	var party_partner_rule_label = Label.new()
-	party_partner_rule_label.text = "真人队友优先占位，陪练伙伴补满剩余位置。"
-	party_partner_rule_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	party_partner_rule_label.add_theme_font_size_override("font_size", 14)
-	party_partner_section.add_child(party_partner_rule_label)
-	var party_partner_slots_title = Label.new()
-	party_partner_slots_title.text = "当前队伍"
-	party_partner_slots_title.add_theme_font_size_override("font_size", 17)
-	party_partner_section.add_child(party_partner_slots_title)
-	party_partner_slots_container = VBoxContainer.new()
-	party_partner_slots_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	party_partner_slots_container.size_flags_vertical = Control.SIZE_FILL
-	party_partner_slots_container.add_theme_constant_override("separation", 4)
-	party_partner_section.add_child(party_partner_slots_container)
-	var party_partner_button_row = HBoxContainer.new()
-	party_partner_button_row.add_theme_constant_override("separation", 8)
-	party_partner_section.add_child(party_partner_button_row)
-	party_partner_add_button = Button.new()
-	party_partner_add_button.text = "加入"
-	party_partner_add_button.custom_minimum_size = Vector2(0, 40)
-	party_partner_add_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	party_partner_add_button.pressed.connect(_on_training_partner_add_pressed)
-	party_partner_button_row.add_child(party_partner_add_button)
-	party_partner_remove_button = Button.new()
-	party_partner_remove_button.text = "移除"
-	party_partner_remove_button.custom_minimum_size = Vector2(0, 40)
-	party_partner_remove_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	party_partner_remove_button.pressed.connect(_on_training_partner_remove_pressed)
-	party_partner_button_row.add_child(party_partner_remove_button)
-	party_partner_fill_button = Button.new()
-	party_partner_fill_button.text = "加满"
-	party_partner_fill_button.custom_minimum_size = Vector2(0, 40)
-	party_partner_fill_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	party_partner_fill_button.pressed.connect(_on_training_partner_fill_pressed)
-	party_partner_button_row.add_child(party_partner_fill_button)
-	party_partner_clear_button = Button.new()
-	party_partner_clear_button.text = "清空"
-	party_partner_clear_button.custom_minimum_size = Vector2(0, 40)
-	party_partner_clear_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	party_partner_clear_button.pressed.connect(_on_training_partner_clear_pressed)
-	party_partner_button_row.add_child(party_partner_clear_button)
-	var party_partner_real_party_title = Label.new()
-	party_partner_real_party_title.text = "真人组队"
-	party_partner_real_party_title.add_theme_font_size_override("font_size", 17)
-	party_partner_section.add_child(party_partner_real_party_title)
-	var party_partner_real_party_row = HBoxContainer.new()
-	party_partner_real_party_row.add_theme_constant_override("separation", 8)
-	party_partner_section.add_child(party_partner_real_party_row)
-	party_partner_real_party_label = Label.new()
-	party_partner_real_party_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	party_partner_real_party_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	party_partner_real_party_label.add_theme_font_size_override("font_size", 14)
-	party_partner_real_party_row.add_child(party_partner_real_party_label)
-	var party_partner_view_players_button = Button.new()
-	party_partner_view_players_button.text = "查看"
-	party_partner_view_players_button.custom_minimum_size = Vector2(82, 36)
-	party_partner_view_players_button.pressed.connect(func() -> void:
-		_set_party_panel_mode(PARTY_PANEL_MODE_PLAYERS)
-		_request_party_state()
-	)
-	party_partner_real_party_row.add_child(party_partner_view_players_button)
-
 	party_player_section = VBoxContainer.new()
 	party_player_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	party_player_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -7990,65 +7825,6 @@ func _build_hud() -> void:
 	_build_item_slot_detail_panel(hud_root)
 	_build_backpack_discard_confirm_panel(hud_root)
 
-	training_partner_panel = _panel_container("TrainingPartnerPanel")
-	training_partner_panel.visible = false
-	training_partner_panel.z_index = 24
-	var training_partner_column = VBoxContainer.new()
-	training_partner_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	training_partner_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	training_partner_column.add_theme_constant_override("separation", 10)
-	training_partner_panel.add_child(training_partner_column)
-	var training_partner_header = HBoxContainer.new()
-	training_partner_header.add_theme_constant_override("separation", 10)
-	training_partner_column.add_child(training_partner_header)
-	var training_partner_title = Label.new()
-	training_partner_title.text = "练级伙伴"
-	training_partner_title.add_theme_font_size_override("font_size", 21)
-	training_partner_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	training_partner_header.add_child(training_partner_title)
-	training_partner_close_button = Button.new()
-	training_partner_close_button.text = "关闭"
-	training_partner_close_button.custom_minimum_size = Vector2(92, 44)
-	training_partner_close_button.pressed.connect(_close_training_partner_panel)
-	training_partner_header.add_child(training_partner_close_button)
-	training_partner_scroll = ScrollContainer.new()
-	training_partner_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	training_partner_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	training_partner_column.add_child(training_partner_scroll)
-	training_partner_label = Label.new()
-	training_partner_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	training_partner_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	training_partner_label.add_theme_font_size_override("font_size", 16)
-	training_partner_scroll.add_child(training_partner_label)
-	var training_partner_button_row = HBoxContainer.new()
-	training_partner_button_row.add_theme_constant_override("separation", 8)
-	training_partner_column.add_child(training_partner_button_row)
-	training_partner_add_button = Button.new()
-	training_partner_add_button.text = "加入"
-	training_partner_add_button.custom_minimum_size = Vector2(0, 46)
-	training_partner_add_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	training_partner_add_button.pressed.connect(_on_training_partner_add_pressed)
-	training_partner_button_row.add_child(training_partner_add_button)
-	training_partner_remove_button = Button.new()
-	training_partner_remove_button.text = "移除"
-	training_partner_remove_button.custom_minimum_size = Vector2(0, 46)
-	training_partner_remove_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	training_partner_remove_button.pressed.connect(_on_training_partner_remove_pressed)
-	training_partner_button_row.add_child(training_partner_remove_button)
-	training_partner_fill_button = Button.new()
-	training_partner_fill_button.text = "加满"
-	training_partner_fill_button.custom_minimum_size = Vector2(0, 46)
-	training_partner_fill_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	training_partner_fill_button.pressed.connect(_on_training_partner_fill_pressed)
-	training_partner_button_row.add_child(training_partner_fill_button)
-	training_partner_clear_button = Button.new()
-	training_partner_clear_button.text = "清空"
-	training_partner_clear_button.custom_minimum_size = Vector2(0, 46)
-	training_partner_clear_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	training_partner_clear_button.pressed.connect(_on_training_partner_clear_pressed)
-	training_partner_button_row.add_child(training_partner_clear_button)
-	hud_root.add_child(training_partner_panel)
-
 	auto_settings_panel = _panel_container("AutoBattleSettingsPanel")
 	auto_settings_panel.visible = false
 	auto_settings_panel.z_index = 24
@@ -8650,7 +8426,48 @@ func _build_hud() -> void:
 	battle_log_label.custom_minimum_size = Vector2(0, 42)
 	battle_message_box.add_child(battle_log_label)
 	hud_root.add_child(battle_message_panel)
+	_build_hang_matchmaking_ui()
 	_register_hud_panels()
+
+
+func _build_hang_matchmaking_ui() -> void:
+	host.hang_matchmaking_controller = HangMatchmakingController.new()
+	host.hang_matchmaking_controller.mount(hud_root)
+	host.hang_matchmaking_controller.state_changed.connect(
+		_on_hang_matchmaking_state_changed
+	)
+	host.hang_matchmaking_controller.request_pending_changed.connect(
+		_on_hang_matchmaking_request_pending_changed
+	)
+	host.hang_matchmaking_controller.request_finished.connect(
+		_on_hang_matchmaking_request_finished
+	)
+	host.hang_matchmaking_controller.quest_messages_received.connect(
+		_on_hang_matchmaking_quest_messages_received
+	)
+
+	var panel := HangMatchmakingAwakenedPanel.new()
+	panel.prepare()
+	panel.visible = false
+	panel.z_index = 46
+	panel.route_selected.connect(_on_hang_matchmaking_route_selected)
+	panel.immediate_requested.connect(_on_hang_matchmaking_immediate_requested)
+	panel.match_requested.connect(_on_hang_matchmaking_match_requested)
+	panel.travel_requested.connect(_on_hang_matchmaking_travel_requested)
+	panel.cancel_requested.connect(_on_hang_matchmaking_cancel_requested)
+	panel.close_requested.connect(_close_hang_matchmaking_panel)
+	hud_root.add_child(panel)
+	host.hang_matchmaking_panel = panel
+
+	var world_status := HangMatchmakingWorldStatus.new()
+	world_status.prepare()
+	world_status.view_requested.connect(_open_hang_matchmaking_panel)
+	world_status.cancel_requested.connect(_on_hang_matchmaking_cancel_requested)
+	world_status.stop_requested.connect(func() -> void:
+		host._stop_hang_activity("挂机已停止。")
+	)
+	hud_root.add_child(world_status)
+	host.hang_matchmaking_world_status = world_status
 
 func _build_market_panel() -> void:
 	var awakened_view = MarketAwakenedPanel.new()
@@ -9177,6 +8994,9 @@ func _rotate_server_session_requests(next_token: String) -> void:
 	party_invite_deferred_ids.clear()
 	if host != null and host.has_method("_server_battle"):
 		host._server_battle().invalidate_state_requests()
+	if host != null and host.hang_matchmaking_controller != null:
+		host.hang_matchmaking_controller.reset_for_login()
+	hang_matchmaking_state_refresh_dirty = false
 
 func _cancel_market_and_bank_http_requests() -> void:
 	market_http_retry_generation += 1
@@ -9450,6 +9270,7 @@ func _handle_server_event(event: Dictionary) -> void:
 			var ready_epoch := str(event.get("eventStreamEpoch", event.get("epoch", ""))).strip_edges()
 			if ready_epoch != "":
 				server_event_epoch = ready_epoch
+			_queue_hang_matchmaking_state_refresh()
 		"events.reset":
 			_apply_server_event_reset(event)
 		"session.replaced":
@@ -9465,6 +9286,8 @@ func _handle_server_event(event: Dictionary) -> void:
 			_apply_chat_message_event(event)
 		"party.invite", "party.update", "party.invite_declined":
 			_apply_party_event(event)
+		"hang.match_update", "hang.match_cancelled":
+			_queue_hang_matchmaking_state_refresh()
 		"battle.invite", "battle.room_ready", "battle.invite_declined", "battle.invite_cancelled", "battle.invite_expired", "battle.command_submitted", "battle.turn_resolved", "battle.room_updated", "battle.room_closed":
 			_apply_battle_event(event)
 
@@ -9483,6 +9306,7 @@ func _apply_server_event_reset(event: Dictionary) -> void:
 	host._server_battle().queue_state_restore()
 	_queue_event_reset_domain("chat")
 	_queue_event_reset_domain("mail")
+	_queue_hang_matchmaking_state_refresh()
 	_request_online_position_snapshot()
 
 func _record_server_event_seen(event: Dictionary) -> void:
@@ -9648,12 +9472,13 @@ func _apply_server_party_snapshot(party_value, refresh_ui: bool = true) -> bool:
 	var changed = previous_signature != JSON.stringify(next_party)
 	if _current_player_is_party_member() and not was_party_member:
 		_stop_party_member_local_movement(false)
+	if changed:
+		# 满员状态不会轮询；队伍成员变化必须主动拉一次匹配状态，恢复 matching/npc_filled。
+		_queue_hang_matchmaking_state_refresh()
 	_refresh_party_roster_hud(false)
 	if changed and refresh_ui:
 		if party_panel != null and party_panel.visible:
 			_refresh_party_panel()
-		if training_partner_panel != null and training_partner_panel.visible:
-			_refresh_training_partner_panel()
 		host._update_hud_text(true)
 		host._layout_hud()
 	return changed
@@ -9691,8 +9516,6 @@ func _apply_party_event(event: Dictionary) -> void:
 	if party_panel != null and party_panel.visible:
 		_refresh_party_panel()
 	_refresh_party_roster_hud(false)
-	if training_partner_panel != null and training_partner_panel.visible:
-		_refresh_training_partner_panel()
 	host._update_hud_text(true)
 	host._layout_hud()
 
@@ -10882,6 +10705,7 @@ func _apply_authenticated_session(session: Dictionary, migrate_legacy: bool = fa
 		_start_online_position_sync_if_needed()
 		host._server_sync().request_gm_tool_access()
 		_request_party_state()
+		_queue_hang_matchmaking_state_refresh()
 		_request_server_profile_pull()
 		_request_server_battle_state_restore()
 	else:
@@ -10941,7 +10765,6 @@ func _sync_action_bar_state() -> void:
 		chat_menu_button,
 		party_menu_button,
 		family_menu_button,
-		training_partner_menu_button,
 	]
 	for button in battle_locked_buttons:
 		if button != null:
@@ -11005,7 +10828,6 @@ func _open_account_panel() -> void:
 	_close_party_panel()
 	_close_family_panel()
 	_close_player_action_panel(false)
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	_close_numeric_workbench_panel(false)
@@ -11312,7 +11134,6 @@ func _register_hud_panels() -> void:
 		item_slot_context_panel,
 		item_slot_detail_panel,
 		backpack_discard_confirm_panel,
-		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
 		host.character_entry_panel,
@@ -11351,7 +11172,6 @@ func _register_hud_panels() -> void:
 		item_slot_context_panel,
 		item_slot_detail_panel,
 		backpack_discard_confirm_panel,
-		training_partner_panel,
 		auto_settings_panel,
 		auth_panel,
 		host.character_entry_panel,
@@ -11360,6 +11180,11 @@ func _register_hud_panels() -> void:
 		numeric_workbench_panel,
 		pet_rename_panel,
 	])
+	if host.hang_matchmaking_panel != null:
+		panel_registry.add_input_blocker(host.hang_matchmaking_panel)
+		panel_registry.add_world_menu_panel(host.hang_matchmaking_panel)
+	if host.hang_matchmaking_world_status != null:
+		panel_registry.add_input_blocker(host.hang_matchmaking_world_status)
 
 func _panel_container(node_name: String) -> PanelContainer:
 	var panel = PanelContainer.new()
@@ -13387,7 +13212,6 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	_close_codex_panel()
 	_close_quest_panel()
 	_close_family_panel(false)
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_encounter()
 	world_log_message = ""
@@ -13459,6 +13283,13 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 		battle_message_panel.visible = true
 	if action_bar != null:
 		action_bar.visible = false
+	if _hang_activity_active() or bool(
+		PlayerProgressModel.hang_session(player_profile).get(
+			HangSettingsModel.SESSION_ENABLED_KEY,
+			false
+		)
+	):
+		host._set_battle_auto_attack_enabled(true, false)
 	_reset_battle_trace_file()
 	host._set_battle_message(str(battle_state.get("message", "进入战斗。")))
 	host._sync_battle_buttons()
@@ -13548,6 +13379,7 @@ func _end_battle(_restore_world: bool = true) -> void:
 		_begin_post_battle_encounter_grace()
 	if was_battle_active and host._consume_hang_stop_after_battle_request():
 		host._stop_hang_activity("挂机已停止。", true)
+	_refresh_hang_matchmaking_views()
 	_update_battle_debug_window(true)
 	host.queue_redraw()
 
@@ -13888,7 +13720,6 @@ func _open_backpack_panel() -> void:
 	_close_chat_panel()
 	_close_mailbox_panel()
 	_close_bank_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_item_slot_context_panel(false)
 	_close_item_slot_detail_panel(false)
@@ -13931,7 +13762,6 @@ func _open_equipment_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_equipment_synthesis_panel(false)
 	_close_equipment_detail_popup(false)
@@ -13971,7 +13801,6 @@ func _open_equipment_synthesis_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_equipment_detail_popup(false)
 	if equipment_synthesis_panel != null:
@@ -14005,7 +13834,6 @@ func _open_player_status_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_player_rebirth_preview_panel(false)
 	character_management_pending_allocation.clear()
@@ -14041,7 +13869,6 @@ func _open_player_rebirth_preview_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	if player_rebirth_preview_panel != null:
@@ -16866,7 +16693,6 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_bank_panel(false)
 	_close_party_panel(false)
@@ -17598,7 +17424,6 @@ func _open_pet_panel(stable_access_override: bool = false) -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	pet_panel_stable_access_override = stable_access_override
 	pet_panel.visible = true
@@ -17646,7 +17471,6 @@ func _open_pet_skill_panel(training_mode: bool = false, trainer_id: String = Pet
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	pet_skill_training_mode = training_mode
 	pet_skill_trainer_id = trainer_id if trainer_id != "" else PetSkillTrainingModel.DEFAULT_TRAINER_ID
@@ -17969,7 +17793,6 @@ func _open_codex_panel() -> void:
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	codex_panel.visible = true
 	_refresh_codex_panel()
@@ -18001,7 +17824,6 @@ func _open_map_panel() -> void:
 	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
@@ -18036,7 +17858,6 @@ func _open_chat_panel() -> void:
 	_close_mailbox_panel()
 	_close_player_action_panel(false)
 	_close_bank_panel(false)
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	chat_panel.visible = true
 	_refresh_chat_panel()
@@ -18258,10 +18079,321 @@ func _chat_message_from_server(message: Dictionary, channel: String) -> Dictiona
 		"messageId": str(message.get("messageId", "")),
 	}
 
-func _open_party_panel(mode: String = PARTY_PANEL_MODE_PARTNERS) -> void:
+
+func _configure_hang_matchmaking_controller() -> bool:
+	if host.hang_matchmaking_controller == null or not _is_server_account_session():
+		return false
+	host.hang_matchmaking_controller.configure(
+		_server_profile_base_url(),
+		_server_profile_token()
+	)
+	return true
+
+
+func _open_hang_matchmaking_panel() -> void:
+	if battle_active or host.hang_matchmaking_panel == null:
+		return
+	host._close_dialog()
+	_close_encounter()
+	_close_player_status_panel()
+	_close_backpack_panel()
+	_close_equipment_panel()
+	_close_shop_panel()
+	_close_pet_panel()
+	_close_pet_skill_panel()
+	_close_codex_panel()
+	_close_quest_panel()
+	_close_map_panel()
+	_close_chat_panel()
+	_close_party_panel(false)
+	_close_mailbox_panel(false)
+	_close_bank_panel(false)
+	_close_family_panel(false)
+	_close_player_action_panel(false)
+	_close_auto_settings_panel()
+	_close_qa_panel(false)
+	var panel := host.hang_matchmaking_panel as HangMatchmakingAwakenedPanel
+	panel.configure_from_catalog(
+		current_map_id,
+		PlayerProgressModel.player_level(player_profile)
+	)
+	panel.visible = true
+	_refresh_hang_matchmaking_views()
+	if _configure_hang_matchmaking_controller() and not host.hang_matchmaking_controller.request_active():
+		host.hang_matchmaking_controller.request_state()
+	host._layout_hud()
+
+
+func _close_hang_matchmaking_panel(update_layout: bool = true) -> void:
+	if host.hang_matchmaking_panel != null:
+		host.hang_matchmaking_panel.visible = false
+	_refresh_hang_matchmaking_views()
+	if update_layout:
+		host._layout_hud()
+
+
+func _update_hang_matchmaking_flow(delta: float) -> void:
+	if _configure_hang_matchmaking_controller():
+		host.hang_matchmaking_controller.update(delta)
+	if host.hang_matchmaking_pending_route.is_empty():
+		return
+	if battle_active or player == null or map_data.is_empty():
+		return
+	host.hang_matchmaking_route_check_elapsed += maxf(0.0, delta)
+	if host.hang_matchmaking_route_check_elapsed < 0.2:
+		return
+	host.hang_matchmaking_route_check_elapsed = 0.0
+	var route: Dictionary = host.hang_matchmaking_pending_route
+	if str(route.get("mapId", "")) != current_map_id:
+		return
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var zone := EncounterModel.zone_for_cell(map_data, player_cell)
+	if zone.is_empty() or str(zone.get("encounterGroupId", "")) != str(route.get("encounterGroupId", "")):
+		return
+	var mode: String = host.hang_matchmaking_pending_mode
+	host.hang_matchmaking_pending_route.clear()
+	host.hang_matchmaking_pending_mode = ""
+	if mode == "travel":
+		_set_world_log_message("已到达%s。" % str(route.get("label", "练级区域")))
+		_open_hang_matchmaking_panel()
+		return
+	await _start_hang_matchmaking_at_route(route, mode)
+
+
+func _on_hang_matchmaking_route_selected(_route_id: String) -> void:
+	_refresh_hang_matchmaking_views()
+
+
+func _on_hang_matchmaking_immediate_requested(route_id: String) -> void:
+	_begin_hang_matchmaking_route(route_id, "immediate")
+
+
+func _on_hang_matchmaking_match_requested(route_id: String) -> void:
+	if not _is_server_account_session():
+		_set_world_log_message("匹配挂机需要先登录服务器账号。")
+		return
+	_begin_hang_matchmaking_route(route_id, "match")
+
+
+func _on_hang_matchmaking_travel_requested(route_id: String) -> void:
+	_begin_hang_matchmaking_route(route_id, "travel")
+
+
+func _begin_hang_matchmaking_route(route_id: String, mode: String) -> void:
+	if host.hang_matchmaking_panel == null or player == null or battle_active:
+		return
+	var panel := host.hang_matchmaking_panel as HangMatchmakingAwakenedPanel
+	var route := panel.selected_route()
+	if str(route.get("routeId", "")) != route_id or bool(route.get("locked", false)):
+		return
+	var target := _navigation_target_for_encounter_group_on_map(
+		str(route.get("mapId", "")),
+		str(route.get("encounterGroupId", "")),
+		str(route.get("label", "练级区域"))
+	)
+	if target.is_empty():
+		_set_world_log_message("暂时找不到前往该练级区域的路线。")
+		return
+	host.hang_matchmaking_pending_route = route.duplicate(true)
+	host.hang_matchmaking_pending_mode = mode
+	host.hang_matchmaking_route_check_elapsed = 0.2
+	_close_hang_matchmaking_panel(false)
+	_route_to_quest_target(target)
+	host._layout_hud()
+
+
+func _start_hang_matchmaking_at_route(route: Dictionary, mode: String) -> void:
+	await host._start_hang_walk()
+	if not host.hang_mode_active:
+		return
+	if mode != "match":
+		return
+	if not _configure_hang_matchmaking_controller():
+		host._stop_hang_activity("匹配挂机需要登录服务器账号。", false)
+		return
+	var target := {
+		"progressionZoneId": str(route.get("routeId", "")),
+		"mapId": str(route.get("mapId", "")),
+		"encounterGroupId": str(route.get("encounterGroupId", "")),
+		"label": str(route.get("label", "练级区域")),
+	}
+	host.hang_matchmaking_status_text = "正在加入挂机匹配..."
+	if not host.hang_matchmaking_controller.request_join(target):
+		_set_world_log_message("匹配请求正在处理中，请稍候。")
+	_refresh_hang_matchmaking_views()
+
+
+func _on_hang_matchmaking_cancel_requested() -> void:
+	if not _configure_hang_matchmaking_controller():
+		return
+	host.hang_matchmaking_status_text = "正在取消匹配..."
+	if not host.hang_matchmaking_controller.request_cancel():
+		_set_world_log_message("匹配请求正在处理中，请稍候。")
+	_refresh_hang_matchmaking_views()
+
+
+func _cancel_hang_matchmaking_for_stop() -> void:
+	host.hang_matchmaking_pending_route.clear()
+	host.hang_matchmaking_pending_mode = ""
+	# `/hang/session/stop` 在服务端同一原子操作内取消匹配；本地先清空投影，避免旧 full 状态闪回。
+	if host.hang_matchmaking_controller != null:
+		host.hang_matchmaking_controller.clear_local_state()
+	if host.hang_matchmaking_world_status != null:
+		host.hang_matchmaking_world_status.visible = false
+	_close_hang_matchmaking_panel(false)
+
+
+func _on_hang_matchmaking_state_changed(state: Dictionary) -> void:
+	var party_value = state.get("party", null)
+	if party_value is Dictionary and not (party_value as Dictionary).is_empty():
+		party_current_state["party"] = (party_value as Dictionary).duplicate(true)
+		_refresh_party_roster_hud(false)
+	_refresh_hang_matchmaking_views()
+
+
+func _on_hang_matchmaking_request_pending_changed(pending: bool, _kind: String) -> void:
+	host.hang_matchmaking_panel_pending = pending
+	_refresh_hang_matchmaking_views()
+
+
+func _on_hang_matchmaking_request_finished(kind: String, ok: bool, message: String) -> void:
+	host.hang_matchmaking_status_text = message
+	if message != "" and kind in [
+		HangMatchmakingClientModel.REQUEST_JOIN,
+		HangMatchmakingClientModel.REQUEST_CANCEL,
+	]:
+		_set_world_log_message(message)
+	if ok and [HangMatchmakingClientModel.REQUEST_JOIN, HangMatchmakingClientModel.REQUEST_CANCEL].has(kind):
+		_request_party_state()
+		_queue_server_profile_pull()
+	if hang_matchmaking_state_refresh_dirty:
+		call_deferred("_queue_hang_matchmaking_state_refresh")
+	_refresh_hang_matchmaking_views()
+
+
+func _on_hang_matchmaking_quest_messages_received(_kind: String, messages: Array[String]) -> void:
+	if not messages.is_empty():
+		_set_world_log_message("\n".join(messages))
+
+
+func _queue_hang_matchmaking_state_refresh() -> void:
+	if not _configure_hang_matchmaking_controller():
+		hang_matchmaking_state_refresh_dirty = false
+		return
+	if host.hang_matchmaking_controller.request_active():
+		hang_matchmaking_state_refresh_dirty = true
+		return
+	hang_matchmaking_state_refresh_dirty = false
+	if not host.hang_matchmaking_controller.request_state():
+		hang_matchmaking_state_refresh_dirty = true
+
+
+func _refresh_hang_matchmaking_views() -> void:
+	var state := HangMatchmakingClientModel.empty_state()
+	if host.hang_matchmaking_controller != null:
+		state = host.hang_matchmaking_controller.current_state()
+	if host.hang_matchmaking_world_status != null:
+		host.hang_matchmaking_world_status.apply_state(
+			state,
+			_hang_activity_active() or bool(
+				PlayerProgressModel.hang_session(player_profile).get(
+					HangSettingsModel.SESSION_ENABLED_KEY,
+					false
+				)
+			)
+		)
+	if host.hang_matchmaking_panel == null:
+		return
+	var panel := host.hang_matchmaking_panel as HangMatchmakingAwakenedPanel
+	var target := state.get("target", {}) as Dictionary if state.get("target", {}) is Dictionary else {}
+	var selected_route_id := str(target.get("progressionZoneId", panel.selected_route_id()))
+	var current_view := str(panel.debug_snapshot().get("viewMode", "browse"))
+	var active := bool(state.get("active", false))
+	var status := str(state.get("status", HangMatchmakingClientModel.STATUS_IDLE))
+	var matching_summary_visible := active or status == HangMatchmakingClientModel.STATUS_FULL
+	var party := state.get("party", {}) as Dictionary if state.get("party", {}) is Dictionary else {}
+	var members: Array[Dictionary] = []
+	var leader_account_id := str(party.get("leaderAccountId", ""))
+	for value in party.get("members", []):
+		if not (value is Dictionary):
+			continue
+		var member := value as Dictionary
+		members.append({
+			"kind": "human",
+			"name": str(member.get("displayName", member.get("username", "真人队友"))),
+			"level": maxi(1, int(member.get("level", member.get("playerLevel", 1)))),
+			"leader": str(member.get("accountId", "")) == leader_account_id,
+		})
+	for value in state.get("npcMembers", []):
+		if not (value is Dictionary):
+			continue
+		var npc := value as Dictionary
+		members.append({
+			"kind": "npc",
+			"name": str(npc.get("displayName", npc.get("name", "陪练NPC"))),
+			"level": maxi(1, int(npc.get("level", 1))),
+			"leader": false,
+		})
+	var listings: Array[Dictionary] = []
+	for value in state.get("listings", []):
+		if not (value is Dictionary):
+			continue
+		var listing := (value as Dictionary).duplicate(true)
+		var listing_target := listing.get("target", {}) as Dictionary if listing.get("target", {}) is Dictionary else {}
+		listing["routeId"] = str(listing_target.get("progressionZoneId", listing.get("routeId", "")))
+		listing["routeLabel"] = str(listing_target.get("label", listing.get("routeLabel", "")))
+		listings.append(listing)
+	panel.apply_state({
+		"viewMode": "matching" if matching_summary_visible else current_view,
+		"pending": host.hang_matchmaking_panel_pending or not host.hang_matchmaking_pending_route.is_empty(),
+		"statusText": host.hang_matchmaking_status_text,
+		"selectedRouteId": selected_route_id,
+		"match": {
+			"active": active,
+			"status": status,
+			"humanCount": int(state.get("humanCount", 0)),
+			"npcCount": int(state.get("npcCount", 0)),
+			"emptyCount": int(state.get("emptyCount", 0)),
+			"maxMembers": int(state.get("maxMembers", 5)),
+			"waitingPlayerCount": int(state.get("waitingPlayerCount", 0)),
+			"waitingPartyCount": int(state.get("waitingPartyCount", 0)),
+			"npcFillInSec": int(ceil(float(state.get("npcFillInMs", 0)) / 1000.0)),
+			"members": members,
+		},
+		"partyListings": listings,
+	})
+
+
+func _hang_matchmaking_debug_snapshot() -> Dictionary:
+	return {
+		"panelVisible": host.hang_matchmaking_panel != null and host.hang_matchmaking_panel.visible,
+		"panel": (
+			host.hang_matchmaking_panel.debug_snapshot()
+			if host.hang_matchmaking_panel != null
+			else {}
+		),
+		"worldStatusVisible": (
+			host.hang_matchmaking_world_status != null
+			and host.hang_matchmaking_world_status.visible
+		),
+		"hangActive": _hang_activity_active(),
+		"matchState": (
+			host.hang_matchmaking_controller.current_state()
+			if host.hang_matchmaking_controller != null
+			else {}
+		),
+	}
+
+
+func _debug_apply_hang_matchmaking_state(state: Dictionary) -> Dictionary:
+	if host.hang_matchmaking_controller == null:
+		return {"accepted": false, "changed": false, "reason": "controller_missing"}
+	return host.hang_matchmaking_controller.debug_apply_authoritative_state(state)
+
+
+func _open_party_panel(_mode: String = PARTY_PANEL_MODE_PLAYERS) -> void:
 	if battle_active:
 		return
-	host._set_hang_mode(false)
 	host._close_dialog()
 	_close_encounter()
 	_close_player_status_panel()
@@ -18278,14 +18410,10 @@ func _open_party_panel(mode: String = PARTY_PANEL_MODE_PARTNERS) -> void:
 	_close_bank_panel(false)
 	_close_family_panel()
 	_close_player_action_panel(false)
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	if party_panel != null:
 		party_panel.visible = true
-	party_panel_mode = PARTY_PANEL_MODE_PLAYERS if mode == PARTY_PANEL_MODE_PLAYERS else PARTY_PANEL_MODE_PARTNERS
-	_sync_party_panel_mode_tabs()
-	_refresh_training_partner_panel()
 	_refresh_party_panel()
 	_request_party_state()
 	host._layout_hud()
@@ -18293,27 +18421,6 @@ func _open_party_panel(mode: String = PARTY_PANEL_MODE_PARTNERS) -> void:
 
 func _close_party_panel(update_layout: bool = true) -> void:
 	_hide_control(party_panel, update_layout)
-
-func _set_party_panel_mode(mode: String) -> void:
-	party_panel_mode = PARTY_PANEL_MODE_PLAYERS if mode == PARTY_PANEL_MODE_PLAYERS else PARTY_PANEL_MODE_PARTNERS
-	_sync_party_panel_mode_tabs()
-	if party_panel_mode == PARTY_PANEL_MODE_PARTNERS:
-		_refresh_training_partner_panel()
-	else:
-		_refresh_party_panel()
-
-func _sync_party_panel_mode_tabs() -> void:
-	var partner_visible := party_panel_mode != PARTY_PANEL_MODE_PLAYERS
-	if party_partner_scroll != null:
-		party_partner_scroll.visible = partner_visible
-	if party_partner_section != null:
-		party_partner_section.visible = partner_visible
-	if party_player_section != null:
-		party_player_section.visible = not partner_visible
-	if party_partner_tab_button != null:
-		party_partner_tab_button.button_pressed = partner_visible
-	if party_player_tab_button != null:
-		party_player_tab_button.button_pressed = not partner_visible
 
 func _open_family_panel() -> void:
 	_open_family_panel_with_focus("")
@@ -18342,7 +18449,6 @@ func _open_family_panel_with_focus(manor_id: String) -> void:
 	_close_bank_panel(false)
 	_close_party_panel(false)
 	_close_player_action_panel(false)
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	if family_panel != null:
@@ -19236,8 +19342,6 @@ func _refresh_party_panel() -> void:
 	if not has_online_rows:
 		party_online_container.add_child(_party_info_label("暂无同图玩家。"))
 	_refresh_party_request_controls()
-	_refresh_training_partner_panel()
-	_sync_party_panel_mode_tabs()
 
 func _clear_container_children(container: Container) -> void:
 	for child in container.get_children():
@@ -19298,33 +19402,11 @@ func _current_party_other_members_for_battle() -> Array[Dictionary]:
 			break
 	return result
 
-func _training_partner_raw_count() -> int:
-	var partners = player_profile.get("trainingPartners", [])
-	if not (partners is Array):
-		return 0
-	return (partners as Array).size()
-
-func _training_partner_available_slots() -> int:
-	return maxi(0, BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size() - _current_party_other_members_for_battle().size())
-
-func _effective_training_partner_count() -> int:
-	return mini(_training_partner_raw_count(), _training_partner_available_slots())
-
 func _effective_battle_team_character_count() -> int:
-	return 1 + _current_party_other_members_for_battle().size() + _effective_training_partner_count()
+	return 1 + _current_party_other_members_for_battle().size()
 
 func _battle_quest_party_member_count() -> int:
-	return _current_party_other_members_for_battle().size() + _effective_training_partner_count()
-
-func _profile_with_effective_training_partners(limit: int) -> Dictionary:
-	var normalized = PlayerProgressModel.normalize_profile(player_profile)
-	var partners = PlayerProgressModel.training_partners(normalized)
-	var limited: Array[Dictionary] = []
-	var count = mini(partners.size(), maxi(0, limit))
-	for index in range(count):
-		limited.append((partners[index] as Dictionary).duplicate(true))
-	normalized["trainingPartners"] = limited
-	return PlayerProgressModel.normalize_profile(normalized)
+	return _current_party_other_members_for_battle().size()
 
 func _local_battle_state_with_current_team(base_state: Dictionary) -> Dictionary:
 	var next_state = base_state.duplicate(true)
@@ -19335,12 +19417,13 @@ func _local_battle_state_with_current_team(base_state: Dictionary) -> Dictionary
 		next_state = _battle_state_with_actor(next_state, _party_member_battle_player_actor(members[index], index, slot_number))
 		next_state = _battle_state_with_actor(next_state, _party_member_battle_pet_actor(members[index], index, slot_number))
 	var partner_slots: Array[int] = []
-	for index in range(used_member_slots, BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size()):
-		partner_slots.append(BATTLE_TEAM_COMPANION_SLOT_NUMBERS[index])
 	next_state["trainingPartnerSlotNumbers"] = partner_slots
 	next_state["partyRealMemberActorCount"] = used_member_slots
-	next_state["partyTrainingPartnerSlotCount"] = partner_slots.size()
-	var battle_profile = _profile_with_effective_training_partners(partner_slots.size())
+	next_state["partyTrainingPartnerSlotCount"] = 0
+	# 手工陪练已经退役。旧档案字段只用于读取历史战报；新本地战斗始终剔除它。
+	var battle_profile = player_profile.duplicate(true)
+	battle_profile.erase("trainingPartners")
+	battle_profile = PlayerProgressModel.normalize_profile(battle_profile)
 	return PlayerProgressModel.apply_profile_to_battle_state(battle_profile, next_state)
 
 func _battle_state_with_actor(state: Dictionary, actor: Dictionary) -> Dictionary:
@@ -19688,18 +19771,14 @@ func _on_party_http_request_completed(result: int, response_code: int, _headers:
 	if kind == "state" or kind == "state_poll":
 		var parsed_state = ServerAuthClientModel.parse_party_state_response(response_code, body)
 		if bool(parsed_state.get("ok", false)):
-			party_current_state = {
-				"party": parsed_state.get("party", null),
-				"incomingInvites": parsed_state.get("incomingInvites", []),
-				"maxMembers": int(parsed_state.get("maxMembers", 5)),
-			}
+			_apply_server_party_snapshot(parsed_state.get("party", null), false)
+			party_current_state["incomingInvites"] = parsed_state.get("incomingInvites", [])
+			party_current_state["maxMembers"] = int(parsed_state.get("maxMembers", 5))
 			if party_status_label != null:
 				party_status_label.text = "队伍状态已同步。"
 			_refresh_party_roster_hud(false)
 			_open_latest_party_invite_panel_if_needed()
 			_refresh_party_panel()
-			if training_partner_panel != null and training_partner_panel.visible:
-				_refresh_training_partner_panel()
 			host._update_hud_text(true)
 			host._layout_hud()
 			if kind == "state" or (party_panel != null and party_panel.visible):
@@ -19765,7 +19844,6 @@ func _open_player_action_panel(target: Dictionary) -> void:
 	_close_chat_panel()
 	_close_party_panel(false)
 	_close_mailbox_panel(false)
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	player_action_target = target.duplicate(true)
@@ -20229,7 +20307,6 @@ func _open_market_panel() -> void:
 	_close_player_action_panel(false)
 	_close_mailbox_panel(false)
 	_close_bank_panel(false)
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	if market_panel != null:
@@ -20970,7 +21047,6 @@ func _open_mailbox_panel() -> void:
 	_close_party_panel()
 	_close_family_panel()
 	_close_player_action_panel(false)
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	if mailbox_panel != null:
@@ -21463,7 +21539,6 @@ func _open_bank_panel() -> void:
 	_close_family_panel()
 	_close_player_action_panel(false)
 	_close_mailbox_panel(false)
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	if bank_panel != null:
@@ -22196,209 +22271,6 @@ func _local_player_name() -> String:
 		return str((player_value as Dictionary).get("name", "见习猎人"))
 	return "见习猎人"
 
-func _open_training_partner_panel() -> void:
-	_open_party_panel(PARTY_PANEL_MODE_PARTNERS)
-
-func _close_training_partner_panel() -> void:
-	_hide_control(training_partner_panel)
-	if party_panel != null and party_panel.visible and party_panel_mode == PARTY_PANEL_MODE_PARTNERS:
-		_hide_control(party_panel)
-
-func _refresh_training_partner_panel() -> void:
-	if training_partner_panel == null and party_partner_section == null:
-		return
-	player_profile = PlayerProgressModel.normalize_profile(player_profile)
-	var count = PlayerProgressModel.training_partner_count(player_profile)
-	var real_member_count = _current_party_other_members_for_battle().size()
-	var available_slots = _training_partner_available_slots()
-	var active_count = mini(count, available_slots)
-	var lines := _training_partner_detail_lines(count, real_member_count, available_slots, active_count)
-	if training_partner_label != null:
-		training_partner_label.text = "\n".join(lines)
-	if party_partner_status_label != null:
-		party_partner_status_label.text = "伙伴 %d/%d｜真人队友 %d｜本场上阵 %d" % [count, available_slots, real_member_count, active_count]
-	if party_partner_slots_container != null:
-		_refresh_party_partner_slots(active_count)
-	if party_partner_real_party_label != null:
-		party_partner_real_party_label.text = _party_partner_real_party_summary(real_member_count)
-	if count > available_slots:
-		if party_partner_status_label != null:
-			party_partner_status_label.text = "%s｜真人队友占位" % party_partner_status_label.text
-	if training_partner_scroll != null:
-		training_partner_scroll.scroll_vertical = 0
-	var server_request_pending = _is_server_account_session() and profile_action_request_pending
-	if training_partner_add_button != null:
-		training_partner_add_button.disabled = server_request_pending or count >= available_slots
-	if training_partner_remove_button != null:
-		training_partner_remove_button.disabled = server_request_pending or count <= 0
-	if training_partner_fill_button != null:
-		training_partner_fill_button.disabled = server_request_pending or count >= available_slots
-	if training_partner_clear_button != null:
-		training_partner_clear_button.disabled = server_request_pending or count <= 0
-	if party_partner_add_button != null:
-		party_partner_add_button.disabled = server_request_pending or count >= available_slots
-	if party_partner_remove_button != null:
-		party_partner_remove_button.disabled = server_request_pending or count <= 0
-	if party_partner_fill_button != null:
-		party_partner_fill_button.disabled = server_request_pending or count >= available_slots
-	if party_partner_clear_button != null:
-		party_partner_clear_button.disabled = server_request_pending or count <= 0
-
-func _training_partner_detail_lines(count: int, real_member_count: int, available_slots: int, active_count: int) -> Array[String]:
-	var lines: Array[String] = []
-	lines.append("队伍：自己 1 / 真人队友 %d / 陪练伙伴 %d，最多 5 人。" % [real_member_count, active_count])
-	lines.append("伙伴槽位：%d/%d" % [count, available_slots])
-	lines.append("草丛遇敌时，真人队友优先占位，陪练伙伴补满剩余位置。")
-	lines.append("陪练会复制加入时的人物和出战宠属性，之后独立获得经验。")
-	if count > available_slots:
-		lines.append("当前真人队友已占位，本场只会上阵前 %d 个陪练伙伴。" % active_count)
-	lines.append("")
-	lines.append_array(PlayerProgressModel.training_partner_summary_lines(player_profile))
-	return lines
-
-func _refresh_party_partner_slots(active_count: int) -> void:
-	_clear_container_children(party_partner_slots_container)
-	party_partner_slots_container.add_child(_party_partner_slot_row("自己", _local_player_name(), false))
-	var used_slots := 0
-	for member in _current_party_other_members_for_battle():
-		if used_slots >= BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size():
-			break
-		party_partner_slots_container.add_child(_party_partner_slot_row("真人队友", _party_player_text(member), false))
-		used_slots += 1
-	var partners := PlayerProgressModel.training_partners(player_profile)
-	for index in range(active_count):
-		if used_slots >= BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size() or index >= partners.size():
-			break
-		var partner := partners[index] as Dictionary
-		var pet_value = partner.get("pet", {})
-		var pet := pet_value as Dictionary if pet_value is Dictionary else {}
-		var detail := "%s Lv%d / %s Lv%d" % [
-			str(partner.get("name", "陪练伙伴%d" % [index + 1])),
-			int(partner.get("level", 1)),
-			str(pet.get("name", "陪练宠物")),
-			int(pet.get("level", 1)),
-		]
-		party_partner_slots_container.add_child(_party_partner_slot_row("陪练伙伴%d" % [index + 1], detail, false))
-		used_slots += 1
-	for index in range(used_slots, BATTLE_TEAM_COMPANION_SLOT_NUMBERS.size()):
-		party_partner_slots_container.add_child(_party_partner_slot_row("空位", "可加入陪练伙伴", true))
-
-func _party_partner_slot_row(title: String, detail: String, muted: bool) -> Control:
-	var row := HBoxContainer.new()
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_theme_constant_override("separation", 10)
-	var title_label := Label.new()
-	title_label.text = title
-	title_label.custom_minimum_size = Vector2(112, 24)
-	title_label.add_theme_font_size_override("font_size", 15)
-	if muted:
-		title_label.add_theme_color_override("font_color", Color(0.72, 0.72, 0.68, 0.72))
-	row.add_child(title_label)
-	var detail_label := Label.new()
-	detail_label.text = detail
-	detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	detail_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	detail_label.add_theme_font_size_override("font_size", 15)
-	if muted:
-		detail_label.add_theme_color_override("font_color", Color(0.72, 0.72, 0.68, 0.72))
-	row.add_child(detail_label)
-	return row
-
-func _party_partner_real_party_summary(real_member_count: int) -> String:
-	if real_member_count > 0:
-		return "已有真人队友 %d 人。需要邀请或查看同图玩家时切到真人组队。" % real_member_count
-	var online_count := 0
-	for value in party_online_players:
-		if value is Dictionary and str((value as Dictionary).get("username", "")).strip_edges() != "":
-			online_count += 1
-	if online_count > 0:
-		return "当前没有真人队伍；同图玩家 %d 人。" % online_count
-	return "当前没有真人队伍。"
-
-func _training_partner_panel_layout_is_usable() -> bool:
-	if party_panel != null and party_panel.visible and party_panel_mode == PARTY_PANEL_MODE_PARTNERS:
-		var merged_viewport_size = host._layout_size()
-		var merged_margin = 18.0
-		var merged_bottom = party_panel.position.y + party_panel.size.y
-		return (
-			party_panel.position.x >= -1.0
-			and party_panel.position.y >= merged_margin
-			and party_panel.size.x <= merged_viewport_size.x - merged_margin * 2.0 + 1.0
-			and party_panel.size.y <= merged_viewport_size.y - merged_margin * 2.0 + 1.0
-			and merged_bottom <= merged_viewport_size.y + 1.0
-			and party_partner_scroll != null
-			and party_partner_scroll.visible
-			and party_partner_scroll.global_position.y + party_partner_scroll.size.y <= party_panel.global_position.y + party_panel.size.y + 1.0
-			and party_partner_section != null
-			and party_partner_section.visible
-			and party_partner_slots_container != null
-			and party_partner_slots_container.get_child_count() >= 1
-			and party_partner_clear_button != null
-			and party_partner_clear_button.global_position.y + party_partner_clear_button.size.y <= party_panel.global_position.y + party_panel.size.y + 1.0
-			and party_partner_real_party_label != null
-			and party_partner_real_party_label.global_position.y + party_partner_real_party_label.size.y <= party_panel.global_position.y + party_panel.size.y + 1.0
-		)
-	if training_partner_panel == null or training_partner_scroll == null or not training_partner_panel.visible:
-		return false
-	var viewport_size = host._layout_size()
-	var margin = 18.0
-	var bottom = training_partner_panel.position.y + training_partner_panel.size.y
-	return (
-		training_partner_panel.position.x >= -1.0
-		and training_partner_panel.position.y >= margin
-		and training_partner_panel.size.x <= viewport_size.x - margin * 2.0 + 1.0
-		and training_partner_panel.size.y <= viewport_size.y - margin * 2.0 + 1.0
-		and bottom <= viewport_size.y + 1.0
-		and training_partner_scroll.size.y >= 80.0
-	)
-
-func _set_training_partner_count(count: int) -> void:
-	var available_slots = _training_partner_available_slots()
-	var target_count = clampi(count, 0, available_slots)
-	if _is_server_account_session():
-		_refresh_training_partner_panel()
-		var parsed = await _submit_server_profile_action("training_partner_set_count", {"count": target_count}, "设置陪练伙伴失败。")
-		var log_lines = _string_array_values(parsed.get("logLines", []))
-		if log_lines.is_empty():
-			var fallback_count = PlayerProgressModel.training_partner_count(player_profile)
-			log_lines.append("队伍伙伴 %d/%d。" % [fallback_count, _training_partner_available_slots()])
-		_set_world_log_message("\n".join(log_lines))
-		_refresh_training_partner_panel()
-		host._update_hud_text()
-		return
-	if _local_profile_mutation_blocked_for_server_only("设置陪练伙伴"):
-		_refresh_training_partner_panel()
-		return
-	player_profile = PlayerProgressModel.with_training_partner_count(player_profile, target_count)
-	var next_count = PlayerProgressModel.training_partner_count(player_profile)
-	var log_lines: Array[String] = ["队伍伙伴 %d/%d。" % [next_count, available_slots]]
-	log_lines.append_array(_record_quest_event_and_maybe_claim({
-		"type": "training_partner_set_count",
-		"count": next_count,
-		"amount": 1,
-	}))
-	if profile_save_enabled:
-		host._save_player_profile_now()
-	_set_world_log_message("\n".join(log_lines))
-	_refresh_training_partner_panel()
-	host._update_hud_text()
-
-func _on_training_partner_add_pressed() -> void:
-	if PlayerProgressModel.training_partner_count(player_profile) >= _training_partner_available_slots():
-		_set_world_log_message("队伍槽位已满，请先离队或移除伙伴。")
-		_refresh_training_partner_panel()
-		return
-	await _set_training_partner_count(PlayerProgressModel.training_partner_count(player_profile) + 1)
-
-func _on_training_partner_remove_pressed() -> void:
-	await _set_training_partner_count(PlayerProgressModel.training_partner_count(player_profile) - 1)
-
-func _on_training_partner_fill_pressed() -> void:
-	await _set_training_partner_count(_training_partner_available_slots())
-
-func _on_training_partner_clear_pressed() -> void:
-	await _set_training_partner_count(0)
-
 func _open_auto_settings_panel() -> void:
 	if not battle_active:
 		host._set_hang_mode(false)
@@ -22412,7 +22284,6 @@ func _open_auto_settings_panel() -> void:
 	_close_pet_skill_panel()
 	_close_codex_panel()
 	_close_quest_panel()
-	_close_training_partner_panel()
 	_close_map_panel()
 	_close_chat_panel()
 	_close_mailbox_panel()
@@ -22458,7 +22329,6 @@ func _open_qa_panel() -> void:
 	_close_mailbox_panel()
 	_close_party_panel()
 	_close_family_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_numeric_workbench_panel(false)
 	if qa_panel != null:
@@ -22495,7 +22365,6 @@ func _open_numeric_workbench_panel() -> void:
 	_close_mailbox_panel()
 	_close_party_panel()
 	_close_family_panel()
-	_close_training_partner_panel()
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	if numeric_workbench_panel != null:
@@ -22964,7 +22833,7 @@ func _on_qa_entry_pressed(entry_id: String) -> void:
 			_qa_open_auto_settings("capture")
 		"open_partner":
 			_close_qa_panel(false)
-			_open_training_partner_panel()
+			_open_hang_matchmaking_panel()
 		"open_pet":
 			_close_qa_panel(false)
 			_open_pet_panel(false)
@@ -24329,8 +24198,8 @@ func _navigation_target_for_quest(quest: Dictionary) -> Dictionary:
 			return {"kind": "mailbox_panel", "mapId": "", "label": QuestModel.objective_text_for(quest)}
 		"send_chat":
 			return {"kind": "chat_panel", "mapId": "", "label": QuestModel.objective_text_for(quest)}
-		"training_partner_count":
-			return {"kind": "party_panel", "mapId": "", "label": QuestModel.objective_text_for(quest)}
+		"hang_matchmaking_join":
+			return {"kind": "hang_matchmaking_panel", "mapId": "", "label": QuestModel.objective_text_for(quest)}
 		"capture_pet":
 			return _navigation_target_for_capture_objective(objective)
 	return {}
@@ -24838,9 +24707,9 @@ func _route_to_quest_target(target: Dictionary) -> void:
 			_open_chat_panel()
 			_set_chat_channel(CHAT_CHANNEL_NEARBY)
 			_set_world_log_message("请在附近频道完成：%s。" % label)
-		"party_panel":
-			_open_party_panel(PARTY_PANEL_MODE_PARTNERS)
-			_set_world_log_message("请在队伍的伙伴页完成：%s。" % label)
+		"hang_matchmaking_panel":
+			_open_hang_matchmaking_panel()
+			_set_world_log_message("请在挂机匹配中完成：%s。" % label)
 
 func _open_tutorial_feature_panel(feature_id: String) -> void:
 	match feature_id:

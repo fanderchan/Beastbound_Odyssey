@@ -23,6 +23,7 @@ const DURABLE_RECEIPT_EXCLUDED_METHODS = new Set([
   "refreshSession",
   "getMarketConfig",
   "selectCharacter",
+  "cancelHangMatchmaking",
 ]);
 // These player-asset domains can turn a successful remote mutation into a
 // local domain failure before this Node reaches MySQL (for example, a shop

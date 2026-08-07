@@ -55,6 +55,14 @@ test("quest catalog gives every formal quest explicit pickup and recommended lev
       "quest_rebirth_6_guidance",
     ],
   );
+  const matchmakingTutorial = questCatalog.quests.find((quest) => quest.id === "quest_training_partner_intro");
+  assert.equal(matchmakingTutorial.title, "匹配陪练");
+  assert.equal(matchmakingTutorial.objective.type, "hang_matchmaking_join");
+  assert.equal(matchmakingTutorial.objective.count, 1);
+  assert.match(matchmakingTutorial.objective.text, /匹配挂机/);
+  const groupBrawl = questCatalog.quests.find((quest) => quest.id === "quest_group_brawl");
+  assert.equal(groupBrawl.objective.allowServerFillers, true);
+  assert.match(groupBrawl.summary, /真人队友或NPC陪练/);
 });
 
 test("production evolution license quests can be claimed after the attested route gate opens", () => {
@@ -971,8 +979,8 @@ test("party pve spirit event advances battle quest chain from server event log",
   assert.equal(after.profile.captureTools.capture_poison_wuli_net, 1);
 });
 
-test("group brawl quest requires an ally and a dangerous grass victory", () => {
-  const service = createAuthService({"store": createMemoryAuthStore()});
+test("group brawl quest rejects ordinary solo victory but accepts matched NPC filler victory", () => {
+  const service = createAuthService({"store": createMemoryAuthStore(), "allowPositionTeleport": true});
   const solo = service.register({"username": "groupbrawlsolo", "password": "test1234", "displayName": "单人群殴"});
   assert.equal(solo.ok, true);
   const soloProfile = battleProfile("单人群殴", {
@@ -1020,15 +1028,23 @@ test("group brawl quest requires an ally and a dangerous grass victory", () => {
   assert.equal(soloAfter.profile.questStates.quest_group_brawl.status, "active");
   assert.equal(soloAfter.profile.questStates.quest_group_brawl.progress, 0);
 
-  const grouped = service.register({"username": "groupbrawlally", "password": "test1234", "displayName": "群殴队伍"});
+  let matchNowMs = Date.parse("2026-08-08T00:00:00.000Z");
+  const matchedService = createAuthService({
+    "store": createMemoryAuthStore(),
+    "now": () => matchNowMs,
+    "allowPositionTeleport": true,
+    "hangMatchmakingNpcFillDelayMs": 8000,
+    "useStrictPetEncounterAuthority": true,
+  });
+  const grouped = matchedService.register({"username": "groupbrawlally", "password": "test1234", "displayName": "群殴队伍"});
   assert.equal(grouped.ok, true);
   const groupedProfile = battleProfile("群殴队伍", {
     "level": 8,
-    "hp": 140,
-    "maxHp": 140,
-    "attack": 1000,
-    "defense": 20,
-    "quick": 200,
+    "hp": 5000,
+    "maxHp": 5000,
+    "attack": 100,
+    "defense": 1000,
+    "quick": 100,
     "comboRateOverride": 0,
   });
   groupedProfile.stoneCoins = 5;
@@ -1037,38 +1053,75 @@ test("group brawl quest requires an ally and a dangerous grass victory", () => {
     "quest_training_partner_intro": {"questId": "quest_training_partner_intro", "status": "claimed", "progress": 1},
     "quest_group_brawl": {"questId": "quest_group_brawl", "status": "active", "progress": 0},
   };
-  assert.equal(service.saveProfile(grouped.session.token, {"expectedRevision": 0, "profile": groupedProfile}).ok, true);
-  const partnerSet = service.profileAction(grouped.session.token, {"action": "training_partner_set_count", "payload": {"count": 1}});
-  assert.equal(partnerSet.ok, true);
-  const groupedEncounter = service.startPartyEncounter(grouped.session.token, {
-    "enemyCount": 1,
-    "encounterZone": {
-      "id": "danger_grass",
-      "name": "危险草丛",
-      "encounterGroupId": "firebud_grass_danger",
-      "selectedWildPet": {
-        "formId": "wuli_normal_orange_fire10",
-        "name": "危险乌力",
-        "level": 1,
-        "battleStats": {"maxHp": 1, "attack": 1, "defense": 1, "quick": 1},
-      },
-    },
+  groupedProfile.hangSession = {
+    "enabled": true,
+    "mode": "walk",
+    "originMapId": "firebud_village_gate",
+    "originCell": [11, 15],
+    "encounterZoneId": "village_grass",
+    "encounterGroupId": "firebud_grass_01",
+    "startedAt": "2026-08-08T00:00:00.000Z",
+  };
+  assert.equal(matchedService.saveProfile(grouped.session.token, {"expectedRevision": 0, "profile": groupedProfile}).ok, true);
+
+  assert.equal(matchedService.updatePlayerPosition(grouped.session.token, {
+    "mapId": "firebud_village_gate",
+    "cellX": 16,
+    "cellY": 15,
+    "moving": false,
+  }).ok, true);
+  const groupedJoin = matchedService.joinHangMatchmaking(grouped.session.token, {
+    "idempotencyKey": "group_brawl_match_leader_0001",
+    "target": {"mapId": "firebud_village_gate", "encounterGroupId": "firebud_grass_01"},
   });
-  assert.equal(groupedEncounter.ok, true);
+  assert.equal(groupedJoin.ok, true, JSON.stringify(groupedJoin));
+  assert.equal(groupedJoin.state.status, "matching");
+  assert.equal(groupedJoin.state.humanCount, 1);
+  assert.equal(groupedJoin.state.npcCount, 0);
+  matchNowMs += 7999;
+  const beforeNpcFill = matchedService.getHangMatchState(grouped.session.token);
+  assert.equal(beforeNpcFill.state.status, "matching");
+  assert.equal(beforeNpcFill.state.npcCount, 0);
+  matchNowMs += 1;
+  const npcFilled = matchedService.getHangMatchState(grouped.session.token);
+  assert.equal(npcFilled.ok, true);
+  assert.equal(npcFilled.state.status, "npc_filled");
+  assert.equal(npcFilled.state.humanCount, 1);
+  assert.equal(npcFilled.state.npcCount, 4);
+  const groupedEncounter = matchedService.startPartyEncounter(grouped.session.token, {
+    "encounterIntent": {"zoneId": "danger_grass", "encounterGroupId": "firebud_grass_danger"},
+  });
+  assert.equal(groupedEncounter.ok, true, JSON.stringify(groupedEncounter));
+  assert.equal(groupedEncounter.room.participantAccountIds.length, 1);
   const groupedPlayer = groupedEncounter.room.battle.actors.find((actor) => actor.accountId === grouped.account.accountId && actor.kind === "player");
-  const groupedEnemy = groupedEncounter.room.battle.actors.find((actor) => actor.side === "enemy");
-  const groupedResolved = service.submitBattleCommand(grouped.session.token, groupedEncounter.room.roomId, {
-    "round": 1,
-    "actorId": groupedPlayer.actorId,
-    "actionId": "attack",
-    "targetActorId": groupedEnemy.actorId,
-  });
-  assert.equal(groupedResolved.ok, true);
-  const writeback = groupedResolved.room.battle.profileWriteback.profiles.find((entry) => entry.accountId === grouped.account.accountId);
-  assert.equal(writeback.quests.claimed.some((entry) => entry.questId === "quest_group_brawl"), true);
-  assert.equal(writeback.quests.activeQuestId, "quest_use_poison_spirit");
-  const groupedAfter = service.getProfile(grouped.session.token);
-  assert.equal(groupedAfter.ok, true);
+  assert.equal(groupedPlayer.hp, 5000, JSON.stringify(groupedPlayer));
+  const matchmakingNpcActors = groupedEncounter.room.battle.actors.filter((actor) => actor.matchmakingNpc === true);
+  assert.equal(matchmakingNpcActors.length, 8);
+  assert.equal(matchmakingNpcActors.filter((actor) => actor.kind === "player").length, 4);
+  assert.equal(matchmakingNpcActors.filter((actor) => actor.kind === "pet").length, 4);
+  assert.equal(matchmakingNpcActors.every((actor) => (
+    actor.controller === "server_ai"
+    && actor.rewardEligible === false
+    && actor.accountId === ""
+    && actor.ownerAccountId === ""
+    && actor.partnerId === ""
+  )), true);
+  let groupedResolved = groupedEncounter;
+  for (let round = 1; round <= 10 && groupedResolved.room.status !== "closed"; round += 1) {
+    const groupedEnemy = groupedResolved.room.battle.actors.find((actor) => actor.side === "enemy" && actor.hp > 0);
+    assert.ok(groupedEnemy);
+    const groupedPending = matchedService.submitBattleCommand(grouped.session.token, groupedEncounter.room.roomId, {
+      "round": round,
+      "actorId": groupedPlayer.actorId,
+      "actionId": "attack",
+      "targetActorId": groupedEnemy.actorId,
+    });
+    assert.equal(groupedPending.ok, true, JSON.stringify(groupedPending));
+    groupedResolved = groupedPending;
+  }
+  assert.equal(groupedResolved.room.status, "closed");
+  const groupedAfter = matchedService.getProfile(grouped.session.token);
+  assert.equal(groupedAfter.ok, true, JSON.stringify(groupedAfter));
   assert.equal(groupedAfter.profile.questStates.quest_group_brawl.status, "claimed");
   assert.equal(groupedAfter.profile.activeQuestId, "quest_use_poison_spirit");
   assert.equal(groupedAfter.profile.stoneCoins >= 25, true);

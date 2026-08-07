@@ -439,3 +439,91 @@ final result: passed
 final result: passed
 
 ---
+
+# Phase 394 Design QA：挂机匹配、真人优先与陪练 NPC 软补位
+
+## Findings
+
+- P0：无。
+- P1：无。服务端独立审计最终确认真人队伍、`8s` 软补位、下一场真人替换、掉线席位、
+  幂等／模糊提交恢复和 NPC 奖励隔离均没有阻断问题；不存在幽灵队列、revision 回退、NPC
+  冒充真人或旧手工陪练继续写档。
+- P2：无。真实 `Main.tscn` 的路线卡、便捷组队、开始二选一、真人等待、陪练 NPC、下一场
+  替换和世界状态均完整落在 `1280×720`；路线／真人／临时 NPC／空位层级可读，主动作、
+  取消、停止与关闭均可左键完成，正常画面无队列 ID、接口、测试或 agent／QA 文案。
+
+## Comparison target
+
+- 比较目标为项目所有者同轮提供的挂机选区、便捷组队、立即／匹配挂机、真人等待、NPC
+  补位及回到世界状态参考截图；Phase 393 已单独处理同轮的战后奖励图。
+- 比较范围是页面层级、选择顺序、真人优先、补位透明度、下一场替换语义和世界挂机连续性；
+  不要求复制参考游戏的角色、宠物、地图、商标、在线人数、数值或像素。
+
+## Comparison evidence
+
+- 连续视频：
+  `.run/evidence/phase394_hang_matchmaking_owner_review/phase394-final/hang-matchmaking-owner-review-1x.mp4`；
+- 15 帧联系表：
+  `.run/evidence/phase394_hang_matchmaking_owner_review/phase394-final/contact-sheet.png`；
+- 结构化摘要：
+  `.run/evidence/phase394_hang_matchmaking_owner_review/phase394-final/summary.json`；
+- 成片为真实 `Main.tscn`、Metal、`1280×720 / 30 FPS / 1.00×`，共
+  `23.833333s / 715` 帧；MP4 SHA-256：
+  `9074a94aa54458c6aeae20277cf0151412d7d5f312139fd74f6860e6c6955f0c`。
+
+## Required fidelity surfaces
+
+- Layout：顶部标题与关闭、路线／便捷组队页签、左侧六条正式路线、中部规则与席位、底部
+  主动作形成固定阅读顺序；开始二选一作为同页模态层，不让背景误触。
+- Hierarchy：当前路线、可立即挂机状态、真人数、陪练 NPC 数和空位明确分层；队伍卡不会把
+  NPC 画成在线玩家，世界状态条只保留当前挂机／匹配摘要和停止入口。
+- Truth：服务器等待满 `8s` 才软补位；真人加入立即缩减 NPC，已开战不被强切而在下一场
+  替换。取消匹配继续挂机，停止挂机才隐藏状态；队长掉线取消匹配，非队长掉线由 NPC 补席。
+- Controls：路线、页签、队伍、立即挂机、匹配挂机、取消、停止和关闭均可真实跨帧左键完成；
+  非当前地图使用正式跨图寻路，不提供服务端不存在的指定队伍申请按钮。
+- Safety：NPC 不计在线人口、不进入 participant IDs、奖励、捕捉、档案或 receipt；旧手工陪练
+  无入口、无 mutation，新战斗不注入，旧 frozen actor 只读显示且不可再获得 EXP。
+- Continuity：匹配在挂机中进行，关闭面板或取消匹配不会中断已经选择的挂机；登入／重连、
+  满员后 party update 和队员离开都按单调 revision 有界刷新。
+
+## Interaction, regression and performance evidence
+
+- 服务端 Node 语法检查与四个定向套件合计 `142/142 PASS`，独立审计 P0／P1／P2 均无；
+  保存失败、GET prune 交错、单人／合并队员模糊 COMMIT、重启 exact replay、离线席位、NPC
+  战斗注入与奖励隔离均有回归。
+- 客户端 `--auto-hang-matchmaking-check` 为 `2/2 PASS`，choice、matching、dedupe、
+  npc_filled、replacement、full、party update refresh、matching resumed、人物／宠物自动策略、
+  取消继续挂机和停止隐藏全为 `true`。
+- 网络模型 focused check `16/16`；面板 focused check、挂机任务 standalone、Godot 解析和任务
+  模板／任务链／任务 UI `4/4` 均通过；旧手工陪练 UI、flag、按钮和包装函数精确残留为零。
+- fixed idle／movement 均保持 `60 FPS`，`process_total` 分别为 `0.03..0.04ms` 与
+  `0.04..0.05ms`；112 次跨帧点击合并为 33 次寻路并停稳，`0.05..0.07ms`。Metal 实时时钟
+  idle 为 CPU 中位 `4.8% / process 0.285ms`，movement 为 `11.8% / 0.29ms / 60 FPS`。
+- 录像共 9 次真实左键，十章 flow coverage 全为 true；隔离 user-data、无后端／MySQL／服务端
+  写入。录像采样峰值 `42.602ms` 不作为稳态性能结论。
+
+## Intentional differences and P3 observations
+
+- [P3] Beastbound 明示“陪练 NPC”，不把补位角色混入真人在线数。参考流程的高人口观感不能
+  覆盖本项目的数据真实性原则；这项差异保留。
+- [P3] 当前只有统一自动匹配，不提供参考中可能存在的指定队伍申请、聊天招募、跨服或付费
+  加速入口，因为服务端尚无这些权威合同。
+- [P3] 未做真实 MySQL fault injection 或完整 `npm test`；typed async store 已覆盖模糊
+  COMMIT，发布前仍需 MySQL 专用演练。旧 frozen room 的无入口 internal helper／switch 只为
+  只读兼容保留，可另阶段清理。
+- [P3] 本轮工程与媒体 Design QA 通过，但项目所有者尚未观看最终视频；
+  `ownerReviewStatus=pending`，不能冒充 owner visual approval 或 broad P2.2 完成。
+
+## Comparison history
+
+| 轮次 | 发现 | 修复 | 复核证据 |
+| --- | --- | --- | --- |
+| 合同审计 | P1：旧路径让玩家手工增删本地陪练，既不是真人匹配，也会把本地对象混进战斗与奖励 | 退役全部玩家入口和 mutation，改为正式路线的服务端权威真人优先／NPC 软补位；旧档只读兼容 | 旧 UI／flag／wrapper 零残留；profile action 与 frozen room 回归通过 |
+| Server Pass 1 | P0：延迟 join 的整表快照可覆盖 GET prune，复活过期队列并回退 revision | 改为提交后 delta rebase 与单调 revision | delayed durable join／GET prune 交错回归通过 |
+| Server Pass 2 | P1：模糊 COMMIT 重启与合并入队缺少最小 exact receipt；离线成员仍可能占真人席位 | receipt 冻结 party＋target 最小证明；重启重建唯一队列；只按在线真人计席，队长掉线取消 | single＋merged ack-lost、restart、offline seat 回归通过 |
+| Client Pass | P2：需要同时证明二选一、软补位、下一场替换、取消继续和停止隐藏，而不能靠静态截图 | 真实 Main 十章连续录像、9 次跨帧左键与专项状态机断言 | 客户端 2/2、focused checks、23.833333 秒视频 |
+| Final | 未发现剩余 P0、P1、P2；保留三项明确 P3 边界 | 无进一步改动 | Node 142/142、客户端专项全绿、完整媒体解码与独立 PC 性能探针 |
+
+`ownerReviewStatus=pending`；本结论只代表工程 Design QA 通过，不替代项目所有者观看与审美接受。
+
+final result: passed

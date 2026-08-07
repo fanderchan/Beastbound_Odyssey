@@ -2558,7 +2558,7 @@ test("storage failure recovery preserves published replay cursor without leaking
   assert.equal(saveAttempts, 1);
 });
 
-test("only durable record point actions carry a matching row-local profile recovery scope", async () => {
+test("record point writes carry row-local recovery scope while retired training partners perform no durable write", async () => {
   const base = createMemoryAuthStore();
   const seed = createAuthService({store: base});
   const owner = seed.register({
@@ -2566,6 +2566,17 @@ test("only durable record point actions carry a matching row-local profile recov
     password: "test1234",
     displayName: "记录点范围猎人",
   });
+  const legacyProfile = seed.getProfile(owner.session.token);
+  legacyProfile.profile.trainingPartners = [{
+    partnerId: "legacy_record_scope_partner",
+    name: "旧陪练存档",
+    level: 12,
+    schemaVersion: 1,
+  }];
+  assert.equal(seed.saveProfile(owner.session.token, {
+    expectedRevision: legacyProfile.profileSummary.profileRevision,
+    profile: legacyProfile.profile,
+  }).ok, true);
   const saveOptions = [];
   const service = createAuthService({
     store: createAsyncWriteAuthStore({
@@ -2599,7 +2610,8 @@ test("only durable record point actions carry a matching row-local profile recov
     actionId: recordOperation.actionId,
   });
 
-  const otherAction = await service.invokeDurable("profileAction", [owner.session.token, {
+  const beforeRetiredAction = service.getProfile(owner.session.token);
+  const retiredAction = await service.invokeDurable("profileAction", [owner.session.token, {
     action: "training_partner_set_count",
     payload: {count: 1},
   }], {
@@ -2607,9 +2619,19 @@ test("only durable record point actions carry a matching row-local profile recov
     requestHash: "b".repeat(64),
     actionId: "POST /profile/action",
   });
-  assert.equal(otherAction.ok, true);
-  assert.equal(saveOptions.length, 2);
-  assert.equal(Object.hasOwn(saveOptions[1], "consistencyScope"), false);
+  assert.equal(retiredAction.ok, false);
+  assert.equal(retiredAction.code, "training_partner_action_retired");
+  assert.match(retiredAction.message, /匹配挂机/);
+  assert.equal(saveOptions.length, 1);
+  const afterRetiredAction = service.getProfile(owner.session.token);
+  assert.equal(
+    afterRetiredAction.profileSummary.profileRevision,
+    beforeRetiredAction.profileSummary.profileRevision,
+  );
+  assert.deepEqual(
+    afterRetiredAction.profile.trainingPartners,
+    beforeRetiredAction.profile.trainingPartners,
+  );
 });
 
 test("scoped ambiguous record point recovery publishes both target and unrelated profile commits", async () => {

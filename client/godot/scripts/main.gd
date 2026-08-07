@@ -350,7 +350,6 @@ var chat_menu_button: Button
 var party_menu_button: Button
 var family_menu_button: Button
 var mailbox_menu_button: Button
-var training_partner_menu_button: Button
 var auto_settings_menu_button: Button
 var account_menu_button: Button
 var qa_menu_button: Button
@@ -671,6 +670,14 @@ var party_online_players: Array[Dictionary] = []
 var party_request_pending: bool = false
 var party_pending_kind: String = ""
 var party_state_poll_elapsed: float = 0.0
+var hang_matchmaking_controller
+var hang_matchmaking_panel: Control
+var hang_matchmaking_world_status: Control
+var hang_matchmaking_panel_pending: bool = false
+var hang_matchmaking_status_text: String = ""
+var hang_matchmaking_pending_route: Dictionary = {}
+var hang_matchmaking_pending_mode: String = ""
+var hang_matchmaking_route_check_elapsed: float = 0.0
 var family_panel: PanelContainer
 var family_status_label: Label
 var family_name_input: LineEdit
@@ -748,14 +755,6 @@ var battle_invite_pending_kind: String = ""
 var server_battle_command_request_active: bool = false
 var server_battle_last_playback_turn_key: String = ""
 var server_battle_pending_closed_room: Dictionary = {}
-var training_partner_panel: PanelContainer
-var training_partner_scroll: ScrollContainer
-var training_partner_label: Label
-var training_partner_add_button: Button
-var training_partner_remove_button: Button
-var training_partner_fill_button: Button
-var training_partner_clear_button: Button
-var training_partner_close_button: Button
 var auto_settings_panel: PanelContainer
 var auto_settings_battle_tab_button: Button
 var auto_settings_hang_tab_button: Button
@@ -829,8 +828,8 @@ var auto_pet_battle_review_lab_check: bool = false
 var auto_battle_settings_check: bool = false
 var auto_capture_settings_check: bool = false
 var auto_pet_growth_rule_preview_check: bool = false
-var auto_training_partner_check: bool = false
 var auto_hang_settings_check: bool = false
+var auto_hang_matchmaking_check: bool = false
 var auto_offline_hang_live_check: bool = false
 var auto_gm_10v10_map_check: bool = false
 var auto_level_grass_trial_map_check: bool = false
@@ -1092,7 +1091,6 @@ var pet_battle_review_preview_step_ids: Array[String] = []
 var auto_battle_settings_preview: bool = false
 var battle_spirit_source_preview: bool = false
 var auto_capture_settings_preview: bool = false
-var training_partner_demo: bool = false
 var hang_settings_preview: bool = false
 var record_point_knockaway_demo: bool = false
 var battle_stat_test: bool = false
@@ -1663,10 +1661,10 @@ func _ready() -> void:
 		call_deferred("_run_auto_capture_settings_check")
 	elif auto_pet_growth_rule_preview_check:
 		call_deferred("_run_auto_pet_growth_rule_preview_check")
-	elif auto_training_partner_check:
-		call_deferred("_run_auto_training_partner_check")
 	elif auto_hang_settings_check:
 		call_deferred("_run_auto_hang_settings_check")
+	elif auto_hang_matchmaking_check:
+		call_deferred("_run_auto_hang_matchmaking_check")
 	elif auto_offline_hang_live_check:
 		call_deferred("_run_auto_offline_hang_live_check")
 	elif auto_gm_10v10_map_check:
@@ -2142,8 +2140,6 @@ func _ready() -> void:
 		call_deferred("_run_battle_spirit_source_preview")
 	elif auto_capture_settings_preview:
 		call_deferred("_run_auto_capture_settings_preview")
-	elif training_partner_demo:
-		call_deferred("_run_training_partner_demo")
 	elif hang_settings_preview:
 		call_deferred("_run_hang_settings_preview")
 	elif record_point_knockaway_demo:
@@ -2404,10 +2400,10 @@ func _apply_preview_window_args() -> void:
 			auto_capture_settings_check = true
 		elif arg == "--auto-pet-growth-rule-preview-check":
 			auto_pet_growth_rule_preview_check = true
-		elif arg == "--auto-training-partner-check":
-			auto_training_partner_check = true
 		elif arg == "--auto-hang-settings-check":
 			auto_hang_settings_check = true
+		elif arg == "--auto-hang-matchmaking-check":
+			auto_hang_matchmaking_check = true
 		elif arg == "--auto-offline-hang-live-check":
 			auto_offline_hang_live_check = true
 		elif arg == "--auto-gm-10v10-map-check":
@@ -2939,8 +2935,6 @@ func _apply_preview_window_args() -> void:
 			battle_spirit_source_preview = true
 		elif arg == "--auto-capture-settings-preview":
 			auto_capture_settings_preview = true
-		elif arg == "--training-partner-demo":
-			training_partner_demo = true
 		elif arg == "--hang-settings-preview":
 			hang_settings_preview = true
 		elif arg == "--record-point-knockaway-demo":
@@ -3623,10 +3617,6 @@ func _auto_capture_full_pet_profile() -> Dictionary:
 	profile["activePetInstanceId"] = "auto_full_party_0"
 	profile["nextPetInstanceSerial"] = 1000
 	return PlayerProgressModel.normalize_profile(profile)
-
-
-func _run_auto_training_partner_check() -> void:
-	await _auto_checks()._run_auto_training_partner_check()
 
 
 func _run_auto_battle_formation_check() -> void:
@@ -5000,7 +4990,7 @@ func _run_chat_panel_preview() -> void:
 	_load_map("firebud_village_gate", "from_training_yard")
 	_set_world_log_message("Phase77：聊天系统频道与世界日志分离。")
 	_append_chat_message(CHAT_CHANNEL_NEARBY, "附近频道测试消息。", "见习猎人")
-	_append_chat_message(CHAT_CHANNEL_TEAM, "队伍频道测试消息。", "陪练伙伴1")
+	_append_chat_message(CHAT_CHANNEL_TEAM, "队伍频道测试消息。", "测试队友1")
 	_open_chat_panel()
 	if status_label != null:
 		_update_hud_text()
@@ -5062,21 +5052,12 @@ func _run_auto_hang_settings_check() -> void:
 	await _auto_checks()._run_auto_hang_settings_check()
 
 
+func _run_auto_hang_matchmaking_check() -> void:
+	await _auto_checks()._run_auto_hang_matchmaking_check()
+
+
 func _run_auto_offline_hang_live_check() -> void:
 	await _auto_checks()._run_auto_offline_hang_live_check()
-
-
-func _run_training_partner_demo() -> void:
-	profile_save_enabled = false
-	world_log_history.clear()
-	world_log_message = ""
-	_load_map("firebud_village_gate", "from_training_yard")
-	player_profile = PlayerProgressModel.with_training_partner_count(PlayerProgressModel.default_profile(), 4)
-	battle_auto_attack_enabled = true
-	_set_world_log_message("已加入4个陪练伙伴。进入草丛遇敌后，可点战斗里的自动观察练级。")
-	_open_training_partner_panel()
-	if status_label != null:
-		_update_hud_text()
 
 
 func _run_record_point_knockaway_demo() -> void:
@@ -7897,6 +7878,7 @@ func _process(delta: float) -> void:
 	_sync_world_layer_visibility()
 	_update_runtime_frame_budget()
 	_flush_profile_save_if_due(delta)
+	_update_hang_matchmaking_flow(delta)
 	if battle_active:
 		var battle_start := _perf_now()
 		battle_pet_art_elapsed += _scaled_battle_delta(delta) if pet_battle_review_lab != null and pet_battle_review_lab.is_active() else delta
@@ -8615,8 +8597,7 @@ func _update_world_hud_if_needed(delta: float, force: bool = false) -> void:
 
 func _world_hud_signature() -> String:
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position) if player != null and not map_data.is_empty() else Vector2i.ZERO
-	var partners = player_profile.get("trainingPartners", [])
-	var partner_count := (partners as Array).size() if partners is Array else 0
+	var partner_count := 0
 	var party_other_count := _current_party_other_members_for_battle().size()
 	return "%s|%s|%s|%s|%s|%s|%d,%d|%d|%d|%s|%s|%s" % [
 		current_map_id,
@@ -10278,7 +10259,7 @@ func _replace_chat_channel_messages(channel: String, server_messages) -> void:
 func _chat_message_from_server(message: Dictionary, channel: String) -> Dictionary:
 	return _panel_flow()._chat_message_from_server(message, channel)
 
-func _open_party_panel(mode: String = "partners") -> void:
+func _open_party_panel(mode: String = "players") -> void:
 	_panel_flow()._open_party_panel(mode)
 
 func _close_party_panel(update_layout: bool = true) -> void:
@@ -10317,20 +10298,8 @@ func _party_member_is_current_player(member: Dictionary) -> bool:
 func _current_party_other_members_for_battle() -> Array[Dictionary]:
 	return _panel_flow()._current_party_other_members_for_battle()
 
-func _training_partner_raw_count() -> int:
-	return _panel_flow()._training_partner_raw_count()
-
-func _training_partner_available_slots() -> int:
-	return _panel_flow()._training_partner_available_slots()
-
-func _effective_training_partner_count() -> int:
-	return _panel_flow()._effective_training_partner_count()
-
 func _effective_battle_team_character_count() -> int:
 	return _panel_flow()._effective_battle_team_character_count()
-
-func _profile_with_effective_training_partners(limit: int) -> Dictionary:
-	return _panel_flow()._profile_with_effective_training_partners(limit)
 
 func _local_battle_state_with_current_team(base_state: Dictionary) -> Dictionary:
 	return _panel_flow()._local_battle_state_with_current_team(base_state)
@@ -10547,33 +10516,6 @@ func _mailbox_item_entries(message: Dictionary) -> Array[Dictionary]:
 
 func _local_player_name() -> String:
 	return _panel_flow()._local_player_name()
-
-func _open_training_partner_panel() -> void:
-	_panel_flow()._open_training_partner_panel()
-
-func _close_training_partner_panel() -> void:
-	_panel_flow()._close_training_partner_panel()
-
-func _refresh_training_partner_panel() -> void:
-	_panel_flow()._refresh_training_partner_panel()
-
-func _training_partner_panel_layout_is_usable() -> bool:
-	return _panel_flow()._training_partner_panel_layout_is_usable()
-
-func _set_training_partner_count(count: int) -> void:
-	await _panel_flow()._set_training_partner_count(count)
-
-func _on_training_partner_add_pressed() -> void:
-	await _panel_flow()._on_training_partner_add_pressed()
-
-func _on_training_partner_remove_pressed() -> void:
-	await _panel_flow()._on_training_partner_remove_pressed()
-
-func _on_training_partner_fill_pressed() -> void:
-	await _panel_flow()._on_training_partner_fill_pressed()
-
-func _on_training_partner_clear_pressed() -> void:
-	await _panel_flow()._on_training_partner_clear_pressed()
 
 func _open_auto_settings_panel() -> void:
 	_panel_flow()._open_auto_settings_panel()
@@ -13772,13 +13714,6 @@ func _current_task_guidance_uncached() -> Dictionary:
 	}
 
 
-func _training_partner_count() -> int:
-	var partners = player_profile.get("trainingPartners", [])
-	if not (partners is Array):
-		return 0
-	return (partners as Array).size()
-
-
 func _toggle_pet_ring() -> void:
 	if pet_follow_enabled:
 		_set_pet_follow_enabled(false)
@@ -13886,9 +13821,9 @@ func _on_hang_button_pressed() -> void:
 		_request_hang_stop_after_battle()
 		return
 	if hang_mode_active or _encounter_stone_active():
-		_stop_hang_activity("挂机已停止。")
+		_open_hang_matchmaking_panel()
 		return
-	_start_hang_walk()
+	_open_hang_matchmaking_panel()
 
 
 func _start_hang_walk() -> void:
@@ -13939,6 +13874,7 @@ func _set_hang_mode(enabled: bool) -> void:
 	if not enabled:
 		hang_walk_direction_index = 0
 	_sync_hang_button_text()
+	_panel_flow()._refresh_hang_matchmaking_views()
 
 
 func _sync_hang_button_text() -> void:
@@ -13946,13 +13882,17 @@ func _sync_hang_button_text() -> void:
 		return
 	var next_text := "挂机"
 	if (hang_mode_active or _encounter_stone_active()) and not hang_stop_after_battle_requested:
-		next_text = "停"
+		next_text = "挂机中"
 	if stop_button.text != next_text:
 		stop_button.text = next_text
 
 
 func _update_hang_walk(delta: float) -> void:
 	if not hang_mode_active or player == null or map_data.is_empty() or battle_active or encounter_active:
+		return
+	if _current_player_is_party_member():
+		if player.is_auto_moving():
+			_panel_flow()._stop_party_member_local_movement(false)
 		return
 	if has_pending_interaction or _dialog_is_open() or _world_menu_is_open():
 		return
@@ -14000,6 +13940,7 @@ func _stop_auto_move() -> void:
 
 func _stop_hang_activity(message: String = "", clear_stone: bool = true, sync_server: bool = true) -> void:
 	var was_active := _hang_activity_active() or bool(PlayerProgressModel.hang_session(player_profile).get(HangSettingsModel.SESSION_ENABLED_KEY, false))
+	_cancel_hang_matchmaking_for_stop()
 	_set_hang_mode(false)
 	player_profile = PlayerProgressModel.stop_hang_session(player_profile, message)
 	if player != null:
@@ -14012,6 +13953,30 @@ func _stop_hang_activity(message: String = "", clear_stone: bool = true, sync_se
 		_request_server_hang_session_stop("manual" if message == "" else message)
 	if message != "":
 		_set_world_log_message(message)
+
+
+func _open_hang_matchmaking_panel() -> void:
+	_panel_flow()._open_hang_matchmaking_panel()
+
+
+func _close_hang_matchmaking_panel(update_layout: bool = true) -> void:
+	_panel_flow()._close_hang_matchmaking_panel(update_layout)
+
+
+func _update_hang_matchmaking_flow(delta: float) -> void:
+	_panel_flow()._update_hang_matchmaking_flow(delta)
+
+
+func _cancel_hang_matchmaking_for_stop() -> void:
+	_panel_flow()._cancel_hang_matchmaking_for_stop()
+
+
+func _hang_matchmaking_debug_snapshot() -> Dictionary:
+	return _panel_flow()._hang_matchmaking_debug_snapshot()
+
+
+func _debug_apply_hang_matchmaking_state(state: Dictionary) -> Dictionary:
+	return _panel_flow()._debug_apply_hang_matchmaking_state(state)
 
 
 func _request_hang_stop_after_battle() -> void:
@@ -14401,13 +14366,29 @@ func _layout_hud() -> void:
 			if bank_panel.visible and action_bar != null:
 				action_bar.visible = false
 
-	if training_partner_panel != null:
-		training_partner_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
-		training_partner_panel.size = Vector2(codex_width, codex_height)
+	if hang_matchmaking_panel != null:
+		hang_matchmaking_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		if battle_active:
-			training_partner_panel.visible = false
-		if training_partner_panel.visible and action_bar != null:
-			action_bar.visible = false
+			hang_matchmaking_panel.visible = false
+		if hang_matchmaking_panel.visible:
+			if top_panel != null:
+				top_panel.visible = false
+			if side_panel != null:
+				side_panel.visible = false
+			if action_bar != null:
+				action_bar.visible = false
+			if party_roster_panel != null:
+				party_roster_panel.visible = false
+			if battle_message_panel != null:
+				battle_message_panel.visible = false
+	if hang_matchmaking_world_status != null:
+		hang_matchmaking_world_status.position = Vector2(
+			maxf(margin, viewport_size.x - 384.0 - margin),
+			maxf(margin + 72.0, viewport_size.y - 184.0)
+		)
+		hang_matchmaking_world_status.size = Vector2(384.0, 112.0)
+		if battle_active or (hang_matchmaking_panel != null and hang_matchmaking_panel.visible):
+			hang_matchmaking_world_status.visible = false
 
 	auto_settings_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
 	auto_settings_panel.size = Vector2(codex_width, codex_height)
@@ -14558,8 +14539,8 @@ func _update_hud_text(force: bool = false) -> void:
 		detail_text = AdventureGoalPresenter.world_hud_text(
 			task_tracker_hud_prefix_cache,
 			player_cell,
-			_effective_training_partner_count(),
-			_training_partner_available_slots(),
+			0,
+			0,
 		)
 	_perf_add("hud_text_build", build_start)
 	var label_start := _perf_now()
