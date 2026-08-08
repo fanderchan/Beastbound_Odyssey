@@ -67,6 +67,7 @@ const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const MapRoutePlanner := preload("res://scripts/world/map_route_planner.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
 const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_economy_ledger_model.gd")
@@ -155,6 +156,7 @@ const CHAT_MAX_MESSAGES := 120
 const PARTY_PANEL_MODE_PLAYERS := "players"
 
 var party_player_section: Control
+var _map_route_planner = null
 
 var qa_profile_identity_label: Label
 var qa_profile_status_state: Dictionary = {}
@@ -8519,14 +8521,18 @@ func _build_world_hud_awakened() -> void:
 		},
 	})
 	if not bool(mounted.get("ok", false)):
-		push_error("WorldHudAwakenedView mount failed: %s" % JSON.stringify(mounted))
-		awakened.queue_free()
+		_abort_world_hud_awakened_mount(
+			awakened,
+			"mount failed: %s" % JSON.stringify(mounted)
+		)
 		return
-	host.world_hud_awakened_view = awakened
 	var side_surface := awakened.find_child("WorldHudSideSurface", true, false) as Control
 	var task_body := awakened.find_child("WorldHudTaskBody", true, false) as Control
 	if side_surface == null or task_body == null:
-		push_error("WorldHudAwakenedView party roster mount points are missing")
+		_abort_world_hud_awakened_mount(
+			awakened,
+			"party roster mount points are missing"
+		)
 		return
 	var hidden_legacy_tabs := Control.new()
 	hidden_legacy_tabs.name = "WorldHudLegacySideTabsRetired"
@@ -8552,6 +8558,7 @@ func _build_world_hud_awakened() -> void:
 	roster.tab_changed.connect(_on_world_hud_side_tab_changed)
 	roster.match_detail_requested.connect(_on_world_hud_match_detail_requested)
 	roster.cancel_match_requested.connect(_on_hang_matchmaking_cancel_requested)
+	host.world_hud_awakened_view = awakened
 	host.world_hud_party_roster_view = roster
 	if party_roster_panel != null:
 		party_roster_panel.visible = false
@@ -8559,6 +8566,28 @@ func _build_world_hud_awakened() -> void:
 		host.hang_matchmaking_world_status.visible = false
 	_refresh_world_hud_awakened(true)
 	_refresh_world_hud_party_roster(true)
+
+
+func _abort_world_hud_awakened_mount(
+	awakened: WorldHudAwakenedView,
+	reason: String
+) -> void:
+	host.world_hud_party_roster_view = null
+	host.world_hud_awakened_view = null
+	host.world_hud_minimap_map_id = ""
+	host.world_hud_minimap_render_revision = -1
+	var rollback := awakened.rollback_mount()
+	if not bool(rollback.get("ok", false)):
+		push_error(
+			"WorldHudAwakenedView rollback failed after %s: %s"
+			% [reason, JSON.stringify(rollback)]
+		)
+		# Never free the failed host while it may still own live legacy controls.
+		awakened.visible = false
+		awakened.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return
+	push_error("WorldHudAwakenedView %s" % reason)
+	awakened.queue_free()
 
 
 func _refresh_world_hud_awakened(_force: bool = false) -> void:
@@ -8586,14 +8615,19 @@ func _refresh_world_hud_awakened(_force: bool = false) -> void:
 		"battleActive": battle_active,
 	})
 	presented["activeSideTab"] = host.world_hud_active_side_tab
-	awakened.apply_view_state(presented)
-	if host.world_hud_minimap_map_id != current_map_id and not map_data.is_empty():
+	var minimap_needs_configure: bool = (
+		host.world_hud_minimap_map_id != current_map_id
+		or host.world_hud_minimap_render_revision != host.map_visual_render_revision
+	)
+	if minimap_needs_configure and not map_data.is_empty():
 		awakened.configure_minimap(
 			host.map_visual_render_state,
 			host._map_world_bounds(),
 			IsoMapModel.grid_size(map_data)
 		)
 		host.world_hud_minimap_map_id = current_map_id
+		host.world_hud_minimap_render_revision = host.map_visual_render_revision
+	awakened.apply_view_state(presented)
 	if party_roster_panel != null:
 		party_roster_panel.visible = false
 	if host.hang_matchmaking_world_status != null:
@@ -13101,6 +13135,12 @@ func _transfer_from_warp(item: Dictionary) -> void:
 		host._open_interaction_dialog(item)
 		return
 	if not host._load_map(to_map, to_spawn):
+		if host.hang_matchmaking_pending_route.is_empty():
+			_set_world_log_message("地图切换失败，请重试。")
+		else:
+			_rollback_pending_hang_matchmaking_route(
+				"地图切换失败，请重新选择挂机区域。"
+			)
 		return
 	host._audio_play_cue("world.warp")
 	_reset_server_step_move_authority_after_map_change()
@@ -13112,6 +13152,16 @@ func _transfer_from_warp(item: Dictionary) -> void:
 
 func _continue_route_after_map_transfer(target: Dictionary) -> void:
 	if target.is_empty() or battle_active or encounter_active or player == null or map_data.is_empty():
+		return
+	var target_map_id := str(target.get("mapId", "")).strip_edges()
+	if (
+		target_map_id != ""
+		and target_map_id != current_map_id
+		and _route_warp_for_target_map(current_map_id, target_map_id).is_empty()
+	):
+		_rollback_pending_hang_matchmaking_route(
+			"前往%s的路线已经中断，请重新选择。" % _map_name_for_id(target_map_id)
+		)
 		return
 	_route_to_quest_target(target)
 
@@ -18431,6 +18481,16 @@ func _begin_hang_matchmaking_route(route_id: String, mode: String) -> void:
 	if target.is_empty():
 		_set_world_log_message("暂时找不到前往该练级区域的路线。")
 		return
+	var target_map_id := str(target.get("mapId", "")).strip_edges()
+	if (
+		target_map_id != ""
+		and target_map_id != current_map_id
+		and _route_warp_for_target_map(current_map_id, target_map_id).is_empty()
+	):
+		_set_world_log_message(
+			"目标在%s，当前地图暂时找不到通路。" % _map_name_for_id(target_map_id)
+		)
+		return
 	if mode == "match":
 		host.world_hud_active_side_tab = "party"
 		_refresh_world_hud_party_roster(true)
@@ -18440,6 +18500,28 @@ func _begin_hang_matchmaking_route(route_id: String, mode: String) -> void:
 	_close_hang_matchmaking_panel(false)
 	_route_to_quest_target(target)
 	host._layout_hud()
+
+
+func _rollback_pending_hang_matchmaking_route(message: String) -> void:
+	var had_pending: bool = not host.hang_matchmaking_pending_route.is_empty()
+	host.hang_matchmaking_pending_route.clear()
+	host.hang_matchmaking_pending_mode = ""
+	host.hang_matchmaking_route_check_elapsed = 0.0
+	if message.strip_edges() != "":
+		_set_world_log_message(message)
+	if not had_pending:
+		return
+	_clear_pending_interaction()
+	_clear_pending_click_move_target()
+	if player != null:
+		player.clear_move_target()
+	current_path_cells.clear()
+	has_target_marker = false
+	has_target_cell = false
+	if host.hang_matchmaking_panel != null and not battle_active:
+		_open_hang_matchmaking_panel()
+	else:
+		_refresh_hang_matchmaking_views()
 
 
 func _start_hang_matchmaking_at_route(route: Dictionary, mode: String) -> void:
@@ -19427,12 +19509,13 @@ func _on_family_http_request_completed(result: int, response_code: int, _headers
 	_refresh_family_request_controls()
 
 func _refresh_party_roster_hud(update_layout: bool = true) -> void:
-	if party_roster_panel == null or party_roster_container == null:
-		return
-	if host.world_hud_awakened_view != null:
-		party_roster_panel.set_meta("has_party", false)
-		party_roster_panel.visible = false
+	if host.world_hud_party_roster_view != null:
+		if party_roster_panel != null:
+			party_roster_panel.set_meta("has_party", false)
+			party_roster_panel.visible = false
 		_refresh_world_hud_party_roster()
+		return
+	if party_roster_panel == null or party_roster_container == null:
 		return
 	_clear_container_children(party_roster_container)
 	var members = _current_party_members()
@@ -24980,9 +25063,10 @@ func _route_to_quest_target(target: Dictionary) -> void:
 	var target_map_id = str(target.get("mapId", ""))
 	var label = _navigation_target_display_label(target)
 	if target_map_id != "" and target_map_id != current_map_id:
-		var warp = _warp_to_map(current_map_id, target_map_id)
+		var warp = _route_warp_for_target_map(current_map_id, target_map_id)
 		if warp.is_empty():
 			_set_world_log_message("目标在%s，当前地图暂时找不到通路。" % _map_name_for_id(target_map_id))
+			_rollback_pending_hang_matchmaking_route("")
 			return
 		var routed_warp = warp.duplicate(true)
 		routed_warp["routeContinuationTarget"] = target.duplicate(true)
@@ -25336,6 +25420,34 @@ func _warp_to_map(from_map_id: String, to_map_id: String) -> Dictionary:
 		if InteractionModel.is_warp(item) and str(item.get("toMap", "")) == to_map_id:
 			return item
 	return {}
+
+
+func _route_warp_for_target_map(from_map_id: String, to_map_id: String) -> Dictionary:
+	var direct_warp := _warp_to_map(from_map_id, to_map_id)
+	if not direct_warp.is_empty():
+		return direct_warp
+	var planner = _map_route_planner_instance()
+	if planner == null or not planner.is_ready():
+		return {}
+	return planner.next_warp(from_map_id, to_map_id)
+
+
+func _map_route_planner_instance():
+	if _map_route_planner != null:
+		return _map_route_planner
+	var known_map_ids: Array[String] = []
+	for map_id_value in MAP_DATA_PATHS.keys():
+		known_map_ids.append(str(map_id_value))
+	_map_route_planner = MapRoutePlanner.new(
+		known_map_ids,
+		Callable(self, "_map_data_for_id")
+	)
+	if not _map_route_planner.is_ready():
+		push_error(
+			"Map route planner failed closed: %s"
+			% JSON.stringify(_map_route_planner.validation_errors())
+		)
+	return _map_route_planner
 
 func _map_data_for_id(map_id: String) -> Dictionary:
 	if map_id == current_map_id and not map_data.is_empty():

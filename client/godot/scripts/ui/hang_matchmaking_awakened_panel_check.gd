@@ -91,6 +91,26 @@ func _run() -> void:
 	await _settle()
 	await _real_left_click(_panel.cancel_button)
 	_expect(_cancel_count == 1, "取消匹配没有发出一次取消事件")
+	_panel.apply_state(_cancelled_stale_matching_state())
+	await _settle()
+	var cancelled_snapshot := _panel.debug_snapshot()
+	var cancelled_text := _visible_text(_panel)
+	_expect(
+		str(cancelled_snapshot.get("viewMode", "")) == "browse"
+			and not bool(cancelled_snapshot.get("matching", true)),
+		"取消匹配后的旧 matching 视图没有归一为区域选择页"
+	)
+	_expect(
+		not _panel.cancel_button.is_visible_in_tree()
+			and "挂机匹配中" not in cancelled_text
+			and "持续匹配真人中" not in cancelled_text,
+		"取消匹配后的空闲页仍伪装成匹配中或保留取消入口"
+	)
+	_expect(
+		_panel.stop_button.visible
+			and "匹配已取消，挂机继续。" in cancelled_text,
+		"取消匹配后没有保留挂机停止入口或结果说明"
+	)
 
 	var active_browse_state := _browse_state()
 	active_browse_state["hangActive"] = true
@@ -338,6 +358,25 @@ func _browse_state() -> Dictionary:
 		"pending": false,
 		"statusText": "真人队友优先；空位可由陪练NPC临时补足。",
 		"match": {"active": false},
+	}
+
+
+func _cancelled_stale_matching_state() -> Dictionary:
+	return {
+		"viewMode": "matching",
+		"hangActive": true,
+		"selectedRouteId": "mistcap_growth",
+		"pending": false,
+		"statusText": "匹配已取消，挂机继续。",
+		"match": {
+			"active": false,
+			"status": "idle",
+			"maxMembers": 5,
+			"humanCount": 2,
+			"npcCount": 0,
+			"waitingPlayerCount": 0,
+			"waitingPartyCount": 0,
+		},
 	}
 
 

@@ -61,8 +61,13 @@ static func normalize_state(source: Dictionary) -> Dictionary:
 	var empty_count := max_members - human_count - npc_count
 	var raw_view := str(source.get("viewMode", "")).strip_edges().to_lower()
 	var view_mode := raw_view if raw_view in [VIEW_BROWSE, VIEW_PARTY, VIEW_MATCHING] else VIEW_BROWSE
-	if active or match_status == "full":
+	if matching_context:
 		view_mode = VIEW_MATCHING
+	elif view_mode == VIEW_MATCHING:
+		# A cancelled/idle response can arrive while the panel still remembers its
+		# previous matching page. Never let that stale local view impersonate an
+		# active queue; only an active or full authoritative match may own it.
+		view_mode = VIEW_BROWSE
 	return {
 		"viewMode": view_mode,
 		"pending": bool(source.get("pending", source.get("requestPending", false))),

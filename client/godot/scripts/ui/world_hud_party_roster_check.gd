@@ -440,6 +440,35 @@ func _run() -> void:
 	_expect(_tab_events == ["task", "party"], "双页签事件顺序不正确：%s" % str(_tab_events))
 	_expect(_detail_count == 1, "查看匹配没有发出一次事件")
 	_expect(_cancel_count == 1, "取消匹配没有发出一次事件")
+	_view.apply_state(WorldHudPartyRosterPresenter.present({
+		"activeTab": "party",
+		"match": {
+			"active": false,
+			"status": "idle",
+			"maxMembers": 5,
+			"party": {
+				"members": [{
+					"accountId": "account-offline-visible",
+					"displayName": "离线猎人",
+					"online": false,
+					"level": 32,
+				}],
+			},
+		},
+	}))
+	await _settle()
+	var offline_card := _view.find_child("WorldHudPartyMember1", true, false)
+	var offline_status := (
+		offline_card.find_child("StatusText", true, false)
+		if offline_card != null
+		else null
+	)
+	_expect(
+		offline_status is Label and (offline_status as Label).text == "离线",
+		"正式 roster 没有给离线真人显示可见离线标记"
+	)
+	_view.apply_state(WorldHudPartyRosterPresenter.present(_fixture()))
+	await _settle()
 
 	var report := {
 		"schemaVersion": 1,

@@ -4209,6 +4209,8 @@ func _run_auto_hang_matchmaking_check() -> void:
 	var matching_resumed_ok := false
 	var auto_battle_strategy_ok := false
 	var battle_hud_visibility_ok := false
+	var formal_roster_without_legacy_ok := false
+	var minimap_hot_replace_ok := false
 	var cancel_click_ok := false
 	var cancel_keeps_hang_ok := false
 	var close_click_ok := false
@@ -4216,6 +4218,77 @@ func _run_auto_hang_matchmaking_check() -> void:
 	var stop_hides_ok := false
 
 	if ui_ready:
+		var roster_before_value = host.world_hud_party_roster_view.call("debug_snapshot")
+		var roster_before := (
+			roster_before_value as Dictionary
+			if roster_before_value is Dictionary
+			else {}
+		)
+		var original_roster_panel = host.party_roster_panel
+		var original_roster_container = host.party_roster_container
+		var original_side_tab: String = host.world_hud_active_side_tab
+		var original_roster_signature: String = host.world_hud_roster_signature
+		var target_side_tab := (
+			"task"
+			if str(roster_before.get("activeTab", "party")) == "party"
+			else "party"
+		)
+		host.party_roster_panel = null
+		host.party_roster_container = null
+		host.world_hud_active_side_tab = target_side_tab
+		host.world_hud_roster_signature = ""
+		host._refresh_party_roster_hud(false)
+		var roster_without_legacy_value = host.world_hud_party_roster_view.call(
+			"debug_snapshot"
+		)
+		var roster_without_legacy := (
+			roster_without_legacy_value as Dictionary
+			if roster_without_legacy_value is Dictionary
+			else {}
+		)
+		formal_roster_without_legacy_ok = (
+			str(roster_without_legacy.get("activeTab", "")) == target_side_tab
+			and int(roster_without_legacy.get("rowCount", 0))
+				== HangMatchmakingClientModel.PARTY_MAX_MEMBERS
+		)
+		host.party_roster_panel = original_roster_panel
+		host.party_roster_container = original_roster_container
+		host.world_hud_active_side_tab = original_side_tab
+		host.world_hud_roster_signature = original_roster_signature
+		host._panel_flow()._refresh_world_hud_party_roster(true)
+
+		host._panel_flow()._refresh_world_hud_awakened(true)
+		var minimap_before_value = host.world_hud_awakened_view.call(
+			"debug_minimap_snapshot"
+		)
+		var minimap_before := (
+			minimap_before_value as Dictionary
+			if minimap_before_value is Dictionary
+			else {}
+		)
+		var same_map_id: String = host.current_map_id
+		host.map_visual_render_state = host.map_visual_render_state.duplicate(true)
+		host.map_visual_render_revision += 1
+		host._panel_flow()._refresh_world_hud_awakened(true)
+		var minimap_after_value = host.world_hud_awakened_view.call(
+			"debug_minimap_snapshot"
+		)
+		var minimap_after := (
+			minimap_after_value as Dictionary
+			if minimap_after_value is Dictionary
+			else {}
+		)
+		minimap_hot_replace_ok = (
+			host.current_map_id == same_map_id
+			and host.world_hud_minimap_map_id == same_map_id
+			and host.world_hud_minimap_render_revision
+				== host.map_visual_render_revision
+			and int(minimap_after.get("configureRevision", -1))
+				== int(minimap_before.get("configureRevision", -1)) + 1
+			and int(minimap_after.get("lastApplyConfigureRevision", -2))
+				== int(minimap_after.get("configureRevision", -1))
+		)
+
 		host.current_account_session = {
 			"authSource": "local_qa_check",
 			"accountId": "qa_hang_human_1",
@@ -4662,10 +4735,12 @@ func _run_auto_hang_matchmaking_check() -> void:
 		and matching_resumed_ok
 		and auto_battle_strategy_ok
 		and battle_hud_visibility_ok
+		and formal_roster_without_legacy_ok
+		and minimap_hot_replace_ok
 		and cancel_keeps_hang_ok
 		and stop_hides_ok
 	) else "failed"
-	print("hang matchmaking check ready: status=%s client=%s ui=%s panel=%s choice=%s matching=%s local_rebirth=%s dedupe=%s npc_filled=%s replacement=%s active_snapshot_priority=%s full_empty_snapshot_priority=%s full=%s party_update_refresh=%s matching_resumed=%s auto_strategies=%s battle_hud=%s cancel_click=%s cancel_keeps_hang=%s close_click=%s stop_click=%s stop_hides=%s model_errors=%s" % [
+	print("hang matchmaking check ready: status=%s client=%s ui=%s panel=%s choice=%s matching=%s local_rebirth=%s dedupe=%s npc_filled=%s replacement=%s active_snapshot_priority=%s full_empty_snapshot_priority=%s full=%s party_update_refresh=%s matching_resumed=%s auto_strategies=%s battle_hud=%s formal_without_legacy=%s minimap_hot_replace=%s cancel_click=%s cancel_keeps_hang=%s close_click=%s stop_click=%s stop_hides=%s model_errors=%s" % [
 		status,
 		str(client_model_ok),
 		str(ui_ready),
@@ -4683,6 +4758,8 @@ func _run_auto_hang_matchmaking_check() -> void:
 		str(matching_resumed_ok),
 		str(auto_battle_strategy_ok),
 		str(battle_hud_visibility_ok),
+		str(formal_roster_without_legacy_ok),
+		str(minimap_hot_replace_ok),
 		str(cancel_click_ok),
 		str(cancel_keeps_hang_ok),
 		str(close_click_ok),
@@ -18638,6 +18715,328 @@ func _run_auto_task_tracker_route_check() -> void:
 		and str(host.pending_interaction.get("id", "")) == "firebud_bank_keeper"
 		and host.world_log_message.find("银行管理员阿衡") >= 0
 	)
+	host._clear_navigation_state()
+	var multi_hop_loaded: bool = bool(host._load_map(
+		"firebud_village_gate",
+		"from_training_yard"
+	))
+	await host.get_tree().process_frame
+	var multi_hop_expected: Array[String] = [
+		"firebud_village_gate",
+		"shadow_oath_cavern",
+		"shadow_oath_cavern_f2",
+		"shadow_oath_cavern_f3",
+		"shadow_oath_cavern_f4",
+		"shadow_oath_cavern_f5",
+	]
+	var first_multi_hop_warp_value = host._panel_flow()._route_warp_for_target_map(
+		"firebud_village_gate",
+		"shadow_oath_cavern_f5"
+	)
+	var first_multi_hop_warp := (
+		first_multi_hop_warp_value as Dictionary
+		if first_multi_hop_warp_value is Dictionary
+		else {}
+	)
+	var first_planner = host._panel_flow()._map_route_planner_instance()
+	var second_multi_hop_warp_value = host._panel_flow()._route_warp_for_target_map(
+		"firebud_village_gate",
+		"shadow_oath_cavern_f5"
+	)
+	var second_multi_hop_warp := (
+		second_multi_hop_warp_value as Dictionary
+		if second_multi_hop_warp_value is Dictionary
+		else {}
+	)
+	var second_planner = host._panel_flow()._map_route_planner_instance()
+	var planner_cache_reused_ok: bool = (
+		first_planner != null
+		and first_planner == second_planner
+		and first_multi_hop_warp == second_multi_hop_warp
+	)
+	var multi_hop_contract_ok: bool = (
+		str(first_multi_hop_warp.get("toMap", ""))
+			== "shadow_oath_cavern"
+		and first_multi_hop_warp.get("routeMapPath", [])
+			== multi_hop_expected
+	)
+	var multi_hop_target: Dictionary = (
+		host._navigation_target_for_encounter_group_on_map(
+			"shadow_oath_cavern_f5",
+			"shadow_capstone_training_01",
+			"玄影洞窟顶层练级区"
+		)
+	)
+	host._panel_flow()._route_to_quest_target(multi_hop_target)
+	await host.get_tree().process_frame
+	var multi_hop_pending: Dictionary = host.pending_interaction.duplicate(true)
+	var continuation_value = multi_hop_pending.get(
+		"routeContinuationTarget",
+		{}
+	)
+	var continuation := (
+		continuation_value as Dictionary
+		if continuation_value is Dictionary
+		else {}
+	)
+	var multi_hop_started_ok: bool = (
+		multi_hop_loaded
+		and host.has_pending_interaction
+		and str(multi_hop_pending.get("toMap", ""))
+			== "shadow_oath_cavern"
+		and multi_hop_pending.get("routeMapPath", [])
+			== multi_hop_expected
+		and str(continuation.get("mapId", ""))
+			== "shadow_oath_cavern_f5"
+	)
+	var expected_arrival_maps: Array[String] = [
+		"shadow_oath_cavern",
+		"shadow_oath_cavern_f2",
+		"shadow_oath_cavern_f3",
+		"shadow_oath_cavern_f4",
+		"shadow_oath_cavern_f5",
+	]
+	var actual_arrival_maps: Array[String] = []
+	var multi_hop_trace: Array[String] = []
+	var every_hop_pending_ok := true
+	var every_hop_continuation_ok := true
+	for hop_index in range(expected_arrival_maps.size()):
+		var expected_arrival_map: String = expected_arrival_maps[hop_index]
+		var hop_pending: Dictionary = host.pending_interaction.duplicate(true)
+		var hop_continuation_value = hop_pending.get(
+			"routeContinuationTarget",
+			{}
+		)
+		var hop_continuation := (
+			hop_continuation_value as Dictionary
+			if hop_continuation_value is Dictionary
+			else {}
+		)
+		var hop_route_path_value = hop_pending.get("routeMapPath", [])
+		var hop_route_path: Array = (
+			hop_route_path_value as Array
+			if hop_route_path_value is Array
+			else []
+		)
+		var hop_route_metadata_ok: bool = (
+			(
+				hop_route_path.is_empty()
+				and hop_index == expected_arrival_maps.size() - 1
+				and host.current_map_id == "shadow_oath_cavern_f4"
+			)
+			or (
+				not hop_route_path.is_empty()
+				and str(hop_route_path[0]) == host.current_map_id
+				and str(hop_route_path[-1]) == "shadow_oath_cavern_f5"
+			)
+		)
+		multi_hop_trace.append(
+			"before%d:%s->%s pending=%s" % [
+				hop_index + 1,
+				host.current_map_id,
+				expected_arrival_map,
+				str(hop_pending.get("toMap", "")),
+			]
+		)
+		every_hop_pending_ok = (
+			every_hop_pending_ok
+			and host.has_pending_interaction
+			and InteractionModel.is_warp(hop_pending)
+			and str(hop_pending.get("toMap", "")) == expected_arrival_map
+			and hop_route_metadata_ok
+		)
+		every_hop_continuation_ok = (
+			every_hop_continuation_ok
+			and str(hop_continuation.get("kind", "")) == "encounter_zone"
+			and str(hop_continuation.get("mapId", ""))
+				== "shadow_oath_cavern_f5"
+			and str((hop_continuation.get("zone", {}) as Dictionary).get(
+				"encounterGroupId",
+				""
+			)) == "shadow_capstone_training_01"
+		)
+		if not every_hop_pending_ok or not every_hop_continuation_ok:
+			break
+		host._complete_interaction(hop_pending)
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+		await host.get_tree().process_frame
+		actual_arrival_maps.append(host.current_map_id)
+		multi_hop_trace.append(
+			"after%d:%s pending=%s target=%s" % [
+				hop_index + 1,
+				host.current_map_id,
+				str(host.pending_interaction.get("toMap", "")),
+				str(host.has_target_cell),
+			]
+		)
+		if host.current_map_id != expected_arrival_map:
+			every_hop_pending_ok = false
+			break
+	var target_zone_value = multi_hop_target.get("zone", {})
+	var target_zone := (
+		target_zone_value as Dictionary
+		if target_zone_value is Dictionary
+		else {}
+	)
+	var expected_target_cell: Vector2i = multi_hop_target.get(
+		"cell",
+		Vector2i.ZERO
+	) as Vector2i
+	var final_encounter_movement_ok: bool = (
+		actual_arrival_maps == expected_arrival_maps
+		and host.current_map_id == "shadow_oath_cavern_f5"
+		and not host.has_pending_interaction
+		and host.pending_interaction.is_empty()
+		and host.has_target_cell
+		and host.target_cell == expected_target_cell
+		and EncounterModel.zone_contains_cell(target_zone, host.target_cell)
+	)
+	var multi_hop_completed_ok: bool = (
+		every_hop_pending_ok
+		and every_hop_continuation_ok
+		and final_encounter_movement_ok
+	)
+	host._clear_navigation_state()
+
+	var unreachable_target := {
+		"kind": "encounter_zone",
+		"mapId": "gm_10v10_training_ground",
+		"label": "不可达测试地图",
+		"zone": {},
+		"cell": Vector2i.ZERO,
+	}
+	host.hang_matchmaking_pending_route = {
+		"routeId": "qa_unreachable",
+		"mapId": "gm_10v10_training_ground",
+		"encounterGroupId": "qa_unreachable",
+		"label": "不可达测试地图",
+	}
+	host.hang_matchmaking_pending_mode = "match"
+	host.hang_matchmaking_route_check_elapsed = 9.0
+	host._panel_flow()._route_to_quest_target(unreachable_target)
+	await host.get_tree().process_frame
+	var unreachable_cleanup_ok: bool = (
+		host.hang_matchmaking_pending_route.is_empty()
+		and host.hang_matchmaking_pending_mode == ""
+		and is_zero_approx(host.hang_matchmaking_route_check_elapsed)
+		and not host.has_pending_interaction
+		and host.pending_interaction.is_empty()
+		and host.hang_matchmaking_panel != null
+		and host.hang_matchmaking_panel.visible
+		and host.world_log_message.find("暂时找不到通路") >= 0
+	)
+	host._panel_flow()._close_hang_matchmaking_panel(false)
+
+	host.hang_matchmaking_pending_route = {
+		"routeId": "qa_interrupted",
+		"mapId": "shadow_oath_cavern_f5",
+		"encounterGroupId": "shadow_oath_f5",
+		"label": "玄影洞窟五层",
+	}
+	host.hang_matchmaking_pending_mode = "travel"
+	host.hang_matchmaking_route_check_elapsed = 4.0
+	host._panel_flow()._continue_route_after_map_transfer(unreachable_target)
+	await host.get_tree().process_frame
+	var interrupted_cleanup_ok: bool = (
+		host.hang_matchmaking_pending_route.is_empty()
+		and host.hang_matchmaking_pending_mode == ""
+		and is_zero_approx(host.hang_matchmaking_route_check_elapsed)
+		and not host.has_pending_interaction
+		and host.pending_interaction.is_empty()
+		and host.hang_matchmaking_panel != null
+		and host.hang_matchmaking_panel.visible
+		and host.world_log_message.find("路线已经中断") >= 0
+	)
+	host._panel_flow()._close_hang_matchmaking_panel(false)
+
+	var map_before_load_failure: String = host.current_map_id
+	host.hang_matchmaking_pending_route = {
+		"routeId": "qa_load_failure",
+		"mapId": "shadow_oath_cavern_f5",
+		"encounterGroupId": "shadow_capstone_training_01",
+		"label": "玄影洞窟顶层练级区",
+	}
+	host.hang_matchmaking_pending_mode = "match"
+	host.hang_matchmaking_route_check_elapsed = 6.0
+	host.pending_interaction = {
+		"id": "qa_stale_pending_warp",
+		"kind": "warp",
+		"toMap": "missing_phase396_map",
+	}
+	host.has_pending_interaction = true
+	host.pending_interaction_approach_cell = Vector2i(4, 4)
+	host.current_path_cells.clear()
+	host.current_path_cells.append(Vector2i(4, 4))
+	host.current_path_cells.append(Vector2i(5, 5))
+	host.current_path_is_direct = true
+	host.target_marker = host.player.global_position + Vector2(96.0, 48.0)
+	host.target_cell = Vector2i(5, 5)
+	host.has_target_marker = true
+	host.has_target_cell = true
+	host.has_pending_click_screen_point = true
+	host.has_pending_click_move_target = true
+	var seeded_player_path: Array[Vector2] = [
+		host.player.global_position + Vector2(120.0, 0.0),
+	]
+	host.player.set_path(seeded_player_path)
+	var hang_load_failure_seeded_ok: bool = (
+		host.has_pending_interaction
+		and not host.pending_interaction.is_empty()
+		and not host.current_path_cells.is_empty()
+		and host.has_target_marker
+		and host.has_target_cell
+		and host.has_pending_click_screen_point
+		and host.has_pending_click_move_target
+		and host.player.is_auto_moving()
+	)
+	host._panel_flow()._transfer_from_warp({
+		"id": "qa_missing_hang_warp",
+		"kind": "warp",
+		"toMap": "missing_phase396_map",
+		"toSpawn": "default",
+	})
+	await host.get_tree().process_frame
+	var hang_load_failure_cleanup_ok: bool = (
+		hang_load_failure_seeded_ok
+		and host.current_map_id == map_before_load_failure
+		and host.hang_matchmaking_pending_route.is_empty()
+		and host.hang_matchmaking_pending_mode == ""
+		and is_zero_approx(host.hang_matchmaking_route_check_elapsed)
+		and not host.has_pending_interaction
+		and host.pending_interaction.is_empty()
+		and host.pending_interaction_approach_cell == Vector2i.ZERO
+		and host.current_path_cells.is_empty()
+		and not host.has_target_marker
+		and not host.has_target_cell
+		and not host.has_pending_click_screen_point
+		and not host.has_pending_click_move_target
+		and not host.player.is_auto_moving()
+		and host.hang_matchmaking_panel != null
+		and host.hang_matchmaking_panel.visible
+		and host.world_log_message
+			== "地图切换失败，请重新选择挂机区域。"
+	)
+	host.current_path_is_direct = false
+	host._panel_flow()._close_hang_matchmaking_panel(false)
+	host._panel_flow()._transfer_from_warp({
+		"id": "qa_missing_normal_warp",
+		"kind": "warp",
+		"toMap": "missing_phase396_map",
+		"toSpawn": "default",
+	})
+	await host.get_tree().process_frame
+	var normal_load_failure_message_ok: bool = (
+		host.current_map_id == map_before_load_failure
+		and host.hang_matchmaking_pending_route.is_empty()
+		and host.hang_matchmaking_pending_mode == ""
+		and host.world_log_message == "地图切换失败，请重试。"
+		and host.world_log_message.find("挂机区域") < 0
+		and (
+			host.hang_matchmaking_panel == null
+			or not host.hang_matchmaking_panel.visible
+		)
+	)
 	var tutorial_route_contract_ok = true
 	for route_case in [
 		["quest_open_task_panel", "tutorial_feature", "quest"],
@@ -18660,8 +19059,8 @@ func _run_auto_task_tracker_route_check() -> void:
 			tutorial_route_contract_ok = tutorial_route_contract_ok and str(tutorial_target.get("featureId", "")) == str(route_case[2])
 	var hang_target = host._navigation_target_for_quest(QuestModel.quest_for_id("quest_start_hang"))
 	tutorial_route_contract_ok = tutorial_route_contract_ok and str(hang_target.get("kind", "")) == "encounter_zone" and str((hang_target.get("zone", {}) as Dictionary).get("encounterGroupId", "")) == "firebud_grass_01"
-	var status = "ok" if loaded and button_ready and route_ok and disabled_after_route and reenabled_after_clear and bank_loaded and bank_cross_map_started and bank_continued_route and tutorial_route_contract_ok else "failed"
-	print("task tracker route check ready: status=%s loaded=%s button=%s route=%s disabled_after=%s reenabled=%s bank_loaded=%s bank_cross_map=%s bank_continue=%s tutorial_routes=%s pending=%s log=%s" % [
+	var status = "ok" if loaded and button_ready and route_ok and disabled_after_route and reenabled_after_clear and bank_loaded and bank_cross_map_started and bank_continued_route and multi_hop_loaded and multi_hop_contract_ok and planner_cache_reused_ok and multi_hop_started_ok and multi_hop_completed_ok and unreachable_cleanup_ok and interrupted_cleanup_ok and hang_load_failure_cleanup_ok and normal_load_failure_message_ok and tutorial_route_contract_ok else "failed"
+	print("task tracker route check ready: status=%s loaded=%s button=%s route=%s disabled_after=%s reenabled=%s bank_loaded=%s bank_cross_map=%s bank_continue=%s multi_hop_contract=%s planner_cache=%s multi_hop_start=%s multi_hop_complete=%s hop_pending=%s hop_continuation=%s final_encounter_move=%s arrivals=%s trace=%s unreachable_cleanup=%s interrupted_cleanup=%s hang_load_fail_cleanup=%s normal_load_fail_message=%s tutorial_routes=%s pending=%s log=%s" % [
 		status,
 		str(loaded),
 		str(button_ready),
@@ -18671,6 +19070,19 @@ func _run_auto_task_tracker_route_check() -> void:
 		str(bank_loaded),
 		str(bank_cross_map_started),
 		str(bank_continued_route),
+		str(multi_hop_contract_ok),
+		str(planner_cache_reused_ok),
+		str(multi_hop_started_ok),
+		str(multi_hop_completed_ok),
+		str(every_hop_pending_ok),
+		str(every_hop_continuation_ok),
+		str(final_encounter_movement_ok),
+		str(actual_arrival_maps),
+		str(multi_hop_trace),
+		str(unreachable_cleanup_ok),
+		str(interrupted_cleanup_ok),
+		str(hang_load_failure_cleanup_ok),
+		str(normal_load_failure_message_ok),
 		str(tutorial_route_contract_ok),
 		str(host.pending_interaction.get("id", "")),
 		host.world_log_message,
@@ -22238,6 +22650,9 @@ func _run_auto_party_live_check() -> void:
 		await host.get_tree().process_frame
 	var panel_party = host.party_current_state.get("party", {}) as Dictionary if host.party_current_state.get("party", {}) is Dictionary else {}
 	var panel_members: Array = panel_party.get("members", []) if panel_party.get("members", []) is Array else []
+	host._refresh_party_roster_hud(false)
+	var formal_roster_value = host.world_hud_party_roster_view.call("debug_snapshot") if host.world_hud_party_roster_view != null else {}
+	var formal_roster := formal_roster_value as Dictionary if formal_roster_value is Dictionary else {}
 	var ui_ok = (
 		host.party_panel != null
 		and host.party_panel.visible
@@ -22246,10 +22661,11 @@ func _run_auto_party_live_check() -> void:
 		and host.party_online_players.size() >= 2
 		and host.party_members_container != null
 		and host.party_members_container.get_child_count() >= 2
-		and host.party_roster_panel != null
-		and host.party_roster_panel.visible
-		and host.party_roster_container != null
-		and host.party_roster_container.get_child_count() >= 2
+		and host.world_hud_party_roster_view != null
+		and int(formal_roster.get("rowCount", 0)) == 5
+		and str(formal_roster.get("rowNames", [])).find("队长甲") >= 0
+		and str(formal_roster.get("rowNames", [])).find("队员乙") >= 0
+		and (host.party_roster_panel == null or not host.party_roster_panel.visible)
 	)
 	var offline_marker_ok = false
 	var offline_party = host.party_current_state.get("party", {}) as Dictionary if host.party_current_state.get("party", {}) is Dictionary else {}
@@ -22268,15 +22684,21 @@ func _run_auto_party_live_check() -> void:
 		offline_party["members"] = offline_members
 		host.party_current_state["party"] = offline_party
 		host._refresh_party_roster_hud(false)
-		if host.party_roster_container != null:
-			for index in range(host.party_roster_container.get_child_count()):
-				var offline_row = host.party_roster_container.get_child(index)
-				var avatar_glyph = offline_row.find_child("AvatarGlyph", true, false)
+		if host.world_hud_party_roster_view != null:
+			for index in range(5):
+				var offline_row = host.world_hud_party_roster_view.find_child(
+					"WorldHudPartyMember%d" % (index + 1),
+					true,
+					false
+				)
+				if offline_row == null:
+					continue
+				var member_name = offline_row.find_child("MemberName", true, false)
 				var status_text = offline_row.find_child("StatusText", true, false)
 				if (
-					avatar_glyph is Label
+					member_name is Label
 					and status_text is Label
-					and (avatar_glyph as Label).text == "⚡"
+					and (member_name as Label).text == "队员乙"
 					and (status_text as Label).text.find("离线") >= 0
 				):
 					offline_marker_ok = true
@@ -22285,7 +22707,11 @@ func _run_auto_party_live_check() -> void:
 	host.battle_active = true
 	host._refresh_party_roster_hud(false)
 	host._layout_hud()
-	var battle_roster_hidden_ok = host.party_roster_panel != null and not host.party_roster_panel.visible
+	var battle_roster_hidden_ok = (
+		host.world_hud_party_roster_view != null
+		and not host.world_hud_party_roster_view.is_visible_in_tree()
+		and (host.party_roster_panel == null or not host.party_roster_panel.visible)
+	)
 	host.battle_active = saved_battle_active
 	host._refresh_party_roster_hud(false)
 	host._layout_hud()

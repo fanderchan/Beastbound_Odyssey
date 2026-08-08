@@ -682,6 +682,7 @@ var world_hud_active_side_tab: String = "task"
 var world_hud_last_match_status: String = ""
 var world_hud_roster_signature: String = ""
 var world_hud_minimap_map_id: String = ""
+var world_hud_minimap_render_revision: int = -1
 var hang_matchmaking_panel_pending: bool = false
 var hang_matchmaking_status_text: String = ""
 var hang_matchmaking_pending_route: Dictionary = {}
@@ -1124,6 +1125,7 @@ var npc_main_review_capture: bool = false
 var npc_main_review_capture_request: Dictionary = {}
 var map_data: Dictionary = {}
 var map_visual_render_state: Dictionary = {}
+var map_visual_render_revision: int = 0
 var world_depth_layer: Node2D
 var world_overlay_layer: Node2D
 var world_depth_map_signature_cache: String = ""
@@ -3121,6 +3123,7 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 	current_map_id = str(map_data.get("id", map_id))
 	_audio_sync_current_map()
 	map_visual_render_state = MapVisualCatalog.prepare_map(current_map_id, map_data, map_art_review_preview)
+	map_visual_render_revision += 1
 	world_depth_map_signature_cache = ""
 	world_depth_remote_signature_cache = ""
 	world_depth_drop_signature_cache = ""

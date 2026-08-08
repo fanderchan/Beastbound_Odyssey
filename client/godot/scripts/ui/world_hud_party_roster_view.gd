@@ -115,16 +115,19 @@ func set_task_content(content: Control) -> void:
 func debug_snapshot() -> Dictionary:
 	var kinds: Array[String] = []
 	var names: Array[String] = []
+	var statuses: Array[String] = []
 	for raw_row in _state.get("rows", []):
 		if raw_row is Dictionary:
 			var row := raw_row as Dictionary
 			kinds.append(str(row.get("kind", "")))
 			names.append(str(row.get("name", "")))
+			statuses.append(str(row.get("statusText", "")))
 	return {
 		"activeTab": _active_tab,
 		"rowCount": _row_nodes.size(),
 		"rowKinds": kinds,
 		"rowNames": names,
+		"rowStatuses": statuses,
 		"statusText": _status_label.text if _status_label != null else "",
 		"detailVisible": detail_button != null and detail_button.visible,
 		"cancelVisible": cancel_button != null and cancel_button.visible,
@@ -348,8 +351,13 @@ func _member_card(row: Dictionary, index: int) -> Control:
 	WorldHudPartyRosterVisualSkin.apply_body(level_label, 13, kind == "empty")
 	facts.add_child(level_label)
 	var kind_label := Label.new()
-	kind_label.name = "KindBadge"
-	kind_label.text = str(row.get("kindLabel", "空位"))
+	var offline_human := kind == "human" and not bool(row.get("online", true))
+	kind_label.name = "StatusText" if offline_human else "KindBadge"
+	kind_label.text = (
+		str(row.get("statusText", "离线"))
+		if offline_human
+		else str(row.get("kindLabel", "空位"))
+	)
 	kind_label.custom_minimum_size = Vector2(50.0 if kind == "npc" else 38.0, 20.0)
 	WorldHudPartyRosterVisualSkin.apply_badge(kind_label, kind)
 	facts.add_child(kind_label)

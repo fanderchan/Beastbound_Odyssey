@@ -640,3 +640,65 @@ final result: passed
 `ownerReviewStatus=pending`；本结论只代表工程与媒体 Design QA 通过，等待项目所有者观看纠正版。
 
 final result: passed
+
+---
+
+# Phase 396 Design QA：多跳世界导航与正式 HUD 韧性
+
+## Findings
+
+- 本窄范围修复后未发现剩余 P0／P1／P2；多跳路线、失败回滚、取消真值与正式 HUD 生命周期均
+  有独立门禁，不把内部图结构、revision、旧 panel 或 QA 文案暴露给玩家。
+- 全局玩家流程仍有一项明确的视觉发布阻断：战斗画面继续使用灰色默认地面和圆形宠物占位。
+  Phase 396 没有伪装成已经修复；候选战场和宠物素材在 owner approval／release
+  attestation 前不能进入普通运行。新鲜真实 Main 审片帧：
+  `.run/evidence/phase396_player_flow_audit/phase396-audit-battle-20260808/03-battle-preview-1280x720.png`。
+
+## Required experience surfaces
+
+- Flow：任务栏或挂机页选中跨越多张地图的目标后，沿真实 warp 最短路逐图继续；不可达与中断
+  会清空 pending 并回到可选择页面，不留下假的“前往中”。
+- Truth：只有权威 active／full 匹配可显示 matching；取消／idle 即使携带旧本地 viewMode 也回到
+  browse，同时保留“挂机继续”和正式停止入口。
+- Continuity：同图 render state 更新会立即重配 minimap；party update 在旧 roster 为 `null` 时
+  仍刷新正式五席，离线真人显示文字状态，进战时正式／旧 roster 都隐藏。
+- Recovery：正式 HUD mount 失败恢复 `29` 个真实控件的父级、顺序、几何、内容、交互状态、
+  metadata 与主题覆盖；回滚失败时不释放仍持有真实控件的候选 view。
+- Cleanup：正常画面不显示 BFS 路径、map revision、测试账号、错误栈或 legacy 工程 UI。
+
+## Evidence
+
+- planner standalone：`37` 张正式地图、`71` 条有向边、构图加载 `37` 次，正式二／四／五跳、
+  合成最短路和损坏图 fail-closed 均通过。
+- 最终串行 Godot auto `4/4` 回执
+  `.run/godot_auto_checks/2026-08-08T05-36-33-386Z.log` 中，`--auto-task-tracker-route-check`
+  为 `status=ok`，多跳合同、cache、首跳、
+  五次真实 warp 到达、每跳 pending／continuation、最终练级区移动、不可达清理和中断清理均
+  为 `true`；挂机加载失败清理与普通任务加载失败文案也都为 `true`。
+- 同一最终串行回执中的 `--auto-hang-matchmaking-check` 为 `status=ok`，其中
+  `formal_without_legacy=true`、`minimap_hot_replace=true`。
+- focused checks 覆盖取消后的 stale matching、正式五席离线标记与 mount rollback `29` 控件；
+  mount 最终回执为 `PASS / rollbackRestored=true / rollbackRestoredCount=29`，Godot 全项目解析与
+  scoped diff-check 通过；不把未执行的真实多客户端 `--auto-party-live-check` 冒充 passed。
+- 最终性能包 `.run/evidence/phase396_final_perf-tYiwl0/`：固定 60 FPS idle `process_total`
+  平均 `0.042ms`；真实跨帧移动平均 `0.147ms`、`hud_apply` 平均 `0.108ms` 且
+  `status=ok / path_len=11`；连续点击 `36` 次有效输入，`accepted=36 / applied=11 /`
+  `screen mismatch=0`，停稳和最终格精确命中均为真。真实 Metal `1280x720` idle 首组 `27.4`
+  后稳定设计上限 `30 FPS`，`process_total` 平均 `0.355ms`，稳态 OS CPU 平均 `3.83%`。四轮
+  `exit 0`、无 `ERROR`／`WARNING`／解析错误／leak，且无本 worktree 相关进程残留；截断的
+  `source-after.sha256` 不作为全树 hash 证据。
+- 未运行完整 local CI；本结论限定于本阶段定向门禁。
+
+## Comparison history
+
+| 轮次 | 发现 | 修复 | 复核证据 |
+| --- | --- | --- | --- |
+| Route pass | P1：任务／挂机只能找当前图或直达 warp，深层洞窟目标会误报不可达 | 独立缓存有向图与 BFS，continuation 每图继续 | 37 图／71 边、二／四／五跳；实际完成五次 warp 并移动到终点练级区 |
+| Recovery pass | P1：传送失败或路线中断会遗留 pending，页面已关但目标永远不到 | 写 pending 前预检；失败统一清空并重开正式挂机页 | unreachable／interrupted cleanup 均为真 |
+| Truth pass | P2：取消回包可携带旧 matching view，使玩家误以为仍在排队 | 只有 active／full 可拥有 matching，idle 归一 browse | focused stale-cancel fixture |
+| HUD pass | P1：mount 中途失败可能丢真实控件；正式 roster 仍依赖旧节点；同图热替换不刷新 minimap | 完整 mount snapshot／rollback、正式 roster 独立刷新、map render revision | rollback 29、formal-without-legacy、minimap hot replace |
+| Visual audit | 发布阻断：灰色战斗地面与圆形宠物占位仍像程序 | 本阶段不偷渡未批准候选资产，转入正式 battle arena／actor release 后续 | 新鲜真实 Main 战斗审片；本项保持 outstanding |
+
+`ownerReviewStatus=pending`；不勾选 broad P2.2。
+
+final result: passed

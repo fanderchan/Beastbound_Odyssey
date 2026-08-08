@@ -180,6 +180,10 @@ var _proxy_slots: Dictionary = {}
 var _minimap_viewport: SubViewport
 var _minimap_canvas: WorldHudMinimapRenderCanvas
 var _minimap_grid_size := Vector2i.ZERO
+var _minimap_configure_revision := 0
+var _last_apply_minimap_configure_revision := -1
+var _mount_snapshot: Array[Dictionary] = []
+var _mount_root_child_ids: Dictionary = {}
 
 
 func _ready() -> void:
@@ -194,6 +198,9 @@ func mount_existing_controls(controls: Dictionary) -> Dictionary:
 			"alreadyMounted": true,
 			"missingIds": [],
 		}
+	_entries.clear()
+	_mount_snapshot.clear()
+	_mount_root_child_ids.clear()
 
 	_top_panel = _control_from(controls, ["topPanel", "top_panel"]) as Control
 	_side_panel = _control_from(controls, ["sidePanel", "side_panel"]) as Control
@@ -255,6 +262,7 @@ func mount_existing_controls(controls: Dictionary) -> Dictionary:
 			"missingIds": missing_ids,
 		}
 
+	_capture_mount_snapshot()
 	_mount_blocker_roots()
 	_build_top_panel()
 	_build_side_panel()
@@ -268,6 +276,60 @@ func mount_existing_controls(controls: Dictionary) -> Dictionary:
 		"ok": true,
 		"alreadyMounted": false,
 		"missingIds": [],
+	}
+
+
+func rollback_mount() -> Dictionary:
+	if _mount_snapshot.is_empty():
+		return {
+			"ok": not _mounted,
+			"alreadyRolledBack": not _mounted,
+			"restoredCount": 0,
+			"errors": [] if not _mounted else ["mount snapshot is unavailable"],
+		}
+	var errors: Array[String] = []
+	var ordered: Array[Dictionary] = _mount_snapshot.duplicate()
+	ordered.sort_custom(func(left: Dictionary, right: Dictionary) -> bool:
+		return int(left.get("depth", 0)) < int(right.get("depth", 0))
+	)
+	for record in ordered:
+		var item = record.get("node")
+		if not (item is CanvasItem) or not is_instance_valid(item):
+			errors.append("mounted control is no longer valid")
+			continue
+		var canvas_item := item as CanvasItem
+		var original_parent = record.get("parent")
+		if original_parent != null and not is_instance_valid(original_parent):
+			errors.append("original parent is no longer valid: %s" % str(record.get("name", "")))
+			continue
+		if canvas_item.get_parent() == original_parent:
+			continue
+		if original_parent == null:
+			var current_parent := canvas_item.get_parent()
+			if current_parent != null:
+				current_parent.remove_child(canvas_item)
+		elif canvas_item.get_parent() == null:
+			(original_parent as Node).add_child(canvas_item)
+		else:
+			canvas_item.reparent(original_parent as Node, false)
+	_restore_mount_child_indices(ordered, errors)
+	var restored_count := 0
+	for record in ordered:
+		var item = record.get("node")
+		if not (item is CanvasItem) or not is_instance_valid(item):
+			continue
+		_restore_mount_item(item as CanvasItem, record)
+		restored_count += 1
+	if errors.is_empty():
+		_remove_mount_artifacts()
+		_mounted = false
+		_mount_snapshot.clear()
+		_mount_root_child_ids.clear()
+	return {
+		"ok": errors.is_empty(),
+		"alreadyRolledBack": false,
+		"restoredCount": restored_count,
+		"errors": errors,
 	}
 
 
@@ -338,6 +400,7 @@ func apply_view_state(state: Dictionary) -> void:
 	_ensure_built()
 	if not _mounted:
 		return
+	_last_apply_minimap_configure_revision = _minimap_configure_revision
 	state = _flatten_presenter_state(state)
 	var player_value = state.get("player", state.get("character", {}))
 	var player := player_value as Dictionary if player_value is Dictionary else {}
@@ -582,6 +645,7 @@ func configure_minimap(
 	if _minimap_viewport == null or _minimap_canvas == null:
 		return
 	_minimap_canvas.configure(prepared_visual, world_bounds, Vector2(256.0, 256.0))
+	_minimap_configure_revision += 1
 	var minimap_texture_rect := find_child(
 		"WorldHudMinimapTexture",
 		true,
@@ -593,6 +657,15 @@ func configure_minimap(
 	var map_hotspot := entry_button("map")
 	if map_hotspot != null:
 		map_hotspot.icon = null
+
+
+func debug_minimap_snapshot() -> Dictionary:
+	return {
+		"configureRevision": _minimap_configure_revision,
+		"lastApplyConfigureRevision": _last_apply_minimap_configure_revision,
+		"gridSize": _minimap_grid_size,
+		"hasVisual": _minimap_canvas != null and _minimap_canvas.has_visual(),
+	}
 
 
 func apply_task_text(text: String) -> void:
@@ -1790,6 +1863,369 @@ func _message_header() -> HBoxContainer:
 		if child is HBoxContainer:
 			return child as HBoxContainer
 	return null
+
+
+func _capture_mount_snapshot() -> void:
+	_mount_snapshot.clear()
+	_mount_root_child_ids.clear()
+	var candidates: Array = []
+	for root_control in [_top_panel, _side_panel, _message_panel, _action_bar]:
+		if root_control != null:
+			var child_ids: Array[int] = []
+			for child in root_control.get_children():
+				child_ids.append(child.get_instance_id())
+			_mount_root_child_ids[root_control.get_instance_id()] = child_ids
+		_append_mount_snapshot_candidates(root_control, candidates)
+	for control in [
+		_status_label,
+		_version_label,
+		_detail_label,
+		_task_route_button,
+		_battle_log_label,
+		_collapse_button,
+	]:
+		if control is CanvasItem:
+			candidates.append(control)
+	for entry_id in REQUIRED_ENTRY_IDS:
+		var button := _entries.get(entry_id) as Button
+		if button != null:
+			candidates.append(button)
+	var seen: Dictionary = {}
+	for value in candidates:
+		if not (value is CanvasItem) or not is_instance_valid(value):
+			continue
+		var item := value as CanvasItem
+		var instance_id := item.get_instance_id()
+		if seen.has(instance_id):
+			continue
+		seen[instance_id] = true
+		_mount_snapshot.append(_mount_item_snapshot(item))
+
+
+func _remove_mount_artifacts() -> void:
+	for root_control in [_top_panel, _side_panel, _message_panel, _action_bar]:
+		if root_control == null or not is_instance_valid(root_control):
+			continue
+		var original_ids_value = _mount_root_child_ids.get(
+			root_control.get_instance_id(),
+			[]
+		)
+		var original_ids := (
+			original_ids_value as Array
+			if original_ids_value is Array
+			else []
+		)
+		for child in root_control.get_children():
+			if child.get_instance_id() in original_ids:
+				continue
+			root_control.remove_child(child)
+			child.queue_free()
+
+
+func _append_mount_snapshot_candidates(node: Node, candidates: Array) -> void:
+	if node == null:
+		return
+	if node is CanvasItem:
+		candidates.append(node)
+	for child in node.get_children():
+		_append_mount_snapshot_candidates(child, candidates)
+
+
+func _mount_item_snapshot(item: CanvasItem) -> Dictionary:
+	var metadata: Dictionary = {}
+	for meta_name in item.get_meta_list():
+		metadata[meta_name] = item.get_meta(meta_name)
+	var result := {
+		"node": item,
+		"parent": item.get_parent(),
+		"index": item.get_index(),
+		"depth": _mount_item_depth(item),
+		"name": item.name,
+		"visible": item.visible,
+		"modulate": item.modulate,
+		"selfModulate": item.self_modulate,
+		"zIndex": item.z_index,
+		"zAsRelative": item.z_as_relative,
+		"showBehindParent": item.show_behind_parent,
+		"metadata": metadata,
+	}
+	if item is Control:
+		var control := item as Control
+		result["control"] = {
+			"anchorLeft": control.anchor_left,
+			"anchorTop": control.anchor_top,
+			"anchorRight": control.anchor_right,
+			"anchorBottom": control.anchor_bottom,
+			"offsetLeft": control.offset_left,
+			"offsetTop": control.offset_top,
+			"offsetRight": control.offset_right,
+			"offsetBottom": control.offset_bottom,
+			"position": control.position,
+			"size": control.size,
+			"rotation": control.rotation,
+			"scale": control.scale,
+			"pivotOffset": control.pivot_offset,
+			"customMinimumSize": control.custom_minimum_size,
+			"sizeFlagsHorizontal": control.size_flags_horizontal,
+			"sizeFlagsVertical": control.size_flags_vertical,
+			"mouseFilter": control.mouse_filter,
+			"mouseDefaultCursorShape": control.mouse_default_cursor_shape,
+			"focusMode": control.focus_mode,
+			"clipContents": control.clip_contents,
+			"tooltipText": control.tooltip_text,
+			"themeOverrides": _theme_override_snapshot(control),
+		}
+	if item is Label:
+		var label := item as Label
+		result["label"] = {
+			"text": label.text,
+			"horizontalAlignment": label.horizontal_alignment,
+			"verticalAlignment": label.vertical_alignment,
+			"autowrapMode": label.autowrap_mode,
+			"clipText": label.clip_text,
+			"textOverrunBehavior": label.text_overrun_behavior,
+			"maxLinesVisible": label.max_lines_visible,
+		}
+	elif item is RichTextLabel:
+		var rich_text := item as RichTextLabel
+		result["richText"] = {
+			"text": rich_text.text,
+			"fitContent": rich_text.fit_content,
+			"scrollActive": rich_text.scroll_active,
+			"autowrapMode": rich_text.autowrap_mode,
+		}
+	if item is BaseButton:
+		var base_button := item as BaseButton
+		result["baseButton"] = {
+			"disabled": base_button.disabled,
+			"toggleMode": base_button.toggle_mode,
+			"buttonPressed": base_button.button_pressed,
+			"actionMode": base_button.action_mode,
+		}
+	if item is Button:
+		var button := item as Button
+		result["button"] = {
+			"text": button.text,
+			"icon": button.icon,
+			"flat": button.flat,
+			"clipText": button.clip_text,
+			"textOverrunBehavior": button.text_overrun_behavior,
+			"alignment": button.alignment,
+			"iconAlignment": button.icon_alignment,
+			"expandIcon": button.expand_icon,
+		}
+	return result
+
+
+func _mount_item_depth(item: Node) -> int:
+	var depth := 0
+	var current := item.get_parent()
+	while current != null:
+		depth += 1
+		current = current.get_parent()
+	return depth
+
+
+func _restore_mount_child_indices(
+	ordered: Array[Dictionary],
+	errors: Array[String]
+) -> void:
+	var indexed: Array[Dictionary] = ordered.duplicate()
+	indexed.sort_custom(func(left: Dictionary, right: Dictionary) -> bool:
+		var left_parent = left.get("parent")
+		var right_parent = right.get("parent")
+		var left_parent_id := (
+			int((left_parent as Node).get_instance_id())
+			if left_parent is Node and is_instance_valid(left_parent)
+			else -1
+		)
+		var right_parent_id := (
+			int((right_parent as Node).get_instance_id())
+			if right_parent is Node and is_instance_valid(right_parent)
+			else -1
+		)
+		if left_parent_id == right_parent_id:
+			return int(left.get("index", 0)) < int(right.get("index", 0))
+		return left_parent_id < right_parent_id
+	)
+	for record in indexed:
+		var item = record.get("node")
+		var original_parent = record.get("parent")
+		if (
+			not (item is CanvasItem)
+			or not is_instance_valid(item)
+			or not (original_parent is Node)
+			or not is_instance_valid(original_parent)
+		):
+			continue
+		var canvas_item := item as CanvasItem
+		var parent := original_parent as Node
+		if canvas_item.get_parent() != parent:
+			errors.append("parent restore failed: %s" % str(record.get("name", "")))
+			continue
+		parent.move_child(
+			canvas_item,
+			clampi(int(record.get("index", 0)), 0, parent.get_child_count() - 1)
+		)
+
+
+func _restore_mount_item(item: CanvasItem, record: Dictionary) -> void:
+	item.name = record.get("name", item.name)
+	item.visible = bool(record.get("visible", true))
+	item.modulate = record.get("modulate", item.modulate)
+	item.self_modulate = record.get("selfModulate", item.self_modulate)
+	item.z_index = int(record.get("zIndex", item.z_index))
+	item.z_as_relative = bool(record.get("zAsRelative", item.z_as_relative))
+	item.show_behind_parent = bool(record.get("showBehindParent", item.show_behind_parent))
+	_restore_metadata(item, record.get("metadata", {}))
+	if item is Control:
+		_restore_control_mount_state(item as Control, record.get("control", {}))
+	if item is Label:
+		var label := item as Label
+		var state = record.get("label", {}) as Dictionary
+		label.text = str(state.get("text", label.text))
+		label.horizontal_alignment = state.get("horizontalAlignment", label.horizontal_alignment)
+		label.vertical_alignment = state.get("verticalAlignment", label.vertical_alignment)
+		label.autowrap_mode = state.get("autowrapMode", label.autowrap_mode)
+		label.clip_text = bool(state.get("clipText", label.clip_text))
+		label.text_overrun_behavior = state.get("textOverrunBehavior", label.text_overrun_behavior)
+		label.max_lines_visible = int(state.get("maxLinesVisible", label.max_lines_visible))
+	elif item is RichTextLabel:
+		var rich_text := item as RichTextLabel
+		var state = record.get("richText", {}) as Dictionary
+		rich_text.text = str(state.get("text", rich_text.text))
+		rich_text.fit_content = bool(state.get("fitContent", rich_text.fit_content))
+		rich_text.scroll_active = bool(state.get("scrollActive", rich_text.scroll_active))
+		rich_text.autowrap_mode = state.get("autowrapMode", rich_text.autowrap_mode)
+	if item is BaseButton:
+		var base_button := item as BaseButton
+		var state = record.get("baseButton", {}) as Dictionary
+		base_button.disabled = bool(state.get("disabled", base_button.disabled))
+		base_button.toggle_mode = bool(state.get("toggleMode", base_button.toggle_mode))
+		base_button.button_pressed = bool(state.get("buttonPressed", base_button.button_pressed))
+		base_button.action_mode = state.get("actionMode", base_button.action_mode)
+	if item is Button:
+		var button := item as Button
+		var state = record.get("button", {}) as Dictionary
+		button.text = str(state.get("text", button.text))
+		button.icon = state.get("icon", button.icon)
+		button.flat = bool(state.get("flat", button.flat))
+		button.clip_text = bool(state.get("clipText", button.clip_text))
+		button.text_overrun_behavior = state.get("textOverrunBehavior", button.text_overrun_behavior)
+		button.alignment = state.get("alignment", button.alignment)
+		button.icon_alignment = state.get("iconAlignment", button.icon_alignment)
+		button.expand_icon = bool(state.get("expandIcon", button.expand_icon))
+
+
+func _restore_control_mount_state(control: Control, state: Dictionary) -> void:
+	control.custom_minimum_size = state.get("customMinimumSize", control.custom_minimum_size)
+	control.anchor_left = float(state.get("anchorLeft", control.anchor_left))
+	control.anchor_top = float(state.get("anchorTop", control.anchor_top))
+	control.anchor_right = float(state.get("anchorRight", control.anchor_right))
+	control.anchor_bottom = float(state.get("anchorBottom", control.anchor_bottom))
+	control.offset_left = float(state.get("offsetLeft", control.offset_left))
+	control.offset_top = float(state.get("offsetTop", control.offset_top))
+	control.offset_right = float(state.get("offsetRight", control.offset_right))
+	control.offset_bottom = float(state.get("offsetBottom", control.offset_bottom))
+	control.position = state.get("position", control.position)
+	control.size = state.get("size", control.size)
+	control.rotation = float(state.get("rotation", control.rotation))
+	control.scale = state.get("scale", control.scale)
+	control.pivot_offset = state.get("pivotOffset", control.pivot_offset)
+	control.size_flags_horizontal = int(state.get("sizeFlagsHorizontal", control.size_flags_horizontal))
+	control.size_flags_vertical = int(state.get("sizeFlagsVertical", control.size_flags_vertical))
+	control.mouse_filter = state.get("mouseFilter", control.mouse_filter)
+	control.mouse_default_cursor_shape = state.get(
+		"mouseDefaultCursorShape",
+		control.mouse_default_cursor_shape
+	)
+	control.focus_mode = state.get("focusMode", control.focus_mode)
+	control.clip_contents = bool(state.get("clipContents", control.clip_contents))
+	control.tooltip_text = str(state.get("tooltipText", control.tooltip_text))
+	_restore_theme_overrides(control, state.get("themeOverrides", {}))
+
+
+func _restore_metadata(item: CanvasItem, value) -> void:
+	var metadata := value as Dictionary if value is Dictionary else {}
+	for meta_name in item.get_meta_list():
+		if not metadata.has(meta_name):
+			item.remove_meta(meta_name)
+	for meta_name in metadata:
+		item.set_meta(meta_name, metadata.get(meta_name))
+
+
+func _theme_override_snapshot(control: Control) -> Dictionary:
+	var result: Dictionary = {}
+	for property in control.get_property_list():
+		var property_name := str((property as Dictionary).get("name", ""))
+		var parsed := _theme_override_property(property_name)
+		if not parsed.is_empty() and _has_theme_override(
+			control,
+			str(parsed.get("group", "")),
+			str(parsed.get("item", ""))
+		):
+			result[property_name] = control.get(property_name)
+	return result
+
+
+func _restore_theme_overrides(control: Control, value) -> void:
+	var saved := value as Dictionary if value is Dictionary else {}
+	for property in control.get_property_list():
+		var property_name := str((property as Dictionary).get("name", ""))
+		var parsed := _theme_override_property(property_name)
+		if parsed.is_empty() or saved.has(property_name):
+			continue
+		var group := str(parsed.get("group", ""))
+		var item_name := str(parsed.get("item", ""))
+		if _has_theme_override(control, group, item_name):
+			_remove_theme_override(control, group, item_name)
+	for property_name in saved:
+		control.set(property_name, saved.get(property_name))
+
+
+func _theme_override_property(property_name: String) -> Dictionary:
+	if not property_name.begins_with("theme_override_"):
+		return {}
+	var slash_index := property_name.find("/")
+	if slash_index < 0 or slash_index >= property_name.length() - 1:
+		return {}
+	return {
+		"group": property_name.substr(15, slash_index - 15),
+		"item": property_name.substr(slash_index + 1),
+	}
+
+
+func _has_theme_override(control: Control, group: String, item_name: String) -> bool:
+	match group:
+		"colors":
+			return control.has_theme_color_override(item_name)
+		"constants":
+			return control.has_theme_constant_override(item_name)
+		"fonts":
+			return control.has_theme_font_override(item_name)
+		"font_sizes":
+			return control.has_theme_font_size_override(item_name)
+		"icons":
+			return control.has_theme_icon_override(item_name)
+		"styles":
+			return control.has_theme_stylebox_override(item_name)
+	return false
+
+
+func _remove_theme_override(control: Control, group: String, item_name: String) -> void:
+	match group:
+		"colors":
+			control.remove_theme_color_override(item_name)
+		"constants":
+			control.remove_theme_constant_override(item_name)
+		"fonts":
+			control.remove_theme_font_override(item_name)
+		"font_sizes":
+			control.remove_theme_font_size_override(item_name)
+		"icons":
+			control.remove_theme_icon_override(item_name)
+		"styles":
+			control.remove_theme_stylebox_override(item_name)
 
 
 func _hide_existing_children(parent: Control) -> void:
