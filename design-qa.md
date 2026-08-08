@@ -702,3 +702,80 @@ final result: passed
 `ownerReviewStatus=pending`；不勾选 broad P2.2。
 
 final result: passed
+
+---
+
+# Phase 399 Design QA：觉醒式正式地图页与跨图路线
+
+## Findings
+
+- 结论：Phase399 地图窄范围 `P0=0 / P1=0 / P2=0`。
+- P0：无。地图只消费既有地图、interaction、区域和 `MapRoutePlanner` 路线事实；无路线时操作
+  fail-closed 并保留页面供重选，战斗中拒绝打开，不修改服务端、地图权威或玩家档案合同。
+- P1：无。当前地点、世界区域、楼层、真实 route path／continuation、成功关闭、HUD 恢复和
+  battle 隐藏均有正式 Main 门禁；UI 左键不会穿透成世界移动。
+- P2：无。真实 `1280×720` 页面完整覆盖世界、右上为项目既有正式橙色 X；当前地图使用
+  prepared visual，世界地图显示原创 atlas 的精确 9 区，正常玩家画面无 QA、raw ID、接口或
+  agent 文案。工程通过不替代项目所有者审美接受。
+
+## Comparison target and evidence
+
+- 参考输入为项目所有者提供的《石器时代：觉醒》地图流程，以及冻结的当前地图、世界概览和
+  区域放大三张参考图；只比较入口层级、全屏关系、当前／世界切换、地点目录、区域选择、楼层
+  路线和关闭恢复，不复制参考像素、地名、图标、商标或数值。
+- 三行参考／实机同屏：
+  `.run/evidence/phase399_map_awakened_owner_review/phase399-final-20260808-c/reference-vs-implementation.png`，
+  SHA-256 `707e3dac82cefca498ca5c953daf1235eb960709686ca491ab5f6774f1dc73f1`。
+- 真实 Main 八章有声视频：
+  `.run/evidence/phase399_map_awakened_owner_review/phase399-final-20260808-c/map-awakened-owner-review-1x.mp4`，
+  `22.933333s / 688` 帧、`1280×720 / 30 FPS / 1.00×`、H.264 `yuv420p`／AAC 48kHz 双声道，
+  SHA-256 `b1b56f8fe3eafb2ed3cc9af46a40ef31a7a73af03042872eb62970a2572417ac`。
+- 12 帧联系表 SHA-256 为
+  `cb91fbe999a3aa49fdcc822f18032236a06dd416dc10d071ff0b7aede57e1426`；媒体双流完整解码，
+  内层 `SHA256SUMS` 为 `45/45 PASS`。
+
+## Required fidelity surfaces
+
+- Layout：世界 HUD 中保留可发现的地图入口；页面覆盖完整视口，顶部标题／坐标／当前与世界
+  页签／橙色 X 固定，当前地图的地点目录与大图、世界地图的 atlas 与区域详情形成稳定双栏。
+- Map truth：当前地图消费真实 prepared render state；世界 atlas 只显示 9 个非 GM 权威区域；
+  玄影洞窟展示真实入口与一至五层，不补画不存在的区域、楼层或传送。
+- Route truth：村医点击形成真实 pending interaction 与目标格；火芽村到玄影二层保留
+  `firebud_village_gate → shadow_oath_cavern → shadow_oath_cavern_f2` 的完整 path 和
+  continuation。只有有效路线成功提交才关闭页面。
+- Controls：入口、当前／世界页签、地点、区域、楼层、关闭均可左键完成；按下与释放必须跨帧，
+  UI 点击不得落到世界移动。开页每次复位当前地图，成功路线或 X 关闭后恢复原 HUD。
+- Battle boundary：进入战斗隐藏地图页与世界入口；战斗中拒绝开页，不允许地图、任务或世界
+  菜单继续覆盖战场。
+- Originality：atlas、棕金框、文字、区域热点和图标为 Beastbound 原创／项目既有资产；参考图
+  只提供成熟信息架构，未复制商业游戏美术。
+
+## Interaction, regression and performance evidence
+
+- 正式录像共 6 次主左键，`6/6` 按下／释放跨帧；八章连续覆盖 HUD 入口、prepared local、
+  当前目标、九区世界、玄影详情、二层跨图、HUD 恢复和 battle 隐藏。
+- 最终 Godot auto 回执 `.run/godot_auto_checks/2026-08-08T06-49-27-894Z.log` 为 `2/2 PASS`；
+  focused check 另锁定开页复位、prepared visual、atlas、9 区、稳定 getter、route path、
+  continuation、关闭恢复和战斗隐藏。
+- 独立真实 Main 性能包：
+  `.run/evidence/phase399_map_awakened_perf/phase399-final-perf-20260808-b/`。后半稳态 idle 为
+  `28.5..30.0 FPS / process_total median 0.170ms / p95 0.180ms`；持续跨帧移动为
+  `45.8..52.8 FPS / 3.575ms / 7.720ms`；12 轮地图页压力为
+  `29.5..31.5 FPS / 0.255ms / 0.280ms`。
+- 性能流程执行 12 轮“打开 → 世界 → 玄影 → 当前 → 关闭”，加移动共 `69/69` 次跨帧左键；
+  移动接受 `9/9`、累计 `583.40px`，面板 60 次点击穿透世界 `0`，每轮 prepared visual、9 区与
+  HUD 恢复都为真。摘要 `12/12` 门禁和清单 `2/2` 通过，日志无 warning／error／leak。
+
+## Intentional differences and P3 boundaries
+
+- [P3] Beastbound 使用原创九区 atlas 和已有 37 图／71 warp 路网，不复制参考游戏的岛屿轮廓、
+  地名、角色、图标或任务入口；这是版权与本项目世界合同要求，不是 fidelity 缺失。
+- [P3] 录像与性能包均用隔离 user data、禁档案保存、未启动后端并确认结束态 HTTP 断开；
+  `httpRequests=false / serverWrites=0` 或对应性能字段只是配置／结束态声明，没有请求或服务端
+  写入计数器，不冒充生产联网证明。
+- [P3] 灰色战斗地面和简化战斗 actor 仍是地图范围外的独立视觉发布阻断；本阶段没有偷渡未批准
+  战场／宠物候选，也没有据此勾选 broad P2.2。
+- [P3] `ownerReviewStatus=pending`；项目所有者尚未观看最终地图视频。本结论只代表工程、交互、
+  性能与媒体 Design QA 通过，不等于 owner visual approval。
+
+final result: passed

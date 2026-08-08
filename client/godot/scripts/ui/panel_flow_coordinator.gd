@@ -89,6 +89,8 @@ const MarketAwakenedPanel := preload("res://scripts/ui/market_awakened_panel.gd"
 const HangMatchmakingAwakenedPanel := preload(
 	"res://scripts/ui/hang_matchmaking_awakened_panel.gd"
 )
+const MapAwakenedPanel := preload("res://scripts/ui/map_awakened_panel.gd")
+const MapAwakenedPresenter := preload("res://scripts/ui/map_awakened_presenter.gd")
 const HangMatchmakingWorldStatus := preload(
 	"res://scripts/ui/hang_matchmaking_world_status.gd"
 )
@@ -157,6 +159,7 @@ const PARTY_PANEL_MODE_PLAYERS := "players"
 
 var party_player_section: Control
 var _map_route_planner = null
+var _map_awakened_map_name_cache: Dictionary = {}
 
 var qa_profile_identity_label: Label
 var qa_profile_status_state: Dictionary = {}
@@ -7043,51 +7046,20 @@ func _build_hud() -> void:
 	quest_column.add_child(quest_route_button)
 	hud_root.add_child(quest_panel)
 
-	map_panel = _panel_container("MapPanel")
+	var awakened_map_panel := MapAwakenedPanel.new()
+	map_panel = awakened_map_panel
 	map_panel.visible = false
-	map_panel.z_index = 24
-	var map_column = VBoxContainer.new()
-	map_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	map_column.add_theme_constant_override("separation", 8)
-	map_panel.add_child(map_column)
-
-	var map_header = HBoxContainer.new()
-	map_header.add_theme_constant_override("separation", 10)
-	map_column.add_child(map_header)
-	var map_title_label = Label.new()
-	map_title_label.text = "地图"
-	map_title_label.add_theme_font_size_override("font_size", 21)
-	map_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_header.add_child(map_title_label)
-	map_close_button = Button.new()
-	map_close_button.text = "关闭"
-	map_close_button.custom_minimum_size = Vector2(92, 44)
-	map_close_button.pressed.connect(_close_map_panel)
-	map_header.add_child(map_close_button)
-
-	map_texture_rect = TextureRect.new()
-	map_texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	map_texture_rect.custom_minimum_size = Vector2(0, 210)
-	map_texture_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	map_column.add_child(map_texture_rect)
-
-	map_detail_label = Label.new()
-	map_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	map_detail_label.add_theme_font_size_override("font_size", 15)
-	map_detail_label.custom_minimum_size = Vector2(0, 58)
-	map_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_column.add_child(map_detail_label)
-
-	var map_marker_scroll = ScrollContainer.new()
-	map_marker_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_marker_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	map_column.add_child(map_marker_scroll)
-	map_marker_container = VBoxContainer.new()
-	map_marker_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_marker_container.add_theme_constant_override("separation", 7)
-	map_marker_scroll.add_child(map_marker_container)
+	map_panel.z_index = 46
+	map_close_button = awakened_map_panel.close_button
+	map_texture_rect = awakened_map_panel.legacy_texture_rect
+	map_detail_label = awakened_map_panel.legacy_detail_label
+	map_marker_container = awakened_map_panel.marker_container
+	map_marker_buttons = awakened_map_panel.marker_buttons
+	awakened_map_panel.close_requested.connect(_close_map_panel)
+	awakened_map_panel.route_target_requested.connect(_on_map_marker_pressed)
+	awakened_map_panel.map_destination_requested.connect(
+		_on_map_destination_requested
+	)
 	hud_root.add_child(map_panel)
 
 	chat_panel = _panel_container("ChatPanel")
@@ -18117,6 +18089,8 @@ func _open_map_panel() -> void:
 	_close_party_panel()
 	_close_family_panel()
 	map_panel.visible = true
+	if map_panel is MapAwakenedPanel:
+		(map_panel as MapAwakenedPanel).reset_to_local_view()
 	_refresh_map_panel()
 	host._layout_hud()
 	host.call_deferred("_layout_hud")
@@ -24837,6 +24811,17 @@ func _rebirth_target_label(target_count: int) -> String:
 func _refresh_map_panel() -> void:
 	if map_panel == null or map_texture_rect == null or map_detail_label == null or map_marker_container == null:
 		return
+	if map_panel is MapAwakenedPanel:
+		var awakened_panel := map_panel as MapAwakenedPanel
+		var state := _map_awakened_view_state()
+		awakened_panel.apply_view_state(
+			state,
+			host.map_visual_render_state,
+			host._map_world_bounds(),
+			_map_minimap_texture()
+		)
+		map_marker_buttons = awakened_panel.marker_buttons
+		return
 	map_texture_rect.texture = _map_minimap_texture()
 	var player_cell = IsoMapModel.world_to_grid(map_data, player.global_position)
 	var target_text = "无"
@@ -24933,6 +24918,77 @@ func _on_map_marker_pressed(target: Dictionary) -> void:
 		return
 	_close_map_panel()
 	_route_to_quest_target(target)
+
+
+func _on_map_destination_requested(map_id: String, label: String) -> void:
+	var destination_map_id := map_id.strip_edges()
+	if destination_map_id == "" or battle_active:
+		return
+	if destination_map_id == current_map_id:
+		_set_world_log_message("已经位于%s。" % _map_name_for_id(current_map_id))
+		_close_map_panel()
+		return
+	var planner = _map_route_planner_instance()
+	if planner == null or not planner.is_ready():
+		_set_world_log_message("地图路线暂时不可用，请稍后重试。")
+		return
+	var route_map_path: Array[String] = planner.shortest_path(
+		current_map_id,
+		destination_map_id
+	)
+	if route_map_path.size() < 2:
+		_set_world_log_message(
+			"当前无法前往%s。" % _map_name_for_id(destination_map_id)
+		)
+		return
+	_close_map_panel()
+	_route_to_quest_target({
+		"id": "map_destination:%s" % destination_map_id,
+		"kind": "map_destination",
+		"mapId": destination_map_id,
+		"label": label if label.strip_edges() != "" else _map_name_for_id(destination_map_id),
+		"routeMapPath": route_map_path,
+	})
+
+
+func _map_awakened_view_state() -> Dictionary:
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var local_targets: Array[Dictionary] = []
+	for target_value in _map_targets_for_current_map():
+		var target := target_value.duplicate(true)
+		var cell := _map_target_cell(target)
+		target["cell"] = cell
+		target["worldPosition"] = IsoMapModel.grid_to_world(map_data, cell)
+		target["displayText"] = _map_target_button_text(target)
+		local_targets.append(target)
+	var state := MapAwakenedPresenter.build_view_state(
+		current_map_id,
+		str(map_data.get("name", current_map_id)),
+		player_cell,
+		target_cell if has_target_cell else null,
+		local_targets,
+		MapRegionCatalog.regions(),
+		_map_awakened_map_names()
+	)
+	state["mapGrid"] = IsoMapModel.grid_size(map_data)
+	state["playerWorldPosition"] = player.global_position
+	state["targetCell"] = target_cell if has_target_cell else Vector2i(-1, -1)
+	state["targetWorldPosition"] = (
+		IsoMapModel.grid_to_world(map_data, target_cell)
+		if has_target_cell
+		else Vector2.ZERO
+	)
+	return state
+
+
+func _map_awakened_map_names() -> Dictionary:
+	if _map_awakened_map_name_cache.size() == MAP_DATA_PATHS.size():
+		return _map_awakened_map_name_cache.duplicate()
+	_map_awakened_map_name_cache.clear()
+	for map_id_value in MAP_DATA_PATHS.keys():
+		var map_id := str(map_id_value)
+		_map_awakened_map_name_cache[map_id] = _map_name_for_id(map_id)
+	return _map_awakened_map_name_cache.duplicate()
 
 func _map_minimap_texture() -> Texture2D:
 	var image_width = 420

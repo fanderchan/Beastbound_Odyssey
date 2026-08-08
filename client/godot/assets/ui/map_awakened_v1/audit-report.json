@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "packageId": "map_awakened_v1",
+  "status": "passed",
+  "auditedAt": "2026-08-08",
+  "contract": {
+    "runtimeEnabled": true,
+    "ownerReviewStatus": "owner_review_pending",
+    "assetCount": 1,
+    "hotspotCount": 9,
+    "authorityNonGmRegionCount": 9,
+    "trackedForbiddenSidecarCount": 0
+  },
+  "asset": {
+    "path": "client/godot/assets/ui/map_awakened_v1/runtime/world_atlas_background_v1.png",
+    "bytes": 2777702,
+    "width": 1568,
+    "height": 1003,
+    "bitDepth": 8,
+    "pixelFormat": "RGB8",
+    "hasAlpha": false,
+    "compression": 0,
+    "filterMethod": 0,
+    "interlace": 0,
+    "sha256": "ebae9a0e3fe14f104062080f39788278c53b87b38e1932be25b49724ca3e3470"
+  },
+  "hotspots": {
+    "authoritySource": "client/godot/data/map_regions.json",
+    "authorityRegionIds": [
+      "firebud_village",
+      "firebud_training_field",
+      "element_trial_caves",
+      "shadow_oath_cavern",
+      "level_grass_trial_field",
+      "mistcap_marsh",
+      "suncrack_badlands",
+      "windglass_highlands",
+      "manor_ring"
+    ],
+    "manifestHotspotIds": [
+      "element_trial_caves",
+      "firebud_training_field",
+      "firebud_village",
+      "level_grass_trial_field",
+      "manor_ring",
+      "mistcap_marsh",
+      "shadow_oath_cavern",
+      "suncrack_badlands",
+      "windglass_highlands"
+    ],
+    "exactMatch": true
+  },
+  "documents": {
+    "manifest": {
+      "path": "client/godot/assets/ui/map_awakened_v1/asset-manifest.json",
+      "sha256": "6329550ebdf0d919505c4a1e328b11da5f32ea5836c9061932a2c83c2a6bf2ca"
+    },
+    "prompt": {
+      "path": "client/godot/assets/ui/map_awakened_v1/source/prompts/world-atlas-background-v1.txt",
+      "sha256": "922e28afcedc58c24e9160b2ce0a9458d252fb907f2f99702962b24398fa32e1"
+    },
+    "ownership": {
+      "path": "client/godot/assets/ui/map_awakened_v1/source-and-ownership.md",
+      "sha256": "bc7ab8d8e1af8f37cdb0c716c4a1be455b0c5d8b04ebeeebbe67b14667a1a791"
+    },
+    "ignore": {
+      "path": "client/godot/assets/ui/map_awakened_v1/.gitignore",
+      "sha256": "11a6aa96623006b92021d8cf4ce0fdad87548bd02f42ed4b21f86595776093a5"
+    },
+    "regionCatalog": {
+      "path": "client/godot/data/map_regions.json",
+      "sha256": "0b0e352f736f09370fb148dd7d40933632d2206cdfb0927c9570bd630036e29f"
+    }
+  },
+  "visualAcceptance": {
+    "status": "owner_review_pending",
+    "screenshotAccepted": false,
+    "statement": "结构与来源审计通过；截图和视频仍待项目所有者验收。"
+  }
+}

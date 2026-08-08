@@ -19283,7 +19283,38 @@ func _run_auto_map_panel_check() -> void:
 	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
 	host._open_map_panel()
 	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	var awakened_ok: bool = (
+		host.map_panel != null
+		and host.map_panel.has_method("is_awakened_map_panel")
+		and bool(host.map_panel.call("is_awakened_map_panel"))
+	)
+	var local_tab_value = (
+		host.map_panel.call("local_tab_button")
+		if awakened_ok and host.map_panel.has_method("local_tab_button")
+		else null
+	)
+	var world_tab_value = (
+		host.map_panel.call("world_tab_button")
+		if awakened_ok and host.map_panel.has_method("world_tab_button")
+		else null
+	)
+	var local_mode_ok: bool = (
+		awakened_ok
+		and str(host.map_panel.call("current_mode")) == "local"
+		and local_tab_value is Button
+		and world_tab_value is Button
+	)
+	var full_screen_ok: bool = (
+		host.map_panel.position.is_equal_approx(Vector2.ZERO)
+		and host.map_panel.size.is_equal_approx(host._layout_size())
+	)
 	var texture_ok = host.map_texture_rect != null and host.map_texture_rect.texture != null
+	var prepared_visual_ok: bool = (
+		host.map_panel != null
+		and host.map_panel.has_method("uses_prepared_visual")
+		and bool(host.map_panel.call("uses_prepared_visual"))
+	)
 	var detail_ok = host.map_detail_label != null and host.map_detail_label.text.find("火芽村入口") >= 0 and host.map_detail_label.text.find("坐标") >= 0
 	var marker_ok = (
 		host.map_panel != null
@@ -19292,6 +19323,50 @@ func _run_auto_map_panel_check() -> void:
 		and host.map_marker_buttons.has("interaction:firebud_equipment_keeper")
 		and host.map_marker_buttons.has("interaction:firebud_rebirth_mentor")
 		and host.map_marker_buttons.has("zone:village_grass")
+	)
+	if world_tab_value is Button:
+		(world_tab_value as Button).pressed.emit()
+	await host.get_tree().process_frame
+	var shadow_region_button_value = (
+		host.map_panel.call("world_region_button", "shadow_oath_cavern")
+		if awakened_ok and host.map_panel.has_method("world_region_button")
+		else null
+	)
+	if shadow_region_button_value is Button:
+		(shadow_region_button_value as Button).pressed.emit()
+	var world_route_button_value = (
+		host.map_panel.call("world_route_button", "shadow_oath_cavern_f5")
+		if awakened_ok and host.map_panel.has_method("world_route_button")
+		else null
+	)
+	var entry_route_button_value = (
+		host.map_panel.call("world_entry_route_button")
+		if awakened_ok and host.map_panel.has_method("world_entry_route_button")
+		else null
+	)
+	var world_mode_ok: bool = (
+		awakened_ok
+		and str(host.map_panel.call("current_mode")) == "world"
+		and bool(host.map_panel.call("uses_world_atlas_visual"))
+		and int(host.map_panel.call("world_region_count")) == 9
+		and shadow_region_button_value is Button
+		and world_route_button_value is Button
+		and entry_route_button_value is Button
+	)
+	host._close_map_panel()
+	await host.get_tree().process_frame
+	var close_restore_ok: bool = (
+		not host.map_panel.visible
+		and not host._world_menu_is_open()
+		and host.action_bar != null
+		and host.action_bar.is_visible_in_tree()
+	)
+
+	host._open_map_panel()
+	await host.get_tree().process_frame
+	var reopen_local_ok: bool = (
+		awakened_ok
+		and str(host.map_panel.call("current_mode")) == "local"
 	)
 	var doctor_target = {
 		"kind": "interaction",
@@ -19326,15 +19401,120 @@ func _run_auto_map_panel_check() -> void:
 		and EncounterModel.zone_contains_cell(zone, host.target_cell)
 		and host.world_log_message.find("村外草丛") >= 0
 	)
-	var status = "ok" if loaded and texture_ok and detail_ok and marker_ok and doctor_route_ok and zone_route_ok else "failed"
-	print("map panel check ready: status=%s loaded=%s texture=%s detail=%s markers=%s doctor=%s zone=%s marker_count=%d target=%s log=%s" % [
+
+	host._clear_navigation_state()
+	host._open_map_panel()
+	await host.get_tree().process_frame
+	world_tab_value = host.map_panel.call("world_tab_button") if awakened_ok else null
+	if world_tab_value is Button:
+		(world_tab_value as Button).pressed.emit()
+	shadow_region_button_value = (
+		host.map_panel.call("world_region_button", "shadow_oath_cavern")
+		if awakened_ok
+		else null
+	)
+	if shadow_region_button_value is Button:
+		(shadow_region_button_value as Button).pressed.emit()
+	world_route_button_value = (
+		host.map_panel.call("world_route_button", "shadow_oath_cavern_f5")
+		if awakened_ok
+		else null
+	)
+	if world_route_button_value is Button:
+		(world_route_button_value as Button).pressed.emit()
+	await host.get_tree().process_frame
+	var expected_route_path: Array[String] = [
+		"firebud_village_gate",
+		"shadow_oath_cavern",
+		"shadow_oath_cavern_f2",
+		"shadow_oath_cavern_f3",
+		"shadow_oath_cavern_f4",
+		"shadow_oath_cavern_f5",
+	]
+	var first_route_warp: Dictionary = host.pending_interaction.duplicate(true)
+	var first_continuation_value = first_route_warp.get("routeContinuationTarget", {})
+	var first_continuation := (
+		first_continuation_value as Dictionary
+		if first_continuation_value is Dictionary
+		else {}
+	)
+	var route_path_ok: bool = (
+		not host.map_panel.visible
+		and str(first_route_warp.get("toMap", "")) == "shadow_oath_cavern"
+		and first_route_warp.get("routeMapPath", []) == expected_route_path
+		and str(first_continuation.get("mapId", "")) == "shadow_oath_cavern_f5"
+		and first_continuation.get("routeMapPath", []) == expected_route_path
+	)
+	host._clear_pending_interaction()
+	if host.player != null:
+		host.player.clear_move_target()
+	host._transfer_from_warp(first_route_warp)
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	var second_route_warp: Dictionary = host.pending_interaction.duplicate(true)
+	var second_continuation_value = second_route_warp.get("routeContinuationTarget", {})
+	var second_continuation := (
+		second_continuation_value as Dictionary
+		if second_continuation_value is Dictionary
+		else {}
+	)
+	var continuation_ok: bool = (
+		host.current_map_id == "shadow_oath_cavern"
+		and str(second_route_warp.get("toMap", "")) == "shadow_oath_cavern_f2"
+		and str(second_continuation.get("mapId", "")) == "shadow_oath_cavern_f5"
+	)
+
+	host._clear_navigation_state()
+	host.battle_active = true
+	host._layout_hud()
+	host._panel_flow()._refresh_world_hud_awakened(true)
+	host._open_map_panel()
+	await host.get_tree().process_frame
+	var battle_hidden_ok: bool = (
+		not host.map_panel.visible
+		and host.map_menu_button != null
+		and not host.map_menu_button.is_visible_in_tree()
+	)
+	host.battle_active = false
+	host._layout_hud()
+	host._panel_flow()._refresh_world_hud_awakened(true)
+
+	var status = "ok" if (
+		loaded
+		and awakened_ok
+		and local_mode_ok
+		and world_mode_ok
+		and full_screen_ok
+		and texture_ok
+		and prepared_visual_ok
+		and detail_ok
+		and marker_ok
+		and close_restore_ok
+		and reopen_local_ok
+		and doctor_route_ok
+		and zone_route_ok
+		and route_path_ok
+		and continuation_ok
+		and battle_hidden_ok
+	) else "failed"
+	print("map panel check ready: status=%s loaded=%s awakened=%s local=%s world=%s fullscreen=%s texture=%s prepared_visual=%s detail=%s markers=%s close_restore=%s reopen_local=%s doctor=%s zone=%s route_path=%s continuation=%s battle_hidden=%s marker_count=%d target=%s log=%s" % [
 		status,
 		str(loaded),
+		str(awakened_ok),
+		str(local_mode_ok),
+		str(world_mode_ok),
+		str(full_screen_ok),
 		str(texture_ok),
+		str(prepared_visual_ok),
 		str(detail_ok),
 		str(marker_ok),
+		str(close_restore_ok),
+		str(reopen_local_ok),
 		str(doctor_route_ok),
 		str(zone_route_ok),
+		str(route_path_ok),
+		str(continuation_ok),
+		str(battle_hidden_ok),
 		host.map_marker_buttons.size(),
 		str(host.target_cell),
 		host.world_log_message,

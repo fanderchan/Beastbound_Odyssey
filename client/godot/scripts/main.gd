@@ -121,6 +121,9 @@ const BackpackAwakenedOwnerReviewCapture := preload(
 const MarketAwakenedOwnerReviewCapture := preload(
 	"res://scripts/qa/market_awakened_owner_review_capture.gd"
 )
+const MapAwakenedOwnerReviewCapture := preload(
+	"res://scripts/qa/map_awakened_owner_review_capture.gd"
+)
 const CharacterEntryOwnerReviewCapture := preload(
 	"res://scripts/qa/character_entry_owner_review_capture.gd"
 )
@@ -1071,6 +1074,7 @@ var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
 var backpack_awakened_owner_review_capture: bool = false
 var market_awakened_owner_review_capture: bool = false
+var map_awakened_owner_review_capture: bool = false
 var character_entry_owner_review_capture: bool = false
 var player_character_owner_review_capture: bool = false
 var hang_matchmaking_world_hud_owner_review_capture: bool = false
@@ -2021,6 +2025,8 @@ func _ready() -> void:
 		call_deferred("_run_backpack_awakened_owner_review_capture")
 	elif market_awakened_owner_review_capture:
 		call_deferred("_run_market_awakened_owner_review_capture")
+	elif map_awakened_owner_review_capture:
+		call_deferred("_run_map_awakened_owner_review_capture")
 	elif character_entry_owner_review_capture:
 		call_deferred("_run_character_entry_owner_review_capture")
 	elif player_character_owner_review_capture:
@@ -2264,6 +2270,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == NpcMainReviewCapture.CAPTURE_FLAG
 		or normalized == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG
 		or MarketAwakenedOwnerReviewCapture.is_flag(normalized)
+		or MapAwakenedOwnerReviewCapture.is_flag(normalized)
 		or normalized == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == "--hang-matchmaking-world-hud-owner-review-capture"
@@ -2882,6 +2889,8 @@ func _apply_preview_window_args() -> void:
 			backpack_awakened_owner_review_capture = true
 		elif MarketAwakenedOwnerReviewCapture.is_flag(arg):
 			market_awakened_owner_review_capture = true
+		elif MapAwakenedOwnerReviewCapture.is_flag(arg):
+			map_awakened_owner_review_capture = true
 		elif arg == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG:
 			character_entry_owner_review_capture = true
 		elif arg == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG:
@@ -4123,6 +4132,10 @@ func _run_backpack_awakened_owner_review_capture() -> void:
 
 func _run_market_awakened_owner_review_capture() -> void:
 	await MarketAwakenedOwnerReviewCapture.new(self).run()
+
+
+func _run_map_awakened_owner_review_capture() -> void:
+	await MapAwakenedOwnerReviewCapture.new(self).run()
 
 
 func _run_character_entry_owner_review_capture() -> void:
@@ -14265,8 +14278,8 @@ func _layout_hud() -> void:
 	if quest_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	map_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
-	map_panel.size = Vector2(codex_width, codex_height)
+	map_panel.position = Vector2.ZERO
+	map_panel.size = viewport_size
 	if battle_active:
 		map_panel.visible = false
 	if map_panel.visible and action_bar != null:

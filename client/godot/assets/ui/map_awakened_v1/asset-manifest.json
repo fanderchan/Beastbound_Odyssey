@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packageId": "map_awakened_v1",
+  "title": "万兽纪元原创觉醒式地图界面资产",
+  "auditedAt": "2026-08-08",
+  "ownership": "OpenAI ImageGen original for Beastbound Odyssey",
+  "authorization": {
+    "sourceType": "project_original_openai_imagegen",
+    "usageScope": "Beastbound Odyssey project runtime and derivative production under applicable OpenAI terms",
+    "externalThirdPartyAssetEmbedded": false,
+    "exclusiveCopyrightClaim": false
+  },
+  "runtimeEnabled": true,
+  "ownerReviewStatus": "owner_review_pending",
+  "target": {
+    "platform": "PC",
+    "viewport": "1280x720",
+    "runtimeDirectory": "runtime"
+  },
+  "referencePolicy": {
+    "use": "world-map hierarchy, density and interaction intent only",
+    "externalPixelsEmbedded": false,
+    "externalMapCopied": false,
+    "externalTrademarkCopied": false,
+    "statement": "外部地图截图只用于理解成熟的当前地图、区域地图与世界地图层级；本包未复制、裁切、描摹或嵌入参考游戏的岛屿轮廓、地名、标志、角色或像素。"
+  },
+  "generation": {
+    "method": "OpenAI built-in ImageGen original raster generation",
+    "promptRecord": "source/prompts/world-atlas-background-v1.txt",
+    "promptProvenance": "verbatim",
+    "sourceCanvas": "1568x1003 RGB8",
+    "derivation": "direct lossless generated PNG; Godot applies aspect-preserving display only"
+  },
+  "replacementPolicy": {
+    "rule": "使用同一用途合同重新生成版本化世界图底板，保留区域热区 ID 与运行时路径映射；复核尺寸、SHA-256、九区可辨识度和 1280x720 实机截图后再替换。",
+    "ownerAcceptance": "项目所有者明确接受冻结实机截图前保持 owner_review_pending。"
+  },
+  "normalizedHotspots": {
+    "element_trial_caves": [0.22, 0.24],
+    "firebud_training_field": [0.50, 0.18],
+    "manor_ring": [0.78, 0.25],
+    "firebud_village": [0.50, 0.49],
+    "shadow_oath_cavern": [0.18, 0.49],
+    "level_grass_trial_field": [0.82, 0.51],
+    "mistcap_marsh": [0.22, 0.79],
+    "suncrack_badlands": [0.51, 0.82],
+    "windglass_highlands": [0.79, 0.80]
+  },
+  "assets": [
+    {
+      "assetId": "world_atlas_background_v1",
+      "role": "runtime_background",
+      "responsibility": "世界地图九个真实区域的原创无字底板",
+      "relativePath": "runtime/world_atlas_background_v1.png",
+      "mediaType": "image/png",
+      "dimensions": {"width": 1568, "height": 1003},
+      "bytes": 2777702,
+      "pixelFormat": "RGB8",
+      "hasAlpha": false,
+      "sha256": "ebae9a0e3fe14f104062080f39788278c53b87b38e1932be25b49724ca3e3470",
+      "authorization": "project_original_openai_imagegen_under_applicable_terms",
+      "generationPromptId": "world-atlas-background-v1",
+      "runtimeEnabled": true,
+      "ownerReviewStatus": "owner_review_pending"
+    }
+  ]
+}
