@@ -2996,7 +2996,18 @@ func _run_auto_battle_check() -> void:
 
 func _run_auto_battle_auto_attack_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	var auto_profile := PlayerProgressModel.default_profile()
+	var auto_pet_id := "pet_auto_attack_bui"
+	var auto_pet := PlayerProgressModel.create_pet_instance_from_form(
+		auto_pet_id,
+		"自动布伊",
+		"bui_normal_red_fire10",
+		PlayerProgressModel.PET_STATE_BATTLE,
+		18
+	)
+	auto_profile["petInstances"] = [auto_pet]
+	auto_profile["activePetInstanceId"] = auto_pet_id
+	host.player_profile = PlayerProgressModel.normalize_profile(auto_profile)
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -3012,18 +3023,23 @@ func _run_auto_battle_auto_attack_check() -> void:
 	host.battle_auto_attack_player_submissions = 0
 	host.battle_auto_attack_pet_submissions = 0
 	host._set_battle_auto_attack_enabled(true, false)
-	var auto_button_on = host.battle_auto_button != null and host.battle_auto_button.visible and host.battle_auto_button.button_pressed and host.battle_auto_button.text == "停止"
+	var auto_button_on = host.battle_auto_button != null and host.battle_auto_button.visible and host.battle_auto_button.button_pressed and host.battle_auto_button.text == "取消"
 	var player_submitted = false
 	var pet_submitted = false
 	var round_events_seen = false
 	var enemy_damaged_seen = false
-	var stop_button_seen = false
+	var cancel_button_seen = false
 	for _frame in range(900):
 		await host.get_tree().process_frame
 		player_submitted = player_submitted or host.battle_auto_attack_player_submissions > 0
 		pet_submitted = pet_submitted or host.battle_auto_attack_pet_submissions > 0
 		round_events_seen = round_events_seen or host.battle_last_round_applied_events > 0 or host.battle_last_round_actor_order.has(BattleModel.PLAYER_ACTOR_ID) or host.battle_last_round_actor_order.has(BattleModel.PLAYER_PET_ID)
-		stop_button_seen = stop_button_seen or (host.battle_auto_stop_button != null and host.battle_auto_stop_button.visible and host.battle_auto_stop_button.text == "停止")
+		cancel_button_seen = cancel_button_seen or (
+			host.battle_auto_button != null
+			and host.battle_auto_button.is_visible_in_tree()
+			and host.battle_auto_button.text == "取消"
+			and not host.battle_auto_button.disabled
+		)
 		if target_found:
 			enemy_damaged_seen = enemy_damaged_seen or int(BattleModel.actor_by_id(host.battle_state, target_id).get("hp", enemy_before)) < enemy_before
 		if player_submitted and pet_submitted and round_events_seen and enemy_damaged_seen:
@@ -3042,15 +3058,15 @@ func _run_auto_battle_auto_attack_check() -> void:
 	)
 	var auto_button_off = host.battle_auto_button != null and not host.battle_auto_button.button_pressed
 	var auto_damaged_enemy = target_found and enemy_after < enemy_before
-	var status = "ok" if loaded and zone_found and battle_started and target_found and auto_button_on and stop_button_seen and player_submitted and pet_submitted and round_events_seen and auto_damaged_enemy and auto_button_off and no_new_after_off else "failed"
-	print("battle auto attack check ready: status=%s loaded=%s zone_found=%s battle_started=%s target=%s button_on=%s stop_button=%s player_submitted=%s pet_submitted=%s round_events=%s enemy_before=%d enemy_after=%d button_off=%s no_new_after_off=%s player_submissions=%d pet_submissions=%d" % [
+	var status = "ok" if loaded and zone_found and battle_started and target_found and auto_button_on and cancel_button_seen and player_submitted and pet_submitted and round_events_seen and auto_damaged_enemy and auto_button_off and no_new_after_off else "failed"
+	print("battle auto attack check ready: status=%s loaded=%s zone_found=%s battle_started=%s target=%s button_on=%s cancel_button=%s player_submitted=%s pet_submitted=%s round_events=%s enemy_before=%d enemy_after=%d button_off=%s no_new_after_off=%s player_submissions=%d pet_submissions=%d" % [
 		status,
 		str(loaded),
 		str(zone_found),
 		str(battle_started),
 		target_id,
 		str(auto_button_on),
-		str(stop_button_seen),
+		str(cancel_button_seen),
 		str(player_submitted),
 		str(pet_submitted),
 		str(round_events_seen),
@@ -3098,15 +3114,20 @@ func _run_auto_battle_auto_10v10_check() -> void:
 	host.battle_auto_attack_player_submissions = 0
 	host.battle_auto_attack_pet_submissions = 0
 	host._set_battle_auto_attack_enabled(true, false)
-	var auto_button_on = host.battle_auto_button != null and host.battle_auto_button.visible and host.battle_auto_button.button_pressed
-	var stop_button_seen = false
+	var auto_button_on = host.battle_auto_button != null and host.battle_auto_button.visible and host.battle_auto_button.button_pressed and host.battle_auto_button.text == "取消"
+	var cancel_button_seen = false
 	var seen_combo = false
 	var seen_npc_allies: Array[String] = []
 	var seen_player = false
 	var seen_pet = false
 	for _frame in range(1800):
 		await host.get_tree().process_frame
-		stop_button_seen = stop_button_seen or (host.battle_auto_stop_button != null and host.battle_auto_stop_button.visible and host.battle_auto_stop_button.text == "停止")
+		cancel_button_seen = cancel_button_seen or (
+			host.battle_auto_button != null
+			and host.battle_auto_button.is_visible_in_tree()
+			and host.battle_auto_button.text == "取消"
+			and not host.battle_auto_button.disabled
+		)
 		seen_combo = seen_combo or host.battle_last_round_event_types.has("combo_attack") or host.battle_last_event_type == "combo_attack"
 		seen_player = seen_player or host.battle_last_round_actor_order.has(BattleModel.PLAYER_ACTOR_ID)
 		seen_pet = seen_pet or host.battle_last_round_actor_order.has(BattleModel.PLAYER_PET_ID)
@@ -3117,8 +3138,8 @@ func _run_auto_battle_auto_10v10_check() -> void:
 				seen_npc_allies.append(actor_id)
 		if seen_combo and seen_player and seen_pet and seen_npc_allies.size() >= 3:
 			break
-	var status = "ok" if loaded and zone_found and formation_ok and target_id != "" and planned_npc_allies.size() >= 3 and auto_button_on and stop_button_seen and seen_combo and seen_player and seen_pet and seen_npc_allies.size() >= 3 else "failed"
-	print("battle auto 10v10 check ready: status=%s loaded=%s zone_found=%s formation=%s target=%s planned_combo=%s planned_npc_allies=%d button_on=%s stop_button=%s seen_combo=%s seen_player=%s seen_pet=%s seen_npc_allies=%d actor_order=%s events=%s" % [
+	var status = "ok" if loaded and zone_found and formation_ok and target_id != "" and planned_npc_allies.size() >= 3 and auto_button_on and cancel_button_seen and seen_combo and seen_player and seen_pet and seen_npc_allies.size() >= 3 else "failed"
+	print("battle auto 10v10 check ready: status=%s loaded=%s zone_found=%s formation=%s target=%s planned_combo=%s planned_npc_allies=%d button_on=%s cancel_button=%s seen_combo=%s seen_player=%s seen_pet=%s seen_npc_allies=%d actor_order=%s events=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -3127,7 +3148,7 @@ func _run_auto_battle_auto_10v10_check() -> void:
 		str(planned_combo),
 		planned_npc_allies.size(),
 		str(auto_button_on),
-		str(stop_button_seen),
+		str(cancel_button_seen),
 		str(seen_combo),
 		str(seen_player),
 		str(seen_pet),
@@ -5253,7 +5274,7 @@ func _run_auto_battle_command_timer_check() -> void:
 		and timer_same_turn_sync_applied
 		and host.battle_command_owner == "spirit"
 		and host.battle_command_title_label != null
-		and host.battle_command_title_label.text == "精灵"
+		and host.battle_command_title_label.text == "咒术"
 	)
 	host.battle_command_countdown_remaining = 42.0
 	host.battle_command_countdown_last_second = -1
@@ -8005,16 +8026,15 @@ func _run_auto_battle_label_check() -> void:
 		and int(enemy_actor.get("level", 0)) == 3
 		and host._battle_actor_label(enemy_actor) == "高速乌力 Lv3"
 	)
-	host.player_profile = PlayerProgressModel.with_training_partner_count(label_profile, 4)
-	if zone_found:
-		host._start_battle(BattleModel.create_training_partner_battle(zone, 10))
-	await host.get_tree().process_frame
-	var large_actors: Array = host.battle_state.get("actors", []) if host.battle_active else []
-	var large_count_ok = large_actors.size() == 20
-	var large_labels_ok = large_count_ok
-	var large_visible_ok = large_count_ok
+	var active_actors: Array = host.battle_state.get("actors", []) if host.battle_active else []
+	var active_count_ok := active_actors.size() >= 3
+	var active_labels_ok := active_count_ok
+	var active_visible_ok := active_count_ok
+	var legacy_training_absent := (
+		PlayerProgressModel.training_partner_count(host.player_profile) == 0
+	)
 	var large_long_label_plan = host._battle_actor_label_draw_plan({
-		"name": "陪练高速乌力1",
+		"name": "匹配队员高速乌力1",
 		"level": 131,
 	}, host._battle_actor_visual_scale(), true)
 	var large_long_label_ok = (
@@ -8022,17 +8042,31 @@ func _run_auto_battle_label_check() -> void:
 		and bool(large_long_label_plan.get("fits", false))
 		and bool(large_long_label_plan.get("fullLabel", false))
 	)
+	var battle_function_snapshot: Dictionary = (
+		host.battle_function_drawer.snapshot()
+		if host.battle_function_drawer != null
+		else {}
+	)
+	var battle_function_enabled_ids: Array = battle_function_snapshot.get(
+		"enabledIds",
+		[]
+	)
 	var battle_menu_buttons_enabled_ok = (
 		host.action_bar != null
-		and host.action_bar.visible
-		and host.codex_menu_button != null
-		and not host.codex_menu_button.disabled
-		and host.quest_menu_button != null
-		and not host.quest_menu_button.disabled
+		and not host.action_bar.visible
+		and host.top_panel != null
+		and not host.top_panel.visible
+		and host.battle_function_drawer != null
+		and host.battle_function_drawer.visible
+		and not bool(battle_function_snapshot.get("mapIncluded", true))
+		and battle_function_enabled_ids.has("codex")
+		and battle_function_enabled_ids.has("quest")
+		and host.map_menu_button != null
+		and host.map_menu_button.disabled
 	)
 	var player_help_label_ok = (
 		host.battle_command_buttons.has("help")
-		and (host.battle_command_buttons["help"] as Button).text == "帮助"
+		and (host.battle_command_buttons["help"] as Button).text == "援助"
 	)
 	host._open_codex_panel()
 	await host.get_tree().process_frame
@@ -8065,25 +8099,31 @@ func _run_auto_battle_label_check() -> void:
 	host._close_quest_panel()
 	await host.get_tree().process_frame
 	var command_after_quest_ok = host.battle_command_panel != null and host.battle_command_panel.visible
-	for value in large_actors:
+	for value in active_actors:
 		if not (value is Dictionary):
-			large_labels_ok = false
-			large_visible_ok = false
+			active_labels_ok = false
+			active_visible_ok = false
 			continue
-		var large_actor = value as Dictionary
-		var label = host._battle_actor_label(large_actor)
-		large_labels_ok = large_labels_ok and label != "" and label.find(" Lv") >= 0
-		large_visible_ok = large_visible_ok and host._battle_should_show_actor_label(large_actor)
+		var active_actor = value as Dictionary
+		var actor_id := str(active_actor.get("id", ""))
+		legacy_training_absent = (
+			legacy_training_absent
+			and actor_id.find("training_partner") < 0
+		)
+		var label = host._battle_actor_label(active_actor)
+		active_labels_ok = active_labels_ok and label != "" and label.find(" Lv") >= 0
+		active_visible_ok = active_visible_ok and host._battle_should_show_actor_label(active_actor)
 	var battle_menu_ok = player_help_label_ok and battle_menu_buttons_enabled_ok and codex_in_battle_ok and command_after_codex_ok and quest_in_battle_ok and command_after_quest_ok
-	var status = "ok" if loaded and zone_found and host.battle_active and player_ok and pet_ok and enemy_ok and large_count_ok and large_labels_ok and large_visible_ok and large_long_label_ok and battle_menu_ok else "failed"
-	print("battle label check ready: status=%s player=%s pet=%s enemy=%s large_count=%s large_labels=%s large_visible=%s long_label=%s battle_menu=%s buttons=%s codex=%s quest=%s quest_readonly=%s command_after=%s/%s long_plan=%s player_label=%s pet_label=%s enemy_label=%s" % [
+	var status = "ok" if loaded and zone_found and host.battle_active and player_ok and pet_ok and enemy_ok and active_count_ok and active_labels_ok and active_visible_ok and legacy_training_absent and large_long_label_ok and battle_menu_ok else "failed"
+	print("battle label check ready: status=%s player=%s pet=%s enemy=%s active_count=%s active_labels=%s active_visible=%s legacy_training_absent=%s long_label=%s battle_menu=%s buttons=%s codex=%s quest=%s quest_readonly=%s command_after=%s/%s long_plan=%s player_label=%s pet_label=%s enemy_label=%s" % [
 		status,
 		str(player_ok),
 		str(pet_ok),
 		str(enemy_ok),
-		str(large_count_ok),
-		str(large_labels_ok),
-		str(large_visible_ok),
+		str(active_count_ok),
+		str(active_labels_ok),
+		str(active_visible_ok),
+		str(legacy_training_absent),
 		str(large_long_label_ok),
 		str(battle_menu_ok),
 		str(battle_menu_buttons_enabled_ok),

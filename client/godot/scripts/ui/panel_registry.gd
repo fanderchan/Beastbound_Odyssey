@@ -53,7 +53,7 @@ func _compact_controls(controls: Array) -> Array:
 
 
 func _control_or_visible_child_contains(control: Control, point: Vector2) -> bool:
-	if control == null or not control.visible:
+	if control == null or not control.is_visible_in_tree():
 		return false
 	if control.get_global_rect().has_point(point):
 		return true

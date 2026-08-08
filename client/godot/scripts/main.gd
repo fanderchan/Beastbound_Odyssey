@@ -83,6 +83,9 @@ const QaPanelPresenter := preload("res://scripts/ui/qa_panel_presenter.gd")
 const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const DialogQuestCoordinator := preload("res://scripts/ui/dialog_quest_coordinator.gd")
 const PanelFlowCoordinator := preload("res://scripts/ui/panel_flow_coordinator.gd")
+const BattleCommandAwakenedHost := preload(
+	"res://scripts/ui/battle_command_awakened_host.gd"
+)
 const CharacterEntryFlowController := preload(
 	"res://scripts/ui/character_entry_flow_controller.gd"
 )
@@ -132,6 +135,12 @@ const PlayerCharacterOwnerReviewCapture := preload(
 )
 const HangMatchmakingWorldHudOwnerReviewCapture := preload(
 	"res://scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd"
+)
+const BattleCommandAwakenedOwnerReviewCapture := preload(
+	"res://scripts/qa/battle_command_awakened_owner_review_capture.gd"
+)
+const BattleCommandAwakenedViewCheck := preload(
+	"res://scripts/qa/battle_command_awakened_view_check.gd"
 )
 const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
 const PetBattleReviewLab := preload("res://scripts/qa/pet_battle_review_lab.gd")
@@ -325,6 +334,9 @@ var encounter_body_label: Label
 var encounter_enter_button: Button
 var encounter_retreat_button: Button
 var battle_command_panel: PanelContainer
+var battle_command_awakened_host
+var battle_command_awakened_view
+var battle_function_drawer
 var battle_command_title_label: Label
 var battle_capture_capacity_label: Label
 var battle_round_panel: PanelContainer
@@ -835,6 +847,7 @@ var auto_stable_facility_check: bool = false
 var auto_map_transfer_check: bool = false
 var auto_encounter_check: bool = false
 var auto_battle_check: bool = false
+var auto_battle_command_awakened_ui_check: bool = false
 var auto_battle_auto_attack_check: bool = false
 var auto_battle_auto_10v10_check: bool = false
 var auto_pet_battle_review_lab_check: bool = false
@@ -1078,6 +1091,7 @@ var map_awakened_owner_review_capture: bool = false
 var character_entry_owner_review_capture: bool = false
 var player_character_owner_review_capture: bool = false
 var hang_matchmaking_world_hud_owner_review_capture: bool = false
+var battle_command_awakened_owner_review_capture: bool = false
 var pet_action_art_preview: bool = false
 var battle_visual_review_scenario: String = ""
 var audio_impact_review_preview: bool = false
@@ -1661,6 +1675,8 @@ func _ready() -> void:
 		call_deferred("_run_auth_ux_preview")
 	elif auto_encounter_check:
 		call_deferred("_run_auto_encounter_check")
+	elif auto_battle_command_awakened_ui_check:
+		call_deferred("_run_auto_battle_command_awakened_ui_check")
 	elif auto_battle_action_catalog_check:
 		call_deferred("_run_auto_battle_action_catalog_check")
 	elif auto_battle_action_system_check:
@@ -2033,6 +2049,8 @@ func _ready() -> void:
 		call_deferred("_run_player_character_owner_review_capture")
 	elif hang_matchmaking_world_hud_owner_review_capture:
 		call_deferred("_run_hang_matchmaking_world_hud_owner_review_capture")
+	elif battle_command_awakened_owner_review_capture:
+		call_deferred("_run_battle_command_awakened_owner_review_capture")
 	elif pet_action_art_preview:
 		call_deferred("_run_pet_action_art_preview")
 	elif battle_visual_review_scenario != "":
@@ -2274,6 +2292,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == "--hang-matchmaking-world-hud-owner-review-capture"
+		or normalized == BattleCommandAwakenedOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == "--server-step-world-move"
 	)
 
@@ -2410,6 +2429,8 @@ func _apply_preview_window_args() -> void:
 			auto_encounter_check = true
 		elif arg == "--auto-battle-check":
 			auto_battle_check = true
+		elif arg == "--auto-battle-command-awakened-ui-check":
+			auto_battle_command_awakened_ui_check = true
 		elif arg == "--auto-battle-auto-attack-check":
 			auto_battle_auto_attack_check = true
 		elif arg == "--auto-battle-auto-10v10-check":
@@ -2897,6 +2918,8 @@ func _apply_preview_window_args() -> void:
 			player_character_owner_review_capture = true
 		elif arg == "--hang-matchmaking-world-hud-owner-review-capture":
 			hang_matchmaking_world_hud_owner_review_capture = true
+		elif arg == BattleCommandAwakenedOwnerReviewCapture.CAPTURE_FLAG:
+			battle_command_awakened_owner_review_capture = true
 		elif arg == "--pet-action-art-preview":
 			pet_action_art_preview = true
 		elif arg.begins_with("--battle-visual-review="):
@@ -3590,6 +3613,10 @@ func _run_auto_battle_check() -> void:
 	await _auto_checks()._run_auto_battle_check()
 
 
+func _run_auto_battle_command_awakened_ui_check() -> void:
+	await BattleCommandAwakenedViewCheck.new(self).run()
+
+
 func _run_auto_battle_auto_attack_check() -> void:
 	await _auto_checks()._run_auto_battle_auto_attack_check()
 
@@ -4148,6 +4175,10 @@ func _run_player_character_owner_review_capture() -> void:
 
 func _run_hang_matchmaking_world_hud_owner_review_capture() -> void:
 	await HangMatchmakingWorldHudOwnerReviewCapture.new(self).run()
+
+
+func _run_battle_command_awakened_owner_review_capture() -> void:
+	await BattleCommandAwakenedOwnerReviewCapture.new(self).run()
 
 
 func _run_pet_action_art_preview() -> void:
@@ -6908,12 +6939,12 @@ func _start_stat_formula_test_battle() -> bool:
 func _battle_buttons_match_request() -> bool:
 	var expected := {
 		"attack": "攻击",
-		"spirit": "精灵",
-		"capture": "捕捉",
-		"help": "帮助",
+		"spirit": "咒术",
+		"capture": "抓捕",
+		"help": "援助",
 		"defend": "防御",
-		"item": "物品",
-		"switch_pet": "换宠",
+		"item": "道具",
+		"switch_pet": "召唤",
 		"run": "逃跑",
 	}
 	for command_id in expected.keys():
@@ -6951,10 +6982,10 @@ func _set_battle_command_owner(owner: String) -> void:
 			"run": _pet_skill_button_label(7),
 		})
 	elif owner == "spirit":
-		battle_command_title_label.text = "精灵"
+		battle_command_title_label.text = "咒术"
 		_apply_spirit_button_labels()
 	elif owner == "item":
-		battle_command_title_label.text = "物品"
+		battle_command_title_label.text = "道具"
 		_apply_battle_button_labels({
 			"attack": _battle_item_label(BattleModel.ITEM_HEAL_ALL, "群体草药5"),
 			"spirit": _battle_item_label(BattleModel.ITEM_HEAL_SINGLE, "回复药5"),
@@ -6966,21 +6997,21 @@ func _set_battle_command_owner(owner: String) -> void:
 			"run": "",
 		})
 	elif owner == "capture":
-		battle_command_title_label.text = "捕捉"
+		battle_command_title_label.text = "抓捕"
 		_apply_capture_tool_button_labels()
 	elif owner == "switch_pet":
-		battle_command_title_label.text = "换宠"
+		battle_command_title_label.text = "召唤"
 		_apply_switch_pet_button_labels()
 	else:
 		battle_command_title_label.text = "人物"
 		_apply_battle_button_labels({
 			"attack": "攻击",
-			"spirit": "精灵",
-			"capture": "捕捉",
-			"help": "帮助",
+			"spirit": "咒术",
+			"capture": "抓捕",
+			"help": "援助",
 			"defend": "防御",
-			"item": "物品",
-			"switch_pet": "换宠",
+			"item": "道具",
+			"switch_pet": "召唤",
 			"run": _battle_player_run_label(),
 		})
 	_sync_battle_command_layout()
@@ -7008,6 +7039,11 @@ func _set_battle_auto_attack_enabled(enabled: bool, show_message: bool = true) -
 
 
 func _sync_battle_auto_button() -> void:
+	if (
+		battle_command_awakened_host != null
+		and battle_command_awakened_host.sync_auto_state()
+	):
+		return
 	if battle_auto_button != null:
 		battle_auto_button.visible = battle_active
 		battle_auto_button.disabled = not battle_active
@@ -7769,6 +7805,16 @@ func _sync_battle_command_layout() -> void:
 	battle_command_button_grid.columns = 1 if list_mode else 4
 	var visible_ids := _battle_command_visible_ids()
 	var ordered_ids := _battle_command_order_for_owner()
+	if (
+		battle_command_awakened_host != null
+		and battle_command_awakened_host.sync_command_layout(
+			battle_command_owner,
+			visible_ids,
+			ordered_ids
+		)
+	):
+		battle_command_panel.custom_minimum_size = _battle_command_panel_size(_layout_size())
+		return
 	var button_size := _battle_command_button_size()
 	var child_index := 0
 	for command_id in ordered_ids:
@@ -7843,6 +7889,11 @@ func _battle_command_panel_is_top_right() -> bool:
 	if battle_command_panel == null or not battle_command_panel.visible:
 		return false
 	var viewport_size := _layout_size()
+	if battle_command_awakened_host != null:
+		return (
+			battle_command_panel.position.x + battle_command_panel.size.x > viewport_size.x - 28.0
+			and battle_command_panel.position.y + battle_command_panel.size.y > viewport_size.y - 28.0
+		)
 	return battle_command_panel.position.x + battle_command_panel.size.x > viewport_size.x - 28.0 and battle_command_panel.position.y <= 90.0
 
 
@@ -7873,8 +7924,25 @@ func _battle_full_formation_screen_layout_ok() -> bool:
 
 
 func _battle_point_overlaps_panel(point: Vector2) -> bool:
-	for control in [battle_command_panel, battle_auto_stop_button, battle_passive_panel, battle_message_panel, action_bar, top_panel]:
-		if control != null and control.visible:
+	if (
+		battle_command_awakened_host != null
+		and battle_command_awakened_host.point_overlaps(point)
+	):
+		return true
+	var fallback_controls: Array = [
+		battle_passive_panel,
+		battle_message_panel,
+		action_bar,
+		top_panel,
+	]
+	# The awakened view deliberately leaves transparent space between its active
+	# controls. Never fall back to its full panel rectangle or that space becomes
+	# an invisible battle-target click wall.
+	if battle_command_awakened_host == null:
+		fallback_controls.push_front(battle_auto_stop_button)
+		fallback_controls.push_front(battle_command_panel)
+	for control in fallback_controls:
+		if control != null and control.is_visible_in_tree():
 			if Rect2(control.global_position, control.size).has_point(point):
 				return true
 	return false
@@ -8936,6 +9004,8 @@ func _build_hud() -> void:
 	# The first registry pass happens while the legacy HUD is being built.
 	# Re-register once the focused full-screen entry flow exists.
 	_panel_flow()._register_hud_panels()
+	battle_command_awakened_host = BattleCommandAwakenedHost.new(self)
+	battle_command_awakened_host.mount()
 	npc_hover_identity_presenter = NpcHoverIdentityPresenter.new()
 	npc_hover_identity_presenter.build(hud_root)
 	npc_hover_identity_presenter.configure_map(map_data)
@@ -11774,6 +11844,7 @@ func _begin_spirit_target_selection() -> void:
 
 func _on_pet_battle_command_pressed(command_id: String) -> void:
 	if command_id == "help":
+		battle_target_mode = "enemy"
 		battle_pending_spirit_id = ""
 		battle_pending_item_id = ""
 		battle_pending_capture_tool_id = ""
@@ -12925,6 +12996,8 @@ func _sync_battle_buttons() -> void:
 		battle_message_panel.visible = battle_active or world_log_message != ""
 	if action_bar != null:
 		action_bar.visible = battle_active or not _world_menu_is_open()
+		if battle_active and battle_command_awakened_host != null:
+			action_bar.visible = false
 		if _battle_overlay_panel_open():
 			action_bar.visible = false
 	var can_command := battle_active and not _battle_commands_locked()
@@ -13033,10 +13106,16 @@ func _sync_battle_buttons() -> void:
 							button.disabled = not has_ally
 						"switch_pet":
 							button.disabled = BattleModel.switchable_pet_entries(battle_state).is_empty()
+	if battle_command_awakened_host != null:
+		battle_command_awakened_host.sync_enabled_state()
 
 
 func _battle_command_panel_should_be_visible() -> bool:
-	return battle_active and not _battle_commands_locked() and not _battle_overlay_panel_open()
+	return (
+		battle_active
+		and (battle_auto_attack_enabled or not _battle_commands_locked())
+		and not _battle_overlay_panel_open()
+	)
 
 
 func _battle_overlay_panel_open() -> bool:
@@ -14074,27 +14153,23 @@ func _layout_hud() -> void:
 	var world_menu_open := _world_menu_is_open()
 	top_panel.position = Vector2(margin, margin)
 	top_panel.size = Vector2(top_width, 56)
-	top_panel.visible = true
+	top_panel.visible = not battle_active
 	if npc_hover_identity_presenter != null:
 		npc_hover_identity_presenter.layout(viewport_size, Rect2(top_panel.position, top_panel.size))
 	if battle_round_panel != null:
 		var round_size := Vector2(128.0, 40.0)
-		var round_y := top_panel.position.y + top_panel.size.y + 8.0
-		var timer_size := Vector2(112.0, 44.0)
-		var timer_y := margin
-		if viewport_size.x < 720.0:
-			timer_y = round_y
-			round_y = timer_y + timer_size.y + 8.0
-		battle_round_panel.position = Vector2(margin, round_y)
+		var round_y := margin
+		battle_round_panel.position = Vector2(
+			(viewport_size.x - round_size.x) * 0.5,
+			round_y
+		)
 		battle_round_panel.size = round_size
 		battle_round_panel.visible = battle_active
 		if battle_round_label != null:
 			battle_round_label.size = round_size - Vector2(20.0, 12.0)
 	if battle_timer_panel != null:
 		var timer_size := Vector2(112.0, 44.0)
-		var timer_y := margin
-		if viewport_size.x < 720.0:
-			timer_y = top_panel.position.y + top_panel.size.y + 8.0
+		var timer_y := margin + 44.0
 		battle_timer_panel.position = Vector2((viewport_size.x - timer_size.x) * 0.5, timer_y)
 		battle_timer_panel.size = timer_size
 		battle_timer_panel.visible = _battle_timer_should_be_visible()
@@ -14111,7 +14186,7 @@ func _layout_hud() -> void:
 
 	if battle_active:
 		side_panel.visible = false
-		action_bar.visible = true
+		action_bar.visible = battle_command_awakened_host == null
 		action_bar.position = Vector2(viewport_size.x - (action_collapsed_size.x if action_bar_collapsed else action_width) - margin, viewport_size.y - 104.0)
 		action_bar.size = action_collapsed_size if action_bar_collapsed else action_size
 	elif is_phone_shape or world_menu_open:
@@ -14451,18 +14526,30 @@ func _layout_hud() -> void:
 	if battle_active:
 		pet_rename_panel.visible = false
 
-	var battle_panel_size := _battle_command_panel_size(viewport_size)
-	var battle_width := battle_panel_size.x
-	var battle_height := battle_panel_size.y
-	var battle_x := viewport_size.x - battle_width - margin
-	var battle_y := margin
-	if battle_x < top_panel.position.x + top_panel.size.x + margin:
-		battle_y = top_panel.position.y + top_panel.size.y + 10.0
-	battle_command_panel.position = Vector2(
-		maxf(margin, battle_x),
-		battle_y
-	)
-	battle_command_panel.size = Vector2(battle_width, battle_height)
+	if (
+		battle_command_awakened_host != null
+		and (
+			battle_active
+			or battle_command_awakened_host.needs_world_layout_reset()
+		)
+	):
+		battle_command_awakened_host.apply_layout(
+			viewport_size,
+			battle_active and (world_menu_open or _battle_overlay_panel_open())
+		)
+	else:
+		var battle_panel_size := _battle_command_panel_size(viewport_size)
+		var battle_width := battle_panel_size.x
+		var battle_height := battle_panel_size.y
+		var battle_x := viewport_size.x - battle_width - margin
+		var battle_y := margin
+		if battle_x < top_panel.position.x + top_panel.size.x + margin:
+			battle_y = top_panel.position.y + top_panel.size.y + 10.0
+		battle_command_panel.position = Vector2(
+			maxf(margin, battle_x),
+			battle_y
+		)
+		battle_command_panel.size = Vector2(battle_width, battle_height)
 	battle_command_panel.visible = _battle_command_panel_should_be_visible()
 	if battle_auto_stop_button != null:
 		var stop_size := Vector2(86.0, 44.0)
@@ -14630,6 +14717,8 @@ func _battle_command_panel_height(size: Vector2) -> float:
 
 
 func _battle_command_panel_size(size: Vector2) -> Vector2:
+	if battle_command_awakened_host != null:
+		return battle_command_awakened_host.recommended_size(size)
 	var target_size := BATTLE_COMMAND_PLAYER_SIZE if battle_command_owner == "player" else BATTLE_COMMAND_MENU_SIZE
 	var width := minf(size.x - 36.0, target_size.x)
 	var height := minf(size.y - 36.0, target_size.y)

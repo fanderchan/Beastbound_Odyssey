@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "battle_command_awakened_v1",
+  "source": "source/generated/battle_command_icon_atlas_alpha.png",
+  "sourceSha256": "7e1d3cd281a11064d8e84a1b337d7e496da0df168d1a3f14410a7e1c3892c9d2",
+  "icons": [
+    {
+      "id": "attack",
+      "path": "runtime/icons/attack.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "94737db13ba7d3c6061b7b582b71bac76b8428bbdf8b605118495fe5403c0034"
+    },
+    {
+      "id": "spirit",
+      "path": "runtime/icons/spirit.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "94fe39e74484c52990d4c0d3c7d65b8019bda2eaf82bfd3d3031656ec476d4ba"
+    },
+    {
+      "id": "item",
+      "path": "runtime/icons/item.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "1bf1c0f9da65d37838c8db6b0883b8145ea8a081bcb2329f42d47d608eb33ff0"
+    },
+    {
+      "id": "escape",
+      "path": "runtime/icons/escape.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "57d80cda38daa519dd87800bc66f8c2aff6865c23e215a71f74c1c3b99bbdb76"
+    },
+    {
+      "id": "assist",
+      "path": "runtime/icons/assist.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "e34bc0a2f69c02f451fab18feb8fdf2eafdf4d60fd47bf0fe256d7fcff5d9392"
+    },
+    {
+      "id": "capture",
+      "path": "runtime/icons/capture.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "6dcfc59615499936be065137421fec071c1606e496f5fc4321b08e66998baf8d"
+    },
+    {
+      "id": "summon",
+      "path": "runtime/icons/summon.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "e831d0f326abf335c30cb56d6e68a7ca0323e4cbd018178be48b74902ed64fcc"
+    },
+    {
+      "id": "defend",
+      "path": "runtime/icons/defend.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "0d52f39abef38243fe723c8e628c83987ab291490bbd732fee477cc1650adc69"
+    },
+    {
+      "id": "auto",
+      "path": "runtime/icons/auto.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "93f40d5fe0dbc541332ef2f52d3d7782433072111124e161cf4d1ef4ae3fa86b"
+    },
+    {
+      "id": "skill",
+      "path": "runtime/icons/skill.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "4db1dac6ddea75763cec5c4475744b85bec5facf67063c0f8b11cf82ba2e3642"
+    },
+    {
+      "id": "recall",
+      "path": "runtime/icons/recall.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "914cb8f50137874d6bd0fe606a6458b307adeb5624d94a18ae829b1568824099"
+    },
+    {
+      "id": "return",
+      "path": "runtime/icons/return.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "dd5f08f131dbccab0fee271abb58e309da52bf954902c7cc10f5d897ade66cd6"
+    },
+    {
+      "id": "player",
+      "path": "runtime/icons/player.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "230b25f544d9c414576dd900c7c3173af8ecbc425e4135de743ff578370c132f"
+    },
+    {
+      "id": "pet",
+      "path": "runtime/icons/pet.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "5a6ea929a0b42c0c7915806917014261c8a859db88a9cf4da639ee6b09df75d1"
+    },
+    {
+      "id": "cancel",
+      "path": "runtime/icons/cancel.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "0f2911bc7af6b9a919ee9fc4c322ddd9eb18b40429cd8b7aadd763614d2572e8"
+    },
+    {
+      "id": "managed",
+      "path": "runtime/icons/managed.png",
+      "width": 96,
+      "height": 96,
+      "sha256": "99239f9252abc49401513143b90c57f9b972dfc591fbfe02be2c3c503e9c937e"
+    }
+  ]
+}
