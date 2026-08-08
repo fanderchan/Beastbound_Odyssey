@@ -1868,6 +1868,11 @@ func _run_auto_camera_click_check() -> void:
 	var expected_cell = Vector2i(27, 26)
 	host.player.global_position = IsoMapModel.grid_to_world(host.map_data, camera_anchor_cell)
 	host._update_camera_position(true)
+	# Camera2D publishes its displayed screen center on the render/process tick.
+	# The expanded edge-safe range can move farther than the old clamp, so sample
+	# the same center a real pointer event sees instead of the pre-tick value.
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
 	var world_point = IsoMapModel.grid_to_world(host.map_data, expected_cell)
 	var screen_point = host._world_to_screen(world_point)
 	host._set_click_move_target(screen_point)
@@ -2608,16 +2613,20 @@ func _run_auto_npc_collision_check() -> void:
 func _run_auto_map_transfer_check() -> void:
 	var previous_multiplier = host.gm_battle_speed_multiplier
 	host._set_gm_speed_multiplier(10)
+	var input_accept_before: int = host.click_move_input_accept_count
+	var input_ui_reject_before: int = host.click_move_input_ui_reject_count
 	var start_ok = host.current_map_id == "firebud_training_yard"
 	var outbound_warp = InteractionModel.find_by_id(host.map_data, "warp_to_village_gate")
 	var outbound_found = not outbound_warp.is_empty()
 	var outbound_overlap = outbound_found and not InteractionModel.blocks_movement(outbound_warp)
+	var outbound_click_report: Dictionary = {}
 	if outbound_found:
-		host._set_click_move_target(host._world_to_screen(InteractionModel.marker_world_position(host.map_data, outbound_warp)))
-	var outbound_guard = 0
-	while outbound_guard < 320 and host.current_map_id != "firebud_village_gate":
-		outbound_guard += 1
-		await host.get_tree().physics_frame
+		outbound_click_report = await _map_transfer_check_click_interaction(
+			outbound_warp,
+			"firebud_village_gate",
+			12,
+			360
+		)
 	var arrived_village = host.current_map_id == "firebud_village_gate"
 	var village_spawn_ok = false
 	var village_map_payload_ok = false
@@ -2635,12 +2644,14 @@ func _run_auto_map_transfer_check() -> void:
 	var return_warp = InteractionModel.find_by_id(host.map_data, "warp_to_training_yard")
 	var return_found = arrived_village and not return_warp.is_empty()
 	var return_overlap = return_found and not InteractionModel.blocks_movement(return_warp)
+	var return_click_report: Dictionary = {}
 	if return_found:
-		host._set_click_move_target(host._world_to_screen(InteractionModel.marker_world_position(host.map_data, return_warp)))
-	var return_guard = 0
-	while return_guard < 220 and host.current_map_id != "firebud_training_yard":
-		return_guard += 1
-		await host.get_tree().physics_frame
+		return_click_report = await _map_transfer_check_click_interaction(
+			return_warp,
+			"firebud_training_yard",
+			6,
+			240
+		)
 	var returned_training = host.current_map_id == "firebud_training_yard"
 	var return_spawn_ok = false
 	var return_map_payload_ok = false
@@ -2656,8 +2667,41 @@ func _run_auto_map_transfer_check() -> void:
 		)
 	host._set_gm_speed_multiplier(previous_multiplier)
 	var speed_restored = host._gm_battle_speed_multiplier() == clampi(previous_multiplier, GM_BATTLE_SPEED_MIN, GM_BATTLE_SPEED_MAX)
-	var status = "ok" if start_ok and outbound_found and outbound_overlap and arrived_village and village_spawn_ok and village_map_payload_ok and return_found and return_overlap and returned_training and return_spawn_ok and return_map_payload_ok else "failed"
-	print("map transfer check ready: status=%s speed_x10=true speed_restored=%s start_ok=%s outbound_found=%s outbound_overlap=%s arrived_village=%s village_spawn_ok=%s village_map_payload_ok=%s return_found=%s return_overlap=%s returned_training=%s return_spawn_ok=%s return_map_payload_ok=%s final_map=%s final_cell=%s" % [
+	var real_click_count: int = int(outbound_click_report.get("realLeftClickCount", 0)) + int(return_click_report.get("realLeftClickCount", 0))
+	var cross_frame_count: int = int(outbound_click_report.get("crossFrameCount", 0)) + int(return_click_report.get("crossFrameCount", 0))
+	var coordinate_roundtrip_count: int = int(outbound_click_report.get("coordinateRoundtripCount", 0)) + int(return_click_report.get("coordinateRoundtripCount", 0))
+	var input_accept_count: int = host.click_move_input_accept_count - input_accept_before
+	var input_ui_reject_count: int = host.click_move_input_ui_reject_count - input_ui_reject_before
+	var evidence_capture_requested: bool = bool(outbound_click_report.get("evidenceCaptureRequested", false))
+	var evidence_capture_ok: bool = bool(outbound_click_report.get("evidenceCaptureOk", false))
+	var action_bar_visible: bool = host.action_bar != null and host.action_bar.is_visible_in_tree()
+	var action_bar_owned_by_ui := false
+	if action_bar_visible:
+		action_bar_owned_by_ui = host._is_ui_point(host.action_bar.get_global_rect().get_center())
+	var formal_hud_mounted: bool = (
+		host.world_hud_awakened_view != null
+		and host.world_hud_awakened_view.is_visible_in_tree()
+	)
+	var hud_still_usable: bool = action_bar_visible and action_bar_owned_by_ui and formal_hud_mounted
+	var real_input_ok: bool = (
+		bool(outbound_click_report.get("ok", false))
+		and bool(return_click_report.get("ok", false))
+		and bool(outbound_click_report.get("targetClicked", false))
+		and bool(return_click_report.get("targetClicked", false))
+		and bool(outbound_click_report.get("playerAndTargetVisible", false))
+		and bool(return_click_report.get("playerAndTargetVisible", false))
+		and bool(outbound_click_report.get("cameraInsideLimits", false))
+		and bool(return_click_report.get("cameraInsideLimits", false))
+		and real_click_count >= 2
+		and cross_frame_count == real_click_count
+		and coordinate_roundtrip_count == real_click_count
+		and input_accept_count == real_click_count
+		and input_ui_reject_count == 0
+		and hud_still_usable
+		and (not evidence_capture_requested or evidence_capture_ok)
+	)
+	var status = "ok" if start_ok and outbound_found and outbound_overlap and arrived_village and village_spawn_ok and village_map_payload_ok and return_found and return_overlap and returned_training and return_spawn_ok and return_map_payload_ok and real_input_ok else "failed"
+	print("map transfer check ready: status=%s speed_x10=true speed_restored=%s start_ok=%s outbound_found=%s outbound_overlap=%s arrived_village=%s village_spawn_ok=%s village_map_payload_ok=%s return_found=%s return_overlap=%s returned_training=%s return_spawn_ok=%s return_map_payload_ok=%s real_input_ok=%s real_clicks=%d cross_frame=%d coordinate_roundtrip=%d input_accept=%d input_ui_reject=%d outbound_segments=%d return_segments=%d outbound_player_target_visible=%s return_player_target_visible=%s camera_limits=%s/%s hud_visible=%s hud_ui_owned=%s formal_hud=%s evidence_requested=%s evidence_ok=%s evidence_path=%s evidence_size=%s safe_rect=%s safe_anchor=%s outbound_reason=%s return_reason=%s outbound_trace=%s return_trace=%s final_map=%s final_cell=%s" % [
 		status,
 		str(speed_restored),
 		str(start_ok),
@@ -2671,10 +2715,265 @@ func _run_auto_map_transfer_check() -> void:
 		str(returned_training),
 		str(return_spawn_ok),
 		str(return_map_payload_ok),
+		str(real_input_ok),
+		real_click_count,
+		cross_frame_count,
+		coordinate_roundtrip_count,
+		input_accept_count,
+		input_ui_reject_count,
+		int(outbound_click_report.get("segmentCount", 0)),
+		int(return_click_report.get("segmentCount", 0)),
+		str(outbound_click_report.get("playerAndTargetVisible", false)),
+		str(return_click_report.get("playerAndTargetVisible", false)),
+		str(outbound_click_report.get("cameraInsideLimits", false)),
+		str(return_click_report.get("cameraInsideLimits", false)),
+		str(action_bar_visible),
+		str(action_bar_owned_by_ui),
+		str(formal_hud_mounted),
+		str(evidence_capture_requested),
+		str(evidence_capture_ok),
+		str(outbound_click_report.get("evidenceCapturePath", "")),
+		str(outbound_click_report.get("evidenceCaptureSize", Vector2i.ZERO)),
+		str(host.world_camera_safe_viewport_rect),
+		str(host.world_camera_safe_anchor_screen),
+		str(outbound_click_report.get("reason", "")),
+		str(return_click_report.get("reason", "")),
+		str(outbound_click_report.get("segmentTrace", [])),
+		str(return_click_report.get("segmentTrace", [])),
 		host.current_map_id,
 		str(IsoMapModel.world_to_grid(host.map_data, host.player.global_position)),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _map_transfer_check_click_interaction(
+	interaction: Dictionary,
+	expected_map_id: String,
+	max_segments: int,
+	max_settle_frames: int
+) -> Dictionary:
+	var source_map_id: String = host.current_map_id
+	var interaction_id := str(interaction.get("id", ""))
+	var target_cell := InteractionModel.cell_for(interaction)
+	var real_left_click_count := 0
+	var cross_frame_count := 0
+	var coordinate_roundtrip_count := 0
+	var target_clicked := false
+	var player_and_target_visible := false
+	var camera_inside_limits := true
+	var evidence_capture_path := ""
+	var evidence_capture_requested := false
+	var evidence_capture_ok := false
+	var evidence_capture_size := Vector2i.ZERO
+	var segment_trace: Array[String] = []
+	var reason := "segment_limit"
+	for _segment_index in range(max_segments):
+		if not await _map_transfer_check_wait_for_camera_settle(90):
+			reason = "camera_did_not_settle"
+			break
+		if host.current_map_id == expected_map_id:
+			reason = "arrived"
+			break
+		if host.current_map_id != source_map_id or host.player == null or host.map_data.is_empty():
+			reason = "unexpected_map_or_missing_player"
+			break
+		var start_cell := IsoMapModel.world_to_grid(host.map_data, host.player.global_position)
+		var path: Array[Vector2i] = IsoMapModel.find_path(host.map_data, start_cell, target_cell)
+		if path.size() < 2:
+			reason = "path_missing"
+			break
+		var click_target := _map_transfer_check_visible_path_target(path, interaction)
+		if click_target.is_empty():
+			reason = "no_visible_world_target"
+			break
+		var selected_cell := click_target.get("cell", start_cell) as Vector2i
+		var screen_point := click_target.get("screenPoint", Vector2.ZERO) as Vector2
+		var roundtrip_screen: Vector2 = host._world_to_screen(host._screen_to_world(screen_point))
+		if roundtrip_screen.distance_to(screen_point) <= 0.1:
+			coordinate_roundtrip_count += 1
+		if bool(click_target.get("isInteraction", false)):
+			target_clicked = true
+			# Sample before the press. A warp may load the destination during the
+			# following physics frame, after which the old target screen point no
+			# longer belongs to the active map/camera.
+			var player_screen: Vector2 = host._world_to_screen(host.player.global_position)
+			var viewport_rect: Rect2 = host.get_viewport().get_visible_rect()
+			player_and_target_visible = (
+				viewport_rect.has_point(player_screen)
+				and viewport_rect.has_point(screen_point)
+				and not host._is_ui_point(player_screen)
+				and not host._is_ui_point(screen_point)
+			)
+			if interaction_id == "warp_to_village_gate":
+				evidence_capture_path = OS.get_environment(
+					"BEASTBOUND_MAP_TRANSFER_SCREENSHOT_PATH"
+				).strip_edges()
+				evidence_capture_requested = evidence_capture_path != ""
+				if evidence_capture_requested:
+					var capture_report := _map_transfer_check_capture_viewport(
+						evidence_capture_path
+					)
+					evidence_capture_ok = bool(capture_report.get("ok", false))
+					evidence_capture_size = capture_report.get(
+						"size",
+						Vector2i.ZERO
+					) as Vector2i
+		camera_inside_limits = (
+			camera_inside_limits
+			and host._camera_center_is_inside_limits(host.game_camera.global_position)
+		)
+		var frame_separated := await _map_transfer_check_send_real_left_click(screen_point)
+		real_left_click_count += 1
+		if frame_separated:
+			cross_frame_count += 1
+		var settled := false
+		for _frame_index in range(max_settle_frames):
+			await host.get_tree().physics_frame
+			if host.current_map_id == expected_map_id:
+				settled = true
+				break
+			if host.current_map_id != source_map_id:
+				break
+			var player_cell := IsoMapModel.world_to_grid(host.map_data, host.player.global_position)
+			if (
+				player_cell == selected_cell
+				and not host.player.is_auto_moving()
+				and not host.has_pending_click_screen_point
+				and not host.has_pending_click_move_target
+			):
+				settled = true
+				break
+		if host.current_map_id == expected_map_id:
+			camera_inside_limits = (
+				camera_inside_limits
+				and host._camera_center_is_inside_limits(host.game_camera.global_position)
+			)
+			reason = "arrived"
+			break
+		if not settled:
+			segment_trace.append("%s>%s:settle=false:auto=%s:pending=%s/%s:interaction=%s" % [
+				str(start_cell),
+				str(selected_cell),
+				str(host.player.is_auto_moving()),
+				str(host.has_pending_click_screen_point),
+				str(host.has_pending_click_move_target),
+				str(host.has_pending_interaction),
+			])
+			reason = "movement_did_not_settle"
+			break
+		segment_trace.append("%s>%s:settle=true:player=%s:interaction=%s" % [
+			str(start_cell),
+			str(selected_cell),
+			str(IsoMapModel.world_to_grid(host.map_data, host.player.global_position)),
+			str(bool(click_target.get("isInteraction", false))),
+		])
+	return {
+		"ok": host.current_map_id == expected_map_id,
+		"reason": reason,
+		"interactionId": interaction_id,
+		"realLeftClickCount": real_left_click_count,
+		"crossFrameCount": cross_frame_count,
+		"coordinateRoundtripCount": coordinate_roundtrip_count,
+		"segmentCount": real_left_click_count,
+		"targetClicked": target_clicked,
+		"playerAndTargetVisible": player_and_target_visible,
+		"cameraInsideLimits": camera_inside_limits,
+		"evidenceCaptureRequested": evidence_capture_requested,
+		"evidenceCaptureOk": evidence_capture_ok,
+		"evidenceCapturePath": evidence_capture_path,
+		"evidenceCaptureSize": evidence_capture_size,
+		"segmentTrace": segment_trace,
+	}
+
+
+func _map_transfer_check_wait_for_camera_settle(max_frames: int) -> bool:
+	if host.game_camera == null:
+		return false
+	for _frame_index in range(max_frames):
+		await host.get_tree().process_frame
+		if (
+			host.game_camera.get_screen_center_position().distance_to(
+				host.game_camera.global_position
+			) <= 0.25
+		):
+			return true
+	return false
+
+
+func _map_transfer_check_visible_path_target(path: Array[Vector2i], interaction: Dictionary) -> Dictionary:
+	if path.size() < 2:
+		return {}
+	var viewport_rect: Rect2 = host.get_viewport().get_visible_rect()
+	var interaction_id := str(interaction.get("id", ""))
+	for path_index in range(path.size() - 1, 0, -1):
+		var cell := path[path_index]
+		var is_interaction := path_index == path.size() - 1
+		var world_point := (
+			InteractionModel.marker_world_position(host.map_data, interaction)
+			if is_interaction
+			else IsoMapModel.grid_to_world(host.map_data, cell)
+		)
+		var screen_point: Vector2 = host._world_to_screen(world_point)
+		if not viewport_rect.has_point(screen_point) or host._is_ui_point(screen_point):
+			continue
+		var hit_interaction := InteractionModel.find_at_world_point(host.map_data, world_point, 34.0, false)
+		if is_interaction:
+			if str(hit_interaction.get("id", "")) != interaction_id:
+				continue
+		elif not hit_interaction.is_empty():
+			continue
+		return {
+			"cell": cell,
+			"screenPoint": screen_point,
+			"isInteraction": is_interaction,
+		}
+	return {}
+
+
+func _map_transfer_check_send_real_left_click(screen_point: Vector2) -> bool:
+	var input_position: Vector2 = host.get_viewport().get_screen_transform() * screen_point
+	var motion := InputEventMouseMotion.new()
+	motion.position = input_position
+	motion.global_position = input_position
+	Input.parse_input_event(motion)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.position = input_position
+	press.global_position = input_position
+	var press_frame := Engine.get_process_frames()
+	Input.parse_input_event(press)
+	await host.get_tree().process_frame
+	await host.get_tree().physics_frame
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.position = input_position
+	release.global_position = input_position
+	var release_frame := Engine.get_process_frames()
+	Input.parse_input_event(release)
+	await host.get_tree().process_frame
+	return release_frame > press_frame
+
+
+func _map_transfer_check_capture_viewport(output_path: String) -> Dictionary:
+	var normalized_path := output_path.strip_edges()
+	if normalized_path == "":
+		return {"ok": false, "size": Vector2i.ZERO}
+	var directory_error := DirAccess.make_dir_recursive_absolute(
+		normalized_path.get_base_dir()
+	)
+	if directory_error != OK:
+		return {"ok": false, "size": Vector2i.ZERO}
+	var image: Image = host.get_viewport().get_texture().get_image()
+	if image == null or image.is_empty():
+		return {"ok": false, "size": Vector2i.ZERO}
+	var image_size := Vector2i(image.get_width(), image.get_height())
+	return {
+		"ok": image.save_png(normalized_path) == OK,
+		"size": image_size,
+	}
 
 func _run_auto_encounter_check() -> void:
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")

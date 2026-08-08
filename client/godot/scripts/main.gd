@@ -5,6 +5,9 @@ const PET_SCENE := preload("res://scenes/pet/Pet.tscn")
 const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const EncounterModel := preload("res://scripts/world/encounter_model.gd")
+const WorldCameraSafeAreaModel := preload(
+	"res://scripts/world/world_camera_safe_area_model.gd"
+)
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleLayoutConstants := preload("res://scripts/battle/battle_layout_constants.gd")
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
@@ -821,6 +824,9 @@ var numeric_workbench_result_label: RichTextLabel
 var numeric_workbench_profile_id: String = ""
 var numeric_workbench_stone_plan_id: String = ""
 var game_camera: Camera2D
+var world_camera_safe_viewport_rect: Rect2
+var world_camera_safe_anchor_screen: Vector2
+var world_camera_hud_blocker_rects: Array[Rect2] = []
 var auto_movement_check: bool = false
 var movement_perf_check: bool = false
 var movement_spam_click_check: bool = false
@@ -13881,22 +13887,22 @@ func _update_pet_follow() -> void:
 func _screen_to_world(screen_point: Vector2) -> Vector2:
 	if game_camera == null:
 		return screen_point
-	var center := game_camera.get_screen_center_position()
-	var offset := screen_point - get_viewport_rect().size * 0.5
-	return center + Vector2(
-		offset.x * game_camera.zoom.x,
-		offset.y * game_camera.zoom.y
+	return WorldCameraSafeAreaModel.screen_to_world(
+		screen_point,
+		game_camera.get_screen_center_position(),
+		get_viewport_rect().size,
+		game_camera.zoom
 	)
 
 
 func _world_to_screen(world_point: Vector2) -> Vector2:
 	if game_camera == null:
 		return world_point
-	var center := game_camera.get_screen_center_position()
-	var offset := world_point - center
-	return get_viewport_rect().size * 0.5 + Vector2(
-		offset.x / game_camera.zoom.x,
-		offset.y / game_camera.zoom.y
+	return WorldCameraSafeAreaModel.world_to_screen(
+		world_point,
+		game_camera.get_screen_center_position(),
+		get_viewport_rect().size,
+		game_camera.zoom
 	)
 
 
@@ -14634,6 +14640,7 @@ func _layout_hud() -> void:
 				battle_auto_stop_button.visible = false
 
 	_panel_flow()._layout_world_hud_awakened(viewport_size, world_menu_open)
+	_refresh_world_camera_safe_area(viewport_size)
 
 	if player != null:
 		player.set_movement_bounds(_player_movement_bounds())
@@ -14781,29 +14788,82 @@ func _update_camera_position(force: bool) -> void:
 func _clamped_camera_center(target: Vector2) -> Vector2:
 	if map_data.is_empty():
 		return target
-	var bounds := _camera_limit_bounds()
-	var half_view := get_viewport_rect().size * 0.5
-	var min_center := bounds.position + half_view
-	var max_center := bounds.position + bounds.size - half_view
-	var center := target
-	if min_center.x <= max_center.x:
-		center.x = clampf(target.x, min_center.x, max_center.x)
-	else:
-		center.x = bounds.get_center().x
-	if min_center.y <= max_center.y:
-		center.y = clampf(target.y, min_center.y, max_center.y)
-	else:
-		center.y = bounds.get_center().y
-	return center
+	var viewport_size := get_viewport_rect().size
+	var zoom := game_camera.zoom if game_camera != null else Vector2.ONE
+	var desired_center := WorldCameraSafeAreaModel.camera_center_for_anchor(
+		target,
+		viewport_size,
+		zoom,
+		_world_camera_anchor(viewport_size)
+	)
+	return WorldCameraSafeAreaModel.clamp_camera_center(
+		desired_center,
+		_camera_limit_bounds(),
+		viewport_size,
+		zoom
+	)
 
 
 func _camera_center_is_inside_limits(center: Vector2) -> bool:
-	var expected := _clamped_camera_center(center)
+	var viewport_size := get_viewport_rect().size
+	var zoom := game_camera.zoom if game_camera != null else Vector2.ONE
+	var expected := WorldCameraSafeAreaModel.clamp_camera_center(
+		center,
+		_camera_limit_bounds(),
+		viewport_size,
+		zoom
+	)
 	return center.distance_to(expected) <= 0.1
 
 
 func _camera_limit_bounds() -> Rect2:
-	return _map_world_bounds().grow(80.0)
+	var viewport_size := get_viewport_rect().size
+	var zoom := game_camera.zoom if game_camera != null else Vector2.ONE
+	return WorldCameraSafeAreaModel.camera_limit_bounds(
+		_map_world_bounds().grow(80.0),
+		viewport_size,
+		zoom,
+		_world_camera_safe_rect(viewport_size)
+	)
+
+
+func _refresh_world_camera_safe_area(viewport_size: Vector2) -> void:
+	world_camera_hud_blocker_rects.clear()
+	for value in [top_panel, side_panel, battle_message_panel, action_bar]:
+		var control := value as Control
+		if (
+			control == null
+			or not control.is_visible_in_tree()
+			or control.mouse_filter == Control.MOUSE_FILTER_IGNORE
+		):
+			continue
+		world_camera_hud_blocker_rects.append(control.get_global_rect())
+	world_camera_safe_viewport_rect = WorldCameraSafeAreaModel.safe_viewport_rect(
+		viewport_size,
+		world_camera_hud_blocker_rects
+	)
+	world_camera_safe_anchor_screen = WorldCameraSafeAreaModel.player_anchor(
+		viewport_size,
+		world_camera_safe_viewport_rect
+	)
+
+
+func _world_camera_anchor(viewport_size: Vector2) -> Vector2:
+	if (
+		world_camera_safe_viewport_rect.size.x <= 0.0
+		or world_camera_safe_viewport_rect.size.y <= 0.0
+	):
+		return viewport_size * 0.5
+	return world_camera_safe_anchor_screen
+
+
+func _world_camera_safe_rect(viewport_size: Vector2) -> Rect2:
+	if (
+		world_camera_safe_viewport_rect.size.x <= 0.0
+		or world_camera_safe_viewport_rect.size.y <= 0.0
+	):
+		return Rect2(Vector2.ZERO, viewport_size)
+	return world_camera_safe_viewport_rect
 
 
 func _world_background_rect(viewport_size: Vector2) -> Rect2:
