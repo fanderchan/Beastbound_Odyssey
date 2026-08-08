@@ -5042,7 +5042,17 @@ static func ground_pet_drop_pet(drop: Dictionary) -> Dictionary:
 
 
 static func codex_entries(profile: Dictionary) -> Array[Dictionary]:
-	var normalized := normalize_profile(profile)
+	return codex_entries_from_normalized_profile(normalize_profile(profile))
+
+
+# The panel host already normalizes its authoritative profile when a formal
+# surface opens. This opt-in projection avoids repeating the full normalization
+# pass for every in-panel family/form selection while preserving the public
+# codex_entries() contract for all existing callers.
+static func codex_entries_from_normalized_profile(
+	normalized_profile: Dictionary
+) -> Array[Dictionary]:
+	var normalized := normalized_profile
 	var seen_ids := _string_array(normalized.get(PET_CODEX_SEEN_FORM_IDS_KEY, []))
 	var captured_ids := _string_array(normalized.get(PET_CODEX_CAPTURED_FORM_IDS_KEY, []))
 	var owned_counts := _owned_pet_form_counts(normalized)
@@ -5060,7 +5070,9 @@ static func codex_entries(profile: Dictionary) -> Array[Dictionary]:
 		result.append({
 			"formId": form_id,
 			"formName": str(template.get("formName", "宠物")),
+			"lineId": str(template.get("lineId", "")),
 			"lineName": str(template.get("lineName", "未知种系")),
+			"subtypeId": str(template.get("subtypeId", "")),
 			"subtypeName": str(template.get("subtypeName", "未知亚种")),
 			"seen": seen,
 			"captured": captured,

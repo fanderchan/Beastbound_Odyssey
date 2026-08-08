@@ -94,6 +94,9 @@ const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
+const PetPortraitArtCatalog := preload(
+	"res://scripts/ui/pet_portrait_art_catalog.gd"
+)
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
 const RebirthModel := preload("res://scripts/progression/rebirth_model.gd")
@@ -10838,21 +10841,64 @@ func _run_auto_pet_codex_detail_check() -> void:
 
 func _run_auto_pet_codex_list_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	host.codex_selected_form_id = ""
 	host._open_codex_panel()
 	await host.get_tree().process_frame
-	var entries = PlayerProgressModel.codex_entries(host.player_profile)
-	var buttons_ready = (
+	await host.get_tree().process_frame
+	var entries := PlayerProgressModel.codex_entries(host.player_profile)
+	var codex_view = host.codex_panel
+	var family_buttons: Dictionary = (
+		codex_view.call("visible_family_buttons")
+		if codex_view != null and codex_view.has_method("visible_family_buttons")
+		else {}
+	)
+	var selected_template := PetTemplateCatalog.runtime_template_for_form(
+		host.codex_selected_form_id
+	)
+	var selected_line_id := str(selected_template.get("lineId", ""))
+	var selected_line_form_count := 0
+	for form in PetTemplateCatalog.forms():
+		if str(form.get("lineId", "")) == selected_line_id:
+			selected_line_form_count += 1
+	var viewport_layout_ok: bool = (
+		codex_view != null
+		and codex_view.has_method("is_within_viewport")
+		and bool(codex_view.call("is_within_viewport"))
+	)
+	var title_glyph_ok: bool = (
+		codex_view != null
+		and codex_view.has_method("title_font_has_jian_glyph")
+		and bool(codex_view.call("title_font_has_jian_glyph"))
+	)
+	var family_count_ok: bool = (
+		family_buttons.size() == PetTemplateCatalog.lines().size()
+	)
+	var form_count_ok: bool = (
+		host.codex_list_buttons.size() == selected_line_form_count
+	)
+	var layout_ready: bool = (
 		host.codex_menu_button != null
-		and host.codex_menu_button.text == "图鉴"
-		and host.codex_panel != null
-		and host.codex_panel.visible
-		and host.codex_list_buttons.size() == entries.size()
+		and codex_view != null
+		and codex_view.visible
+		and viewport_layout_ok
+		and title_glyph_ok
+		and family_count_ok
+		and form_count_ok
 		and entries.size() == PetTemplateCatalog.forms().size()
 	)
-	var default_entry = PlayerProgressModel.codex_entry_for_form(host.player_profile, "bui_normal_red_fire10")
-	var default_owned_ok = (
+	host._update_runtime_frame_budget()
+	var menu_active_fps_ok: bool = (
+		host._world_menu_is_open()
+		and host._world_needs_active_fps()
+		and host.runtime_target_fps_cache == 60
+		and Engine.max_fps == 60
+	)
+	var default_entry := PlayerProgressModel.codex_entry_for_form(
+		host.player_profile,
+		"bui_normal_red_fire10"
+	)
+	var default_owned_ok := (
 		bool(default_entry.get("seen", false))
 		and bool(default_entry.get("captured", false))
 		and int(default_entry.get("ownedCount", 0)) == 2
@@ -10860,8 +10906,13 @@ func _run_auto_pet_codex_list_check() -> void:
 
 	host._select_codex_form("bui_normal_yellow_wind10")
 	await host.get_tree().process_frame
-	var yellow_text = host.codex_detail_label.text if host.codex_detail_label != null else ""
-	var yellow_ok = (
+	var yellow_text: String = (
+		host.codex_detail_label.text
+		if host.codex_detail_label != null
+		else ""
+	)
+	var showcase := codex_view.find_child("SelectedPetShowcase", true, false) as TextureRect
+	var yellow_ok: bool = (
 		yellow_text.find("图鉴：黄色普通布伊") >= 0
 		and yellow_text.find("记录：已捕捉") >= 0
 		and yellow_text.find("持有 1") >= 0
@@ -10869,11 +10920,77 @@ func _run_auto_pet_codex_list_check() -> void:
 		and yellow_text.find("bui_normal_yellow_wind10") < 0
 		and yellow_text.find("agility_high") < 0
 	)
-	var unseen_button = host.codex_list_buttons.get("wuli_normal_fast_wind10", null)
-	var unseen_button_text = (unseen_button as Button).text if unseen_button is Button else ""
-	var unseen_button_ok = unseen_button_text.find("？？？") >= 0 and unseen_button_text.find("高速乌力") < 0
+	# 芽耳布伊的画像文件虽然存在且 runtimeEnabled，但仍处于
+	# in_production。图鉴必须坚持 owner-review 发布门禁而显示自然占位。
+	host.player_profile = PlayerProgressModel.record_codex_seen(
+		host.player_profile,
+		"bui_novice_sprout_earth5_wind5"
+	)
+	host._select_codex_form("bui_novice_sprout_earth5_wind5")
+	await host.get_tree().process_frame
+	var pending_texture := PetPortraitArtCatalog.texture_for_form(
+		"bui_novice_sprout_earth5_wind5"
+	)
+	var forged_state := (
+		(codex_view.get("_view_state") as Dictionary).duplicate(true)
+	)
+	var forged_selected := forged_state.get("selectedPet", {}) as Dictionary
+	forged_selected["showcaseTexture"] = pending_texture
+	forged_selected["portraitTexture"] = pending_texture
+	forged_state["selectedPet"] = forged_selected
+	var forged_families := forged_state.get("families", []) as Array
+	for index in range(forged_families.size()):
+		if not (forged_families[index] is Dictionary):
+			continue
+		var forged_family := forged_families[index] as Dictionary
+		if str(forged_family.get("lineId", "")) == "bui":
+			forged_family["portraitTexture"] = pending_texture
+			forged_families[index] = forged_family
+	forged_state["families"] = forged_families
+	var forged_forms := forged_state.get("forms", []) as Array
+	for index in range(forged_forms.size()):
+		if not (forged_forms[index] is Dictionary):
+			continue
+		var forged_form := forged_forms[index] as Dictionary
+		if str(forged_form.get("formId", "")) == "bui_novice_sprout_earth5_wind5":
+			forged_form["portraitTexture"] = pending_texture
+			forged_forms[index] = forged_form
+	forged_state["forms"] = forged_forms
+	codex_view.call("apply_view_state", forged_state)
+	await host.get_tree().process_frame
+	showcase = codex_view.find_child("SelectedPetShowcase", true, false) as TextureRect
+	var pending_stage_label := codex_view.find_child(
+		"LockedStageLabel",
+		true,
+		false
+	) as Label
+	var pending_portrait_blocked_ok: bool = (
+		pending_texture != null
+		and showcase != null
+		and not showcase.visible
+		and showcase.texture == null
+		and pending_stage_label != null
+		and pending_stage_label.visible
+		and pending_stage_label.text == "形象尚未收录"
+		and (codex_view.call("visible_family_buttons") as Dictionary).get(
+			"bui",
+			null
+		) is Button
+		and ((codex_view.call("visible_family_buttons") as Dictionary).get(
+			"bui",
+			null
+		) as Button).icon == null
+		and (codex_view.call("visible_form_buttons") as Dictionary).get(
+			"bui_novice_sprout_earth5_wind5",
+			null
+		) is Button
+		and ((codex_view.call("visible_form_buttons") as Dictionary).get(
+			"bui_novice_sprout_earth5_wind5",
+			null
+		) as Button).icon == null
+	)
 
-	var empty_profile = PlayerProgressModel.default_profile()
+	var empty_profile := PlayerProgressModel.default_profile()
 	empty_profile["petInstances"] = []
 	empty_profile["activePetInstanceId"] = ""
 	empty_profile[PlayerProgressModel.PET_CODEX_SEEN_FORM_IDS_KEY] = []
@@ -10882,34 +10999,163 @@ func _run_auto_pet_codex_list_check() -> void:
 	host.codex_selected_form_id = "wuli_normal_fast_wind10"
 	host._refresh_codex_panel()
 	await host.get_tree().process_frame
-	var hidden_text = host.codex_detail_label.text if host.codex_detail_label != null else ""
-	var hidden_ok = (
+	var hidden_text: String = (
+		host.codex_detail_label.text
+		if host.codex_detail_label != null
+		else ""
+	)
+	var unseen_button = host.codex_list_buttons.get(
+		"wuli_normal_fast_wind10",
+		null
+	)
+	var unseen_button_text := (
+		(unseen_button as Button).text
+		if unseen_button is Button
+		else ""
+	)
+	var acquisition_button := codex_view.get("acquisition_button") as Button
+	var hidden_ok: bool = (
 		hidden_text.find("图鉴：？？？") >= 0
 		and hidden_text.find("记录：未遇见") >= 0
 		and hidden_text.find("高速乌力") < 0
 		and hidden_text.find("wuli_normal_fast_wind10") < 0
+		and unseen_button is Button
+		and unseen_button_text.find("高速乌力") < 0
+		and (unseen_button as Button).icon == null
+		and acquisition_button != null
+		and not acquisition_button.visible
 	)
 
-	host.player_profile = PlayerProgressModel.record_codex_seen(host.player_profile, "wuli_normal_fast_wind10")
+	host.player_profile = PlayerProgressModel.record_codex_seen(
+		host.player_profile,
+		"wuli_normal_fast_wind10"
+	)
 	host._refresh_codex_panel()
 	await host.get_tree().process_frame
-	var seen_text = host.codex_detail_label.text if host.codex_detail_label != null else ""
-	var seen_ok = (
+	var seen_text: String = (
+		host.codex_detail_label.text
+		if host.codex_detail_label != null
+		else ""
+	)
+	acquisition_button = codex_view.get("acquisition_button") as Button
+	var seen_ok: bool = (
 		seen_text.find("图鉴：高速乌力") >= 0
 		and seen_text.find("记录：已遇见") >= 0
 		and seen_text.find("已捕捉") < 0
 		and seen_text.find("wuli_normal_fast_wind10") < 0
+		and acquisition_button != null
+		and acquisition_button.visible
+		and not acquisition_button.disabled
 	)
 
-	var seen_result = PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), BattleModel.create_wild_battle({
-		"id": "codex_seen_check",
-		"name": "图鉴遇见验证",
-	}), "escape")
-	var seen_profile = seen_result.get("profile", {}) as Dictionary
-	var wild_seen_entry = PlayerProgressModel.codex_entry_for_form(seen_profile, "wuli_normal_orange_fire10")
-	var battle_seen_ok = bool(wild_seen_entry.get("seen", false)) and not bool(wild_seen_entry.get("captured", false))
+	var before_resolve_count: int = host.click_move_screen_resolve_count
+	var before_repath_count: int = host.click_move_repath_apply_count
+	var acquisition_click_ok := await _hang_matchmaking_check_real_left_click(
+		acquisition_button
+	)
+	var acquisition_overlay := codex_view.get("acquisition_overlay") as PanelContainer
+	var acquisition_title := (
+		acquisition_overlay.find_child("AcquisitionTitle", true, false) as Label
+		if acquisition_overlay != null
+		else null
+	)
+	var acquisition_sheet := (
+		acquisition_overlay.find_child("AcquisitionSheet", true, false) as PanelContainer
+		if acquisition_overlay != null
+		else null
+	)
+	var acquisition_open_ok: bool = (
+		acquisition_click_ok
+		and codex_view.has_method("acquisition_is_visible")
+		and bool(codex_view.call("acquisition_is_visible"))
+		and codex_view.has_method("route_card_count")
+		and int(codex_view.call("route_card_count")) > 0
+		and acquisition_title != null
+		and acquisition_title.text == "获取途径"
+		and acquisition_overlay.size.distance_to(Vector2(1280.0, 720.0)) <= 0.5
+		and acquisition_sheet != null
+		and acquisition_sheet.position.distance_to(Vector2(418.0, 148.0)) <= 0.5
+		and acquisition_sheet.size.distance_to(Vector2(365.0, 402.0)) <= 0.5
+		and host.click_move_screen_resolve_count == before_resolve_count
+		and host.click_move_repath_apply_count == before_repath_count
+	)
+	var modal_form_before: String = str(host.codex_selected_form_id)
+	var modal_tab_before := str(codex_view.call("active_detail_tab"))
+	var modal_family_button: Button = null
+	var modal_family_buttons: Dictionary = (
+		codex_view.call("visible_family_buttons") as Dictionary
+	)
+	for line_id in modal_family_buttons.keys():
+		if str(line_id) != "wuli":
+			modal_family_button = modal_family_buttons.get(line_id, null) as Button
+			break
+	var modal_form_button: Button = null
+	for form_id in host.codex_list_buttons.keys():
+		if str(form_id) != modal_form_before:
+			modal_form_button = host.codex_list_buttons.get(form_id) as Button
+			break
+	await _hang_matchmaking_check_real_left_click(modal_family_button)
+	await _hang_matchmaking_check_real_left_click(modal_form_button)
+	await _hang_matchmaking_check_real_left_click(
+		codex_view.get("attribute_tab_button") as Button
+	)
+	var modal_blocks_underlay_ok: bool = (
+		host.codex_selected_form_id == modal_form_before
+		and str(codex_view.call("active_detail_tab")) == modal_tab_before
+	)
+	var top_close := codex_view.get("close_button") as Button
+	var top_close_click_ok := await _hang_matchmaking_check_real_left_click(top_close)
+	var top_close_collapses_only_ok: bool = (
+		top_close_click_ok
+		and codex_view.visible
+		and not bool(codex_view.call("acquisition_is_visible"))
+	)
+	await _hang_matchmaking_check_real_left_click(acquisition_button)
+	var dismiss := (
+		acquisition_overlay.find_child("DismissAcquisitionButton", true, false) as Button
+		if acquisition_overlay != null
+		else null
+	)
+	var dismiss_click_ok := await _hang_matchmaking_check_real_left_click(dismiss)
+	var acquisition_close_ok: bool = (
+		dismiss_click_ok
+		and codex_view.has_method("acquisition_is_visible")
+		and not bool(codex_view.call("acquisition_is_visible"))
+	)
+	host._close_codex_panel()
+	await host.get_tree().process_frame
+	host.has_target_marker = false
+	host.has_pending_interaction = false
+	host.current_path_cells.clear()
+	host.hang_mode_active = false
+	host.encounter_active = false
+	host._update_runtime_frame_budget()
+	var closed_idle_fps_ok: bool = (
+		not host._world_menu_is_open()
+		and not host._world_needs_active_fps()
+		and host.runtime_target_fps_cache == 30
+		and Engine.max_fps == 30
+	)
 
-	var capture_state = BattleModel.create_wild_battle({
+	var seen_result := PlayerProgressModel.apply_battle_result(
+		PlayerProgressModel.default_profile(),
+		BattleModel.create_wild_battle({
+			"id": "codex_seen_check",
+			"name": "图鉴遇见验证",
+		}),
+		"escape"
+	)
+	var seen_profile := seen_result.get("profile", {}) as Dictionary
+	var wild_seen_entry := PlayerProgressModel.codex_entry_for_form(
+		seen_profile,
+		"wuli_normal_orange_fire10"
+	)
+	var battle_seen_ok := (
+		bool(wild_seen_entry.get("seen", false))
+		and not bool(wild_seen_entry.get("captured", false))
+	)
+
+	var capture_state := BattleModel.create_wild_battle({
 		"id": "codex_capture_check",
 		"name": "图鉴捕捉验证",
 	})
@@ -10923,24 +11169,96 @@ func _run_auto_pet_codex_list_check() -> void:
 			actor["hp"] = 0
 			actors[index] = actor
 	capture_state["actors"] = actors
-	var capture_result = PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), capture_state, "victory")
-	var capture_profile = capture_result.get("profile", {}) as Dictionary
-	var wild_capture_entry = PlayerProgressModel.codex_entry_for_form(capture_profile, "wuli_normal_orange_fire10")
-	var battle_capture_ok = (
+	var capture_result := PlayerProgressModel.apply_battle_result(
+		PlayerProgressModel.default_profile(),
+		capture_state,
+		"victory"
+	)
+	var capture_profile := capture_result.get("profile", {}) as Dictionary
+	var wild_capture_entry := PlayerProgressModel.codex_entry_for_form(
+		capture_profile,
+		"wuli_normal_orange_fire10"
+	)
+	var battle_capture_ok := (
 		bool(wild_capture_entry.get("seen", false))
 		and bool(wild_capture_entry.get("captured", false))
 		and int(wild_capture_entry.get("ownedCount", 0)) == 1
 	)
 
-	var status = "ok" if buttons_ready and default_owned_ok and yellow_ok and unseen_button_ok and hidden_ok and seen_ok and battle_seen_ok and battle_capture_ok else "failed"
-	print("pet codex list check ready: status=%s buttons=%s default_owned=%s yellow=%s unseen_button=%s hidden=%s seen=%s battle_seen=%s battle_capture=%s" % [
+	# The lightweight world-overlay close path must never replace battle's full
+	# command/message restoration contract.  Exercise the real host transition,
+	# then return to the idle world budget for the remaining check shutdown.
+	host.battle_state = BattleModel.create_wild_battle({
+		"id": "codex_battle_restore_check",
+		"name": "图鉴战斗恢复验证",
+	})
+	host.battle_active = true
+	host._update_runtime_frame_budget()
+	var battle_active_fps_ok: bool = (
+		host._world_needs_active_fps()
+		and host.runtime_target_fps_cache == 60
+		and Engine.max_fps == 60
+	)
+	host._open_codex_panel()
+	await host.get_tree().process_frame
+	var battle_command_hidden_by_codex: bool = (
+		host.battle_command_panel != null
+		and not host.battle_command_panel.visible
+	)
+	host._close_codex_panel()
+	await host.get_tree().process_frame
+	var battle_ui_restore_ok: bool = (
+		battle_command_hidden_by_codex
+		and host.battle_command_panel != null
+		and host.battle_command_panel.visible
+		and host.battle_message_panel != null
+		and host.battle_message_panel.visible
+		and host.battle_auto_button != null
+		and host.battle_auto_button.is_visible_in_tree()
+	)
+	host._end_battle(false)
+	host._update_runtime_frame_budget()
+
+	var status := "ok" if (
+		layout_ready
+		and menu_active_fps_ok
+		and closed_idle_fps_ok
+		and battle_active_fps_ok
+		and battle_ui_restore_ok
+		and default_owned_ok
+		and yellow_ok
+		and pending_portrait_blocked_ok
+		and hidden_ok
+		and seen_ok
+		and acquisition_open_ok
+		and modal_blocks_underlay_ok
+		and top_close_collapses_only_ok
+		and acquisition_close_ok
+		and battle_seen_ok
+		and battle_capture_ok
+	) else "failed"
+	print("pet codex list check ready: status=%s layout=%s viewport=%s glyph=%s menu_fps60=%s idle_fps30=%s battle_fps60=%s battle_ui_restore=%s families=%d/%d forms=%d/%d default_owned=%s yellow=%s pending_portrait_blocked=%s hidden=%s seen=%s acquisition_open=%s modal_block=%s top_close_collapses=%s acquisition_close=%s battle_seen=%s battle_capture=%s" % [
 		status,
-		str(buttons_ready),
+		str(layout_ready),
+		str(viewport_layout_ok),
+		str(title_glyph_ok),
+		str(menu_active_fps_ok),
+		str(closed_idle_fps_ok),
+		str(battle_active_fps_ok),
+		str(battle_ui_restore_ok),
+		family_buttons.size(),
+		PetTemplateCatalog.lines().size(),
+		host.codex_list_buttons.size(),
+		selected_line_form_count,
 		str(default_owned_ok),
 		str(yellow_ok),
-		str(unseen_button_ok),
+		str(pending_portrait_blocked_ok),
 		str(hidden_ok),
 		str(seen_ok),
+		str(acquisition_open_ok),
+		str(modal_blocks_underlay_ok),
+		str(top_close_collapses_only_ok),
+		str(acquisition_close_ok),
 		str(battle_seen_ok),
 		str(battle_capture_ok),
 	])

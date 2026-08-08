@@ -77,6 +77,10 @@ const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth
 const PetLevelOnePercentileModel := preload("res://scripts/progression/pet_level_one_percentile_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const PetListEntryButton := preload("res://scripts/ui/pet_list_entry_button.gd")
+const PetCodexPresenter := preload("res://scripts/ui/pet_codex_presenter.gd")
+const PetCodexAwakenedPanel := preload(
+	"res://scripts/ui/pet_codex_awakened_panel.gd"
+)
 const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const ItemDropZone := preload("res://scripts/ui/item_drop_zone.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
@@ -160,6 +164,16 @@ const PARTY_PANEL_MODE_PLAYERS := "players"
 var party_player_section: Control
 var _map_route_planner = null
 var _map_awakened_map_name_cache: Dictionary = {}
+var _codex_entries_cache: Array[Dictionary] = []
+var _codex_entry_by_form_cache: Dictionary = {}
+var _codex_profile_projection_cache: Dictionary = {}
+var _codex_selection_refresh_count := 0
+var _codex_selection_refresh_max_usec := 0
+var _codex_selection_build_max_usec := 0
+var _codex_selection_apply_max_usec := 0
+var _codex_close_world_hud_restore_same_call := false
+var _codex_last_build_usec := 0
+var _codex_last_apply_usec := 0
 
 var qa_profile_identity_label: Label
 var qa_profile_status_state: Dictionary = {}
@@ -6939,54 +6953,21 @@ func _build_hud() -> void:
 	_create_pet_skill_panel()
 	_create_pet_cultivation_panel()
 
-	codex_panel = _panel_container("CodexPanel")
+	# Build the authoritative map/evolution acquisition index once while the HUD
+	# is prepared. Subsequent codex family/form clicks are memory-only.
+	PetCodexPresenter.prepare_static_catalog()
+	PetCodexPresenter.prepare_acquisition_routes()
+	var codex_view := PetCodexAwakenedPanel.new()
+	codex_view.apply_view_state({})
+	codex_panel = codex_view
 	codex_panel.visible = false
 	codex_panel.z_index = 24
-	var codex_column = VBoxContainer.new()
-	codex_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	codex_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	codex_column.add_theme_constant_override("separation", 8)
-	codex_panel.add_child(codex_column)
-
-	var codex_header = HBoxContainer.new()
-	codex_header.add_theme_constant_override("separation", 10)
-	codex_column.add_child(codex_header)
-	var codex_title = Label.new()
-	codex_title.text = "图鉴"
-	codex_title.add_theme_font_size_override("font_size", 21)
-	codex_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	codex_header.add_child(codex_title)
-	codex_close_button = Button.new()
-	codex_close_button.text = "关闭"
-	codex_close_button.custom_minimum_size = Vector2(92, 44)
-	codex_close_button.pressed.connect(_close_codex_panel)
-	codex_header.add_child(codex_close_button)
-
-	var codex_body = HBoxContainer.new()
-	codex_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	codex_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	codex_body.add_theme_constant_override("separation", 10)
-	codex_column.add_child(codex_body)
-
-	var codex_scroll = ScrollContainer.new()
-	codex_scroll.custom_minimum_size = Vector2(236, 0)
-	codex_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	codex_body.add_child(codex_scroll)
-	codex_list_container = VBoxContainer.new()
-	codex_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	codex_list_container.add_theme_constant_override("separation", 7)
-	codex_scroll.add_child(codex_list_container)
-
-	var codex_detail_scroll = ScrollContainer.new()
-	codex_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	codex_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	codex_body.add_child(codex_detail_scroll)
-	codex_detail_label = Label.new()
-	codex_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	codex_detail_label.add_theme_font_size_override("font_size", 16)
-	codex_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	codex_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	codex_detail_scroll.add_child(codex_detail_label)
+	codex_view.close_requested.connect(_close_codex_panel)
+	codex_view.form_selected.connect(_select_codex_form)
+	codex_view.family_selected.connect(_select_codex_family)
+	codex_list_container = codex_view.family_list_container
+	codex_detail_label = codex_view.legacy_detail_label
+	codex_close_button = codex_view.close_button
 	hud_root.add_child(codex_panel)
 
 	quest_panel = _panel_container("QuestPanel")
@@ -18038,6 +18019,7 @@ func _on_pet_skill_forget_pressed() -> void:
 		_refresh_pet_panel()
 
 func _open_codex_panel() -> void:
+	_codex_close_world_hud_restore_same_call = false
 	if not battle_active:
 		host._set_hang_mode(false)
 	host._close_dialog()
@@ -18060,7 +18042,93 @@ func _open_codex_panel() -> void:
 	_record_tutorial_feature_opened(TutorialFeatureModel.FEATURE_CODEX)
 
 func _close_codex_panel() -> void:
-	_hide_control(codex_panel)
+	_codex_close_world_hud_restore_same_call = false
+	if codex_panel is PetCodexAwakenedPanel:
+		(codex_panel as PetCodexAwakenedPanel).hide_acquisition_routes()
+	if not _hide_control(codex_panel, false):
+		return
+	if battle_active:
+		# Battle restores command/passive/message visibility through the existing
+		# authoritative contract; the lightweight path below is world-only.
+		host._sync_battle_buttons()
+		host._layout_hud()
+		return
+	_restore_world_hud_after_codex_close()
+	_codex_close_world_hud_restore_same_call = _world_hud_chrome_ready_after_codex_close()
+
+func _restore_world_hud_after_codex_close() -> void:
+	# The awakened codex is a fixed full-screen overlay.  Re-running the legacy
+	# all-panel layout on close needlessly visits every hidden menu and caused a
+	# visible return-to-world hitch.  Restore only the world chrome that opening
+	# the overlay intentionally suppressed, then project that state into the
+	# formal Phase396 HUD.  Geometry is unchanged while the overlay is open.
+	if battle_active or hud_root == null or host._world_menu_is_open():
+		return
+	var viewport_size: Vector2 = host._layout_size()
+	var is_phone_shape: bool = host._is_phone_shape(viewport_size)
+	if top_panel != null:
+		top_panel.visible = not battle_active
+	if battle_active:
+		if side_panel != null:
+			side_panel.visible = false
+		if action_bar != null:
+			action_bar.visible = true
+	else:
+		if side_panel != null:
+			side_panel.visible = not is_phone_shape
+		if action_bar != null:
+			action_bar.visible = true
+	if battle_message_panel != null:
+		battle_message_panel.visible = (
+			world_log_message != ""
+			or not world_log_history.is_empty()
+		)
+	_sync_action_bar_state()
+	_layout_world_hud_awakened(viewport_size, false)
+	# Phase400 caches HUD blocker geometry outside the camera hot path. The
+	# codex uses a world-only lightweight close, so mirror the full host layout's
+	# safe-area tail after restoring top/side/action/message chrome.
+	host._refresh_world_camera_safe_area(viewport_size)
+	if player != null:
+		player.set_movement_bounds(host._player_movement_bounds())
+	if game_camera != null:
+		host._update_camera_limits()
+		host._update_camera_position(true)
+	host.queue_redraw()
+
+func _world_hud_chrome_ready_after_codex_close() -> bool:
+	var awakened := host.world_hud_awakened_view as Control
+	if awakened == null or not awakened.is_visible_in_tree():
+		return false
+	var top_surface := awakened.find_child("WorldHudTopSurface", true, false) as Control
+	var side_surface := awakened.find_child("WorldHudSideSurface", true, false) as Control
+	var dock_surface := awakened.find_child("WorldHudDockSurface", true, false) as Control
+	var fixed_entries := awakened.find_child("WorldHudFixedEntries", true, false) as Control
+	var expect_side: bool = (
+		not battle_active
+		and not bool(host._is_phone_shape(host._layout_size()))
+	)
+	return (
+		codex_panel != null
+		and not codex_panel.visible
+		and top_panel != null
+		and top_panel.visible == (not battle_active)
+		and side_panel != null
+		and side_panel.visible == expect_side
+		and action_bar != null
+		and action_bar.visible
+		and top_surface != null
+		and top_surface.is_visible_in_tree() == (not battle_active)
+		and side_surface != null
+		and side_surface.is_visible_in_tree() == expect_side
+		and dock_surface != null
+		and dock_surface.is_visible_in_tree()
+		and fixed_entries != null
+		and fixed_entries.is_visible_in_tree()
+	)
+
+func codex_close_world_hud_restore_same_call_for_qa() -> bool:
+	return _codex_close_world_hud_restore_same_call
 
 func _open_quest_panel() -> void:
 	host._dialog_quest()._open_quest_panel()
@@ -25517,26 +25585,42 @@ func _map_name_for_id(map_id: String) -> String:
 	var loaded_map = _map_data_for_id(map_id)
 	return str(loaded_map.get("name", map_id))
 
-func _refresh_codex_panel() -> void:
+func _refresh_codex_panel(refresh_authoritative_projection: bool = true) -> void:
 	if codex_panel == null or codex_list_container == null or codex_detail_label == null:
 		return
-	player_profile = PlayerProgressModel.normalize_profile(player_profile)
-	var entries = PlayerProgressModel.codex_entries(player_profile)
-	for child in codex_list_container.get_children():
-		child.queue_free()
-	codex_list_buttons.clear()
-
-	var selected_exists = false
-	for entry in entries:
-		if str(entry.get("formId", "")) == codex_selected_form_id:
-			selected_exists = true
-			break
-	if not selected_exists:
-		codex_selected_form_id = _preferred_codex_form_id(entries)
-
-	for entry in entries:
-		_add_codex_list_button(entry)
-	codex_detail_label.text = "\n".join(PlayerProgressModel.pet_codex_detail_lines_for_form(player_profile, codex_selected_form_id))
+	if refresh_authoritative_projection or _codex_entries_cache.is_empty():
+		player_profile = PlayerProgressModel.normalize_profile(player_profile)
+		_codex_entries_cache = (
+			PlayerProgressModel.codex_entries_from_normalized_profile(
+				player_profile
+			)
+		)
+		_codex_entry_by_form_cache.clear()
+		for entry in _codex_entries_cache:
+			var form_id := str(entry.get("formId", "")).strip_edges()
+			if form_id != "":
+				_codex_entry_by_form_cache[form_id] = entry
+		_codex_profile_projection_cache = (
+			PetCodexPresenter.prepare_profile_projection(
+				_codex_entries_cache
+			)
+		)
+	var build_started_usec := Time.get_ticks_usec()
+	var state := PetCodexPresenter.build_view_state_from_projection(
+		_codex_profile_projection_cache,
+		codex_selected_form_id
+	)
+	_codex_last_build_usec = Time.get_ticks_usec() - build_started_usec
+	codex_selected_form_id = str(state.get("selectedFormId", ""))
+	if codex_panel is PetCodexAwakenedPanel:
+		var codex_view := codex_panel as PetCodexAwakenedPanel
+		var apply_started_usec := Time.get_ticks_usec()
+		codex_view.apply_view_state(state)
+		_codex_last_apply_usec = Time.get_ticks_usec() - apply_started_usec
+		codex_list_container = codex_view.family_list_container
+		codex_detail_label = codex_view.legacy_detail_label
+		codex_close_button = codex_view.close_button
+		codex_list_buttons = codex_view.visible_form_buttons()
 
 func _preferred_codex_form_id(entries: Array[Dictionary]) -> String:
 	var first_form_id = ""
@@ -25551,31 +25635,62 @@ func _preferred_codex_form_id(entries: Array[Dictionary]) -> String:
 			return str(entry.get("formId", ""))
 	return first_form_id
 
-func _add_codex_list_button(entry: Dictionary) -> void:
-	var form_id = str(entry.get("formId", ""))
-	if form_id == "":
-		return
-	var button = Button.new()
-	var marker = "▶ " if form_id == codex_selected_form_id else ""
-	var display_name = str(entry.get("formName", "宠物")) if bool(entry.get("seen", false)) else "？？？"
-	button.text = "%s%s\n%s" % [
-		marker,
-		display_name,
-		str(entry.get("recordLabel", "未遇见")),
-	]
-	button.custom_minimum_size = Vector2(214, 58)
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.pressed.connect(func() -> void:
-		_select_codex_form(form_id)
-	)
-	codex_list_container.add_child(button)
-	codex_list_buttons[form_id] = button
-
 func _select_codex_form(form_id: String) -> void:
-	if PlayerProgressModel.codex_entry_for_form(player_profile, form_id).is_empty():
+	var normalized_form_id := form_id.strip_edges()
+	if not _codex_entry_by_form_cache.has(normalized_form_id):
 		return
-	codex_selected_form_id = form_id
-	_refresh_codex_panel()
+	if codex_selected_form_id == normalized_form_id:
+		return
+	var started_usec := Time.get_ticks_usec()
+	codex_selected_form_id = normalized_form_id
+	_refresh_codex_panel(false)
+	_codex_selection_refresh_count += 1
+	_codex_selection_build_max_usec = maxi(
+		_codex_selection_build_max_usec,
+		_codex_last_build_usec
+	)
+	_codex_selection_apply_max_usec = maxi(
+		_codex_selection_apply_max_usec,
+		_codex_last_apply_usec
+	)
+	_codex_selection_refresh_max_usec = maxi(
+		_codex_selection_refresh_max_usec,
+		Time.get_ticks_usec() - started_usec
+	)
+
+
+func reset_codex_selection_performance_for_qa() -> void:
+	_codex_selection_refresh_count = 0
+	_codex_selection_refresh_max_usec = 0
+	_codex_selection_build_max_usec = 0
+	_codex_selection_apply_max_usec = 0
+
+
+func codex_selection_performance_for_qa() -> Dictionary:
+	return {
+		"refreshCount": _codex_selection_refresh_count,
+		"maxRefreshUsec": _codex_selection_refresh_max_usec,
+		"maxBuildUsec": _codex_selection_build_max_usec,
+		"maxApplyUsec": _codex_selection_apply_max_usec,
+		"cachedEntryCount": _codex_entries_cache.size(),
+	}
+
+
+func _select_codex_family(line_id: String) -> void:
+	var preferred_form_id := (
+		PetCodexPresenter.preferred_form_id_for_line_from_entries(
+		_codex_entries_cache,
+		line_id
+		)
+	)
+	if preferred_form_id == "":
+		return
+	_select_codex_form(preferred_form_id)
+
+
+func _show_codex_acquisition_routes() -> void:
+	if codex_panel is PetCodexAwakenedPanel:
+		(codex_panel as PetCodexAwakenedPanel).show_acquisition_routes()
 
 func _refresh_pet_growth_table(instance: Dictionary) -> void:
 	if pet_growth_table_grid == null:

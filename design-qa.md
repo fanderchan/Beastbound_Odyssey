@@ -124,6 +124,87 @@ final result: passed
 
 ---
 
+# Phase 398 Design QA：觉醒式正式宠物图鉴与获取途径内嵌页
+
+## Result
+
+- P0：无。
+- P1：无。项目所有者未批准的宠物画像无法经 family／form／showcase／portrait／route／skill
+  原始纹理绕过门禁；共享画像 API 不变，不使 Phase 396 HUD 或宠物管理页退化。
+- P2：无。最终 `1280×720` 画面保留参考的左种族、中展示、右成长／属性三栏层级和暖木金材质，
+  “获取途径”是同页内嵌层，不是程序式系统弹窗；“鉴”字、按钮、页签、形态卡、自然占位文案
+  均无乱码、越界、裁切或 QA／工程话术。
+- `5302406ab` 基线上的工程、媒体与参考同屏 Design QA 已通过；项目所有者的主观视觉验收仍为
+  `ownerReviewStatus=pending`，broad P2.2 不勾选。录后 current main 已推进到 Phase 399
+  `3c0e811aa`，所以本结果不冒充当前 main 发布通过；迁移、冲突审计、相邻回归及可能重录仍是
+  独立阻断门。
+
+## Comparison targets
+
+- 概览参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-be26f056-fcc1-4415-b2ee-2d5edf314ace.png`；
+- 获取途径参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-bb5a1c7e-4b8b-4f4c-a504-fa11ec0215a3.png`；
+- 实机概览：Phase398 final-v3 `keyframes/frame-04.png`；
+- 实机获取途径：Phase398 final-v3 `keyframes/frame-09.png`；
+- 四状态同屏：
+  `.run/evidence/phase398_pet_codex_reference_comparison/phase398-pet-codex-final-v3-20260808/reference-vs-implementation.png`，
+  SHA-256 `250b49263ab8e3c922ca768f7b8201a2008a50dd318786651b5452858b57f14b`。
+
+## Required fidelity surfaces
+
+- Layout：左侧 11 种族纵列、中部种族／形态与展示区、右侧成长／属性页签；关闭后恢复 Phase 396
+  顶栏、任务／组队栏和右下固定栏，不把地图功能留在图鉴之上。
+- Material：仅借鉴参考的暗木、暖金、兽骨／石纹层次，使用 Beastbound 原创底板、既有正式按钮
+  primitives 与正式爪印图标；不复制参考宠物、图标、文字、数值或 UI 像素。
+- Truth：未遇见形态匿名；已遇见形态显示真实名称；未获批准画像显示“形象尚未收录”；成长页
+  只公开 Lv1 四维与“成长倾向”，不泄露隐藏总成长或伪造拥有数量。
+- Modal：点击“获取途径”显示 `(418,148) / 365×402` 内嵌页，阻断种族、形态、页签和世界输入；
+  顶部关闭第一次只折叠内嵌页，第二次才退出图鉴。
+- Controls：正式右下图鉴入口、种族、形态、成长／属性、获取途径、两级关闭均由真实跨帧左键完成；
+  右键不是必需输入。
+- Safety：玩家 UI 不显示 form ID、资源路径、画像审核状态、缓存计数、性能值、测试标志或 agent
+  文案；帮助爪印为装饰，不保留无反馈的死按钮。
+
+## Engineering and media evidence
+
+- focused 面板检查通过：11 个种族、4 个同族形态、10 张获取途径卡；72 次热切换
+  `maxBuild=0.002ms / maxApply=1.978ms / maxRefresh=1.979ms`，路线读取 `38→38`。
+- Godot 专项 parse＋auto `2/2 PASS`；字形、匿名／pending 画像、伪造纹理、modal 不穿透、顶部
+  关闭顺序、正式 HUD 恢复、菜单／静止／战斗 `60/30/60 FPS` 均为 true。
+- native visible Main 不含 `--fixed-fps`／Movie Maker，前后都在前台；自身 ticks 为
+  `process_total max=3.909ms / 654 samples`，selection `2.996ms`、input dispatch `0.020ms`、
+  detail tab `6.886ms`。built-in delayed monitor 不用于逐帧 CPU 放行。
+- 最终真实 `Main.tscn` 有声视频位于
+  `.run/evidence/phase398_pet_codex_awakened_owner_review/phase398-pet-codex-final-v3-20260808/`，
+  为 `17.466667s / 524` 帧、`1280×720 / 30 FPS / 1.00×`、H.264 `yuv420p`／AAC 48kHz
+  双声道；9 章、15 次跨帧真实左键，完整解码通过。
+- MP4 SHA-256 `62f6d9bb61312b6362660eceed8968f0e354e3cc14c0ae81e9e907050756ca76`；
+  联系表 SHA-256 `6f068149f4396b486791e3a66a85e6d690b0d888f4b545e67e80655b46b7c428`；
+  `SHA256SUMS` 覆盖 45 个保留证据文件并逐项通过，两份 Godot 日志无 ERROR、WARNING、
+  leak、POINTER 或失败 marker。
+- 捕获使用隔离 user-data，未启动后端、访问 MySQL 或走普通玩家 save path；`serverWrites=0`
+  只是隔离捕获合同，不是联网 HTTP／MySQL 写入计数器。
+
+## Intentional differences and P3 observations
+
+- 参考图展示商业产品宠物与技能美术；本阶段不以项目所有者未批准的候选画像填满画面。自然占位
+  是发布边界，不是素材丢失。批准正式画像后可沿同一 approved-only API 逐只补齐。
+- 参考右栏含具体成长区间和技能图；Beastbound 只显示当前权威允许公开的 Lv1 四维、成长倾向和
+  已登记技能，不为了视觉密度伪造隐藏成长或未登记能力。
+- native visible Main 的自身 ticks 负责性能结论；30 FPS Movie 的 delayed monitor 只作诊断。
+  两类证据不能互换。
+- detached source attestation 已将 19 个录制关键路径绑定到 `5302406ab` 基线媒体；Phase 文档、
+  本 Design QA 和路线图作为三份 post-run docs 明确排除。它没有可信时间戳，也不证明
+  `3c0e811aa` current main 兼容。
+- 宠物管理、任务路线、挂机、地图、battle-command 相邻回归须在安全迁移后重新串行执行；
+  失败会阻断发布，不以本 Design QA 结果覆盖。录制相关源码或玩家可见状态变化时必须重录。
+- `ownerReviewStatus=pending`；本结论不代表项目所有者已接受底板审美或 broad P2.2 完成。
+
+final result: baseline_engineering_media_passed; main_migration_pending; owner_review_pending
+
+---
+
 # Phase 381 Design QA：世界“角色”入口与角色管理三页
 
 ## Result

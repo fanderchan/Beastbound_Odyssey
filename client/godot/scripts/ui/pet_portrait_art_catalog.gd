@@ -49,6 +49,27 @@ static func has_formal_portrait(form_id: String) -> bool:
 	return texture_for_form(form_id) != null
 
 
+static func is_owner_approved_portrait(form_id: String) -> bool:
+	var record := PetArtCatalog.form_record(form_id.strip_edges())
+	return (
+		not record.is_empty()
+		and str(record.get("status", "")) == PetArtCatalog.STATUS_APPROVED
+		and bool(record.get("runtimeEnabled", false))
+	)
+
+
+static func approved_texture_for_form(form_id: String) -> Texture2D:
+	if not is_owner_approved_portrait(form_id):
+		return null
+	return texture_for_form(form_id)
+
+
+static func approved_resource_path_for_form(form_id: String) -> String:
+	if not is_owner_approved_portrait(form_id):
+		return ""
+	return resource_path_for_form(form_id)
+
+
 static func declared_path_for_form(form_id: String) -> String:
 	var record := PetArtCatalog.form_record(form_id.strip_edges())
 	var pet_value = record.get("pet", {})

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "packageId": "pet_codex_awakened_v1",
+  "runtimeEnabled": true,
+  "ownerReviewStatus": "owner_review_pending",
+  "generator": "codex_builtin_imagegen",
+  "generationId": "019fbf19-529f-7b93-879c-c023b0dfd23a/exec-162bcf66-5fac-41a9-9d79-4541c9e90086.png",
+  "referencePolicy": "layout_material_direction_only_no_external_runtime_assets",
+  "assets": [
+    {
+      "id": "pet_codex_backdrop",
+      "sourcePath": "client/godot/assets/ui/pet_codex_awakened_v1/source/generated/pet_codex_backdrop_raw.png",
+      "runtimePath": "client/godot/assets/ui/pet_codex_awakened_v1/runtime/pet_codex_backdrop_1280x720.png",
+      "sourceSize": [1672, 941],
+      "runtimeSize": [1280, 720],
+      "sourceSha256": "4bca05805e5f15264fcfd89487c4d7f33747c003b269a0c0ae1237e7aa3a6e86",
+      "runtimeSha256": "863e7c86b5f8f8219d971a6db6bd12f537a5884c4628dc86e56a19010bc17470"
+    }
+  ]
+}

@@ -1107,6 +1107,7 @@ var pet_order_preview: bool = false
 var pet_drop_preview: bool = false
 var pet_codex_preview: bool = false
 var pet_codex_list_preview: bool = false
+var pet_codex_acquisition_preview: bool = false
 var pet_encounter_table_preview: bool = false
 var pet_capture_feedback_preview: bool = false
 var pet_skill_training_preview: bool = false
@@ -1347,6 +1348,8 @@ var perf_probe_enabled: bool = false
 var perf_probe_elapsed: float = 0.0
 var perf_probe_frames: int = 0
 var perf_probe_totals: Dictionary = {}
+var perf_probe_frame_max_usec: Dictionary = {}
+var perf_probe_label_samples: Dictionary = {}
 
 
 func _bootstrap_auth_state() -> void:
@@ -2231,6 +2234,12 @@ func _update_runtime_frame_budget() -> void:
 func _world_needs_active_fps() -> bool:
 	if battle_active or encounter_active:
 		return true
+	# Full-screen player menus are active interaction surfaces.  Keeping them on
+	# the 30fps idle budget makes tab/form/modal input visibly hitch even when the
+	# handlers themselves are sub-frame; return to 30fps only after the menu is
+	# closed and the world is otherwise idle.
+	if _world_menu_is_open():
+		return true
 	if hang_mode_active or _encounter_stone_active():
 		return true
 	if has_target_marker or has_pending_interaction or not current_path_cells.is_empty():
@@ -2944,6 +2953,8 @@ func _apply_preview_window_args() -> void:
 			pet_codex_preview = true
 		elif arg == "--pet-codex-list-preview":
 			pet_codex_list_preview = true
+		elif arg == "--pet-codex-acquisition-preview":
+			pet_codex_acquisition_preview = true
 		elif arg == "--pet-encounter-table-preview":
 			pet_encounter_table_preview = true
 		elif arg == "--pet-capture-feedback-preview":
@@ -4250,6 +4261,32 @@ func _run_pet_codex_list_preview() -> void:
 	codex_selected_form_id = "wuli_normal_fast_wind10"
 	_open_codex_panel()
 	_select_codex_form("wuli_normal_fast_wind10")
+	await get_tree().process_frame
+	if pet_codex_acquisition_preview:
+		var acquisition_button := codex_panel.get("acquisition_button") as Button
+		if acquisition_button != null:
+			var click_point := (
+				acquisition_button.global_position
+				+ acquisition_button.size * 0.5
+			)
+			var motion := InputEventMouseMotion.new()
+			motion.position = click_point
+			motion.global_position = click_point
+			get_viewport().push_input(motion, true)
+			await get_tree().process_frame
+			var press := InputEventMouseButton.new()
+			press.button_index = MOUSE_BUTTON_LEFT
+			press.pressed = true
+			press.position = click_point
+			press.global_position = click_point
+			get_viewport().push_input(press, true)
+			await get_tree().process_frame
+			var release := InputEventMouseButton.new()
+			release.button_index = MOUSE_BUTTON_LEFT
+			release.pressed = false
+			release.position = click_point
+			release.global_position = click_point
+			get_viewport().push_input(release, true)
 
 
 func _run_backpack_preview() -> void:
@@ -8081,6 +8118,13 @@ func _perf_add(label: String, start_usec: int) -> void:
 		return
 	var duration := Time.get_ticks_usec() - start_usec
 	perf_probe_totals[label] = int(perf_probe_totals.get(label, 0)) + duration
+	perf_probe_frame_max_usec[label] = maxi(
+		int(perf_probe_frame_max_usec.get(label, 0)),
+		duration
+	)
+	perf_probe_label_samples[label] = int(
+		perf_probe_label_samples.get(label, 0)
+	) + 1
 
 
 func _perf_report(delta: float) -> void:
@@ -8111,6 +8155,23 @@ func _reset_perf_probe_counters() -> void:
 	perf_probe_elapsed = 0.0
 	perf_probe_frames = 0
 	perf_probe_totals.clear()
+	perf_probe_frame_max_usec.clear()
+	perf_probe_label_samples.clear()
+
+
+func _reset_perf_probe_frame_max_for_qa() -> void:
+	if not perf_probe_enabled:
+		return
+	perf_probe_frame_max_usec.clear()
+	perf_probe_label_samples.clear()
+
+
+func _perf_probe_frame_snapshot_for_qa() -> Dictionary:
+	return {
+		"enabled": perf_probe_enabled,
+		"maxUsecByLabel": perf_probe_frame_max_usec.duplicate(true),
+		"sampleCountByLabel": perf_probe_label_samples.duplicate(true),
+	}
 
 
 func _request_profile_save(delay_seconds: float = 0.3) -> void:
@@ -11011,9 +11072,6 @@ func _refresh_codex_panel() -> void:
 
 func _preferred_codex_form_id(entries: Array[Dictionary]) -> String:
 	return _panel_flow()._preferred_codex_form_id(entries)
-
-func _add_codex_list_button(entry: Dictionary) -> void:
-	_panel_flow()._add_codex_list_button(entry)
 
 func _select_codex_form(form_id: String) -> void:
 	_panel_flow()._select_codex_form(form_id)
@@ -14349,8 +14407,7 @@ func _layout_hud() -> void:
 
 	var codex_width := pet_width
 	var codex_height := pet_height
-	codex_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
-	codex_panel.size = Vector2(codex_width, codex_height)
+	codex_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if codex_panel.visible and action_bar != null:
 		action_bar.visible = false
 
