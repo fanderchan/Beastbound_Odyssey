@@ -75,6 +75,10 @@ func configure_command_buttons(buttons: Dictionary) -> void:
 			continue
 		if button.get_parent() != null:
 			button.get_parent().remove_child(button)
+		# The legacy GridContainer assigned a 70px player minimum. Once this
+		# focused view owns the button, Presenter is the sole size authority;
+		# retaining that minimum widens 68px slots and overlaps their neighbours.
+		button.custom_minimum_size = Vector2.ZERO
 		_command_layer.add_child(button)
 		_prepare_button(button, str(button.text), str(PLAYER_ICONS.get(command_id, "attack")))
 		# Legacy buttons already point at the host. Disconnect all existing

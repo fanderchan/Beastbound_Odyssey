@@ -1,6 +1,5 @@
-extends SceneTree
+extends RefCounted
 
-const MAIN_SCENE := preload("res://scenes/Main.tscn")
 const PlayerProgressModel := preload(
 	"res://scripts/progression/player_progress_model.gd"
 )
@@ -10,9 +9,16 @@ const PetCodexAwakenedPanel := preload(
 const PetCodexAcquisitionRouteCatalog := preload(
 	"res://scripts/ui/pet_codex_acquisition_route_catalog.gd"
 )
+const WorldCameraSafeAreaModel := preload(
+	"res://scripts/world/world_camera_safe_area_model.gd"
+)
 
+const CAPTURE_FLAG := "--pet-codex-awakened-owner-review-capture"
+const NATIVE_PERF_FLAG := "--pet-codex-awakened-owner-review-native-perf"
 const REVIEW_FPS := 30
 const VIEWPORT_SIZE := Vector2i(1280, 720)
+const FOREGROUND_TIMEOUT_MSEC := 3000
+const FOREGROUND_RETRY_MSEC := 250
 const ACCOUNT_ID := "phase398_pet_codex_owner_review"
 const WORLD_MAP_ID := "firebud_village_gate"
 const WORLD_SPAWN_NAME := "from_training_yard"
@@ -31,6 +37,7 @@ const CHAPTERS := [
 ]
 
 var _host
+var _tree: SceneTree
 var _panel_flow
 var _panel: PetCodexAwakenedPanel
 var _failed := false
@@ -55,6 +62,10 @@ var _coverage := {
 	"embedded_close": false,
 	"world_hud_restored": false,
 	"world_hud_clickable": false,
+	"message_panel_restored": false,
+	"safe_area_restored": false,
+	"movement_bounds_restored": false,
+	"camera_state_restored": false,
 	"menu_fps60": false,
 	"idle_fps30": false,
 	"battle_fps60": false,
@@ -72,41 +83,63 @@ var _input_dispatch_max_usec := 0
 var _detail_tab_max_usec := 0
 
 
-func _initialize() -> void:
-	_native_perf_mode = OS.get_cmdline_user_args().has(
-		"--pet-codex-native-perf"
-	)
-	call_deferred("_run")
+func _init(host_node = null) -> void:
+	_host = host_node
+	if _host != null and is_instance_valid(_host):
+		_tree = _host.get_tree()
+	if _tree == null:
+		var main_loop := Engine.get_main_loop()
+		if main_loop is SceneTree:
+			_tree = main_loop as SceneTree
+
+
+static func is_flag(argument: String) -> bool:
+	return argument == CAPTURE_FLAG or argument == NATIVE_PERF_FLAG
+
+
+func run() -> void:
+	var user_args := OS.get_cmdline_user_args()
+	var capture_count := user_args.count(CAPTURE_FLAG)
+	var native_perf_count := user_args.count(NATIVE_PERF_FLAG)
+	if capture_count != 1 or native_perf_count > 1:
+		await _fail(
+			"图鉴验收参数必须包含唯一 capture flag，native perf flag 最多一个"
+		)
+		return
+	_native_perf_mode = native_perf_count == 1
+	await _run()
 
 
 func _run() -> void:
 	_started_msec = Time.get_ticks_msec()
-	root.size = VIEWPORT_SIZE
-	root.content_scale_size = VIEWPORT_SIZE
-	root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
-	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+	if _host == null or not is_instance_valid(_host) or _host.get_tree() == null:
+		await _fail("正式 Main 宿主不存在")
+		return
+	var tree := _host.get_tree()
+	var root_window := tree.root
+	if (
+		tree.current_scene != _host
+		or str(_host.scene_file_path) != "res://scenes/Main.tscn"
+		or root_window.size != VIEWPORT_SIZE
+		or root_window.content_scale_size != VIEWPORT_SIZE
+	):
+		await _fail("图鉴验收没有运行在正式 1280×720 Main.tscn 宿主")
+		return
+	if bool(_host.perf_probe_enabled) != _native_perf_mode:
+		await _fail("native perf flag 与 Main --perf-probe 状态不一致")
+		return
+	# Main has already completed `_ready()`, including the fail-closed QA lane
+	# attestation.  Wait for a fresh player-visible frame before asking macOS for
+	# key focus; focus itself remains a hard start/end gate below.
+	await tree.process_frame
+	await RenderingServer.frame_post_draw
 	if _native_perf_mode:
-		# macOS throttles a covered/unfocused drawable independently of Beastbound's
-		# own 60fps menu budget.  The native evidence must be the same visible,
-		# foreground window a player interacts with, not a background scheduler.
-		DisplayServer.window_move_to_foreground()
-		for _focus_frame in range(30):
-			await process_frame
-			if DisplayServer.window_is_focused():
-				break
-		_coverage["foreground_contract"] = DisplayServer.window_is_focused()
+		_coverage["foreground_contract"] = await _wait_for_native_foreground_focus()
 		if not bool(_coverage["foreground_contract"]):
 			await _fail("native 性能窗口没有进入玩家前台焦点态")
 			return
 	else:
 		_coverage["foreground_contract"] = true
-
-	_host = MAIN_SCENE.instantiate()
-	# Native performance evidence uses Main's own per-frame monotonic ticks. The
-	# built-in Performance monitor is not a gate because its values can lag.
-	_host.perf_probe_enabled = _native_perf_mode
-	root.add_child(_host)
-	current_scene = _host
 	if not await _wait_for_real_world():
 		await _fail("真实 Main.tscn 世界 HUD 没有在限定帧内就绪")
 		return
@@ -115,7 +148,7 @@ func _run() -> void:
 
 	print((
 		"PET_CODEX_AWAKENED_OWNER_REVIEW_START scene=Main.tscn "
-		+ "entry=SceneTreeScript viewport=1280x720 fps=%s speed=1.00x "
+		+ "entry=MainSceneFlag viewport=1280x720 fps=%s speed=1.00x "
 		+ "profile=isolated backend=false profile_save=false "
 		+ "owner_review_status=pending perf_mode=%s"
 	) % [
@@ -340,12 +373,15 @@ func _run() -> void:
 		_panel_flow.codex_close_world_hud_restore_same_call_for_qa()
 	)
 	var next_frame_restored := _formal_world_hud_complete()
+	var same_call_close_contract := _world_close_runtime_contract()
 	await _settle_frames(1)
 	next_frame_restored = next_frame_restored and _formal_world_hud_complete()
+	var next_frame_close_contract := _world_close_runtime_contract()
 	await _left_click(_formal_codex_entry_button(), "恢复后的正式图鉴入口")
 	var reopened_from_restored_hud := _panel.is_visible_in_tree()
 	await _left_click(_panel.close_button, "从恢复入口再次关闭图鉴")
 	await _settle_frames(1)
+	var final_close_contract := _world_close_runtime_contract()
 	_interactive_process_active = false
 	if _native_perf_mode:
 		_coverage["foreground_contract"] = (
@@ -383,6 +419,26 @@ func _run() -> void:
 		and bool(_panel_flow.codex_close_world_hud_restore_same_call_for_qa())
 		and _formal_world_hud_complete()
 	)
+	_coverage["message_panel_restored"] = (
+		bool(same_call_close_contract.get("messagePanel", false))
+		and bool(next_frame_close_contract.get("messagePanel", false))
+		and bool(final_close_contract.get("messagePanel", false))
+	)
+	_coverage["safe_area_restored"] = (
+		bool(same_call_close_contract.get("safeArea", false))
+		and bool(next_frame_close_contract.get("safeArea", false))
+		and bool(final_close_contract.get("safeArea", false))
+	)
+	_coverage["movement_bounds_restored"] = (
+		bool(same_call_close_contract.get("movementBounds", false))
+		and bool(next_frame_close_contract.get("movementBounds", false))
+		and bool(final_close_contract.get("movementBounds", false))
+	)
+	_coverage["camera_state_restored"] = (
+		bool(same_call_close_contract.get("cameraState", false))
+		and bool(next_frame_close_contract.get("cameraState", false))
+		and bool(final_close_contract.get("cameraState", false))
+	)
 	_host._update_runtime_frame_budget()
 	_coverage["idle_fps30"] = (
 		not _host._world_menu_is_open()
@@ -401,11 +457,26 @@ func _run() -> void:
 	_host.battle_active = battle_active_before
 	_host._update_runtime_frame_budget()
 	_coverage["no_player_qa_text"] = not _visible_tree_has_forbidden_review_text()
+	if not _all_http_requests_disconnected():
+		await _fail("isolated owner review 结束前发现未断开的 HTTP 请求")
+		return
 	if not bool(_coverage["world_hud_restored"]):
 		await _fail("关闭图鉴后同调用／下一帧正式世界 HUD 没有完整恢复")
 		return
 	if not bool(_coverage["world_hud_clickable"]):
 		await _fail("关闭图鉴后正式 HUD 入口没有恢复真实左键响应")
+		return
+	if not bool(_coverage["message_panel_restored"]):
+		await _fail("关闭图鉴后世界消息面板或其可交互矩形没有恢复")
+		return
+	if not bool(_coverage["safe_area_restored"]):
+		await _fail("关闭图鉴后 Phase400 正式安全区或 HUD blocker 没有恢复")
+		return
+	if not bool(_coverage["movement_bounds_restored"]):
+		await _fail("关闭图鉴后玩家移动边界没有恢复为当前地图权威边界")
+		return
+	if not bool(_coverage["camera_state_restored"]):
+		await _fail("关闭图鉴后镜头限制或当前位置没有恢复到安全区内")
 		return
 	if not bool(_coverage["idle_fps30"]):
 		await _fail("图鉴关闭后的静止世界没有恢复 30fps 空闲预算")
@@ -455,6 +526,8 @@ func _run() -> void:
 		+ "attributes_growth=%s acquisition_open=%s modal_blocks_underlay=%s "
 		+ "top_close_collapses=%s embedded_close=%s world_hud_restored=%s "
 		+ "world_hud_clickable=%s "
+		+ "message_panel_restored=%s safe_area_restored=%s "
+		+ "movement_bounds_restored=%s camera_state_restored=%s "
 		+ "menu_fps60=%s idle_fps30=%s battle_fps60=%s "
 		+ "foreground_contract=%s "
 		+ "pending_portrait_blocked=%s no_player_qa_text=%s "
@@ -476,6 +549,10 @@ func _run() -> void:
 			_bool_text(bool(_coverage["embedded_close"])),
 			_bool_text(bool(_coverage["world_hud_restored"])),
 			_bool_text(bool(_coverage["world_hud_clickable"])),
+			_bool_text(bool(_coverage["message_panel_restored"])),
+			_bool_text(bool(_coverage["safe_area_restored"])),
+			_bool_text(bool(_coverage["movement_bounds_restored"])),
+			_bool_text(bool(_coverage["camera_state_restored"])),
 			_bool_text(bool(_coverage["menu_fps60"])),
 			_bool_text(bool(_coverage["idle_fps30"])),
 			_bool_text(bool(_coverage["battle_fps60"])),
@@ -505,11 +582,43 @@ func _run() -> void:
 	await _finish(0)
 
 
+func _wait_for_native_foreground_focus() -> bool:
+	# macOS treats activation as a request. Repeat it only inside a bounded
+	# window, and accept evidence solely after a fresh frame reports key focus.
+	var tree := _host.get_tree()
+	var started_msec := Time.get_ticks_msec()
+	var next_request_msec := started_msec
+	var request_count := 0
+	while Time.get_ticks_msec() - started_msec <= FOREGROUND_TIMEOUT_MSEC:
+		var now_msec := Time.get_ticks_msec()
+		if now_msec >= next_request_msec:
+			DisplayServer.window_move_to_foreground()
+			request_count += 1
+			next_request_msec = now_msec + FOREGROUND_RETRY_MSEC
+		await tree.process_frame
+		if DisplayServer.window_is_focused():
+			print(
+				"PET_CODEX_AWAKENED_OWNER_REVIEW_FOCUS "
+				+ "focused=true elapsed_msec=%d requests=%d"
+				% [Time.get_ticks_msec() - started_msec, request_count]
+			)
+			return true
+	print(
+		"PET_CODEX_AWAKENED_OWNER_REVIEW_FOCUS "
+		+ "focused=false elapsed_msec=%d requests=%d"
+		% [Time.get_ticks_msec() - started_msec, request_count]
+	)
+	return false
+
+
 func _wait_for_real_world() -> bool:
+	var tree := _tree
+	if tree == null:
+		return false
 	for _frame_index in range(240):
-		await process_frame
 		if _host == null or not is_instance_valid(_host):
 			return false
+		await tree.process_frame
 		if (
 			_host.get("hud_root") is Control
 			and _host.get("player") is CanvasItem
@@ -517,7 +626,7 @@ func _wait_for_real_world() -> bool:
 			and str(_host.get("current_map_id")).strip_edges() != ""
 		):
 			return (
-				current_scene == _host
+				_host.get_tree().current_scene == _host
 				and str(_host.scene_file_path) == "res://scenes/Main.tscn"
 			)
 	return false
@@ -526,6 +635,7 @@ func _wait_for_real_world() -> bool:
 func _configure_isolated_world() -> bool:
 	_host.profile_save_enabled = false
 	_host.account_authenticated = true
+	_host.auth_auto_bypass = false
 	_host.current_account_session = {
 		"accountId": ACCOUNT_ID,
 		"displayName": "岚牙",
@@ -539,6 +649,19 @@ func _configure_isolated_world() -> bool:
 		_host._stop_server_event_stream()
 	if _host.has_method("_stop_online_position_sync"):
 		_host._stop_online_position_sync()
+	for value in _host.find_children("*", "HTTPRequest", true, false):
+		if value is HTTPRequest:
+			var request := value as HTTPRequest
+			request.cancel_request()
+			if request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+				await _fail("isolated owner review 未能断开所有 HTTP 请求")
+				return false
+	if _host.has_method("_refresh_gm_visibility"):
+		_host._refresh_gm_visibility()
+	var qa_menu := _host.get("qa_menu_button") as CanvasItem
+	if qa_menu != null and qa_menu.visible:
+		await _fail("isolated owner review 仍显示 GM/QA 入口")
+		return false
 	for method_name in [
 		"_close_auth_panel",
 		"_close_account_panel",
@@ -645,6 +768,118 @@ func _formal_world_hud_complete() -> bool:
 	)
 
 
+func _world_close_runtime_contract() -> Dictionary:
+	var viewport_size := Vector2(VIEWPORT_SIZE)
+	var message_panel := _host.get("battle_message_panel") as Control
+	var message_expand_button := (
+		_host.get("battle_message_expand_button") as Button
+	)
+	var message_clear_button := _host.get("battle_message_clear_button") as Button
+	var message_panel_ready := (
+		str(_host.get("world_log_message")).strip_edges() != ""
+		or not (_host.get("world_log_history") as Array).is_empty()
+	)
+	message_panel_ready = (
+		message_panel_ready
+		and _hud_control_ready(message_panel)
+		and message_panel.mouse_filter != Control.MOUSE_FILTER_IGNORE
+		and _hud_button_ready(message_expand_button)
+		and _hud_button_ready(message_clear_button)
+	)
+
+	var blocker_rects: Array[Rect2] = []
+	var raw_blockers = _host.get("world_camera_hud_blocker_rects")
+	if raw_blockers is Array:
+		for raw_rect in raw_blockers:
+			if typeof(raw_rect) == TYPE_RECT2:
+				var blocker_rect: Rect2 = raw_rect
+				blocker_rects.append(blocker_rect)
+	var expected_blocker_controls: Array[Control] = [
+		_host.get("top_panel") as Control,
+		_host.get("side_panel") as Control,
+		message_panel,
+		_host.get("action_bar") as Control,
+	]
+	var blockers_match := blocker_rects.size() == expected_blocker_controls.size()
+	for blocker_control in expected_blocker_controls:
+		blockers_match = (
+			blockers_match
+			and blocker_control != null
+			and blocker_control.is_visible_in_tree()
+			and blocker_control.mouse_filter != Control.MOUSE_FILTER_IGNORE
+			and _rect_list_contains(blocker_rects, blocker_control.get_global_rect())
+		)
+	var expected_safe_rect := WorldCameraSafeAreaModel.safe_viewport_rect(
+		viewport_size,
+		blocker_rects
+	)
+	var actual_safe_rect: Rect2 = _host.get("world_camera_safe_viewport_rect")
+	var expected_safe_anchor := WorldCameraSafeAreaModel.player_anchor(
+		viewport_size,
+		expected_safe_rect
+	)
+	var actual_safe_anchor: Vector2 = _host.get("world_camera_safe_anchor_screen")
+	var safe_area_ready := (
+		blockers_match
+		and expected_safe_rect.size.x > 0.5
+		and expected_safe_rect.size.y > 0.5
+		and _rect_nearly_equal(actual_safe_rect, expected_safe_rect)
+		and not _rect_nearly_equal(
+			actual_safe_rect,
+			Rect2(Vector2.ZERO, viewport_size)
+		)
+		and actual_safe_anchor.distance_to(expected_safe_anchor) <= 0.5
+	)
+
+	var player := _host.get("player") as CharacterBody2D
+	var expected_movement_bounds: Rect2 = _host._player_movement_bounds()
+	var actual_movement_bounds := Rect2()
+	if player != null:
+		actual_movement_bounds = player.get("movement_bounds") as Rect2
+	var movement_bounds_ready := (
+		player != null
+		and expected_movement_bounds.size.x > 0.5
+		and expected_movement_bounds.size.y > 0.5
+		and _rect_nearly_equal(actual_movement_bounds, expected_movement_bounds)
+		and expected_movement_bounds.grow(0.5).has_point(player.global_position)
+	)
+
+	var camera := _host.get("game_camera") as Camera2D
+	var camera_state_ready := false
+	if camera != null and player != null:
+		var expected_camera_position: Vector2 = _host._clamped_camera_center(
+			player.global_position
+		)
+		camera_state_ready = (
+			camera.limit_left == -10000000
+			and camera.limit_top == -10000000
+			and camera.limit_right == 10000000
+			and camera.limit_bottom == 10000000
+			and _host._camera_center_is_inside_limits(camera.global_position)
+			and camera.global_position.distance_to(expected_camera_position) <= 0.1
+		)
+	return {
+		"messagePanel": message_panel_ready,
+		"safeArea": safe_area_ready,
+		"movementBounds": movement_bounds_ready,
+		"cameraState": camera_state_ready,
+	}
+
+
+func _rect_list_contains(rects: Array[Rect2], expected: Rect2) -> bool:
+	for rect in rects:
+		if _rect_nearly_equal(rect, expected):
+			return true
+	return false
+
+
+func _rect_nearly_equal(left: Rect2, right: Rect2) -> bool:
+	return (
+		left.position.distance_to(right.position) <= 0.5
+		and left.size.distance_to(right.size) <= 0.5
+	)
+
+
 func _formal_codex_entry_button() -> Button:
 	var awakened = _host.get("world_hud_awakened_view")
 	if not (awakened is Node):
@@ -670,7 +905,7 @@ func _hud_control_ready(control: Control) -> bool:
 	if control == null or not control.is_visible_in_tree():
 		return false
 	var rect := control.get_global_rect()
-	var viewport_rect := root.get_visible_rect()
+	var viewport_rect := _host.get_tree().root.get_visible_rect()
 	return (
 		rect.size.x > 0.5
 		and rect.size.y > 0.5
@@ -708,17 +943,18 @@ func _left_click(control: Control, label: String, require_button_ready := true) 
 		await _fail("%s不可见或不可用，无法执行真实左键" % label)
 		return
 	var viewport_point := control.get_global_rect().get_center()
-	if not root.get_visible_rect().has_point(viewport_point):
+	var root_window := _host.get_tree().root
+	if not root_window.get_visible_rect().has_point(viewport_point):
 		await _fail("%s不在 1280×720 可点击区域内" % label)
 		return
-	var input_position: Vector2 = root.get_screen_transform() * viewport_point
+	var input_position: Vector2 = root_window.get_screen_transform() * viewport_point
 	var motion := InputEventMouseMotion.new()
 	motion.position = input_position
 	motion.global_position = input_position
 	_parse_input_event_with_perf(motion)
-	await process_frame
+	await _host.get_tree().process_frame
 	if require_button_ready:
-		var hovered := root.gui_get_hovered_control()
+		var hovered := root_window.gui_get_hovered_control()
 		if hovered == null or (
 			hovered != control and not control.is_ancestor_of(hovered)
 		):
@@ -739,7 +975,7 @@ func _left_click(control: Control, label: String, require_button_ready := true) 
 	press.position = input_position
 	press.global_position = input_position
 	_parse_input_event_with_perf(press)
-	await process_frame
+	await _host.get_tree().process_frame
 	_press_frames += 1
 	_sample_performance()
 	var release := InputEventMouseButton.new()
@@ -748,7 +984,7 @@ func _left_click(control: Control, label: String, require_button_ready := true) 
 	release.position = input_position
 	release.global_position = input_position
 	_parse_input_event_with_perf(release)
-	await process_frame
+	await _host.get_tree().process_frame
 	_actual_left_clicks += 1
 	_sample_performance()
 
@@ -765,7 +1001,7 @@ func _parse_input_event_with_perf(event: InputEvent) -> void:
 
 func _settle_frames(count: int) -> void:
 	for _index in range(maxi(1, count)):
-		await process_frame
+		await _host.get_tree().process_frame
 		_sample_performance()
 
 
@@ -787,7 +1023,7 @@ func _hold_chapter(chapter_id: String) -> void:
 		+ "frame=%d seconds=%.3f speed=1.00x") % [chapter_id, frames, seconds]
 	)
 	for _frame_index in range(frames):
-		await process_frame
+		await _host.get_tree().process_frame
 		_sample_performance()
 
 
@@ -821,17 +1057,40 @@ func _print_performance_diagnostics() -> void:
 
 
 func _visible_tree_has_forbidden_review_text() -> bool:
-	for value in root.find_children("*", "Label", true, false):
+	for value in _host.find_children("*", "Label", true, false):
 		if value is Label and (value as Label).is_visible_in_tree():
-			var text_value := str((value as Label).text).to_lower()
-			if "qa" in text_value or "调试" in text_value or "验收" in text_value:
+			var text_value := str((value as Label).text).strip_edges().to_lower()
+			if (
+				"qa" in text_value
+				or "调试" in text_value
+				or "验收" in text_value
+				or text_value == "gm"
+				or text_value.begins_with("gm/")
+			):
 				return true
-	for value in root.find_children("*", "Button", true, false):
+	for value in _host.find_children("*", "Button", true, false):
 		if value is Button and (value as Button).is_visible_in_tree():
-			var text_value := str((value as Button).text).to_lower()
-			if "qa" in text_value or "调试" in text_value or "验收" in text_value:
+			var text_value := str((value as Button).text).strip_edges().to_lower()
+			if (
+				"qa" in text_value
+				or "调试" in text_value
+				or "验收" in text_value
+				or text_value == "gm"
+				or text_value.begins_with("gm/")
+			):
 				return true
 	return false
+
+
+func _all_http_requests_disconnected() -> bool:
+	for value in _host.find_children("*", "HTTPRequest", true, false):
+		if (
+			value is HTTPRequest
+			and (value as HTTPRequest).get_http_client_status()
+			!= HTTPClient.STATUS_DISCONNECTED
+		):
+			return false
+	return true
 
 
 func _bool_text(value: bool) -> String:
@@ -848,9 +1107,9 @@ func _fail(message: String) -> void:
 
 
 func _finish(exit_code: int) -> void:
-	current_scene = null
-	if _host != null and is_instance_valid(_host):
-		_host.queue_free()
+	var tree := _tree
+	if tree == null:
+		return
 	for _frame_index in range(4):
-		await process_frame
-	quit(exit_code)
+		await tree.process_frame
+	tree.call_deferred("quit", exit_code)

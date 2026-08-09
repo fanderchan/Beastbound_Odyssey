@@ -61,6 +61,14 @@ const PHANTOM_FIELD_KEYS: Array[String] = [
 	"vip",
 	"currency",
 ]
+const ROLLBACK_NONCANONICAL_INTRINSIC_MINIMUM_NAMES: Array[String] = [
+	"LegacyStatusLabel",
+	"LegacyVersionLabel",
+	"LegacyDetailLabel",
+	"LegacyTaskRouteButton",
+	"LegacyMessageBox",
+	"LegacyCollapseButton",
+]
 
 var _errors: Array[String] = []
 var _view: Control
@@ -69,6 +77,9 @@ var _original_entries: Dictionary = {}
 var _collapsed_restore_only_verified := false
 var _rollback_expectations: Array[Dictionary] = []
 var _rollback_result: Dictionary = {}
+var _fixture_message_expanded := false
+var _fixture_message_history: Array[String] = ["欢迎来到火芽训练场"]
+var _fixture_message_clear_count := 0
 
 
 func _initialize() -> void:
@@ -87,7 +98,20 @@ func _run() -> void:
 	root.add_child(legacy_host)
 	_legacy_controls = _build_legacy_controls(legacy_host)
 	_configure_rollback_fixture()
+	var rollback_message_panel: Control = (
+		_legacy_controls.get("battleMessagePanel") as Control
+	)
+	_expect(
+		rollback_message_panel != null and not rollback_message_panel.visible,
+		"rollback fixture 消息根在基线排版前应保持隐藏"
+	)
+	rollback_message_panel.visible = true
+	await process_frame
+	await process_frame
+	rollback_message_panel.visible = false
 	_rollback_expectations = _capture_rollback_expectations()
+	_append_internal_auto_name_fixture_errors()
+	_append_noncanonical_intrinsic_minimum_fixture_errors()
 
 	_view = WorldHudAwakenedView.new()
 	_view.name = "WorldHudAwakenedViewCheckSubject"
@@ -126,6 +150,7 @@ func _run() -> void:
 	_append_portrait_errors()
 	_append_portrait_fallback_errors(flattened)
 	_append_player_gate_errors()
+	_append_message_action_errors()
 
 	var more_button := _named_button("WorldHudMoreButton")
 	_expect(more_button != null, "世界 HUD 缺少更多按钮")
@@ -154,8 +179,19 @@ func _run() -> void:
 	var player_portrait_loaded := _entry_has_icon("character")
 	var battle_pet_portrait_loaded := _entry_has_icon("pet")
 	_rollback_result = _view.call("rollback_mount") as Dictionary
-	_append_mount_rollback_errors()
+	_append_mount_rollback_structure_errors()
+	_append_mount_write_set_errors("rollback 同调用")
+	_expect(
+		rollback_message_panel != null and not rollback_message_panel.visible,
+		"rollback 同调用没有恢复隐藏的消息根"
+	)
+	rollback_message_panel.visible = true
 	await process_frame
+	await process_frame
+	rollback_message_panel.visible = false
+	_append_mount_rollback_errors()
+	_append_mount_write_set_errors("rollback settled")
+	_append_mount_name_helper_contract_errors(legacy_host)
 
 	var report := {
 		"schemaVersion": 1,
@@ -220,6 +256,16 @@ func _build_legacy_controls(host: Control) -> Dictionary:
 	var message_title := Label.new()
 	message_title.text = "消息"
 	message_header.add_child(message_title)
+	var message_expand_button := Button.new()
+	message_expand_button.name = "LegacyMessageExpandButton"
+	message_expand_button.text = "展开"
+	message_expand_button.pressed.connect(_fixture_toggle_message_expanded)
+	message_header.add_child(message_expand_button)
+	var message_clear_button := Button.new()
+	message_clear_button.name = "LegacyMessageClearButton"
+	message_clear_button.text = "清空"
+	message_clear_button.pressed.connect(_fixture_clear_message)
+	message_header.add_child(message_clear_button)
 	var battle_log := RichTextLabel.new()
 	battle_log.name = "BattleLog"
 	battle_log.text = "欢迎来到火芽训练场"
@@ -267,6 +313,8 @@ func _build_legacy_controls(host: Control) -> Dictionary:
 		"detailLabel": detail_label,
 		"taskRouteButton": task_route_button,
 		"battleLogLabel": battle_log,
+		"battleMessageExpandButton": message_expand_button,
+		"battleMessageClearButton": message_clear_button,
 		"actionBarCollapseButton": collapse_button,
 		"buttons": buttons,
 	}
@@ -324,6 +372,279 @@ func _configure_rollback_fixture() -> void:
 		status_label.text = "旧世界状态"
 
 
+func _append_internal_auto_name_fixture_errors() -> void:
+	var internal_label_expectations: Array[Dictionary] = []
+	for expected in _rollback_expectations:
+		var saved_name := str(expected.get("name", ""))
+		if saved_name.begins_with("@Label@"):
+			internal_label_expectations.append(expected)
+	_expect(
+		internal_label_expectations.size() == 1,
+		"rollback fixture 必须恰有一个内部自动命名 Label"
+	)
+	if internal_label_expectations.size() != 1:
+		return
+	var expected := internal_label_expectations[0]
+	var control := expected.get("control") as Control
+	_expect(control is Label, "rollback 内部自动命名控件必须是 Label")
+	if not (control is Label):
+		return
+	_expect((control as Label).text == "消息", "rollback 内部自动命名 Label 角色错误")
+	_expect(
+		control.get_parent() != null
+			and control.get_parent().name == "LegacyMessageHeader",
+		"rollback 内部自动命名 Label 父级错误"
+	)
+
+
+func _append_noncanonical_intrinsic_minimum_fixture_errors() -> void:
+	var noncanonical_count := 0
+	for node_name in ROLLBACK_NONCANONICAL_INTRINSIC_MINIMUM_NAMES:
+		var control := legacy_host_find(node_name) as Control
+		_expect(control != null, "rollback 非 canonical fixture 缺少控件：%s" % node_name)
+		if control == null:
+			continue
+		var expected := _rollback_expectation_for(control)
+		_expect(not expected.is_empty(), "rollback 非 canonical fixture 缺少快照：%s" % node_name)
+		if expected.is_empty():
+			continue
+		var intrinsic_minimum := control.get_combined_minimum_size()
+		_expect(
+			intrinsic_minimum.x > 0.0 or intrinsic_minimum.y > 0.0,
+			"rollback 非 canonical fixture 没有 intrinsic minimum：%s" % node_name
+		)
+		var parent_area_size := control.get_parent_area_size()
+		var expected_position: Vector2 = expected.get("position", control.position)
+		var expected_size: Vector2 = expected.get("size", control.size)
+		var canonical_x := expected_position.x
+		if control.is_layout_rtl():
+			canonical_x = parent_area_size.x - canonical_x - expected_size.x
+		var canonical_right := (
+			canonical_x
+			+ expected_size.x
+			- float(expected.get("anchorRight", control.anchor_right)) * parent_area_size.x
+		)
+		var canonical_bottom := (
+			expected_position.y
+			+ expected_size.y
+			- float(expected.get("anchorBottom", control.anchor_bottom)) * parent_area_size.y
+		)
+		var raw_right := float(expected.get("offsetRight", control.offset_right))
+		var raw_bottom := float(expected.get("offsetBottom", control.offset_bottom))
+		var right_is_noncanonical := not is_equal_approx(raw_right, canonical_right)
+		var bottom_is_noncanonical := not is_equal_approx(raw_bottom, canonical_bottom)
+		_expect(
+			right_is_noncanonical and bottom_is_noncanonical,
+			"rollback fixture 没有锁住 raw R/B 非 canonical 状态：%s" % node_name
+		)
+		if right_is_noncanonical and bottom_is_noncanonical:
+			noncanonical_count += 1
+	_expect(
+		noncanonical_count == ROLLBACK_NONCANONICAL_INTRINSIC_MINIMUM_NAMES.size(),
+		"rollback fixture 非 canonical intrinsic-min 控件数量错误：%d" % noncanonical_count
+	)
+
+
+func _control_mount_write_set_snapshot(control: Control) -> Dictionary:
+	var result := {
+		"name": control.name,
+		"visible": control.visible,
+		"modulate": control.modulate,
+		"selfModulate": control.self_modulate,
+		"zIndex": control.z_index,
+		"zAsRelative": control.z_as_relative,
+		"showBehindParent": control.show_behind_parent,
+		"metadata": _control_metadata_snapshot(control),
+		"control": {
+			"anchorLeft": control.anchor_left,
+			"anchorTop": control.anchor_top,
+			"anchorRight": control.anchor_right,
+			"anchorBottom": control.anchor_bottom,
+			"offsetLeft": control.offset_left,
+			"offsetTop": control.offset_top,
+			"offsetRight": control.offset_right,
+			"offsetBottom": control.offset_bottom,
+			"position": control.position,
+			"size": control.size,
+			"rotation": control.rotation,
+			"scale": control.scale,
+			"pivotOffset": control.pivot_offset,
+			"customMinimumSize": control.custom_minimum_size,
+			"sizeFlagsHorizontal": control.size_flags_horizontal,
+			"sizeFlagsVertical": control.size_flags_vertical,
+			"mouseFilter": control.mouse_filter,
+			"mouseDefaultCursorShape": control.mouse_default_cursor_shape,
+			"focusMode": control.focus_mode,
+			"clipContents": control.clip_contents,
+			"tooltipText": control.tooltip_text,
+			"themeOverrides": _control_theme_override_snapshot(control),
+		},
+	}
+	if control is Label:
+		var label := control as Label
+		result["label"] = {
+			"text": label.text,
+			"horizontalAlignment": label.horizontal_alignment,
+			"verticalAlignment": label.vertical_alignment,
+			"autowrapMode": label.autowrap_mode,
+			"clipText": label.clip_text,
+			"textOverrunBehavior": label.text_overrun_behavior,
+			"maxLinesVisible": label.max_lines_visible,
+		}
+	elif control is RichTextLabel:
+		var rich_text := control as RichTextLabel
+		result["richText"] = {
+			"text": rich_text.text,
+			"fitContent": rich_text.fit_content,
+			"scrollActive": rich_text.scroll_active,
+			"autowrapMode": rich_text.autowrap_mode,
+		}
+	if control is BaseButton:
+		var base_button := control as BaseButton
+		result["baseButton"] = {
+			"disabled": base_button.disabled,
+			"toggleMode": base_button.toggle_mode,
+			"buttonPressed": base_button.button_pressed,
+			"actionMode": base_button.action_mode,
+		}
+	if control is Button:
+		var button := control as Button
+		result["button"] = {
+			"text": button.text,
+			"icon": button.icon,
+			"flat": button.flat,
+			"clipText": button.clip_text,
+			"textOverrunBehavior": button.text_overrun_behavior,
+			"alignment": button.alignment,
+			"iconAlignment": button.icon_alignment,
+			"expandIcon": button.expand_icon,
+		}
+	return result
+
+
+func _control_theme_override_snapshot(control: Control) -> Dictionary:
+	var result: Dictionary = {}
+	for property in control.get_property_list():
+		var property_name := str((property as Dictionary).get("name", ""))
+		if not property_name.begins_with("theme_override_"):
+			continue
+		var slash_index := property_name.find("/")
+		if slash_index < 0 or slash_index >= property_name.length() - 1:
+			continue
+		var group := property_name.substr(15, slash_index - 15)
+		var item_name := property_name.substr(slash_index + 1)
+		if _control_has_theme_override(control, group, item_name):
+			result[property_name] = control.get(property_name)
+	return result
+
+
+func _control_has_theme_override(
+	control: Control,
+	group: String,
+	item_name: String
+) -> bool:
+	match group:
+		"colors":
+			return control.has_theme_color_override(item_name)
+		"constants":
+			return control.has_theme_constant_override(item_name)
+		"fonts":
+			return control.has_theme_font_override(item_name)
+		"font_sizes":
+			return control.has_theme_font_size_override(item_name)
+		"icons":
+			return control.has_theme_icon_override(item_name)
+		"styles":
+			return control.has_theme_stylebox_override(item_name)
+	return false
+
+
+func _append_mount_write_set_errors(phase_label: String) -> void:
+	for expected in _rollback_expectations:
+		var control := expected.get("control") as Control
+		_expect(
+			control != null and is_instance_valid(control),
+			"%s mount write-set 丢失真实控件：%s"
+				% [phase_label, str(expected.get("name", "unknown"))]
+		)
+		if control == null or not is_instance_valid(control):
+			continue
+		var expected_write_set = expected.get("mountWriteSet", {}) as Dictionary
+		var actual_write_set := _control_mount_write_set_snapshot(control)
+		_expect(
+			not expected_write_set.is_empty(),
+			"%s mount write-set 缺少独立基线：%s" % [phase_label, control.name]
+		)
+		_expect(
+			actual_write_set.recursive_equal(expected_write_set, 0),
+			"%s mount write-set 不一致：%s" % [phase_label, control.name]
+		)
+
+
+func _append_mount_name_helper_contract_errors(host: Control) -> void:
+	var internal_same := Label.new()
+	host.add_child(internal_same)
+	var internal_same_name: StringName = internal_same.name
+	var internal_same_errors: Array[String] = []
+	_view.call(
+		"_restore_mount_item_name",
+		internal_same,
+		{"name": internal_same_name},
+		internal_same_errors
+	)
+	_expect(
+		str(internal_same_name).begins_with("@Label@"),
+		"name helper internal-same fixture 不是内部自动名"
+	)
+	_expect(
+		internal_same.name == internal_same_name and internal_same_errors.is_empty(),
+		"name helper internal-same 不应写名或报错"
+	)
+
+	var internal_changed := Label.new()
+	host.add_child(internal_changed)
+	var internal_changed_saved_name: StringName = internal_changed.name
+	internal_changed.name = "ChangedInternalReadable"
+	var internal_changed_errors: Array[String] = []
+	_view.call(
+		"_restore_mount_item_name",
+		internal_changed,
+		{"name": internal_changed_saved_name},
+		internal_changed_errors
+	)
+	_expect(
+		str(internal_changed_saved_name).begins_with("@Label@"),
+		"name helper internal-changed fixture 不是内部自动名"
+	)
+	_expect(
+		internal_changed.name == "ChangedInternalReadable"
+			and not str(internal_changed.name).begins_with("_Label_")
+			and not internal_changed_errors.is_empty(),
+		"name helper internal-changed 必须 fail-closed 且禁止规范化写回"
+	)
+
+	var ordinary_changed := Label.new()
+	ordinary_changed.name = "ReadableMountOriginal"
+	host.add_child(ordinary_changed)
+	var ordinary_saved_name: StringName = ordinary_changed.name
+	ordinary_changed.name = "ReadableMountChanged"
+	var ordinary_errors: Array[String] = []
+	_view.call(
+		"_restore_mount_item_name",
+		ordinary_changed,
+		{"name": ordinary_saved_name},
+		ordinary_errors
+	)
+	_expect(
+		ordinary_changed.name == ordinary_saved_name and ordinary_errors.is_empty(),
+		"name helper ordinary-changed 必须精确恢复可读名"
+	)
+
+	internal_same.free()
+	internal_changed.free()
+	ordinary_changed.free()
+
+
 func _capture_rollback_expectations() -> Array[Dictionary]:
 	var candidates: Array[Control] = []
 	for key in ["topPanel", "sidePanel", "battleMessagePanel", "actionBar"]:
@@ -340,12 +661,16 @@ func _capture_rollback_expectations() -> Array[Dictionary]:
 		seen[control.get_instance_id()] = true
 		result.append({
 			"control": control,
+			"mountWriteSet": _control_mount_write_set_snapshot(control),
 			"parent": control.get_parent(),
 			"index": control.get_index(),
 			"name": control.name,
 			"visible": control.visible,
 			"position": control.position,
 			"size": control.size,
+			"rotation": control.rotation,
+			"scale": control.scale,
+			"pivotOffset": control.pivot_offset,
 			"anchorLeft": control.anchor_left,
 			"anchorTop": control.anchor_top,
 			"anchorRight": control.anchor_right,
@@ -361,7 +686,6 @@ func _capture_rollback_expectations() -> Array[Dictionary]:
 			"buttonDisabled": (control as Button).disabled if control is Button else null,
 			"buttonIcon": (control as Button).icon if control is Button else null,
 			"labelText": (control as Label).text if control is Label else null,
-			"assertFourOffsets": control == _original_entries.get("hang"),
 			"panelStyleOverride": control.has_theme_stylebox_override("panel"),
 			"panelStyle": (
 				control.get_theme_stylebox("panel")
@@ -398,6 +722,7 @@ func _mutate_mounted_controls_for_rollback_check() -> void:
 	var hang_button := _original_entries.get("hang") as Button
 	var expected := _rollback_expectation_for(hang_button)
 	if hang_button != null and not expected.is_empty():
+		hang_button.name = "MountedReadableNameMutation"
 		hang_button.offset_left = float(expected.get("offsetLeft", 0.0)) + 11.0
 		hang_button.offset_top = float(expected.get("offsetTop", 0.0)) + 13.0
 		hang_button.offset_right = float(expected.get("offsetRight", 0.0)) + 17.0
@@ -421,6 +746,10 @@ func _append_mount_mutation_errors() -> void:
 	var expected := _rollback_expectation_for(hang_button)
 	_expect(hang_button != null and not expected.is_empty(), "rollback 变异 fixture 缺少挂机按钮")
 	if hang_button != null and not expected.is_empty():
+		_expect(
+			hang_button.name != expected.get("name"),
+			"rollback fixture 未真实改写可读 Button.name"
+		)
 		_expect(not is_equal_approx(hang_button.offset_left, float(expected.get("offsetLeft", 0.0))), "rollback fixture 未真实改写左 offset")
 		_expect(not is_equal_approx(hang_button.offset_top, float(expected.get("offsetTop", 0.0))), "rollback fixture 未真实改写上 offset")
 		_expect(not is_equal_approx(hang_button.offset_right, float(expected.get("offsetRight", 0.0))), "rollback fixture 未真实改写右 offset")
@@ -449,6 +778,107 @@ func _rollback_expectation_for(control: Control) -> Dictionary:
 	return {}
 
 
+func _append_mount_rollback_structure_errors() -> void:
+	_expect(
+		bool(_rollback_result.get("ok", false)),
+		"正式 HUD rollback 同调用结构失败：%s" % str(_rollback_result)
+	)
+	_expect(
+		int(_rollback_result.get("restoredCount", 0))
+			== _rollback_expectations.size(),
+		"正式 HUD rollback 同调用恢复数量不完整：%s" % str(_rollback_result)
+	)
+	for expected in _rollback_expectations:
+		var control := expected.get("control") as Control
+		var label := str(expected.get("name", "unknown"))
+		_expect(
+			control != null and is_instance_valid(control),
+			"rollback 同调用丢失真实控件：%s" % label
+		)
+		if control == null or not is_instance_valid(control):
+			continue
+		_expect(
+			control.get_parent() == expected.get("parent"),
+			"rollback 同调用父级错误：%s" % label
+		)
+		_expect(
+			control.get_index() == int(expected.get("index", -1)),
+			"rollback 同调用索引错误：%s" % label
+		)
+		_expect(
+			control.position.is_equal_approx(
+				expected.get("position", Vector2.ZERO)
+			),
+			"rollback 同调用位置错误：%s" % label
+		)
+		_expect(
+			control.size.is_equal_approx(expected.get("size", Vector2.ZERO)),
+			"rollback 同调用尺寸错误：%s" % label
+		)
+		for anchor_pair in [
+			[control.anchor_left, expected.get("anchorLeft", 0.0), "左"],
+			[control.anchor_top, expected.get("anchorTop", 0.0), "上"],
+			[control.anchor_right, expected.get("anchorRight", 0.0), "右"],
+			[control.anchor_bottom, expected.get("anchorBottom", 0.0), "下"],
+		]:
+			_expect(
+				is_equal_approx(float(anchor_pair[0]), float(anchor_pair[1])),
+				"rollback 同调用%s锚点错误：%s" % [str(anchor_pair[2]), label]
+			)
+		for offset_pair in [
+			[control.offset_left, expected.get("offsetLeft", 0.0), "左"],
+			[control.offset_top, expected.get("offsetTop", 0.0), "上"],
+			[control.offset_right, expected.get("offsetRight", 0.0), "右"],
+			[control.offset_bottom, expected.get("offsetBottom", 0.0), "下"],
+		]:
+			_expect(
+				is_equal_approx(float(offset_pair[0]), float(offset_pair[1])),
+				"rollback 同调用%s offset 错误：%s" % [str(offset_pair[2]), label]
+			)
+		_expect(
+			is_equal_approx(control.rotation, float(expected.get("rotation", 0.0))),
+			"rollback 同调用旋转错误：%s" % label
+		)
+		_expect(
+			control.scale.is_equal_approx(expected.get("scale", Vector2.ONE)),
+			"rollback 同调用缩放错误：%s" % label
+		)
+		_expect(
+			control.pivot_offset.is_equal_approx(
+				expected.get("pivotOffset", Vector2.ZERO)
+			),
+			"rollback 同调用轴心错误：%s" % label
+		)
+	var expand_button := (
+		_legacy_controls.get("battleMessageExpandButton") as Button
+	)
+	var clear_button := (
+		_legacy_controls.get("battleMessageClearButton") as Button
+	)
+	_expect(
+		expand_button != null
+			and expand_button.pressed.is_connected(
+				_fixture_toggle_message_expanded
+			),
+		"rollback 同调用丢失原展开按钮权威连接"
+	)
+	_expect(
+		clear_button != null
+			and clear_button.pressed.is_connected(_fixture_clear_message),
+		"rollback 同调用丢失原清空按钮权威连接"
+	)
+	for artifact_name in [
+		"WorldHudTopSurface",
+		"WorldHudSideSurface",
+		"WorldHudMessageSurface",
+		"WorldHudDockSurface",
+	]:
+		_expect(
+			legacy_host_find(artifact_name) == null,
+			"rollback 同调用遗留正式 HUD 节点：%s" % artifact_name
+		)
+
+
 func _append_mount_rollback_errors() -> void:
 	_expect(
 		bool(_rollback_result.get("ok", false)),
@@ -471,15 +901,17 @@ func _append_mount_rollback_errors() -> void:
 		_expect(control.visible == bool(expected.get("visible", true)), "rollback 可见性错误：%s" % label)
 		_expect(control.position.is_equal_approx(expected.get("position", Vector2.ZERO)), "rollback 位置错误：%s" % label)
 		_expect(control.size.is_equal_approx(expected.get("size", Vector2.ZERO)), "rollback 尺寸错误：%s" % label)
+		_expect(is_equal_approx(control.rotation, float(expected.get("rotation", 0.0))), "rollback 旋转错误：%s" % label)
+		_expect(control.scale.is_equal_approx(expected.get("scale", Vector2.ONE)), "rollback 缩放错误：%s" % label)
+		_expect(control.pivot_offset.is_equal_approx(expected.get("pivotOffset", Vector2.ZERO)), "rollback 轴心错误：%s" % label)
 		_expect(is_equal_approx(control.anchor_left, float(expected.get("anchorLeft", 0.0))), "rollback 左锚点错误：%s" % label)
 		_expect(is_equal_approx(control.anchor_top, float(expected.get("anchorTop", 0.0))), "rollback 上锚点错误：%s" % label)
 		_expect(is_equal_approx(control.anchor_right, float(expected.get("anchorRight", 0.0))), "rollback 右锚点错误：%s" % label)
 		_expect(is_equal_approx(control.anchor_bottom, float(expected.get("anchorBottom", 0.0))), "rollback 下锚点错误：%s" % label)
-		if bool(expected.get("assertFourOffsets", false)):
-			_expect(is_equal_approx(control.offset_left, float(expected.get("offsetLeft", 0.0))), "rollback 左 offset 错误：%s" % label)
-			_expect(is_equal_approx(control.offset_top, float(expected.get("offsetTop", 0.0))), "rollback 上 offset 错误：%s" % label)
-			_expect(is_equal_approx(control.offset_right, float(expected.get("offsetRight", 0.0))), "rollback 右 offset 错误：%s" % label)
-			_expect(is_equal_approx(control.offset_bottom, float(expected.get("offsetBottom", 0.0))), "rollback 下 offset 错误：%s" % label)
+		_expect(is_equal_approx(control.offset_left, float(expected.get("offsetLeft", 0.0))), "rollback 左 offset 错误：%s" % label)
+		_expect(is_equal_approx(control.offset_top, float(expected.get("offsetTop", 0.0))), "rollback 上 offset 错误：%s" % label)
+		_expect(is_equal_approx(control.offset_right, float(expected.get("offsetRight", 0.0))), "rollback 右 offset 错误：%s" % label)
+		_expect(is_equal_approx(control.offset_bottom, float(expected.get("offsetBottom", 0.0))), "rollback 下 offset 错误：%s" % label)
 		_expect(control.custom_minimum_size.is_equal_approx(expected.get("customMinimumSize", Vector2.ZERO)), "rollback 最小尺寸错误：%s" % label)
 		_expect(control.mouse_filter == expected.get("mouseFilter"), "rollback mouse_filter 错误：%s" % label)
 		_expect(_control_metadata_snapshot(control) == expected.get("metadata"), "rollback metadata 错误：%s" % label)
@@ -694,6 +1126,115 @@ func _append_expanded_layout_errors() -> void:
 		drawer != null and drawer.is_visible_in_tree(),
 		"更多抽屉展开后不可见"
 	)
+
+
+func _append_message_action_errors() -> void:
+	var message_panel := _legacy_controls.get("battleMessagePanel") as Control
+	var battle_log := _legacy_controls.get("battleLogLabel") as RichTextLabel
+	var expand_button := (
+		_legacy_controls.get("battleMessageExpandButton") as Button
+	)
+	var clear_button := (
+		_legacy_controls.get("battleMessageClearButton") as Button
+	)
+	var message_surface := _named_control("WorldHudMessageSurface")
+	var chat_surface := _named_control("WorldHudChatSurface")
+	var action_row := _named_control("WorldHudMessageActions")
+	_expect(
+		message_surface != null
+			and chat_surface != null
+			and action_row != null
+			and action_row.get_parent() == chat_surface,
+		"正式世界消息面缺少 ChatSurface 操作栏"
+	)
+	for pair in [
+		["展开", expand_button, "WorldHudMessageExpandButton"],
+		["清空", clear_button, "WorldHudMessageClearButton"],
+	]:
+		var label := str(pair[0])
+		var button := pair[1] as Button
+		_expect(
+			button != null
+				and str(button.name) == str(pair[2])
+				and button.get_parent() == action_row
+				and button.is_visible_in_tree()
+				and not button.disabled
+				and button.mouse_filter == Control.MOUSE_FILTER_STOP,
+			"正式世界消息%s按钮没有复用原权威 Button 并挂入操作栏" % label
+		)
+	var collapsed_rect := (
+		message_panel.get_global_rect() if message_panel != null else Rect2()
+	)
+	if expand_button != null:
+		expand_button.pressed.emit()
+	_expect(
+		_fixture_message_expanded
+			and expand_button != null
+			and expand_button.text == "收起"
+			and message_panel != null
+			and message_panel.get_global_rect().size.y > collapsed_rect.size.y,
+		"真实展开按钮没有同步切换权威状态、文案与正式消息布局"
+	)
+	if clear_button != null:
+		clear_button.pressed.emit()
+	_expect(
+		_fixture_message_clear_count == 1
+			and _fixture_message_history.is_empty()
+			and battle_log != null
+			and battle_log.text == ""
+			and clear_button != null
+			and clear_button.disabled
+			and message_panel != null
+			and not message_panel.visible,
+		"真实清空按钮没有清空权威历史／日志并按世界态隐藏消息面"
+	)
+	_fixture_message_history = ["欢迎来到火芽训练场"]
+	if battle_log != null:
+		battle_log.text = _fixture_message_history[0]
+	if clear_button != null:
+		clear_button.disabled = false
+	if message_panel != null:
+		message_panel.visible = true
+	if expand_button != null:
+		expand_button.pressed.emit()
+	_expect(
+		not _fixture_message_expanded
+			and expand_button != null
+			and expand_button.text == "展开"
+			and message_panel != null
+			and message_panel.is_visible_in_tree(),
+		"消息操作验收后没有恢复折叠的正式世界消息面"
+	)
+
+
+func _fixture_toggle_message_expanded() -> void:
+	_fixture_message_expanded = not _fixture_message_expanded
+	var expand_button := (
+		_legacy_controls.get("battleMessageExpandButton") as Button
+	)
+	if expand_button != null:
+		expand_button.text = "收起" if _fixture_message_expanded else "展开"
+	if _view != null:
+		_view.call("apply_layout", Vector2(VIEWPORT_SIZE), {
+			"messageExpanded": _fixture_message_expanded,
+			"showMessage": true,
+		})
+
+
+func _fixture_clear_message() -> void:
+	_fixture_message_history.clear()
+	_fixture_message_clear_count += 1
+	var battle_log := _legacy_controls.get("battleLogLabel") as RichTextLabel
+	var message_panel := _legacy_controls.get("battleMessagePanel") as Control
+	var clear_button := (
+		_legacy_controls.get("battleMessageClearButton") as Button
+	)
+	if battle_log != null:
+		battle_log.text = ""
+	if clear_button != null:
+		clear_button.disabled = true
+	if message_panel != null:
+		message_panel.visible = false
 
 
 func _append_spectator_point_errors() -> void:

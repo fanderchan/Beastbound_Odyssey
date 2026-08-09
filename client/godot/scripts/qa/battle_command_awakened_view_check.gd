@@ -192,6 +192,12 @@ func run() -> void:
 		["咒术", "攻击", "道具", "托管", "逃跑", "援助", "抓捕", "召唤", "防御", "自动"]
 	)
 	_expect_visual_contract(errors, "人物回合", player_snapshot)
+	var player_geometry := _player_command_geometry_snapshot(view)
+	if not bool(player_geometry.get("ok", false)):
+		errors.append(
+			"人物十指令没有严格命中Presenter缩放矩形、右/底区域或发生重叠：%s"
+			% str(player_geometry)
+		)
 
 	var auto_click: Dictionary = await _real_click(host.battle_auto_button, true)
 	var auto_snapshot: Dictionary = view.snapshot()
@@ -376,6 +382,7 @@ func run() -> void:
 
 	_finish(errors, {
 		"player": player_snapshot,
+		"playerGeometry": player_geometry,
 		"auto": auto_snapshot,
 		"strategy": strategy_snapshot,
 		"pet": pet_snapshot,
@@ -407,6 +414,163 @@ func run() -> void:
 		"topBattleLayout": top_battle_layout,
 		"clickDelivery": "Viewport.push_input",
 	})
+
+
+func _player_command_geometry_snapshot(view: Control) -> Dictionary:
+	var command_buttons_value = (view as Object).call("command_buttons")
+	var host_buttons_value = host.battle_command_buttons
+	if not (command_buttons_value is Dictionary) or not (host_buttons_value is Dictionary):
+		return {
+			"ok": false,
+			"reason": "authoritative_command_buttons_missing",
+			"visibleCount": 0,
+			"identityCount": 0,
+			"authoritativeLegacyCount": 0,
+			"authoritativeLegacyExact": false,
+			"legacyIdentityMismatches": [],
+			"positionExact": false,
+			"sizeExact": false,
+			"rectExact": false,
+			"inRightOrBottom": false,
+			"nonOverlapping": false,
+			"rects": {},
+			"expectedRects": {},
+		}
+	var controls := (command_buttons_value as Dictionary).duplicate()
+	var host_buttons := host_buttons_value as Dictionary
+	var legacy_ids := [
+		"spirit", "attack", "item", "run", "help", "capture", "switch_pet", "defend",
+	]
+	controls["managed"] = (view as Object).call("synthetic_button", "managed")
+	controls["auto"] = (view as Object).call("synthetic_button", "auto")
+	var right_local := Presenter.scaled_rect(
+		Presenter.RIGHT_COLUMN_REGION,
+		view.size
+	)
+	var bottom_local := Presenter.scaled_rect(
+		Presenter.BOTTOM_ROW_REGION,
+		view.size
+	)
+	var right_global := Rect2(
+		view.global_position + right_local.position,
+		right_local.size
+	)
+	var bottom_global := Rect2(
+		view.global_position + bottom_local.position,
+		bottom_local.size
+	)
+	var visible_count := 0
+	var seen_instance_ids := {}
+	var missing_ids: Array[String] = []
+	var duplicate_ids: Array[String] = []
+	var legacy_identity_mismatches: Array[String] = []
+	var authoritative_legacy_count := 0
+	var rects := {}
+	var expected_rects := {}
+	var occupied_rects: Array[Rect2] = []
+	var position_exact := true
+	var size_exact := true
+	var in_right_or_bottom := true
+	var non_overlapping := true
+	for command_id in Presenter.PLAYER_LAYOUT.keys():
+		var control = controls.get(command_id, null)
+		if not (control is Control) or not (control as Control).is_visible_in_tree():
+			missing_ids.append(str(command_id))
+			continue
+		var button := control as Control
+		visible_count += 1
+		var instance_id := button.get_instance_id()
+		if seen_instance_ids.has(instance_id):
+			duplicate_ids.append(str(command_id))
+		else:
+			seen_instance_ids[instance_id] = true
+		if legacy_ids.has(command_id):
+			var host_control = host_buttons.get(command_id, null)
+			if (
+				not (host_control is Control)
+				or (host_control as Control).get_instance_id() != instance_id
+			):
+				legacy_identity_mismatches.append(str(command_id))
+			else:
+				authoritative_legacy_count += 1
+		var actual_rect := button.get_global_rect()
+		var expected_local := Presenter.scaled_rect(
+			Presenter.PLAYER_LAYOUT.get(command_id, Rect2()) as Rect2,
+			view.size
+		)
+		var expected_global := Rect2(
+			view.global_position + expected_local.position,
+			expected_local.size
+		)
+		if not actual_rect.position.is_equal_approx(expected_global.position):
+			position_exact = false
+		if (
+			not expected_local.size.is_equal_approx(Presenter.TOUCH_SIZE)
+			or not actual_rect.size.is_equal_approx(expected_global.size)
+		):
+			size_exact = false
+		if not right_global.encloses(actual_rect) and not bottom_global.encloses(actual_rect):
+			in_right_or_bottom = false
+		for previous_rect in occupied_rects:
+			if previous_rect.intersects(actual_rect):
+				non_overlapping = false
+		occupied_rects.append(actual_rect)
+		rects[str(command_id)] = [
+			actual_rect.position.x,
+			actual_rect.position.y,
+			actual_rect.size.x,
+			actual_rect.size.y,
+		]
+		expected_rects[str(command_id)] = [
+			expected_global.position.x,
+			expected_global.position.y,
+			expected_global.size.x,
+			expected_global.size.y,
+		]
+	var ok := (
+		visible_count == 10
+		and seen_instance_ids.size() == 10
+		and authoritative_legacy_count == 8
+		and missing_ids.is_empty()
+		and duplicate_ids.is_empty()
+		and legacy_identity_mismatches.is_empty()
+		and position_exact
+		and size_exact
+		and in_right_or_bottom
+		and non_overlapping
+	)
+	return {
+		"ok": ok,
+		"visibleCount": visible_count,
+		"identityCount": seen_instance_ids.size(),
+		"authoritativeLegacyCount": authoritative_legacy_count,
+		"authoritativeLegacyExact": (
+			authoritative_legacy_count == 8
+			and legacy_identity_mismatches.is_empty()
+		),
+		"legacyIdentityMismatches": legacy_identity_mismatches,
+		"missingIds": missing_ids,
+		"duplicateIds": duplicate_ids,
+		"positionExact": position_exact,
+		"sizeExact": size_exact,
+		"rectExact": position_exact and size_exact,
+		"inRightOrBottom": in_right_or_bottom,
+		"nonOverlapping": non_overlapping,
+		"rightRegion": [
+			right_global.position.x,
+			right_global.position.y,
+			right_global.size.x,
+			right_global.size.y,
+		],
+		"bottomRegion": [
+			bottom_global.position.x,
+			bottom_global.position.y,
+			bottom_global.size.x,
+			bottom_global.size.y,
+		],
+		"rects": rects,
+		"expectedRects": expected_rects,
+	}
 
 
 func _top_battle_layout_snapshot(view: Control) -> Dictionary:

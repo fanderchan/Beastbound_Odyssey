@@ -2,6 +2,8 @@ extends RefCounted
 
 const DESIGN_SIZE := Vector2(494.0, 300.0)
 const TOUCH_SIZE := Vector2(68.0, 72.0)
+const RIGHT_COLUMN_REGION := Rect2(418.0, 0.0, 68.0, 300.0)
+const BOTTOM_ROW_REGION := Rect2(8.0, 228.0, 478.0, 72.0)
 
 const PLAYER_LAYOUT := {
 	"spirit": Rect2(418, 0, 68, 72),
@@ -60,12 +62,22 @@ static func selftest() -> Array[String]:
 			if layout_name == "pet"
 			else AUTO_LAYOUT
 		)
+		var occupied_rects: Array[Rect2] = []
 		for entry_id in layout.keys():
 			var rect := layout[entry_id] as Rect2
-			if rect.size.x < 60.0 or rect.size.y < 60.0:
-				errors.append("%s.%s 触控尺寸不足" % [layout_name, entry_id])
+			if not rect.size.is_equal_approx(TOUCH_SIZE):
+				errors.append("%s.%s 必须严格使用68×72指令槽" % [layout_name, entry_id])
 			if not Rect2(Vector2.ZERO, DESIGN_SIZE).encloses(rect):
 				errors.append("%s.%s 超出设计画布" % [layout_name, entry_id])
+			if (
+				not RIGHT_COLUMN_REGION.encloses(rect)
+				and not BOTTOM_ROW_REGION.encloses(rect)
+			):
+				errors.append("%s.%s 没有落在右列或底行" % [layout_name, entry_id])
+			for previous_rect in occupied_rects:
+				if previous_rect.intersects(rect):
+					errors.append("%s.%s 与相邻指令槽重叠" % [layout_name, entry_id])
+			occupied_rects.append(rect)
 	if PLAYER_LAYOUT.size() != 10:
 		errors.append("人物回合入口必须为 10 个")
 	if PET_LAYOUT.size() != 8:

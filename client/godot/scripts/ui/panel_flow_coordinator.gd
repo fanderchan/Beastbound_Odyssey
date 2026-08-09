@@ -164,6 +164,16 @@ const PARTY_PANEL_MODE_PLAYERS := "players"
 var party_player_section: Control
 var _map_route_planner = null
 var _map_awakened_map_name_cache: Dictionary = {}
+var _map_awakened_catalog_revision_cache := ""
+var _map_minimap_fallback_build_count := 0
+var _map_open_timing_for_qa_active := false
+var _map_open_timing_for_qa_sample = null
+var _map_world_lightweight_layout_active := false
+var _map_world_lightweight_layout_viewport := Vector2.ZERO
+var _map_world_lightweight_open_same_call := false
+var _map_world_lightweight_close_same_call := false
+var _map_world_full_layout_fallback_count := 0
+var _map_world_last_full_layout_fallback_reason := ""
 var _codex_entries_cache: Array[Dictionary] = []
 var _codex_entry_by_form_cache: Dictionary = {}
 var _codex_profile_projection_cache: Dictionary = {}
@@ -8368,12 +8378,14 @@ func _build_hud() -> void:
 	battle_message_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	battle_message_header.add_child(battle_message_title)
 	battle_message_expand_button = Button.new()
+	battle_message_expand_button.name = "WorldHudMessageExpandButton"
 	battle_message_expand_button.text = "展开"
 	battle_message_expand_button.custom_minimum_size = Vector2(54, 28)
 	battle_message_expand_button.add_theme_font_size_override("font_size", 13)
 	battle_message_expand_button.pressed.connect(_toggle_battle_message_expanded)
 	battle_message_header.add_child(battle_message_expand_button)
 	battle_message_clear_button = Button.new()
+	battle_message_clear_button.name = "WorldHudMessageClearButton"
 	battle_message_clear_button.text = "清空"
 	battle_message_clear_button.custom_minimum_size = Vector2(54, 28)
 	battle_message_clear_button.add_theme_font_size_override("font_size", 13)
@@ -8453,6 +8465,8 @@ func _build_world_hud_awakened() -> void:
 		"detailLabel": detail_label,
 		"taskRouteButton": task_route_button,
 		"battleLogLabel": battle_log_label,
+		"battleMessageExpandButton": battle_message_expand_button,
+		"battleMessageClearButton": battle_message_clear_button,
 		"actionBarCollapseButton": action_bar_collapse_button,
 		"buttons": {
 			"hang": stop_button,
@@ -13863,6 +13877,17 @@ func _record_tutorial_feature_opened(feature_id: String) -> void:
 	var event := TutorialFeatureModel.open_event(feature_id)
 	if event.is_empty():
 		return
+	# Server sessions always queue the authoritative event. Local schema-1
+	# profiles may skip only a definitive mismatch; uncertain legacy/claimed/
+	# optional states still normalize through the unchanged recording path.
+	if not (_is_server_account_session() and not auth_auto_bypass):
+		var match_certainty := PlayerProgressModel.active_quest_event_match_certainty(
+			player_profile,
+			event,
+			true
+		)
+		if match_certainty == PlayerProgressModel.QUEST_EVENT_NO_MATCH:
+			return
 	var messages := _record_quest_event_and_maybe_claim(event)
 	if not messages.is_empty():
 		_set_world_log_message("\n".join(messages))
@@ -18138,11 +18163,45 @@ func _close_quest_panel() -> void:
 	host._dialog_quest()._close_quest_panel()
 
 func _open_map_panel() -> void:
+	_map_world_lightweight_open_same_call = false
+	_map_world_lightweight_close_same_call = false
 	if battle_active:
 		return
-	host._set_hang_mode(false)
+	var viewport_size: Vector2 = host._layout_size()
+	var preflight_reason := _map_world_lightweight_preflight_blocker(
+		viewport_size
+	)
+	if preflight_reason != "":
+		if map_panel != null:
+			map_panel.visible = false
+		_apply_map_world_full_layout_fallback(preflight_reason, false)
+		return
+	var diagnostic_timing = (
+		_map_open_timing_for_qa_sample
+		if _map_open_timing_for_qa_active
+		else null
+	)
+	var open_started_usec := 0
+	var segment_started_usec := 0
+	if diagnostic_timing is Dictionary:
+		open_started_usec = Time.get_ticks_usec()
+		segment_started_usec = Time.get_ticks_usec()
+	# Stopping a real hang session remains authoritative, but the common idle
+	# path must not rebuild hang HUD/profile state just to open a menu.
+	if hang_mode_active:
+		host._set_hang_mode(false)
+	if diagnostic_timing is Dictionary:
+		(diagnostic_timing as Dictionary)["hang_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
 	host._close_dialog()
 	_close_encounter()
+	if diagnostic_timing is Dictionary:
+		(diagnostic_timing as Dictionary)["dialog_encounter_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
 	_close_player_status_panel()
 	_close_backpack_panel()
 	_close_equipment_panel()
@@ -18156,16 +18215,294 @@ func _open_map_panel() -> void:
 	_close_mailbox_panel()
 	_close_party_panel()
 	_close_family_panel()
+	if diagnostic_timing is Dictionary:
+		(diagnostic_timing as Dictionary)["other_panels_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
 	map_panel.visible = true
 	if map_panel is MapAwakenedPanel:
 		(map_panel as MapAwakenedPanel).reset_to_local_view()
-	_refresh_map_panel()
-	host._layout_hud()
-	host.call_deferred("_layout_hud")
+	if diagnostic_timing is Dictionary:
+		(diagnostic_timing as Dictionary)["show_reset_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+	_refresh_map_panel(diagnostic_timing)
+	if diagnostic_timing is Dictionary:
+		segment_started_usec = Time.get_ticks_usec()
 	_record_tutorial_feature_opened(TutorialFeatureModel.FEATURE_MAP)
+	if diagnostic_timing is Dictionary:
+		(diagnostic_timing as Dictionary)["tutorial_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
+	var layout_fallback_before := _map_world_full_layout_fallback_count
+	var lightweight_reason := _map_world_lightweight_layout_blocker(
+		true,
+		viewport_size
+	)
+	if lightweight_reason == "":
+		_apply_map_world_lightweight_layout(true, viewport_size)
+		_map_world_lightweight_layout_active = true
+		_map_world_lightweight_layout_viewport = viewport_size
+		_map_world_last_full_layout_fallback_reason = ""
+		_map_world_lightweight_open_same_call = true
+	else:
+		_apply_map_world_full_layout_fallback(lightweight_reason, false)
+	if diagnostic_timing is Dictionary:
+		var timing := diagnostic_timing as Dictionary
+		timing["lightweight_layout"] = lightweight_reason == ""
+		timing["layout_fallback_delta"] = (
+			_map_world_full_layout_fallback_count - layout_fallback_before
+		)
+		timing["layout_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
+	# Only a fail-closed compatibility fallback retains the legacy second pass.
+	# The formal MapAwakened world path has already projected the complete
+	# Phase400 safe-area tail and must never schedule a deferred full layout.
+	if lightweight_reason != "":
+		host.call_deferred("_layout_hud")
+	if diagnostic_timing is Dictionary:
+		(diagnostic_timing as Dictionary)["deferred_layout_schedule_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+	if diagnostic_timing is Dictionary:
+		var timing := diagnostic_timing as Dictionary
+		var open_total_usec := int(Time.get_ticks_usec() - open_started_usec)
+		var open_child_usec := (
+			int(timing.get("hang_usec", 0))
+			+ int(timing.get("dialog_encounter_usec", 0))
+			+ int(timing.get("other_panels_usec", 0))
+			+ int(timing.get("show_reset_usec", 0))
+			+ int(timing.get("refresh_total_usec", 0))
+			+ int(timing.get("layout_usec", 0))
+			+ int(timing.get("deferred_layout_schedule_usec", 0))
+			+ int(timing.get("tutorial_usec", 0))
+		)
+		timing["open_total_usec"] = open_total_usec
+		timing["open_residual_usec"] = maxi(
+			0,
+			open_total_usec - open_child_usec
+		)
 
 func _close_map_panel() -> void:
-	_hide_control(map_panel)
+	_map_world_lightweight_close_same_call = false
+	if not _hide_control(map_panel, false):
+		return
+	var viewport_size: Vector2 = host._layout_size()
+	var lightweight_reason := _map_world_lightweight_layout_blocker(
+		false,
+		viewport_size
+	)
+	if lightweight_reason == "":
+		_apply_map_world_lightweight_layout(false, viewport_size)
+		_map_world_lightweight_layout_active = false
+		_map_world_lightweight_layout_viewport = Vector2.ZERO
+		_map_world_last_full_layout_fallback_reason = ""
+		_map_world_lightweight_close_same_call = true
+		return
+	_apply_map_world_full_layout_fallback(lightweight_reason, false)
+
+func _map_world_lightweight_layout_blocker(
+	opening: bool,
+	viewport_size: Vector2
+) -> String:
+	if battle_active:
+		return "battle_active"
+	if encounter_active:
+		return "encounter_active"
+	var preflight_reason := _map_world_lightweight_preflight_blocker(
+		viewport_size
+	)
+	if preflight_reason != "":
+		return preflight_reason
+	if not (map_panel is MapAwakenedPanel):
+		return "non_formal_map"
+	if host._dialog_is_open():
+		return "dialog_open"
+	var visible_world_menus := _map_visible_world_menu_controls()
+	if opening:
+		if not map_panel.visible:
+			return "map_not_visible"
+		if visible_world_menus.size() != 1 or visible_world_menus[0] != map_panel:
+			return "other_world_menu"
+		return ""
+	if not _map_world_lightweight_layout_active:
+		return "lightweight_not_active"
+	if map_panel.visible:
+		return "map_still_visible"
+	if not viewport_size.is_equal_approx(
+		_map_world_lightweight_layout_viewport
+	):
+		return "viewport_changed"
+	if not visible_world_menus.is_empty():
+		return "other_world_menu"
+	return ""
+
+func _map_world_lightweight_preflight_blocker(
+	viewport_size: Vector2
+) -> String:
+	# This guard must run before refresh: both the formal and compatibility
+	# renderers dereference player/map data, while the formal lightweight path
+	# also requires the complete Phase395/400 world-HUD graph.
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return "invalid_viewport"
+	if (
+		map_panel == null
+		or hud_root == null
+		or not hud_root.is_visible_in_tree()
+		or player == null
+		or game_camera == null
+		or map_data.is_empty()
+		or current_map_id == ""
+	):
+		return "non_world_state"
+	if (
+		map_panel is MapAwakenedPanel
+		and (
+			panel_registry == null
+			or top_panel == null
+			or side_panel == null
+			or action_bar == null
+			or battle_message_panel == null
+			or party_roster_panel == null
+			or not _map_formal_world_hud_ready()
+		)
+	):
+		return "missing_world_hud"
+	return ""
+
+func _map_formal_world_hud_ready() -> bool:
+	if not (host.world_hud_awakened_view is WorldHudAwakenedView):
+		return false
+	if not (host.world_hud_party_roster_view is WorldHudPartyRosterView):
+		return false
+	var awakened := host.world_hud_awakened_view as WorldHudAwakenedView
+	var top_surface := awakened.find_child(
+		"WorldHudTopSurface", true, false
+	) as Control
+	var side_surface := awakened.find_child(
+		"WorldHudSideSurface", true, false
+	) as Control
+	var message_surface := awakened.find_child(
+		"WorldHudMessageSurface", true, false
+	) as Control
+	var chat_surface := awakened.find_child(
+		"WorldHudChatSurface", true, false
+	) as Control
+	var message_actions := awakened.find_child(
+		"WorldHudMessageActions", true, false
+	) as HBoxContainer
+	var dock_surface := awakened.find_child(
+		"WorldHudDockSurface", true, false
+	) as Control
+	var fixed_entries := awakened.find_child(
+		"WorldHudFixedEntries", true, false
+	) as Control
+	var map_entry := awakened.find_child(
+		"WorldHudEntryMap", true, false
+	) as Button
+	return (
+		top_surface != null
+		and side_surface != null
+		and message_surface != null
+		and chat_surface != null
+		and chat_surface.get_parent() == message_surface
+		and message_actions != null
+		and message_actions.get_parent() == chat_surface
+		and battle_log_label != null
+		and battle_log_label.get_parent() == chat_surface
+		and battle_message_expand_button != null
+		and battle_message_expand_button.get_parent() == message_actions
+		and battle_message_clear_button != null
+		and battle_message_clear_button.get_parent() == message_actions
+		and dock_surface != null
+		and fixed_entries != null
+		and map_entry != null
+		and map_entry == host.map_menu_button
+	)
+
+func _map_visible_world_menu_controls() -> Array[Control]:
+	var visible_controls: Array[Control] = []
+	if panel_registry == null:
+		return visible_controls
+	for control_value in panel_registry.world_menu_panels:
+		if not (control_value is Control):
+			continue
+		var control := control_value as Control
+		if control.is_visible_in_tree():
+			visible_controls.append(control)
+	return visible_controls
+
+func _apply_map_world_lightweight_layout(
+	opening: bool,
+	viewport_size: Vector2
+) -> void:
+	# MapAwakened is a fixed full-screen world overlay. Keep the costly legacy
+	# all-panel layout out of this path, but preserve its formal HUD and Phase400
+	# camera-safe-area ordering exactly.
+	hud_root.position = Vector2.ZERO
+	hud_root.size = viewport_size
+	map_panel.position = Vector2.ZERO
+	map_panel.size = viewport_size
+	if opening:
+		top_panel.visible = false
+		side_panel.visible = false
+		action_bar.visible = false
+		battle_message_panel.visible = false
+		party_roster_panel.visible = false
+	else:
+		var is_phone_shape: bool = host._is_phone_shape(viewport_size)
+		top_panel.visible = true
+		side_panel.visible = not is_phone_shape
+		action_bar.visible = true
+		battle_message_panel.visible = (
+			world_log_message != ""
+			or not world_log_history.is_empty()
+		)
+		party_roster_panel.visible = false
+		_sync_action_bar_state()
+	_layout_world_hud_awakened(viewport_size, opening)
+	_apply_map_world_safe_area_tail(viewport_size)
+
+func _apply_map_world_safe_area_tail(viewport_size: Vector2) -> void:
+	host._refresh_world_camera_safe_area(viewport_size)
+	if player != null:
+		player.set_movement_bounds(host._player_movement_bounds())
+	if game_camera != null:
+		host._update_camera_limits()
+		host._update_camera_position(true)
+	host.queue_redraw()
+
+func _apply_map_world_full_layout_fallback(
+	reason: String,
+	schedule_deferred: bool
+) -> void:
+	_map_world_lightweight_layout_active = false
+	_map_world_lightweight_layout_viewport = Vector2.ZERO
+	_map_world_full_layout_fallback_count += 1
+	_map_world_last_full_layout_fallback_reason = reason
+	if not _map_world_full_layout_available():
+		return
+	host._layout_hud()
+	if schedule_deferred:
+		host.call_deferred("_layout_hud")
+
+func _map_world_full_layout_available() -> bool:
+	# A damaged bootstrap graph cannot safely execute the legacy all-panel
+	# layout. Keep the map closed and fail safe instead of dereferencing a
+	# missing core node; normal non-formal compatibility still uses full layout.
+	return (
+		hud_root != null
+		and map_panel != null
+		and top_panel != null
+		and side_panel != null
+		and action_bar != null
+		and battle_message_panel != null
+		and party_roster_panel != null
+	)
 
 func _open_chat_panel() -> void:
 	if battle_active:
@@ -24876,19 +25213,90 @@ func _rebirth_target_label(target_count: int) -> String:
 		_:
 			return "六转"
 
-func _refresh_map_panel() -> void:
-	if map_panel == null or map_texture_rect == null or map_detail_label == null or map_marker_container == null:
+func _refresh_map_panel(diagnostic_timing = null) -> void:
+	var timing_enabled := diagnostic_timing is Dictionary
+	var timing_ref = diagnostic_timing
+	var refresh_started_usec := 0
+	var segment_started_usec := 0
+	if timing_enabled:
+		refresh_started_usec = Time.get_ticks_usec()
+		segment_started_usec = Time.get_ticks_usec()
+	if map_panel == null:
 		return
 	if map_panel is MapAwakenedPanel:
 		var awakened_panel := map_panel as MapAwakenedPanel
 		var state := _map_awakened_view_state()
+		if timing_enabled:
+			(diagnostic_timing as Dictionary)["view_state_usec"] = int(
+				Time.get_ticks_usec() - segment_started_usec
+			)
+			segment_started_usec = Time.get_ticks_usec()
+		var world_bounds: Rect2 = host._map_world_bounds()
+		if timing_enabled:
+			(diagnostic_timing as Dictionary)["bounds_usec"] = int(
+				Time.get_ticks_usec() - segment_started_usec
+			)
+			segment_started_usec = Time.get_ticks_usec()
+		var prepared_visual_usable := MapAwakenedPanel.can_use_prepared_visual(
+			host.map_visual_render_state,
+			world_bounds
+		)
+		if timing_enabled:
+			timing_ref["prepared_predicate_usec"] = int(
+				Time.get_ticks_usec() - segment_started_usec
+			)
+			timing_ref["prepared_visual"] = prepared_visual_usable
+			segment_started_usec = Time.get_ticks_usec()
+		var fallback_texture: Texture2D = null
+		var fallback_counter_before := _map_minimap_fallback_build_count
+		if not prepared_visual_usable:
+			fallback_texture = _map_minimap_texture()
+		if timing_enabled:
+			timing_ref["fallback_called"] = not prepared_visual_usable
+			timing_ref["fallback_usec"] = (
+				int(Time.get_ticks_usec() - segment_started_usec)
+				if not prepared_visual_usable
+				else 0
+			)
+			timing_ref["fallback_counter_delta"] = (
+				_map_minimap_fallback_build_count - fallback_counter_before
+			)
 		awakened_panel.apply_view_state(
 			state,
 			host.map_visual_render_state,
-			host._map_world_bounds(),
-			_map_minimap_texture()
+			world_bounds,
+			fallback_texture,
+			diagnostic_timing
 		)
+		if timing_enabled:
+			segment_started_usec = Time.get_ticks_usec()
+		map_close_button = awakened_panel.close_button
+		map_texture_rect = awakened_panel.legacy_texture_rect
+		map_detail_label = awakened_panel.legacy_detail_label
+		map_marker_container = awakened_panel.marker_container
 		map_marker_buttons = awakened_panel.marker_buttons
+		if timing_enabled:
+			timing_ref["marker_publish_usec"] = int(
+				Time.get_ticks_usec() - segment_started_usec
+			)
+			var refresh_total_usec := int(
+				Time.get_ticks_usec() - refresh_started_usec
+			)
+			var refresh_child_usec := (
+				int(timing_ref.get("view_state_usec", 0))
+				+ int(timing_ref.get("bounds_usec", 0))
+				+ int(timing_ref.get("prepared_predicate_usec", 0))
+				+ int(timing_ref.get("fallback_usec", 0))
+				+ int(timing_ref.get("panel_apply_total_usec", 0))
+				+ int(timing_ref.get("marker_publish_usec", 0))
+			)
+			timing_ref["refresh_total_usec"] = refresh_total_usec
+			timing_ref["refresh_residual_usec"] = maxi(
+				0,
+				refresh_total_usec - refresh_child_usec
+			)
+		return
+	if map_texture_rect == null or map_detail_label == null or map_marker_container == null:
 		return
 	map_texture_rect.texture = _map_minimap_texture()
 	var player_cell = IsoMapModel.world_to_grid(map_data, player.global_position)
@@ -25029,16 +25437,22 @@ func _map_awakened_view_state() -> Dictionary:
 		target["worldPosition"] = IsoMapModel.grid_to_world(map_data, cell)
 		target["displayText"] = _map_target_button_text(target)
 		local_targets.append(target)
+	var regions := MapRegionCatalog.regions()
+	var map_names := _map_awakened_map_names()
 	var state := MapAwakenedPresenter.build_view_state(
 		current_map_id,
 		str(map_data.get("name", current_map_id)),
 		player_cell,
 		target_cell if has_target_cell else null,
 		local_targets,
-		MapRegionCatalog.regions(),
-		_map_awakened_map_names()
+		regions,
+		map_names
 	)
 	state["mapGrid"] = IsoMapModel.grid_size(map_data)
+	state["mapNames"] = map_names.duplicate(true)
+	state["mapVisualRevision"] = int(host.map_visual_render_revision)
+	state["mapCatalogRevision"] = _map_awakened_catalog_revision()
+	state["mapRouteContractRevision"] = _map_awakened_route_contract_revision()
 	state["playerWorldPosition"] = player.global_position
 	state["targetCell"] = target_cell if has_target_cell else Vector2i(-1, -1)
 	state["targetWorldPosition"] = (
@@ -25058,7 +25472,33 @@ func _map_awakened_map_names() -> Dictionary:
 		_map_awakened_map_name_cache[map_id] = _map_name_for_id(map_id)
 	return _map_awakened_map_name_cache.duplicate()
 
+
+func _map_awakened_catalog_revision() -> String:
+	if _map_awakened_catalog_revision_cache != "":
+		return _map_awakened_catalog_revision_cache
+	var catalog := MapRegionCatalog.catalog()
+	_map_awakened_catalog_revision_cache = "schema:%d|sha256:%s" % [
+		int(catalog.get("schemaVersion", 0)),
+		JSON.stringify(catalog).sha256_text(),
+	]
+	return _map_awakened_catalog_revision_cache
+
+
+func _map_awakened_route_contract_revision() -> String:
+	# Do not instantiate the 37-map planner merely to render the map panel.
+	# A later authoritative planner build changes this token and invalidates the
+	# bounded prepared-panel projection on the next explicit open.
+	if _map_route_planner == null:
+		return "uninitialized|known:%d" % MAP_DATA_PATHS.size()
+	return "instance:%d|ready:%s|maps:%d|edges:%d" % [
+		_map_route_planner.get_instance_id(),
+		str(_map_route_planner.is_ready()),
+		int(_map_route_planner.map_count()),
+		int(_map_route_planner.directed_edge_count()),
+	]
+
 func _map_minimap_texture() -> Texture2D:
+	_map_minimap_fallback_build_count += 1
 	var image_width = 420
 	var image_height = 220
 	var image = Image.create(image_width, image_height, false, Image.FORMAT_RGBA8)
@@ -25099,6 +25539,68 @@ func _map_minimap_texture() -> Texture2D:
 	if IsoMapModel.is_inside(map_data, player_cell):
 		_fill_image_rect(image, _map_cell_rect(origin_pixel, cell_size, player_cell), Color(0.24, 0.56, 0.95, 1.0))
 	return ImageTexture.create_from_image(image)
+
+func reset_map_minimap_fallback_build_count_for_qa() -> void:
+	_map_minimap_fallback_build_count = 0
+
+func map_minimap_fallback_build_count_for_qa() -> int:
+	return _map_minimap_fallback_build_count
+
+func reset_map_world_lightweight_layout_for_qa() -> void:
+	_map_world_lightweight_open_same_call = false
+	_map_world_lightweight_close_same_call = false
+	_map_world_full_layout_fallback_count = 0
+	_map_world_last_full_layout_fallback_reason = ""
+
+func map_world_lightweight_open_same_call_for_qa() -> bool:
+	return _map_world_lightweight_open_same_call
+
+func map_world_lightweight_close_same_call_for_qa() -> bool:
+	return _map_world_lightweight_close_same_call
+
+func map_world_lightweight_active_for_qa() -> bool:
+	return _map_world_lightweight_layout_active
+
+func map_world_full_layout_fallback_count_for_qa() -> int:
+	return _map_world_full_layout_fallback_count
+
+func map_world_last_full_layout_fallback_reason_for_qa() -> String:
+	return _map_world_last_full_layout_fallback_reason
+
+func invalidate_map_world_lightweight_viewport_for_qa() -> void:
+	if _map_world_lightweight_layout_active:
+		_map_world_lightweight_layout_viewport += Vector2.ONE
+
+func begin_map_open_timing_for_qa(action_id: String, cycle_index: int) -> bool:
+	if _map_open_timing_for_qa_active:
+		return false
+	if action_id != "open_local" or cycle_index < 0:
+		return false
+	_map_open_timing_for_qa_active = true
+	_map_open_timing_for_qa_sample = {
+		"action": action_id,
+		"cycle": cycle_index,
+		"token": "%s:%d" % [action_id, cycle_index],
+	}
+	return true
+
+func consume_map_open_timing_for_qa() -> Dictionary:
+	if (
+		not _map_open_timing_for_qa_active
+		or not (_map_open_timing_for_qa_sample is Dictionary)
+	):
+		return {}
+	var sample := _map_open_timing_for_qa_sample as Dictionary
+	_map_open_timing_for_qa_active = false
+	_map_open_timing_for_qa_sample = null
+	return sample
+
+func disable_map_open_timing_for_qa() -> void:
+	_map_open_timing_for_qa_active = false
+	_map_open_timing_for_qa_sample = null
+
+func map_open_timing_active_for_qa() -> bool:
+	return _map_open_timing_for_qa_active
 
 func _map_target_minimap_color(target: Dictionary) -> Color:
 	match str(target.get("facilityType", "")):

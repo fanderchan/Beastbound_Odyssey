@@ -174,6 +174,9 @@ const MAIL_REWARD_FALLBACK_PREFIX := "system_reward_fallback"
 const CAPTURE_TOOLS_KEY := "captureTools"
 const ACTIVE_QUEST_ID_KEY := "activeQuestId"
 const QUEST_STATES_KEY := "questStates"
+const QUEST_EVENT_MATCH := "match"
+const QUEST_EVENT_NO_MATCH := "no_match"
+const QUEST_EVENT_UNCERTAIN := "uncertain"
 const QUEST_SET_BATTLE_PET_ID := "quest_set_battle_pet"
 const QUEST_OPEN_STATUS_PANEL_ID := "quest_open_status_panel"
 const BATTLE_PET_TUTORIAL_FORM_ID := "bui_novice_sprout_earth5_wind5"
@@ -3751,6 +3754,45 @@ static func record_quest_event(profile: Dictionary, event: Dictionary) -> Dictio
 		"title": QuestModel.title_for(quest),
 		"message": message,
 	}
+
+
+static func active_quest_event_match_certainty(
+	profile: Dictionary,
+	event: Dictionary,
+	profile_is_normalized: bool = false
+) -> String:
+	# This is a no-mutation fast gate, not a replacement for normalization.
+	# Only a complete local schema-1 active quest can prove a mismatch. Any
+	# legacy, server, optional, claimed, unavailable or incomplete document may
+	# normalize to a different active quest and must use the authoritative path.
+	if (
+		not profile_is_normalized
+		or not profile.has("schemaVersion")
+		or _exact_profile_schema_version(profile) != PROFILE_SCHEMA_VERSION
+		or not profile.has(ACTIVE_QUEST_ID_KEY)
+		or not profile.has(QUEST_STATES_KEY)
+		or not (profile.get(QUEST_STATES_KEY) is Dictionary)
+	):
+		return QUEST_EVENT_UNCERTAIN
+	var quest_id := str(profile.get(ACTIVE_QUEST_ID_KEY, "")).strip_edges()
+	var states := profile.get(QUEST_STATES_KEY) as Dictionary
+	if quest_id == "" or not states.has(quest_id):
+		return QUEST_EVENT_UNCERTAIN
+	var quest := QuestModel.quest_for_id(quest_id)
+	if (
+		quest.is_empty()
+		or QuestModel.is_optional(quest)
+		or not _quest_progress_available_for_profile(quest, profile)
+	):
+		return QUEST_EVENT_UNCERTAIN
+	var state := QuestModel.normalize_state(states.get(quest_id, {}), quest_id)
+	if str(state.get("status", QuestModel.STATUS_ACTIVE)) == QuestModel.STATUS_CLAIMED:
+		return QUEST_EVENT_UNCERTAIN
+	return (
+		QUEST_EVENT_MATCH
+		if QuestModel.progress_amount_for_event(quest, event) > 0
+		else QUEST_EVENT_NO_MATCH
+	)
 
 
 static func record_current_battle_pet_quest(profile: Dictionary) -> Dictionary:

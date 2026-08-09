@@ -158,6 +158,9 @@ var _drawer_grid: HBoxContainer
 var _bottom_row: HBoxContainer
 var _message_surface: Control
 var _chat_surface: Panel
+var _message_action_row: HBoxContainer
+var _message_expand_button: Button
+var _message_clear_button: Button
 var _task_body_panel: Panel
 var _task_entries_scroll: ScrollContainer
 var _task_entries_container: VBoxContainer
@@ -220,6 +223,24 @@ func mount_existing_controls(controls: Dictionary) -> Dictionary:
 		controls,
 		["battleLogLabel", "battle_log_label", "battleLog", "battle_log"]
 	) as RichTextLabel
+	_message_expand_button = _control_from(
+		controls,
+		[
+			"battleMessageExpandButton",
+			"battle_message_expand_button",
+			"messageExpandButton",
+			"message_expand_button",
+		]
+	) as Button
+	_message_clear_button = _control_from(
+		controls,
+		[
+			"battleMessageClearButton",
+			"battle_message_clear_button",
+			"messageClearButton",
+			"message_clear_button",
+		]
+	) as Button
 	_collapse_button = _control_from(
 		controls,
 		[
@@ -250,6 +271,10 @@ func mount_existing_controls(controls: Dictionary) -> Dictionary:
 		missing_ids.append("battleMessagePanel")
 	if _action_bar == null:
 		missing_ids.append("actionBar")
+	if _message_expand_button == null:
+		missing_ids.append("battleMessageExpandButton")
+	if _message_clear_button == null:
+		missing_ids.append("battleMessageClearButton")
 	if _collapse_button == null:
 		missing_ids.append("actionBarCollapseButton")
 	for entry_id in REQUIRED_ENTRY_IDS:
@@ -318,8 +343,13 @@ func rollback_mount() -> Dictionary:
 		var item = record.get("node")
 		if not (item is CanvasItem) or not is_instance_valid(item):
 			continue
-		_restore_mount_item(item as CanvasItem, record)
+		_restore_mount_item_semantics(item as CanvasItem, record, errors)
 		restored_count += 1
+	for record in ordered:
+		var item = record.get("node")
+		if not (item is CanvasItem) or not is_instance_valid(item):
+			continue
+		_restore_mount_item_geometry(item as CanvasItem, record)
 	if errors.is_empty():
 		_remove_mount_artifacts()
 		_mounted = false
@@ -856,6 +886,9 @@ func layout_contract() -> Dictionary:
 			"restoreButton": "WorldHudRestoreButton",
 			"taskTab": "WorldHudTaskTab",
 			"partyTab": "WorldHudPartyTab",
+			"messageActions": "WorldHudMessageActions",
+			"messageExpandButton": "WorldHudMessageExpandButton",
+			"messageClearButton": "WorldHudMessageClearButton",
 		},
 	}
 
@@ -1256,6 +1289,27 @@ func _build_message_panel() -> void:
 		WorldHudAwakenedVisualSkin.caption_plate_style()
 	)
 	_chat_surface.add_child(channel_chip)
+	_message_action_row = HBoxContainer.new()
+	_message_action_row.name = "WorldHudMessageActions"
+	_message_action_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_message_action_row.add_theme_constant_override("separation", 4)
+	_chat_surface.add_child(_message_action_row)
+	_message_expand_button.name = "WorldHudMessageExpandButton"
+	_message_clear_button.name = "WorldHudMessageClearButton"
+	var message_buttons: Array[Button] = [
+		_message_expand_button,
+		_message_clear_button,
+	]
+	for message_button in message_buttons:
+		_reparent_control(message_button, _message_action_row)
+		WorldHudAwakenedVisualSkin.apply_entry_button(
+			message_button,
+			"message_action",
+			true
+		)
+		message_button.custom_minimum_size = Vector2(54.0, 28.0)
+		message_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		message_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	if _battle_log_label == null:
 		_battle_log_label = _message_panel.find_child("BattleLog", true, false) as RichTextLabel
 	if _battle_log_label != null:
@@ -1484,6 +1538,12 @@ func _layout_message_contents(message_size: Vector2, expanded: bool) -> void:
 		if channel != null:
 			channel.position = Vector2(9.0, 37.0)
 			channel.size = Vector2(54.0, 26.0)
+		if _message_action_row != null:
+			_message_action_row.position = Vector2(
+				maxf(96.0, _chat_surface.size.x - 122.0),
+				5.0
+			)
+			_message_action_row.size = Vector2(112.0, 28.0)
 		if _battle_log_label != null:
 			_battle_log_label.position = Vector2(70.0, 36.0)
 			_battle_log_label.size = Vector2(
@@ -2069,8 +2129,12 @@ func _restore_mount_child_indices(
 		)
 
 
-func _restore_mount_item(item: CanvasItem, record: Dictionary) -> void:
-	item.name = record.get("name", item.name)
+func _restore_mount_item_semantics(
+	item: CanvasItem,
+	record: Dictionary,
+	errors: Array[String]
+) -> void:
+	_restore_mount_item_name(item, record, errors)
 	item.visible = bool(record.get("visible", true))
 	item.modulate = record.get("modulate", item.modulate)
 	item.self_modulate = record.get("selfModulate", item.self_modulate)
@@ -2079,7 +2143,7 @@ func _restore_mount_item(item: CanvasItem, record: Dictionary) -> void:
 	item.show_behind_parent = bool(record.get("showBehindParent", item.show_behind_parent))
 	_restore_metadata(item, record.get("metadata", {}))
 	if item is Control:
-		_restore_control_mount_state(item as Control, record.get("control", {}))
+		_restore_control_mount_semantics(item as Control, record.get("control", {}))
 	if item is Label:
 		var label := item as Label
 		var state = record.get("label", {}) as Dictionary
@@ -2117,21 +2181,30 @@ func _restore_mount_item(item: CanvasItem, record: Dictionary) -> void:
 		button.expand_icon = bool(state.get("expandIcon", button.expand_icon))
 
 
-func _restore_control_mount_state(control: Control, state: Dictionary) -> void:
+func _restore_mount_item_name(
+	item: CanvasItem,
+	record: Dictionary,
+	errors: Array[String]
+) -> void:
+	if not record.has("name"):
+		errors.append("mount snapshot name is missing")
+		return
+	var saved_name: StringName = StringName(record.get("name"))
+	if saved_name == StringName():
+		errors.append("mount snapshot name is empty")
+		return
+	if item.name == saved_name:
+		return
+	if str(saved_name).begins_with("@"):
+		errors.append("internal mount name changed: %s" % str(saved_name))
+		return
+	item.name = saved_name
+	if item.name != saved_name:
+		errors.append("mount name restore failed: %s" % str(saved_name))
+
+
+func _restore_control_mount_semantics(control: Control, state: Dictionary) -> void:
 	control.custom_minimum_size = state.get("customMinimumSize", control.custom_minimum_size)
-	control.anchor_left = float(state.get("anchorLeft", control.anchor_left))
-	control.anchor_top = float(state.get("anchorTop", control.anchor_top))
-	control.anchor_right = float(state.get("anchorRight", control.anchor_right))
-	control.anchor_bottom = float(state.get("anchorBottom", control.anchor_bottom))
-	control.offset_left = float(state.get("offsetLeft", control.offset_left))
-	control.offset_top = float(state.get("offsetTop", control.offset_top))
-	control.offset_right = float(state.get("offsetRight", control.offset_right))
-	control.offset_bottom = float(state.get("offsetBottom", control.offset_bottom))
-	control.position = state.get("position", control.position)
-	control.size = state.get("size", control.size)
-	control.rotation = float(state.get("rotation", control.rotation))
-	control.scale = state.get("scale", control.scale)
-	control.pivot_offset = state.get("pivotOffset", control.pivot_offset)
 	control.size_flags_horizontal = int(state.get("sizeFlagsHorizontal", control.size_flags_horizontal))
 	control.size_flags_vertical = int(state.get("sizeFlagsVertical", control.size_flags_vertical))
 	control.mouse_filter = state.get("mouseFilter", control.mouse_filter)
@@ -2143,6 +2216,28 @@ func _restore_control_mount_state(control: Control, state: Dictionary) -> void:
 	control.clip_contents = bool(state.get("clipContents", control.clip_contents))
 	control.tooltip_text = str(state.get("tooltipText", control.tooltip_text))
 	_restore_theme_overrides(control, state.get("themeOverrides", {}))
+
+
+func _restore_mount_item_geometry(item: CanvasItem, record: Dictionary) -> void:
+	if not (item is Control):
+		return
+	_restore_control_mount_geometry(item as Control, record.get("control", {}))
+
+
+func _restore_control_mount_geometry(control: Control, state: Dictionary) -> void:
+	control.anchor_left = float(state.get("anchorLeft", control.anchor_left))
+	control.anchor_top = float(state.get("anchorTop", control.anchor_top))
+	control.anchor_right = float(state.get("anchorRight", control.anchor_right))
+	control.anchor_bottom = float(state.get("anchorBottom", control.anchor_bottom))
+	control.position = state.get("position", control.position)
+	control.size = state.get("size", control.size)
+	control.rotation = float(state.get("rotation", control.rotation))
+	control.scale = state.get("scale", control.scale)
+	control.pivot_offset = state.get("pivotOffset", control.pivot_offset)
+	control.offset_left = float(state.get("offsetLeft", control.offset_left))
+	control.offset_top = float(state.get("offsetTop", control.offset_top))
+	control.offset_right = float(state.get("offsetRight", control.offset_right))
+	control.offset_bottom = float(state.get("offsetBottom", control.offset_bottom))
 
 
 func _restore_metadata(item: CanvasItem, value) -> void:

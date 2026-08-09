@@ -13,6 +13,9 @@ const WorldHudAwakenedVisualSkin := preload(
 const WorldHudMinimapRenderCanvas := preload(
 	"res://scripts/ui/world_hud_minimap_render_canvas.gd"
 )
+const MapVisualRenderer := preload(
+	"res://scripts/world/map_visual_renderer.gd"
+)
 const WORLD_ATLAS_BACKGROUND := preload(
 	"res://assets/ui/map_awakened_v1/runtime/world_atlas_background_v1.png"
 )
@@ -37,7 +40,25 @@ var _selected_world_region_id := ""
 var _using_prepared_visual := false
 var _map_grid_size := Vector2i.ZERO
 var _marker_specs: Array[Dictionary] = []
+var _prepared_cache_context: Dictionary = {}
+var _prepared_sidebar_signature: Dictionary = {}
+var _prepared_regions_signature: Dictionary = {}
+var _prepared_detail_signature: Dictionary = {}
+var _prepared_canvas_signature: Dictionary = {}
+var _prepared_sidebar_child_count := -1
+var _prepared_regions_child_count := -1
+var _prepared_detail_child_count := -1
+var _prepared_sidebar_button_keys: Array[String] = []
+var _prepared_sidebar_destination_button_keys: Array[String] = []
+var _prepared_region_button_keys: Array[String] = []
+var _prepared_detail_button_keys: Array[String] = []
+var _static_sidebar_rebuild_count := 0
+var _static_regions_rebuild_count := 0
+var _static_detail_rebuild_count := 0
+var _prepared_canvas_configure_count := 0
+var _dynamic_marker_rebuild_count := 0
 
+var _ui_root: Control
 var _header_location_label: Label
 var _local_tab_button: Button
 var _world_tab_button: Button
@@ -52,9 +73,11 @@ var _map_marker_overlay: Control
 var _world_region_list: Control
 var _world_region_buttons: Dictionary = {}
 var _world_route_buttons: Dictionary = {}
+var _local_destination_buttons: Dictionary = {}
 var _world_atlas_texture_rect: TextureRect
 var _world_detail_title: Label
 var _world_detail_meta: Label
+var _world_detail_column: VBoxContainer
 var _world_detail_points: VBoxContainer
 var _world_entry_route_button: Button
 var _empty_local_label: Label
@@ -73,15 +96,47 @@ func is_awakened_map_panel() -> bool:
 	return true
 
 
+static func can_use_prepared_visual(
+	prepared_visual: Dictionary,
+	world_bounds: Rect2
+) -> bool:
+	return (
+		MapVisualRenderer.has_prepared_visual(prepared_visual)
+		and world_bounds.size.x > 0.0
+		and world_bounds.size.y > 0.0
+	)
+
+
 func apply_view_state(
 	state: Dictionary,
 	prepared_visual: Dictionary,
 	world_bounds: Rect2,
-	fallback_texture: Texture2D
+	fallback_texture: Texture2D,
+	diagnostic_timing = null
 ) -> void:
+	var timing_enabled := diagnostic_timing is Dictionary
+	var apply_started_usec := 0
+	var segment_started_usec := 0
+	if timing_enabled:
+		apply_started_usec = Time.get_ticks_usec()
+		segment_started_usec = Time.get_ticks_usec()
+	if not _fixed_ui_roots_ready():
+		_rebuild_fixed_ui_roots()
 	_view_state = state.duplicate(true)
 	_map_grid_size = state.get("mapGrid", Vector2i.ZERO) as Vector2i
+	_prepared_cache_context = _build_prepared_cache_context(
+		state,
+		prepared_visual,
+		world_bounds
+	)
+	if not bool(_prepared_cache_context.get("valid", false)):
+		_invalidate_prepared_static_cache()
 	var player_cell := state.get("playerCell", Vector2i.ZERO) as Vector2i
+	if timing_enabled:
+		(diagnostic_timing as Dictionary)["apply_state_copy_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
 	_header_location_label.text = "%s  ·  (%d,%d)" % [
 		str(state.get("currentMapName", "未知地图")),
 		player_cell.x,
@@ -98,17 +153,74 @@ func apply_view_state(
 	_local_region_label.text = (
 		"所属区域 · %s" % str(current_region.get("label", "未归档区域"))
 	)
-	_populate_local_sidebar()
-	_configure_local_map(prepared_visual, world_bounds, fallback_texture)
-	_populate_world_regions()
-	if _selected_world_region_id == "":
-		_selected_world_region_id = str(current_region.get("id", ""))
-	_render_selected_world_region()
+	if timing_enabled:
+		(diagnostic_timing as Dictionary)["apply_header_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
+	_refresh_local_sidebar(_prepared_cache_context)
+	if timing_enabled:
+		(diagnostic_timing as Dictionary)["apply_sidebar_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
+	_configure_local_map(
+		prepared_visual,
+		world_bounds,
+		fallback_texture,
+		_prepared_cache_context
+	)
+	if timing_enabled:
+		(diagnostic_timing as Dictionary)["apply_local_map_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
+	_refresh_world_regions(_prepared_cache_context)
+	if timing_enabled:
+		(diagnostic_timing as Dictionary)["apply_world_regions_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
+	_ensure_selected_world_region(str(current_region.get("id", "")))
+	_refresh_selected_world_region(_prepared_cache_context)
+	if timing_enabled:
+		(diagnostic_timing as Dictionary)["apply_world_detail_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
 	show_mode(MapAwakenedPresenter.MODE_LOCAL)
+	if timing_enabled:
+		(diagnostic_timing as Dictionary)["apply_show_mode_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		segment_started_usec = Time.get_ticks_usec()
 	call_deferred("_refresh_map_marker_positions")
+	if timing_enabled:
+		var timing := diagnostic_timing as Dictionary
+		timing["apply_marker_schedule_usec"] = int(
+			Time.get_ticks_usec() - segment_started_usec
+		)
+		var apply_total_usec := int(Time.get_ticks_usec() - apply_started_usec)
+		var apply_child_usec := (
+			int(timing.get("apply_state_copy_usec", 0))
+			+ int(timing.get("apply_header_usec", 0))
+			+ int(timing.get("apply_sidebar_usec", 0))
+			+ int(timing.get("apply_local_map_usec", 0))
+			+ int(timing.get("apply_world_regions_usec", 0))
+			+ int(timing.get("apply_world_detail_usec", 0))
+			+ int(timing.get("apply_show_mode_usec", 0))
+			+ int(timing.get("apply_marker_schedule_usec", 0))
+		)
+		timing["panel_apply_total_usec"] = apply_total_usec
+		timing["apply_residual_usec"] = maxi(
+			0,
+			apply_total_usec - apply_child_usec
+		)
 
 
 func reset_to_local_view() -> void:
+	if not _fixed_ui_roots_ready():
+		_rebuild_fixed_ui_roots()
 	show_mode(MapAwakenedPresenter.MODE_LOCAL)
 
 
@@ -166,8 +278,28 @@ func world_route_button(map_id: String) -> Button:
 	return _world_route_buttons.get(map_id) as Button
 
 
+func reset_static_cache_counters_for_qa() -> void:
+	_static_sidebar_rebuild_count = 0
+	_static_regions_rebuild_count = 0
+	_static_detail_rebuild_count = 0
+	_prepared_canvas_configure_count = 0
+	_dynamic_marker_rebuild_count = 0
+
+
+func static_cache_counters_for_qa() -> Dictionary:
+	return {
+		"sidebarRebuilds": _static_sidebar_rebuild_count,
+		"regionRebuilds": _static_regions_rebuild_count,
+		"detailRebuilds": _static_detail_rebuild_count,
+		"canvasConfigures": _prepared_canvas_configure_count,
+		"markerRebuilds": _dynamic_marker_rebuild_count,
+		"cacheActive": bool(_prepared_cache_context.get("valid", false)),
+	}
+
+
 func _build_ui() -> void:
 	var outer_margin := MarginContainer.new()
+	_ui_root = outer_margin
 	outer_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	outer_margin.add_theme_constant_override("margin_left", 12)
 	outer_margin.add_theme_constant_override("margin_top", 10)
@@ -401,23 +533,23 @@ func _build_world_mode(parent: Control) -> void:
 	detail_panel.custom_minimum_size = Vector2(360.0, 0.0)
 	detail_panel.add_theme_stylebox_override("panel", MapAwakenedVisualSkin.dark_surface_style())
 	_world_mode.add_child(detail_panel)
-	var detail_column := VBoxContainer.new()
-	detail_column.add_theme_constant_override("separation", 8)
-	detail_panel.add_child(detail_column)
+	_world_detail_column = VBoxContainer.new()
+	_world_detail_column.add_theme_constant_override("separation", 8)
+	detail_panel.add_child(_world_detail_column)
 	_world_detail_title = Label.new()
 	_world_detail_title.custom_minimum_size = Vector2(0.0, 44.0)
 	MapAwakenedVisualSkin.apply_heading(_world_detail_title, 22)
-	detail_column.add_child(_world_detail_title)
+	_world_detail_column.add_child(_world_detail_title)
 	_world_detail_meta = Label.new()
 	_world_detail_meta.custom_minimum_size = Vector2(0.0, 54.0)
 	_world_detail_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	MapAwakenedVisualSkin.apply_label(_world_detail_meta, 15, true)
-	detail_column.add_child(_world_detail_meta)
+	_world_detail_column.add_child(_world_detail_meta)
 	var point_scroll := ScrollContainer.new()
 	point_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	point_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	point_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	detail_column.add_child(point_scroll)
+	_world_detail_column.add_child(point_scroll)
 	_world_detail_points = VBoxContainer.new()
 	_world_detail_points.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_world_detail_points.add_theme_constant_override("separation", 7)
@@ -426,12 +558,355 @@ func _build_world_mode(parent: Control) -> void:
 	_world_entry_route_button.text = "前往区域入口"
 	MapAwakenedVisualSkin.apply_list_button(_world_entry_route_button, "map", true)
 	_world_entry_route_button.pressed.connect(_on_world_entry_route_pressed)
-	detail_column.add_child(_world_entry_route_button)
+	_world_detail_column.add_child(_world_entry_route_button)
+
+
+static func _node_is_live(value) -> bool:
+	return (
+		is_instance_valid(value)
+		and value is Node
+		and not (value as Node).is_queued_for_deletion()
+	)
+
+
+static func _node_has_live_ancestry_to(value, expected_ancestor) -> bool:
+	if not _node_is_live(value) or not _node_is_live(expected_ancestor):
+		return false
+	var node := value as Node
+	var ancestor := expected_ancestor as Node
+	while node != ancestor:
+		node = node.get_parent()
+		if not _node_is_live(node):
+			return false
+	return true
+
+
+static func _all_direct_children_live(container_value) -> bool:
+	if not _node_is_live(container_value):
+		return false
+	var container := container_value as Node
+	for child in container.get_children():
+		if not _node_is_live(child) or child.get_parent() != container:
+			return false
+	return true
+
+
+func _fixed_ui_root_nodes() -> Array:
+	return [
+		close_button,
+		_header_location_label,
+		_local_tab_button,
+		_world_tab_button,
+		_local_mode,
+		_world_mode,
+		_local_map_title_label,
+		_local_region_label,
+		_local_map_surface,
+		marker_container,
+		legacy_texture_rect,
+		legacy_detail_label,
+		_map_marker_overlay,
+		_world_region_list,
+		_world_atlas_texture_rect,
+		_world_detail_title,
+		_world_detail_meta,
+		_world_detail_column,
+		_world_detail_points,
+		_world_entry_route_button,
+		_empty_local_label,
+	]
+
+
+func _fixed_ui_roots_ready() -> bool:
+	if (
+		not _node_is_live(_ui_root)
+		or _ui_root.get_parent() != self
+	):
+		return false
+	for value in _fixed_ui_root_nodes():
+		if not _node_has_live_ancestry_to(value, _ui_root):
+			return false
+	return _world_entry_route_button.get_parent() == _world_detail_column
+
+
+func _rebuild_fixed_ui_roots() -> void:
+	var old_nodes: Array[Node] = []
+	for value in _fixed_ui_root_nodes():
+		if is_instance_valid(value):
+			old_nodes.append(value as Node)
+	if is_instance_valid(_ui_root):
+		_ui_root.free()
+	for node in old_nodes:
+		if is_instance_valid(node):
+			node.free()
+	for child in get_children():
+		child.free()
+	marker_buttons.clear()
+	_local_destination_buttons.clear()
+	_world_region_buttons.clear()
+	_world_route_buttons.clear()
+	_marker_specs.clear()
+	_map_viewport = null
+	_map_canvas = null
+	_invalidate_prepared_static_cache()
+	_build_ui()
+
+
+func _build_prepared_cache_context(
+	state: Dictionary,
+	prepared_visual: Dictionary,
+	world_bounds: Rect2
+) -> Dictionary:
+	var prepared_usable := can_use_prepared_visual(
+		prepared_visual,
+		world_bounds
+	)
+	var visual_revision := int(state.get("mapVisualRevision", -1))
+	var catalog_revision := str(
+		state.get("mapCatalogRevision", "")
+	).strip_edges()
+	var route_revision := str(
+		state.get("mapRouteContractRevision", "")
+	).strip_edges()
+	var current_map_id := str(state.get("currentMapId", "")).strip_edges()
+	var map_names_value = state.get("mapNames", {})
+	var valid := (
+		prepared_usable
+		and visual_revision >= 0
+		and catalog_revision != ""
+		and route_revision != ""
+		and current_map_id != ""
+		and map_names_value is Dictionary
+		and not (map_names_value as Dictionary).is_empty()
+		and state.get("localTargets", null) is Array
+		and state.get("currentRegion", null) is Dictionary
+		and state.get("worldRegions", null) is Array
+	)
+	var base := {
+		"prepared": prepared_usable,
+		"currentMapId": current_map_id,
+		"mapVisualRevision": visual_revision,
+		"mapCatalogRevision": catalog_revision,
+		"mapRouteContractRevision": route_revision,
+		"mapNames": map_names_value,
+		"worldBounds": [
+			world_bounds.position.x,
+			world_bounds.position.y,
+			world_bounds.size.x,
+			world_bounds.size.y,
+		],
+	}
+	return {
+		"valid": valid,
+		"base": base,
+		"canvasSignature": _static_signature({
+			"prepared": prepared_usable,
+			"currentMapId": current_map_id,
+			"mapVisualRevision": visual_revision,
+			"worldBounds": base.get("worldBounds", []),
+		}),
+	}
+
+
+func _static_signature(value: Dictionary) -> Dictionary:
+	# Keep one native deep projection per panel. Dictionary.recursive_equal()
+	# preserves Vector/Rect values and cannot hide a short-hash collision.
+	return value.duplicate(true)
+
+
+func _signatures_equal(left: Dictionary, right: Dictionary) -> bool:
+	return not left.is_empty() and left.recursive_equal(right, 0)
+
+
+func _signature_with_base(
+	context: Dictionary,
+	payload: Dictionary
+) -> Dictionary:
+	var projection := (
+		(context.get("base", {}) as Dictionary).duplicate(true)
+		if context.get("base", {}) is Dictionary
+		else {}
+	)
+	for key in payload.keys():
+		projection[key] = payload.get(key)
+	return _static_signature(projection)
+
+
+func _invalidate_prepared_static_cache() -> void:
+	_prepared_sidebar_signature = {}
+	_prepared_regions_signature = {}
+	_prepared_detail_signature = {}
+	_prepared_canvas_signature = {}
+	_prepared_sidebar_child_count = -1
+	_prepared_regions_child_count = -1
+	_prepared_detail_child_count = -1
+	_prepared_sidebar_button_keys.clear()
+	_prepared_sidebar_destination_button_keys.clear()
+	_prepared_region_button_keys.clear()
+	_prepared_detail_button_keys.clear()
+
+
+func _sorted_string_keys(values: Dictionary) -> Array[String]:
+	var result: Array[String] = []
+	for key_value in values.keys():
+		result.append(str(key_value))
+	result.sort()
+	return result
+
+
+func _local_sidebar_cache_ready() -> bool:
+	if not _all_direct_children_live(marker_container):
+		return false
+	if marker_container.get_child_count() != _prepared_sidebar_child_count:
+		return false
+	if _sorted_string_keys(marker_buttons) != _prepared_sidebar_button_keys:
+		return false
+	if (
+		_sorted_string_keys(_local_destination_buttons)
+		!= _prepared_sidebar_destination_button_keys
+	):
+		return false
+	for button_value in marker_buttons.values():
+		if not (button_value is Button):
+			return false
+		var button := button_value as Button
+		if not _node_is_live(button) or button.get_parent() != marker_container:
+			return false
+	for button_value in _local_destination_buttons.values():
+		if not (button_value is Button):
+			return false
+		var button := button_value as Button
+		if not _node_is_live(button) or button.get_parent() != marker_container:
+			return false
+	return true
+
+
+func _world_regions_cache_ready() -> bool:
+	if not _all_direct_children_live(_world_region_list):
+		return false
+	if _world_region_list.get_child_count() != _prepared_regions_child_count:
+		return false
+	if _sorted_string_keys(_world_region_buttons) != _prepared_region_button_keys:
+		return false
+	for button_value in _world_region_buttons.values():
+		if not (button_value is Button):
+			return false
+		var button := button_value as Button
+		if not _node_is_live(button) or button.get_parent() != _world_region_list:
+			return false
+	return true
+
+
+func _world_detail_cache_ready() -> bool:
+	if (
+		not _all_direct_children_live(_world_detail_points)
+		or not _node_is_live(_world_entry_route_button)
+		or _world_detail_points.get_child_count()
+		!= _prepared_detail_child_count
+	):
+		return false
+	if _sorted_string_keys(_world_route_buttons) != _prepared_detail_button_keys:
+		return false
+	for button_value in _world_route_buttons.values():
+		if not (button_value is Button):
+			return false
+		var button := button_value as Button
+		if (
+			not _node_is_live(button)
+			or button.get_parent() != _world_detail_points
+		):
+			return false
+	return true
+
+
+func _refresh_local_sidebar(context: Dictionary) -> void:
+	var cache_enabled := bool(context.get("valid", false))
+	var signature := _signature_with_base(context, {
+		"localTargets": _view_state.get("localTargets", []),
+		"currentRegion": _view_state.get("currentRegion", {}),
+	})
+	if (
+		cache_enabled
+		and _signatures_equal(signature, _prepared_sidebar_signature)
+		and _local_sidebar_cache_ready()
+	):
+		return
+	_populate_local_sidebar()
+	_static_sidebar_rebuild_count += 1
+	_prepared_sidebar_child_count = marker_container.get_child_count()
+	_prepared_sidebar_button_keys = _sorted_string_keys(marker_buttons)
+	_prepared_sidebar_destination_button_keys = _sorted_string_keys(
+		_local_destination_buttons
+	)
+	_prepared_sidebar_signature = signature if cache_enabled else {}
+
+
+func _refresh_world_regions(context: Dictionary) -> void:
+	var cache_enabled := bool(context.get("valid", false))
+	var signature := _signature_with_base(context, {
+		"worldRegions": _view_state.get("worldRegions", []),
+	})
+	if not (
+		cache_enabled
+		and _signatures_equal(signature, _prepared_regions_signature)
+		and _world_regions_cache_ready()
+	):
+		_populate_world_regions()
+		_static_regions_rebuild_count += 1
+		_prepared_regions_child_count = _world_region_list.get_child_count()
+		_prepared_region_button_keys = _sorted_string_keys(
+			_world_region_buttons
+		)
+		_prepared_regions_signature = signature if cache_enabled else {}
+	_sync_world_region_button_state()
+
+
+func _refresh_selected_world_region(context: Dictionary) -> void:
+	var cache_enabled := bool(context.get("valid", false))
+	var signature := _signature_with_base(context, {
+		"selectedWorldRegionId": _selected_world_region_id,
+		"selectedWorldRegion": _world_region_state(
+			_selected_world_region_id
+		),
+		"currentMapId": str(_view_state.get("currentMapId", "")),
+	})
+	if not (
+		cache_enabled
+		and _signatures_equal(signature, _prepared_detail_signature)
+		and _world_detail_cache_ready()
+	):
+		_render_selected_world_region()
+		_static_detail_rebuild_count += 1
+		_prepared_detail_child_count = _world_detail_points.get_child_count()
+		_prepared_detail_button_keys = _sorted_string_keys(
+			_world_route_buttons
+		)
+		_prepared_detail_signature = signature if cache_enabled else {}
+	_sync_world_region_button_state()
+
+
+func _ensure_selected_world_region(current_region_id: String) -> void:
+	if not _world_region_state(_selected_world_region_id).is_empty():
+		return
+	if _selected_world_region_id == "":
+		_selected_world_region_id = current_region_id
+		if not _world_region_state(_selected_world_region_id).is_empty():
+			return
+	var regions_value = _view_state.get("worldRegions", [])
+	if (
+		regions_value is Array
+		and not (regions_value as Array).is_empty()
+		and (regions_value as Array)[0] is Dictionary
+	):
+		_selected_world_region_id = str(
+			((regions_value as Array)[0] as Dictionary).get("id", "")
+		)
 
 
 func _populate_local_sidebar() -> void:
 	_clear_children(marker_container)
 	marker_buttons.clear()
+	_local_destination_buttons.clear()
 	var nearby_heading := Label.new()
 	nearby_heading.text = "附近目标"
 	nearby_heading.custom_minimum_size = Vector2(0.0, 34.0)
@@ -439,24 +914,33 @@ func _populate_local_sidebar() -> void:
 	marker_container.add_child(nearby_heading)
 	var local_targets_value = _view_state.get("localTargets", [])
 	if local_targets_value is Array:
-		for value in local_targets_value as Array:
+		for target_index in range((local_targets_value as Array).size()):
+			var value = (local_targets_value as Array)[target_index]
 			if not (value is Dictionary):
 				continue
 			var target := (value as Dictionary).duplicate(true)
+			var target_id := str(
+				target.get("id", target.get("label", ""))
+			)
+			var captured_target_id := target_id
 			var button := Button.new()
-			button.text = str(target.get("displayText", target.get("label", "目标")))
+			button.text = str(
+				target.get("displayText", target.get("label", "目标"))
+			)
 			button.clip_text = true
 			button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 			MapAwakenedVisualSkin.apply_list_button(
 				button,
 				MapAwakenedVisualSkin.icon_for_target(target)
 			)
-			button.tooltip_text = "%s · 点击自动寻路" % str(target.get("label", "目标"))
+			button.tooltip_text = "%s · 点击自动寻路" % str(
+				target.get("label", "目标")
+			)
 			button.pressed.connect(func() -> void:
-				route_target_requested.emit(target)
+				_emit_latest_local_target(captured_target_id)
 			)
 			marker_container.add_child(button)
-			marker_buttons[str(target.get("id", target.get("label", "")))] = button
+			marker_buttons[target_id] = button
 	if marker_buttons.is_empty():
 		var empty := Label.new()
 		empty.text = "当前地图暂无可寻路目标"
@@ -475,6 +959,7 @@ func _populate_local_sidebar() -> void:
 	var points_value = region.get("points", [])
 	if not (points_value is Array):
 		return
+	var captured_region_id := str(region.get("id", ""))
 	for value in points_value as Array:
 		if not (value is Dictionary):
 			continue
@@ -482,39 +967,111 @@ func _populate_local_sidebar() -> void:
 		var map_id := str(point.get("mapId", ""))
 		if map_id == "":
 			continue
+		var captured_map_id := map_id
 		var button := Button.new()
 		button.text = "%s  %s" % [str(point.get("label", map_id)), str(point.get("meta", ""))]
 		button.disabled = bool(point.get("current", false))
 		MapAwakenedVisualSkin.apply_list_button(button, "map", bool(point.get("current", false)))
 		button.pressed.connect(func() -> void:
-			map_destination_requested.emit(map_id, str(point.get("label", map_id)))
+			_emit_latest_map_destination(captured_region_id, captured_map_id)
 		)
 		marker_container.add_child(button)
+		_local_destination_buttons[map_id] = button
 
 
 func _configure_local_map(
 	prepared_visual: Dictionary,
 	world_bounds: Rect2,
-	fallback_texture: Texture2D
+	fallback_texture: Texture2D,
+	cache_context: Dictionary
 ) -> void:
-	_using_prepared_visual = (
-		bool(prepared_visual.get("active", false))
-		and world_bounds.size.x > 0.0
-		and world_bounds.size.y > 0.0
+	_using_prepared_visual = can_use_prepared_visual(
+		prepared_visual,
+		world_bounds
 	)
+	if _using_prepared_visual and not _ensure_local_map_canvas_ready():
+		_using_prepared_visual = false
 	if _using_prepared_visual:
-		_map_canvas.configure(prepared_visual, world_bounds, Vector2(MAP_VIEWPORT_SIZE))
+		var canvas_signature_value = cache_context.get("canvasSignature", {})
+		var canvas_signature := (
+			(canvas_signature_value as Dictionary).duplicate(true)
+			if canvas_signature_value is Dictionary
+			else {}
+		)
+		var configure_required := (
+			not bool(cache_context.get("valid", false))
+			or canvas_signature.is_empty()
+			or not _signatures_equal(
+				canvas_signature,
+				_prepared_canvas_signature
+			)
+		)
+		if configure_required:
+			_map_canvas.configure(
+				prepared_visual,
+				world_bounds,
+				Vector2(MAP_VIEWPORT_SIZE)
+			)
+			_prepared_canvas_configure_count += 1
+			_prepared_canvas_signature = (
+				canvas_signature
+				if bool(cache_context.get("valid", false))
+				else {}
+			)
 		legacy_texture_rect.texture = _map_viewport.get_texture()
-		_map_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+		if configure_required:
+			_map_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	else:
+		_prepared_canvas_signature = {}
 		legacy_texture_rect.texture = fallback_texture
 	_empty_local_label.visible = legacy_texture_rect.texture == null
 	_build_map_markers()
 
 
+func _ensure_local_map_canvas_ready() -> bool:
+	if not _node_is_live(legacy_texture_rect):
+		return false
+	var map_stage := legacy_texture_rect.get_parent()
+	if not _node_is_live(map_stage):
+		return false
+	if (
+		_node_is_live(_map_viewport)
+		and _map_viewport.get_parent() == map_stage
+		and _node_is_live(_map_canvas)
+		and _map_canvas.get_parent() == _map_viewport
+	):
+		return true
+	if not _node_is_live(_map_viewport):
+		if is_instance_valid(_map_viewport):
+			_map_viewport.free()
+		_map_viewport = SubViewport.new()
+		_map_viewport.name = "MapAwakenedViewport"
+		_map_viewport.size = MAP_VIEWPORT_SIZE
+		_map_viewport.transparent_bg = true
+		_map_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	elif _map_viewport.get_parent() != null:
+		_map_viewport.get_parent().remove_child(_map_viewport)
+	if _map_viewport.get_parent() == null:
+		map_stage.add_child(_map_viewport)
+	_map_viewport.size = MAP_VIEWPORT_SIZE
+	_map_viewport.transparent_bg = true
+	_map_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	if not _node_is_live(_map_canvas):
+		if is_instance_valid(_map_canvas):
+			_map_canvas.free()
+		_map_canvas = WorldHudMinimapRenderCanvas.new()
+		_map_canvas.name = "MapAwakenedCanvas"
+	elif _map_canvas.get_parent() != null:
+		_map_canvas.get_parent().remove_child(_map_canvas)
+	_map_viewport.add_child(_map_canvas)
+	_prepared_canvas_signature = {}
+	return true
+
+
 func _build_map_markers() -> void:
 	_clear_children(_map_marker_overlay)
 	_marker_specs.clear()
+	_dynamic_marker_rebuild_count += 1
 	var player_marker := Button.new()
 	player_marker.text = ""
 	player_marker.tooltip_text = "当前位置"
@@ -554,10 +1111,15 @@ func _build_map_markers() -> void:
 	var local_targets_value = _view_state.get("localTargets", [])
 	var visible_target_count := 0
 	if local_targets_value is Array:
-		for value in local_targets_value as Array:
+		for target_index in range((local_targets_value as Array).size()):
+			var value = (local_targets_value as Array)[target_index]
 			if not (value is Dictionary):
 				continue
 			var target := (value as Dictionary).duplicate(true)
+			var target_id := str(
+				target.get("id", target.get("label", ""))
+			)
+			var captured_target_id := target_id
 			if not _target_should_show_on_map(target):
 				continue
 			if visible_target_count >= MAX_PRIMARY_MAP_MARKERS:
@@ -570,7 +1132,7 @@ func _build_map_markers() -> void:
 				MapAwakenedVisualSkin.icon_for_target(target)
 			)
 			marker_button.pressed.connect(func() -> void:
-				route_target_requested.emit(target)
+				_emit_latest_local_target(captured_target_id)
 			)
 			_map_marker_overlay.add_child(marker_button)
 			_marker_specs.append({"button": marker_button, "target": target})
@@ -578,7 +1140,11 @@ func _build_map_markers() -> void:
 
 
 func _refresh_map_marker_positions() -> void:
-	if legacy_texture_rect == null or legacy_texture_rect.size.x <= 1.0 or legacy_texture_rect.size.y <= 1.0:
+	if not _fixed_ui_roots_ready():
+		return
+	if _using_prepared_visual and not _node_is_live(_map_canvas):
+		return
+	if legacy_texture_rect.size.x <= 1.0 or legacy_texture_rect.size.y <= 1.0:
 		return
 	var source_size := Vector2(MAP_VIEWPORT_SIZE) if _using_prepared_visual else Vector2(420.0, 220.0)
 	var fit_scale := minf(
@@ -672,6 +1238,7 @@ func _populate_world_regions() -> void:
 			continue
 		var region := (value as Dictionary).duplicate(true)
 		var region_id := str(region.get("id", ""))
+		var captured_region_id := region_id
 		var button := Button.new()
 		button.name = "MapRegion_%s" % region_id
 		button.text = str(region.get("label", "未知区域"))
@@ -695,8 +1262,8 @@ func _populate_world_regions() -> void:
 		button.offset_top = -21.0
 		button.offset_bottom = 21.0
 		button.pressed.connect(func() -> void:
-			_selected_world_region_id = region_id
-			_render_selected_world_region()
+			_selected_world_region_id = captured_region_id
+			_refresh_selected_world_region(_prepared_cache_context)
 		)
 		_world_region_list.add_child(button)
 		_world_region_buttons[region_id] = button
@@ -759,20 +1326,26 @@ func _render_selected_world_region() -> void:
 		MapAwakenedVisualSkin.apply_label(empty, 15, true)
 		_world_detail_points.add_child(empty)
 		return
+	var captured_region_id := str(region.get("id", ""))
 	for value in points_value as Array:
 		if not (value is Dictionary):
 			continue
 		var point := value as Dictionary
 		var map_id := str(point.get("mapId", ""))
+		var captured_map_id := map_id
 		var button := Button.new()
 		button.text = "%s\n%s" % [str(point.get("label", map_id)), str(point.get("meta", "自动寻路"))]
 		button.disabled = bool(point.get("current", false))
 		MapAwakenedVisualSkin.apply_list_button(button, "map", bool(point.get("current", false)))
 		button.pressed.connect(func() -> void:
-			map_destination_requested.emit(map_id, str(point.get("label", map_id)))
+			_emit_latest_map_destination(captured_region_id, captured_map_id)
 		)
 		_world_detail_points.add_child(button)
 		_world_route_buttons[map_id] = button
+	_sync_world_region_button_state()
+
+
+func _sync_world_region_button_state() -> void:
 	for region_id_value in _world_region_buttons.keys():
 		var region_button := _world_region_buttons.get(region_id_value) as Button
 		if region_button != null:
@@ -784,8 +1357,77 @@ func _on_world_entry_route_pressed() -> void:
 	if region.is_empty():
 		return
 	var map_id := str(region.get("entryMapId", ""))
-	if map_id != "":
-		map_destination_requested.emit(map_id, str(region.get("entryMapName", region.get("label", map_id))))
+	if map_id == "":
+		return
+	var label := str(
+		region.get("entryMapName", region.get("label", map_id))
+	)
+	map_destination_requested.emit(map_id, label)
+
+
+func _emit_latest_local_target(target_id: String) -> void:
+	var targets_value = _view_state.get("localTargets", [])
+	if not (targets_value is Array):
+		return
+	for value in targets_value as Array:
+		if not (value is Dictionary):
+			continue
+		var target := value as Dictionary
+		if str(target.get("id", target.get("label", ""))) == target_id:
+			route_target_requested.emit(target.duplicate(true))
+			return
+
+
+func _emit_latest_map_destination(region_id: String, map_id: String) -> void:
+	var point := _world_map_point_state(region_id, map_id)
+	if point.is_empty():
+		return
+	var label := str(point.get("label", map_id))
+	map_destination_requested.emit(map_id, label)
+
+
+func _world_map_point_state(region_id: String, map_id: String) -> Dictionary:
+	if region_id == "" or map_id == "":
+		return {}
+	var current_region_value = _view_state.get("currentRegion", {})
+	if (
+		current_region_value is Dictionary
+		and str((current_region_value as Dictionary).get("id", ""))
+			== region_id
+	):
+		var current_point := _region_point_for_map(
+			current_region_value as Dictionary,
+			map_id
+		)
+		if not current_point.is_empty():
+			return current_point
+	var regions_value = _view_state.get("worldRegions", [])
+	if regions_value is Array:
+		for region_value in regions_value as Array:
+			if not (region_value is Dictionary):
+				continue
+			if str((region_value as Dictionary).get("id", "")) != region_id:
+				continue
+			var point := _region_point_for_map(
+				region_value as Dictionary,
+				map_id
+			)
+			if not point.is_empty():
+				return point
+			return {}
+	return {}
+
+
+func _region_point_for_map(region: Dictionary, map_id: String) -> Dictionary:
+	var points_value = region.get("points", [])
+	if points_value is Array:
+		for value in points_value as Array:
+			if (
+				value is Dictionary
+				and str((value as Dictionary).get("mapId", "")) == map_id
+			):
+				return (value as Dictionary).duplicate(true)
+	return {}
 
 
 func _world_region_state(region_id: String) -> Dictionary:
@@ -806,4 +1448,5 @@ func _clear_children(container: Node) -> void:
 		return
 	for child in container.get_children():
 		container.remove_child(child)
-		child.queue_free()
+		if not child.is_queued_for_deletion():
+			child.queue_free()
