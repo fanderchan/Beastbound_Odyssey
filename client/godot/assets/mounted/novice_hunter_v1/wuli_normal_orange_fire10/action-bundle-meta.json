@@ -3,7 +3,7 @@
   "mountFormId": "wuli_normal_orange_fire10",
   "characterId": "novice_hunter_v1",
   "artStatus": "owner_review_pending",
-  "productionScope": "mounted_key_pose_gate",
+  "productionScope": "identity_world_true8_and_formal_two_view_battle_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -31,51 +31,75 @@
   "actions": {
     "idle": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": true,
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -152,5 +176,73 @@
     "mounted160ContactSheetSha256": "dd37a24037149112fe359985271266c6771a3df6b07a5cad3cc72950fbd1cea4"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Integrated front/back mounted key poses only. World and battle mounted animation matrices are intentionally not produced in this gate."
+  "notes": "Identity, independent true-eight world frames, and formal two-view 12-action battle matrices are installed for review. Runtime stays disabled until real Godot review and owner acceptance.",
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "mounted",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "2b030627e22cb36eb50a02a8ae256bb1d46175c81bfea6b084e7e6c4394bc8fc",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "battleViewMapping": {
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      },
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      }
+    },
+    "runtimeBodyLayerCount": 1
+  },
+  "battleViewMapping": {
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    },
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    }
+  }
 }

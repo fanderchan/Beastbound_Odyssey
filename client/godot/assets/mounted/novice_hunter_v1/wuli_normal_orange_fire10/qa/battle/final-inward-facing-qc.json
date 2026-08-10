@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "formId": "wuli_normal_orange_fire10",
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "battleViewMapping": {
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    },
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    }
+  },
+  "petAndMountedMappingMatched": true,
+  "finalFacing": "both teams face battle center",
+  "contactSheetSha256": "820f6ea23bb6e6724eefc22fb55162325d65fa1acea058fab27d8652ff7ca964",
+  "errors": []
+}
