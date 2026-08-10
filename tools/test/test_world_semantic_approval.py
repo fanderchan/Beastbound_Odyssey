@@ -12,6 +12,8 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOL = REPO_ROOT / "tools" / "world_semantic_approval.py"
@@ -31,6 +33,8 @@ RUN_ID = "fixture-run-001"
 CHARACTER_ROOT = Path("assets/characters/fixture")
 PET_ROOT = Path("assets/pets/fixture")
 MOUNTED_ROOT = Path("assets/mounted/fixture")
+LEGACY_SUBJECTS = ("character", "pet", "mounted")
+PET_ONLY_SUBJECTS = ("pet",)
 CONTACT_SAMPLES = [
     frame
     for direction_index in range(8)
@@ -81,13 +85,92 @@ def _materialize_world(root: Path, *, salt: str) -> None:
             for index in range(1, count + 1):
                 path = root / "world" / "directions" / direction / action / f"{action}-{index}.png"
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(f"fixture:{salt}:{direction}:{action}:{index}\n".encode())
+                color = hashlib.sha256(
+                    f"fixture:{salt}:{direction}:{action}:{index}".encode()
+                ).digest()
+                Image.new(
+                    "RGBA",
+                    (4, 4),
+                    (color[0], color[1], color[2], 255),
+                ).save(path)
 
 
-def _materialize_parity(repo_root: Path, path: Path) -> dict[str, Any]:
+def _materialize_isolated_bundle(repo_root: Path) -> tuple[Path, dict[str, Any]]:
+    relative_root = Path(".run/isolated-pet")
+    root = repo_root / relative_root
+    meta_path = root / "action-bundle-meta.json"
+    _write_json(
+        meta_path,
+        {
+            "schemaVersion": 1,
+            "formId": FORM_ID,
+            "runtimeEnabled": False,
+            "rideableTarget": False,
+            "ownerReviewStatus": "pending",
+            "supportedMountedCharacterIds": [],
+        },
+    )
+    identity_paths = [
+        root / "identity" / "identity-board-transparent.png",
+        root / "identity" / "front_3quarter_sw.png",
+        root / "identity" / "back_3quarter_ne.png",
+        root / "identity" / "south.png",
+        root / "identity" / "west.png",
+    ]
+    for index, path in enumerate(identity_paths):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        size = (1024, 1024) if index == 0 else (512, 512)
+        Image.new("RGBA", size, (20 + index, 30, 40, 255)).save(path)
+    _materialize_world(root, salt="isolated-pet")
+    for path in (root / "world").rglob("*.png"):
+        with Image.open(path) as source:
+            source.resize((256, 256)).save(path)
+    world_paths = [
+        root / "world" / "directions" / direction / action / f"{action}-{index}.png"
+        for direction in DIRECTIONS
+        for action, count in ACTIONS.items()
+        for index in range(1, count + 1)
+    ]
+    artifact_paths = [*identity_paths, *world_paths]
+    lines = [
+        f"action-bundle-meta.json\t{_sha256(meta_path)}\n",
+        *[
+            f"{path.relative_to(root).as_posix()}\t{_sha256(path)}\n"
+            for path in artifact_paths
+        ],
+    ]
+    return relative_root, {
+        "mode": "isolated_pet_root",
+        "formId": FORM_ID,
+        "root": relative_root.as_posix(),
+        "metadata": _file_record(repo_root, meta_path),
+        "bundleSha256": hashlib.sha256("".join(lines).encode()).hexdigest(),
+        "frameCount": 40,
+    }
+
+
+def _decoded_hash(path: Path) -> str:
+    with Image.open(path) as image:
+        rgba = image.convert("RGBA")
+        width, height = rgba.size
+        decoded = rgba.tobytes()
+    return hashlib.sha256(
+        f"{width}x{height}:RGBA\n".encode() + decoded
+    ).hexdigest()
+
+
+def _materialize_parity(
+    repo_root: Path,
+    path: Path,
+    *,
+    subjects: tuple[str, ...] = LEGACY_SUBJECTS,
+    explicit_subject_contract: bool = False,
+    pet_root: Path = PET_ROOT,
+    isolated_bundle: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     roots = {
         "character": CHARACTER_ROOT,
-        "pet": PET_ROOT,
+        "pet": pet_root,
         "mounted": MOUNTED_ROOT,
     }
     frames: list[dict[str, Any]] = []
@@ -95,13 +178,18 @@ def _materialize_parity(repo_root: Path, path: Path) -> dict[str, Any]:
     for direction in DIRECTIONS:
         for action, count in ACTIONS.items():
             for index in range(1, count + 1):
-                for kind in ("character", "pet", "mounted"):
+                for kind in subjects:
                     relative = roots[kind] / "world" / "directions" / direction / action / f"{action}-{index}.png"
                     source = repo_root / relative
                     source_hash = _sha256(source)
                     source_md5 = hashlib.md5(source.read_bytes(), usedforsecurity=False).hexdigest()
-                    decoded_hash = hashlib.sha256(b"decoded:" + source.read_bytes()).hexdigest()
-                    runtime_path = f"res://{relative.as_posix()}"
+                    decoded_hash = _decoded_hash(source)
+                    isolated_frame = kind == "pet" and isolated_bundle is not None
+                    runtime_path = (
+                        f"repo://{relative.as_posix()}"
+                        if isolated_frame
+                        else f"res://{relative.as_posix()}"
+                    )
                     frame = {
                         "kind": kind,
                         "path": runtime_path,
@@ -112,9 +200,15 @@ def _materialize_parity(repo_root: Path, path: Path) -> dict[str, Any]:
                         "errors": [],
                         "sourceFileSha256": source_hash,
                         "sourceFileMd5": source_md5,
-                        "importSourceMd5": source_md5,
-                        "importFresh": True,
-                        "loadMode": "godot_import",
+                        "importSourceMd5": "" if isolated_frame else source_md5,
+                        "importFresh": not isolated_frame,
+                        "sourceFileFresh": True,
+                        "resourceImportParityChecked": not isolated_frame,
+                        "loadMode": (
+                            "qa_isolated_file"
+                            if isolated_frame
+                            else "godot_import"
+                        ),
                         "sourceDecodedRgbaSha256": decoded_hash,
                         "loadedDecodedRgbaSha256": decoded_hash,
                         "canonicalRgbaMatch": True,
@@ -124,39 +218,76 @@ def _materialize_parity(repo_root: Path, path: Path) -> dict[str, Any]:
                         f"{kind}\t{runtime_path}\t{source_hash}\t{decoded_hash}\t{decoded_hash}\n"
                     )
     source_set_hash = hashlib.sha256("".join(source_set_lines).encode()).hexdigest()
-    _write_json(
-        path,
-        {
-            "schemaVersion": 1,
-            "formId": FORM_ID,
-            "runId": RUN_ID,
-            "status": "passed",
-            "checkedFrames": 120,
-            "passedFrames": 120,
-            "sourceSetSha256": source_set_hash,
-            "errors": [],
-            "canonicalPartialRgb": "rgb_zeroed_where_alpha_below_255_before_rgba_hash",
-            "frames": frames,
-        },
-    )
-    return _file_record(
+    report = {
+        "schemaVersion": 1,
+        "formId": FORM_ID,
+        "runId": RUN_ID,
+        "status": "passed",
+        "checkedFrames": len(frames),
+        "passedFrames": len(frames),
+        "sourceSetSha256": source_set_hash,
+        "errors": [],
+        "canonicalPartialRgb": "rgb_zeroed_where_alpha_below_255_before_rgba_hash",
+        "frames": frames,
+    }
+    if explicit_subject_contract:
+        report["subjects"] = list(subjects)
+        report["expectedFrames"] = len(frames)
+    if isolated_bundle is not None:
+        report["isolatedPetRoot"] = str(
+            (repo_root / isolated_bundle["root"]).resolve()
+        )
+        report["overlayScope"] = "world_pet_only"
+    _write_json(path, report)
+    record = _file_record(
         repo_root,
         path,
         status="passed",
-        checkedFrames=120,
-        passedFrames=120,
-        expectedFrames=120,
+        checkedFrames=len(frames),
+        passedFrames=len(frames),
+        expectedFrames=len(frames),
         sourceSetSha256=source_set_hash,
     )
+    if explicit_subject_contract:
+        record["subjects"] = list(subjects)
+    return record
 
 
-def _materialize_evidence(repo_root: Path) -> Path:
+def _materialize_evidence(
+    repo_root: Path,
+    *,
+    subjects: tuple[str, ...] = LEGACY_SUBJECTS,
+    explicit_subject_contract: bool = False,
+    pet_root: Path = PET_ROOT,
+    isolated_bundle: dict[str, Any] | None = None,
+) -> Path:
     run_root = repo_root / "evidence" / RUN_ID
     form_root = run_root / FORM_ID
     form_root.mkdir(parents=True, exist_ok=True)
-    preflight_parity = _materialize_parity(repo_root, form_root / "preflight-parity.json")
-    recording_parity = _materialize_parity(repo_root, form_root / "recording-parity.json")
-    grid_parity = _materialize_parity(repo_root, form_root / "grid-parity.json")
+    preflight_parity = _materialize_parity(
+        repo_root,
+        form_root / "preflight-parity.json",
+        subjects=subjects,
+        explicit_subject_contract=explicit_subject_contract,
+        pet_root=pet_root,
+        isolated_bundle=isolated_bundle,
+    )
+    recording_parity = _materialize_parity(
+        repo_root,
+        form_root / "recording-parity.json",
+        subjects=subjects,
+        explicit_subject_contract=explicit_subject_contract,
+        pet_root=pet_root,
+        isolated_bundle=isolated_bundle,
+    )
+    grid_parity = _materialize_parity(
+        repo_root,
+        form_root / "grid-parity.json",
+        subjects=subjects,
+        explicit_subject_contract=explicit_subject_contract,
+        pet_root=pet_root,
+        isolated_bundle=isolated_bundle,
+    )
 
     video_path = form_root / "review.mp4"
     grid_path = form_root / "grid.png"
@@ -250,6 +381,10 @@ def _materialize_evidence(repo_root: Path) -> Path:
         "movieArchive": movie,
         "files": records,
     }
+    if explicit_subject_contract:
+        form["subjects"] = list(subjects)
+    if isolated_bundle is not None:
+        form["isolatedPetBundle"] = isolated_bundle
     audit_directions = []
     for direction in DIRECTIONS:
         audit_directions.append(
@@ -257,28 +392,17 @@ def _materialize_evidence(repo_root: Path) -> Path:
                 "expectedDirection": direction,
                 "result": "pass",
                 "columns": {
-                    "character": {
+                    kind: {
                         "pass": True,
                         "actualDirection": direction,
                         "idleWalkAxisStable": True,
-                    },
-                    "pet": {
-                        "pass": True,
-                        "actualDirection": direction,
-                        "idleWalkAxisStable": True,
-                    },
-                    "mounted": {
-                        "pass": True,
-                        "actualDirection": direction,
-                        "idleWalkAxisStable": True,
-                        "riderMountCoAxis": True,
-                    },
+                        **({"riderMountCoAxis": True} if kind == "mounted" else {}),
+                    }
+                    for kind in subjects
                 },
             }
         )
-    _write_json(
-        run_root / "blind-audit.json",
-        {
+    blind_audit = {
             "schemaVersion": 1,
             "auditId": "fixture-blind-audit",
             "runId": RUN_ID,
@@ -303,16 +427,16 @@ def _materialize_evidence(repo_root: Path) -> Path:
                     "directions": audit_directions,
                 }
             ],
-        },
-    )
+        }
+    if explicit_subject_contract or subjects == PET_ONLY_SUBJECTS:
+        blind_audit["subjects"] = list(subjects)
+    _write_json(run_root / "blind-audit.json", blind_audit)
     import_log = run_root / "godot-import.log"
     import_log.write_text("fixture godot import passed\n", encoding="utf-8")
     all_records = [_file_record(repo_root, import_log), *records]
     all_records.sort(key=lambda record: record["path"])
     evidence_index_path = run_root / "evidence-index.json"
-    _write_json(
-        evidence_index_path,
-        {
+    evidence_index = {
             "schemaVersion": 1,
             "indexType": "beastbound_world_direction_review_evidence",
             "runId": RUN_ID,
@@ -320,7 +444,7 @@ def _materialize_evidence(repo_root: Path) -> Path:
             "scene": "res://scenes/qa/CharacterMountDirectionReview.tscn",
             "formIds": [FORM_ID],
             "expected": {
-                "parityFramesPerForm": 120,
+                "parityFramesPerForm": len(subjects) * 40,
                 "width": 1280,
                 "height": 720,
                 "fps": 30.0,
@@ -339,12 +463,30 @@ def _materialize_evidence(repo_root: Path) -> Path:
             "files": all_records,
             "indexedFileCount": len(all_records),
             "indexSelfHashExcluded": True,
-        },
-    )
+        }
+    if explicit_subject_contract:
+        evidence_index["subjects"] = list(subjects)
+        evidence_index["expected"] = {
+            "subjects": list(subjects),
+            **evidence_index["expected"],
+        }
+    _write_json(evidence_index_path, evidence_index)
     return evidence_index_path
 
 
-def _materialize_fixture(repo_root: Path) -> tuple[Path, Path, Path]:
+def _materialize_fixture(
+    repo_root: Path,
+    *,
+    subjects: tuple[str, ...] = LEGACY_SUBJECTS,
+    explicit_subject_contract: bool = False,
+    isolated_pet: bool = False,
+) -> tuple[Path, Path, Path]:
+    pet_root = PET_ROOT
+    isolated_bundle: dict[str, Any] | None = None
+    if isolated_pet:
+        if subjects != PET_ONLY_SUBJECTS:
+            raise AssertionError("isolated fixture is pet-only")
+        pet_root, isolated_bundle = _materialize_isolated_bundle(repo_root)
     catalog_path = repo_root / "catalog.json"
     manifest_path = repo_root / "approval.json"
     _write_json(
@@ -354,16 +496,36 @@ def _materialize_fixture(repo_root: Path) -> tuple[Path, Path, Path]:
             "forms": [
                 {
                     "formId": FORM_ID,
-                    "pet": {"root": PET_ROOT.as_posix()},
-                    "mounted": {"root": MOUNTED_ROOT.as_posix()},
+                    "pet": {"root": pet_root.as_posix()},
+                    **(
+                        {"mounted": {"root": MOUNTED_ROOT.as_posix()}}
+                        if "mounted" in subjects
+                        else {
+                            "rideableTarget": False,
+                            "supportedCharacterIds": [],
+                        }
+                    ),
                 }
             ],
         },
     )
-    _materialize_world(repo_root / CHARACTER_ROOT, salt="character")
-    _materialize_world(repo_root / PET_ROOT, salt="pet")
-    _materialize_world(repo_root / MOUNTED_ROOT, salt="mounted")
-    return catalog_path, manifest_path, _materialize_evidence(repo_root)
+    if "character" in subjects:
+        _materialize_world(repo_root / CHARACTER_ROOT, salt="character")
+    if not isolated_pet:
+        _materialize_world(repo_root / pet_root, salt="pet")
+    if "mounted" in subjects:
+        _materialize_world(repo_root / MOUNTED_ROOT, salt="mounted")
+    return (
+        catalog_path,
+        manifest_path,
+        _materialize_evidence(
+            repo_root,
+            subjects=subjects,
+            explicit_subject_contract=explicit_subject_contract,
+            pet_root=pet_root,
+            isolated_bundle=isolated_bundle,
+        ),
+    )
 
 
 def _create_command(
@@ -486,6 +648,193 @@ class WorldSemanticApprovalTest(unittest.TestCase):
             self.assertEqual(report["status"], "ok")
             self.assertEqual(report["checkedFrames"], 120)
             self.assertEqual(report["checkedEvidenceFiles"], 18)
+
+    def test_pet_only_manifest_freezes_exact_40_frames_and_stays_owner_pending(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog_path, manifest_path, evidence_index_path = _materialize_fixture(
+                root,
+                subjects=PET_ONLY_SUBJECTS,
+                explicit_subject_contract=True,
+            )
+            completed = subprocess.run(
+                _create_command(root, catalog_path, manifest_path, evidence_index_path)
+                + ["--confirm-visual-direction-review"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["subjects"], ["pet"])
+            self.assertEqual(manifest["bundleCount"], 1)
+            self.assertEqual(manifest["frameCount"], 40)
+            self.assertEqual(manifest["ownerReview"], "pending")
+            self.assertFalse(manifest["automaticDirectionRecognition"])
+            self.assertEqual(
+                {bundle["kind"] for bundle in manifest["bundles"]},
+                {"pet"},
+            )
+
+            verified = _verify(root, catalog_path, manifest_path)
+            self.assertEqual(verified.returncode, 0, verified.stdout + verified.stderr)
+            report = json.loads(verified.stdout)
+            self.assertEqual(report["subjects"], ["pet"])
+            self.assertEqual(report["checkedFrames"], 40)
+            self.assertEqual(report["expectedFrames"], 40)
+
+    def test_isolated_pet_only_evidence_binds_direct_load_bundle_snapshot(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog_path, manifest_path, evidence_index_path = _materialize_fixture(
+                root,
+                subjects=PET_ONLY_SUBJECTS,
+                explicit_subject_contract=True,
+                isolated_pet=True,
+            )
+            completed = subprocess.run(
+                _create_command(root, catalog_path, manifest_path, evidence_index_path)
+                + ["--confirm-visual-direction-review"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            snapshot = manifest["evidenceAudit"]["snapshot"]["forms"][0][
+                "isolatedPetBundle"
+            ]
+            self.assertEqual(snapshot["mode"], "isolated_pet_root")
+            self.assertEqual(snapshot["root"], ".run/isolated-pet")
+            self.assertEqual(snapshot["frameCount"], 40)
+
+            verified = _verify(root, catalog_path, manifest_path)
+            self.assertEqual(verified.returncode, 0, verified.stdout + verified.stderr)
+
+            frame = (
+                root
+                / ".run/isolated-pet/world/directions/south/idle/idle-1.png"
+            )
+            Image.new("RGBA", (256, 256), (1, 2, 3, 255)).save(frame)
+            rejected = _verify(root, catalog_path, manifest_path)
+            self.assertEqual(rejected.returncode, 1, rejected.stdout)
+            self.assertIn("漂移", rejected.stdout)
+
+    def test_pet_only_rejects_unbound_or_mixed_subject_reports(self) -> None:
+        for case in ("missing-report-binding", "mixed-frame", "extra-audit-column"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as temp_dir:
+                root = Path(temp_dir)
+                catalog_path, manifest_path, evidence_index_path = _materialize_fixture(
+                    root,
+                    subjects=PET_ONLY_SUBJECTS,
+                    explicit_subject_contract=True,
+                )
+                if case in ("missing-report-binding", "mixed-frame"):
+                    parity_path = (
+                        root
+                        / "evidence"
+                        / RUN_ID
+                        / FORM_ID
+                        / "recording-parity.json"
+                    )
+                    parity = json.loads(parity_path.read_text(encoding="utf-8"))
+                    if case == "missing-report-binding":
+                        parity.pop("subjects")
+                        parity.pop("expectedFrames")
+                    else:
+                        parity["frames"][0]["kind"] = "character"
+                    _write_json(parity_path, parity)
+                    _refresh_index_path_record(root, evidence_index_path, parity_path)
+                else:
+                    audit_path = evidence_index_path.parent / "blind-audit.json"
+                    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+                    audit["forms"][0]["directions"][0]["columns"]["character"] = {
+                        "pass": True,
+                        "actualDirection": DIRECTIONS[0],
+                        "idleWalkAxisStable": True,
+                    }
+                    _write_json(audit_path, audit)
+
+                completed = subprocess.run(
+                    _create_command(root, catalog_path, manifest_path, evidence_index_path)
+                    + ["--confirm-visual-direction-review"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertEqual(completed.returncode, 1, completed.stdout)
+                self.assertFalse(manifest_path.exists())
+
+    def test_pet_only_rejects_rideable_catalog_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog_path, manifest_path, evidence_index_path = _materialize_fixture(
+                root,
+                subjects=PET_ONLY_SUBJECTS,
+                explicit_subject_contract=True,
+            )
+            catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+            catalog["forms"][0]["rideableTarget"] = True
+            _write_json(catalog_path, catalog)
+            completed = subprocess.run(
+                _create_command(root, catalog_path, manifest_path, evidence_index_path)
+                + ["--confirm-visual-direction-review"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assertIn("rideableTarget", completed.stderr)
+            self.assertFalse(manifest_path.exists())
+
+    def test_pet_only_rejects_world_hardlink_alias_and_horizontal_mirror(self) -> None:
+        for case in ("symlink", "hardlink", "mirror"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as temp_dir:
+                root = Path(temp_dir)
+                catalog_path, manifest_path, _ = _materialize_fixture(
+                    root,
+                    subjects=PET_ONLY_SUBJECTS,
+                    explicit_subject_contract=True,
+                )
+                first = root / PET_ROOT / "world/directions/south/idle/idle-1.png"
+                second = root / PET_ROOT / "world/directions/southwest/idle/idle-1.png"
+                if case == "symlink":
+                    pet_root = root / PET_ROOT
+                    real_pet_root = pet_root.with_name("fixture-real")
+                    pet_root.rename(real_pet_root)
+                    pet_root.symlink_to(real_pet_root.name, target_is_directory=True)
+                elif case == "hardlink":
+                    second.unlink()
+                    second.hardlink_to(first)
+                else:
+                    image = Image.new("RGBA", (4, 4), (0, 0, 0, 255))
+                    image.putpixel((0, 1), (255, 0, 0, 255))
+                    image.save(first)
+                    image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).save(second)
+                evidence_index_path = _materialize_evidence(
+                    root,
+                    subjects=PET_ONLY_SUBJECTS,
+                    explicit_subject_contract=True,
+                )
+                completed = subprocess.run(
+                    _create_command(root, catalog_path, manifest_path, evidence_index_path)
+                    + ["--confirm-visual-direction-review"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertEqual(completed.returncode, 1, completed.stdout)
+                self.assertRegex(completed.stderr, "别名|水平镜像")
+                self.assertFalse(manifest_path.exists())
 
     def test_modified_reviewed_frame_fails_hash_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

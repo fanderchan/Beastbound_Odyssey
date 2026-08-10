@@ -4,11 +4,10 @@
 This tool deliberately does *not* infer what direction a sprite is facing.  A
 schema-v2 manifest may only be created after an explicit visual-audit
 acknowledgement and a complete atomic-recorder evidence index.  Its SHA-256
-inventory prevents either the reviewed character/pet/integrated-mounted frames
-or the exact runtime parity/video/grid/contact/probe evidence from changing
-without another review.  Legacy schema-v1 manifests remain auditable, but can
-never produce a current passing result because they did not bind runtime
-evidence.
+inventory prevents either the reviewed, explicitly declared subjects or the
+exact runtime parity/video/grid/contact/probe evidence from changing without
+another review.  Legacy schema-v1 manifests remain auditable, but can never
+produce a current passing result because they did not bind runtime evidence.
 """
 
 from __future__ import annotations
@@ -20,7 +19,9 @@ import re
 import sys
 from fractions import Fraction
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, Sequence
+
+from PIL import Image, UnidentifiedImageError
 
 
 SCHEMA_VERSION = 2
@@ -75,6 +76,10 @@ PARITY_EVIDENCE_FILENAMES = {
 }
 ARTIFACT_EVIDENCE_KEYS = ("video", "grid", "contact", "probe")
 REVIEW_SCENE = "res://scenes/qa/CharacterMountDirectionReview.tscn"
+LEGACY_SUBJECTS = ("character", "pet", "mounted")
+PET_ONLY_SUBJECTS = ("pet",)
+SUPPORTED_SUBJECTS = (LEGACY_SUBJECTS, PET_ONLY_SUBJECTS)
+FRAMES_PER_SUBJECT = sum(WORLD_ACTIONS.values()) * len(CANONICAL_DIRECTIONS)
 EXPECTED_PARITY_FRAMES = 120
 EXPECTED_WIDTH = 1280
 EXPECTED_HEIGHT = 720
@@ -121,12 +126,41 @@ def _repo_path(value: Path | str, repo_root: Path, *, label: str) -> tuple[Path,
     if raw.startswith(("/", "\\")) or pure.is_absolute() or ".." in pure.parts:
         raise ApprovalError(f"{label} 必须是安全的 repo-relative 路径：{raw}")
     relative = Path(*pure.parts)
-    resolved = (repo_root / relative).resolve(strict=False)
+    candidate = repo_root / relative
+    cursor = repo_root
+    for part in relative.parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise ApprovalError(f"{label} 不能包含符号链接路径别名：{raw}")
+    resolved = candidate.resolve(strict=False)
     try:
         resolved.relative_to(repo_root)
     except ValueError as error:
         raise ApprovalError(f"{label} 越出仓库根目录：{raw}") from error
     return resolved, relative.as_posix()
+
+
+def _subjects_from_value(
+    value: Any,
+    *,
+    label: str,
+    allow_legacy_missing: bool,
+) -> tuple[str, ...]:
+    if value is None and allow_legacy_missing:
+        return LEGACY_SUBJECTS
+    if not isinstance(value, list):
+        raise ApprovalError(f"{label} 必须是主体字符串数组")
+    subjects = tuple(value)
+    if subjects not in SUPPORTED_SUBJECTS:
+        raise ApprovalError(
+            f"{label} 仅允许 ['pet'] 或 ['character', 'pet', 'mounted']，"
+            "不能重排、重复或混用"
+        )
+    return subjects
+
+
+def _expected_parity_frame_count(subjects: Sequence[str]) -> int:
+    return FRAMES_PER_SUBJECT * len(subjects)
 
 
 def _load_json(path: Path, *, label: str) -> dict[str, Any]:
@@ -153,6 +187,111 @@ def _md5(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _source_decoded_rgba_sha256(path: Path, *, label: str) -> str:
+    try:
+        with Image.open(path) as image:
+            image.load()
+            width, height = image.size
+            canonical = _canonical_rgba_bytes(image)
+    except (OSError, UnidentifiedImageError) as error:
+        raise ApprovalError(f"{label} 无法解码：{path}: {error}") from error
+    return _decoded_rgba_sha256(width, height, canonical)
+
+
+def _isolated_bundle_artifact_paths(root: Path) -> list[Path]:
+    identity = [
+        root / "identity" / "identity-board-transparent.png",
+        root / "identity" / "front_3quarter_sw.png",
+        root / "identity" / "back_3quarter_ne.png",
+        root / "identity" / "south.png",
+        root / "identity" / "west.png",
+    ]
+    world = [
+        root / "world" / "directions" / direction / action / f"{action}-{index}.png"
+        for direction in CANONICAL_DIRECTIONS
+        for action, count in WORLD_ACTIONS.items()
+        for index in range(1, count + 1)
+    ]
+    return [*identity, *world]
+
+
+def _isolated_bundle_snapshot(
+    *,
+    repo_root: Path,
+    root_relative: str,
+    form_id: str,
+) -> dict[str, Any]:
+    root, normalized_root = _repo_path(
+        root_relative,
+        repo_root,
+        label=f"{form_id}.isolatedPetBundle.root",
+    )
+    if not Path(normalized_root).parts or Path(normalized_root).parts[0] != ".run":
+        raise ApprovalError(f"{form_id} 隔离宠物包必须位于仓库 .run/ 内")
+    if not root.is_dir():
+        raise ApprovalError(f"{form_id} 隔离宠物包目录不存在：{normalized_root}")
+    meta_path = root / "action-bundle-meta.json"
+    meta = _load_json(meta_path, label=f"{form_id} isolated action-bundle-meta")
+    exact_meta = {
+        "formId": form_id,
+        "runtimeEnabled": False,
+        "rideableTarget": False,
+        "ownerReviewStatus": "pending",
+    }
+    for field, expected in exact_meta.items():
+        if meta.get(field) != expected:
+            raise ApprovalError(
+                f"{form_id} isolated action-bundle-meta.{field} 必须为 {expected!r}"
+            )
+    if meta.get("supportedMountedCharacterIds", []) != []:
+        raise ApprovalError(
+            f"{form_id} isolated supportedMountedCharacterIds 必须为空数组"
+        )
+    if any(field in meta for field in ("mounted", "character", "supportedCharacterIds")):
+        raise ApprovalError(f"{form_id} isolated action-bundle-meta 含骑乘/人物声明")
+
+    artifact_paths = _isolated_bundle_artifact_paths(root)
+    missing = [path for path in artifact_paths if not path.is_file() or path.is_symlink()]
+    if missing:
+        raise ApprovalError(
+            f"{form_id} 隔离宠物包缺少普通文件：{missing[0].relative_to(root)}"
+        )
+    expected_sizes = [(1024, 1024), *((512, 512),) * 4, *((256, 256),) * 40]
+    for path, expected_size in zip(artifact_paths, expected_sizes, strict=True):
+        try:
+            with Image.open(path) as image:
+                image.load()
+                actual_size = image.size
+        except (OSError, UnidentifiedImageError) as error:
+            raise ApprovalError(
+                f"{form_id} 隔离宠物包 PNG 无法解码：{path.relative_to(root)}"
+            ) from error
+        if actual_size != expected_size:
+            raise ApprovalError(
+                f"{form_id} 隔离宠物包 PNG 尺寸错误："
+                f"{path.relative_to(root)}={actual_size}"
+            )
+    lines = [
+        f"action-bundle-meta.json\t{_sha256(meta_path)}\n",
+        *[
+            f"{path.relative_to(root).as_posix()}\t{_sha256(path)}\n"
+            for path in artifact_paths
+        ],
+    ]
+    meta_relative = (Path(normalized_root) / "action-bundle-meta.json").as_posix()
+    return {
+        "mode": "isolated_pet_root",
+        "formId": form_id,
+        "root": normalized_root,
+        "rootAbsolute": str(root.resolve(strict=True)),
+        "metadata": _file_record(meta_path, meta_relative),
+        "bundleSha256": hashlib.sha256(
+            "".join(lines).encode("utf-8")
+        ).hexdigest(),
+        "frameCount": 40,
+    }
 
 
 def _duration_matches(value: Any, expected: float) -> bool:
@@ -225,7 +364,12 @@ def _validate_parity_evidence(
     label: str,
     required_parent: Path,
     expected_frames: dict[tuple[str, str, str, int], dict[str, str]],
+    subjects: Sequence[str],
+    require_subject_binding: bool,
+    isolated_bundle: dict[str, Any] | None,
 ) -> str:
+    selected_subjects = tuple(subjects)
+    expected_frame_count = len(expected_frames)
     parity_path, relative = _validate_file_record(
         value,
         repo_root=repo_root,
@@ -235,13 +379,18 @@ def _validate_parity_evidence(
     assert isinstance(value, dict)
     exact_index_fields = {
         "status": "passed",
-        "checkedFrames": EXPECTED_PARITY_FRAMES,
-        "passedFrames": EXPECTED_PARITY_FRAMES,
-        "expectedFrames": EXPECTED_PARITY_FRAMES,
+        "checkedFrames": expected_frame_count,
+        "passedFrames": expected_frame_count,
+        "expectedFrames": expected_frame_count,
     }
     for field, expected in exact_index_fields.items():
         if value.get(field) != expected:
             raise ApprovalError(f"{label}.{field} 必须为 {expected!r}")
+    if require_subject_binding:
+        if value.get("subjects") != list(selected_subjects):
+            raise ApprovalError(f"{label}.subjects 必须为 {list(selected_subjects)!r}")
+    elif "subjects" in value and value.get("subjects") != list(selected_subjects):
+        raise ApprovalError(f"{label}.subjects 与默认三主体契约不一致")
     index_source_set = value.get("sourceSetSha256")
     if not isinstance(index_source_set, str) or HASH_PATTERN.fullmatch(index_source_set) is None:
         raise ApprovalError(f"{label}.sourceSetSha256 必须是小写 SHA-256")
@@ -252,19 +401,47 @@ def _validate_parity_evidence(
         "formId": form_id,
         "runId": run_id,
         "status": "passed",
-        "checkedFrames": EXPECTED_PARITY_FRAMES,
-        "passedFrames": EXPECTED_PARITY_FRAMES,
+        "checkedFrames": expected_frame_count,
+        "passedFrames": expected_frame_count,
         "sourceSetSha256": index_source_set,
         "canonicalPartialRgb": CANONICAL_PARTIAL_RGB,
     }
     for field, expected in exact_report_fields.items():
         if report.get(field) != expected:
             raise ApprovalError(f"{label} 文件内 {field} 必须为 {expected!r}")
+    if isolated_bundle is None:
+        if report.get("isolatedPetRoot", "") != "":
+            raise ApprovalError(f"{label} 文件内 isolatedPetRoot 必须为空")
+        if report.get("overlayScope", "") != "":
+            raise ApprovalError(f"{label} 文件内 overlayScope 必须为空")
+    else:
+        if report.get("isolatedPetRoot") != isolated_bundle["rootAbsolute"]:
+            raise ApprovalError(
+                f"{label} 文件内 isolatedPetRoot 与冻结隔离包不一致"
+            )
+        if report.get("overlayScope") != "world_pet_only":
+            raise ApprovalError(
+                f"{label} 文件内 overlayScope 必须为 'world_pet_only'"
+            )
+    if require_subject_binding:
+        if report.get("subjects") != list(selected_subjects):
+            raise ApprovalError(f"{label} 文件内 subjects 必须为 {list(selected_subjects)!r}")
+        if report.get("expectedFrames") != expected_frame_count:
+            raise ApprovalError(
+                f"{label} 文件内 expectedFrames 必须为 {expected_frame_count}"
+            )
+    else:
+        if "subjects" in report and report.get("subjects") != list(selected_subjects):
+            raise ApprovalError(f"{label} 文件内 subjects 与默认三主体契约不一致")
+        if "expectedFrames" in report and report.get("expectedFrames") != expected_frame_count:
+            raise ApprovalError(
+                f"{label} 文件内 expectedFrames 必须为 {expected_frame_count}"
+            )
     if report.get("errors") != []:
         raise ApprovalError(f"{label} 文件内 errors 必须为空数组")
     frames = report.get("frames")
-    if not isinstance(frames, list) or len(frames) != EXPECTED_PARITY_FRAMES:
-        raise ApprovalError(f"{label} 文件内 frames 必须恰好包含 {EXPECTED_PARITY_FRAMES} 帧")
+    if not isinstance(frames, list) or len(frames) != expected_frame_count:
+        raise ApprovalError(f"{label} 文件内 frames 必须恰好包含 {expected_frame_count} 帧")
     actual_keys: list[tuple[str, str, str, int]] = []
     source_set_lines: list[str] = []
     for frame_index, frame in enumerate(frames):
@@ -282,19 +459,36 @@ def _validate_parity_evidence(
         key = (kind, direction, action, index)
         expected = expected_frames.get(key)
         if expected is None:
-            raise ApprovalError(f"{frame_label} 不是规范的 character/pet/mounted 世界帧：{key}")
+            raise ApprovalError(
+                f"{frame_label} 不是声明主体 {list(selected_subjects)!r} 的规范世界帧：{key}"
+            )
         actual_keys.append(key)
-        exact_fields = {
+        exact_fields: dict[str, Any] = {
             "status": "passed",
             "errors": [],
             "path": expected["path"],
             "sourceFileSha256": expected["sha256"],
             "sourceFileMd5": expected["md5"],
-            "importSourceMd5": expected["md5"],
-            "importFresh": True,
-            "loadMode": "godot_import",
             "canonicalRgbaMatch": True,
         }
+        if isolated_bundle is None:
+            exact_fields.update(
+                {
+                    "importSourceMd5": expected["md5"],
+                    "importFresh": True,
+                    "loadMode": "godot_import",
+                }
+            )
+        else:
+            exact_fields.update(
+                {
+                    "importSourceMd5": "",
+                    "importFresh": False,
+                    "sourceFileFresh": True,
+                    "resourceImportParityChecked": False,
+                    "loadMode": "qa_isolated_file",
+                }
+            )
         for field, expected_value in exact_fields.items():
             if frame.get(field) != expected_value:
                 raise ApprovalError(f"{frame_label}.{field} 必须为 {expected_value!r}")
@@ -306,6 +500,8 @@ def _validate_parity_evidence(
             or loaded_decoded != source_decoded
         ):
             raise ApprovalError(f"{frame_label} 解码 RGBA 哈希必须是相同的小写 SHA-256")
+        if source_decoded != expected["decodedRgbaSha256"]:
+            raise ApprovalError(f"{frame_label} 解码 RGBA 哈希与当前源 PNG 不一致")
         source_set_lines.append(
             "%s\t%s\t%s\t%s\t%s\n"
             % (kind, expected["path"], expected["sha256"], source_decoded, loaded_decoded)
@@ -314,7 +510,10 @@ def _validate_parity_evidence(
     if actual_keys != expected_keys:
         if len(set(actual_keys)) != len(actual_keys):
             raise ApprovalError(f"{label} 文件内 frames 含重复规范键")
-        raise ApprovalError(f"{label} 文件内 frames 顺序或覆盖与 3x40 规范集合不一致")
+        raise ApprovalError(
+            f"{label} 文件内 frames 顺序或覆盖与 "
+            f"{len(selected_subjects)}x{FRAMES_PER_SUBJECT} 规范集合不一致"
+        )
     recomputed_source_set = hashlib.sha256("".join(source_set_lines).encode("utf-8")).hexdigest()
     if report.get("sourceSetSha256") != recomputed_source_set:
         raise ApprovalError(f"{label} 文件内 sourceSetSha256 不能由逐帧记录重算得到")
@@ -456,7 +655,10 @@ def _validate_evidence_index(
     index_relative: str,
     form_ids: tuple[str, ...],
     expected_frames_by_form: dict[str, dict[tuple[str, str, str, int], dict[str, str]]],
+    subjects: Sequence[str],
 ) -> dict[str, Any]:
+    selected_subjects = tuple(subjects)
+    expected_parity_frames = _expected_parity_frame_count(selected_subjects)
     evidence_index = _load_json(index_path, label="evidence-index")
     if evidence_index.get("schemaVersion") != EVIDENCE_INDEX_SCHEMA_VERSION:
         raise ApprovalError(
@@ -473,8 +675,16 @@ def _validate_evidence_index(
         raise ApprovalError(f"evidence-index.scene 必须为 {REVIEW_SCENE!r}")
     if evidence_index.get("formIds") != list(form_ids):
         raise ApprovalError("evidence-index.formIds 必须与批准目标顺序完全一致")
+    explicit_subject_binding = "subjects" in evidence_index
+    index_subjects = _subjects_from_value(
+        evidence_index.get("subjects"),
+        label="evidence-index.subjects",
+        allow_legacy_missing=True,
+    )
+    if index_subjects != selected_subjects:
+        raise ApprovalError("evidence-index.subjects 与本次批准主体不一致")
     expected_contract = {
-        "parityFramesPerForm": EXPECTED_PARITY_FRAMES,
+        "parityFramesPerForm": expected_parity_frames,
         "width": EXPECTED_WIDTH,
         "height": EXPECTED_HEIGHT,
         "fps": EXPECTED_FPS,
@@ -482,6 +692,11 @@ def _validate_evidence_index(
         "encodedDurationSeconds": EXPECTED_ENCODED_DURATION_SECONDS,
         "encodedFrameCount": EXPECTED_FRAME_COUNT,
     }
+    if explicit_subject_binding:
+        expected_contract = {
+            "subjects": list(selected_subjects),
+            **expected_contract,
+        }
     if evidence_index.get("expected") != expected_contract:
         raise ApprovalError("evidence-index.expected 与固定录制契约不一致")
     tools = evidence_index.get("tools")
@@ -517,11 +732,53 @@ def _validate_evidence_index(
             raise ApprovalError(f"{label}.runId 必须与顶层 runId 一致")
         if value.get("status") != "passed":
             raise ApprovalError(f"{label}.status 必须为 'passed'")
+        if explicit_subject_binding:
+            if value.get("subjects") != list(selected_subjects):
+                raise ApprovalError(f"{label}.subjects 必须与顶层 subjects 一致")
+        elif "subjects" in value and value.get("subjects") != list(selected_subjects):
+            raise ApprovalError(f"{label}.subjects 与默认三主体契约不一致")
         form_parent = (index_parent / form_id).resolve(strict=False)
         try:
             form_parent.relative_to(index_parent)
         except ValueError as error:
             raise ApprovalError(f"非法 formId 路径：{form_id}") from error
+
+        isolated_roots = {
+            frame.get("isolatedRoot", "")
+            for frame in expected_frames_by_form[form_id].values()
+            if frame.get("isolatedRoot", "")
+        }
+        if len(isolated_roots) > 1:
+            raise ApprovalError(f"{label} 混入多个隔离宠物源根")
+        isolated_bundle: dict[str, Any] | None = None
+        if isolated_roots:
+            if selected_subjects != PET_ONLY_SUBJECTS:
+                raise ApprovalError(f"{label} 隔离宠物包只能用于 subjects=['pet']")
+            isolated_bundle = _isolated_bundle_snapshot(
+                repo_root=repo_root,
+                root_relative=next(iter(isolated_roots)),
+                form_id=form_id,
+            )
+            frozen_bundle = value.get("isolatedPetBundle")
+            if not isinstance(frozen_bundle, dict):
+                raise ApprovalError(f"{label}.isolatedPetBundle 必须是对象")
+            expected_frozen_bundle = {
+                key: isolated_bundle[key]
+                for key in (
+                    "mode",
+                    "formId",
+                    "root",
+                    "metadata",
+                    "bundleSha256",
+                    "frameCount",
+                )
+            }
+            if frozen_bundle != expected_frozen_bundle:
+                raise ApprovalError(
+                    f"{label}.isolatedPetBundle 与当前隔离候选包不一致"
+                )
+        elif "isolatedPetBundle" in value:
+            raise ApprovalError(f"{label} 正式资源禁止声明 isolatedPetBundle")
 
         required_records: dict[str, dict[str, Any]] = {}
         parity_records: dict[str, tuple[str, dict[str, Any]]] = {}
@@ -536,6 +793,9 @@ def _validate_evidence_index(
                 label=f"{label}.{key}",
                 required_parent=form_parent,
                 expected_frames=expected_frames_by_form[form_id],
+                subjects=selected_subjects,
+                require_subject_binding=explicit_subject_binding,
+                isolated_bundle=isolated_bundle,
             )
             assert isinstance(record, dict)
             parity_records[key] = (relative, record)
@@ -708,7 +968,9 @@ def _validate_audit_form(
     repo_root: Path,
     run_parent: Path,
     evidence_form: dict[str, Any],
+    subjects: Sequence[str],
 ) -> None:
+    selected_subjects = tuple(subjects)
     _require_pass_marker(value, label=label)
     if value.get("flags") != []:
         raise ApprovalError(f"{label}.flags 必须为空数组")
@@ -731,9 +993,11 @@ def _validate_audit_form(
         if direction_value.get("flags", []) != []:
             raise ApprovalError(f"{direction_label}.flags 必须为空数组")
         columns = direction_value.get("columns")
-        if not isinstance(columns, dict) or set(columns) != {"character", "pet", "mounted"}:
-            raise ApprovalError(f"{direction_label}.columns 必须精确包含 character/pet/mounted")
-        for kind in ("character", "pet", "mounted"):
+        if not isinstance(columns, dict) or set(columns) != set(selected_subjects):
+            raise ApprovalError(
+                f"{direction_label}.columns 必须精确包含 {list(selected_subjects)!r}"
+            )
+        for kind in selected_subjects:
             column = columns[kind]
             column_label = f"{direction_label}.columns.{kind}"
             if not isinstance(column, dict):
@@ -832,7 +1096,9 @@ def _validate_audit_report_records(
     run_id: str,
     form_ids: tuple[str, ...],
     evidence_index: dict[str, Any],
+    subjects: Sequence[str],
 ) -> int:
+    selected_subjects = tuple(subjects)
     if not isinstance(records, list) or not records:
         raise ApprovalError("visualAudit.reports 必须是非空文件记录数组")
     covered: set[str] = set()
@@ -852,6 +1118,15 @@ def _validate_audit_report_records(
             raise ApprovalError(f"visualAudit.reports[{index}].schemaVersion 必须为 1")
         if report.get("runId") != run_id:
             raise ApprovalError(f"visualAudit.reports[{index}].runId 必须与 evidence-index 一致")
+        report_subjects = _subjects_from_value(
+            report.get("subjects"),
+            label=f"visualAudit.reports[{index}].subjects",
+            allow_legacy_missing=selected_subjects == LEGACY_SUBJECTS,
+        )
+        if report_subjects != selected_subjects:
+            raise ApprovalError(
+                f"visualAudit.reports[{index}].subjects 与批准主体不一致"
+            )
         top_markers: list[bool] = []
         if "result" in report:
             top_markers.append(report.get("result") == "pass")
@@ -883,6 +1158,7 @@ def _validate_audit_report_records(
                 repo_root=repo_root,
                 run_parent=required_parent,
                 evidence_form=evidence_form,
+                subjects=selected_subjects,
             )
             covered.add(form_id)
     if covered != set(form_ids):
@@ -906,7 +1182,11 @@ def _catalog_bundles(
     form_ids: tuple[str, ...],
     *,
     character_root: str,
+    subjects: Sequence[str],
 ) -> tuple[str, list[dict[str, str]]]:
+    selected_subjects = tuple(subjects)
+    if selected_subjects not in SUPPORTED_SUBJECTS:
+        raise ApprovalError(f"不支持的主体集合：{selected_subjects!r}")
     default_character_id = catalog.get("defaultCharacterId")
     if not isinstance(default_character_id, str) or not default_character_id.strip():
         raise ApprovalError("catalog.defaultCharacterId 必须是非空字符串")
@@ -923,19 +1203,30 @@ def _catalog_bundles(
                 raise ApprovalError(f"catalog formId 重复：{form_id}")
             by_id[form_id] = value
 
-    bundles = [
-        {
-            "bundleKey": f"character:{default_character_id}",
-            "kind": "character",
-            "formId": "",
-            "root": character_root,
-        }
-    ]
+    bundles: list[dict[str, str]] = []
+    if "character" in selected_subjects:
+        bundles.append(
+            {
+                "bundleKey": f"character:{default_character_id}",
+                "kind": "character",
+                "formId": "",
+                "root": character_root,
+            }
+        )
     for form_id in form_ids:
         form = by_id.get(form_id)
         if form is None:
             raise ApprovalError(f"catalog 缺少目标 form：{form_id}")
-        for kind in ("pet", "mounted"):
+        if selected_subjects == PET_ONLY_SUBJECTS:
+            if form.get("rideableTarget") is not False:
+                raise ApprovalError(f"{form_id}.rideableTarget 必须明确为 false")
+            if form.get("supportedCharacterIds") != []:
+                raise ApprovalError(f"{form_id}.supportedCharacterIds 必须为空数组")
+            if "mounted" in form:
+                raise ApprovalError(f"{form_id} 不可骑 pet-only 形态禁止声明 mounted")
+        for kind in selected_subjects:
+            if kind == "character":
+                continue
             bundle = form.get(kind)
             root = bundle.get("root") if isinstance(bundle, dict) else None
             if not isinstance(root, str) or not root.strip():
@@ -964,28 +1255,35 @@ def _expected_parity_frames_by_form(
     form_ids: tuple[str, ...],
     *,
     repo_root: Path,
+    subjects: Sequence[str],
 ) -> dict[str, dict[tuple[str, str, str, int], dict[str, str]]]:
+    selected_subjects = tuple(subjects)
     by_kind_and_form = {
         (bundle["kind"], bundle["formId"]): bundle
         for bundle in bundle_specs
     }
     character = by_kind_and_form.get(("character", ""))
-    if character is None:
+    if "character" in selected_subjects and character is None:
         raise ApprovalError("缺少人物 parity bundle")
     result: dict[str, dict[tuple[str, str, str, int], dict[str, str]]] = {}
     for form_id in form_ids:
         kind_bundles = {
-            "character": character,
-            "pet": by_kind_and_form.get(("pet", form_id)),
-            "mounted": by_kind_and_form.get(("mounted", form_id)),
+            kind: (
+                character
+                if kind == "character"
+                else by_kind_and_form.get((kind, form_id))
+            )
+            for kind in selected_subjects
         }
         if any(bundle is None for bundle in kind_bundles.values()):
-            raise ApprovalError(f"{form_id} 缺少 character/pet/mounted parity bundle")
+            raise ApprovalError(
+                f"{form_id} 缺少声明主体 {list(selected_subjects)!r} 的 parity bundle"
+            )
         expected: dict[tuple[str, str, str, int], dict[str, str]] = {}
         for direction in CANONICAL_DIRECTIONS:
             for action, count in WORLD_ACTIONS.items():
                 for index in range(1, count + 1):
-                    for kind in ("character", "pet", "mounted"):
+                    for kind in selected_subjects:
                         bundle = kind_bundles[kind]
                         assert bundle is not None
                         root_path, root_relative = _repo_path(
@@ -998,13 +1296,28 @@ def _expected_parity_frames_by_form(
                         if not source_path.is_file():
                             raise ApprovalError(f"parity 当前源帧不存在：{source_path.relative_to(repo_root)}")
                         repo_relative = (Path(root_relative) / suffix).as_posix()
+                        is_isolated = (
+                            kind == "pet"
+                            and bool(Path(root_relative).parts)
+                            and Path(root_relative).parts[0] == ".run"
+                        )
                         expected[(kind, direction, action, index)] = {
-                            "path": _runtime_res_path(repo_relative),
+                            "path": (
+                                f"repo://{repo_relative}"
+                                if is_isolated
+                                else _runtime_res_path(repo_relative)
+                            ),
                             "sha256": _sha256(source_path),
                             "md5": _md5(source_path),
+                            "decodedRgbaSha256": _source_decoded_rgba_sha256(
+                                source_path,
+                                label=f"{kind}:{form_id} 世界帧",
+                            ),
+                            "isolatedRoot": root_relative if is_isolated else "",
                         }
-        if len(expected) != EXPECTED_PARITY_FRAMES:
-            raise ApprovalError(f"{form_id} parity 规范应为 {EXPECTED_PARITY_FRAMES} 帧")
+        expected_count = _expected_parity_frame_count(selected_subjects)
+        if len(expected) != expected_count:
+            raise ApprovalError(f"{form_id} parity 规范应为 {expected_count} 帧")
         result[form_id] = expected
     return result
 
@@ -1041,6 +1354,99 @@ def _scan_world_pngs(bundle_root: Path) -> set[Path]:
     return {path.resolve() for path in directions_root.rglob("*.png") if path.is_file()}
 
 
+def _canonical_rgba_bytes(image: Image.Image) -> bytes:
+    rgba = bytearray(image.convert("RGBA").tobytes())
+    for offset in range(0, len(rgba), 4):
+        if rgba[offset + 3] < 255:
+            rgba[offset] = 0
+            rgba[offset + 1] = 0
+            rgba[offset + 2] = 0
+    return bytes(rgba)
+
+
+def _decoded_rgba_sha256(width: int, height: int, rgba: bytes) -> str:
+    digest = hashlib.sha256()
+    digest.update(f"{width}x{height}:RGBA\n".encode("utf-8"))
+    digest.update(rgba)
+    return digest.hexdigest()
+
+
+def _validate_source_independence(
+    bundle_specs: Sequence[dict[str, str]],
+    *,
+    repo_root: Path,
+) -> dict[str, str]:
+    """Reject aliases, duplicate world frames, and cross-direction mirrors."""
+    seen_inodes: dict[tuple[int, int], str] = {}
+    decoded_by_path: dict[str, str] = {}
+    for bundle in bundle_specs:
+        bundle_key = bundle["bundleKey"]
+        rows: list[tuple[tuple[str, str, int], str, str]] = []
+        for entry in _expected_frame_records(bundle, repo_root=repo_root):
+            path = entry["absolutePath"]
+            relative = entry["path"]
+            try:
+                path_relative = path.relative_to(repo_root)
+            except ValueError as error:
+                raise ApprovalError(f"{bundle_key} 世界帧越出仓库：{relative}") from error
+            cursor = repo_root
+            for part in path_relative.parts:
+                cursor = cursor / part
+                if cursor.is_symlink():
+                    raise ApprovalError(f"世界帧路径包含符号链接别名：{relative}")
+            if not path.is_file():
+                raise ApprovalError(f"{bundle_key} 缺少世界帧：{relative}")
+            stat = path.stat()
+            inode = (stat.st_dev, stat.st_ino)
+            previous = seen_inodes.get(inode)
+            if previous is not None:
+                raise ApprovalError(f"世界帧路径存在文件系统别名：{previous} 与 {relative}")
+            if stat.st_nlink != 1:
+                raise ApprovalError(
+                    f"世界帧存在仓库外硬链接别名：{relative} links={stat.st_nlink}"
+                )
+            seen_inodes[inode] = relative
+            try:
+                with Image.open(path) as image:
+                    image.load()
+                    width, height = image.size
+                    canonical = _canonical_rgba_bytes(image)
+            except (OSError, UnidentifiedImageError) as error:
+                raise ApprovalError(f"世界帧无法解码：{relative}: {error}") from error
+            decoded = _decoded_rgba_sha256(width, height, canonical)
+            canonical_image = Image.frombytes("RGBA", (width, height), canonical)
+            mirrored = canonical_image.transpose(Image.Transpose.FLIP_LEFT_RIGHT).tobytes()
+            mirror_hash = _decoded_rgba_sha256(width, height, mirrored)
+            decoded_by_path[relative] = decoded
+            rows.append(
+                (
+                    (
+                        str(entry["direction"]),
+                        str(entry["action"]),
+                        int(entry["index"]),
+                    ),
+                    decoded,
+                    mirror_hash,
+                )
+            )
+
+        by_decoded: dict[str, tuple[str, str, int]] = {}
+        for key, decoded, _ in rows:
+            previous_key = by_decoded.get(decoded)
+            if previous_key is not None:
+                raise ApprovalError(
+                    f"{bundle_key} 世界帧像素重复：{previous_key!r} 与 {key!r}"
+                )
+            by_decoded[decoded] = key
+        for key, _, mirror_hash in rows:
+            mirror_key = by_decoded.get(mirror_hash)
+            if mirror_key is not None and mirror_key[0] != key[0]:
+                raise ApprovalError(
+                    f"{bundle_key} 世界方向疑似水平镜像：{key!r} 与 {mirror_key!r}"
+                )
+    return decoded_by_path
+
+
 def _build_manifest(
     *,
     repo_root: Path,
@@ -1053,13 +1459,17 @@ def _build_manifest(
     evidence_index_relative: str,
     evidence_index: dict[str, Any],
     audit_report_records: list[dict[str, Any]],
+    subjects: Sequence[str],
 ) -> dict[str, Any]:
+    selected_subjects = tuple(subjects)
     catalog = _load_json(catalog_path, label="catalog")
     default_character_id, bundle_specs = _catalog_bundles(
         catalog,
         form_ids,
         character_root=character_root,
+        subjects=selected_subjects,
     )
+    decoded_by_path = _validate_source_independence(bundle_specs, repo_root=repo_root)
     bundles: list[dict[str, Any]] = []
     for bundle in bundle_specs:
         root_path, root_relative = _repo_path(bundle["root"], repo_root, label=f"{bundle['bundleKey']}.root")
@@ -1082,6 +1492,7 @@ def _build_manifest(
                 "action": entry["action"],
                 "index": entry["index"],
                 "sha256": _sha256(entry["absolutePath"]),
+                "decodedRgbaSha256": decoded_by_path[entry["path"]],
                 "sizeBytes": entry["absolutePath"].stat().st_size,
             }
             for entry in frame_records
@@ -1107,6 +1518,7 @@ def _build_manifest(
         "defaultCharacterId": default_character_id,
         "characterRoot": character_root,
         "formIds": list(form_ids),
+        "subjects": list(selected_subjects),
         "canonicalDirections": list(CANONICAL_DIRECTIONS),
         "requiredWorldActions": WORLD_ACTIONS,
         "visualAudit": {
@@ -1132,7 +1544,9 @@ def _validate_manifest_header(
     *,
     form_ids: tuple[str, ...],
     schema_version: int,
+    subjects: Sequence[str],
 ) -> list[str]:
+    selected_subjects = tuple(subjects)
     errors: list[str] = []
     review_statement = REVIEW_STATEMENT if schema_version == SCHEMA_VERSION else LEGACY_REVIEW_STATEMENT
     exact_fields = {
@@ -1149,6 +1563,11 @@ def _validate_manifest_header(
     for field, expected in exact_fields.items():
         if manifest.get(field) != expected:
             errors.append(f"manifest.{field} 必须为 {expected!r}")
+    if "subjects" in manifest:
+        if manifest.get("subjects") != list(selected_subjects):
+            errors.append(f"manifest.subjects 必须为 {list(selected_subjects)!r}")
+    elif selected_subjects != LEGACY_SUBJECTS:
+        errors.append("pet-only manifest 必须显式冻结 subjects=['pet']")
     visual_audit = manifest.get("visualAudit")
     if not isinstance(visual_audit, dict):
         errors.append("manifest.visualAudit 必须是对象")
@@ -1177,6 +1596,7 @@ def _verify_evidence_audit(
     manifest: dict[str, Any],
     form_ids: tuple[str, ...],
     expected_frames_by_form: dict[str, dict[tuple[str, str, str, int], dict[str, str]]],
+    subjects: Sequence[str],
 ) -> tuple[list[str], int]:
     errors: list[str] = []
     evidence_audit = manifest.get("evidenceAudit")
@@ -1206,6 +1626,7 @@ def _verify_evidence_audit(
             index_relative=index_relative,
             form_ids=form_ids,
             expected_frames_by_form=expected_frames_by_form,
+            subjects=subjects,
         )
     except ApprovalError as error:
         errors.append(str(error))
@@ -1220,6 +1641,7 @@ def _verify_evidence_audit(
                 run_id=str(current_index.get("runId", "")),
                 form_ids=form_ids,
                 evidence_index=current_index,
+                subjects=subjects,
             )
         except ApprovalError as error:
             errors.append(str(error))
@@ -1251,10 +1673,24 @@ def _verify_manifest(
             "checkedFrames": 0,
             "checkedEvidenceFiles": 0,
         }
+    try:
+        subjects = _subjects_from_value(
+            manifest.get("subjects"),
+            label="manifest.subjects",
+            allow_legacy_missing=True,
+        )
+    except ApprovalError as error:
+        return {
+            "status": "failed",
+            "errors": [str(error)],
+            "checkedFrames": 0,
+            "checkedEvidenceFiles": 0,
+        }
     errors = _validate_manifest_header(
         manifest,
         form_ids=form_ids,
         schema_version=int(schema_version),
+        subjects=subjects,
     )
     catalog_value = catalog_override or Path(str(manifest.get("catalogPath", "")))
     try:
@@ -1272,6 +1708,7 @@ def _verify_manifest(
             catalog,
             form_ids,
             character_root=character_root,
+            subjects=subjects,
         )
     except ApprovalError as error:
         return {"status": "failed", "errors": errors + [str(error)], "checkedFrames": 0}
@@ -1279,7 +1716,7 @@ def _verify_manifest(
         errors.append(f"manifest.catalogPath 非规范路径：{manifest.get('catalogPath')!r}")
     if manifest.get("defaultCharacterId") != default_character_id:
         errors.append("manifest.defaultCharacterId 与 catalog 不一致")
-    expected_bundle_count = 1 + 2 * len(form_ids)
+    expected_bundle_count = len(expected_bundles)
     if manifest.get("bundleCount") != expected_bundle_count:
         errors.append(f"manifest.bundleCount 必须为 {expected_bundle_count}")
     if manifest.get("frameCount") != expected_bundle_count * 40:
@@ -1304,6 +1741,14 @@ def _verify_manifest(
         errors.append("manifest bundle 集合与 catalog/目标 form 不一致")
 
     checked_frames = 0
+    try:
+        decoded_by_path = _validate_source_independence(
+            expected_bundles,
+            repo_root=repo_root,
+        )
+    except ApprovalError as error:
+        errors.append(str(error))
+        decoded_by_path = {}
     for expected_bundle in expected_bundles:
         key = expected_bundle["bundleKey"]
         bundle = by_key.get(key)
@@ -1360,6 +1805,11 @@ def _verify_manifest(
             current_hash = _sha256(absolute_path)
             if value.get("sha256") != current_hash:
                 errors.append(f"{key} 帧哈希漂移：{path}")
+            if "decodedRgbaSha256" in value:
+                if value.get("decodedRgbaSha256") != decoded_by_path.get(path):
+                    errors.append(f"{key} 帧解码 RGBA 哈希漂移：{path}")
+            elif subjects == PET_ONLY_SUBJECTS:
+                errors.append(f"{key} pet-only 清单缺少 decodedRgbaSha256：{path}")
             if value.get("sizeBytes") != absolute_path.stat().st_size:
                 errors.append(f"{key} 帧大小漂移：{path}")
     checked_evidence_files = 0
@@ -1369,6 +1819,7 @@ def _verify_manifest(
                 expected_bundles,
                 form_ids,
                 repo_root=repo_root,
+                subjects=subjects,
             )
         except ApprovalError as error:
             errors.append(str(error))
@@ -1378,6 +1829,7 @@ def _verify_manifest(
                 manifest=manifest,
                 form_ids=form_ids,
                 expected_frames_by_form=expected_frames_by_form,
+                subjects=subjects,
             )
             errors.extend(evidence_errors)
     else:
@@ -1391,6 +1843,7 @@ def _verify_manifest(
         "errors": errors,
         "checkedFrames": checked_frames,
         "expectedFrames": expected_bundle_count * 40,
+        "subjects": list(subjects),
         "checkedEvidenceFiles": checked_evidence_files,
         "semanticDirectionReview": manifest.get("semanticDirectionReview"),
         "ownerReview": manifest.get("ownerReview"),
@@ -1477,12 +1930,24 @@ def _create(args: argparse.Namespace) -> int:
         label="evidence-index",
     )
     form_ids = _selected_form_ids(args.form_id)
+    raw_evidence_index = _load_json(evidence_index_path, label="evidence-index")
+    subjects = _subjects_from_value(
+        raw_evidence_index.get("subjects"),
+        label="evidence-index.subjects",
+        allow_legacy_missing=True,
+    )
     catalog = _load_json(catalog_path, label="catalog")
-    _, bundle_specs = _catalog_bundles(catalog, form_ids, character_root=character_root)
+    _, bundle_specs = _catalog_bundles(
+        catalog,
+        form_ids,
+        character_root=character_root,
+        subjects=subjects,
+    )
     expected_frames_by_form = _expected_parity_frames_by_form(
         bundle_specs,
         form_ids,
         repo_root=repo_root,
+        subjects=subjects,
     )
     evidence_index = _validate_evidence_index(
         repo_root=repo_root,
@@ -1490,6 +1955,7 @@ def _create(args: argparse.Namespace) -> int:
         index_relative=evidence_index_relative,
         form_ids=form_ids,
         expected_frames_by_form=expected_frames_by_form,
+        subjects=subjects,
     )
     audit_report_records: list[dict[str, Any]] = []
     for index, value in enumerate(args.audit_report):
@@ -1508,6 +1974,7 @@ def _create(args: argparse.Namespace) -> int:
         run_id=str(evidence_index.get("runId", "")),
         form_ids=form_ids,
         evidence_index=evidence_index,
+        subjects=subjects,
     )
     manifest = _build_manifest(
         repo_root=repo_root,
@@ -1520,6 +1987,7 @@ def _create(args: argparse.Namespace) -> int:
         evidence_index_relative=evidence_index_relative,
         evidence_index=evidence_index,
         audit_report_records=audit_report_records,
+        subjects=subjects,
     )
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

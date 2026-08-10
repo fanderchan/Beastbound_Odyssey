@@ -633,10 +633,117 @@ def _validate_action(
     if raw_decoded != original_decoded:
         raise BattleBundleError(f"{view}/{action} raw archive is not a lossless decoded copy of the generated input")
     original_hash = _require_sha(source_meta.get("originalGeneratedSha256"), f"{view}/{action} originalGeneratedSha256")
+    pipeline_input_hash = original_hash
+    preprocessing_copies: list[tuple[Path, str]] = []
+    preprocessing = source_meta.get("preprocessing")
+    if preprocessing is not None:
+        if not isinstance(preprocessing, dict):
+            raise BattleBundleError(f"{view}/{action} preprocessing must be an object")
+        if preprocessing.get("schemaVersion") != 1:
+            raise BattleBundleError(f"{view}/{action} preprocessing schemaVersion must be 1")
+        if preprocessing.get("tool") != "repack_chroma_sprite_grid.py":
+            raise BattleBundleError(f"{view}/{action} preprocessing tool is invalid")
+        if (
+            _require_sha(
+                preprocessing.get("inputSha256"),
+                f"{view}/{action} preprocessing inputSha256",
+            )
+            != original_hash
+        ):
+            raise BattleBundleError(
+                f"{view}/{action} preprocessing input hash does not match original generated input"
+            )
+        if (
+            _require_sha(
+                preprocessing.get("inputDecodedRgbaSha256"),
+                f"{view}/{action} preprocessing inputDecodedRgbaSha256",
+            )
+            != original_decoded
+        ):
+            raise BattleBundleError(
+                f"{view}/{action} preprocessing decoded input hash does not match original generated input"
+            )
+        pipeline_input_path = _safe_relative(
+            action_root,
+            preprocessing.get("outputArchive"),
+            f"{view}/{action} preprocessing outputArchive",
+        )
+        preprocessing_metadata_path = _safe_relative(
+            action_root,
+            preprocessing.get("metadata"),
+            f"{view}/{action} preprocessing metadata",
+        )
+        if (
+            pipeline_input_path.parent != action_root.resolve()
+            or pipeline_input_path.name
+            not in {"pipeline-input-lossless.png", "pipeline-input-lossless.webp"}
+        ):
+            raise BattleBundleError(
+                f"{view}/{action} preprocessing output archive must be "
+                "pipeline-input-lossless.png or pipeline-input-lossless.webp"
+            )
+        if (
+            preprocessing_metadata_path.parent != action_root.resolve()
+            or preprocessing_metadata_path.name != "repack-meta.json"
+        ):
+            raise BattleBundleError(
+                f"{view}/{action} preprocessing metadata must be repack-meta.json"
+            )
+        _require_file(
+            pipeline_input_path,
+            f"{view}/{action} preprocessing output archive",
+        )
+        _require_file(
+            preprocessing_metadata_path,
+            f"{view}/{action} preprocessing metadata",
+        )
+        pipeline_input_hash = _assert_hash(
+            pipeline_input_path,
+            preprocessing.get("outputArchiveSha256"),
+            f"{view}/{action} preprocessing outputArchiveSha256",
+        )
+        pipeline_input_decoded = decoded_rgba_hash(pipeline_input_path)
+        if pipeline_input_decoded != _require_sha(
+            preprocessing.get("outputDecodedRgbaSha256"),
+            f"{view}/{action} preprocessing outputDecodedRgbaSha256",
+        ):
+            raise BattleBundleError(
+                f"{view}/{action} preprocessing output decoded RGBA hash mismatch"
+            )
+        _assert_hash(
+            preprocessing_metadata_path,
+            preprocessing.get("metadataSha256"),
+            f"{view}/{action} preprocessing metadataSha256",
+        )
+        repack_metadata = _read_json(
+            preprocessing_metadata_path,
+            f"{view}/{action} repack metadata",
+        )
+        if (
+            repack_metadata.get("schemaVersion") != 1
+            or repack_metadata.get("tool") != "repack_chroma_sprite_grid.py"
+        ):
+            raise BattleBundleError(
+                f"{view}/{action} repack metadata must identify "
+                "repack_chroma_sprite_grid.py schema 1"
+            )
+        if (
+            repack_metadata.get("inputSha256") != original_hash
+            or repack_metadata.get("outputSha256") != pipeline_input_hash
+        ):
+            raise BattleBundleError(
+                f"{view}/{action} repack metadata hash chain is incomplete"
+            )
+        preprocessing_copies.extend(
+            [
+                (pipeline_input_path, pipeline_input_path.name),
+                (preprocessing_metadata_path, preprocessing_metadata_path.name),
+            ]
+        )
 
     if pipeline.get("schemaVersion") != 1 or pipeline.get("tool") != "build_pet_art_bundle.py":
         raise BattleBundleError(f"{view}/{action} pipeline must come from build_pet_art_bundle.py schema 1")
-    if pipeline.get("inputSha256") != original_hash:
+    if pipeline.get("inputSha256") != pipeline_input_hash:
         raise BattleBundleError(f"{view}/{action} pipeline input hash does not match source provenance")
     if pipeline.get("sourceFrameSize") != SOURCE_FRAME_SIZE or pipeline.get("runtimeFrameSize") != RUNTIME_FRAME_SIZE:
         raise BattleBundleError(f"{view}/{action} pipeline frame sizes must be 512/256")
@@ -799,6 +906,7 @@ def _validate_action(
         (pipeline_path, "pipeline-meta.json"),
         (source_meta_path, "source-meta.json"),
         (qa_path, "qa.json"),
+        *preprocessing_copies,
     ]:
         relative = provenance_root / name
         copies.append(CopyEntry(source, relative, sha256_file(source)))
@@ -939,7 +1047,7 @@ def _source_ledger(
             frame_meta = pipeline.get("frames")
             if not isinstance(frame_meta, list):
                 raise BattleBundleError(f"{view}/{action} pipeline frame metadata is missing")
-            view_actions[action] = {
+            action_ledger = {
                 "originalGeneratedSha256": source_meta["originalGeneratedSha256"],
                 "originalGeneratedDecodedRgbaSha256": source_meta[
                     "originalGeneratedDecodedRgbaSha256"
@@ -954,6 +1062,26 @@ def _source_ledger(
                 "representativeRawTracked": tracks_full_source or action == "idle",
                 "sourceFramesTracked": tracks_full_source,
             }
+            preprocessing = source_meta.get("preprocessing")
+            if isinstance(preprocessing, dict):
+                action_ledger["preprocessing"] = {
+                    "schemaVersion": preprocessing["schemaVersion"],
+                    "tool": preprocessing["tool"],
+                    "inputSha256": preprocessing["inputSha256"],
+                    "inputDecodedRgbaSha256": preprocessing[
+                        "inputDecodedRgbaSha256"
+                    ],
+                    "outputArchiveSha256": preprocessing[
+                        "outputArchiveSha256"
+                    ],
+                    "outputDecodedRgbaSha256": preprocessing[
+                        "outputDecodedRgbaSha256"
+                    ],
+                    "metadataSha256": preprocessing["metadataSha256"],
+                    "outputArchiveTracked": tracks_full_source,
+                    "metadataTracked": tracks_full_source,
+                }
+            view_actions[action] = action_ledger
         actions[view] = view_actions
     return {
         "schemaVersion": 1,
@@ -1030,6 +1158,26 @@ def _build_target_metadata(
         "contactSheet": "qa/battle/contact-sheet.png",
         "qcSummary": "qa/battle/qc-summary.json",
     }
+    world_visual = result.get("worldVisual")
+    world_matrix_present = (
+        isinstance(world_visual, dict)
+        and world_visual.get("strategy") == "independent_8"
+        and world_visual.get("runtimeMirroring") is False
+        and world_visual.get("totalFrameCount") == 40
+    )
+    if world_matrix_present:
+        result["notes"] = (
+            "Identity, true-eight-direction world art, and the complete two-view "
+            "battle matrix are installed for isolated owner review. This metadata "
+            "does not grant runtime or release approval."
+        )
+    else:
+        result["notes"] = (
+            "Identity and the complete two-view battle matrix are installed for "
+            "isolated owner review. World art is not declared complete by this "
+            "battle installer, and this metadata does not grant runtime or release "
+            "approval."
+        )
     result["ownerReviewStatus"] = "pending"
     return result
 

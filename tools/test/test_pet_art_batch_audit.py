@@ -34,7 +34,12 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 from build_pet_art_bundle import derive_runtime_frame, rgba_hash  # noqa: E402
 import finalize_pet_identity_gate as identity_finalizer  # noqa: E402
-from install_pet_battle_bundle import ACTION_SPECS  # noqa: E402
+from install_pet_battle_bundle import (  # noqa: E402
+    ACTION_SPECS,
+    InstallOptions,
+    ValidatedBundle,
+    _build_target_metadata,
+)
 
 
 def _read_fixture() -> dict[str, Any]:
@@ -391,6 +396,42 @@ def _materialize_schema2_identity_gate(
     catalog: dict[str, Any],
 ) -> Path:
     return _build_schema2_identity_gate(repo_root, catalog)
+
+
+def _extend_schema2_identity_gate_with_battle(
+    repo_root: Path,
+    catalog: dict[str, Any],
+    pet_root: Path,
+) -> dict[str, Any]:
+    metadata_path = pet_root / "action-bundle-meta.json"
+    existing = json.loads(metadata_path.read_text(encoding="utf-8"))
+    action_metadata = {
+        action: {
+            "frameCount": frame_count,
+            "fps": fps,
+            "loop": loop,
+            "status": "owner_review_pending",
+        }
+        for action, (frame_count, fps, loop) in ACTION_SPECS.items()
+    }
+    options = InstallOptions(
+        staging=repo_root / "battle-staging",
+        destination=pet_root,
+        form_id=catalog["forms"][0]["formId"],
+        kind="pet",
+        archive_mode="full",
+    )
+    validated = ValidatedBundle(
+        manifest={},
+        copies=[],
+        generated=[],
+        frame_hashes={},
+        bundle_digest="a" * 64,
+        action_metadata=action_metadata,
+    )
+    extended = _build_target_metadata(existing, options, validated)
+    _write_json(metadata_path, extended)
+    return extended
 
 
 def _materialize_full_source_battle(
@@ -763,6 +804,115 @@ class PetArtBatchAuditTest(unittest.TestCase):
                 "invalid_identity_gate_action_meta",
                 _issue_codes(report),
             )
+
+    def test_schema2_identity_gate_allows_formal_battle_metadata_extension(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            catalog = _read_fixture()
+            pet_root = _materialize_schema2_identity_gate(root, catalog)
+
+            initial_completed, initial_report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+            self.assertEqual(
+                initial_completed.returncode,
+                0,
+                initial_completed.stderr,
+            )
+            self.assertEqual(initial_report["summary"]["errors"], 0)
+
+            extended = _extend_schema2_identity_gate_with_battle(
+                root,
+                catalog,
+                pet_root,
+            )
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(report["summary"]["errors"], 0)
+            self.assertEqual(
+                report["forms"][0]["pet"]["identityGate"]["status"],
+                "verified",
+            )
+            self.assertEqual(
+                extended["productionScope"],
+                "formal_battle_two_view_owner_review_pending",
+            )
+            self.assertEqual(
+                extended["battleVisual"]["totalFrameCount"],
+                180,
+            )
+
+    def test_schema2_identity_gate_rejects_identity_drift_after_battle_extension(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            catalog = _read_fixture()
+            pet_root = _materialize_schema2_identity_gate(root, catalog)
+            metadata = _extend_schema2_identity_gate_with_battle(
+                root,
+                catalog,
+                pet_root,
+            )
+            metadata["identity"]["poses"].pop("west")
+            _write_json(pet_root / "action-bundle-meta.json", metadata)
+
+            completed, report = _run(
+                root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "invalid_identity_gate_action_meta",
+                _issue_codes(report),
+            )
+
+    def test_schema2_identity_gate_rejects_owner_or_runtime_bypass_after_battle_extension(
+        self,
+    ) -> None:
+        mutations = {
+            "nested runtime enable": lambda metadata: metadata[
+                "battleVisual"
+            ].__setitem__("runtimeEnabled", True),
+            "nested owner approval": lambda metadata: metadata[
+                "battleVisual"
+            ].__setitem__("status", "approved"),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                root = Path(temp_dir).resolve()
+                catalog = _read_fixture()
+                pet_root = _materialize_schema2_identity_gate(root, catalog)
+                metadata = _extend_schema2_identity_gate_with_battle(
+                    root,
+                    catalog,
+                    pet_root,
+                )
+                mutate(metadata)
+                _write_json(pet_root / "action-bundle-meta.json", metadata)
+
+                completed, report = _run(
+                    root,
+                    catalog,
+                    _fusion_catalog_fixture(),
+                )
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn(
+                    "invalid_identity_gate_action_meta",
+                    _issue_codes(report),
+                )
 
     def test_schema2_identity_gate_detects_source_meta_hash_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

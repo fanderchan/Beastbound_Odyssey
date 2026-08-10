@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Record fail-closed, hash-frozen true-eight world-direction review evidence.
 
-The review scene validates the exact character, pet, and mounted textures that it
-loads.  This wrapper makes that validation inseparable from a candidate movie:
+The review scene validates the exact requested world subjects that it loads.
+The legacy default remains character + pet + mounted (120 frames), while
+``--subjects pet`` records a non-rideable pet-only 40-frame review.  This
+wrapper makes that validation inseparable from a candidate movie:
 
 1. import the Godot project once;
-2. run a 120-frame parity-only preflight for every requested form;
+2. run a subject-bound parity-only preflight for every requested form;
 3. record each form while asking the recording process to write its own parity
    report with the same run ID;
 4. capture the eight-direction grid and its parity report;
@@ -37,6 +39,8 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
+from PIL import Image, UnidentifiedImageError
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GODOT_PROJECT = REPO_ROOT / "client" / "godot"
@@ -58,6 +62,9 @@ INDEX_SCHEMA_VERSION = 1
 INDEX_TYPE = "beastbound_world_direction_review_evidence"
 PARITY_SCHEMA_VERSION = 1
 PARITY_KINDS = ("character", "pet", "mounted")
+PET_ONLY_SUBJECTS = ("pet",)
+SUPPORTED_SUBJECTS = (PARITY_KINDS, PET_ONLY_SUBJECTS)
+FRAMES_PER_SUBJECT = 40
 PARITY_DIRECTIONS = (
     "south",
     "southwest",
@@ -75,13 +82,7 @@ PARITY_ACTION_FRAMES = (
     ("walk", 3),
     ("walk", 4),
 )
-EXPECTED_PARITY_COVERAGE = frozenset(
-    (kind, direction, action, frame_index)
-    for kind in PARITY_KINDS
-    for direction in PARITY_DIRECTIONS
-    for action, frame_index in PARITY_ACTION_FRAMES
-)
-EXPECTED_PARITY_FRAMES = 120
+EXPECTED_PARITY_FRAMES = FRAMES_PER_SUBJECT * len(PARITY_KINDS)
 EXPECTED_WIDTH = 1280
 EXPECTED_HEIGHT = 720
 EXPECTED_FPS = Fraction(30, 1)
@@ -101,6 +102,9 @@ CONTACT_SAMPLE_FRAME_INDICES = tuple(
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SAFE_RES_PNG_PATH = re.compile(
     r"^res://[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*\.png$"
+)
+SAFE_REPO_PNG_PATH = re.compile(
+    r"^repo://[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*\.png$"
 )
 LOWER_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 FRAME_SHA256_FIELDS = (
@@ -227,15 +231,262 @@ def _capture_version(executable: str, arguments: Sequence[str]) -> str:
     return output.splitlines()[0] if output else "unknown"
 
 
-def _is_safe_res_png_path(value: Any) -> bool:
+def _is_safe_source_png_path(value: Any) -> bool:
     if not isinstance(value, str) or not value:
         return False
-    if SAFE_RES_PNG_PATH.fullmatch(value) is None:
+    if (
+        SAFE_RES_PNG_PATH.fullmatch(value) is None
+        and SAFE_REPO_PNG_PATH.fullmatch(value) is None
+    ):
         return False
+    prefix = "res://" if value.startswith("res://") else "repo://"
     return all(
         segment not in (".", "..")
-        for segment in value.removeprefix("res://").split("/")
+        for segment in value.removeprefix(prefix).split("/")
     )
+
+
+def _isolated_world_frame_paths(root: Path) -> list[Path]:
+    return [
+        root / "world" / "directions" / direction / action / f"{action}-{frame_index}.png"
+        for direction in PARITY_DIRECTIONS
+        for action, frame_index in PARITY_ACTION_FRAMES
+    ]
+
+
+def _isolated_identity_paths(root: Path) -> list[Path]:
+    return [
+        root / "identity" / "identity-board-transparent.png",
+        root / "identity" / "front_3quarter_sw.png",
+        root / "identity" / "back_3quarter_ne.png",
+        root / "identity" / "south.png",
+        root / "identity" / "west.png",
+    ]
+
+
+def _isolated_bundle_sha256(root: Path, artifact_paths: Sequence[Path]) -> str:
+    paths = [root / "action-bundle-meta.json", *artifact_paths]
+    lines = [
+        f"{path.relative_to(root).as_posix()}\t{_sha256(path)}\n"
+        for path in paths
+    ]
+    return hashlib.sha256("".join(lines).encode("utf-8")).hexdigest()
+
+
+def _validate_png_size(path: Path, *, expected: tuple[int, int], label: str) -> None:
+    if path.is_symlink() or not path.is_file():
+        raise ReviewRecordingError(f"{label} 不是普通 PNG 文件：{path}")
+    try:
+        with Image.open(path) as image:
+            image.load()
+            actual = image.size
+    except (OSError, UnidentifiedImageError) as error:
+        raise ReviewRecordingError(f"{label} 无法解码：{path}: {error}") from error
+    if actual != expected:
+        raise ReviewRecordingError(
+            f"{label} 尺寸为 {actual[0]}x{actual[1]}，期望 {expected[0]}x{expected[1]}"
+        )
+
+
+def _validate_isolated_pet_root(root_value: Path, *, form_id: str) -> dict[str, Any]:
+    candidate = root_value if root_value.is_absolute() else REPO_ROOT / root_value
+    try:
+        lexical_relative = candidate.absolute().relative_to(REPO_ROOT)
+    except ValueError as error:
+        raise ReviewRecordingError("--pet-root 必须位于仓库内") from error
+    cursor = REPO_ROOT
+    for part in lexical_relative.parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise ReviewRecordingError(f"--pet-root 不能包含符号链接路径别名：{root_value}")
+    try:
+        root = candidate.resolve(strict=True)
+        relative = root.relative_to(REPO_ROOT)
+    except (FileNotFoundError, ValueError, OSError) as error:
+        raise ReviewRecordingError(f"--pet-root 不存在或越出仓库：{root_value}") from error
+    if not root.is_dir():
+        raise ReviewRecordingError(f"--pet-root 不是目录：{relative.as_posix()}")
+    if not relative.parts or relative.parts[0] != ".run":
+        raise ReviewRecordingError("--pet-root 必须位于仓库 .run/ 隔离目录")
+
+    meta_path = root / "action-bundle-meta.json"
+    meta = _read_json(meta_path, label="isolated action-bundle-meta")
+    if meta.get("formId") != form_id:
+        raise ReviewRecordingError(
+            f"isolated action-bundle-meta.formId={meta.get('formId')!r}，期望 {form_id!r}"
+        )
+    if meta.get("runtimeEnabled") is not False:
+        raise ReviewRecordingError("isolated action-bundle-meta.runtimeEnabled 必须为 false")
+    if meta.get("rideableTarget") is not False:
+        raise ReviewRecordingError("isolated action-bundle-meta.rideableTarget 必须为 false")
+    if meta.get("ownerReviewStatus") != "pending":
+        raise ReviewRecordingError(
+            "isolated action-bundle-meta.ownerReviewStatus 必须为 'pending'"
+        )
+    forbidden_fields = ("mounted", "character", "supportedCharacterIds")
+    present_forbidden = [field for field in forbidden_fields if field in meta]
+    if present_forbidden:
+        raise ReviewRecordingError(
+            "isolated action-bundle-meta 禁止骑乘/人物字段："
+            + ",".join(present_forbidden)
+        )
+    if (
+        "supportedMountedCharacterIds" in meta
+        and meta.get("supportedMountedCharacterIds") != []
+    ):
+        raise ReviewRecordingError(
+            "isolated action-bundle-meta.supportedMountedCharacterIds "
+            "若存在必须为空数组"
+        )
+    for forbidden_directory in ("mounted", "character"):
+        if (root / forbidden_directory).exists():
+            raise ReviewRecordingError(
+                f"isolated pet root 禁止 {forbidden_directory}/ 目录"
+            )
+    if meta.get("runtimeFrameSize") != [256, 256]:
+        raise ReviewRecordingError(
+            "isolated action-bundle-meta.runtimeFrameSize 必须为 [256, 256]"
+        )
+
+    identity = meta.get("identity")
+    if not isinstance(identity, dict):
+        raise ReviewRecordingError("isolated action-bundle-meta.identity 必须是对象")
+    expected_identity = {
+        "board": "identity/identity-board-transparent.png",
+        "poses": {
+            "front_3quarter_sw": "identity/front_3quarter_sw.png",
+            "back_3quarter_ne": "identity/back_3quarter_ne.png",
+            "south": "identity/south.png",
+            "west": "identity/west.png",
+        },
+        "sourceFrameSize": [512, 512],
+        "status": "self_review_passed_owner_pending",
+    }
+    for field, expected in expected_identity.items():
+        if identity.get(field) != expected:
+            raise ReviewRecordingError(
+                f"isolated action-bundle-meta.identity.{field} 必须为 {expected!r}"
+            )
+    identity_paths = _isolated_identity_paths(root)
+    for index, path in enumerate(identity_paths):
+        _validate_png_size(
+            path,
+            expected=(1024, 1024) if index == 0 else (512, 512),
+            label=f"isolated identity {path.name}",
+        )
+    actual_identity_paths = {
+        path.resolve(strict=True)
+        for path in (root / "identity").rglob("*.png")
+        if path.is_file()
+    }
+    expected_identity_paths = {path.resolve(strict=True) for path in identity_paths}
+    if actual_identity_paths != expected_identity_paths:
+        extras = sorted(actual_identity_paths - expected_identity_paths)
+        raise ReviewRecordingError(
+            "isolated pet root 含规范外 identity PNG："
+            + (extras[0].relative_to(root).as_posix() if extras else "unknown")
+        )
+
+    world_visual = meta.get("worldVisual")
+    if not isinstance(world_visual, dict):
+        raise ReviewRecordingError("isolated action-bundle-meta.worldVisual 必须是对象")
+    exact_world_fields = {
+        "strategy": "independent_8",
+        "runtimeMirroring": False,
+        "directions": list(PARITY_DIRECTIONS),
+    }
+    for field, expected in exact_world_fields.items():
+        if world_visual.get(field) != expected:
+            raise ReviewRecordingError(
+                f"isolated action-bundle-meta.worldVisual.{field} 必须为 {expected!r}"
+            )
+    if world_visual.get("totalFrameCount") != 40:
+        raise ReviewRecordingError(
+            "isolated action-bundle-meta.worldVisual.totalFrameCount 必须为 40"
+        )
+    if world_visual.get("runtimeMountedComposition") is not False:
+        raise ReviewRecordingError(
+            "isolated action-bundle-meta.worldVisual.runtimeMountedComposition "
+            "必须为 false"
+        )
+    actions = world_visual.get("actions")
+    if not isinstance(actions, dict):
+        raise ReviewRecordingError(
+            "isolated action-bundle-meta.worldVisual.actions 必须是对象"
+        )
+    for action, expected_count in (("idle", 1), ("walk", 4)):
+        action_value = actions.get(action)
+        if not isinstance(action_value, dict) or action_value.get("frameCount") != expected_count:
+            raise ReviewRecordingError(
+                f"isolated action-bundle-meta.worldVisual.actions.{action}.frameCount "
+                f"必须为 {expected_count}"
+            )
+
+    frame_paths = _isolated_world_frame_paths(root)
+    missing = [path for path in frame_paths if not path.is_file()]
+    if missing:
+        raise ReviewRecordingError(
+            "isolated pet root 缺少世界帧："
+            + missing[0].relative_to(root).as_posix()
+        )
+    for path in frame_paths:
+        _validate_png_size(
+            path,
+            expected=(256, 256),
+            label=f"isolated world frame {path.relative_to(root).as_posix()}",
+        )
+    expected_paths = {path.resolve(strict=True) for path in frame_paths}
+    world_root = root / "world" / "directions"
+    actual_paths = {
+        path.resolve(strict=True)
+        for path in world_root.rglob("*.png")
+        if path.is_file()
+    }
+    if actual_paths != expected_paths:
+        extras = sorted(actual_paths - expected_paths)
+        raise ReviewRecordingError(
+            "isolated pet root 含规范外 world PNG："
+            + (extras[0].relative_to(root).as_posix() if extras else "unknown")
+        )
+    meta_record = _artifact_record(meta_path)
+    return {
+        "mode": "isolated_pet_root",
+        "formId": form_id,
+        "root": relative.as_posix(),
+        "rootAbsolute": str(root),
+        "metadata": meta_record,
+        "bundleSha256": _isolated_bundle_sha256(
+            root,
+            [*identity_paths, *frame_paths],
+        ),
+        "frameCount": len(frame_paths),
+    }
+
+
+def _selected_subjects(value: str | None) -> tuple[str, ...]:
+    if value is None:
+        return PARITY_KINDS
+    subjects = tuple(value.split(","))
+    if subjects not in SUPPORTED_SUBJECTS:
+        raise ReviewRecordingError(
+            "--subjects 仅允许 pet 或 character,pet,mounted，且不能重排、重复或混用"
+        )
+    return subjects
+
+
+def _expected_parity_coverage(
+    subjects: Sequence[str],
+) -> frozenset[tuple[str, str, str, int]]:
+    return frozenset(
+        (kind, direction, action, frame_index)
+        for kind in subjects
+        for direction in PARITY_DIRECTIONS
+        for action, frame_index in PARITY_ACTION_FRAMES
+    )
+
+
+def _expected_parity_frames(subjects: Sequence[str]) -> int:
+    return FRAMES_PER_SUBJECT * len(subjects)
 
 
 def _parity_source_set_sha256(frames: Sequence[dict[str, Any]]) -> str:
@@ -256,8 +507,15 @@ def _validate_parity_report(
     form_id: str,
     run_id: str,
     label: str,
+    subjects: Sequence[str] = PARITY_KINDS,
+    isolated_bundle: dict[str, Any] | None = None,
     expected_source_set_sha256: str | None = None,
 ) -> dict[str, Any]:
+    selected_subjects = tuple(subjects)
+    if selected_subjects not in SUPPORTED_SUBJECTS:
+        raise ReviewRecordingError(f"{label} 请求了不支持的主体集合：{selected_subjects!r}")
+    expected_coverage = _expected_parity_coverage(selected_subjects)
+    expected_frames = _expected_parity_frames(selected_subjects)
     report = _read_json(path, label=label)
     errors: list[str] = []
     if type(report.get("schemaVersion")) is not int or report.get(
@@ -270,9 +528,27 @@ def _validate_parity_report(
         errors.append(f"formId={report.get('formId')!r}")
     if report.get("runId") != run_id:
         errors.append(f"runId={report.get('runId')!r}")
-    if report.get("checkedFrames") != EXPECTED_PARITY_FRAMES:
+    if report.get("subjects") != list(selected_subjects):
+        errors.append(f"subjects={report.get('subjects')!r}")
+    if isolated_bundle is None:
+        if report.get("isolatedPetRoot", "") != "":
+            errors.append("isolatedPetRoot 非空但未声明隔离宠物包")
+        if report.get("overlayScope", "") != "":
+            errors.append("overlayScope 非空但未声明隔离宠物包")
+    else:
+        if selected_subjects != PET_ONLY_SUBJECTS:
+            errors.append("隔离宠物包只能用于 subjects=['pet']")
+        if report.get("isolatedPetRoot") != isolated_bundle["rootAbsolute"]:
+            errors.append(
+                f"isolatedPetRoot={report.get('isolatedPetRoot')!r}"
+            )
+        if report.get("overlayScope") != "world_pet_only":
+            errors.append(f"overlayScope={report.get('overlayScope')!r}")
+    if report.get("expectedFrames") != expected_frames:
+        errors.append(f"expectedFrames={report.get('expectedFrames')!r}")
+    if report.get("checkedFrames") != expected_frames:
         errors.append(f"checkedFrames={report.get('checkedFrames')!r}")
-    if report.get("passedFrames") != EXPECTED_PARITY_FRAMES:
+    if report.get("passedFrames") != expected_frames:
         errors.append(f"passedFrames={report.get('passedFrames')!r}")
     report_errors = report.get("errors")
     if report_errors != []:
@@ -288,8 +564,8 @@ def _validate_parity_report(
     ):
         errors.append("sourceSetSha256 在录制步骤之间发生漂移")
     frames = report.get("frames")
-    if not isinstance(frames, list) or len(frames) != EXPECTED_PARITY_FRAMES:
-        errors.append("frames 数量不是 120")
+    if not isinstance(frames, list) or len(frames) != expected_frames:
+        errors.append(f"frames 数量不是 {expected_frames}")
     else:
         coverage: set[tuple[str, str, str, int]] = set()
         duplicate_coverage: set[tuple[str, str, str, int]] = set()
@@ -307,10 +583,26 @@ def _validate_parity_report(
                 errors.append(f"{frame_label}.status={frame.get('status')!r}")
             if frame.get("errors") != []:
                 errors.append(f"{frame_label}.errors 不是空数组")
-            if frame.get("importFresh") is not True:
-                errors.append(f"{frame_label}.importFresh 不是 true")
-            if frame.get("loadMode") != "godot_import":
-                errors.append(f"{frame_label}.loadMode={frame.get('loadMode')!r}")
+            if isolated_bundle is None:
+                if frame.get("importFresh") is not True:
+                    errors.append(f"{frame_label}.importFresh 不是 true")
+                if frame.get("loadMode") != "godot_import":
+                    errors.append(
+                        f"{frame_label}.loadMode={frame.get('loadMode')!r}"
+                    )
+            else:
+                exact_isolated_fields = {
+                    "importFresh": False,
+                    "sourceFileFresh": True,
+                    "resourceImportParityChecked": False,
+                    "importSourceMd5": "",
+                    "loadMode": "qa_isolated_file",
+                }
+                for field, expected in exact_isolated_fields.items():
+                    if frame.get(field) != expected:
+                        errors.append(
+                            f"{frame_label}.{field}={frame.get(field)!r}"
+                        )
             if frame.get("canonicalRgbaMatch") is not True:
                 errors.append(f"{frame_label}.canonicalRgbaMatch 不是 true")
 
@@ -326,7 +618,7 @@ def _validate_parity_report(
                 and type(frame_index) is int
             ):
                 coverage_key = (kind, direction, action, frame_index)
-            if coverage_key not in EXPECTED_PARITY_COVERAGE:
+            if coverage_key not in expected_coverage:
                 errors.append(
                     f"{frame_label} 不是规范 kind/direction/action/index 覆盖"
                 )
@@ -336,11 +628,28 @@ def _validate_parity_report(
                 coverage.add(coverage_key)
 
             source_path = frame.get("path")
-            if not _is_safe_res_png_path(source_path):
-                errors.append(f"{frame_label}.path 不是安全的 res:// PNG 路径")
-            elif source_path in seen_paths:
+            if not _is_safe_source_png_path(source_path):
+                errors.append(f"{frame_label}.path 不是安全的 res:// 或 repo:// PNG 路径")
+            elif isolated_bundle is None and not source_path.startswith("res://"):
+                errors.append(f"{frame_label}.path 正式资源必须使用 res://")
+            elif isolated_bundle is not None:
+                expected_path = (
+                    f"repo://{isolated_bundle['root']}/world/directions/"
+                    f"{direction}/{action}/{action}-{frame_index}.png"
+                )
+                if source_path != expected_path:
+                    errors.append(
+                        f"{frame_label}.path={source_path!r}，期望 {expected_path!r}"
+                    )
+                else:
+                    current_path = REPO_ROOT / source_path.removeprefix("repo://")
+                    if frame.get("sourceFileSha256") != _sha256(current_path):
+                        errors.append(
+                            f"{frame_label}.sourceFileSha256 与隔离源 PNG 不一致"
+                        )
+            if isinstance(source_path, str) and source_path in seen_paths:
                 duplicate_paths.add(source_path)
-            else:
+            elif isinstance(source_path, str):
                 seen_paths.add(source_path)
 
             for field in FRAME_SHA256_FIELDS:
@@ -352,10 +661,10 @@ def _validate_parity_report(
             errors.append(f"frames 存在重复逻辑帧：{len(duplicate_coverage)} 项")
         if duplicate_paths:
             errors.append(f"frames 存在重复 PNG 路径：{len(duplicate_paths)} 项")
-        missing_coverage = EXPECTED_PARITY_COVERAGE - coverage
+        missing_coverage = expected_coverage - coverage
         if missing_coverage:
             errors.append(f"frames 缺少规范逻辑帧：{len(missing_coverage)} 项")
-        if len(typed_frames) == EXPECTED_PARITY_FRAMES:
+        if len(typed_frames) == expected_frames:
             recomputed_sha256 = _parity_source_set_sha256(typed_frames)
             if source_set_sha256 != recomputed_sha256:
                 errors.append(
@@ -366,15 +675,142 @@ def _validate_parity_report(
     return report
 
 
-def _parity_artifact(path: Path, report: dict[str, Any]) -> dict[str, Any]:
+def _parity_artifact(
+    path: Path,
+    report: dict[str, Any],
+    *,
+    subjects: Sequence[str],
+) -> dict[str, Any]:
+    expected_frames = _expected_parity_frames(subjects)
     return {
         **_artifact_record(path),
         "status": "passed",
+        "subjects": list(subjects),
         "checkedFrames": report["checkedFrames"],
         "passedFrames": report["passedFrames"],
-        "expectedFrames": EXPECTED_PARITY_FRAMES,
+        "expectedFrames": expected_frames,
         "sourceSetSha256": report["sourceSetSha256"],
     }
+
+
+def _canonical_rgba_bytes(image: Image.Image) -> bytes:
+    rgba = bytearray(image.convert("RGBA").tobytes())
+    for offset in range(0, len(rgba), 4):
+        if rgba[offset + 3] < 255:
+            rgba[offset] = 0
+            rgba[offset + 1] = 0
+            rgba[offset + 2] = 0
+    return bytes(rgba)
+
+
+def _rgba_sha256(width: int, height: int, rgba: bytes) -> str:
+    digest = hashlib.sha256()
+    digest.update(f"{width}x{height}:RGBA\n".encode("utf-8"))
+    digest.update(rgba)
+    return digest.hexdigest()
+
+
+def _source_path_for_frame(source_path: str) -> Path:
+    if not _is_safe_source_png_path(source_path):
+        raise ReviewRecordingError(
+            f"不是安全的 res:// 或 repo:// PNG 路径：{source_path!r}"
+        )
+    is_repo_path = source_path.startswith("repo://")
+    prefix = "repo://" if is_repo_path else "res://"
+    relative = Path(source_path.removeprefix(prefix))
+    source_root = REPO_ROOT if is_repo_path else GODOT_PROJECT
+    candidate = source_root / relative
+    cursor = source_root
+    for part in relative.parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise ReviewRecordingError(f"世界帧路径包含符号链接别名：{source_path}")
+    try:
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(source_root.resolve(strict=True))
+    except (FileNotFoundError, ValueError, OSError) as error:
+        raise ReviewRecordingError(f"世界帧不存在或越出声明源根：{source_path}") from error
+    if not resolved.is_file():
+        raise ReviewRecordingError(f"世界帧不是普通文件：{source_path}")
+    return resolved
+
+
+def _validate_source_frame_independence(
+    frames: Sequence[dict[str, Any]],
+    *,
+    subjects: Sequence[str],
+) -> None:
+    """Reject filesystem aliases, duplicate pixels, and mirrored directions."""
+    expected_frames = _expected_parity_frames(subjects)
+    if len(frames) != expected_frames:
+        raise ReviewRecordingError(
+            f"源帧独立性检查收到 {len(frames)} 帧，期望 {expected_frames}"
+        )
+    seen_inodes: dict[tuple[int, int], str] = {}
+    per_subject: dict[str, list[tuple[tuple[str, str, int], str, str]]] = {
+        subject: [] for subject in subjects
+    }
+    for row_index, frame in enumerate(frames):
+        source_path = str(frame.get("path", ""))
+        path = _source_path_for_frame(source_path)
+        stat = path.stat()
+        inode = (stat.st_dev, stat.st_ino)
+        previous_path = seen_inodes.get(inode)
+        if previous_path is not None:
+            raise ReviewRecordingError(
+                f"世界帧路径存在文件系统别名：{previous_path} 与 {source_path}"
+            )
+        if stat.st_nlink != 1:
+            raise ReviewRecordingError(
+                f"世界帧存在仓库外硬链接别名：{source_path} links={stat.st_nlink}"
+            )
+        seen_inodes[inode] = source_path
+        try:
+            with Image.open(path) as image:
+                image.load()
+                width, height = image.size
+                canonical = _canonical_rgba_bytes(image)
+        except (OSError, UnidentifiedImageError) as error:
+            raise ReviewRecordingError(f"世界帧无法解码：{source_path}: {error}") from error
+        decoded_sha256 = _rgba_sha256(width, height, canonical)
+        if frame.get("sourceDecodedRgbaSha256") != decoded_sha256:
+            raise ReviewRecordingError(
+                f"世界帧 canonical RGBA 与 parity 报告不一致：frames[{row_index}]"
+            )
+        row_width = width * 4
+        mirrored = b"".join(
+            b"".join(
+                canonical[row_start + column : row_start + column + 4]
+                for column in range(row_width - 4, -1, -4)
+            )
+            for row_start in range(0, len(canonical), row_width)
+        )
+        mirror_sha256 = _rgba_sha256(width, height, mirrored)
+        subject = str(frame.get("kind", ""))
+        if subject not in per_subject:
+            raise ReviewRecordingError(f"世界帧混入未请求主体：{subject!r}")
+        key = (
+            str(frame.get("direction", "")),
+            str(frame.get("action", "")),
+            int(frame.get("index", 0)),
+        )
+        per_subject[subject].append((key, decoded_sha256, mirror_sha256))
+
+    for subject, rows in per_subject.items():
+        by_decoded: dict[str, tuple[str, str, int]] = {}
+        for key, decoded_sha256, _ in rows:
+            previous = by_decoded.get(decoded_sha256)
+            if previous is not None:
+                raise ReviewRecordingError(
+                    f"{subject} 世界帧像素重复：{previous!r} 与 {key!r}"
+                )
+            by_decoded[decoded_sha256] = key
+        for key, _, mirror_sha256 in rows:
+            mirror_match = by_decoded.get(mirror_sha256)
+            if mirror_match is not None and mirror_match[0] != key[0]:
+                raise ReviewRecordingError(
+                    f"{subject} 世界方向疑似水平镜像：{key!r} 与 {mirror_match!r}"
+                )
 
 
 def _parse_fraction(value: Any, *, label: str) -> Fraction:
@@ -502,12 +938,20 @@ def _review_arguments(
     form_id: str,
     run_id: str,
     parity_report_path: Path,
+    subjects: Sequence[str],
+    isolated_bundle: dict[str, Any] | None = None,
 ) -> list[str]:
-    return [
+    arguments = [
         f"--mount-review-form={form_id}",
         f"--mount-review-run-id={run_id}",
         f"--mount-review-parity-report={parity_report_path}",
+        f"--mount-review-subjects={','.join(subjects)}",
     ]
+    if isolated_bundle is not None:
+        arguments.append(
+            f"--mount-review-pet-root={isolated_bundle['rootAbsolute']}"
+        )
+    return arguments
 
 
 def _record_form(
@@ -519,6 +963,8 @@ def _record_form(
     ffmpeg: str,
     ffprobe: str,
     timeout_seconds: float,
+    subjects: Sequence[str],
+    isolated_bundle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     form_dir.mkdir(parents=False, exist_ok=False)
 
@@ -536,6 +982,8 @@ def _record_form(
                 form_id=form_id,
                 run_id=run_id,
                 parity_report_path=preflight_report_path,
+                subjects=subjects,
+                isolated_bundle=isolated_bundle,
             ),
             "--mount-review-parity-only",
         ],
@@ -547,6 +995,12 @@ def _record_form(
         form_id=form_id,
         run_id=run_id,
         label=f"{form_id} parity-only 报告",
+        subjects=subjects,
+        isolated_bundle=isolated_bundle,
+    )
+    _validate_source_frame_independence(
+        preflight_report["frames"],
+        subjects=subjects,
     )
     source_set_sha256 = preflight_report["sourceSetSha256"]
 
@@ -565,6 +1019,8 @@ def _record_form(
                 form_id=form_id,
                 run_id=run_id,
                 parity_report_path=recording_report_path,
+                subjects=subjects,
+                isolated_bundle=isolated_bundle,
             ),
             "--record-mount-directions",
         ],
@@ -576,6 +1032,8 @@ def _record_form(
         form_id=form_id,
         run_id=run_id,
         label=f"{form_id} 录制进程 parity 报告",
+        subjects=subjects,
+        isolated_bundle=isolated_bundle,
         expected_source_set_sha256=source_set_sha256,
     )
     _artifact_record(avi_path)
@@ -646,6 +1104,8 @@ def _record_form(
                 form_id=form_id,
                 run_id=run_id,
                 parity_report_path=grid_report_path,
+                subjects=subjects,
+                isolated_bundle=isolated_bundle,
             ),
             f"--capture-mount-directions={grid_path}",
         ],
@@ -657,6 +1117,8 @@ def _record_form(
         form_id=form_id,
         run_id=run_id,
         label=f"{form_id} 网格进程 parity 报告",
+        subjects=subjects,
+        isolated_bundle=isolated_bundle,
         expected_source_set_sha256=source_set_sha256,
     )
     grid_width, grid_height = _png_dimensions(grid_path)
@@ -736,14 +1198,27 @@ def _record_form(
         for path in sorted(form_dir.iterdir(), key=lambda value: value.name)
         if path.is_file()
     ]
-    parity = _parity_artifact(recording_report_path, recording_report)
-    return {
+    parity = _parity_artifact(
+        recording_report_path,
+        recording_report,
+        subjects=subjects,
+    )
+    result = {
         "formId": form_id,
         "runId": run_id,
         "status": "passed",
+        "subjects": list(subjects),
         "parity": parity,
-        "preflightParity": _parity_artifact(preflight_report_path, preflight_report),
-        "gridParity": _parity_artifact(grid_report_path, grid_report),
+        "preflightParity": _parity_artifact(
+            preflight_report_path,
+            preflight_report,
+            subjects=subjects,
+        ),
+        "gridParity": _parity_artifact(
+            grid_report_path,
+            grid_report,
+            subjects=subjects,
+        ),
         "video": {
             **_artifact_record(video_path),
             **video_metadata,
@@ -770,6 +1245,16 @@ def _record_form(
         "probe": _artifact_record(probe_path),
         "files": files,
     }
+    if isolated_bundle is not None:
+        result["isolatedPetBundle"] = {
+            "mode": isolated_bundle["mode"],
+            "formId": isolated_bundle["formId"],
+            "root": isolated_bundle["root"],
+            "metadata": isolated_bundle["metadata"],
+            "bundleSha256": isolated_bundle["bundleSha256"],
+            "frameCount": isolated_bundle["frameCount"],
+        }
+    return result
 
 
 def _selected_forms(values: Iterable[str] | None) -> tuple[str, ...]:
@@ -798,6 +1283,19 @@ def _record(args: argparse.Namespace) -> Path:
         raise ReviewRecordingError(f"Godot 项目不存在：{GODOT_PROJECT}")
 
     forms = _selected_forms(args.form_ids)
+    subjects = _selected_subjects(args.subjects)
+    isolated_bundle: dict[str, Any] | None = None
+    if args.pet_root is not None:
+        if subjects != PET_ONLY_SUBJECTS:
+            raise ReviewRecordingError(
+                "--pet-root 只允许与 --subjects pet 同时使用"
+            )
+        if len(forms) != 1:
+            raise ReviewRecordingError("--pet-root 每次只能录制一个 --form-id")
+        isolated_bundle = _validate_isolated_pet_root(
+            args.pet_root,
+            form_id=forms[0],
+        )
     run_id = args.run_id or _new_run_id()
     if not SAFE_ID.fullmatch(run_id):
         raise ReviewRecordingError(f"不安全的 runId：{run_id!r}")
@@ -832,8 +1330,18 @@ def _record(args: argparse.Namespace) -> Path:
                 ffmpeg=ffmpeg,
                 ffprobe=ffprobe,
                 timeout_seconds=timeout_seconds,
+                subjects=subjects,
+                isolated_bundle=isolated_bundle,
             )
         )
+
+    if isolated_bundle is not None:
+        final_bundle = _validate_isolated_pet_root(
+            Path(isolated_bundle["rootAbsolute"]),
+            form_id=forms[0],
+        )
+        if final_bundle["bundleSha256"] != isolated_bundle["bundleSha256"]:
+            raise ReviewRecordingError("隔离宠物包在录制期间发生漂移")
 
     all_indexed_files = [
         _artifact_record(path)
@@ -848,8 +1356,10 @@ def _record(args: argparse.Namespace) -> Path:
         "generatedAtUtc": _utc_now().isoformat().replace("+00:00", "Z"),
         "scene": REVIEW_SCENE,
         "formIds": list(forms),
+        "subjects": list(subjects),
         "expected": {
-            "parityFramesPerForm": EXPECTED_PARITY_FRAMES,
+            "subjects": list(subjects),
+            "parityFramesPerForm": _expected_parity_frames(subjects),
             "width": EXPECTED_WIDTH,
             "height": EXPECTED_HEIGHT,
             "fps": float(EXPECTED_FPS),
@@ -877,6 +1387,7 @@ def _record(args: argparse.Namespace) -> Path:
                 "status": "passed",
                 "runId": run_id,
                 "forms": len(form_records),
+                "subjects": list(subjects),
                 "indexedFiles": len(all_indexed_files),
                 "evidenceIndex": _repo_relative(index_path),
             },
@@ -895,6 +1406,21 @@ def _parser() -> argparse.ArgumentParser:
         action="append",
         dest="form_ids",
         help="要录制的 formId；可重复。省略时录制当前 7 套完整世界包。",
+    )
+    parser.add_argument(
+        "--subjects",
+        help=(
+            "验收主体：pet 或 character,pet,mounted。"
+            "省略时保持旧版三主体 120 帧流程。"
+        ),
+    )
+    parser.add_argument(
+        "--pet-root",
+        type=Path,
+        help=(
+            "仅用于 --subjects pet 且单一 --form-id："
+            "仓库 .run/ 内的 runtimeEnabled=false 隔离非骑乘宠物包。"
+        ),
     )
     parser.add_argument("--run-id", help="可选的唯一安全 runId；省略时自动生成。")
     parser.add_argument(

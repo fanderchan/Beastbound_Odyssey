@@ -95,6 +95,60 @@ def _refresh_action_integrity(action_root: Path) -> None:
     _write_json(source_meta_path, source_meta)
 
 
+def _add_preprocessing_chain(action_root: Path) -> dict[str, str]:
+    """Add an original -> repack -> deterministic split provenance chain."""
+
+    source_meta_path = action_root / "source-meta.json"
+    source_meta = json.loads(source_meta_path.read_text(encoding="utf-8"))
+    raw_archive = action_root / source_meta["rawArchive"]
+    pipeline_input = action_root / "pipeline-input-lossless.png"
+    with Image.open(raw_archive) as image:
+        image.convert("RGBA").save(pipeline_input, format="PNG")
+
+    pipeline_input_sha = MODULE.sha256_file(pipeline_input)
+    pipeline_input_decoded = MODULE.decoded_rgba_hash(pipeline_input)
+    repack_path = action_root / "repack-meta.json"
+    repack = {
+        "schemaVersion": 1,
+        "tool": "repack_chroma_sprite_grid.py",
+        "input": source_meta["rawArchive"],
+        "output": pipeline_input.name,
+        "inputSha256": source_meta["originalGeneratedSha256"],
+        "inputDecodedRgbaSha256": source_meta[
+            "originalGeneratedDecodedRgbaSha256"
+        ],
+        "outputSha256": pipeline_input_sha,
+        "outputDecodedRgbaSha256": pipeline_input_decoded,
+    }
+    _write_json(repack_path, repack)
+
+    pipeline_path = action_root / "pipeline-meta.json"
+    pipeline = json.loads(pipeline_path.read_text(encoding="utf-8"))
+    pipeline["inputSha256"] = pipeline_input_sha
+    _write_json(pipeline_path, pipeline)
+
+    source_meta["pipelineSha256"] = MODULE.sha256_file(pipeline_path)
+    source_meta["preprocessing"] = {
+        "schemaVersion": 1,
+        "tool": "repack_chroma_sprite_grid.py",
+        "inputSha256": source_meta["originalGeneratedSha256"],
+        "inputDecodedRgbaSha256": source_meta[
+            "originalGeneratedDecodedRgbaSha256"
+        ],
+        "outputArchive": pipeline_input.name,
+        "outputArchiveSha256": pipeline_input_sha,
+        "outputDecodedRgbaSha256": pipeline_input_decoded,
+        "metadata": repack_path.name,
+        "metadataSha256": MODULE.sha256_file(repack_path),
+    }
+    _write_json(source_meta_path, source_meta)
+    return {
+        "pipelineInputSha256": pipeline_input_sha,
+        "pipelineInputDecodedRgbaSha256": pipeline_input_decoded,
+        "repackMetadataSha256": MODULE.sha256_file(repack_path),
+    }
+
+
 def _materialize_staging(root: Path, *, mounted: bool = False) -> tuple[Path, dict[str, Any]]:
     staging = root / "staging"
     manifest = _manifest_fixture()
@@ -632,6 +686,140 @@ class InstallPetBattleBundleTest(unittest.TestCase):
                     "representativeRawTracked"
                 ]
             )
+
+    def test_install_replaces_identity_only_note_with_truthful_full_pack_scope(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging, _ = _materialize_staging(root)
+            destination = root / "asset-root"
+            destination.mkdir(parents=True)
+            _write_json(
+                destination / "action-bundle-meta.json",
+                {
+                    "schemaVersion": 1,
+                    "formId": "fixture_pet_v1",
+                    "runtimeEnabled": False,
+                    "notes": (
+                        "Identity and four key poses only. World and battle "
+                        "animation matrices are intentionally not produced."
+                    ),
+                    "worldVisual": {
+                        "strategy": "independent_8",
+                        "runtimeMirroring": False,
+                        "totalFrameCount": 40,
+                    },
+                },
+            )
+
+            MODULE.install_bundle(_options(staging, destination))
+
+            metadata = json.loads(
+                (destination / "action-bundle-meta.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertIn(
+                "true-eight-direction world art",
+                metadata["notes"],
+            )
+            self.assertIn(
+                "complete two-view battle matrix",
+                metadata["notes"],
+            )
+            self.assertNotIn("key poses only", metadata["notes"])
+
+    def test_repack_preprocessing_chain_is_archived_and_recorded(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging, _ = _materialize_staging(root)
+            action_root = staging / "views/front_3quarter_sw/attack"
+            expected = _add_preprocessing_chain(action_root)
+            destination = root / "asset-root"
+
+            summary = MODULE.install_bundle(_options(staging, destination))
+
+            self.assertTrue(summary["changed"])
+            installed_action = (
+                destination
+                / "source/battle/front_3quarter_sw/attack"
+            )
+            self.assertEqual(
+                MODULE.sha256_file(
+                    installed_action / "pipeline-input-lossless.png"
+                ),
+                expected["pipelineInputSha256"],
+            )
+            self.assertEqual(
+                MODULE.sha256_file(installed_action / "repack-meta.json"),
+                expected["repackMetadataSha256"],
+            )
+            ledger = json.loads(
+                (
+                    destination / "source/battle/source-ledger.json"
+                ).read_text(encoding="utf-8")
+            )
+            preprocessing = ledger["actions"]["front_3quarter_sw"][
+                "attack"
+            ]["preprocessing"]
+            self.assertEqual(
+                preprocessing["tool"],
+                "repack_chroma_sprite_grid.py",
+            )
+            self.assertEqual(
+                preprocessing["outputArchiveSha256"],
+                expected["pipelineInputSha256"],
+            )
+            self.assertEqual(
+                preprocessing["outputDecodedRgbaSha256"],
+                expected["pipelineInputDecodedRgbaSha256"],
+            )
+            self.assertTrue(preprocessing["outputArchiveTracked"])
+            self.assertTrue(preprocessing["metadataTracked"])
+
+    def test_repack_preprocessing_hash_drift_is_rejected(self) -> None:
+        with self.subTest("pipeline input bytes"):
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                staging, _ = _materialize_staging(root)
+                action_root = staging / "views/front_3quarter_sw/attack"
+                _add_preprocessing_chain(action_root)
+                pipeline_input = (
+                    action_root / "pipeline-input-lossless.png"
+                )
+                pipeline_input.write_bytes(
+                    pipeline_input.read_bytes() + b"drift"
+                )
+
+                with self.assertRaisesRegex(
+                    MODULE.BattleBundleError,
+                    "preprocessing outputArchiveSha256",
+                ):
+                    MODULE.install_bundle(
+                        _options(staging, root / "asset-root")
+                    )
+
+        with self.subTest("repack metadata bytes"):
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                staging, _ = _materialize_staging(root)
+                action_root = staging / "views/front_3quarter_sw/attack"
+                _add_preprocessing_chain(action_root)
+                repack_path = action_root / "repack-meta.json"
+                repack = json.loads(
+                    repack_path.read_text(encoding="utf-8")
+                )
+                repack["unexpected"] = "drift"
+                _write_json(repack_path, repack)
+
+                with self.assertRaisesRegex(
+                    MODULE.BattleBundleError,
+                    "preprocessing metadataSha256",
+                ):
+                    MODULE.install_bundle(
+                        _options(staging, root / "asset-root")
+                    )
 
     def test_cli_defaults_to_full_archive(self) -> None:
         parsed = MODULE.parse_args(

@@ -2,7 +2,11 @@ class_name WorldReviewFrameParity
 extends RefCounted
 
 
-static func compare_source_and_loaded(source_res_path: String, texture: Texture2D) -> Dictionary:
+static func compare_source_and_loaded(
+	source_res_path: String,
+	texture: Texture2D,
+	allow_isolated_file: bool = false
+) -> Dictionary:
 	var result := {
 		"path": source_res_path,
 		"status": "failed",
@@ -11,6 +15,8 @@ static func compare_source_and_loaded(source_res_path: String, texture: Texture2
 		"sourceFileMd5": "",
 		"importSourceMd5": "",
 		"importFresh": false,
+		"sourceFileFresh": false,
+		"resourceImportParityChecked": false,
 		"loadMode": "",
 		"sourceFullDecodedRgbaSha256": "",
 		"sourceDecodedRgbaSha256": "",
@@ -18,13 +24,27 @@ static func compare_source_and_loaded(source_res_path: String, texture: Texture2
 		"canonicalRgbaMatch": false,
 	}
 	var errors := result["errors"] as Array
-	if source_res_path == "" or not source_res_path.begins_with("res://"):
-		errors.append("源路径不是 res:// 资源")
+	var is_resource_path := source_res_path.begins_with("res://")
+	var is_isolated_path := (
+		allow_isolated_file
+		and source_res_path.is_absolute_path()
+	)
+	if source_res_path == "" or (not is_resource_path and not is_isolated_path):
+		errors.append("源路径不是 res:// 资源或显式隔离绝对路径")
 		return result
 	if texture == null:
 		errors.append("ResourceLoader 纹理为空")
 		return result
-	var source_absolute := ProjectSettings.globalize_path(source_res_path)
+	var source_absolute := (
+		ProjectSettings.globalize_path(source_res_path)
+		if is_resource_path
+		else source_res_path.simplify_path()
+	)
+	if is_isolated_path:
+		result["path"] = _repo_record_path(source_absolute)
+		if not str(result["path"]).begins_with("repo://"):
+			errors.append("隔离源路径不在仓库内")
+			return result
 	var source := Image.load_from_file(source_absolute)
 	if source == null or source.is_empty():
 		errors.append("当前源 PNG 无法解码")
@@ -33,14 +53,22 @@ static func compare_source_and_loaded(source_res_path: String, texture: Texture2
 	if loaded == null or loaded.is_empty():
 		errors.append("Godot 已加载纹理无法解码")
 		return result
-	result["sourceFileSha256"] = FileAccess.get_sha256(source_res_path)
-	result["sourceFileMd5"] = FileAccess.get_md5(source_res_path)
-	var import_record := _import_record(source_res_path)
-	result["importSourceMd5"] = str(import_record.get("sourceMd5", ""))
-	result["importFresh"] = bool(import_record.get("fresh", false))
-	result["loadMode"] = str(import_record.get("loadMode", ""))
-	for error_value in import_record.get("errors", []):
-		errors.append(str(error_value))
+	var hash_path := source_res_path if is_resource_path else source_absolute
+	result["sourceFileSha256"] = FileAccess.get_sha256(hash_path)
+	result["sourceFileMd5"] = FileAccess.get_md5(hash_path)
+	if is_resource_path:
+		var import_record := _import_record(source_res_path)
+		result["importSourceMd5"] = str(import_record.get("sourceMd5", ""))
+		result["importFresh"] = bool(import_record.get("fresh", false))
+		result["sourceFileFresh"] = bool(import_record.get("fresh", false))
+		result["resourceImportParityChecked"] = true
+		result["loadMode"] = str(import_record.get("loadMode", ""))
+		for error_value in import_record.get("errors", []):
+			errors.append(str(error_value))
+	else:
+		result["sourceFileFresh"] = true
+		result["resourceImportParityChecked"] = false
+		result["loadMode"] = "qa_isolated_file"
 	if source.get_size() != loaded.get_size():
 		errors.append("源 PNG 与 Godot 纹理尺寸不一致：%s != %s" % [source.get_size(), loaded.get_size()])
 		return result
@@ -54,7 +82,7 @@ static func compare_source_and_loaded(source_res_path: String, texture: Texture2
 	if not bool(result["canonicalRgbaMatch"]):
 		var difference := _first_difference(source_bytes, loaded_bytes, source.get_width())
 		errors.append("当前源 PNG 与 Godot 实际加载像素不一致，首差异=%s" % JSON.stringify(difference))
-	if not bool(result["importFresh"]):
+	if is_resource_path and not bool(result["importFresh"]):
 		errors.append("Godot import source_md5 不是当前源 PNG；必须重导入后再录制")
 	result["status"] = "passed" if errors.is_empty() else "failed"
 	return result
@@ -114,6 +142,15 @@ static func _import_record(source_res_path: String) -> Dictionary:
 	result["sourceMd5"] = imported_source_md5
 	result["fresh"] = imported_source_md5 == FileAccess.get_md5(source_res_path).to_lower()
 	return result
+
+
+static func _repo_record_path(absolute_path: String) -> String:
+	var project_root := ProjectSettings.globalize_path("res://").simplify_path()
+	var repository_root := project_root.get_base_dir().get_base_dir().simplify_path()
+	var normalized := absolute_path.simplify_path()
+	if not normalized.begins_with("%s/" % repository_root):
+		return normalized
+	return "repo://%s" % normalized.trim_prefix("%s/" % repository_root)
 
 
 static func _canonical_rgba_bytes(image: Image) -> PackedByteArray:

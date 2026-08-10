@@ -28,6 +28,7 @@ GREEN_DOMINANCE_MIN = 18.0
 GREEN_LOCAL_DOMINANCE_GAP = 12.0
 GREEN_REFERENCE_RADIUS = 12
 GREEN_AUTO_REPAIR_MAX_COMPONENT_PIXELS = 4
+RESAMPLED_GREEN_REFERENCE_RADIUS = 16
 CHROMA_KEY_RGB = (255.0, 0.0, 255.0)
 CHROMA_RESIDUE_DISTANCE_MAX = 96.0
 
@@ -126,6 +127,59 @@ def _small_target_components(mask: np.ndarray, max_pixels: int) -> np.ndarray:
             for component_x, component_y in component:
                 accepted[component_y, component_x] = True
     return accepted
+
+
+def green_region_metrics(
+    image: Image.Image,
+    alpha_threshold: int = 8,
+) -> dict[str, int]:
+    """Measure authored-looking green regions without changing the image.
+
+    The bundle builder uses this only after chroma cleanup.  A substantial
+    connected region or a field of many green particles is evidence that green
+    is part of the authored pet/VFX palette and resample fringe must be kept.
+    """
+
+    rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8)
+    alpha = rgba[:, :, 3]
+    mask = (
+        (alpha >= alpha_threshold)
+        & (rgba[:, :, 1] >= GREEN_MIN_CHANNEL)
+        & (_green_dominance(rgba[:, :, :3]) >= GREEN_DOMINANCE_MIN)
+    )
+    height, width = mask.shape
+    visited = np.zeros_like(mask)
+    largest = 0
+    components = 0
+    target_y, target_x = np.nonzero(mask)
+    for y, x in zip(target_y.tolist(), target_x.tolist()):
+        if visited[y, x]:
+            continue
+        components += 1
+        visited[y, x] = True
+        queue: deque[tuple[int, int]] = deque([(x, y)])
+        size = 0
+        while queue:
+            current_x, current_y = queue.popleft()
+            size += 1
+            for next_x, next_y in (
+                (current_x - 1, current_y),
+                (current_x + 1, current_y),
+                (current_x, current_y - 1),
+                (current_x, current_y + 1),
+            ):
+                if not (0 <= next_x < width and 0 <= next_y < height):
+                    continue
+                if visited[next_y, next_x] or not mask[next_y, next_x]:
+                    continue
+                visited[next_y, next_x] = True
+                queue.append((next_x, next_y))
+        largest = max(largest, size)
+    return {
+        "pixels": int(len(target_x)),
+        "components": components,
+        "largestComponentPixels": largest,
+    }
 
 
 def _component_labels_for_targets(
@@ -357,10 +411,12 @@ def despill_chroma_partial_anomalies(
         & (rgb[:, :, 1] >= GREEN_MIN_CHANNEL)
         & (green_dominance >= GREEN_DOMINANCE_MIN)
     )
-    green_inverse = _small_target_components(
-        green_inverse,
-        GREEN_AUTO_REPAIR_MAX_COMPONENT_PIXELS,
-    )
+    # ``proven_green_anomaly`` comes from the same raw chroma pixels and is
+    # stronger evidence than component size.  Background tint bands can be
+    # dozens of connected pixels wide (the fire counter regression is one),
+    # so limiting repair to tiny islands leaves deterministic green seams.
+    # Authored green is protected below by a same-component green reference,
+    # not by the number of pixels in the effect.
     anomalous = invalid_inverse | green_inverse
 
     # References may be opaque or mathematically valid partial pixels, but may
@@ -394,10 +450,25 @@ def despill_chroma_partial_anomalies(
         & assigned
         & (local_green_gap < GREEN_LOCAL_DOMINANCE_GAP)
     )
-    repaired = repaired_invalid | repaired_green
+    # A proven low-alpha chroma inverse can form a disconnected background
+    # tint band with no opaque inward reference at all.  In that case there is
+    # no authored hue to borrow.  Clamp only the excess green channel to the
+    # strongest red/blue channel; this removes the impossible inverse without
+    # inventing another hue or touching alpha.  A real green body/VFX with a
+    # non-key core gets a same-component reference and is preserved above.
     unresolved_invalid = invalid_inverse & ~assigned
     unresolved_green = green_inverse & ~assigned
-    rgba[:, :, :3][repaired] = references[repaired]
+    fallback_green = unresolved_green
+    repaired_from_reference = repaired_invalid | repaired_green
+    repaired = repaired_from_reference | fallback_green
+    rgba[:, :, :3][repaired_from_reference] = references[repaired_from_reference]
+    if np.any(fallback_green):
+        fallback_rgb = rgba[:, :, :3][fallback_green]
+        fallback_rgb[:, 1] = np.minimum(
+            fallback_rgb[:, 1],
+            np.maximum(fallback_rgb[:, 0], fallback_rgb[:, 2]),
+        )
+        rgba[:, :, :3][fallback_green] = fallback_rgb
 
     rgba[original_alpha == 0, :3] = 0
     rgba[:, :, 3] = original_alpha
@@ -416,7 +487,8 @@ def despill_chroma_partial_anomalies(
         "strongGreenPixelsBefore": int(np.count_nonzero(green_inverse)),
         "repairedPixels": int(np.count_nonzero(repaired)),
         "unresolvedInvalidInversePixels": int(np.count_nonzero(unresolved_invalid)),
-        "unresolvedStrongGreenPixels": int(np.count_nonzero(unresolved_green)),
+        "unresolvedStrongGreenPixels": 0,
+        "fallbackGreenPixels": int(np.count_nonzero(fallback_green)),
         "preservedNaturalGreenPixels": int(np.count_nonzero(preserved_natural_green)),
         "strongGreenPixelsAfter": int(np.count_nonzero(strong_green_after)),
         "referenceRadius": GREEN_REFERENCE_RADIUS,
@@ -430,12 +502,15 @@ def despill_chroma_partial_anomalies(
 def despill_resampled_green_edges(
     image: Image.Image,
     alpha_threshold: int = 2,
+    eligible_mask: np.ndarray | None = None,
 ) -> tuple[Image.Image, dict[str, Any]]:
-    """Preserve resized art when no chroma provenance mask exists.
+    """Repair proven resample fringe, or preserve art without provenance.
 
     Premultiplied resizing prevents hidden RGB from inventing a green fringe.
-    Any remaining low-alpha green may be a legitimate connected VFX or body
-    accent, so this compatibility entry point is intentionally a no-op.
+    Any remaining low-alpha green may still be a legitimate connected VFX or
+    body accent, so the default remains a byte-preserving no-op.  A caller that
+    keyed the raw chroma in the same build may pass an explicit eligibility
+    mask after separately proving that the frame has no authored green region.
     """
 
     rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8).copy()
@@ -447,20 +522,61 @@ def despill_resampled_green_edges(
         & (_green_dominance(rgba[:, :, :3]) >= GREEN_DOMINANCE_MIN)
     )
     count = int(np.count_nonzero(strong_green))
+    if eligible_mask is None:
+        return Image.fromarray(rgba, mode="RGBA"), {
+            "invalidInversePixelsBefore": 0,
+            "strongGreenPixelsBefore": count,
+            "repairedPixels": 0,
+            "unresolvedInvalidInversePixels": 0,
+            "unresolvedStrongGreenPixels": count,
+            "preservedNaturalGreenPixels": count,
+            "strongGreenPixelsAfter": count,
+            "referenceRadius": 0,
+            "referenceAlphaMinimum": REFERENCE_ALPHA_MIN,
+            "greenAutoRepairMaxComponentPixels": 0,
+            "provenGreenAnomalyPixels": 0,
+            "alphaPixelsChanged": 0,
+            "skippedReason": "no_chroma_provenance",
+        }
+    if eligible_mask.shape != strong_green.shape:
+        raise ValueError("resampled green eligibility mask must match the image dimensions")
+
+    targets = strong_green & eligible_mask
+    # At the resampled stage there is no longer a one-to-one inward source
+    # pixel to borrow without letting Lanczos changes bleed into neighboring
+    # authored purple.  Make the smallest possible correction instead: keep
+    # red and blue byte-for-byte and lower only the excess green channel to the
+    # stronger of them.  This deterministically clears the gate, remains far
+    # from the magenta key, and cannot alter alpha.
+    if np.any(targets):
+        target_rgb = rgba[:, :, :3][targets]
+        target_rgb[:, 1] = np.minimum(
+            target_rgb[:, 1],
+            np.maximum(target_rgb[:, 0], target_rgb[:, 2]),
+        )
+        rgba[:, :, :3][targets] = target_rgb
+    rgba[:, :, 3] = alpha
+    repaired_green = _green_dominance(rgba[:, :, :3])
+    strong_green_after = (
+        (alpha >= alpha_threshold)
+        & (alpha <= GREEN_EDGE_ALPHA_MAX)
+        & (rgba[:, :, 1] >= GREEN_MIN_CHANNEL)
+        & (repaired_green >= GREEN_DOMINANCE_MIN)
+    )
     return Image.fromarray(rgba, mode="RGBA"), {
         "invalidInversePixelsBefore": 0,
         "strongGreenPixelsBefore": count,
-        "repairedPixels": 0,
+        "repairedPixels": int(np.count_nonzero(targets)),
         "unresolvedInvalidInversePixels": 0,
-        "unresolvedStrongGreenPixels": count,
-        "preservedNaturalGreenPixels": count,
-        "strongGreenPixelsAfter": count,
+        "unresolvedStrongGreenPixels": 0,
+        "preservedNaturalGreenPixels": int(np.count_nonzero(strong_green & ~eligible_mask)),
+        "strongGreenPixelsAfter": int(np.count_nonzero(strong_green_after)),
         "referenceRadius": 0,
         "referenceAlphaMinimum": REFERENCE_ALPHA_MIN,
         "greenAutoRepairMaxComponentPixels": 0,
-        "provenGreenAnomalyPixels": 0,
-        "alphaPixelsChanged": 0,
-        "skippedReason": "no_chroma_provenance",
+        "provenGreenAnomalyPixels": int(np.count_nonzero(targets)),
+        "fallbackGreenPixels": int(np.count_nonzero(targets)),
+        "alphaPixelsChanged": int(np.count_nonzero(rgba[:, :, 3] != alpha)),
     }
 
 

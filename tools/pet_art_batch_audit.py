@@ -739,6 +739,138 @@ def _identity_load_json(path: Path, label: str) -> dict[str, Any]:
     return value
 
 
+def _first_json_subset_mismatch(
+    actual: Any,
+    expected: Any,
+    path: str = "$",
+) -> str | None:
+    """Return the first immutable-subcontract mismatch, allowing dict additions."""
+
+    if isinstance(expected, dict):
+        if not isinstance(actual, dict):
+            return f"{path} 必须是对象"
+        for key, expected_child in expected.items():
+            child_path = f"{path}.{key}"
+            if key not in actual:
+                return f"{child_path} 缺失"
+            mismatch = _first_json_subset_mismatch(
+                actual[key],
+                expected_child,
+                child_path,
+            )
+            if mismatch is not None:
+                return mismatch
+        return None
+    if isinstance(expected, list):
+        if not isinstance(actual, list):
+            return f"{path} 必须是数组"
+        if len(actual) != len(expected):
+            return f"{path} 长度必须为 {len(expected)}，实际 {len(actual)}"
+        for index, (actual_child, expected_child) in enumerate(
+            zip(actual, expected, strict=True)
+        ):
+            mismatch = _first_json_subset_mismatch(
+                actual_child,
+                expected_child,
+                f"{path}[{index}]",
+            )
+            if mismatch is not None:
+                return mismatch
+        return None
+    if type(actual) is not type(expected) or actual != expected:
+        return f"{path} 与冻结 identity 子合同不一致"
+    return None
+
+
+def _first_pending_lifecycle_violation(
+    value: Any,
+    path: str = "$",
+) -> str | None:
+    """Reject owner/release/runtime promotion hidden in extensible metadata."""
+
+    if isinstance(value, dict):
+        for key, child in value.items():
+            normalized_key = re.sub(
+                r"[^a-z0-9]",
+                "",
+                str(key).casefold(),
+            )
+            child_path = f"{path}.{key}"
+            if normalized_key.endswith("runtimeenabled") and child is not False:
+                return f"{child_path} 必须保持 false"
+            if (
+                (
+                    normalized_key.endswith("approved")
+                    or normalized_key.endswith("approvalgranted")
+                    or normalized_key.endswith("releaseenabled")
+                )
+                and child is not False
+            ):
+                return f"{child_path} 必须保持 false"
+            if (
+                ("approv" in normalized_key or "release" in normalized_key)
+                and child is True
+            ):
+                return f"{child_path} 不得声明批准或发布"
+            if (
+                "releaseattestation" in normalized_key
+                and child not in (None, False, "", [], {})
+            ):
+                return f"{child_path} 不得提前写入发布证明"
+            if isinstance(child, str):
+                normalized_value = re.sub(
+                    r"[^a-z0-9]",
+                    "",
+                    child.casefold(),
+                )
+                state_key = (
+                    normalized_key.endswith("status")
+                    or normalized_key.endswith("scope")
+                    or normalized_key.endswith("state")
+                    or normalized_key.endswith("gate")
+                )
+                negated_approval = (
+                    "notapproved" in normalized_value
+                    or "unapproved" in normalized_value
+                )
+                if state_key and (
+                    (
+                        "approved" in normalized_value
+                        and not negated_approval
+                    )
+                    or "released" in normalized_value
+                    or "runtimeenabled" in normalized_value
+                    or normalized_value == "enabled"
+                ):
+                    return f"{child_path} 不得越过 owner/runtime 发布门禁"
+                if (
+                    "owner" in normalized_key
+                    and normalized_value in {
+                        "approved",
+                        "ownerapproved",
+                        "passed",
+                        "true",
+                    }
+                ):
+                    return f"{child_path} 不得冒充 owner 批准"
+            violation = _first_pending_lifecycle_violation(
+                child,
+                child_path,
+            )
+            if violation is not None:
+                return violation
+        return None
+    if isinstance(value, list):
+        for index, child in enumerate(value):
+            violation = _first_pending_lifecycle_violation(
+                child,
+                f"{path}[{index}]",
+            )
+            if violation is not None:
+                return violation
+    return None
+
+
 def _audit_identity_gate_chain(
     spec: BundleSpec,
     *,
@@ -949,10 +1081,73 @@ def _audit_identity_gate_chain(
                 "matrices are intentionally not produced in this gate."
             ),
         }
-        if metadata != expected_metadata:
+        expected_identity_contract = {
+            key: expected_metadata[key]
+            for key in (
+                "schemaVersion",
+                "formId",
+                "displayName",
+                "artStatus",
+                "runtimeEnabled",
+                "rideableTarget",
+                "runtimeFrameSize",
+                "views",
+                "identity",
+                "supportedMountedCharacterIds",
+                "sourceArchive",
+                "evidence",
+                "keyPoseReviewStatus",
+                "ownerReviewStatus",
+            )
+        }
+        mismatch = _first_json_subset_mismatch(
+            metadata,
+            expected_identity_contract,
+        )
+        lifecycle_violation = _first_pending_lifecycle_violation(metadata)
+        production_scope = metadata.get("productionScope")
+        scope_normalized = (
+            re.sub(
+                r"[^a-z0-9]",
+                "",
+                production_scope.casefold(),
+            )
+            if isinstance(production_scope, str)
+            else ""
+        )
+        advanced_scope_invalid = (
+            production_scope != "identity_key_pose_gate"
+            and not (
+                "ownerreviewpending" in scope_normalized
+                or "ownerpending" in scope_normalized
+            )
+        )
+        initial_snapshot_drift = (
+            production_scope == "identity_key_pose_gate"
+            and metadata != expected_metadata
+        )
+        if (
+            mismatch is not None
+            or lifecycle_violation is not None
+            or advanced_scope_invalid
+            or initial_snapshot_drift
+        ):
+            detail = (
+                mismatch
+                or lifecycle_violation
+                or (
+                    "$.productionScope 必须是 identity_key_pose_gate，"
+                    "或明确保持 owner pending 的后续生产范围"
+                    if advanced_scope_invalid
+                    else "identity-only 初始快照发生漂移"
+                )
+            )
             raise IdentityGateAuditError(
                 "invalid_identity_gate_action_meta",
-                "身份门动作元数据与重算后的 schema-2 证据链不一致",
+                (
+                    "身份门动作元数据破坏重算后的 schema-2 identity "
+                    f"子合同：{detail}"
+                ),
                 spec.metadata_path,
             )
     except IdentityGateAuditError:

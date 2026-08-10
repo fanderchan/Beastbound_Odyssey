@@ -46,9 +46,22 @@ const ACTION_NAMES := {
 	"idle": "待机",
 	"walk": "行走",
 }
+const SUBJECT_CHARACTER := "character"
+const SUBJECT_PET := "pet"
+const SUBJECT_MOUNTED := "mounted"
+const LEGACY_SUBJECTS: Array[String] = [
+	SUBJECT_CHARACTER,
+	SUBJECT_PET,
+	SUBJECT_MOUNTED,
+]
+const PET_ONLY_SUBJECTS: Array[String] = [SUBJECT_PET]
+const FRAMES_PER_SUBJECT := 40
+const PET_ONLY_GRID_SCALE := 0.50
 
 var elapsed: float = 0.0
 var form_id: String = FORM_ID
+var subjects: Array[String] = LEGACY_SUBJECTS.duplicate()
+var isolated_pet_root: String = ""
 var grid_mode: bool = true
 var recording_mode: bool = false
 var timing_check_mode: bool = false
@@ -65,6 +78,7 @@ var active_mount: Node2D
 var active_title: Label
 var active_mapping: Label
 var qa_pet_preview_owned: bool = false
+var isolated_pet_overlay_owned: bool = false
 var qa_mounted_preview_owned: bool = false
 var qa_mount_profile_preview_owned: bool = false
 var grid_idle_characters: Array[Sprite2D] = []
@@ -80,6 +94,8 @@ func _ready() -> void:
 	get_window().size = Vector2i(1280, 720)
 	get_window().content_scale_size = Vector2i(1280, 720)
 	var startup_errors: Array[String] = []
+	var subjects_argument_seen := false
+	var pet_root_argument_seen := false
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--mount-review-form="):
 			var requested_form_id := arg.trim_prefix("--mount-review-form=").strip_edges()
@@ -101,6 +117,32 @@ func _ready() -> void:
 			parity_report_path = arg.trim_prefix("--mount-review-parity-report=").strip_edges()
 		elif arg.begins_with("--mount-review-run-id="):
 			parity_run_id = arg.trim_prefix("--mount-review-run-id=").strip_edges()
+		elif arg.begins_with("--mount-review-pet-root="):
+			if pet_root_argument_seen:
+				startup_errors.append("--mount-review-pet-root 只能提供一次")
+				continue
+			pet_root_argument_seen = true
+			isolated_pet_root = arg.trim_prefix(
+				"--mount-review-pet-root="
+			).strip_edges()
+		elif arg.begins_with("--mount-review-subjects="):
+			if subjects_argument_seen:
+				startup_errors.append("--mount-review-subjects 只能提供一次")
+				continue
+			subjects_argument_seen = true
+			var requested_subjects := arg.trim_prefix("--mount-review-subjects=").strip_edges()
+			if requested_subjects == SUBJECT_PET:
+				subjects = PET_ONLY_SUBJECTS.duplicate()
+			elif requested_subjects == ",".join(LEGACY_SUBJECTS):
+				subjects = LEGACY_SUBJECTS.duplicate()
+			else:
+				startup_errors.append(
+					"不支持的验收主体集合：%s（仅允许 pet 或 character,pet,mounted）" % requested_subjects
+				)
+	if isolated_pet_root != "" and not _is_pet_only():
+		startup_errors.append(
+			"--mount-review-pet-root 只允许与 --mount-review-subjects=pet 同时使用"
+		)
 	if timing_check_mode:
 		set_process(false)
 		_run_timing_check()
@@ -159,6 +201,9 @@ func _draw() -> void:
 
 
 func _build_grid() -> void:
+	if _is_pet_only():
+		_build_pet_only_grid()
+		return
 	_add_label("人物 / %s / 人骑宠 · 真八方向视觉验收" % _form_display_name(), Vector2(42, 20), 29, Color("f4de94"))
 	_add_label("每格同时展示固定待机与动态行走；独立八向源图，不做水平镜像", Vector2(43, 58), 16, Color("c8d8cf"))
 	for index in range(DIRECTIONS.size()):
@@ -184,7 +229,39 @@ func _build_grid() -> void:
 		grid_walk_mounts.append(_mounted_character(rect.position + Vector2(238, 251), direction, 0.19, "walk"))
 
 
+func _build_pet_only_grid() -> void:
+	_add_label("%s · 宠物真八方向视觉验收" % _form_display_name(), Vector2(42, 20), 29, Color("f4de94"))
+	_add_label("每格同时展示固定待机与动态行走；独立八向源图，不做水平镜像", Vector2(43, 58), 16, Color("c8d8cf"))
+	for index in range(DIRECTIONS.size()):
+		var direction := DIRECTIONS[index]
+		var rect := _grid_rect(index)
+		_add_label(
+			"%d  %s · 独立源图" % [index + 1, DIRECTION_NAMES[direction]],
+			rect.position + Vector2(15, 10),
+			15,
+			Color("edd689")
+		)
+		_add_label("宠物", rect.position + Vector2(130, 40), 13, Color("b9cbc1"))
+		_add_label("待", rect.position + Vector2(34, 90), 12, Color("edd689"))
+		_add_label("走", rect.position + Vector2(34, 201), 12, Color("8fdcc2"))
+		grid_idle_pets.append(
+			_pet_sprite(
+				rect.position + Vector2(155, 151),
+				PET_ONLY_GRID_SCALE
+			)
+		)
+		grid_walk_pets.append(
+			_pet_sprite(
+				rect.position + Vector2(155, 210),
+				PET_ONLY_GRID_SCALE
+			)
+		)
+
+
 func _build_cycle() -> void:
+	if _is_pet_only():
+		_build_pet_only_cycle()
+		return
 	_add_label("人物 / %s / 人骑宠 · 真八方向逐项录像" % _form_display_name(), Vector2(42, 20), 29, Color("f4de94"))
 	_add_label("独立八向源图 · 无运行时镜像 · 骑手、坐骑与运动轴必须一致", Vector2(43, 58), 16, Color("c8d8cf"))
 	_add_label("人物", Vector2(190, 126), 23, Color("e8d58f"))
@@ -200,15 +277,30 @@ func _build_cycle() -> void:
 		_add_label("%d %s" % [index + 1, DIRECTION_NAMES[DIRECTIONS[index]]], Vector2(x + 37, 655), 15, Color("cfdcd4"))
 
 
+func _build_pet_only_cycle() -> void:
+	_add_label("%s · 宠物真八方向逐项录像" % _form_display_name(), Vector2(42, 20), 29, Color("f4de94"))
+	_add_label("独立八向源图 · 无运行时镜像 · 朝向与运动轴必须一致", Vector2(43, 58), 16, Color("c8d8cf"))
+	_add_label("宠物", Vector2(598, 126), 23, Color("e8d58f"))
+	active_title = _add_label("", Vector2(520, 98), 26, Color("fff0b2"))
+	active_mapping = _add_label("", Vector2(519, 158), 15, Color("b9cbc1"))
+	active_pet = _pet_sprite(Vector2(640, 489), 0.88)
+	for index in range(DIRECTIONS.size()):
+		var x := 34.0 + float(index) * 153.0
+		_add_label("%d %s" % [index + 1, DIRECTION_NAMES[DIRECTIONS[index]]], Vector2(x + 37, 655), 15, Color("cfdcd4"))
+
+
 func _update_grid() -> void:
 	for index in range(DIRECTIONS.size()):
 		var direction := DIRECTIONS[index]
-		_update_character(grid_idle_characters[index], direction, "idle", 0.0)
-		_update_pet(grid_idle_pets[index], direction, "idle", 0.0)
-		grid_idle_mounts[index].call("set_visual_state", direction, "idle", 0.0)
-		_update_character(grid_walk_characters[index], direction, "walk", elapsed)
-		_update_pet(grid_walk_pets[index], direction, "walk", elapsed)
-		grid_walk_mounts[index].call("set_visual_state", direction, "walk", elapsed)
+		if _has_subject(SUBJECT_CHARACTER):
+			_update_character(grid_idle_characters[index], direction, "idle", 0.0)
+			_update_character(grid_walk_characters[index], direction, "walk", elapsed)
+		if _has_subject(SUBJECT_PET):
+			_update_pet(grid_idle_pets[index], direction, "idle", 0.0)
+			_update_pet(grid_walk_pets[index], direction, "walk", elapsed)
+		if _has_subject(SUBJECT_MOUNTED):
+			grid_idle_mounts[index].call("set_visual_state", direction, "idle", 0.0)
+			grid_walk_mounts[index].call("set_visual_state", direction, "walk", elapsed)
 
 
 func _update_cycle() -> void:
@@ -224,16 +316,26 @@ func _update_cycle() -> void:
 			DIRECTION_NAMES[direction],
 			ACTION_NAMES[next_action],
 		]
-		active_mapping.text = "人物、宠物、骑乘均为 %s 独立 %s 源图（当前：%s）" % [
-			DIRECTION_NAMES[direction],
-			next_action,
-			ACTION_NAMES[next_action],
-		]
+		if _is_pet_only():
+			active_mapping.text = "宠物为 %s 独立 %s 源图（当前：%s）" % [
+				DIRECTION_NAMES[direction],
+				next_action,
+				ACTION_NAMES[next_action],
+			]
+		else:
+			active_mapping.text = "人物、宠物、骑乘均为 %s 独立 %s 源图（当前：%s）" % [
+				DIRECTION_NAMES[direction],
+				next_action,
+				ACTION_NAMES[next_action],
+			]
 		queue_redraw()
 	var action_elapsed := _action_elapsed(local_elapsed)
-	_update_character(active_character, direction, next_action, action_elapsed)
-	_update_pet(active_pet, direction, next_action, action_elapsed)
-	active_mount.call("set_visual_state", direction, next_action, action_elapsed)
+	if _has_subject(SUBJECT_CHARACTER):
+		_update_character(active_character, direction, next_action, action_elapsed)
+	if _has_subject(SUBJECT_PET):
+		_update_pet(active_pet, direction, next_action, action_elapsed)
+	if _has_subject(SUBJECT_MOUNTED):
+		active_mount.call("set_visual_state", direction, next_action, action_elapsed)
 
 
 func _update_character(sprite: Sprite2D, direction: String, action: String, animation_elapsed: float) -> void:
@@ -324,9 +426,12 @@ func _draw_grid_panels() -> void:
 
 
 func _draw_cycle_panels() -> void:
-	draw_style_box(_panel_style(), Rect2(34, 177, 365, 430))
-	draw_style_box(_panel_style(), Rect2(457, 177, 365, 430))
-	draw_style_box(_panel_style(), Rect2(880, 177, 365, 430))
+	if _is_pet_only():
+		draw_style_box(_panel_style(), Rect2(457, 177, 365, 430))
+	else:
+		draw_style_box(_panel_style(), Rect2(34, 177, 365, 430))
+		draw_style_box(_panel_style(), Rect2(457, 177, 365, 430))
+		draw_style_box(_panel_style(), Rect2(880, 177, 365, 430))
 	var direction := DIRECTIONS[maxi(0, active_direction_index)]
 	_draw_direction_arrow(Vector2(640, 203), direction, 42.0)
 	for index in range(DIRECTIONS.size()):
@@ -384,26 +489,46 @@ func _add_label(text_value: String, position_value: Vector2, font_size: int, col
 
 func _prepare_review_assets() -> Array[String]:
 	var errors: Array[String] = []
-	if not CharacterActionAssetCatalog.warm():
+	if isolated_pet_root != "":
+		var overlay_report := (
+			PetActionAssetCatalog
+			.enable_standalone_review_overlay_from_cli(
+				form_id,
+				isolated_pet_root,
+				PetActionAssetCatalog.ISOLATED_SCOPE_WORLD_PET_ONLY
+			)
+		)
+		for value in overlay_report.get("errors", []):
+			errors.append("隔离宠物世界包拒绝：%s" % str(value))
+		isolated_pet_overlay_owned = bool(
+			overlay_report.get("ok", false)
+		)
+		if not isolated_pet_overlay_owned:
+			return errors
+	if _has_subject(SUBJECT_CHARACTER) and not CharacterActionAssetCatalog.warm():
 		errors.append("人物世界八向资产预热失败")
-	if not PetActionAssetCatalog.supports_world_form(form_id):
+	if (
+		_has_subject(SUBJECT_PET)
+		and not isolated_pet_overlay_owned
+		and not PetActionAssetCatalog.supports_world_form(form_id)
+	):
 		qa_pet_preview_owned = PetActionAssetCatalog.enable_qa_preview_form(form_id)
 		if not qa_pet_preview_owned:
 			errors.append("宠物 owner-pending QA 预览授权失败：%s" % form_id)
 	var character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
-	if not MountedCharacterAssetCatalog.supports_combination(character_id, form_id):
+	if _has_subject(SUBJECT_MOUNTED) and not MountedCharacterAssetCatalog.supports_combination(character_id, form_id):
 		qa_mounted_preview_owned = MountedCharacterAssetCatalog.enable_qa_preview_combination(character_id, form_id)
 		if not qa_mounted_preview_owned:
 			errors.append("人骑宠 owner-pending QA 预览授权失败：%s/%s" % [character_id, form_id])
-	if not MountVisualProfileCatalog.supports_form(form_id):
+	if _has_subject(SUBJECT_MOUNTED) and not MountVisualProfileCatalog.supports_form(form_id):
 		qa_mount_profile_preview_owned = MountVisualProfileCatalog.enable_qa_preview_form(form_id)
 		if not qa_mount_profile_preview_owned:
 			errors.append("骑乘展示档案 QA 预览授权失败：%s" % form_id)
 	if not errors.is_empty():
 		return errors
-	if not PetActionAssetCatalog.warm_world_form(form_id):
+	if _has_subject(SUBJECT_PET) and not PetActionAssetCatalog.warm_world_form(form_id):
 		errors.append("宠物世界八向资产预热失败：%s" % form_id)
-	if not MountedCharacterAssetCatalog.warm_world_form(form_id, character_id):
+	if _has_subject(SUBJECT_MOUNTED) and not MountedCharacterAssetCatalog.warm_world_form(form_id, character_id):
 		errors.append("人骑宠世界八向资产预热失败：%s/%s" % [character_id, form_id])
 	_validate_review_frames(character_id, errors)
 	if qa_pet_preview_owned or qa_mounted_preview_owned or qa_mount_profile_preview_owned:
@@ -419,69 +544,74 @@ func _prepare_review_assets() -> Array[String]:
 
 
 func _validate_review_frames(character_id: String, errors: Array[String]) -> void:
-	var frame_errors := {
-		"人物": [],
-		"宠物": [],
-		"人骑宠": [],
-	}
+	var frame_errors := {}
+	if _has_subject(SUBJECT_CHARACTER):
+		frame_errors["人物"] = []
+	if _has_subject(SUBJECT_PET):
+		frame_errors["宠物"] = []
+	if _has_subject(SUBJECT_MOUNTED):
+		frame_errors["人骑宠"] = []
 	for direction in DIRECTIONS:
 		for action in ["idle", "walk"]:
 			var frame_count := 1 if action == "idle" else 4
 			for frame_index in range(1, frame_count + 1):
-				var character_path := CharacterActionAssetCatalog.world_frame_path(
-					direction,
-					action,
-					frame_index
-				)
-				_validate_review_texture(
-					CharacterActionAssetCatalog.world_texture_for_frame(direction, action, frame_index),
-					character_path,
-					"人物",
-					"character",
-					direction,
-					action,
-					frame_index,
-					frame_errors
-				)
-				var pet_path := PetActionAssetCatalog.world_frame_path_for_form(
-					form_id,
-					direction,
-					action,
-					frame_index
-				)
-				_validate_review_texture(
-					PetActionAssetCatalog.world_texture_for_frame(form_id, direction, action, frame_index),
-					pet_path,
-					"宠物",
-					"pet",
-					direction,
-					action,
-					frame_index,
-					frame_errors
-				)
-				var mounted_path := MountedCharacterAssetCatalog.world_frame_path(
-					character_id,
-					form_id,
-					direction,
-					action,
-					frame_index
-				)
-				_validate_review_texture(
-					MountedCharacterAssetCatalog.world_texture_for_frame(
+				if _has_subject(SUBJECT_CHARACTER):
+					var character_path := CharacterActionAssetCatalog.world_frame_path(
+						direction,
+						action,
+						frame_index
+					)
+					_validate_review_texture(
+						CharacterActionAssetCatalog.world_texture_for_frame(direction, action, frame_index),
+						character_path,
+						"人物",
+						SUBJECT_CHARACTER,
+						direction,
+						action,
+						frame_index,
+						frame_errors
+					)
+				if _has_subject(SUBJECT_PET):
+					var pet_path := PetActionAssetCatalog.world_frame_path_for_form(
+						form_id,
+						direction,
+						action,
+						frame_index
+					)
+					_validate_review_texture(
+						PetActionAssetCatalog.world_texture_for_frame(form_id, direction, action, frame_index),
+						pet_path,
+						"宠物",
+						SUBJECT_PET,
+						direction,
+						action,
+						frame_index,
+						frame_errors
+					)
+				if _has_subject(SUBJECT_MOUNTED):
+					var mounted_path := MountedCharacterAssetCatalog.world_frame_path(
 						character_id,
 						form_id,
 						direction,
 						action,
 						frame_index
-					),
-					mounted_path,
-					"人骑宠",
-					"mounted",
-					direction,
-					action,
-					frame_index,
-					frame_errors
-				)
+					)
+					_validate_review_texture(
+						MountedCharacterAssetCatalog.world_texture_for_frame(
+							character_id,
+							form_id,
+							direction,
+							action,
+							frame_index
+						),
+						mounted_path,
+						"人骑宠",
+						SUBJECT_MOUNTED,
+						direction,
+						action,
+						frame_index,
+						frame_errors
+					)
 	for column_name_value in frame_errors.keys():
 		var column_name := str(column_name_value)
 		var issues = frame_errors.get(column_name, [])
@@ -535,7 +665,11 @@ func _validate_review_texture(
 				typed_texture.get_height(),
 			]
 		)
-	var parity := WorldReviewFrameParity.compare_source_and_loaded(source_path, typed_texture)
+	var parity := WorldReviewFrameParity.compare_source_and_loaded(
+		source_path,
+		typed_texture,
+		isolated_pet_overlay_owned
+	)
 	for key_value in parity.keys():
 		record[key_value] = parity[key_value]
 	parity_records.append(record)
@@ -562,11 +696,22 @@ func _write_parity_report(startup_errors: Array[String]) -> String:
 	for record in parity_records:
 		if str(record.get("status", "")) == "passed":
 			passed_frames += 1
+	var expected_frames := subjects.size() * FRAMES_PER_SUBJECT
 	var report := {
 		"schemaVersion": 1,
 		"runId": parity_run_id,
 		"formId": form_id,
-		"status": "passed" if startup_errors.is_empty() and parity_records.size() == 120 else "failed",
+		"subjects": subjects.duplicate(),
+		"isolatedPetRoot": (
+			isolated_pet_root if isolated_pet_overlay_owned else ""
+		),
+		"overlayScope": (
+			PetActionAssetCatalog.ISOLATED_SCOPE_WORLD_PET_ONLY
+			if isolated_pet_overlay_owned
+			else ""
+		),
+		"expectedFrames": expected_frames,
+		"status": "passed" if startup_errors.is_empty() and parity_records.size() == expected_frames and passed_frames == expected_frames else "failed",
 		"checkedFrames": parity_records.size(),
 		"passedFrames": passed_frames,
 		"canonicalPartialRgb": "rgb_zeroed_where_alpha_below_255_before_rgba_hash",
@@ -607,7 +752,15 @@ func _fail_startup(errors: Array[String]) -> void:
 
 
 func _cleanup_owned_qa_preview() -> void:
-	var cleaned := qa_mount_profile_preview_owned or qa_mounted_preview_owned or qa_pet_preview_owned
+	var cleaned := (
+		qa_mount_profile_preview_owned
+		or qa_mounted_preview_owned
+		or qa_pet_preview_owned
+		or isolated_pet_overlay_owned
+	)
+	if isolated_pet_overlay_owned:
+		PetActionAssetCatalog.disable_standalone_review_overlay(form_id)
+		isolated_pet_overlay_owned = false
 	if qa_mount_profile_preview_owned:
 		MountVisualProfileCatalog.disable_qa_preview_form(form_id)
 		qa_mount_profile_preview_owned = false
@@ -627,3 +780,11 @@ func _cleanup_owned_qa_preview() -> void:
 func _form_display_name() -> String:
 	var form := PetTemplateCatalog.form_by_id(form_id)
 	return str(form.get("formName", form_id))
+
+
+func _has_subject(subject: String) -> bool:
+	return subjects.has(subject)
+
+
+func _is_pet_only() -> bool:
+	return subjects == PET_ONLY_SUBJECTS
