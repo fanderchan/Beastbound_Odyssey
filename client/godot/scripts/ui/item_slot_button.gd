@@ -1,6 +1,11 @@
 extends Button
 class_name ItemSlotButton
 
+const PetRelatedItemPortraitModel := preload(
+	"res://scripts/progression/pet_related_item_portrait_model.gd"
+)
+const PetPortraitArtCatalog := preload("res://scripts/ui/pet_portrait_art_catalog.gd")
+
 signal slot_double_clicked(slot_data: Dictionary)
 signal slot_dropped(source_data: Dictionary, target_data: Dictionary)
 signal slot_context_requested(slot_data: Dictionary, screen_position: Vector2)
@@ -12,6 +17,8 @@ var drag_enabled: bool = true
 var drop_enabled: bool = true
 var highlight_drop_target: bool = false
 var active_drag_data: Dictionary = {}
+var _pet_portrait_form_id: String = ""
+var _uses_formal_pet_portrait: bool = false
 
 
 func configure(data: Dictionary, slot_text: String, pressed_value: bool = false, disabled_value: bool = false, toggle_value: bool = true) -> void:
@@ -28,6 +35,19 @@ func configure(data: Dictionary, slot_text: String, pressed_value: bool = false,
 	disabled = disabled_value
 	tooltip_text = str(slot_data.get("tooltip", ""))
 	_apply_slot_style()
+	_apply_pet_item_portrait()
+
+
+func pet_portrait_form_id() -> String:
+	return _pet_portrait_form_id
+
+
+func uses_formal_pet_portrait() -> bool:
+	return _uses_formal_pet_portrait
+
+
+func shows_original_item_fallback() -> bool:
+	return _pet_portrait_form_id != "" and not _uses_formal_pet_portrait and icon == null
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -126,6 +146,23 @@ func _apply_slot_style() -> void:
 	add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.78, 1.0))
 	add_theme_color_override("font_pressed_color", Color(1.0, 0.88, 0.48, 1.0))
 	add_theme_color_override("font_disabled_color", Color(0.68, 0.68, 0.62, 0.70))
+
+
+func _apply_pet_item_portrait() -> void:
+	icon = null
+	expand_icon = false
+	_pet_portrait_form_id = PetRelatedItemPortraitModel.form_id_for_item(
+		str(slot_data.get("itemId", ""))
+	)
+	_uses_formal_pet_portrait = false
+	if _pet_portrait_form_id == "":
+		return
+	var portrait := PetPortraitArtCatalog.texture_for_form(_pet_portrait_form_id)
+	if portrait == null:
+		return
+	icon = portrait
+	expand_icon = true
+	_uses_formal_pet_portrait = true
 
 
 func _slot_style(background: Color, border: Color, border_width: int) -> StyleBoxFlat:

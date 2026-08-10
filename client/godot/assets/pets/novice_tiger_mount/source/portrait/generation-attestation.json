@@ -6,7 +6,6 @@
   "independentlyAuthoredClaim": true,
   "semanticIndependenceVerified": false,
   "ownerReviewStatus": "owner_review_pending",
-  "releaseGate": false,
   "fullBodyCropAllowed": false,
   "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
   "sourceInputSha256": "fa1668710f35897a2560f3cf55096c455129b4b0bd59da4b2dc9b4237d8099ba",
@@ -29,7 +28,7 @@
     "selectionEvidence": {
       "contract": "portrait_selected_sources_entry_v1",
       "path": ".run/pet-portrait-generation/selected-sources.json",
-      "sha256": "3e56387fd9ac5ff8341af48f3e841e299ab6ddc13b2beb0fecb519e698dd2339",
+      "sha256": "4196ad4010ae9e7c83aa10f391e8d3de6361439d42f837b65c84770791afea48",
       "entrySha256": "454b4f1023c72ee26d8ab919fc6e61802c335453b3b4ba51a7782ccfea1de18f"
     },
     "transcriptEvidence": {
@@ -108,7 +107,7 @@
     "bindingMode": "metadata_pose",
     "formId": "novice_tiger_mount",
     "bundleMetadataPath": "client/godot/assets/pets/novice_tiger_mount/action-bundle-meta.json",
-    "bundleMetadataSha256": "1c699555b2da53959e4a55251dc72cc2c6782cf3917190b54716514510386000",
+    "bundleMetadataSha256": "2fc56f40831368b0672ef9cf845003122fa9a511d03b1c8de47e3f452c296dc5",
     "identityLockPath": "client/godot/assets/pets/novice_tiger_mount/identity/identity-lock.md",
     "identityLockSha256": "6629cc6f80d1e04557bfc43648d440f18fdd7a10a629820b1b4de5285dcb1e41",
     "identityStatus": "self_review_passed_owner_pending",

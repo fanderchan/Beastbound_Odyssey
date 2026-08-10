@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 3,
+  "generator": "built_in_imagegen",
+  "generationId": "call_uqtwPpzjnuNmH0zt3vB9xN6K",
+  "compositionClaim": "dedicated_headshot",
+  "independentlyAuthoredClaim": true,
+  "semanticIndependenceVerified": false,
+  "ownerReviewStatus": "owner_review_pending",
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sourceInputSha256": "e281988859ecaa6adda9de877ce738c33fd059f2d8b9cd71b910d3dcbab2107a",
+  "sourceInputRgbaSha256": "e53d555446bf836a9925388f77cd575bdaae05f6c94101d0296a86831dd5883d",
+  "identityReferencePath": "client/godot/assets/pets/wuli_normal_tough_earth10/identity/front_3quarter_sw.png",
+  "identityReferenceSha256": "637ae03e2f8568a2a81d1d76a1a3a85c5fb4fbe1cb925cb0f78e5e02c8b41a16",
+  "promptSha256": "81ac562725b020124cc35d6e6fe0882933a0543054954f55058fef410cb7a624",
+  "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+  "generationResultEvidence": {
+    "contract": "built_in_imagegen_operational_binding_v2",
+    "path": ".run/pet-portrait-generation/wuli_normal_tough_earth10/result.txt",
+    "sha256": "29566ccb1df1e10fecb2eafc6dbbf177723fb4b6354816567e0b3aa3dfdb5275",
+    "selectedGenerationId": "call_uqtwPpzjnuNmH0zt3vB9xN6K",
+    "selectedOutputPath": ".run/pet-portrait-generation/wuli_normal_tough_earth10/raw.png",
+    "selectedOutputSha256": "e281988859ecaa6adda9de877ce738c33fd059f2d8b9cd71b910d3dcbab2107a",
+    "declaredOutputSha256": "e281988859ecaa6adda9de877ce738c33fd059f2d8b9cd71b910d3dcbab2107a",
+    "generatorSource": ".codex/generated_images/019fa94a-38eb-7490-a833-c3d716ccb207/call_uqtwPpzjnuNmH0zt3vB9xN6K.png",
+    "generatorSourceSha256": "e281988859ecaa6adda9de877ce738c33fd059f2d8b9cd71b910d3dcbab2107a",
+    "byteParityVerified": true,
+    "selectionEvidence": {
+      "contract": "portrait_selected_sources_entry_v1",
+      "path": ".run/pet-portrait-generation/selected-sources.json",
+      "sha256": "4196ad4010ae9e7c83aa10f391e8d3de6361439d42f837b65c84770791afea48",
+      "entrySha256": "b03bfbf82490755a0567f2b00c9a30c5b6d46930abc0e395aed7cc9735edfae0"
+    },
+    "transcriptEvidence": {
+      "contract": "codex_imagegen_rollout_event_binding_v2",
+      "sessionId": "019fa94a-38eb-7490-a833-c3d716ccb207",
+      "transcriptPath": "sessions/2026/07/28/rollout-2026-07-28T23-14-01-019fa94a-38eb-7490-a833-c3d716ccb207.jsonl",
+      "sessionMetaRecordSha256": "e057eeb3306b825cb626712552f209fbd06457edb2fe5e868f388fc8065d1e44",
+      "requestByteOffset": 667386265,
+      "requestRecordSha256": "a1de1e3500144179dfc4be56254eb9fda7c53843b4f5535c11a2b5a6b0fa4f37",
+      "requestArgumentBinding": {
+        "contract": "imagegen_request_arguments_binding_v1",
+        "requestArgumentBindingVerified": true,
+        "unverifiedReason": null,
+        "argumentsUtf8Sha256": "11bac39f82f46b4dfdd6e98c52678894a744af96ba44c864774a83e3ea8c368f",
+        "argumentsUtf8ByteLength": 2640,
+        "argumentsCanonicalJsonSha256": "6a444248c8869a9b193caebf97930a5bf79a579133464b8545356abc8c6d2952",
+        "argumentKeys": [
+          "prompt",
+          "referenced_image_paths"
+        ],
+        "prompt": {
+          "contract": "imagegen_request_prompt_binding_v1",
+          "requestPromptUtf8Sha256": "0cad5d8eba95351732e88cd8e398712b4b7acf65df27b3101e5cf22f24c1d40f",
+          "requestPromptUtf8ByteLength": 2466,
+          "requestPromptHeuristicPassed": true,
+          "selectedPromptPath": ".run/pet-portrait-generation/wuli_normal_tough_earth10/prompt.txt",
+          "selectedPromptFileSha256": "81ac562725b020124cc35d6e6fe0882933a0543054954f55058fef410cb7a624",
+          "selectedPromptRelation": "selected_prompt_exact_ignoring_terminal_newlines_v1",
+          "requestPromptSourcePath": ".run/pet-portrait-generation/wuli_normal_tough_earth10/prompt.txt",
+          "requestPromptSourceFileSha256": "81ac562725b020124cc35d6e6fe0882933a0543054954f55058fef410cb7a624"
+        },
+        "documentedPrompt": null,
+        "referenceMode": "explicit_paths",
+        "numLastImagesToInclude": null,
+        "referencedImages": [
+          {
+            "index": 0,
+            "pathLabel": "repository:client/godot/assets/pets/wuli_normal_tough_earth10/identity/front_3quarter_sw.png",
+            "role": "declared_identity_reference",
+            "matchesDeclaredIdentityReference": true,
+            "currentFileSha256": "637ae03e2f8568a2a81d1d76a1a3a85c5fb4fbe1cb925cb0f78e5e02c8b41a16",
+            "currentFileByteLength": 251409,
+            "currentFileWidth": 512,
+            "currentFileHeight": 512,
+            "currentFileFormat": "PNG",
+            "currentFileMode": "RGBA",
+            "historicalRequestBytesVerified": false
+          }
+        ],
+        "identityLineage": {
+          "contract": "imagegen_request_identity_lineage_v1",
+          "verified": true,
+          "mode": "direct_declared_identity_reference",
+          "predecessors": []
+        },
+        "compatibilityMode": null,
+        "automaticApprovalEligible": false,
+        "currentReferencedImageContentBound": true,
+        "historicalReferencedImageBytesVerified": false,
+        "declaredIdentityReferenceIncluded": true,
+        "claimLimit": "binds the recorded direct ImageGen JSON arguments and the currently readable bytes of explicit reference paths; path records do not prove those bytes were unchanged since request time, conversation-history image content is not recoverable, and this does not prove semantic independence, copyright provenance, or owner approval"
+      },
+      "eventByteOffset": 667389276,
+      "eventRecordSha256": "f6ab287dd75b6d10fd02c22bb6d3f5c52b99a7d32d859c5629a476fc2108c2b6",
+      "eventOutputSha256": "e281988859ecaa6adda9de877ce738c33fd059f2d8b9cd71b910d3dcbab2107a",
+      "eventOutputByteLength": 1513635,
+      "importGateOnly": true,
+      "portableReleaseAuditRequiresPrivateTranscript": false,
+      "c2paOpenAiClaimMarkerPresent": true,
+      "c2paSignatureCryptographicallyVerified": false
+    },
+    "claimLimit": "operational cache, rollout event, byte parity, and auxiliary C2PA marker binding; does not prove semantic independence, copyright provenance, or owner approval"
+  },
+  "identityEvidence": {
+    "contract": "pet_identity_bundle_binding_v1",
+    "bindingMode": "metadata_pose",
+    "formId": "wuli_normal_tough_earth10",
+    "bundleMetadataPath": "client/godot/assets/pets/wuli_normal_tough_earth10/action-bundle-meta.json",
+    "bundleMetadataSha256": "313583ae05781a826209cc6cb1feca58dadfeee15a28dbbbb0a4df31335eb3a6",
+    "identityLockPath": "client/godot/assets/pets/wuli_normal_tough_earth10/identity/identity-lock.md",
+    "identityLockSha256": "19fdbc4f8d338adf49bbb22cd72a0e515f6e8a82f49b660805f1ea9a08272758",
+    "identityStatus": "self_review_passed_owner_pending",
+    "referenceRole": "front_3quarter_sw",
+    "referencePath": "client/godot/assets/pets/wuli_normal_tough_earth10/identity/front_3quarter_sw.png",
+    "referenceSha256": "637ae03e2f8568a2a81d1d76a1a3a85c5fb4fbe1cb925cb0f78e5e02c8b41a16",
+    "referenceRgbaSha256": "c9281dba8d66cc4b706d6fa2af0b4958b87e878fe4da28319feb6a5688cdb324",
+    "referenceWidth": 512,
+    "referenceHeight": 512,
+    "referenceMode": "RGBA",
+    "referenceFormat": "PNG",
+    "pipelineMetadataPath": "client/godot/assets/pets/wuli_normal_tough_earth10/source/identity-board-pipeline-meta.json",
+    "pipelineMetadataSha256": "a5d221535c43afadd829f3e4c3b1f25cf7c19d9e02901b607346fe70aeed4391",
+    "pipelinePixelHashVerified": false,
+    "currentReferencePixelBindingVerified": true,
+    "compatibilityLedger": {
+      "path": "client/godot/assets/pets/wuli_normal_tough_earth10/source/portrait/identity-reference-compatibility-ledger.json",
+      "sha256": "c63c7bf1f55a8bf749b136220286af5c371f1a17e59340e51a83a5c0dca2400b",
+      "trustLevel": "catalog_bound_legacy_freeze",
+      "historicalPipelineReplayVerified": false
+    },
+    "catalogEvidence": {
+      "path": "client/godot/data/pet_art_catalog.json",
+      "formIdentitySliceSha256": "58c33c10a442956bc248dafe413b1df2fddf0633f31523ae07d8923fced4a19a",
+      "ownershipPath": "client/godot/assets/pets/wuli_normal_tough_earth10/source-and-ownership.md",
+      "ownershipSha256": "fefd9da8d39c486d42f1a7b92d51cc65c8cc2770de5ae97c6f7c299fae672534",
+      "promptPath": "client/godot/assets/pets/wuli_normal_tough_earth10/prompts/identity-board-v1.txt",
+      "promptSha256": "b3bfae79797be0d2d27357631fb735b423f089c5dcc3cba72e847b7473720c65"
+    }
+  }
+}

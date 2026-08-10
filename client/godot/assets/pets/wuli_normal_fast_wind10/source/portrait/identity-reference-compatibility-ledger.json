@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "contract": "beastbound_pet_portrait_identity_reference_compatibility_v1",
+  "evidenceScope": "current_canonical_identity_snapshot_only",
+  "formId": "wuli_normal_fast_wind10",
+  "petRoot": "client/godot/assets/pets/wuli_normal_fast_wind10",
+  "reference": {
+    "role": "front_3quarter_sw",
+    "path": "identity/front_3quarter_sw.png",
+    "format": "PNG",
+    "mode": "RGBA",
+    "pixelSize": [
+      512,
+      512
+    ],
+    "fileSha256": "984cae3abcba075e957f7cad89b031a77fc29bd3947811501b50af5a3c46ce55",
+    "canonicalRgbaSha256": "8123b7083fafc047580962f6fa6c32b8d29a28035a1b54f485e118088deff8cd"
+  },
+  "authorityBindings": {
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "catalogFormIdentitySliceSha256": "625883b4ba56b0f34e813c7fe32368bf3aeae753d8758539b85e257454f1e43d",
+    "bundleMetadataPath": "action-bundle-meta.json",
+    "bundleMetadataSha256": "4e9f2b2564b761f2f98430e144750150c0e2b33b9ce3413722b9991cef9eaeac",
+    "metadataBindingMode": "metadata_pose",
+    "identityLock": {
+      "path": "identity/identity-lock.md",
+      "fileSha256": "1a39d14b921a409a471e735d0b909287907973ab1df068471027051e93c8e063"
+    },
+    "ownership": {
+      "path": "source-and-ownership.md",
+      "fileSha256": "b9ed1b484e1590b7e936e90cc92c5b95592a79ed50ae1a39ea105946cd0120bb"
+    },
+    "prompt": {
+      "path": "prompts/identity-board-v1.txt",
+      "fileSha256": "a5e48daf2c7970a398c3fd64effc5c17baaa4aa99b08743324692b9b88f4eb71"
+    },
+    "pipelineMetadata": {
+      "path": "source/identity-board-pipeline-meta.json",
+      "fileSha256": "b23fe2cbe40382cb00a82d30a22693c91a67a7e6326fd52e70aff487a62bd514"
+    }
+  },
+  "claims": {
+    "currentReferencePixelsFrozen": true,
+    "historicalPipelineReferenceHashRecorded": false,
+    "historicalPipelineReplayVerified": false,
+    "ownerApprovalGrantedByLedger": false
+  }
+}

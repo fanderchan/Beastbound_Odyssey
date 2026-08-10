@@ -322,6 +322,13 @@
       "preferredSlot": 1,
       "label": "攻击",
       "command": "attack",
+      "presentation": {
+        "description": "对一名敌人发动普通攻击；可被闪避、可暴击，并可能触发目标反击。",
+        "role": "普通攻击",
+        "source": "固定",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_attack.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,
@@ -341,6 +348,13 @@
       "preferredSlot": 2,
       "label": "防御",
       "command": "defend",
+      "presentation": {
+        "description": "本回合采取防御姿态，降低受到的物理伤害。",
+        "role": "防御",
+        "source": "固定",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_defend.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": true,
@@ -359,6 +373,13 @@
       "preferredSlot": 3,
       "label": "布伊冲撞",
       "command": "pet_skill",
+      "presentation": {
+        "description": "冲撞一名敌人，造成高于普通攻击的物理伤害；可被闪避、可暴击，但不会触发反击。",
+        "role": "物理伤害",
+        "source": "种族固有",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_bui_charge.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,
@@ -378,6 +399,13 @@
       "preferredSlot": 4,
       "label": "催眠粉",
       "command": "pet_skill",
+      "presentation": {
+        "description": "尝试使一名敌人进入睡眠，基础命中率82%，持续2次行动机会；受抗性与免疫影响，受到直接伤害会醒来。",
+        "role": "控制",
+        "source": "训练",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_sleep_powder.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,
@@ -399,6 +427,13 @@
       "preferredSlot": 5,
       "label": "迷惑吼",
       "command": "pet_skill",
+      "presentation": {
+        "description": "尝试使一名敌人进入混乱，基础命中率78%，持续2次行动机会；受抗性与免疫影响，攻击目标可能改变。",
+        "role": "控制",
+        "source": "训练",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_confuse_cry.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,
@@ -420,6 +455,13 @@
       "preferredSlot": 6,
       "label": "石化凝视",
       "command": "pet_skill",
+      "presentation": {
+        "description": "尝试使一名敌人进入石化，基础命中率74%，持续2次行动机会；受抗性与免疫影响，石化期间无法行动且防御提高。",
+        "role": "控制",
+        "source": "训练",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_stone_gaze.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,
@@ -441,6 +483,13 @@
       "preferredSlot": 7,
       "label": "集中咬击",
       "command": "pet_skill",
+      "presentation": {
+        "description": "集中撕咬一名敌人，造成高于布伊冲撞的物理伤害；可被闪避、可暴击，但不会触发反击。",
+        "role": "物理伤害",
+        "source": "训练",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_focus_bite.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,
@@ -460,6 +509,13 @@
       "preferredSlot": 3,
       "label": "赤角重冲",
       "command": "pet_skill",
+      "presentation": {
+        "description": "重击一名敌人，造成强力物理伤害；可被闪避，不能暴击，也不会触发反击。",
+        "role": "爆发",
+        "source": "血统特技",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_gene_emberhorn_red_heavy_charge.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,
@@ -482,6 +538,13 @@
       "preferredSlot": 3,
       "label": "灰烬追角",
       "command": "pet_skill",
+      "presentation": {
+        "description": "追击一名敌人，造成稳定物理伤害；无法被闪避，不能暴击，也不会触发反击。",
+        "role": "必中",
+        "source": "血统特技",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_gene_emberhorn_ash_sure_charge.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,
@@ -504,6 +567,13 @@
       "preferredSlot": 3,
       "label": "岚角裂风",
       "command": "pet_skill",
+      "presentation": {
+        "description": "撕裂一名敌人，造成物理伤害；可被闪避、可暴击，但不会触发反击。",
+        "role": "暴击",
+        "source": "血统特技",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_gene_emberhorn_gale_rending_charge.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,
@@ -526,6 +596,13 @@
       "preferredSlot": 3,
       "label": "湿甲稳压",
       "command": "pet_skill",
+      "presentation": {
+        "description": "稳压一名敌人，造成物理伤害；无法被闪避且可以暴击，不会触发反击。",
+        "role": "必中暴击",
+        "source": "血统特技",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_gene_mossback_marsh_sure_crush.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,
@@ -548,6 +625,13 @@
       "preferredSlot": 3,
       "label": "晒甲重压",
       "command": "pet_skill",
+      "presentation": {
+        "description": "重压一名敌人，造成较高物理伤害；可被闪避，不能暴击，也不会触发反击。",
+        "role": "重击",
+        "source": "血统特技",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_gene_mossback_sunbaked_heavy_crush.png",
+        "mechanicsImplemented": true
+      },
       "target": {
         "isAll": false,
         "canTargetAlly": false,

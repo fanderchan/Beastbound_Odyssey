@@ -1,0 +1,30 @@
+# Pet Portrait Source And Ownership
+
+- formId: `wuli_normal_fast_wind10`
+- capability: `shared_dedicated_headshot_v1`
+- independently authored claim: `true` (`untrusted_claim`)
+- semantic independence verified by automation: `false`
+- full-body crop allowed: `false`
+- generator: Codex built-in imagegen
+- generation result id: `call_dVZphwiPq1y1tT3YhwajpJXQ`
+- generation attestation: `client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/generation-attestation.json`
+- approved identity reference: `client/godot/assets/pets/wuli_normal_fast_wind10/identity/front_3quarter_sw.png`
+- identity reference SHA-256: `984cae3abcba075e957f7cad89b031a77fc29bd3947811501b50af5a3c46ce55`
+- exact ImageGen request prompt: `client/godot/assets/pets/wuli_normal_fast_wind10/prompts/portrait-v1.txt`
+- prompt source kind: `actual_imagegen_request`
+- prompt SHA-256: `fa82d82b69712be9ed1d9b011fc428fd2fe3b6c73d9e401e021709485ca6329b`
+- selected prompt documentation: `.run/pet-portrait-generation/wuli_normal_fast_wind10/prompt-v3.txt`
+- selected prompt documentation SHA-256: `e4f110d133d1078fffa1b2266c2745c3bc069f14d92ff67d10044035784c32cb`
+- processing: same-operation chroma alpha matte plus exact-mask-bounded edge cleanup; no global color pass
+- edge contract: `1`
+- edge cleanup changed pixels: `1801`
+- edge cleanup alpha changed pixels: `0`
+- exact original ImageGen PNG SHA-256: `98ee76f76c8bffbcd207c41ed5fcf765437ba7b84ff07173795871884b36c5b8`
+- raw lossless source SHA-256: `a59b9e4b359c7ab506a08f0d43dad1eed1a0140f534a228d96649fdd31ac3bdb`
+- transparent 1024 master SHA-256: `7091f836a4296a4139c528af426f5b0a76ca1857bb7c96f40d681923db578363`
+- shared 512 runtime SHA-256: `fca540b4a58f9c572f7ff7bef8c72b96199dc099a9074369ad5d2ae87e8a33af`
+- provenance status: project-directed generated candidate; automated checks do not prove copyright provenance
+- replacement path: rerun `tools/build_pet_portrait.py` from a newly generated dedicated headshot source
+- owner review required: `true`
+- owner review status: `owner_review_pending`
+- claim limit: cache/rollout/hash/normalized-copy checks reject known misuse and source mismatches, but do not prove semantic independence, copyright provenance, or owner approval

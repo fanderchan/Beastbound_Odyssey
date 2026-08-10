@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: canonical square 2D game pet head portrait
+Primary request: Create a fresh independently drawn head-and-upper-chest portrait of the exact Water-Pattern Starter Cub in Image 1. Use Image 1 only as the locked identity reference; do not crop, trace, paste, zoom, or reframe it.
+Scene/backdrop: one perfectly flat solid #FF00FF chroma-key background across the whole canvas; no variation, gradient, texture, vignette, floor, shadow, reflection, or glow.
+Subject: exact same sturdy round-faced short-muzzled fantasy cub; cobalt-blue and white thick fur; violet eyes; exactly one short translucent aqua water-drop horn; low rounded ears with one physically attached pale-aqua fin edge per ear; white water-drop eye/cheek markings; pale-aqua layered shell-shaped shoulder fur. Preserve the reference's face proportions, single horn, eye color, markings, and attached identity parts.
+Style/medium: polished Beastbound 2.5D hand-painted collectible-game art matching the reference.
+Composition/framing: front three-quarter head, neck, upper chest, and only enough shoulder to show the signature layer. Make the complete floating bust silhouette occupy only about 68% of the square. Leave a clearly visible uninterrupted magenta safety band of at least 12% on the TOP, BOTTOM, LEFT, and RIGHT. The lower chest must have a complete rounded/fur contour floating above the bottom band; no creature pixel may touch or cross any edge. Both ears, fin edges, horn, and shoulder cluster fully inside the safety area. No paws, legs, body, or tail.
+Expression: friendly, alert, agile, battle-ready; eyes focal.
+Constraints: exactly preserve species, face, violet eyes, horn count/shape, blue-white palette, facial markings, ear fins, and shoulder identity. Do not use #FF00FF in the creature. No text, UI, badge, logo, watermark, rider, saddle, effects, water, cast shadow, or contact shadow.
+Avoid: full body, cropped bust, edge-touching, oversized face, seal, fish, cat, wolf, external gills, extra horns, floating scales, hard armor, recolor of another pet, photorealism.

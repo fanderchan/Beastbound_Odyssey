@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "blue_man_dragon_water10",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/blue_man_dragon_water10"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_z4BcACbOmxXMIbhLrgEY1QdA",
+    "originalInput": {
+      "path": ".run/pet-portrait-samples/blue_man_dragon_water10/raw-v3.png",
+      "sha256": "c45898ec86e74c0e6b8cf8ff93469e89c89ecc29fd48b424ad09b21c2fa0f82c",
+      "rgbaSha256": "7d84def46dfa420900c457ce8a212732d58e3252373d7f5b710fa967cc7fa600",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/blue_man_dragon_water10/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/blue_man_dragon_water10/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/blue_man_dragon_water10/source/portrait/generation-attestation.json",
+      "sha256": "4c4b663968d3e7252c8c28572ef058f8adaa5553eb247eb5ffe6ff25b5f5896f",
+      "schemaVersion": 3,
+      "generationId": "call_z4BcACbOmxXMIbhLrgEY1QdA"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/blue_man_dragon_water10/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "c231f247554b19667e1e205da86a8c483e2108bc43077729aebcde00f4068f59",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 554,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/blue_man_dragon_water10/identity/front_3quarter_sw.png",
+    "sha256": "c231f247554b19667e1e205da86a8c483e2108bc43077729aebcde00f4068f59",
+    "rgbaSha256": "7339c210bed441693d9718ded2e006e3f4830297b43e61aadf2d4d667e3a5ea4",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/blue_man_dragon_water10/prompts/portrait-v1.txt",
+    "sha256": "a3df10eb5d9a2b5ec5934837f87858732ae38013876f6192ab2f06499080bf61",
+    "sourceSha256": "a3df10eb5d9a2b5ec5934837f87858732ae38013876f6192ab2f06499080bf61",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-samples/blue_man_dragon_water10/prompt-v3.txt",
+    "selectionDocumentationSha256": "50a0d405beada30727de44d258c5b8eb5346ed4308e4e8b04c425c96987be821",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/blue_man_dragon_water10/portrait/source-and-ownership.md",
+    "sha256": "c255a45a44c82f3b1a8d47381084b56175e3c908f87fda53cc90063f2171d806"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#21DC20",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        5.0,
+        3.317,
+        2.449,
+        3.162
+      ],
+      "candidatePixels": 1134480,
+      "eligiblePixels": 5270,
+      "transparentPixels": 1129210,
+      "partialAlphaPixels": 5045,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 0,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "b4c6b291fd4a20b741c34e703644f9a121d1bbdd63e1ec811262d30175d234c1",
+        "afterRgbaSha256": "b4c6b291fd4a20b741c34e703644f9a121d1bbdd63e1ec811262d30175d234c1",
+        "helperMetrics": {
+          "edgePixelCount": 8891,
+          "strongMagentaEdgePixelsBefore": 0,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 0,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/blue_man_dragon_water10/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 554,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/blue_man_dragon_water10/source/portrait/headshot-original-generated.png",
+      "sha256": "c45898ec86e74c0e6b8cf8ff93469e89c89ecc29fd48b424ad09b21c2fa0f82c",
+      "rgbaSha256": "7d84def46dfa420900c457ce8a212732d58e3252373d7f5b710fa967cc7fa600",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/blue_man_dragon_water10/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "3878b0634403c98c9f329925640c3c9900949e45c69a5174e9cc18e813262c53",
+      "rgbaSha256": "7d84def46dfa420900c457ce8a212732d58e3252373d7f5b710fa967cc7fa600",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/blue_man_dragon_water10/source/portrait/headshot-master-1024.png",
+      "sha256": "ca97b74131212f416b561d42519ef461d9d9c0c7865a4415562459b1f73f06c5",
+      "rgbaSha256": "6d4f173eb95f3aebca60a325bf4a5c51e8a0b7aa37c6226d65dda75b333adf3a",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/blue_man_dragon_water10/portrait/default.png",
+      "sha256": "4b3fcd6a79b547cefbdfc689c31ffbbd81890d6b040ebe5a554b816c4c277125",
+      "rgbaSha256": "2cdd174825effe8d7819def7eecfc1c16ae9e234f7554b2893da260dba66fea4",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/blue_man_dragon_water10/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "ca476352655fd0fb73dbf73588a166770bbbf8dd53727dc5f9a6c2814b9804a0",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 5270
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/blue_man_dragon_water10/source/portrait/headshot-alpha-mask.png",
+      "sha256": "a9278cea4fd59964c989b28493bc7440dbb34296c6b4d4c954137523b88d715c",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 443306
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.282732,
+      "transparentCoverage": 0.717268,
+      "visiblePixelCount": 296466,
+      "visibleBbox": [
+        251,
+        149,
+        811,
+        902
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 251,
+        "top": 149,
+        "right": 213,
+        "bottom": 122
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.284256,
+      "transparentCoverage": 0.715744,
+      "visiblePixelCount": 74516,
+      "visibleBbox": [
+        125,
+        74,
+        406,
+        451
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 125,
+        "top": 74,
+        "right": 106,
+        "bottom": 61
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/blue_man_dragon_water10/qa/portrait/contact-sheet.png",
+      "sha256": "74a8aef551abe2d110f843f867d5ab451ed54e9f1717b9546adf4c72b1944889",
+      "rgbaSha256": "01de20037b3aac4d7c33541eeef0e50e32e85baae03725a97da4175ec2cb1e79",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

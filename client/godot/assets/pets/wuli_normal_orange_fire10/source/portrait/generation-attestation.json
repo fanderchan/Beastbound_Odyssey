@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 3,
+  "generator": "built_in_imagegen",
+  "generationId": "call_BQhjhqA4vDkt0IT8FtVRGQv3",
+  "compositionClaim": "dedicated_headshot",
+  "independentlyAuthoredClaim": true,
+  "semanticIndependenceVerified": false,
+  "ownerReviewStatus": "owner_review_pending",
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sourceInputSha256": "2413f266357333364eaf4f83a74578085532edd20b6e65009f97ca62aaf7dae5",
+  "sourceInputRgbaSha256": "8d1a4d7153ce4c36bb8da9561f4f05485f1d1e53243095fd9acf68a06dded36e",
+  "identityReferencePath": "client/godot/assets/pets/wuli_normal_orange_fire10/identity/front_3quarter_sw.png",
+  "identityReferenceSha256": "3a0537413e3f817a4a96f35c626685c60074514bc968bed7ecc2fd7c17052407",
+  "promptSha256": "46255ddf1684da05fa8dac2c92cc90b44f214d170f27c66d801ea9b2531305f8",
+  "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+  "generationResultEvidence": {
+    "contract": "built_in_imagegen_operational_binding_v2",
+    "path": ".run/pet-portrait-generation/wuli_normal_orange_fire10/result.txt",
+    "sha256": "52f025d297b7447fd6ff165de037f7f814781487e0143cc795f7a0fe2cc1afdb",
+    "selectedGenerationId": "call_BQhjhqA4vDkt0IT8FtVRGQv3",
+    "selectedOutputPath": ".run/pet-portrait-generation/wuli_normal_orange_fire10/raw.png",
+    "selectedOutputSha256": "2413f266357333364eaf4f83a74578085532edd20b6e65009f97ca62aaf7dae5",
+    "declaredOutputSha256": "2413f266357333364eaf4f83a74578085532edd20b6e65009f97ca62aaf7dae5",
+    "generatorSource": ".codex/generated_images/019fa94a-38eb-7490-a833-c3d716ccb207/call_BQhjhqA4vDkt0IT8FtVRGQv3.png",
+    "generatorSourceSha256": "2413f266357333364eaf4f83a74578085532edd20b6e65009f97ca62aaf7dae5",
+    "byteParityVerified": true,
+    "selectionEvidence": {
+      "contract": "portrait_selected_sources_entry_v1",
+      "path": ".run/pet-portrait-generation/selected-sources.json",
+      "sha256": "4196ad4010ae9e7c83aa10f391e8d3de6361439d42f837b65c84770791afea48",
+      "entrySha256": "9cb1564828427b81a5cdde3971ee4c51d80f6f78613cfe03e9c2b0fc863c730b"
+    },
+    "transcriptEvidence": {
+      "contract": "codex_imagegen_rollout_event_binding_v2",
+      "sessionId": "019fa94a-38eb-7490-a833-c3d716ccb207",
+      "transcriptPath": "sessions/2026/07/28/rollout-2026-07-28T23-14-01-019fa94a-38eb-7490-a833-c3d716ccb207.jsonl",
+      "sessionMetaRecordSha256": "e057eeb3306b825cb626712552f209fbd06457edb2fe5e868f388fc8065d1e44",
+      "requestByteOffset": 663581814,
+      "requestRecordSha256": "de5ac4b8c80597acf9b850aca51a91f7a4bc3d61c7676a4d2c1bca5f211281e1",
+      "requestArgumentBinding": {
+        "contract": "imagegen_request_arguments_binding_v1",
+        "requestArgumentBindingVerified": true,
+        "unverifiedReason": null,
+        "argumentsUtf8Sha256": "0d0a1866b634e6eadf624a16cc0d53b02470eefcff9f08eea61554ecf39bdcbe",
+        "argumentsUtf8ByteLength": 2608,
+        "argumentsCanonicalJsonSha256": "a7ee85aa2e4a8b81c6287739254052d6e48f9c6d9f7724827ae05d83b8623c18",
+        "argumentKeys": [
+          "prompt",
+          "referenced_image_paths"
+        ],
+        "prompt": {
+          "contract": "imagegen_request_prompt_binding_v1",
+          "requestPromptUtf8Sha256": "6a502dbf8674c292a447ecce100d696c51c0ebfedf0425de274bff31d11770a4",
+          "requestPromptUtf8ByteLength": 2434,
+          "requestPromptHeuristicPassed": true,
+          "selectedPromptPath": ".run/pet-portrait-generation/wuli_normal_orange_fire10/prompt.txt",
+          "selectedPromptFileSha256": "46255ddf1684da05fa8dac2c92cc90b44f214d170f27c66d801ea9b2531305f8",
+          "selectedPromptRelation": "selected_prompt_exact_ignoring_terminal_newlines_v1",
+          "requestPromptSourcePath": ".run/pet-portrait-generation/wuli_normal_orange_fire10/prompt.txt",
+          "requestPromptSourceFileSha256": "46255ddf1684da05fa8dac2c92cc90b44f214d170f27c66d801ea9b2531305f8"
+        },
+        "documentedPrompt": null,
+        "referenceMode": "explicit_paths",
+        "numLastImagesToInclude": null,
+        "referencedImages": [
+          {
+            "index": 0,
+            "pathLabel": "repository:client/godot/assets/pets/wuli_normal_orange_fire10/identity/front_3quarter_sw.png",
+            "role": "declared_identity_reference",
+            "matchesDeclaredIdentityReference": true,
+            "currentFileSha256": "3a0537413e3f817a4a96f35c626685c60074514bc968bed7ecc2fd7c17052407",
+            "currentFileByteLength": 204658,
+            "currentFileWidth": 512,
+            "currentFileHeight": 512,
+            "currentFileFormat": "PNG",
+            "currentFileMode": "RGBA",
+            "historicalRequestBytesVerified": false
+          }
+        ],
+        "identityLineage": {
+          "contract": "imagegen_request_identity_lineage_v1",
+          "verified": true,
+          "mode": "direct_declared_identity_reference",
+          "predecessors": []
+        },
+        "compatibilityMode": null,
+        "automaticApprovalEligible": false,
+        "currentReferencedImageContentBound": true,
+        "historicalReferencedImageBytesVerified": false,
+        "declaredIdentityReferenceIncluded": true,
+        "claimLimit": "binds the recorded direct ImageGen JSON arguments and the currently readable bytes of explicit reference paths; path records do not prove those bytes were unchanged since request time, conversation-history image content is not recoverable, and this does not prove semantic independence, copyright provenance, or owner approval"
+      },
+      "eventByteOffset": 663584793,
+      "eventRecordSha256": "1a04e468d4ad72bbc6ad94284125df7cc68f4217ade7387ce0077f4ef1a90283",
+      "eventOutputSha256": "2413f266357333364eaf4f83a74578085532edd20b6e65009f97ca62aaf7dae5",
+      "eventOutputByteLength": 1423371,
+      "importGateOnly": true,
+      "portableReleaseAuditRequiresPrivateTranscript": false,
+      "c2paOpenAiClaimMarkerPresent": true,
+      "c2paSignatureCryptographicallyVerified": false
+    },
+    "claimLimit": "operational cache, rollout event, byte parity, and auxiliary C2PA marker binding; does not prove semantic independence, copyright provenance, or owner approval"
+  },
+  "identityEvidence": {
+    "contract": "pet_identity_bundle_binding_v1",
+    "bindingMode": "metadata_pose",
+    "formId": "wuli_normal_orange_fire10",
+    "bundleMetadataPath": "client/godot/assets/pets/wuli_normal_orange_fire10/action-bundle-meta.json",
+    "bundleMetadataSha256": "e67635a521d2f419156510bd2c3bcbf47ff4c5d526dc40d464e2921e7cd6a60b",
+    "identityLockPath": "client/godot/assets/pets/wuli_normal_orange_fire10/identity/identity-lock.md",
+    "identityLockSha256": "6d0cb6ca0d454e91ca888fb21b6125335a4a3e9023278bea446ab45493960d88",
+    "identityStatus": "self_review_passed_owner_pending",
+    "referenceRole": "front_3quarter_sw",
+    "referencePath": "client/godot/assets/pets/wuli_normal_orange_fire10/identity/front_3quarter_sw.png",
+    "referenceSha256": "3a0537413e3f817a4a96f35c626685c60074514bc968bed7ecc2fd7c17052407",
+    "referenceRgbaSha256": "9a2b3596920b11dae712c2476af3f9a014e5404a2e9459546490d11c57047640",
+    "referenceWidth": 512,
+    "referenceHeight": 512,
+    "referenceMode": "RGBA",
+    "referenceFormat": "PNG",
+    "pipelineMetadataPath": "client/godot/assets/pets/wuli_normal_orange_fire10/source/identity-board-pipeline-meta.json",
+    "pipelineMetadataSha256": "b1ea6216ace9af0d5ef0de11ed9794103c8cb62c440fa34a50a9354f2d3663a1",
+    "pipelinePixelHashVerified": false,
+    "currentReferencePixelBindingVerified": true,
+    "compatibilityLedger": {
+      "path": "client/godot/assets/pets/wuli_normal_orange_fire10/source/portrait/identity-reference-compatibility-ledger.json",
+      "sha256": "1e6afb5d0515fc1ff06abbd4a0168463fd5e83873d7e46c7f2c8b57feaa44d6f",
+      "trustLevel": "catalog_bound_legacy_freeze",
+      "historicalPipelineReplayVerified": false
+    },
+    "catalogEvidence": {
+      "path": "client/godot/data/pet_art_catalog.json",
+      "formIdentitySliceSha256": "fa26c7a8a00f0c3e08ade05b5d2fa408a12e92dbea207655d1d47b1a7f5d2b23",
+      "ownershipPath": "client/godot/assets/pets/wuli_normal_orange_fire10/source-and-ownership.md",
+      "ownershipSha256": "24bb253621f440a66c93d9846f6db287e06ae568c30a303f294da125a05d21fb",
+      "promptPath": "client/godot/assets/pets/wuli_normal_orange_fire10/prompts/identity-board-v1.txt",
+      "promptSha256": "131eee5447c0c7b4547f79bd027104bf7188d648be2dd2711f83e928068fbe9b"
+    }
+  }
+}

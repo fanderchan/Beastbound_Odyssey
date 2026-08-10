@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "emberhorn_gale_fire5_wind5",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/emberhorn_gale_fire5_wind5"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_P9jGee46yFhcCYqHaJ4fvf2p",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/emberhorn_gale_fire5_wind5/raw.png",
+      "sha256": "9405dac8c6e159e0baaa6ecc0a5ba6bbb68d81bb38848f267ca79b3c2f2730e0",
+      "rgbaSha256": "933f57e6fb3dd286a932a12e04645a14226d15e916a90ddcf93e5c8461dec162",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/source/portrait/generation-attestation.json",
+      "sha256": "0f980741a7ecf9f81046b8e737fd3bd012daf7589c5f945e5e63d45be0b39805",
+      "schemaVersion": 3,
+      "generationId": "call_P9jGee46yFhcCYqHaJ4fvf2p"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "1468ed482b8d778ee57c0b724d0307721b3e7926e4511a95616206063b64340e",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 195,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/identity/front_3quarter_sw.png",
+    "sha256": "1468ed482b8d778ee57c0b724d0307721b3e7926e4511a95616206063b64340e",
+    "rgbaSha256": "5e1dd173f2c9c270453fe8e15e5a36ad9d45d0cee3f98b8f058cc4f200eb6cfc",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/prompts/portrait-v1.txt",
+    "sha256": "6c32a956147b96431e721730c97a3b255be38ed8690810b12eeef44d118d41ea",
+    "sourceSha256": "6c32a956147b96431e721730c97a3b255be38ed8690810b12eeef44d118d41ea",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/emberhorn_gale_fire5_wind5/prompt.txt",
+    "selectionDocumentationSha256": "cfa7b8ff7152a1bb47f5963433b9e2f098e20649684f4a2907033dc118c17845",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/portrait/source-and-ownership.md",
+    "sha256": "cec95bfa0a8a4788417e6e26d57941ad8dc1c322e4ba1ce1c8c210063e872619"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#F013BC",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        10.1,
+        7.81,
+        14.036,
+        6.403
+      ],
+      "candidatePixels": 1086300,
+      "eligiblePixels": 3123,
+      "transparentPixels": 1083177,
+      "partialAlphaPixels": 3115,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 3039,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "cd79b7b506cf7c2b25ac446167a8ffdc2385af7b1ff7c948219973c89ab9159f",
+        "afterRgbaSha256": "aabcf4d40773ee66a56425af96b4713396446ff0e8109d72fcdab0be9f1319f3",
+        "helperMetrics": {
+          "edgePixelCount": 12788,
+          "strongMagentaEdgePixelsBefore": 3039,
+          "strongMagentaEdgePixelsAfter": 82,
+          "strongMagentaEdgeRatioAfter": 0.006412,
+          "despilledPixels": 3039,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 195,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/source/portrait/headshot-original-generated.png",
+      "sha256": "9405dac8c6e159e0baaa6ecc0a5ba6bbb68d81bb38848f267ca79b3c2f2730e0",
+      "rgbaSha256": "933f57e6fb3dd286a932a12e04645a14226d15e916a90ddcf93e5c8461dec162",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "ee3ba3c9e639a257889768657096704df9529e2007778d34b691bdb1fd845d64",
+      "rgbaSha256": "933f57e6fb3dd286a932a12e04645a14226d15e916a90ddcf93e5c8461dec162",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/source/portrait/headshot-master-1024.png",
+      "sha256": "83e82078efa96992c20defe99d6e56c04f71c7396465d438c94f9aed590ece30",
+      "rgbaSha256": "10b8befa8ee28b1e5b15c3cfd8adbcee6bf93e099425d1a46221322c4957f660",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/portrait/default.png",
+      "sha256": "18eb6ad49cef0c8965c827247360dcb3e26ef583d2b76a4dbb8b345d471808b5",
+      "rgbaSha256": "affc25b0ad8e61e1bd20ea104173b803f2b9da8bd98df5616a4ff81c30db131b",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "7b59288782d05a451600144061275f433f3e9bd9236d794fcc372f2eb75165e8",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 3123
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/source/portrait/headshot-alpha-mask.png",
+      "sha256": "9bf2cb5bdbb4008daa6a0b662a15a2a29ccb5e50896046999bebb356742f6a02",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 489339
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.312521,
+      "transparentCoverage": 0.687479,
+      "visiblePixelCount": 327702,
+      "visibleBbox": [
+        266,
+        121,
+        853,
+        932
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 266,
+        "top": 121,
+        "right": 171,
+        "bottom": 92
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.314808,
+      "transparentCoverage": 0.685192,
+      "visiblePixelCount": 82525,
+      "visibleBbox": [
+        132,
+        60,
+        427,
+        466
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 132,
+        "top": 60,
+        "right": 85,
+        "bottom": 46
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/emberhorn_gale_fire5_wind5/qa/portrait/contact-sheet.png",
+      "sha256": "e73904e323a15ea8d6fbe9bf37a99361eb98cda8c34859bcaf7de3a0edb9b644",
+      "rgbaSha256": "8252e3ba71dbff82a51d3843e7e99f04633490f97bf41040ae091284a0a2e946",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

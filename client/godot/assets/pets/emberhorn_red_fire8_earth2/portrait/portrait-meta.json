@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "emberhorn_red_fire8_earth2",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/emberhorn_red_fire8_earth2"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_zNSwjsKN8gz36IKrR6zzrK73",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/emberhorn_red_fire8_earth2/raw.png",
+      "sha256": "7f604788d17be3c40ccf723d9c8069dbd0bb55036f77c8231062d78273663b88",
+      "rgbaSha256": "03ee4668281b668cf3e91c761ff77c4dde1f1666db3beaced7e91faaa193551e",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/portrait/generation-attestation.json",
+      "sha256": "e129114e4245edbe79b3adae62a18e811dc6d6903eb83bd6dff52508ff6a51cd",
+      "schemaVersion": 3,
+      "generationId": "call_zNSwjsKN8gz36IKrR6zzrK73"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "416e0ebba1948639cf0e909edbcf20b073f7c5cea323c3012425cb5c61545c06",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 475,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/identity/front_3quarter_sw.png",
+    "sha256": "416e0ebba1948639cf0e909edbcf20b073f7c5cea323c3012425cb5c61545c06",
+    "rgbaSha256": "ae308d7b2662adcb3b125b06c567bdb3c0b707e858d547d86334363f35d5864e",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/prompts/portrait-v1.txt",
+    "sha256": "77108de9051e38d6211e942616040b8b914ec8f2e217e7d77120abdf45f24025",
+    "sourceSha256": "77108de9051e38d6211e942616040b8b914ec8f2e217e7d77120abdf45f24025",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/emberhorn_red_fire8_earth2/prompt.txt",
+    "selectionDocumentationSha256": "6b1389b4f9354bc77b5a1c5f8d10f78a06bf90c54dbe0bc2eee912dfad5617ad",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/portrait/source-and-ownership.md",
+    "sha256": "47cd37d58b8eabfedb6f27b8c67def0d619a94d06eb7831e3b97c76090e53e2e"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#18F01A",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        2.449,
+        3.0,
+        3.0,
+        2.449
+      ],
+      "candidatePixels": 1016629,
+      "eligiblePixels": 2088,
+      "transparentPixels": 1014541,
+      "partialAlphaPixels": 2083,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 0,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "127fe78219e2852dcffa9e988e025a4159b00ca68815c6c0589734ab84fec114",
+        "afterRgbaSha256": "127fe78219e2852dcffa9e988e025a4159b00ca68815c6c0589734ab84fec114",
+        "helperMetrics": {
+          "edgePixelCount": 9243,
+          "strongMagentaEdgePixelsBefore": 0,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 0,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 475,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/portrait/headshot-original-generated.png",
+      "sha256": "7f604788d17be3c40ccf723d9c8069dbd0bb55036f77c8231062d78273663b88",
+      "rgbaSha256": "03ee4668281b668cf3e91c761ff77c4dde1f1666db3beaced7e91faaa193551e",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "38a7208c101f451f6d626dadffe5bdf44e9747542b93c5525ece4a69edf8a50e",
+      "rgbaSha256": "03ee4668281b668cf3e91c761ff77c4dde1f1666db3beaced7e91faaa193551e",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/portrait/headshot-master-1024.png",
+      "sha256": "b28b931fc2784cce6755f1fe6ef44ef6fbef83c283f5d823da6dc9b07a8dee1b",
+      "rgbaSha256": "26570708c5cd95422df72a88120179766f4b14b58ac8b682baf1a2ad7dfbf826",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/portrait/default.png",
+      "sha256": "54799081eb1ec364e9ab85b974e016a5e9f838dedef33c1637d131c9976c718a",
+      "rgbaSha256": "5b5553387f0e1e214531bc3435034b14c2124de6919f21bb982a45f346da8507",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "7c38a246b49e0b48edab4fa6b6bf92754d8faf3b5e1021f298042d796ed44b4e",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 2088
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/source/portrait/headshot-alpha-mask.png",
+      "sha256": "0842063bbc25d946f528efa1ecd9320c8cb491cc0bf9dda800e97aad60dc9a8d",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 557975
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.355818,
+      "transparentCoverage": 0.644182,
+      "visiblePixelCount": 373102,
+      "visibleBbox": [
+        181,
+        138,
+        844,
+        898
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 181,
+        "top": 138,
+        "right": 180,
+        "bottom": 126
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.357456,
+      "transparentCoverage": 0.642544,
+      "visiblePixelCount": 93705,
+      "visibleBbox": [
+        90,
+        69,
+        422,
+        449
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 90,
+        "top": 69,
+        "right": 90,
+        "bottom": 63
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/emberhorn_red_fire8_earth2/qa/portrait/contact-sheet.png",
+      "sha256": "d03f99751d15ac9b87f142b30ae3da52ab78739af6b60bebfb0087ef2c2eb9e6",
+      "rgbaSha256": "520bdb44a09090b7ce1c2015db0dfe245f356964d1cecdd88e0d6a6604fa5189",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

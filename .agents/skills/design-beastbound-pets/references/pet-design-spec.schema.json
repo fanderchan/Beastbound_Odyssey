@@ -187,6 +187,7 @@
             "runtimeMirroring",
             "battleViews",
             "battleScenarios",
+            "portrait",
             "reviewScenes",
             "ownerReviewRequired",
             "ownerReviewStatus",
@@ -229,6 +230,132 @@
               "minItems": 15,
               "uniqueItems": true,
               "items": {"type": "string", "minLength": 1}
+            },
+            "portrait": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "capability",
+                "independentlyAuthored",
+                "fullBodyCropAllowed",
+                "sharedUses",
+                "source",
+                "ownerReviewRequired",
+                "ownerReviewStatus",
+                "evidencePaths"
+              ],
+              "properties": {
+                "capability": {"const": "shared_dedicated_headshot_v1"},
+                "independentlyAuthored": {"const": true},
+                "fullBodyCropAllowed": {"const": false},
+                "sharedUses": {
+                  "type": "array",
+                  "minItems": 4,
+                  "uniqueItems": true,
+                  "items": {"type": "string", "minLength": 1},
+                  "allOf": [
+                    {"contains": {"const": "pet_roster_bar"}},
+                    {"contains": {"const": "pet_codex"}},
+                    {"contains": {"const": "ride_permit"}},
+                    {"contains": {"const": "pet_egg"}}
+                  ]
+                },
+                "source": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "method",
+                    "identityReferencePaths",
+                    "sourceAssetPaths",
+                    "ownershipRecordPath"
+                  ],
+                  "properties": {
+                    "status": {"enum": ["planned", "available"]},
+                    "method": {
+                      "enum": [
+                        "original_generated_from_identity_board",
+                        "original_hand_authored_from_identity_board",
+                        "licensed_original_commission"
+                      ]
+                    },
+                    "identityReferencePaths": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {"type": "string", "minLength": 1}
+                    },
+                    "sourceAssetPaths": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {"type": "string", "minLength": 1}
+                    },
+                    "ownershipRecordPath": {"type": "string", "minLength": 1},
+                    "portraitMetadataPath": {"type": "string", "minLength": 1},
+                    "portraitMetadataSha256": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "generationAttestationPath": {"type": "string", "minLength": 1},
+                    "generationAttestationSha256": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  },
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": {"status": {"const": "available"}},
+                        "required": ["status"]
+                      },
+                      "then": {
+                        "required": [
+                          "portraitMetadataPath",
+                          "portraitMetadataSha256",
+                          "generationAttestationPath",
+                          "generationAttestationSha256"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "ownerReviewRequired": {"const": true},
+                "ownerReviewStatus": {"enum": ["not_started", "pending", "approved", "rejected"]},
+                "evidencePaths": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {"type": "string", "minLength": 1}
+                },
+                "ownerDecisionPath": {"type": "string", "minLength": 1},
+                "ownerDecisionSha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "properties": {
+                      "source": {
+                        "properties": {"status": {"const": "planned"}},
+                        "required": ["status"]
+                      },
+                      "ownerReviewStatus": {"const": "approved"}
+                    },
+                    "required": ["source", "ownerReviewStatus"]
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {"ownerReviewStatus": {"const": "approved"}},
+                    "required": ["ownerReviewStatus"]
+                  },
+                  "then": {
+                    "required": ["ownerDecisionPath", "ownerDecisionSha256"]
+                  }
+                }
+              ]
             },
             "mounted": {
               "type": "object",
@@ -300,10 +427,71 @@
       "allOf": [
         {
           "if": {
+            "properties": {"artStatus": {"const": "deferred"}},
+            "required": ["artStatus"]
+          },
+          "then": {
+            "not": {"required": ["artProduction"]}
+          }
+        },
+        {
+          "if": {
             "properties": {"artStatus": {"not": {"const": "deferred"}}},
             "required": ["artStatus"]
           },
           "then": {"required": ["artProduction"]}
+        },
+        {
+          "if": {
+            "properties": {"artStatus": {"const": "owner_review_pending"}},
+            "required": ["artStatus"]
+          },
+          "then": {
+            "properties": {
+              "artProduction": {
+                "properties": {
+                  "portrait": {
+                    "properties": {
+                      "source": {
+                        "properties": {"status": {"const": "available"}},
+                        "required": ["status"]
+                      },
+                      "ownerReviewStatus": {"enum": ["pending", "approved"]},
+                      "evidencePaths": {"minItems": 1}
+                    },
+                    "required": ["source", "ownerReviewStatus", "evidencePaths"]
+                  }
+                },
+                "required": ["portrait"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {"artStatus": {"const": "approved"}},
+            "required": ["artStatus"]
+          },
+          "then": {
+            "properties": {
+              "artProduction": {
+                "properties": {
+                  "portrait": {
+                    "properties": {
+                      "source": {
+                        "properties": {"status": {"const": "available"}},
+                        "required": ["status"]
+                      },
+                      "ownerReviewStatus": {"const": "approved"},
+                      "evidencePaths": {"minItems": 1}
+                    },
+                    "required": ["source", "ownerReviewStatus", "evidencePaths"]
+                  }
+                },
+                "required": ["portrait"]
+              }
+            }
+          }
         }
       ]
     },

@@ -1,0 +1,30 @@
+# Pet Portrait Source And Ownership
+
+- formId: `driftfox_evolved_moon_gale_wind7_water3`
+- capability: `shared_dedicated_headshot_v1`
+- independently authored claim: `true` (`untrusted_claim`)
+- semantic independence verified by automation: `false`
+- full-body crop allowed: `false`
+- generator: Codex built-in imagegen
+- generation result id: `call_FBM0lcNQHYLAbPBqoRXvvbsI`
+- generation attestation: `client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/generation-attestation.json`
+- approved identity reference: `client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/identity/front_3quarter_sw.png`
+- identity reference SHA-256: `f6947909b3a3af4657ee6722cb4d01647829e7be6e2d44dfcb52db8294222c62`
+- exact ImageGen request prompt: `client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/prompts/portrait-v1.txt`
+- prompt source kind: `actual_imagegen_request`
+- prompt SHA-256: `e95e1cf115447b9127bd42676587d6a8bbc3b4b0d37bff831721a74c64399443`
+- selected prompt documentation: `.run/pet-portrait-generation/driftfox_evolved_moon_gale_wind7_water3/prompt.txt`
+- selected prompt documentation SHA-256: `840668ccf7679c2e4dbda12b52447d11e670c72c6387781097a08fbf3b0c5426`
+- processing: same-operation chroma alpha matte plus exact-mask-bounded edge cleanup; no global color pass
+- edge contract: `1`
+- edge cleanup changed pixels: `4401`
+- edge cleanup alpha changed pixels: `0`
+- exact original ImageGen PNG SHA-256: `60249f1f2b6bcaaab645a3873c9ae8f3688abf6bdf5dd60d64fbf144cc3e8b0d`
+- raw lossless source SHA-256: `f4eac5d755eefff9a6e94e2460111a9d97de4c51d2556dee03c6f652d0e31409`
+- transparent 1024 master SHA-256: `54687ac7a5d858b2ed40074ce0a40a1ab941eae7b2523e219a1beed6c46fb0a8`
+- shared 512 runtime SHA-256: `a99a9cf54094d7981dfbe00ea780f6097369741e99d026261046e2fcbce6b28e`
+- provenance status: project-directed generated candidate; automated checks do not prove copyright provenance
+- replacement path: rerun `tools/build_pet_portrait.py` from a newly generated dedicated headshot source
+- owner review required: `true`
+- owner review status: `owner_review_pending`
+- claim limit: cache/rollout/hash/normalized-copy checks reject known misuse and source mismatches, but do not prove semantic independence, copyright provenance, or owner approval

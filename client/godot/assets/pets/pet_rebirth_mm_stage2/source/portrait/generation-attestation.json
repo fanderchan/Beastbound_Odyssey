@@ -6,7 +6,6 @@
   "independentlyAuthoredClaim": true,
   "semanticIndependenceVerified": false,
   "ownerReviewStatus": "owner_review_pending",
-  "releaseGate": false,
   "fullBodyCropAllowed": false,
   "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
   "sourceInputSha256": "53d28a1c6608819f8ca6f1548580ae82ae707cdbb366038b237f0ca812637328",
@@ -29,7 +28,7 @@
     "selectionEvidence": {
       "contract": "portrait_selected_sources_entry_v1",
       "path": ".run/pet-portrait-generation/selected-sources.json",
-      "sha256": "3e56387fd9ac5ff8341af48f3e841e299ab6ddc13b2beb0fecb519e698dd2339",
+      "sha256": "4196ad4010ae9e7c83aa10f391e8d3de6361439d42f837b65c84770791afea48",
       "entrySha256": "1fa1730932fccae813bdabcbdabf81afda6fab47ed94bee671ee0fd930686227"
     },
     "transcriptEvidence": {
@@ -121,7 +120,7 @@
     "bindingMode": "metadata_pose",
     "formId": "pet_rebirth_mm_stage2",
     "bundleMetadataPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/action-bundle-meta.json",
-    "bundleMetadataSha256": "3295a41f98fc15c8ba3a1be3e743f6bea7bf117f2fd82a8a45c5d7b46a07afcb",
+    "bundleMetadataSha256": "29aac7552ac3c580e7962df86be92935188997aff7c6741d9df55e1bd8063ea1",
     "identityLockPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/identity/identity-lock.md",
     "identityLockSha256": "f5d986145dae61e1e6ac7034dfa67671098df88624eae219d4d125b2077ffd1e",
     "identityStatus": "self_review_passed_owner_pending",

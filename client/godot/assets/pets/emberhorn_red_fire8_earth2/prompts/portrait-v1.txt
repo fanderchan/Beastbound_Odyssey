@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: reusable square 2D game pet head portrait
+Primary request: Freshly draw a dedicated head-and-upper-chest portrait of the exact same Red Emberhorn from the reference. It must be a new illustration, never a crop, trace, zoom, paste, or reframing of the full-body image.
+Identity lock: same wedge face, short broad cream muzzle, amber eyes, small swept leaf-shaped ears, red-brown hard fur, dark cocoa mane, and exactly ONE stout forward-up forehead horn. Preserve the one horn's layered black obsidian plates, amber-orange seams, blunt amber tip, thickness, angle and skull attachment. Preserve facial proportions, markings and palette. No second horn, nose horn, antlers, or flame.
+Style: polished original Beastbound 2.5D hand-painted collectible portrait matching the reference, painterly fur and matte mineral horn with dark plum-brown outline.
+Composition: front three-quarter bust showing complete horn, complete head, both ears, neck and a little upper chest only. FLOAT THE ENTIRE BUST IN THE MIDDLE OF THE SQUARE. Hard bounding-box rule: every subject pixel must remain inside x=16%-84% and y=14%-80% of the canvas. Therefore leave at least 16% empty background left/right, 14% empty above the horn, and 20% empty below the naturally curved bust base. The lower bust must end no lower than 80% canvas height. No edge contact. No paws, legs, lower torso, tail, floor or shadow.
+Expression: cute, confident, energetic, battle-ready but not angry; both eyes readable.
+Background: perfectly flat uniform solid #00FF00 over the entire canvas and perimeter; no gradient, texture, vignette, glow, floor, shadow, reflection or lighting variation.
+No text, frame, badge, watermark, saddle, rider, clothes, armor, weapon, fire, smoke, sparks or FX. Do not use #00FF00 in the creature.
+Avoid: oversized subject, low-hanging bust, cropped horn/ears, full body, two horns, rhinoceros/goat/Triceratops realism, changed eye color, photorealism, 3D, pixel art, chibi deformation.

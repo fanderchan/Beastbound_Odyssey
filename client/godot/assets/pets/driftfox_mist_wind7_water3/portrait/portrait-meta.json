@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "driftfox_mist_wind7_water3",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/driftfox_mist_wind7_water3"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_y76GOMuzRCIWmmG8kwhL23Sl",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/driftfox_mist_wind7_water3/raw.png",
+      "sha256": "87951e0d2660e6b40d572df9c65011cb199bc5520ac7a67f0aa6f7ee60b7f443",
+      "rgbaSha256": "e61459295f2c85f9cc9f6d7e7a424b53d63110fc627e3ada1fde0e11b23827a3",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/portrait/generation-attestation.json",
+      "sha256": "4ad59775198325eab307c6b88c22ea0208e56c54506f95496e1a5da3ab74db36",
+      "schemaVersion": 3,
+      "generationId": "call_y76GOMuzRCIWmmG8kwhL23Sl"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "1b77fcfd9b4459cc0b627ec13a30a0e5e0b2ff15dd705e3e8075a0ea27473d15",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 221,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/identity/front_3quarter_sw.png",
+    "sha256": "1b77fcfd9b4459cc0b627ec13a30a0e5e0b2ff15dd705e3e8075a0ea27473d15",
+    "rgbaSha256": "b1ae7e65b18c0ccfa07bfd121262c5b7399ceb71ede29fd484e7ee0e8cf77e77",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/prompts/portrait-v1.txt",
+    "sha256": "b56e5e38c9f1452072500d5f0b313b3c4c1f3d1da55eba8a264ea560272c6bb7",
+    "sourceSha256": "b56e5e38c9f1452072500d5f0b313b3c4c1f3d1da55eba8a264ea560272c6bb7",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/driftfox_mist_wind7_water3/prompt.txt",
+    "selectionDocumentationSha256": "9c35ac934aa66c5bc4af2da95803573f815724be8b20f0cff38b6c4db070787e",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/portrait/source-and-ownership.md",
+    "sha256": "208b76f9f1206108d1787611a7894eaf380f84add1c200874c4da0a863c3ab48"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#F116ED",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        9.11,
+        9.899,
+        11.576,
+        6.164
+      ],
+      "candidatePixels": 1236514,
+      "eligiblePixels": 2706,
+      "transparentPixels": 1233808,
+      "partialAlphaPixels": 2698,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 2695,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "bc04fe1f4d22f2d1e9d7b1f98c68767265db627340dfb291b9438e7cecff6ed1",
+        "afterRgbaSha256": "6c0fa74d254037732d70205e12320e023f6cdfdb901e666320e67d0022be4275",
+        "helperMetrics": {
+          "edgePixelCount": 10882,
+          "strongMagentaEdgePixelsBefore": 2695,
+          "strongMagentaEdgePixelsAfter": 81,
+          "strongMagentaEdgeRatioAfter": 0.007443,
+          "despilledPixels": 2695,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 221,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/portrait/headshot-original-generated.png",
+      "sha256": "87951e0d2660e6b40d572df9c65011cb199bc5520ac7a67f0aa6f7ee60b7f443",
+      "rgbaSha256": "e61459295f2c85f9cc9f6d7e7a424b53d63110fc627e3ada1fde0e11b23827a3",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "559c8dd6d4d72ae2b599f0b45234a9fadce941c0d05f8a6f95723ecf17e971a9",
+      "rgbaSha256": "e61459295f2c85f9cc9f6d7e7a424b53d63110fc627e3ada1fde0e11b23827a3",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/portrait/headshot-master-1024.png",
+      "sha256": "e195c85ce9d714da0191e2acbe83fea9a670904025fcbb6b3a9a74d8bf6cf621",
+      "rgbaSha256": "22bd1451d56817ce4825e49089062b9c1c9220b4980bfcc8ce456055e7ffe284",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/portrait/default.png",
+      "sha256": "eca39c7752e8cf1d7f2230bbc592d8f332937a5abd9b7204ee262fd93a591790",
+      "rgbaSha256": "0dca016e6943dd9d289d41edc8ccd438bd2594e86982d4a90582ed0924e718d2",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "c0ed9a53fa24599cd4e6f728fb5e2b3d5832a19dae179fb3b23aa64e6848453f",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 2706
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/source/portrait/headshot-alpha-mask.png",
+      "sha256": "567cf4113ab0d283facf7e3ae6f6a8685a736451387fbb2fca32f11be0f98bb8",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 338708
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.216432,
+      "transparentCoverage": 0.783568,
+      "visiblePixelCount": 226945,
+      "visibleBbox": [
+        250,
+        154,
+        775,
+        905
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 250,
+        "top": 154,
+        "right": 249,
+        "bottom": 119
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.218235,
+      "transparentCoverage": 0.781765,
+      "visiblePixelCount": 57209,
+      "visibleBbox": [
+        125,
+        77,
+        388,
+        453
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 125,
+        "top": 77,
+        "right": 124,
+        "bottom": 59
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/driftfox_mist_wind7_water3/qa/portrait/contact-sheet.png",
+      "sha256": "78b4b882aaa015f1b164649574ebb3f585a83e35b67c55c215896fa400f04340",
+      "rgbaSha256": "ea2467887dfb422ab66bc14e305358cce7311a9f3be8869ec8017b44adedc3f7",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "tidefin_sky_water5_wind5",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/tidefin_sky_water5_wind5"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_fwVpVPlUdoMJnKMOhXP6OQzW",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/tidefin_sky_water5_wind5/raw-v4.png",
+      "sha256": "71b624913754fd5d5e21c07cccb1dfde0ea5b4d7bf924a16944a87ee4d4ec9bb",
+      "rgbaSha256": "38fbd153a59486a380ece18203cc62a29a32928f22e3830a9e873a40e9339ba2",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/tidefin_sky_water5_wind5/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/tidefin_sky_water5_wind5/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/source/portrait/generation-attestation.json",
+      "sha256": "a25abeae7f38f57f777fec0ba27c4a6a52d41d8afb046afb6fc2a1fd1ba28368",
+      "schemaVersion": 3,
+      "generationId": "call_fwVpVPlUdoMJnKMOhXP6OQzW"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/tidefin_sky_water5_wind5/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "ec839313afaf9cd947ff58955448de76232de85657ba4488ce92b522fe0f9d1e",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 222,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/identity/front_3quarter_sw.png",
+    "sha256": "ec839313afaf9cd947ff58955448de76232de85657ba4488ce92b522fe0f9d1e",
+    "rgbaSha256": "edcd80245fd1124abb1de007af7bbb5fa0181b5980775041693a1abacb82c193",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/prompts/portrait-v1.txt",
+    "sha256": "8be49c2c3bae39704405095e9d7e70e5ccb41973f0c9c27e6ca6c7db2d96d07f",
+    "sourceSha256": "8be49c2c3bae39704405095e9d7e70e5ccb41973f0c9c27e6ca6c7db2d96d07f",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/tidefin_sky_water5_wind5/prompt-v4.txt",
+    "selectionDocumentationSha256": "5c6772de94b47ff76cf5fbcda542d78dc48ffa926b1cd7338c5a51ed76da5fcd",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/portrait/source-and-ownership.md",
+    "sha256": "a4071b2b334154e8faf35f3531b9b790d4b0bde51597e3545635c3cb004bcd03"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#EB1CD4",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        18.0,
+        12.806,
+        17.493,
+        3.742
+      ],
+      "candidatePixels": 1138824,
+      "eligiblePixels": 2641,
+      "transparentPixels": 1136183,
+      "partialAlphaPixels": 2634,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 2578,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "140d5a0a8000c34091d6806c97d0b94f44f162a5a84a672ed888b18e607c61a5",
+        "afterRgbaSha256": "2876e33c8fcb5e03f9fe6b8e85f6b54dce6789883aec1f017c3e6c6cd726a6c5",
+        "helperMetrics": {
+          "edgePixelCount": 7961,
+          "strongMagentaEdgePixelsBefore": 2578,
+          "strongMagentaEdgePixelsAfter": 10,
+          "strongMagentaEdgeRatioAfter": 0.001256,
+          "despilledPixels": 2578,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/tidefin_sky_water5_wind5/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 222,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/source/portrait/headshot-original-generated.png",
+      "sha256": "71b624913754fd5d5e21c07cccb1dfde0ea5b4d7bf924a16944a87ee4d4ec9bb",
+      "rgbaSha256": "38fbd153a59486a380ece18203cc62a29a32928f22e3830a9e873a40e9339ba2",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "8a74d936bdd7ecabca44f7539c8018cc18697ecbe5b9f7fd534a3456553c76d4",
+      "rgbaSha256": "38fbd153a59486a380ece18203cc62a29a32928f22e3830a9e873a40e9339ba2",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/source/portrait/headshot-master-1024.png",
+      "sha256": "d4e8432114541a32b1721f5cd3b76270e9e50fcb076d015a4b423ac3785f7bc6",
+      "rgbaSha256": "c8f0bbc2835c7f5632fa79ae9876a746e6461a5479c0c3b4ab5cf795dd940509",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/portrait/default.png",
+      "sha256": "02c09088fbdab709e56b2e32cce96950dc1f8039756435fcd9c41e4cb89b178d",
+      "rgbaSha256": "f895e9b5deb2ee95b9444852202b706d998e1e9ee3c3f4ba3284576269056dfc",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "df80e31539659309bab399ec22c70a47e03241441331f7db5eb1287d4257f38d",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 2641
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/source/portrait/headshot-alpha-mask.png",
+      "sha256": "c9bcd52e8252396fb6ed4e3f8e71bdfebbdb1f54faaaf9d7ebbae0445a0dcb66",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 436333
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.278152,
+      "transparentCoverage": 0.721848,
+      "visiblePixelCount": 291663,
+      "visibleBbox": [
+        223,
+        227,
+        832,
+        911
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 223,
+        "top": 227,
+        "right": 192,
+        "bottom": 113
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.279537,
+      "transparentCoverage": 0.720463,
+      "visiblePixelCount": 73279,
+      "visibleBbox": [
+        111,
+        113,
+        416,
+        456
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 111,
+        "top": 113,
+        "right": 96,
+        "bottom": 56
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/tidefin_sky_water5_wind5/qa/portrait/contact-sheet.png",
+      "sha256": "604ab09eef5ec27733fa2556f84aad01edd84318d34544b87a948484cff45b62",
+      "rgbaSha256": "fe0811ddf91972d4ea232ee4a55a169453d71fb639e436681642bcfff14e0c19",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

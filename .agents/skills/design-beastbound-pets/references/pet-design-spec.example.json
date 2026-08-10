@@ -151,7 +151,7 @@
     "captureText": "捕捉到示例月潮鳍兽；Lv1 四项可见，成长需要继续训练观察。",
     "growthVisibility": "显示 Lv1 当前四项、逐级观察评级和带误差范围的 Lv140 估计；隐藏种子与真实成长值仅 GM 可见。",
     "artStatus": "planned",
-    "futureArtBrief": "月色水纹与轻盈鳍翼；先锁定同一只宠物身份，再制作真八向世界包、正式双视角战斗包和见习猎人整图骑乘包。",
+    "futureArtBrief": "月色水纹与轻盈鳍翼；先锁定同一只宠物身份并独立绘制共享大头照，再制作真八向世界包、正式双视角战斗包和见习猎人整图骑乘包。",
     "artProduction": {
       "deliveryScope": "full_release",
       "identityLockRequired": true,
@@ -162,6 +162,22 @@
       "runtimeMirroring": false,
       "battleViews": ["front_3quarter_sw", "back_3quarter_ne"],
       "battleScenarios": ["idle", "walk", "attack", "skill", "defend", "defend_hit", "hurt", "dodge", "dodge_counter", "counter", "stagger_return", "knockaway", "down", "revive", "combo"],
+      "portrait": {
+        "capability": "shared_dedicated_headshot_v1",
+        "independentlyAuthored": true,
+        "fullBodyCropAllowed": false,
+        "sharedUses": ["pet_roster_bar", "pet_codex", "ride_permit", "pet_egg"],
+        "source": {
+          "status": "planned",
+          "method": "original_generated_from_identity_board",
+          "identityReferencePaths": [".run/pet-art/example_tidefin_moon/identity/identity-board.png"],
+          "sourceAssetPaths": [".run/pet-art/example_tidefin_moon/portrait/source/headshot-512.png"],
+          "ownershipRecordPath": "client/godot/assets/pets/example_tidefin_moon_water6_wind4/source-and-ownership.md"
+        },
+        "ownerReviewRequired": true,
+        "ownerReviewStatus": "not_started",
+        "evidencePaths": []
+      },
       "mounted": {
         "composition": "ai_integrated_whole_frame",
         "runtimeLayeredComposition": false,

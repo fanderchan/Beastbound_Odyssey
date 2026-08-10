@@ -76,6 +76,9 @@ static func skill_cost(skill_id: String) -> int:
 
 
 static func skill_description(skill_id: String) -> String:
+	var canonical_description := BattleActionCatalog.description_for(skill_id, "")
+	if canonical_description != "":
+		return canonical_description
 	var entry := skill_entry(skill_id)
 	var description := str(entry.get("description", ""))
 	if description != "":

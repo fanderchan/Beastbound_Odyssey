@@ -8,7 +8,7 @@ import {fileURLToPath} from "node:url";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const skillRoot = path.resolve(testDir, "..");
-const repoRoot = path.resolve(skillRoot, "../../../..");
+const repoRoot = path.resolve(skillRoot, "../../..");
 const validatorPath = path.join(skillRoot, "scripts/validate_pet_design_spec.mjs");
 const inspectorPath = path.join(skillRoot, "scripts/inspect_pet_design.mjs");
 const examplePath = path.join(skillRoot, "references/pet-design-spec.example.json");
@@ -231,7 +231,11 @@ test("repository inspector verifies terminal evolution policies and the stage-on
   );
   assert.equal(result.terminalPowerContract.fusion.skillInheritance, "contract_allowlist_only");
   assert.equal(result.counts.evolutionTargetForms, 2);
-  assert.equal(result.counts.paidResetTerminalFormPolicies, 2);
+  assert.equal(
+    result.counts.paidResetTerminalFormPolicies,
+    4,
+    "terminal reset denials must cover the two evolution targets and two fusion targets",
+  );
   assert.equal(
     result.counts.paidResetStageOneQuoteForms + result.counts.paidResetTerminalFormPolicies,
     result.counts.forms,

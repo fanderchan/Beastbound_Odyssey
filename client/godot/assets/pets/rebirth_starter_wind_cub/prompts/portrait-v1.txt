@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: canonical square 2D game pet head portrait
+Primary request: Fresh independent portrait of the exact Wind-Pattern Starter Cub in Image 1; reference only, no crop/trace/paste/reframe.
+Scene/backdrop: perfectly uniform flat solid #FF00FF chroma over the entire square, no shadow, texture, gradient, floor, glow, or vignette.
+Subject: exact cub identity from Image 1—cream/pale-gold fur, yellow-green eyes, jade face streaks, one short pale-jade horn. STRICT EAR COUNT: attach one and only one small almond-shaped jade leaf directly behind the LEFT ear, and one and only one small almond-shaped jade leaf directly behind the RIGHT ear. Exactly TWO ear leaves total in the entire image. Each ear leaf is one simple undivided silhouette; no second leaf, no fan, no layered plume, no small companion leaf. STRICT SHOULDER COUNT: exactly three soft jade feather-fur layers on each visible shoulder. Same round face, muzzle, ear shape and proportions as Image 1.
+Style/medium: polished Beastbound 2.5D hand-painted collectible game art matching Image 1.
+Composition/framing: front three-quarter floating head/neck/upper-chest bust, minimal shoulders; complete subject only 60% of square, slightly above center. At least 16% empty magenta below, 14% above, 12% left/right. Closed lower fur contour; nothing touches any edge. No paws, body, legs, tail, or wings.
+Expression: friendly, alert, lively.
+Constraints: ONE horn total; ONE simple leaf per ear, TWO total; THREE shoulder layers per visible side. No #FF00FF on subject. No text, UI, badge, watermark, rider, effects, shadows, floor, reflection.
+Avoid: two or more leaves behind one ear, feather fan behind ear, split leaf, horn-like ear leaf, wing, hard armor, extra shoulder layers, cropped/edge-touching bust, full body, generic bear/cat/wolf, recolor, photorealism.

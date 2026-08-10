@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "tidefin_reed_water6_earth4",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/tidefin_reed_water6_earth4"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_LsUHlvJJVM7sD07plAmFviGQ",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/tidefin_reed_water6_earth4/raw-v4.png",
+      "sha256": "22f1c97fd2fecabe515ea2cd2f830e22ffa66fc85494f707fc2ffb9497fd2c7b",
+      "rgbaSha256": "a0c89cf047b34ea5e729e0b1aa9a6fa11b19bf7530da823386a2f319971d2358",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/tidefin_reed_water6_earth4/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/tidefin_reed_water6_earth4/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/source/portrait/generation-attestation.json",
+      "sha256": "30b04608dff9d428dd8046d9568dbcaf5085c6863bec29d23f1db96f7ecf3026",
+      "schemaVersion": 3,
+      "generationId": "call_LsUHlvJJVM7sD07plAmFviGQ"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/tidefin_reed_water6_earth4/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "d47e10117930d5d8f961874ebe8d2c8ad8d87ad702877e0b7c9254091a275c47",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 225,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/identity/front_3quarter_sw.png",
+    "sha256": "d47e10117930d5d8f961874ebe8d2c8ad8d87ad702877e0b7c9254091a275c47",
+    "rgbaSha256": "15390680fbe809012391862ff6a1e6e80bf4674cccc84e6071a0769853f6b61c",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/prompts/portrait-v1.txt",
+    "sha256": "09ddecd0063e48d2aedbd876d628c866d5212e072923f74ab001ca2d3af9075a",
+    "sourceSha256": "09ddecd0063e48d2aedbd876d628c866d5212e072923f74ab001ca2d3af9075a",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/tidefin_reed_water6_earth4/prompt-v4.txt",
+    "selectionDocumentationSha256": "991d6c55483a2dd56984901e2aa04a1d57c5ad3862b7bc50430221a9034baae1",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/portrait/source-and-ownership.md",
+    "sha256": "cbe9befde297cdebe0911509ee3ad5f157c23e9420ab6dacce62c595a98dbd5e"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#E319D4",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        14.071,
+        11.576,
+        14.036,
+        2.449
+      ],
+      "candidatePixels": 958156,
+      "eligiblePixels": 2568,
+      "transparentPixels": 955588,
+      "partialAlphaPixels": 2563,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 2530,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "ade0e7eaa6764ba9f1e4135fcc15ff2b0ef41fe62f3e0dfadebb5c9640eb41d6",
+        "afterRgbaSha256": "a4f95018a84ddb93852314a930b77f39e397266e1febbb5d1b7ac3ddc81f605a",
+        "helperMetrics": {
+          "edgePixelCount": 9349,
+          "strongMagentaEdgePixelsBefore": 2530,
+          "strongMagentaEdgePixelsAfter": 86,
+          "strongMagentaEdgeRatioAfter": 0.009199,
+          "despilledPixels": 2530,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/tidefin_reed_water6_earth4/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 225,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/source/portrait/headshot-original-generated.png",
+      "sha256": "22f1c97fd2fecabe515ea2cd2f830e22ffa66fc85494f707fc2ffb9497fd2c7b",
+      "rgbaSha256": "a0c89cf047b34ea5e729e0b1aa9a6fa11b19bf7530da823386a2f319971d2358",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "4ed2fa12e77d5a2c16d2fa8156130b2f82c260a2e84b792f8476457801ba266f",
+      "rgbaSha256": "a0c89cf047b34ea5e729e0b1aa9a6fa11b19bf7530da823386a2f319971d2358",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/source/portrait/headshot-master-1024.png",
+      "sha256": "878d7a4d6abd8216821e56bd248aaf0d9e6ed8891707ce109571af010b6d9734",
+      "rgbaSha256": "922d11b40395117aac43a18ebd8d9201a72ca797c6f4ec488493f503028d7648",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/portrait/default.png",
+      "sha256": "347a74610e6045c9e26cca0110f50c782faa5bb3333c79e6766fe5398423ed0a",
+      "rgbaSha256": "d8b3518183b15a3e27df8cb2e28cf3e2c40424b23cf0691278f26e5d175f9d7c",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "6b58683c4bed5f5c3eb6c22826f71e9ae8976525cd23791cbdbfaed36ed8d337",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 2568
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/source/portrait/headshot-alpha-mask.png",
+      "sha256": "fb5040ba6847f7209306887578d408ec978422c3b28aabc53bbb8ea9ebb171a5",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 616928
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.393117,
+      "transparentCoverage": 0.606883,
+      "visiblePixelCount": 412213,
+      "visibleBbox": [
+        168,
+        121,
+        896,
+        940
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 168,
+        "top": 121,
+        "right": 128,
+        "bottom": 84
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.394695,
+      "transparentCoverage": 0.605305,
+      "visiblePixelCount": 103467,
+      "visibleBbox": [
+        83,
+        60,
+        448,
+        470
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 83,
+        "top": 60,
+        "right": 64,
+        "bottom": 42
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/tidefin_reed_water6_earth4/qa/portrait/contact-sheet.png",
+      "sha256": "76429f4b07d0aa619e3c6a6db6bed4116725a2621d6f6c7461367727db30d48f",
+      "rgbaSha256": "e0a2ddeef5fa954bc1da9f15e280885b0d81b841fe2fd301a1c5f13c5d434688",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

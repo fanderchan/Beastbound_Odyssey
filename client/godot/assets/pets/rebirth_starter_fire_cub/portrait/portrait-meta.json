@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "rebirth_starter_fire_cub",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/rebirth_starter_fire_cub"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_iw6E5JUN6kBEL79qcAIo2ksQ",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/rebirth_starter_fire_cub/raw-v4.png",
+      "sha256": "f1bf69d61736ea68a336a69a34b4d3d5c43cf4794f3fb9ecda26d8365add0450",
+      "rgbaSha256": "e1cf09355eec97a59924610a985abdffbdaeea007a61b68c9ee51583c4131b59",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/rebirth_starter_fire_cub/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/rebirth_starter_fire_cub/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/rebirth_starter_fire_cub/source/portrait/generation-attestation.json",
+      "sha256": "7073b9427230c6e6fecbdc9a7e50cbdba12401d1067255cbd89676ed814a2881",
+      "schemaVersion": 3,
+      "generationId": "call_iw6E5JUN6kBEL79qcAIo2ksQ"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/rebirth_starter_fire_cub/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "478c64b49c22e8ccea8f2586daa6d1cf9af99d47afbfa3453d0165dc5c778309",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 215,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/rebirth_starter_fire_cub/identity/front_3quarter_sw.png",
+    "sha256": "478c64b49c22e8ccea8f2586daa6d1cf9af99d47afbfa3453d0165dc5c778309",
+    "rgbaSha256": "19a61d78847c036054b6a61922c0e0b44ad2b8133a3a308e85606e4ebb3c5cb5",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/rebirth_starter_fire_cub/prompts/portrait-v1.txt",
+    "sha256": "4b50c85785f4cda1863b2969540ef4385631e9d93fcd7b0f1418b25629bb94fe",
+    "sourceSha256": "4b50c85785f4cda1863b2969540ef4385631e9d93fcd7b0f1418b25629bb94fe",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/rebirth_starter_fire_cub/prompt-v4.txt",
+    "selectionDocumentationSha256": "19826c5cb6d15842cb32dde8d2b84f46de035a28fc3e3d8672fb2812bd176279",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/rebirth_starter_fire_cub/portrait/source-and-ownership.md",
+    "sha256": "2099e896e798f94a3827d3a782e5c872507c9a6b38bb0a94663bd88c6bc5ea20"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#1ECD28",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        7.348,
+        7.483,
+        3.317,
+        6.0
+      ],
+      "candidatePixels": 1172645,
+      "eligiblePixels": 2815,
+      "transparentPixels": 1169830,
+      "partialAlphaPixels": 2808,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 0,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "4de88826b10bc4446293585196795d488480b844e72222e2068ae1c7b6d9d232",
+        "afterRgbaSha256": "4de88826b10bc4446293585196795d488480b844e72222e2068ae1c7b6d9d232",
+        "helperMetrics": {
+          "edgePixelCount": 9037,
+          "strongMagentaEdgePixelsBefore": 0,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 0,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/rebirth_starter_fire_cub/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 215,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/rebirth_starter_fire_cub/source/portrait/headshot-original-generated.png",
+      "sha256": "f1bf69d61736ea68a336a69a34b4d3d5c43cf4794f3fb9ecda26d8365add0450",
+      "rgbaSha256": "e1cf09355eec97a59924610a985abdffbdaeea007a61b68c9ee51583c4131b59",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/rebirth_starter_fire_cub/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "e2fc5d44b1e6b0d131d301aae1e1c9d515b186c50821600390631e7d557a4c36",
+      "rgbaSha256": "e1cf09355eec97a59924610a985abdffbdaeea007a61b68c9ee51583c4131b59",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/rebirth_starter_fire_cub/source/portrait/headshot-master-1024.png",
+      "sha256": "afb84d073f6e6b256cb9d0adccc047044dc2ff8b593825651a64d5012eebb6ec",
+      "rgbaSha256": "820e188c41e66ba847480193d79fa19e68c40511867abf8701e1fb8154e4aa42",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/rebirth_starter_fire_cub/portrait/default.png",
+      "sha256": "0c6caf3f3cb7384f02375a2c7a6275e906e8583d2aef2b26a4fda180bd001a6a",
+      "rgbaSha256": "65a6448f9c8364b9342e8700ddd16c291748fbf8603fffafbd9925cb424ce22f",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/rebirth_starter_fire_cub/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "022f875a38ccda809319893cf187e366c3457cddf8324aed633b279640f0f888",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 2815
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/rebirth_starter_fire_cub/source/portrait/headshot-alpha-mask.png",
+      "sha256": "734abef92d9bf8eec79712591a45af48b964bc60e7399c69cd3ac382f6e1ec1b",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 402686
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.256856,
+      "transparentCoverage": 0.743144,
+      "visiblePixelCount": 269333,
+      "visibleBbox": [
+        239,
+        209,
+        810,
+        845
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 239,
+        "top": 209,
+        "right": 214,
+        "bottom": 179
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.258415,
+      "transparentCoverage": 0.741585,
+      "visiblePixelCount": 67742,
+      "visibleBbox": [
+        119,
+        105,
+        405,
+        423
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 119,
+        "top": 105,
+        "right": 107,
+        "bottom": 89
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/rebirth_starter_fire_cub/qa/portrait/contact-sheet.png",
+      "sha256": "382f4d5ec4a1e536563c8fba4a92a2c3f88eb23c64f0678d7b5a30a7dec66ce7",
+      "rgbaSha256": "dd01ce042f78200d9f3fd0c4ec9a53fb51cc108487a117a38351b4cfffd3c864",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "driftfox_highland_wind9_earth1",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/driftfox_highland_wind9_earth1"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_5sYl67P9Jdb06mim0jnpn4pu",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/driftfox_highland_wind9_earth1/raw-v3.png",
+      "sha256": "2c03447e2c510f705fd0f88817e767d2e0029bc82baeb526f318636be1cb0c49",
+      "rgbaSha256": "b24f5ca15872086bbaccd8c6359f1cd27336117ebf148b000e7799ccb34e3fb8",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/driftfox_highland_wind9_earth1/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/driftfox_highland_wind9_earth1/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/source/portrait/generation-attestation.json",
+      "sha256": "daed26c37f0613f40c0f22747a0562e67b0d5b78897fe55dfac56c09870814ab",
+      "schemaVersion": 3,
+      "generationId": "call_5sYl67P9Jdb06mim0jnpn4pu"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/driftfox_highland_wind9_earth1/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "b1ae23f2501965e1c306854c1292f3ca484f0cdce83a2bc790dd6359cf4e8347",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 220,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/identity/front_3quarter_sw.png",
+    "sha256": "b1ae23f2501965e1c306854c1292f3ca484f0cdce83a2bc790dd6359cf4e8347",
+    "rgbaSha256": "6b4d4d1e3d3b3d692ea32c5a088183b1479d067655b0a9050e38a74ff3f6b599",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/prompts/portrait-v1.txt",
+    "sha256": "deb4ae8401ab65178c1748d4eed2f19a381fae9ed05dafbde2d62e79610418cc",
+    "sourceSha256": "deb4ae8401ab65178c1748d4eed2f19a381fae9ed05dafbde2d62e79610418cc",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/driftfox_highland_wind9_earth1/prompt-v3.txt",
+    "selectionDocumentationSha256": "8b3e4326192d06a5b34299ec260713d11657e2e3b15b0c6065f99fd92fe20c07",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/portrait/source-and-ownership.md",
+    "sha256": "88108e34c1c1e8423c9496b876aec1c74b8eed6b7376d9ee245390d6df7ec706"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#E71AD4",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        12.042,
+        7.141,
+        11.874,
+        6.164
+      ],
+      "candidatePixels": 1220578,
+      "eligiblePixels": 3834,
+      "transparentPixels": 1216744,
+      "partialAlphaPixels": 3826,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 3670,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "ba105d63d96ffa16a56cc06873cef7b2d1bd82e365cdc41a74d394b09c2a7164",
+        "afterRgbaSha256": "a2e235c53f29b48f80d1b327c5d2c27fb6305f2131d9c348a4e6b691cc358711",
+        "helperMetrics": {
+          "edgePixelCount": 10782,
+          "strongMagentaEdgePixelsBefore": 3670,
+          "strongMagentaEdgePixelsAfter": 109,
+          "strongMagentaEdgeRatioAfter": 0.010109,
+          "despilledPixels": 3670,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/driftfox_highland_wind9_earth1/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 220,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/source/portrait/headshot-original-generated.png",
+      "sha256": "2c03447e2c510f705fd0f88817e767d2e0029bc82baeb526f318636be1cb0c49",
+      "rgbaSha256": "b24f5ca15872086bbaccd8c6359f1cd27336117ebf148b000e7799ccb34e3fb8",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "3404c6eecd71a9744df8dff32795e5a036741360573cf6f7367531efa256c879",
+      "rgbaSha256": "b24f5ca15872086bbaccd8c6359f1cd27336117ebf148b000e7799ccb34e3fb8",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/source/portrait/headshot-master-1024.png",
+      "sha256": "775ad0936475bfc65c49f193cd90a61b0e166cf7456688d63baa9a58e943717b",
+      "rgbaSha256": "cce510fcf1b433751c674f8a223aa4d76776eef5ffb7b2d660e5369b0e5a5e7f",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/portrait/default.png",
+      "sha256": "1ce78acd39fc775439974195e75f9053dbc81a1ea43674f3b06c7435cd3faa5b",
+      "rgbaSha256": "31e5f854f01fde0246cbdcee0e914c658bcca6f895e7feb2c47609a37c5513df",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "d5fc1e1cbc4807f1cc719d002cb82a0360844dfd90d56b88e23d5bd354f637fb",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 3834
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/source/portrait/headshot-alpha-mask.png",
+      "sha256": "9a6f85bc0b373f963ee2459a343d1a9b6f90b38843ca3a24573c5616f9c43e93",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 355772
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.227104,
+      "transparentCoverage": 0.772896,
+      "visiblePixelCount": 238136,
+      "visibleBbox": [
+        270,
+        166,
+        780,
+        897
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 270,
+        "top": 166,
+        "right": 244,
+        "bottom": 127
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.228874,
+      "transparentCoverage": 0.771126,
+      "visiblePixelCount": 59998,
+      "visibleBbox": [
+        135,
+        83,
+        390,
+        449
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 135,
+        "top": 83,
+        "right": 122,
+        "bottom": 63
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/driftfox_highland_wind9_earth1/qa/portrait/contact-sheet.png",
+      "sha256": "de1c212483404b11cf2f3e90f0eba2312b8e5d9b2f9fa1d3ee62c700c66486a0",
+      "rgbaSha256": "7b06ec04f96d3f900d2d23162fcb4f82ad2c08e12379055502243973c80a0685",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

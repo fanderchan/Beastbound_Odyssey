@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "generator": "OpenAI ImageGen",
+  "styleContract": "原创暖暗手绘厚涂技能图标；满幅棕黑背景；单一强语义；无文字、数字、徽标、外框、透明棋盘格或参考资产复制。",
+  "entries": [
+    {
+      "skillId": "pet_attack",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-0f23-7c51-a03a-9cb4f93d97b6/call_cRR6rVzABxtttE0WoSvf67Ij.png",
+      "brief": "兽爪冲击"
+    },
+    {
+      "skillId": "pet_defend",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-0f23-7c51-a03a-9cb4f93d97b6/call_X1Ze2urKljbfRL82YKQ38ADD.png",
+      "brief": "玄岩甲盾"
+    },
+    {
+      "skillId": "pet_bui_charge",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-0f23-7c51-a03a-9cb4f93d97b6/call_eJZnqk848UIHJbJWd2htFZim.png",
+      "brief": "幼兽破石冲锋"
+    },
+    {
+      "skillId": "pet_sleep_powder",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-0f23-7c51-a03a-9cb4f93d97b6/call_TjQhzRBl0PWIQGocGotgetQ2.png",
+      "brief": "靛紫眠粉种荚"
+    },
+    {
+      "skillId": "pet_confuse_cry",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-0f23-7c51-a03a-9cb4f93d97b6/call_vjnJbmMdMNLBbUy1fBrkVqXB.png",
+      "brief": "咆哮与迷乱声旋"
+    },
+    {
+      "skillId": "pet_stone_gaze",
+      "rawOutput": "/Users/fander/.codex/generated_images/019f95af-5eb4-7bb3-bd2a-bf7fbc594d02/call_jZjLEXl7oRY8sEM8dzvF2PyY.png",
+      "brief": "古老石纹兽眼凝固碎石"
+    },
+    {
+      "skillId": "pet_focus_bite",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-0f23-7c51-a03a-9cb4f93d97b6/call_pH2UHl2RGFx53gx9KLG2WuG5.png",
+      "brief": "双颚精准咬击"
+    },
+    {
+      "skillId": "pet_gene_emberhorn_red_heavy_charge",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-5104-7df2-a190-53d5b506f80b/call_prtdbTBJqHrdU5zsfvRArJhX.png",
+      "brief": "烈火重角贯冲"
+    },
+    {
+      "skillId": "pet_gene_emberhorn_ash_sure_charge",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-5104-7df2-a190-53d5b506f80b/call_1PWrk2sa1oKdas3qaDKUNXEv.png",
+      "brief": "灰烬追角必中"
+    },
+    {
+      "skillId": "pet_gene_emberhorn_gale_rending_charge",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-5104-7df2-a190-53d5b506f80b/call_urkobWrW1IOJBpXm0XJ45GjB.png",
+      "brief": "裂风双角冲锋"
+    },
+    {
+      "skillId": "pet_gene_mossback_marsh_sure_crush",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-5104-7df2-a190-53d5b506f80b/call_2XTaC2w2I5i2pI1bxSxq9GRk.png",
+      "brief": "湿甲稳压"
+    },
+    {
+      "skillId": "pet_gene_mossback_sunbaked_heavy_crush",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-5104-7df2-a190-53d5b506f80b/call_qlGhyxSrQfzs3WrnzLqwBI8t.png",
+      "brief": "晒甲重压"
+    },
+    {
+      "skillId": "bui_resistant_skin",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf0e-ee4f-7353-8942-3dd6cd1e18f9/call_bOQRwtUbnD1izuXgwHCrZwoK.png",
+      "brief": "四元素抗性鳞皮"
+    },
+    {
+      "skillId": "wuli_hard_shell",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf0e-ee4f-7353-8942-3dd6cd1e18f9/call_AKuKIzFyPVPucfkUHiM3rPGB.png",
+      "brief": "厚重土石硬壳"
+    },
+    {
+      "skillId": "stone_immunity",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf0e-ee4f-7353-8942-3dd6cd1e18f9/call_cXkzwyVojbQyeVhrsWs5z4KQ.png",
+      "brief": "利爪破开石化结晶"
+    },
+    {
+      "skillId": "poison_resistance",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf0e-ee4f-7353-8942-3dd6cd1e18f9/call_ZZ4jNQEjKlRAbxr5aGvIKaGf.png",
+      "brief": "药叶净化毒滴"
+    },
+    {
+      "skillId": "quick_instinct",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf0e-ee4f-7353-8942-3dd6cd1e18f9/call_XcLLRnTmKcn1eZTY1bs8TY5T.png",
+      "brief": "警觉兽耳与观察眼"
+    },
+    {
+      "skillId": "emberhorn_red_burning_mind",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-5104-7df2-a190-53d5b506f80b/call_6jphFPsWpx6NscvoOSIvtVCe.png",
+      "brief": "灼热心核抵抗混乱"
+    },
+    {
+      "skillId": "emberhorn_ash_cinder_breath",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-5104-7df2-a190-53d5b506f80b/call_Eifb6LDFLFMhu4IDR66hpJCd.png",
+      "brief": "烬息肺纹抵抗毒素"
+    },
+    {
+      "skillId": "emberhorn_gale_wakeful_instinct",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-5104-7df2-a190-53d5b506f80b/call_qmHHIKV8lKJyC4o1B8mV4Y1V.png",
+      "brief": "醒风兽眼抵抗睡眠"
+    },
+    {
+      "skillId": "mossback_marsh_adaptive_shell",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-5104-7df2-a190-53d5b506f80b/call_X3XmbZOjyBdLGZpH0Jti2Cy0.png",
+      "brief": "湿地苔壳适应四异常"
+    },
+    {
+      "skillId": "mossback_sunbaked_grounded_shell",
+      "rawOutput": "/Users/fander/.codex/generated_images/019faf1b-5104-7df2-a190-53d5b506f80b/call_raZrVjLOFw0p1V6KJ8fn5KAw.png",
+      "brief": "地脉晒甲抵抗石化"
+    },
+    {
+      "skillId": "ui_empty_skill_slot",
+      "rawOutput": "/Users/fander/.codex/generated_images/019f95af-5eb4-7bb3-bd2a-bf7fbc594d02/call_fjPd0s7xJJEX0pO6qdRGxCf0.png",
+      "brief": "骨石雕刻空槽加号"
+    }
+  ]
+}

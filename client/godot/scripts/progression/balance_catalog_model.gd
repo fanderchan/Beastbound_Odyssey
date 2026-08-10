@@ -10,6 +10,7 @@ const LEVEL_CURVES_PATH := BALANCE_DIR + "/level_curves.json"
 const PLAYER_GROWTH_PATH := BALANCE_DIR + "/player_growth.json"
 const PET_GROWTH_PROFILES_PATH := BALANCE_DIR + "/pet_growth_profiles.json"
 const PET_GROWTH_SPECIES_PROFILES_PATH := BALANCE_DIR + "/pet_growth_species_profiles.json"
+const PET_GROWTH_QUALITY_PRESENTATION_PATH := BALANCE_DIR + "/pet_growth_quality_presentation.json"
 const PET_REBIRTH_BALANCE_PATH := BALANCE_DIR + "/pet_rebirth_balance.json"
 const PET_EVOLUTION_BALANCE_PATH := BALANCE_DIR + "/pet_evolution_balance.json"
 const PET_EVOLUTION_ROUTES_PATH := "res://data/pet_evolution_routes.json"
@@ -76,6 +77,10 @@ static func pet_growth_profiles() -> Dictionary:
 
 static func pet_growth_species_profiles() -> Dictionary:
 	return _data(PET_GROWTH_SPECIES_PROFILES_PATH)
+
+
+static func pet_growth_quality_presentation() -> Dictionary:
+	return _data(PET_GROWTH_QUALITY_PRESENTATION_PATH)
 
 
 static func pet_rebirth_balance() -> Dictionary:

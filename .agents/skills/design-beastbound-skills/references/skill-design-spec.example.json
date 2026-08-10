@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 2,
+  "deliveryStatus": "ready_for_implementation",
+  "blockers": [],
+  "skill": {
+    "id": "pet_stone_gaze",
+    "label": "石化凝视",
+    "kind": "active",
+    "source": "训练",
+    "role": "单体控制",
+    "availability": {
+      "eligibleFormIds": [
+        "all_trainable_pet_forms"
+      ],
+      "stage": "0转至终局前",
+      "minimumLevel": 1,
+      "acquisition": "在火芽村宠物训练师处学习",
+      "prerequisites": [
+        "训练师邻接校验通过",
+        "权威档案修订有效"
+      ]
+    },
+    "slotPolicy": {
+      "occupiesActiveSlot": true,
+      "fixed": false,
+      "overwritable": true,
+      "forgettable": true,
+      "duplicatesForbidden": true
+    }
+  },
+  "baseline": {
+    "comparatorSkillIds": [
+      "pet_sleep_powder"
+    ],
+    "powerBudget": "以睡眠粉为同档单体控制基准，用较低命中换取不受直接伤害解除的控制。",
+    "tradeoffs": [
+      "单体目标且基础命中率低于睡眠粉",
+      "石化期间提高目标防御，降低集火收益"
+    ]
+  },
+  "mechanics": {
+    "effectType": "status",
+    "target": {
+      "side": "enemy",
+      "mode": "single",
+      "count": 1,
+      "requiresSelection": true,
+      "allowSelf": false,
+      "allowDowned": false,
+      "invalidAtSelection": "拒绝自己、我方、倒下或已经离场的目标。",
+      "invalidAtResolution": "若目标在结算前失效，按服务器稳定顺序改选首个存活敌人。",
+      "noTargetFallback": "没有合法敌人时执行防御，不重新随机也不消耗其他技能。"
+    },
+    "formula": {
+      "source": "battle_actions.effect.statusHitRate/statusTurns",
+      "expression": "命中后施加石化，持续2次目标行动机会。",
+      "rounding": "服务端直接比较规范化概率，不额外取整。",
+      "minimum": "0次状态应用",
+      "maximum": "1次石化状态应用"
+    },
+    "reliability": {
+      "baseRate": 0.74,
+      "deterministic": false,
+      "resistanceRule": "目标石化抗性在服务端降低最终命中概率。",
+      "immunityRule": "石化免疫在概率结算前直接返回免疫结果。"
+    },
+    "duration": {
+      "value": 2,
+      "unit": "action_opportunities"
+    },
+    "orderOfOperations": [
+      "服务端复核技能装备与敌方单体目标",
+      "服务端检查石化免疫和抗性",
+      "服务端使用私有随机源结算命中",
+      "服务端写入状态并发布权威事件"
+    ],
+    "reactions": {
+      "canDodge": false,
+      "canCritical": false,
+      "canCounter": false,
+      "canReflect": false,
+      "canLaunch": false,
+      "canDown": false,
+      "canRevive": false
+    },
+    "statuses": {
+      "applies": [
+        "stone"
+      ],
+      "removes": [],
+      "refreshRule": "重复命中按服务端石化状态规则刷新剩余行动机会。"
+    }
+  },
+  "ai": {
+    "runtimeContexts": [
+      "node_production_ai",
+      "player_auto_battle"
+    ],
+    "candidateWhen": "存在能行动、未石化且未免疫的敌人。",
+    "legalTargets": "仅存活敌方单体，不选择自己、我方或离场单位。",
+    "targetScore": "优先高威胁、低石化抗性且尚未被控制的敌人。",
+    "avoidWhen": "目标已经石化、明确免疫，或普通攻击能稳定结束战斗。",
+    "fallback": "没有值得控制的目标时使用普通攻击。",
+    "tieBreak": "同分时按权威 actorId 升序选择，保证复放一致。"
+  },
+  "counterplay": [
+    {
+      "mechanism": "石化抗性降低成功率",
+      "implementationPath": "Node 状态命中结算读取目标石化抗性。",
+      "proof": "定向测试覆盖基础命中、抗性降低和完全免疫。"
+    },
+    {
+      "mechanism": "石化提高目标防御",
+      "implementationPath": "服务端物理伤害公式读取石化防御增益。",
+      "proof": "公式测试比较石化前后的同源物理伤害。"
+    }
+  ],
+  "presentation": {
+    "shortDescription": "凝视一名敌人，尝试使其石化。",
+    "longDescription": "凝视一名敌人，基础命中率74%，成功后石化2次行动机会；受石化抗性与免疫影响。",
+    "tags": [
+      "主动",
+      "单体",
+      "控制"
+    ],
+    "icon": {
+      "brief": "古老石纹兽眼射出灰白凝固光，前景有少量碎石。",
+      "runtimePath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_stone_gaze.png",
+      "sourcePath": "res://assets/skills/pet_skill_icons_v1/source/active/pet_stone_gaze.png",
+      "smallSizeProof": "32×32及1280×720技能卡实装尺寸均能辨认兽眼和石化光。",
+      "ownership": {
+        "owner": "Beastbound Odyssey 项目",
+        "license": "项目原创可商用",
+        "provenance": "依据本合同图标 brief 独立制作并保留源文件、提示词与哈希。",
+        "replacementPath": "同一精确技能 ID 的正式源图可无损重新派生运行图。"
+      }
+    },
+    "vfx": {
+      "castTell": "施法宠物眼部先聚集灰白光。",
+      "travel": "窄束石化光从施法者连续连接到目标。",
+      "targetReaction": "命中时石壳由脚向上凝固，抵抗时光束碎裂。",
+      "alternateResult": "免疫显示短促护盾闪光，未命中显示光束偏离且不生成石壳。"
+    },
+    "sfx": {
+      "cast": "低沉石纹蓄力声，避免与普通攻击共用。",
+      "result": "命中为石壳闭合声，抵抗和免疫使用不同短音色。"
+    },
+    "logWording": {
+      "success": "{actor} 使用石化凝视，{target} 被石化了。",
+      "alternate": "{actor} 使用石化凝视，但 {target} 抵抗了或免疫石化。"
+    }
+  },
+  "authority": {
+    "serverSettlement": "Node 校验技能装备和敌方目标，并结算命中、抗性、免疫与持续。",
+    "clientIntent": "Godot 只提交技能 ID 与玩家选择的目标意图。",
+    "clientReplay": "Godot 只回放服务器状态事件，不重掷命中或持续时间。",
+    "randomness": "生产使用服务端私有随机权威，固定种子仅通过测试依赖注入。",
+    "effectSupportVerified": true,
+    "effectSupportEvidence": [
+      "Node 宠物状态技能分支拥有独立目标、命中、抗性和免疫结算。",
+      "Godot 服务端战斗回放模型识别宠物状态事件且不本地重掷。"
+    ]
+  },
+  "validation": {
+    "tests": [
+      "目录、训练供给和七槽装备合同",
+      "命中、抗性、免疫、非法目标和目标失效回退",
+      "陈旧修订、未装备技能、重连与权威事件复放",
+      "客户端技能卡和中文长文本"
+    ],
+    "simulationBattles": 1000,
+    "sideSwap": true,
+    "formations": [
+      "1v1",
+      "5v5",
+      "10v10"
+    ],
+    "metrics": [
+      "胜率",
+      "回合数",
+      "技能使用率",
+      "拒绝行动次数",
+      "最长控制链",
+      "无目标回退"
+    ],
+    "evidence": {
+      "testResults": [],
+      "screenshots": [],
+      "videos": [],
+      "performance": []
+    },
+    "ownerReviewStatus": "not_started"
+  }
+}

@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: canonical square 2D game pet head portrait
+Primary request: Create a fresh independently drawn head-and-upper-chest portrait of the exact Earth-Pattern Starter Cub in Image 1. Use Image 1 only as the locked identity reference; do not crop, trace, paste, zoom, or reframe it.
+Scene/backdrop: one perfectly flat solid #00FF00 chroma-key background across the whole canvas; no variation, gradient, texture, vignette, floor, shadow, reflection, or glow.
+Subject: exact same sturdy round-faced short-muzzled fantasy cub; ochre-brown thick fur; amber-gold eyes; exactly one SHORT blunt ochre crystal forehead horn; deep earth-brown eyebrow and cheek markings; the reference's layered earth-pattern SHOULDER FUR with soft fur-edged layers, not armor, shell, stone plate, or wooden scales. Preserve reference face proportions, single short horn, eye color, markings, and visible shoulder identity patch.
+Style/medium: polished Beastbound 2.5D hand-painted collectible-game art matching the reference.
+Composition/framing: front three-quarter head, neck, upper chest, and only enough shoulder to show the identity patch. Make the complete floating bust silhouette occupy only about 68% of the square. Leave a clearly visible uninterrupted green safety band of at least 12% on TOP, BOTTOM, LEFT, and RIGHT. The lower chest must have a complete rounded fur contour floating above the bottom band; no creature pixel may touch any edge. Both ears, short horn, face markings, and shoulder fur fully inside the safety area. No paws, legs, lower body, or tail.
+Expression: friendly, steady, alert, battle-ready; eyes focal.
+Constraints: exactly preserve species, face, amber eyes, one short blunt horn, ochre-brown palette, earth face markings, and soft layered shoulder fur. Do not use #00FF00 in the creature. No text, UI, badge, logo, watermark, rider, saddle, effects, cast shadow, or contact shadow.
+Avoid: large/tall horn, full body, cropped bust, edge-touching, oversized face, bear, cat, wolf, hard rock/wood/metal shoulder armor, extra horns, leaf tail, recolor of another pet, photorealism.

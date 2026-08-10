@@ -1,0 +1,4 @@
+interface:
+  display_name: "设计 Beastbound 技能"
+  short_description: "设计并验证宠物技能的效果图标平衡性战斗反馈与服务端实现"
+  default_prompt: "Use $design-beastbound-skills to design and implement a complete Beastbound pet skill with icon, balance, UI, AI, server authority, and tests."

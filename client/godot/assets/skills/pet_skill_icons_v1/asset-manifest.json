@@ -1,0 +1,446 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "pet_skill_icons_v1",
+  "generatedAt": "2026-07-29T19:03:14.560Z",
+  "sourceAndOwnership": "source-and-ownership.md",
+  "entries": [
+    {
+      "skillId": "pet_attack",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_attack.png",
+      "runtimePath": "runtime/active/pet_attack.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "80ad31f685d7da61edc6a182a7e7e0bb657d7758c0356674bb5af40d3bc1b7a7",
+      "runtimeSha256": "90f0007a0b9efdd0d2de6f368bde4d920900937730ffda76d0f92ff6c66de76e",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_bui_charge",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_bui_charge.png",
+      "runtimePath": "runtime/active/pet_bui_charge.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "c2547a0e37a8f7c24a76aee823f0beef5b2cf602c8eef6656441658aefed6725",
+      "runtimeSha256": "09fea6bd705d4569c4ca944cf19a2fc18c317359df4254103dafe541121ce8d5",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_confuse_cry",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_confuse_cry.png",
+      "runtimePath": "runtime/active/pet_confuse_cry.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "d31d415e52069238e97be274d691298245d9174eaf3f6ac76023b8281dbf8032",
+      "runtimeSha256": "9e38811dfd6ed7598a13082af353ca698466dfb621e7d300d119c042ad857dba",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_defend",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_defend.png",
+      "runtimePath": "runtime/active/pet_defend.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "45d862824c08bffa5df534f0cf5d56ba08ffaee7ede901fc1f8a9260d3113d67",
+      "runtimeSha256": "216d45a278351cbcec7b11bec9586bfc7a17a517c6d53dea91aded608f0ef512",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_focus_bite",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_focus_bite.png",
+      "runtimePath": "runtime/active/pet_focus_bite.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "08b0c07083b1f0a2761cc81084209bed9f1749fdee44aeeae2aefd2da7b433e1",
+      "runtimeSha256": "fe4d2df5f46f6d0e8bb29e214e4b21d1455f4a275be9b86166435295dad6dcde",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_gene_emberhorn_ash_sure_charge",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_gene_emberhorn_ash_sure_charge.png",
+      "runtimePath": "runtime/active/pet_gene_emberhorn_ash_sure_charge.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "0c9ed1b766f6c5fc96af09e8826cee33c4d35d063128420d746355dc08b40983",
+      "runtimeSha256": "67f5c2a736c83e30f260b06ca44dc294013484005b29f0076647e4ae20d1391d",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_gene_emberhorn_gale_rending_charge",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_gene_emberhorn_gale_rending_charge.png",
+      "runtimePath": "runtime/active/pet_gene_emberhorn_gale_rending_charge.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "eb2aa193f1bc3105ff3f4b3d013af216d1ad628acbc3ae128f87d5cb086c977c",
+      "runtimeSha256": "205a2fd6199e6b6e72da83096dd09875db7307ca442b0990ab5d5f2c45a1ceaa",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_gene_emberhorn_red_heavy_charge",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_gene_emberhorn_red_heavy_charge.png",
+      "runtimePath": "runtime/active/pet_gene_emberhorn_red_heavy_charge.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "c65ee6451cba9b6c33b362672876956b83c91ec77a12b93b2b38ac9a7a1ae4bd",
+      "runtimeSha256": "5cb11494876b5dfe4d52e1b4db9ff61c1c64787f4144479b03f7b030cf4331a6",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_gene_mossback_marsh_sure_crush",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_gene_mossback_marsh_sure_crush.png",
+      "runtimePath": "runtime/active/pet_gene_mossback_marsh_sure_crush.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "77b34307860afb971574ee995798493bfc4e8791d0a08189488b0107a5761b32",
+      "runtimeSha256": "cb7f578f8a34323252f0fa20cfc42defa6aae0114f673069181a5b8df48de22f",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_gene_mossback_sunbaked_heavy_crush",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_gene_mossback_sunbaked_heavy_crush.png",
+      "runtimePath": "runtime/active/pet_gene_mossback_sunbaked_heavy_crush.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "b0c1a6476fe04a92e799d6e50ef6fd47458bd037f2e99755ec11340a6975905f",
+      "runtimeSha256": "cde50ea1c5da04ee06968ed1bd79465ea3161779bf1aaf9ece3409cec9dadd61",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_sleep_powder",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_sleep_powder.png",
+      "runtimePath": "runtime/active/pet_sleep_powder.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "210823e316b6f3fa23e64e46cd34111b18f1dc4e987e5c7b6e68ab54dd8fc40f",
+      "runtimeSha256": "ebed3c3e3aade0d1d7d59bc8c6d43b8bb09847147a3760ccafde806da2d50885",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "pet_stone_gaze",
+      "kind": "active",
+      "sourcePath": "source/generated/pet_stone_gaze.png",
+      "runtimePath": "runtime/active/pet_stone_gaze.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "5ae363278147906736581f58d4b7ee81eb56b982e2636d67f642768641eb6bc2",
+      "runtimeSha256": "a01bbca179c707d83469bc47e34adca25ad02ee106f65c32415c3885a6d0a423",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "bui_resistant_skin",
+      "kind": "passive",
+      "sourcePath": "source/generated/bui_resistant_skin.png",
+      "runtimePath": "runtime/passive/bui_resistant_skin.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "082dca6db083fcbb5eaa12810e12eda2c05c296c120743a58729810286e67221",
+      "runtimeSha256": "36498f1a34925a1dad0f19e7667d6d00b49f77c7bd9ae8843962cea215adedff",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "emberhorn_ash_cinder_breath",
+      "kind": "passive",
+      "sourcePath": "source/generated/emberhorn_ash_cinder_breath.png",
+      "runtimePath": "runtime/passive/emberhorn_ash_cinder_breath.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "bacf927c06943be0ee68f3b334d151b1886e2a84071a82cab042740ddcea78e2",
+      "runtimeSha256": "dc2ae3eff5ba5168ea3d7502621ea5d5e23bf120d4d7c72969ddb90c4c390126",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "emberhorn_gale_wakeful_instinct",
+      "kind": "passive",
+      "sourcePath": "source/generated/emberhorn_gale_wakeful_instinct.png",
+      "runtimePath": "runtime/passive/emberhorn_gale_wakeful_instinct.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "5bbcb7fe6f73757bc11d7b6bb9cb670ea2c4d53858d198d39136567150571803",
+      "runtimeSha256": "7f47ef41df7bb565b3a522f65006903c7688c6b2f74b5393c7ecd3f5d48a6b2f",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "emberhorn_red_burning_mind",
+      "kind": "passive",
+      "sourcePath": "source/generated/emberhorn_red_burning_mind.png",
+      "runtimePath": "runtime/passive/emberhorn_red_burning_mind.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "d2115b83e8c5a7b3baf3808633fd982c2be774c92e341728751a161a6594a81c",
+      "runtimeSha256": "a12b02a1215b4923db2a4ebed8f42983631a6b7c943a0ce19c7a3857abc9da17",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "mossback_marsh_adaptive_shell",
+      "kind": "passive",
+      "sourcePath": "source/generated/mossback_marsh_adaptive_shell.png",
+      "runtimePath": "runtime/passive/mossback_marsh_adaptive_shell.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "dcae8290d04d185e76f5e8574d7e981f8e4c09b6ec83a2d507e53ef5241b290e",
+      "runtimeSha256": "cc1233ef3ddbb0233637fe752b7470f9866c865606f8cb1300a3c21b7fa885e7",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "mossback_sunbaked_grounded_shell",
+      "kind": "passive",
+      "sourcePath": "source/generated/mossback_sunbaked_grounded_shell.png",
+      "runtimePath": "runtime/passive/mossback_sunbaked_grounded_shell.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "f46f3d714b43217bf94dabef29dfc3987ae678cfe3381bc5776e2b3882a0a179",
+      "runtimeSha256": "ab6f3b1992b588d0abd3ca54cf1cdc860f39737a38943d28b57888488893917d",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "poison_resistance",
+      "kind": "passive",
+      "sourcePath": "source/generated/poison_resistance.png",
+      "runtimePath": "runtime/passive/poison_resistance.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "6a75647942cf2690ac07a15c1de5cc0c78c7f2b9543c6028881a9cb7065a535c",
+      "runtimeSha256": "211e1aea4b6c961d94075fa1398cf14a6c5be3f3d954144f66260f66964542d0",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "quick_instinct",
+      "kind": "passive",
+      "sourcePath": "source/generated/quick_instinct.png",
+      "runtimePath": "runtime/passive/quick_instinct.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "2cfaa0f8c8a1f26900bd69c8df1150d246830b06899ef1b49a948fe0580247d6",
+      "runtimeSha256": "2e59eea943f6d30a02394c488717062c04d49ea006945f684a60ca53d788fb49",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "stone_immunity",
+      "kind": "passive",
+      "sourcePath": "source/generated/stone_immunity.png",
+      "runtimePath": "runtime/passive/stone_immunity.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "bdb32e7cae39fb58248788ab235a0ed64ba192da2dd7eb00be60719a999deca4",
+      "runtimeSha256": "383a1ecb2ed8bf0be6363138f6f8f9596a43068e1f8a2754d569bbf550d450bb",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    },
+    {
+      "skillId": "wuli_hard_shell",
+      "kind": "passive",
+      "sourcePath": "source/generated/wuli_hard_shell.png",
+      "runtimePath": "runtime/passive/wuli_hard_shell.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "7187cd4ac1e1cc0f2ea75c78d74f8507e9960830ef0df670c1a49d30b17c95b0",
+      "runtimeSha256": "5e475ecdd1c9b81f1b938db4ad5697041347c5014ad66d60a7d6c1ca0c596262",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    }
+  ],
+  "utilities": [
+    {
+      "assetId": "ui_empty_skill_slot",
+      "sourcePath": "source/generated/ui_empty_skill_slot.png",
+      "runtimePath": "runtime/common/empty_skill_slot.png",
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "runtimeSize": {
+        "width": 256,
+        "height": 256
+      },
+      "sourceSha256": "7c21af62064365d9c54ea38b30b66c7e9648f6b08780f348946449cfd6558696",
+      "runtimeSha256": "bbdf1b89b4e2c6888028b0608156043223f708c84be4e51b6f9e6b4e1776c8db",
+      "generator": "OpenAI ImageGen",
+      "ownership": "original_project_asset",
+      "ownerReviewStatus": "owner_review_pending"
+    }
+  ]
+}

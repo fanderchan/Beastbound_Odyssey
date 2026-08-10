@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "driftfox_evolved_moon_gale_wind7_water3",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_FBM0lcNQHYLAbPBqoRXvvbsI",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/driftfox_evolved_moon_gale_wind7_water3/raw.png",
+      "sha256": "60249f1f2b6bcaaab645a3873c9ae8f3688abf6bdf5dd60d64fbf144cc3e8b0d",
+      "rgbaSha256": "70718bad21603daa04eb976008148524b69d8d581255f7afcae227379ab86803",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/generation-attestation.json",
+      "sha256": "3bf3d4fdec809fbfde05be5795a3a4b961b43cf2840048e2a2e0d29bddbec468",
+      "schemaVersion": 3,
+      "generationId": "call_FBM0lcNQHYLAbPBqoRXvvbsI"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "f6947909b3a3af4657ee6722cb4d01647829e7be6e2d44dfcb52db8294222c62",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 551,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/identity/front_3quarter_sw.png",
+    "sha256": "f6947909b3a3af4657ee6722cb4d01647829e7be6e2d44dfcb52db8294222c62",
+    "rgbaSha256": "ab7ad8b8118a93ddbf4c81d6ca023c7377f6e684391c0f16fea95374f73ecbe3",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/prompts/portrait-v1.txt",
+    "sha256": "e95e1cf115447b9127bd42676587d6a8bbc3b4b0d37bff831721a74c64399443",
+    "sourceSha256": "e95e1cf115447b9127bd42676587d6a8bbc3b4b0d37bff831721a74c64399443",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/driftfox_evolved_moon_gale_wind7_water3/prompt.txt",
+    "selectionDocumentationSha256": "840668ccf7679c2e4dbda12b52447d11e670c72c6387781097a08fbf3b0c5426",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/portrait/source-and-ownership.md",
+    "sha256": "97bbab61833e72ce58e3ae710637ecd7f43f452e3c9652029b7ba30c98beaa1c"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#F115EA",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        11.091,
+        9.165,
+        12.728,
+        8.0
+      ],
+      "candidatePixels": 1225033,
+      "eligiblePixels": 4525,
+      "transparentPixels": 1220508,
+      "partialAlphaPixels": 4511,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 4401,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "1a9e2c83e97c8dc3772841e4819a17880485f78bcf1c671af0d9b92546c398ed",
+        "afterRgbaSha256": "d96fa30c0d62659d3a7f34de812138433e19cceb2261b65552d7109bf11d406c",
+        "helperMetrics": {
+          "edgePixelCount": 14093,
+          "strongMagentaEdgePixelsBefore": 4401,
+          "strongMagentaEdgePixelsAfter": 195,
+          "strongMagentaEdgeRatioAfter": 0.013837,
+          "despilledPixels": 4401,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 551,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/headshot-original-generated.png",
+      "sha256": "60249f1f2b6bcaaab645a3873c9ae8f3688abf6bdf5dd60d64fbf144cc3e8b0d",
+      "rgbaSha256": "70718bad21603daa04eb976008148524b69d8d581255f7afcae227379ab86803",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "f4eac5d755eefff9a6e94e2460111a9d97de4c51d2556dee03c6f652d0e31409",
+      "rgbaSha256": "70718bad21603daa04eb976008148524b69d8d581255f7afcae227379ab86803",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/headshot-master-1024.png",
+      "sha256": "54687ac7a5d858b2ed40074ce0a40a1ab941eae7b2523e219a1beed6c46fb0a8",
+      "rgbaSha256": "05de0c8914b1f4a5a0d19f81d45623f995cfe5f349fb5cff77c1a8e8e00f374d",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/portrait/default.png",
+      "sha256": "a99a9cf54094d7981dfbe00ea780f6097369741e99d026261046e2fcbce6b28e",
+      "rgbaSha256": "d4933ed8277a2cc365b366e80ad9f1eaf22f78f2e18c8cb6d660e4831239d649",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "40f3b6f8e0eb3b81435521de168a1152ef83841a37654d1ff320af7d7af2a921",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 4525
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/source/portrait/headshot-alpha-mask.png",
+      "sha256": "48e264dbe85916c61c693403f35a6fc6323c2cad16a3c648b9606c3be2c7ae16",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 352008
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.225096,
+      "transparentCoverage": 0.774904,
+      "visiblePixelCount": 236030,
+      "visibleBbox": [
+        225,
+        142,
+        790,
+        894
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 225,
+        "top": 142,
+        "right": 234,
+        "bottom": 130
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.227531,
+      "transparentCoverage": 0.772469,
+      "visiblePixelCount": 59646,
+      "visibleBbox": [
+        112,
+        71,
+        395,
+        447
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 112,
+        "top": 71,
+        "right": 117,
+        "bottom": 65
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/qa/portrait/contact-sheet.png",
+      "sha256": "cf38a741e4fd18204f681c10c50b1e5bc29fe94d5001a3dbd5472612fee68c4a",
+      "rgbaSha256": "87be8c2cbc803be9096db719b0060fe8c6dea14cf48eeba992330db3b9b7be19",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

@@ -6,7 +6,6 @@
   "independentlyAuthoredClaim": true,
   "independentAuthorshipClaimTrust": "untrusted_claim",
   "semanticIndependenceVerified": false,
-  "releaseGate": false,
   "fullBodyCropAllowed": false,
   "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
   "sharedUses": [
@@ -37,7 +36,7 @@
     "rawLosslessPath": "client/godot/assets/pets/pet_rebirth_mm_stage2/source/portrait/headshot-raw-lossless.webp",
     "generationAttestation": {
       "path": "client/godot/assets/pets/pet_rebirth_mm_stage2/source/portrait/generation-attestation.json",
-      "sha256": "7cc5e2a2f64cfa4f956bf5422d0c14331e9885b8cfade47cf646157902b76b94",
+      "sha256": "c6b27ed6be9828c87e38d3be8b292ce683d5e0eaedfd7f0502cec65599e8e71c",
       "schemaVersion": 3,
       "generationId": "call_cilb4EArcx9Xs7h0ejFwO6Sw"
     }
@@ -48,7 +47,7 @@
     "identityReferenceSha256": "8ce464ae6e244f6975b1f7c99c46721752da1594990f16b6cdc4362176c05833",
     "duplicateGuard": {
       "method": "normalized_rgba_scaled_copy_guard_v1",
-      "checkedExistingImages": 220,
+      "checkedExistingImages": 225,
       "normalizedSize": 128,
       "coarseNormalizedSize": 64,
       "alphaIouThreshold": 0.995,
@@ -145,7 +144,7 @@
     },
     "duplicateGuard": {
       "method": "normalized_rgba_scaled_copy_guard_v1",
-      "checkedExistingImages": 220,
+      "checkedExistingImages": 225,
       "normalizedSize": 128,
       "coarseNormalizedSize": 64,
       "alphaIouThreshold": 0.995,

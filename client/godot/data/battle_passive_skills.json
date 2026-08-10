@@ -5,6 +5,13 @@
       "id": "bui_resistant_skin",
       "label": "抗性皮肤",
       "description": "根据地水火风属性分别获得石化、中毒、混乱、睡眠抗性。",
+      "presentation": {
+        "description": "地、水、火、风每1点分别提供1个百分点的石化、中毒、混乱、睡眠抗性。",
+        "role": "抗性",
+        "source": "种族固有",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/passive/bui_resistant_skin.png",
+        "mechanicsImplemented": true
+      },
       "effect": {
         "type": "element_scaled_status_resist",
         "scalePerPoint": 0.01,
@@ -20,6 +27,13 @@
       "id": "wuli_hard_shell",
       "label": "硬壳体质",
       "description": "根据地属性获得石化抗性；地属性达到10时免疫石化。",
+      "presentation": {
+        "description": "每1点地属性提供10个百分点的石化抗性；地属性达到10点时免疫石化。",
+        "role": "抗性与免疫",
+        "source": "种族固有",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/passive/wuli_hard_shell.png",
+        "mechanicsImplemented": true
+      },
       "effect": {
         "type": "element_scaled_status_resist",
         "scalePerPoint": 0.1,
@@ -33,6 +47,13 @@
       "id": "stone_immunity",
       "label": "石化免疫",
       "description": "免疫一切石化状态。",
+      "presentation": {
+        "description": "免疫一切石化状态。",
+        "role": "免疫",
+        "source": "特殊被动",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/passive/stone_immunity.png",
+        "mechanicsImplemented": true
+      },
       "effect": {
         "statusImmune": ["stone"]
       }
@@ -41,6 +62,13 @@
       "id": "poison_resistance",
       "label": "毒素抗性",
       "description": "降低中毒命中的概率。",
+      "presentation": {
+        "description": "使中毒基础命中率降低35个百分点。",
+        "role": "抗性",
+        "source": "特殊被动",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/passive/poison_resistance.png",
+        "mechanicsImplemented": true
+      },
       "effect": {
         "statusResist": {
           "poison": 0.35
@@ -50,13 +78,27 @@
     {
       "id": "quick_instinct",
       "label": "迅捷本能",
-      "description": "行动判断时更容易抢先出手。",
+      "description": "先手效果尚未开放。",
+      "presentation": {
+        "description": "先手效果尚未开放。",
+        "role": "先手",
+        "source": "特殊被动",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/passive/quick_instinct.png",
+        "mechanicsImplemented": false
+      },
       "effect": {}
     },
     {
       "id": "emberhorn_red_burning_mind",
       "label": "灼心",
       "description": "赤角血脉使其更不容易陷入混乱。",
+      "presentation": {
+        "description": "赤角血脉使混乱基础命中率降低25个百分点。",
+        "role": "抗性",
+        "source": "血统被动",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/passive/emberhorn_red_burning_mind.png",
+        "mechanicsImplemented": true
+      },
       "effect": {
         "statusResist": {
           "confusion": 0.25
@@ -67,6 +109,13 @@
       "id": "emberhorn_ash_cinder_breath",
       "label": "烬息",
       "description": "灰烬血脉使其更不容易受到中毒影响。",
+      "presentation": {
+        "description": "灰烬血脉使中毒基础命中率降低25个百分点。",
+        "role": "抗性",
+        "source": "血统被动",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/passive/emberhorn_ash_cinder_breath.png",
+        "mechanicsImplemented": true
+      },
       "effect": {
         "statusResist": {
           "poison": 0.25
@@ -77,6 +126,13 @@
       "id": "emberhorn_gale_wakeful_instinct",
       "label": "醒风",
       "description": "岚角血脉使其更不容易陷入睡眠。",
+      "presentation": {
+        "description": "岚角血脉使睡眠基础命中率降低25个百分点。",
+        "role": "抗性",
+        "source": "血统被动",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/passive/emberhorn_gale_wakeful_instinct.png",
+        "mechanicsImplemented": true
+      },
       "effect": {
         "statusResist": {
           "sleep": 0.25
@@ -87,6 +143,13 @@
       "id": "mossback_marsh_adaptive_shell",
       "label": "沼生甲",
       "description": "湿地苔背血脉对中毒、睡眠、混乱和石化都提供少量抗性。",
+      "presentation": {
+        "description": "湿地苔背血脉使中毒、睡眠、混乱和石化基础命中率各降低12个百分点。",
+        "role": "全异常抗性",
+        "source": "血统被动",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/passive/mossback_marsh_adaptive_shell.png",
+        "mechanicsImplemented": true
+      },
       "effect": {
         "statusResist": {
           "poison": 0.12,
@@ -100,6 +163,13 @@
       "id": "mossback_sunbaked_grounded_shell",
       "label": "地脉甲",
       "description": "晒甲苔背血脉显著降低石化命中的概率，但不会形成免疫。",
+      "presentation": {
+        "description": "晒甲苔背血脉使石化基础命中率降低35个百分点，但不会形成免疫。",
+        "role": "石化抗性",
+        "source": "血统被动",
+        "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/passive/mossback_sunbaked_grounded_shell.png",
+        "mechanicsImplemented": true
+      },
       "effect": {
         "statusResist": {
           "stone": 0.35

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "assetPackId": "pet_management_awakened_v1",
+  "generatedAt": "2026-07-28",
+  "authoringTool": "OpenAI built-in image generation",
+  "ownership": "original_beastbound_generation",
+  "reviewState": "owner_review_pending",
+  "sourceFiles": [
+    {
+      "path": "source/pet_management_backdrop_raw.png",
+      "sha256": "e0a7c5d42f70811ee11f04a2ea73ddce4509810ee4b472b71b24a74cac0fe858"
+    },
+    {
+      "path": "source/pet_management_components_chroma_raw.png",
+      "sha256": "0b692a28d1bb3f54a68fe39887fe2da55bfd9bf6aaafd2b192348f536f0cf5c0"
+    },
+    {
+      "path": "source/pet_management_components_alpha.png",
+      "sha256": "f73035059ec3ecec83833ab039cd71051a90171c3a6b6ae7656087e9bb65ad4d"
+    }
+  ],
+  "runtimeFiles": [
+    {
+      "path": "runtime/pet_management_backdrop_1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "sha256": "b46b378aff0b2bed2a167708053f62cc1c48322db906f151876828ed45add789"
+    },
+    {
+      "path": "runtime/tab_normal.png",
+      "width": 560,
+      "height": 170,
+      "sha256": "9cc63beae3fe7f0cac92074446af05f3db7f278ec8c3e47ad482cd3f7ad90823"
+    },
+    {
+      "path": "runtime/tab_selected.png",
+      "width": 560,
+      "height": 170,
+      "sha256": "03e6582cdc6930d450d76add306f47840c5d6c702a8fee260c8699399faa36b7"
+    },
+    {
+      "path": "runtime/button_normal.png",
+      "width": 430,
+      "height": 160,
+      "sha256": "886965ff781104d22b8b22ece3ec00830d446e024c020ce1c1cfbf898fb5a623"
+    },
+    {
+      "path": "runtime/button_selected.png",
+      "width": 430,
+      "height": 160,
+      "sha256": "cea96cf14464ece2320e1f0f5b632d693a15dd6cd5938d95060169f7d37a7129"
+    },
+    {
+      "path": "runtime/portrait_slot_normal.png",
+      "width": 300,
+      "height": 290,
+      "sha256": "44f8eb08af0badfa54082a022daf3cc676dcf9a2ecf183738ea8debcd0eaed21"
+    },
+    {
+      "path": "runtime/portrait_slot_selected.png",
+      "width": 300,
+      "height": 290,
+      "sha256": "9c6aa3b10a6cf92c844d28d7d2f41394d3e5e0c312856c9ad75fdd3305189a7c"
+    }
+  ]
+}

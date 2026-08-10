@@ -15,23 +15,19 @@
   "skills": [
     {
       "skillId": "pet_focus_bite",
-      "cost": 28,
-      "description": "集中攻击单体，伤害比普通攻击更高。"
+      "cost": 28
     },
     {
       "skillId": "pet_sleep_powder",
-      "cost": 34,
-      "description": "尝试让单体目标进入睡眠状态。"
+      "cost": 34
     },
     {
       "skillId": "pet_confuse_cry",
-      "cost": 34,
-      "description": "尝试让单体目标进入混乱状态。"
+      "cost": 34
     },
     {
       "skillId": "pet_stone_gaze",
-      "cost": 38,
-      "description": "尝试让单体目标进入石化状态。"
+      "cost": 38
     }
   ]
 }

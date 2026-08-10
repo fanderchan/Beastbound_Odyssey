@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "mossback_marsh_earth7_water3",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/mossback_marsh_earth7_water3"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_0btbDSShJNy2gBw294T1RT8R",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/mossback_marsh_earth7_water3/raw.png",
+      "sha256": "372f5c2a55f39b4c7a3bf7095c24e05f54d1a3bdd84fd12ef3ae37d47c16ecbb",
+      "rgbaSha256": "5ebb726d14b5469344d9d17e9012ed5570a036bd4c2430b99ccd3bfb743910f1",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/generation-attestation.json",
+      "sha256": "55d940ba1a3adb60edf88b5c1d99502a622e07efbda9ee882e24a1a52dfd2870",
+      "schemaVersion": 3,
+      "generationId": "call_0btbDSShJNy2gBw294T1RT8R"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "051965a5284af451fe6addf2532e188684656385a3c1cc1ee4e3e36fb404675f",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 260,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/identity/front_3quarter_sw.png",
+    "sha256": "051965a5284af451fe6addf2532e188684656385a3c1cc1ee4e3e36fb404675f",
+    "rgbaSha256": "37d559ae137efa4afd4faecfb1fb1ace56777a2dfeef0899d6b2c429fdd634fd",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/prompts/portrait-v1.txt",
+    "sha256": "e6dcca4e6817343202a44beca4936718ae3c15dc20c606468cdef23f9dad237f",
+    "sourceSha256": "e6dcca4e6817343202a44beca4936718ae3c15dc20c606468cdef23f9dad237f",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/mossback_marsh_earth7_water3/prompt.txt",
+    "selectionDocumentationSha256": "ca98b1fc52eabae966ce04671c26abbc934a68a6f7d5480d91bed804a517aea8",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/portrait/source-and-ownership.md",
+    "sha256": "a7a721526e9d99c2c01b8cd2337e7707391a9088a9f913bf04f476a5034c2905"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#F214EE",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        9.22,
+        9.165,
+        12.45,
+        8.0
+      ],
+      "candidatePixels": 1078817,
+      "eligiblePixels": 1778,
+      "transparentPixels": 1077039,
+      "partialAlphaPixels": 1775,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 1765,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "98d88b3a96f8f8924feec76990b5df34838e12d75e6a1177d2a8f9267ad5fd37",
+        "afterRgbaSha256": "da0df5f51a70c47bd678c08f57c05fab562c8122705f46caf3cfcfa4219690eb",
+        "helperMetrics": {
+          "edgePixelCount": 8257,
+          "strongMagentaEdgePixelsBefore": 1765,
+          "strongMagentaEdgePixelsAfter": 18,
+          "strongMagentaEdgeRatioAfter": 0.00218,
+          "despilledPixels": 1765,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 260,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/headshot-original-generated.png",
+      "sha256": "372f5c2a55f39b4c7a3bf7095c24e05f54d1a3bdd84fd12ef3ae37d47c16ecbb",
+      "rgbaSha256": "5ebb726d14b5469344d9d17e9012ed5570a036bd4c2430b99ccd3bfb743910f1",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "1538dca61bc9c6c3fe4a94ee2ad9972c10673dd03854e3482de9067e7bde91e6",
+      "rgbaSha256": "5ebb726d14b5469344d9d17e9012ed5570a036bd4c2430b99ccd3bfb743910f1",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/headshot-master-1024.png",
+      "sha256": "8917ab41a69d9dc91efcc413ddf2f461f776e2f9b86b19c5471466a1d13ee2f2",
+      "rgbaSha256": "e3f80925db2209ed611fec4f953b18d12b60a630a26d8dcab59ea6c0c55d915e",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/portrait/default.png",
+      "sha256": "5580836d1869e2e8a3ebf4c81a1415c9e84d87267a235e8a4f5ffc875e3d4fdd",
+      "rgbaSha256": "72a731d26bdaa69b4d1a6d2036df18979fe1ed34aad57787183db4ac4d93f237",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "5ad7ebf6d2d8d7045ac92b761b0c1b09a44f9f5a3a209cdec27918e8aee07e26",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 1778
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/headshot-alpha-mask.png",
+      "sha256": "b77b5d04da1f1af0a208f2f12aa0dddc85a849d54b288c601ff26a30ec5f4f28",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 495477
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.316004,
+      "transparentCoverage": 0.683996,
+      "visiblePixelCount": 331354,
+      "visibleBbox": [
+        201,
+        172,
+        873,
+        868
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 201,
+        "top": 172,
+        "right": 151,
+        "bottom": 156
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.317448,
+      "transparentCoverage": 0.682552,
+      "visiblePixelCount": 83217,
+      "visibleBbox": [
+        100,
+        85,
+        437,
+        434
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 100,
+        "top": 85,
+        "right": 75,
+        "bottom": 78
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/mossback_marsh_earth7_water3/qa/portrait/contact-sheet.png",
+      "sha256": "b37bf384efbd9eec5c751498bfcfe580b6a131e14b85b02b2fff0eef8f4a3061",
+      "rgbaSha256": "5d270c1a212a717a8f7768a47cc9b3f840f937047ffb0db746c024e708f6998a",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

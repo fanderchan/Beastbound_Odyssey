@@ -55,7 +55,7 @@ Define identity in this order:
 7. One or two team synergies.
 8. Acquisition tier and expected scarcity.
 9. Growth shape and long-term path.
-10. Visual brief placeholder; do not create art in the initial skill version.
+10. Visual brief placeholder, including the future independently authored shared headshot portrait; do not create art in a concept-only initial design.
 
 If the card needs several paragraphs to explain its role, simplify the pet before implementing it.
 
@@ -167,6 +167,7 @@ A pet is not complete because it exists in `pet_templates.json`. It is complete 
 - active/passive effects execute authoritatively on the server;
 - AI and manual play use the intended skills;
 - codex and owned-pet views explain the right facts;
+- any non-deferred formal art contract includes a canonical independently authored headshot shared by the roster bar, codex, ride permit and pet egg, with no full-body crop fallback and with source/ownership/evidence/owner-review records;
 - old saves remain compatible;
 - targeted Godot/Node tests and manual acceptance pass;
 - roadmap evidence is updated.

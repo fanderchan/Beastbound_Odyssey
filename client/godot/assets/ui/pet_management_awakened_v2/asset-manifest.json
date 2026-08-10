@@ -1,0 +1,423 @@
+{
+  "schemaVersion": 2,
+  "assetPackId": "pet_management_awakened_v2",
+  "generatedAt": "2026-07-28",
+  "authoringTools": [
+    "OpenAI built-in image generation",
+    "deterministic Python/Pillow processing",
+    "existing formal Beastbound pet identity art"
+  ],
+  "ownership": "original_beastbound_generation_and_formal_art_copies",
+  "reviewState": "approved",
+  "sourceFiles": [
+    {
+      "path": "source/base-components-alpha.png",
+      "width": 1672,
+      "height": 941,
+      "mode": "RGBA",
+      "sha256": "f73035059ec3ecec83833ab039cd71051a90171c3a6b6ae7656087e9bb65ad4d"
+    },
+    {
+      "path": "source/micro-ornament-atlas-alpha.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "sha256": "666e15bfeed50c3ebe4561a3403d1fd69f6287ce4ed29beebe80fa8c42b05690"
+    },
+    {
+      "path": "source/micro-ornament-atlas-chroma.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "sha256": "018726d7128738b0d4da61ec5ee5e177b436a8d5ae62b18007be163ad88c045d"
+    },
+    {
+      "path": "source/ornament-atlas-alpha.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "sha256": "f85f734d2c832195a821dbbc904fb778e45ce04f697a86edf77d0daea0f551b5"
+    },
+    {
+      "path": "source/ornament-atlas-chroma.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "sha256": "657b4a2374476022215369cd801f7e51148dba403ed17c1b9476156cbc6e54f5"
+    },
+    {
+      "path": "source/pet_management_backdrop_wide_original.png",
+      "width": 1280,
+      "height": 720,
+      "mode": "RGB",
+      "sha256": "b46b378aff0b2bed2a167708053f62cc1c48322db906f151876828ed45add789"
+    },
+    {
+      "path": "source/selected-option-2-reference.png",
+      "width": 1672,
+      "height": 941,
+      "mode": "RGB",
+      "sha256": "e570a3efcf087fcd0fd95ff3465e1d9d408531938a0bbf4817a1153ed8d9e8b4"
+    }
+  ],
+  "runtimeFiles": [
+    {
+      "path": "runtime/button_normal.png",
+      "width": 430,
+      "height": 160,
+      "mode": "RGBA",
+      "sha256": "886965ff781104d22b8b22ece3ec00830d446e024c020ce1c1cfbf898fb5a623"
+    },
+    {
+      "path": "runtime/button_selected.png",
+      "width": 430,
+      "height": 160,
+      "mode": "RGBA",
+      "sha256": "cea96cf14464ece2320e1f0f5b632d693a15dd6cd5938d95060169f7d37a7129"
+    },
+    {
+      "path": "runtime/close_icon.png",
+      "width": 321,
+      "height": 326,
+      "mode": "RGBA",
+      "sha256": "1e329c1dcaadf2faa9beb9fae5932848a730989745f4c9a323290104ff03cd02"
+    },
+    {
+      "path": "runtime/codex_badge.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "a88492c4bad3e56eb887ac332478e8fe97e401d0d3c93d5e05a04da87f102c9c"
+    },
+    {
+      "path": "runtime/edit_icon.png",
+      "width": 306,
+      "height": 331,
+      "mode": "RGBA",
+      "sha256": "1a61ee6bc6c72bec0894dba6db47264bfe82064ece54a21349671a8ba4404bc7"
+    },
+    {
+      "path": "runtime/header_paw.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "304dc2f81b0258f6f82bb173656d06dc4dd394bdb521df2337c89d933fa1c0fe"
+    },
+    {
+      "path": "runtime/help_medallion.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "e7f287a0cbe6bdc67235e32ed56d235617ac4a0b00a8eb9c93688cd6e7daf16f"
+    },
+    {
+      "path": "runtime/pet_management_backdrop_1280x720.png",
+      "width": 1280,
+      "height": 720,
+      "mode": "RGBA",
+      "sha256": "ff61df4ef2fd77cef76c0fd1475bba8c905b33032925d6527850d524f0e0036a"
+    },
+    {
+      "path": "runtime/portrait_slot_normal.png",
+      "width": 300,
+      "height": 290,
+      "mode": "RGBA",
+      "sha256": "44f8eb08af0badfa54082a022daf3cc676dcf9a2ecf183738ea8debcd0eaed21"
+    },
+    {
+      "path": "runtime/portrait_slot_selected.png",
+      "width": 300,
+      "height": 290,
+      "mode": "RGBA",
+      "sha256": "9c6aa3b10a6cf92c844d28d7d2f41394d3e5e0c312856c9ad75fdd3305189a7c"
+    },
+    {
+      "path": "runtime/quality_badge_frame.png",
+      "width": 590,
+      "height": 216,
+      "mode": "RGBA",
+      "sha256": "6d2485fc6dbac8f31679d29d0886869b527535a2d294ec74d3c79d1a31dcda7d"
+    },
+    {
+      "path": "runtime/roster_up_down_control.png",
+      "width": 259,
+      "height": 412,
+      "mode": "RGBA",
+      "sha256": "90bef15ac3f301bd12bc1bca0986bc98a27004699f428ccd20448065563b7238"
+    },
+    {
+      "path": "runtime/showcase/blue_man_dragon_water10.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "c231f247554b19667e1e205da86a8c483e2108bc43077729aebcde00f4068f59"
+    },
+    {
+      "path": "runtime/showcase/bui_normal_red_fire10.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "b81bea24a38beb93e438fc983fb1234d55dd358fb07817eab0624f9458632b97"
+    },
+    {
+      "path": "runtime/showcase/bui_normal_thick_earth10.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "7c970fe6ae6b6c0413977febeb1c0886103991dcf40c3aae40b556e86eb84763"
+    },
+    {
+      "path": "runtime/showcase/bui_normal_yellow_wind10.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "158f6a5b59f68d9c260e51f3ea717163405e0521d8ac1f86aa087e4cb45f9342"
+    },
+    {
+      "path": "runtime/showcase/driftfox_evolved_moon_gale_wind7_water3.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "f6947909b3a3af4657ee6722cb4d01647829e7be6e2d44dfcb52db8294222c62"
+    },
+    {
+      "path": "runtime/showcase/driftfox_highland_wind9_earth1.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "b1ae23f2501965e1c306854c1292f3ca484f0cdce83a2bc790dd6359cf4e8347"
+    },
+    {
+      "path": "runtime/showcase/driftfox_mist_wind7_water3.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "1b77fcfd9b4459cc0b627ec13a30a0e5e0b2ff15dd705e3e8075a0ea27473d15"
+    },
+    {
+      "path": "runtime/showcase/emberhorn_ash_fire6_wind4.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "1735ef8652d1bb9e2d43d608736ed2c3d6121a193e29c571d221f1448b8274a3"
+    },
+    {
+      "path": "runtime/showcase/emberhorn_gale_fire5_wind5.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "1468ed482b8d778ee57c0b724d0307721b3e7926e4511a95616206063b64340e"
+    },
+    {
+      "path": "runtime/showcase/emberhorn_red_fire8_earth2.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "416e0ebba1948639cf0e909edbcf20b073f7c5cea323c3012425cb5c61545c06"
+    },
+    {
+      "path": "runtime/showcase/mossback_marsh_earth7_water3.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "051965a5284af451fe6addf2532e188684656385a3c1cc1ee4e3e36fb404675f"
+    },
+    {
+      "path": "runtime/showcase/mossback_sunbaked_earth6_fire4.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "2beffe0a8a647f9ef8de1e72c5d78cb66adb4d81446bf40bad2eb97c46c521a4"
+    },
+    {
+      "path": "runtime/showcase/novice_sprout_bui.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "cd594922ce2ba05fa1f893522195daaad722326326ce76d475d1845ecb70add4"
+    },
+    {
+      "path": "runtime/showcase/novice_tiger_mount.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "07c7a90bc4d921b8b50ccfc0559f0194b78b67e927027076d0d1c9ba925fec65"
+    },
+    {
+      "path": "runtime/showcase/pet_rebirth_mm_stage1.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "49f914e7522ec0ea62c3d3bbe8d139a0138c31657d507eb687090840801b87d2"
+    },
+    {
+      "path": "runtime/showcase/pet_rebirth_mm_stage2.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "8ce464ae6e244f6975b1f7c99c46721752da1594990f16b6cdc4362176c05833"
+    },
+    {
+      "path": "runtime/showcase/rebirth_beast_earth_lv50.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "8d78386003148c217fae9e1df83935f15d2f647fc5c48077fce1518f04134d7c"
+    },
+    {
+      "path": "runtime/showcase/rebirth_beast_fire_lv50.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "f362736c0ef76dbe27c6eed2f5486c5d30a92f69c4e08dfb9e0f3d997e37ddf8"
+    },
+    {
+      "path": "runtime/showcase/rebirth_beast_water_lv50.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "09b6b1ee7dc3816efe3d1eb1e8b5ef211e3a9c3348ca153243bb45576a1a9abb"
+    },
+    {
+      "path": "runtime/showcase/rebirth_beast_wind_lv50.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "b76496259d44b435dd64eea18ab8aa7225b65dca7cb92da033dbeadd4f10f89e"
+    },
+    {
+      "path": "runtime/showcase/rebirth_starter_earth_cub.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "71c72de182137a94cb2e1966d2ccab2d14216389a0ba7a2683fe97c3bc29faf7"
+    },
+    {
+      "path": "runtime/showcase/rebirth_starter_fire_cub.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "478c64b49c22e8ccea8f2586daa6d1cf9af99d47afbfa3453d0165dc5c778309"
+    },
+    {
+      "path": "runtime/showcase/rebirth_starter_four_spirit_cub.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "b7aaa59b329eb1c9be9f10ffadde64a8995f2780481ba51b93392fc76d5d383d"
+    },
+    {
+      "path": "runtime/showcase/rebirth_starter_shadow_cub.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "9b2c185e21bed81c53f9b0ce68ea298b40269fd165bfad3445edf43966c52dd0"
+    },
+    {
+      "path": "runtime/showcase/rebirth_starter_water_cub.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "2b84365872abcd46311906a87e722cfa624ebb4e772bfd1bc1a4a8a3bb9ae96c"
+    },
+    {
+      "path": "runtime/showcase/rebirth_starter_wind_cub.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "462679c9fca678f2093c72046f91d34cfcccb90b34d25a0ad51fb1bbb05091c8"
+    },
+    {
+      "path": "runtime/showcase/thunder_dragon_mount.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "86d78ec2185f305ce6b7d05e39baa2bf4311418b74c19816dfc402ca408fea4e"
+    },
+    {
+      "path": "runtime/showcase/tidefin_mist_water8_wind2.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "09e9501b812072b3becc5a75ffef19457be8bf063a2659a3a4b9a3b312ba28e2"
+    },
+    {
+      "path": "runtime/showcase/tidefin_reed_water6_earth4.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "d47e10117930d5d8f961874ebe8d2c8ad8d87ad702877e0b7c9254091a275c47"
+    },
+    {
+      "path": "runtime/showcase/tidefin_sky_water5_wind5.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "ec839313afaf9cd947ff58955448de76232de85657ba4488ce92b522fe0f9d1e"
+    },
+    {
+      "path": "runtime/showcase/wuli_evolved_crystal_earth8_water2.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "27f8f15fda1fd8ff32155b84d27e1206c9e2cbc2de7a377cc656248b18d2b6ea"
+    },
+    {
+      "path": "runtime/showcase/wuli_normal_fast_wind10.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "984cae3abcba075e957f7cad89b031a77fc29bd3947811501b50af5a3c46ce55"
+    },
+    {
+      "path": "runtime/showcase/wuli_normal_orange_fire10.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "3a0537413e3f817a4a96f35c626685c60074514bc968bed7ecc2fd7c17052407"
+    },
+    {
+      "path": "runtime/showcase/wuli_normal_tough_earth10.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "637ae03e2f8568a2a81d1d76a1a3a85c5fb4fbe1cb925cb0f78e5e02c8b41a16"
+    },
+    {
+      "path": "runtime/stage_frame_normal.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "7769d61acdc4e0616ab370d8df637c04dc1f69e6980b2bfec9fe3694a5fe4bfc"
+    },
+    {
+      "path": "runtime/stage_frame_selected.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "2d8a664a491e4c4e48a1b4674a3ceea5a603211444cd1c4ec99be1651faedc11"
+    },
+    {
+      "path": "runtime/strategy_banner.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "sha256": "e90db8cc99411f8eb39e6f4c956d5f11ff11f4b4b0fe6a4f437bf855be88cc1f"
+    },
+    {
+      "path": "runtime/tab_normal.png",
+      "width": 560,
+      "height": 170,
+      "mode": "RGBA",
+      "sha256": "9cc63beae3fe7f0cac92074446af05f3db7f278ec8c3e47ad482cd3f7ad90823"
+    },
+    {
+      "path": "runtime/tab_selected.png",
+      "width": 560,
+      "height": 170,
+      "mode": "RGBA",
+      "sha256": "03e6582cdc6930d450d76add306f47840c5d6c702a8fee260c8699399faa36b7"
+    }
+  ],
+  "showcaseCount": 34
+}

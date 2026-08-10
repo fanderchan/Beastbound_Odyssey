@@ -39,6 +39,53 @@ static func passive_by_id(passive_id: String) -> Dictionary:
 	return {}
 
 
+static func label_for(passive_id: String, fallback: String = "") -> String:
+	var passive := passive_by_id(passive_id)
+	if passive.is_empty():
+		return fallback
+	var label := str(passive.get("label", "")).strip_edges()
+	return label if label != "" else fallback
+
+
+static func presentation_for(passive_id: String) -> Dictionary:
+	var passive := passive_by_id(passive_id)
+	if passive.is_empty():
+		return {}
+	var presentation = passive.get("presentation", {})
+	return presentation as Dictionary if presentation is Dictionary else {}
+
+
+static func description_for(passive_id: String, fallback: String = "") -> String:
+	var description := str(presentation_for(passive_id).get("description", "")).strip_edges()
+	if description != "":
+		return description
+	var passive := passive_by_id(passive_id)
+	var legacy_description := str(passive.get("description", "")).strip_edges()
+	return legacy_description if legacy_description != "" else fallback
+
+
+static func role_for(passive_id: String, fallback: String = "") -> String:
+	var role := str(presentation_for(passive_id).get("role", "")).strip_edges()
+	return role if role != "" else fallback
+
+
+static func source_for(passive_id: String, fallback: String = "") -> String:
+	var source := str(presentation_for(passive_id).get("source", "")).strip_edges()
+	return source if source != "" else fallback
+
+
+static func icon_path_for(passive_id: String, fallback: String = "") -> String:
+	var icon_path := str(presentation_for(passive_id).get("iconPath", "")).strip_edges()
+	return icon_path if icon_path != "" else fallback
+
+
+static func mechanics_implemented_for(passive_id: String, fallback: bool = false) -> bool:
+	var presentation := presentation_for(passive_id)
+	if not presentation.has("mechanicsImplemented"):
+		return fallback
+	return bool(presentation.get("mechanicsImplemented", fallback))
+
+
 static func passive_ids_for_actor(actor: Dictionary) -> Array[String]:
 	var result: Array[String] = []
 	var raw_ids = actor.get("passiveSkillIds", [])
@@ -171,12 +218,30 @@ static func _validate_passive(passive: Dictionary, index: int, seen_ids: Diction
 		errors.append("%s.label 不能为空" % _passive_name(passive, index))
 	if str(passive.get("description", "")) == "":
 		errors.append("%s.description 不能为空" % _passive_name(passive, index))
+	_validate_presentation(passive, errors)
 
 	var effect = passive.get("effect", {})
 	if not (effect is Dictionary):
 		errors.append("%s.effect 必须是对象" % _passive_name(passive, index))
 		return
 	_validate_passive_effect(passive, effect as Dictionary, errors)
+
+
+static func _validate_presentation(passive: Dictionary, errors: Array[String]) -> void:
+	var passive_name := _passive_name(passive, -1)
+	var raw_presentation = passive.get("presentation", null)
+	if not (raw_presentation is Dictionary):
+		errors.append("%s.presentation 必须是对象" % passive_name)
+		return
+	var presentation := raw_presentation as Dictionary
+	for field in ["description", "role", "source", "iconPath"]:
+		if typeof(presentation.get(field)) != TYPE_STRING or str(presentation.get(field, "")).strip_edges() == "":
+			errors.append("%s.presentation.%s 必须是非空字符串" % [passive_name, field])
+	var icon_path := str(presentation.get("iconPath", "")).strip_edges()
+	if icon_path != "" and not icon_path.begins_with("res://"):
+		errors.append("%s.presentation.iconPath 必须以 res:// 开头" % passive_name)
+	if presentation.has("mechanicsImplemented") and typeof(presentation.get("mechanicsImplemented")) != TYPE_BOOL:
+		errors.append("%s.presentation.mechanicsImplemented 必须是布尔值" % passive_name)
 
 
 static func _validate_passive_effect(passive: Dictionary, effect: Dictionary, errors: Array[String]) -> void:

@@ -1,0 +1,30 @@
+# Pet Portrait Source And Ownership
+
+- formId: `blue_man_dragon_water10`
+- capability: `shared_dedicated_headshot_v1`
+- independently authored claim: `true` (`untrusted_claim`)
+- semantic independence verified by automation: `false`
+- full-body crop allowed: `false`
+- generator: Codex built-in imagegen
+- generation result id: `call_z4BcACbOmxXMIbhLrgEY1QdA`
+- generation attestation: `client/godot/assets/pets/blue_man_dragon_water10/source/portrait/generation-attestation.json`
+- approved identity reference: `client/godot/assets/pets/blue_man_dragon_water10/identity/front_3quarter_sw.png`
+- identity reference SHA-256: `c231f247554b19667e1e205da86a8c483e2108bc43077729aebcde00f4068f59`
+- exact ImageGen request prompt: `client/godot/assets/pets/blue_man_dragon_water10/prompts/portrait-v1.txt`
+- prompt source kind: `actual_imagegen_request`
+- prompt SHA-256: `a3df10eb5d9a2b5ec5934837f87858732ae38013876f6192ab2f06499080bf61`
+- selected prompt documentation: `.run/pet-portrait-samples/blue_man_dragon_water10/prompt-v3.txt`
+- selected prompt documentation SHA-256: `50a0d405beada30727de44d258c5b8eb5346ed4308e4e8b04c425c96987be821`
+- processing: same-operation chroma alpha matte plus exact-mask-bounded edge cleanup; no global color pass
+- edge contract: `1`
+- edge cleanup changed pixels: `0`
+- edge cleanup alpha changed pixels: `0`
+- exact original ImageGen PNG SHA-256: `c45898ec86e74c0e6b8cf8ff93469e89c89ecc29fd48b424ad09b21c2fa0f82c`
+- raw lossless source SHA-256: `3878b0634403c98c9f329925640c3c9900949e45c69a5174e9cc18e813262c53`
+- transparent 1024 master SHA-256: `ca97b74131212f416b561d42519ef461d9d9c0c7865a4415562459b1f73f06c5`
+- shared 512 runtime SHA-256: `4b3fcd6a79b547cefbdfc689c31ffbbd81890d6b040ebe5a554b816c4c277125`
+- provenance status: project-directed generated candidate; automated checks do not prove copyright provenance
+- replacement path: rerun `tools/build_pet_portrait.py` from a newly generated dedicated headshot source
+- owner review required: `true`
+- owner review status: `owner_review_pending`
+- claim limit: cache/rollout/hash/normalized-copy checks reject known misuse and source mismatches, but do not prove semantic independence, copyright provenance, or owner approval

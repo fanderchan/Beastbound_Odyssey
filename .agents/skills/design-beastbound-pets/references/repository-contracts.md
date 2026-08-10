@@ -121,6 +121,7 @@ Do not implement a pet mutation only in `PlayerProgressModel.save_profile()` for
 ### Any new pet form
 
 - Add exactly one `formPolicies[]` entry to `pet_paid_reset_policy.json`; the strict server catalog rejects missing, duplicate, or unknown forms.
+- When art is non-deferred, install one canonical independently authored headshot through the pet asset manifest/focused catalog and reuse it across the roster bar, codex, ride permit, pet egg and compatible compact selectors. Keep consumer frames and badges as overlays; never create per-surface likenesses or crop a full-body/world/battle/mounted asset as fallback.
 - Declare a policy per form instead of assuming every instance can reset. An ordinary form's `allowed=true` means its authority-v1 one-rebirth, pre-terminal instances may be quoted; 0-rebirth and normal 2-rebirth instances remain ineligible. Evolution and future fusion targets use `allowed=false`.
 - For an ordinary `allowed=true` form, select a default price tier by acquisition/replacement value. Do not calculate price from the individual pet's public or hidden quality, reset count, or recharge history.
 - For `allowed=true`, use `bound_first_split` for ordinary/noncommercial system consumption unless the product calls for a stricter rule; reserve `unbound_only` for explicit commercial-value policy. Keep fixed-per-operation pricing, repeated eligibility after retraining to one rebirth, full Lv1/0 reset, successful unbinding, and technical-rollback-only refund semantics invariant.

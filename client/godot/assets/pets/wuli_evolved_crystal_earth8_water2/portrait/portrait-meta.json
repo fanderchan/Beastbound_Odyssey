@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "wuli_evolved_crystal_earth8_water2",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_sv0hWezKQ28pZvf5ZJddfv3j",
+    "originalInput": {
+      "path": ".run/pet-portrait-canary/crystal-wuli/headshot-chroma-v2.png",
+      "sha256": "b7c4a0f6c11bd24d7fdcdcbc4d83f8ca0b9d524594b0bcfbbe5c5f34336882fc",
+      "rgbaSha256": "b0a7cd4361544c5c215c6cf815c06f98f3c1595da52bfd77e600e54198ffe61c",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/source/portrait/generation-attestation.json",
+      "sha256": "98c0a522cd3e97dd09beb95b35dbff14c2a6fa5c37e0f2eafa2cc731bc2929e3",
+      "schemaVersion": 3,
+      "generationId": "call_sv0hWezKQ28pZvf5ZJddfv3j"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "27f8f15fda1fd8ff32155b84d27e1206c9e2cbc2de7a377cc656248b18d2b6ea",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 550,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/identity/front_3quarter_sw.png",
+    "sha256": "27f8f15fda1fd8ff32155b84d27e1206c9e2cbc2de7a377cc656248b18d2b6ea",
+    "rgbaSha256": "ae8d017a6b5e4fa37e3dc9f78f834583734b9292557b7a73b699c9232cb25447",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/prompts/portrait-v1.txt",
+    "sha256": "491bb6de5116bf0c25949a17c377ff85cc885360b466061ec1b35410dc24799a",
+    "sourceSha256": "491bb6de5116bf0c25949a17c377ff85cc885360b466061ec1b35410dc24799a",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-canary/crystal-wuli/prompt-v2.txt",
+    "selectionDocumentationSha256": "3a98b2204e3b0247398a0aeac8c9f2205268d11d809d4d97a67ad7974e713bfc",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/portrait/source-and-ownership.md",
+    "sha256": "6456104b5372342f941492ff083dc947230f0d59cb3313d473895dcbd69a6446"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#19E91C",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        3.606,
+        2.236,
+        3.0,
+        3.606
+      ],
+      "candidatePixels": 977868,
+      "eligiblePixels": 2365,
+      "transparentPixels": 975503,
+      "partialAlphaPixels": 2358,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 0,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "a93560f00d9b6d3c39c2095cb650904a5e38d011eab90497a24d1b299a58337d",
+        "afterRgbaSha256": "a93560f00d9b6d3c39c2095cb650904a5e38d011eab90497a24d1b299a58337d",
+        "helperMetrics": {
+          "edgePixelCount": 8407,
+          "strongMagentaEdgePixelsBefore": 0,
+          "strongMagentaEdgePixelsAfter": 0,
+          "strongMagentaEdgeRatioAfter": 0.0,
+          "despilledPixels": 0,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 550,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/source/portrait/headshot-original-generated.png",
+      "sha256": "b7c4a0f6c11bd24d7fdcdcbc4d83f8ca0b9d524594b0bcfbbe5c5f34336882fc",
+      "rgbaSha256": "b0a7cd4361544c5c215c6cf815c06f98f3c1595da52bfd77e600e54198ffe61c",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "abb32cac5d1c9a8ac9897e1d04f25d9f43a386745d909bbb44b391c72745cb1c",
+      "rgbaSha256": "b0a7cd4361544c5c215c6cf815c06f98f3c1595da52bfd77e600e54198ffe61c",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/source/portrait/headshot-master-1024.png",
+      "sha256": "5d27167ab276dfe369487fbd55b33015d3a709388558cb9993d1d7528be760ae",
+      "rgbaSha256": "2459808963cbc4edd051f1d949a8b195d45b0f436bbb7fc3f36a25dda6588fba",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/portrait/default.png",
+      "sha256": "31916958fb4a07bdde212aa9164b6bc3157b8544087cece7d8f43d773e6b78d1",
+      "rgbaSha256": "ac15f7afc472a61666b6b070d0b911bbda148c603a964334daa2d8c8c2a21f62",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "fedba8fa3ee7cac3bd888c28d6bedd5498d646f890eaa1073b9a74c571cfe08b",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 2365
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/source/portrait/headshot-alpha-mask.png",
+      "sha256": "395a4ad4d738cacda7403f85e5cd25dea58654612c8cd6e364d378df02917c13",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 597013
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.380534,
+      "transparentCoverage": 0.619466,
+      "visiblePixelCount": 399019,
+      "visibleBbox": [
+        174,
+        151,
+        903,
+        845
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 174,
+        "top": 151,
+        "right": 121,
+        "bottom": 179
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.38208,
+      "transparentCoverage": 0.61792,
+      "visiblePixelCount": 100160,
+      "visibleBbox": [
+        87,
+        75,
+        452,
+        423
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 87,
+        "top": 75,
+        "right": 60,
+        "bottom": 89
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/qa/portrait/contact-sheet.png",
+      "sha256": "5b2655853baafb41d3d8de07d468c58dea7c4a4d78943053d791b37cc8b3b911",
+      "rgbaSha256": "79bce73ec89aab0f0f5e6ea6d725932d23bec62678b5dd46845ffba418afbd9d",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}

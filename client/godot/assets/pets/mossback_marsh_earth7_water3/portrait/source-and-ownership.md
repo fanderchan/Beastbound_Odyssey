@@ -1,0 +1,30 @@
+# Pet Portrait Source And Ownership
+
+- formId: `mossback_marsh_earth7_water3`
+- capability: `shared_dedicated_headshot_v1`
+- independently authored claim: `true` (`untrusted_claim`)
+- semantic independence verified by automation: `false`
+- full-body crop allowed: `false`
+- generator: Codex built-in imagegen
+- generation result id: `call_0btbDSShJNy2gBw294T1RT8R`
+- generation attestation: `client/godot/assets/pets/mossback_marsh_earth7_water3/source/portrait/generation-attestation.json`
+- approved identity reference: `client/godot/assets/pets/mossback_marsh_earth7_water3/identity/front_3quarter_sw.png`
+- identity reference SHA-256: `051965a5284af451fe6addf2532e188684656385a3c1cc1ee4e3e36fb404675f`
+- exact ImageGen request prompt: `client/godot/assets/pets/mossback_marsh_earth7_water3/prompts/portrait-v1.txt`
+- prompt source kind: `actual_imagegen_request`
+- prompt SHA-256: `e6dcca4e6817343202a44beca4936718ae3c15dc20c606468cdef23f9dad237f`
+- selected prompt documentation: `.run/pet-portrait-generation/mossback_marsh_earth7_water3/prompt.txt`
+- selected prompt documentation SHA-256: `ca98b1fc52eabae966ce04671c26abbc934a68a6f7d5480d91bed804a517aea8`
+- processing: same-operation chroma alpha matte plus exact-mask-bounded edge cleanup; no global color pass
+- edge contract: `1`
+- edge cleanup changed pixels: `1765`
+- edge cleanup alpha changed pixels: `0`
+- exact original ImageGen PNG SHA-256: `372f5c2a55f39b4c7a3bf7095c24e05f54d1a3bdd84fd12ef3ae37d47c16ecbb`
+- raw lossless source SHA-256: `1538dca61bc9c6c3fe4a94ee2ad9972c10673dd03854e3482de9067e7bde91e6`
+- transparent 1024 master SHA-256: `8917ab41a69d9dc91efcc413ddf2f461f776e2f9b86b19c5471466a1d13ee2f2`
+- shared 512 runtime SHA-256: `5580836d1869e2e8a3ebf4c81a1415c9e84d87267a235e8a4f5ffc875e3d4fdd`
+- provenance status: project-directed generated candidate; automated checks do not prove copyright provenance
+- replacement path: rerun `tools/build_pet_portrait.py` from a newly generated dedicated headshot source
+- owner review required: `true`
+- owner review status: `owner_review_pending`
+- claim limit: cache/rollout/hash/normalized-copy checks reject known misuse and source mismatches, but do not prove semantic independence, copyright provenance, or owner approval

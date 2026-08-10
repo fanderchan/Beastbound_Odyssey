@@ -66,6 +66,41 @@ static func label_for(action_id: String, fallback: String = "") -> String:
 	return label if label != "" else fallback
 
 
+static func presentation_for(action_id: String) -> Dictionary:
+	var action := action_by_id(action_id)
+	if action.is_empty():
+		return {}
+	var presentation = action.get("presentation", {})
+	return presentation as Dictionary if presentation is Dictionary else {}
+
+
+static func description_for(action_id: String, fallback: String = "") -> String:
+	var description := str(presentation_for(action_id).get("description", "")).strip_edges()
+	return description if description != "" else fallback
+
+
+static func role_for(action_id: String, fallback: String = "") -> String:
+	var role := str(presentation_for(action_id).get("role", "")).strip_edges()
+	return role if role != "" else fallback
+
+
+static func source_for(action_id: String, fallback: String = "") -> String:
+	var source := str(presentation_for(action_id).get("source", "")).strip_edges()
+	return source if source != "" else fallback
+
+
+static func icon_path_for(action_id: String, fallback: String = "") -> String:
+	var icon_path := str(presentation_for(action_id).get("iconPath", "")).strip_edges()
+	return icon_path if icon_path != "" else fallback
+
+
+static func mechanics_implemented_for(action_id: String, fallback: bool = false) -> bool:
+	var presentation := presentation_for(action_id)
+	if not presentation.has("mechanicsImplemented"):
+		return fallback
+	return bool(presentation.get("mechanicsImplemented", fallback))
+
+
 static func effect_amount_for(action_id: String, fallback: int = 0) -> int:
 	var effect := effect_for(action_id)
 	if effect.has("amount"):
@@ -323,6 +358,7 @@ static func _validate_action(action: Dictionary, index: int, max_pet_slots: int,
 
 	if owner == OWNER_PET_SKILL:
 		_validate_pet_skill_slot(action, max_pet_slots, errors)
+		_validate_pet_skill_presentation(action, errors)
 
 
 static func _validate_target_rule(action: Dictionary, target: Dictionary, errors: Array[String]) -> void:
@@ -439,6 +475,23 @@ static func _validate_pet_skill_slot(action: Dictionary, max_pet_slots: int, err
 	var slot := int(action.get("preferredSlot", 0))
 	if slot < 1 or slot > max_pet_slots:
 		errors.append("%s.preferredSlot 必须在 1-%d 之间" % [_action_name(action, -1), max_pet_slots])
+
+
+static func _validate_pet_skill_presentation(action: Dictionary, errors: Array[String]) -> void:
+	var action_name := _action_name(action, -1)
+	var raw_presentation = action.get("presentation", null)
+	if not (raw_presentation is Dictionary):
+		errors.append("%s.presentation 必须是对象" % action_name)
+		return
+	var presentation := raw_presentation as Dictionary
+	for field in ["description", "role", "source", "iconPath"]:
+		if typeof(presentation.get(field)) != TYPE_STRING or str(presentation.get(field, "")).strip_edges() == "":
+			errors.append("%s.presentation.%s 必须是非空字符串" % [action_name, field])
+	var icon_path := str(presentation.get("iconPath", "")).strip_edges()
+	if icon_path != "" and not icon_path.begins_with("res://"):
+		errors.append("%s.presentation.iconPath 必须以 res:// 开头" % action_name)
+	if presentation.has("mechanicsImplemented") and typeof(presentation.get("mechanicsImplemented")) != TYPE_BOOL:
+		errors.append("%s.presentation.mechanicsImplemented 必须是布尔值" % action_name)
 
 
 static func _validate_required_actions(seen_ids: Dictionary, errors: Array[String]) -> void:

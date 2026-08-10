@@ -1,6 +1,6 @@
 ---
 name: design-beastbound-pets
-description: Design, implement, rebalance, audit, and validate complete Beastbound Odyssey pets from natural-language briefs. Use for any Beastbound pet work involving taxonomy, elements, Lv1 4V, hidden growth, habitats, encounter and capture probability, active/passive skills, training, rebirth, evolution, fusion, inheritance, economy, server authority, simulations, tests, visual-production planning, rideable presentation, sprites, animation handoff, or cross-file completeness. For formal, complete, runtime-ready, rideable, art, sprite, or animation scope, also route through the dedicated art director and Beastbound production-art contract instead of treating data/code as a finished pet.
+description: Design, implement, rebalance, audit, and validate complete Beastbound Odyssey pets from natural-language briefs. Use for any Beastbound pet work involving taxonomy, elements, Lv1 4V, hidden growth, habitats, encounter and capture probability, active/passive skills, training, rebirth, evolution, fusion, inheritance, economy, server authority, simulations, tests, visual-production planning, a dedicated shared headshot portrait, rideable presentation, sprites, animation handoff, or cross-file completeness. For formal, complete, runtime-ready, rideable, art, sprite, or animation scope, also route through the dedicated art director and Beastbound production-art contract instead of treating data/code as a finished pet.
 ---
 
 # Design Beastbound Pets
@@ -25,7 +25,7 @@ node .agents/skills/design-beastbound-pets/scripts/inspect_pet_design.mjs --form
 
 - For “设计、想一个、给方案、怎么平衡”: produce a design contract and balance rationale; do not edit runtime files.
 - For “加入、开发、实现、落地”: reproduce the current gap, create and validate a design contract, implement the smallest complete cross-runtime slice, test it, update the single roadmap, then narrowly commit and push when authorized by the standing project instruction.
-- For “正式、完整、可发行、可骑、做造型、做素材、做动画”: include the visual-production contract, use `$stoneage9-art-director`, and keep delivery incomplete until real Godot screenshots/video and owner visual review exist. Do not silently expand a concept-only request into asset generation.
+- For “正式、完整、可发行、可骑、做造型、做素材、做动画”: include the visual-production contract and its independently authored shared headshot portrait, use `$stoneage9-art-director`, and keep delivery incomplete until real Godot screenshots/video and owner visual review exist. Do not silently expand a concept-only request into asset generation.
 - For “审计、检查、在哪里抓、成长怎样”: use the inspector and report current facts without changing files.
 - Ask only when a choice changes commercial value, destructive migration, permanent economy, inheritance loss, or another major product rule. Otherwise make a conservative, explicit assumption.
 
@@ -56,7 +56,7 @@ Resolve every section below before implementation:
 6. **Active skills**: purpose, slot, target, effect, reliability, AI use, counterplay, 10v10 readability, client/server support, and training/inheritance policy.
 7. **Passive skill**: family identity, trigger, effect, cap, counters, element interaction, server authority, and inheritance conflict group.
 8. **Progression and economy**: the explicit `0 rebirth -> 1 rebirth -> [normal 2 rebirth / evolution / fusion]` terminal-path choice, trading/binding/paid status, one paid-reset eligibility policy per form, price tier and wallet policy only when reset is allowed, reset protection, auto-capture/discard safeguards, and material/value risk.
-9. **Presentation**: player-facing Chinese name/description, what is visible at capture and while training, GM-only facts, art status, and—when visual production is in scope—the complete declared-capability handoff covering world, battle, riding only when supported, evidence, and owner review.
+9. **Presentation**: player-facing Chinese name/description, what is visible at capture and while training, GM-only facts, art status, and—when visual production is in scope—the complete declared-capability handoff covering a dedicated shared headshot portrait, world, battle, riding only when supported, source/ownership, evidence, and owner review.
 10. **Evidence**: simulations, fixed seeds, catalog checks, server tests, UI/manual checks, and save compatibility.
 
 Use `references/design-rules.md` for whole-pet decisions, `references/growth-capture-encounter.md` for growth/ecology, `references/active-passive-skills.md` for skill design, and `references/repository-contracts.md` for implementation routing.
@@ -91,6 +91,7 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 - Keep large simulations offline; never add population scans or JSON I/O to frame, draw, HUD, or movement hot paths.
 - Audit every species profile with `node tools/pet_level_one_percentile_audit.mjs` after changing `outputBase`, `initialOutputSpread`, `distribution`, or `rareExtremeRate`; the runtime CDF must continue matching at least 10,000 authority rolls per profile.
 - A concept/numeric-only request keeps `presentation.artStatus=deferred` and records a future brief. Any non-deferred visual status must include a validated `presentation.artProduction` contract; read `references/art-animation-production.md` and route generation/review through `$stoneage9-art-director`.
+- Every non-deferred formal pet must declare and deliver one independently authored headshot portrait through `presentation.artProduction.portrait`. It is a canonical shared asset for the pet roster bar, codex, ride permit, pet egg, and later compatible UI surfaces. Never crop a full-body identity, world, battle, or mounted frame and call it the portrait. Record its source plan or source asset, ownership record, actual-size/small-size evidence, and separate owner-review state. A concept-only `artStatus=deferred` contract may defer the portrait with the rest of the art brief.
 - Do not call a runtime pet visually complete because it has an identity image, a side-view loop, two mirrored source views, or only `idle/walk`. Use the scope-specific world, battle, mounted only when the contract is rideable, review-scene, and owner-approval gates.
 - Validate battle facing from the final rendered board, never from source-view filenames alone. Beastbound's standalone-pet path, and the integrated-mounted path when rideable, share one canonical mapping: enemy uses `front_3quarter_sw + flipH=true`, ally uses `back_3quarter_ne + flipH=true`, and both final silhouettes face the arena centre. Reject any per-bundle override, contact sheet, or one-sided preview; rideable contracts must also reject a mounted actor that faces away from its opponent or disagrees with its same-side battle pet.
 - Never run a whole-frame or global despill/color heuristic on transparent art without the exact per-pixel eligibility mask produced by the same chroma-key operation. A missing mask means byte-preserving no-op or fail closed; an all-true mask, hue threshold, or visual suspicion is not provenance. Preserve authored purple outlines, green effects, alpha and silhouette.
@@ -102,6 +103,7 @@ Use `references/design-rules.md` for whole-pet decisions, `references/growth-cap
 Read `references/art-animation-production.md` whenever the user includes formal art, animation, riding, or release-ready scope. The project contract intentionally separates:
 
 - true-eight world movement for every subject declared by the contract: standalone pet always, plus standalone character and each integrated character-riding-pet combination only when rideable;
+- one canonical independently authored headshot portrait shared by the roster bar, codex, ride permit, pet egg, and other compatible UI surfaces; UI frames, labels, rarity borders, egg shells, and badges remain separate overlays;
 - fixed-formation battle art for the two actually rendered diagonal views, without multiplying every combat action into unused world facings;
 - semantic battle coverage for attack, skill, defend-hit, hurt, dodge, dodge-to-counter, counter, wounded return, knock-away, reversible down/revive, and combo readability;
 - generated-source provenance, contact sheets, real `Main.tscn` screenshots, continuous MP4 review, automated asset/runtime checks, and explicit owner approval.
@@ -120,8 +122,8 @@ For Beastbound mounted art, when a pet is rideable, the current product decision
 8. Trace every shared JSON consumer in Godot and Node before changing fields or IDs.
 9. Add migration or compatibility handling before changing persistent instance semantics.
 10. Keep wiring thin in `main.gd`, broad coordinators, `auth-service.js`, and `http-server.js`; place rules in focused models/domains.
-11. When visual production is in scope, approve the identity lock and a small key-pose gate before generating full matrices; integrate assets only after their contact sheets pass.
-12. Record art provenance and replacement paths, then run the isolated battle review lab before any second-pet batch expansion.
+11. When visual production is in scope, approve the identity lock and a small key-pose gate before generating full matrices. Author the dedicated headshot from that locked identity as its own composition, never as a crop, and review it at native size plus representative small-card sizes before UI integration.
+12. Integrate the shared portrait and motion assets only after their contact sheets and focused evidence pass. Record art provenance and replacement paths, then run the isolated battle review lab before any second-pet batch expansion.
 
 ## Validate proportionally
 
@@ -141,7 +143,7 @@ Then select affected checks:
 - Encounter/capture: encounter table, capture tools/settings/result, map/region, server battle-room capture, and hang settlement checks.
 - Management/inheritance: pet safety, stable capacity, skill training, rebirth/evolution/fusion transaction and replay tests.
 - UI/runtime: launch the real 1280x720 client; add idle/moving/input performance evidence when touching visible or hot paths.
-- Formal art/animation: validate the production contract, asset manifest and action catalog; review true-eight world loops plus the focused battle scenarios in `references/art-animation-production.md`, then record a real 1280×720 Godot MP4. The evidence must show both formations simultaneously and prove the applied view/flip mapping faces inward for standalone pet actors and, when the contract is rideable, mounted actors. Automated checks do not replace owner visual approval.
+- Formal art/animation: validate the production contract, dedicated portrait source/ownership/evidence, asset manifest and action catalog; review the portrait at native and representative runtime sizes, true-eight world loops, and the focused battle scenarios in `references/art-animation-production.md`, then record a real 1280×720 Godot MP4. The evidence must show the portrait in current supported UI consumers, both formations simultaneously, and the applied view/flip mapping facing inward for standalone pet actors and, when the contract is rideable, mounted actors. Automated checks do not replace owner visual approval.
 
 Report exact commands, results, generated CSV/JSON paths, and residual risks. For hand-feel, provide concrete play steps, observation metrics, and pass criteria.
 

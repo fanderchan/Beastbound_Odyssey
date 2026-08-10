@@ -1,0 +1,30 @@
+# Pet Portrait Source And Ownership
+
+- formId: `wuli_normal_orange_fire10`
+- capability: `shared_dedicated_headshot_v1`
+- independently authored claim: `true` (`untrusted_claim`)
+- semantic independence verified by automation: `false`
+- full-body crop allowed: `false`
+- generator: Codex built-in imagegen
+- generation result id: `call_BQhjhqA4vDkt0IT8FtVRGQv3`
+- generation attestation: `client/godot/assets/pets/wuli_normal_orange_fire10/source/portrait/generation-attestation.json`
+- approved identity reference: `client/godot/assets/pets/wuli_normal_orange_fire10/identity/front_3quarter_sw.png`
+- identity reference SHA-256: `3a0537413e3f817a4a96f35c626685c60074514bc968bed7ecc2fd7c17052407`
+- exact ImageGen request prompt: `client/godot/assets/pets/wuli_normal_orange_fire10/prompts/portrait-v1.txt`
+- prompt source kind: `actual_imagegen_request`
+- prompt SHA-256: `6a502dbf8674c292a447ecce100d696c51c0ebfedf0425de274bff31d11770a4`
+- selected prompt documentation: `.run/pet-portrait-generation/wuli_normal_orange_fire10/prompt.txt`
+- selected prompt documentation SHA-256: `46255ddf1684da05fa8dac2c92cc90b44f214d170f27c66d801ea9b2531305f8`
+- processing: same-operation chroma alpha matte plus exact-mask-bounded edge cleanup; no global color pass
+- edge contract: `1`
+- edge cleanup changed pixels: `0`
+- edge cleanup alpha changed pixels: `0`
+- exact original ImageGen PNG SHA-256: `2413f266357333364eaf4f83a74578085532edd20b6e65009f97ca62aaf7dae5`
+- raw lossless source SHA-256: `925de609befe0826086d501cc21a0d5c38f45f18e8ca278d6091c80e74caedcd`
+- transparent 1024 master SHA-256: `7fae880c2a9c1bc1bc741f560a819dd63f4bd2dbc8b4abd0f8919b42447773c5`
+- shared 512 runtime SHA-256: `13f55f6600ff794486fe463c5cd0f6ab29186d41f71f9115618a8a2d5d626569`
+- provenance status: project-directed generated candidate; automated checks do not prove copyright provenance
+- replacement path: rerun `tools/build_pet_portrait.py` from a newly generated dedicated headshot source
+- owner review required: `true`
+- owner review status: `owner_review_pending`
+- claim limit: cache/rollout/hash/normalized-copy checks reject known misuse and source mismatches, but do not prove semantic independence, copyright provenance, or owner approval

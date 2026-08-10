@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "contract": "beastbound_pet_portrait_identity_reference_compatibility_v1",
+  "evidenceScope": "current_canonical_identity_snapshot_only",
+  "formId": "wuli_evolved_crystal_earth8_water2",
+  "petRoot": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2",
+  "reference": {
+    "role": "front_3quarter_sw",
+    "path": "identity/front_3quarter_sw.png",
+    "format": "PNG",
+    "mode": "RGBA",
+    "pixelSize": [
+      512,
+      512
+    ],
+    "fileSha256": "27f8f15fda1fd8ff32155b84d27e1206c9e2cbc2de7a377cc656248b18d2b6ea",
+    "canonicalRgbaSha256": "ae8d017a6b5e4fa37e3dc9f78f834583734b9292557b7a73b699c9232cb25447"
+  },
+  "authorityBindings": {
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "catalogFormIdentitySliceSha256": "e726baaa5f7a7debac0aa1811ec2c837b703d93f7c1d4f00d58f8f0bba916916",
+    "bundleMetadataPath": "action-bundle-meta.json",
+    "bundleMetadataSha256": "05b8594e5641a635dbff3c7b877887227ea3f6d848fb91cf148584741bac2fd8",
+    "metadataBindingMode": "metadata_pose",
+    "identityLock": {
+      "path": "identity/identity-lock.md",
+      "fileSha256": "1b417b8b53b97e8e199ad6a274017fdcdfc5caa1125657f3f7b98f351a71bdf6"
+    },
+    "ownership": {
+      "path": "source-and-ownership.md",
+      "fileSha256": "cbb4fa17e308db991272b63f28a8e303b7b26348ccbff187ce9c767812d0cd17"
+    },
+    "prompt": {
+      "path": "prompts/identity-board-v1.txt",
+      "fileSha256": "52a44da80c7aae019eb64649d992bf69737dabbc2f9a3c8930ca058010171647"
+    },
+    "pipelineMetadata": {
+      "path": "source/identity-board-pipeline-meta.json",
+      "fileSha256": "a74203602bcfe95405af28e7202c3f45350446d2e483d46c3200b30f98887fbf"
+    }
+  },
+  "claims": {
+    "currentReferencePixelsFrozen": true,
+    "historicalPipelineReferenceHashRecorded": false,
+    "historicalPipelineReplayVerified": false,
+    "ownerApprovalGrantedByLedger": false
+  }
+}

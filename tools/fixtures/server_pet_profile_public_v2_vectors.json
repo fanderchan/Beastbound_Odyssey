@@ -209,6 +209,7 @@
           "level": 20
         },
         "stoneCoins": 321,
+        "boundStoneCoins": 0,
         "petInstances": [
           {
             "instanceId": "pet_vector_authority",

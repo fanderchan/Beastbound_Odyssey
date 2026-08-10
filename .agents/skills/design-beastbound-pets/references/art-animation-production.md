@@ -31,6 +31,38 @@ Create one reusable identity board before generating action rows. Lock:
 
 Approve a small key-pose gate before producing dozens of frames: standalone pet front/back/world cardinal poses, plus one supported mounted character-pet front/back pose when the contract is rideable. A first-release fusion target with `rideable=false` must omit the mounted set instead of producing an unused or fictional rider composition. Do not expand a failed identity, scale, seat, direction, or anatomy.
 
+## Dedicated shared headshot portrait
+
+Every formal pet has one canonical portrait composed and authored specifically as a headshot. It is not a crop, zoom, screenshot, traced cutout, or masked excerpt of an identity board, full-body showcase, world frame, battle frame, or mounted frame. The portrait must be newly drawn or generated from the approved identity board so the face, expression, signature horns/ears/crest and defining material accents remain readable inside a small card.
+
+Use the same canonical portrait identity across:
+
+- the bottom pet roster bar;
+- the pet codex and collection lists;
+- ride-permit/ride-qualification cards;
+- pet-egg cards or reward previews;
+- later compatible compact pet selectors and notifications.
+
+Those consumers may derive deterministic sizes from the shared transparent master and add their own border, rarity color, level, lock, certificate, egg shell, badge or selection state. They must not maintain separate pet likenesses, bake UI chrome into the portrait, or fall back to cropping a full-body asset when a portrait is missing.
+
+The portrait production contract is `presentation.artProduction.portrait`. It must declare:
+
+- `capability=shared_dedicated_headshot_v1`, `independentlyAuthored=true`, and `fullBodyCropAllowed=false`;
+- all four baseline `sharedUses`: `pet_roster_bar`, `pet_codex`, `ride_permit`, and `pet_egg`;
+- a source status and original-production method, approved identity references, dedicated source-asset paths, and the ownership/provenance record path;
+- its own `ownerReviewRequired`, `ownerReviewStatus`, and `evidencePaths`, separate from the aggregate pet-art status.
+
+Create a lossless square transparent source master at no less than 512×512 unless the current asset pipeline documents a higher canonical size. Keep comfortable safe area around the silhouette, use a deliberate head-and-upper-body composition, and preserve asymmetric identity details without mirroring. Generate runtime variants only through deterministic resize/canvas rules from that portrait master; do not derive the master from another production asset.
+
+Before owner review, show:
+
+- the transparent master at readable/native size;
+- a contact row at representative compact sizes such as 48, 64, 96 and 128 px;
+- real-client screenshots for every currently implemented baseline consumer;
+- source paths, prompt or author brief, ownership record, processing parameters and immutable hashes.
+
+`planned` may record future source paths with `source.status=planned`. Before `owner_review_pending` or `approved`, the dedicated source must be available, portrait evidence must be non-empty, and the nested owner-review state must truthfully reflect the owner's decision. Approval of world or battle art never implicitly approves the portrait, and portrait approval never implicitly approves the motion matrices.
+
 ## World movement matrix: true eight means true eight
 
 The PC world path uses the existing Godot runtime names `south`, `southwest`, `west`, `northwest`, `north`, `northeast`, `east`, and `southeast` as eight independently authored visual directions. These names are the canonical asset-directory contract; do not introduce underscore aliases. Different filenames or logical inputs backed by mirrored pixels are not true eight.
@@ -133,15 +165,15 @@ Do not claim every character appearance is supported because one protagonist com
 ## Production sequence
 
 1. Inspect the pet design contract, existing character pack, asset manifests and closest same-body-plan pet.
-2. Write the identity lock and full subject/direction/action matrix.
-3. Approve cardinal and formal battle key poses at actual relative scale, then prove both teams face inward after the runtime view/flip mapping is applied.
+2. Write the identity lock and full portrait/subject/direction/action matrix.
+3. Approve the dedicated headshot at native and representative compact sizes, then approve cardinal and formal battle key poses at actual relative scale and prove both teams face inward after the runtime view/flip mapping is applied.
 4. Generate standalone pet true-eight idle/walk and its contact sheet/video.
 5. For rideable contracts, generate each supported mounted combination as true-eight whole-frame art and review seat, anatomy and gait; skip this step for non-rideable fusion targets.
 6. Generate both battle views for the core pet, plus mounted actions only for rideable contracts, from the same identity board.
-7. Normalize frames deterministically through the one shared runtime-derivation implementation; preserve prompt, raw source, processed frames, parameters and ownership metadata.
-8. Integrate through focused catalogs/models and manifest paths; do not scatter hardcoded texture paths through `main.gd`.
+7. Normalize portrait runtime variants and motion frames deterministically through their declared canonical derivation implementations; preserve prompt, raw source, processed assets, parameters and ownership metadata.
+8. Integrate the canonical portrait through a focused manifest/catalog shared by UI consumers, and motion assets through focused catalogs/models; do not scatter hardcoded texture paths through `main.gd` or duplicate per-surface likenesses.
 9. Run deterministic checks, then real `Main.tscn` screenshot/video review.
-10. Fix the first failed matrix before producing another pet or mounted combination.
+10. Fix the first failed portrait or matrix before producing another pet or mounted combination.
 
 ## Color cleanup and canonical runtime derivation
 
@@ -155,6 +187,7 @@ Formal installation must validate the complete production bundle before copying 
 
 The tracked runtime repository may use the validated `lean` archive mode when the same pixels would otherwise be stored repeatedly. Lean mode must retain:
 
+- the dedicated portrait master or another durable lossless portrait source, its deterministic runtime derivatives, focused compact-size evidence, source/ownership metadata and immutable hashes;
 - every 256px runtime frame and combined contact/QC evidence;
 - every action's exact prompt, processing metadata, QC record, and immutable source/runtime hashes;
 - one lossless representative generation sheet for each independently authored battle view;
@@ -166,6 +199,7 @@ Per-frame 512px splits and duplicate raw/clean/input intermediates may stay in t
 
 Use the isolated pet battle review lab and formal runtime path. At minimum record or inspect:
 
+- the dedicated portrait at native and representative compact sizes, plus every currently implemented baseline UI consumer;
 - true-eight standalone pet world loops, plus character and mounted loops only for rideable contracts;
 - 10 battle pets in the fixed formation; rideable contracts additionally include 10 riding characters;
 - attack, skill attack, defend-hit, hurt/recovery and combo;
@@ -180,6 +214,9 @@ The true-eight world evidence must show each direction twice: a readable idle ho
 
 ## Acceptance gates
 
+- The portrait is a dedicated independently authored headshot, not a crop or derivative of any full-body/world/battle/mounted asset; identity, expression and signature features remain readable at representative compact sizes.
+- The same canonical portrait asset and deterministic derivatives serve the roster bar, codex, ride permit, pet egg and other compatible consumers; surface-specific frames and badges remain UI overlays.
+- Portrait source method, identity references, dedicated source paths, ownership record, processing metadata, hashes, focused evidence and nested owner-review state are present and truthful.
 - Contact sheets show every required subject, direction, action and formal view together, but remain overview evidence rather than the visual-acceptance source.
 - Every direction is inspected from its original runtime PNG at 1:1 or readable zoom, and the same exact frames are watched in the per-form continuous MP4.
 - Every world-direction contact row shows `idle-1 + walk-1..4` together, and an independent reviewer verifies the five actual silhouettes against the canonical screen vector instead of trusting labels.

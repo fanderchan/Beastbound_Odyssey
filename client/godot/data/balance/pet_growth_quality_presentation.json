@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "presentationId": "pet_growth_quality_v1",
+  "minimumMatureLevel": 20,
+  "minimumMatureObservedLevels": 19,
+  "unobserved": {
+    "label": "成长未观察",
+    "toneId": "unobserved",
+    "colorHex": "#87909C"
+  },
+  "observingSuffix": "观察中",
+  "qualityBands": [
+    {
+      "gradeId": "S",
+      "minimumPercentile": 95,
+      "colorName": "彩",
+      "qualityName": "完美",
+      "toneId": "rainbow",
+      "colorHex": "#F5D95F"
+    },
+    {
+      "gradeId": "A",
+      "minimumPercentile": 85,
+      "colorName": "红",
+      "qualityName": "极品",
+      "toneId": "red",
+      "colorHex": "#FF5364"
+    },
+    {
+      "gradeId": "B",
+      "minimumPercentile": 55,
+      "colorName": "橙",
+      "qualityName": "稀有",
+      "toneId": "orange",
+      "colorHex": "#FF9B3D"
+    },
+    {
+      "gradeId": "C",
+      "minimumPercentile": 25,
+      "colorName": "紫",
+      "qualityName": "优秀",
+      "toneId": "purple",
+      "colorHex": "#B774FF"
+    },
+    {
+      "gradeId": "D",
+      "minimumPercentile": 0,
+      "colorName": "蓝",
+      "qualityName": "普通",
+      "toneId": "blue",
+      "colorHex": "#49A9FF"
+    }
+  ],
+  "rainbowStops": [
+    "#49A9FF",
+    "#B774FF",
+    "#FF5364",
+    "#FF9B3D",
+    "#F5D95F"
+  ],
+  "burst": {
+    "label": "爆",
+    "comparison": "public_observed_average_gt_public_top_benchmark",
+    "epsilon": 0.0005,
+    "minimumLevel": 20,
+    "minimumObservedLevels": 19
+  }
+}

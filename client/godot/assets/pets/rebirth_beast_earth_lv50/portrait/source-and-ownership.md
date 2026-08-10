@@ -1,0 +1,30 @@
+# Pet Portrait Source And Ownership
+
+- formId: `rebirth_beast_earth_lv50`
+- capability: `shared_dedicated_headshot_v1`
+- independently authored claim: `true` (`untrusted_claim`)
+- semantic independence verified by automation: `false`
+- full-body crop allowed: `false`
+- generator: Codex built-in imagegen
+- generation result id: `call_tV8bqxPVfsEmP8PEjbXX76AI`
+- generation attestation: `client/godot/assets/pets/rebirth_beast_earth_lv50/source/portrait/generation-attestation.json`
+- approved identity reference: `client/godot/assets/pets/rebirth_beast_earth_lv50/identity/front_3quarter_sw.png`
+- identity reference SHA-256: `8d78386003148c217fae9e1df83935f15d2f647fc5c48077fce1518f04134d7c`
+- exact ImageGen request prompt: `client/godot/assets/pets/rebirth_beast_earth_lv50/prompts/portrait-v1.txt`
+- prompt source kind: `actual_imagegen_request`
+- prompt SHA-256: `64efd1cfbc3191fe71334e31ff103c4ebfcd098523e6caedb76b6797390dbfad`
+- selected prompt documentation: `.run/pet-portrait-generation/rebirth_beast_earth_lv50/prompt.txt`
+- selected prompt documentation SHA-256: `91114101d17debd941b9398e9003277cd46c1861dc1565c4c9b71c229f25e5e6`
+- processing: same-operation chroma alpha matte plus exact-mask-bounded edge cleanup; no global color pass
+- edge contract: `1`
+- edge cleanup changed pixels: `0`
+- edge cleanup alpha changed pixels: `0`
+- exact original ImageGen PNG SHA-256: `e0bfea8b8c9fcd94579c5025a4b55c22c35010bf49460b67c1475d552d67aa6f`
+- raw lossless source SHA-256: `07c3575063447d5c371639cde30124ddd4bb9610beab8d3705b2ac1b0eb9626e`
+- transparent 1024 master SHA-256: `20814761b68d56b2796f37c7bfd87d994101448cc05955c151cfa8b99aeeb4e5`
+- shared 512 runtime SHA-256: `88105e904e8da7482cf5c3db1ef31be9bb7d84a65f71c963908f10db1214e869`
+- provenance status: project-directed generated candidate; automated checks do not prove copyright provenance
+- replacement path: rerun `tools/build_pet_portrait.py` from a newly generated dedicated headshot source
+- owner review required: `true`
+- owner review status: `owner_review_pending`
+- claim limit: cache/rollout/hash/normalized-copy checks reject known misuse and source mismatches, but do not prove semantic independence, copyright provenance, or owner approval

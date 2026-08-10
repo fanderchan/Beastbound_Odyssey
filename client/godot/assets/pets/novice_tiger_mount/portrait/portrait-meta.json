@@ -6,7 +6,6 @@
   "independentlyAuthoredClaim": true,
   "independentAuthorshipClaimTrust": "untrusted_claim",
   "semanticIndependenceVerified": false,
-  "releaseGate": false,
   "fullBodyCropAllowed": false,
   "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
   "sharedUses": [
@@ -37,7 +36,7 @@
     "rawLosslessPath": "client/godot/assets/pets/novice_tiger_mount/source/portrait/headshot-raw-lossless.webp",
     "generationAttestation": {
       "path": "client/godot/assets/pets/novice_tiger_mount/source/portrait/generation-attestation.json",
-      "sha256": "26ad6e47abf750c3b7ad16cc44cf406f0dbd6aa8f68fb6e5a3c57e6152885fef",
+      "sha256": "d73a5fef3de8e41ea0259739431a1bb5b533a7ebef7ee333f781d51dc647234a",
       "schemaVersion": 3,
       "generationId": "call_Lxrw2LkPu7ge8chVN9OcWMGG"
     }

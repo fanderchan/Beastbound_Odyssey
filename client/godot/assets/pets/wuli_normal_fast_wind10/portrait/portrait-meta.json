@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "build_pet_portrait.py",
+  "formId": "wuli_normal_fast_wind10",
+  "capability": "shared_dedicated_headshot_v1",
+  "independentlyAuthoredClaim": true,
+  "independentAuthorshipClaimTrust": "untrusted_claim",
+  "semanticIndependenceVerified": false,
+  "fullBodyCropAllowed": false,
+  "claimLimit": "project-directed generated candidate; automated checks do not prove semantic independence, copyright provenance, or owner approval",
+  "sharedUses": [
+    "pet_roster_bar",
+    "pet_codex",
+    "ride_permit",
+    "pet_egg"
+  ],
+  "catalogBinding": {
+    "mode": "pet_art_catalog_explicit",
+    "catalogPath": "client/godot/data/pet_art_catalog.json",
+    "petRoot": "client/godot/assets/pets/wuli_normal_fast_wind10"
+  },
+  "source": {
+    "method": "built_in_imagegen_chroma_headshot_v1",
+    "generator": "built_in_imagegen",
+    "generationId": "call_dVZphwiPq1y1tT3YhwajpJXQ",
+    "originalInput": {
+      "path": ".run/pet-portrait-generation/wuli_normal_fast_wind10/raw-v3.png",
+      "sha256": "98ee76f76c8bffbcd207c41ed5fcf765437ba7b84ff07173795871884b36c5b8",
+      "rgbaSha256": "4abd46cd24b3fa15caccb094e07056d24241013ccf52ad39a4420d65b7d66085",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "originalGeneratedPngPath": "client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/headshot-original-generated.png",
+    "rawLosslessPath": "client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/headshot-raw-lossless.webp",
+    "generationAttestation": {
+      "path": "client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/generation-attestation.json",
+      "sha256": "78038389da4fd2c24a7c7087c5fc66e4b8854e60e62283b8b7f448be2d32d6a1",
+      "schemaVersion": 3,
+      "generationId": "call_dVZphwiPq1y1tT3YhwajpJXQ"
+    }
+  },
+  "independentCompositionEvidence": {
+    "generatorAttestation": "client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/generation-attestation.json",
+    "promptContract": "dedicated_headshot_not_full_body_crop_v1",
+    "identityReferenceSha256": "984cae3abcba075e957f7cad89b031a77fc29bd3947811501b50af5a3c46ce55",
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 218,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    },
+    "ownerVisualReviewRequired": true,
+    "claimLimit": "hash and normalized-copy checks reject exact/scaled reuse but do not prove semantic independent authorship"
+  },
+  "identityReference": {
+    "path": "client/godot/assets/pets/wuli_normal_fast_wind10/identity/front_3quarter_sw.png",
+    "sha256": "984cae3abcba075e957f7cad89b031a77fc29bd3947811501b50af5a3c46ce55",
+    "rgbaSha256": "8123b7083fafc047580962f6fa6c32b8d29a28035a1b54f485e118088deff8cd",
+    "width": 512,
+    "height": 512,
+    "mode": "RGBA",
+    "format": "PNG"
+  },
+  "prompt": {
+    "path": "client/godot/assets/pets/wuli_normal_fast_wind10/prompts/portrait-v1.txt",
+    "sha256": "fa82d82b69712be9ed1d9b011fc428fd2fe3b6c73d9e401e021709485ca6329b",
+    "sourceSha256": "fa82d82b69712be9ed1d9b011fc428fd2fe3b6c73d9e401e021709485ca6329b",
+    "encoding": "utf-8",
+    "selectionDocumentationPath": ".run/pet-portrait-generation/wuli_normal_fast_wind10/prompt-v3.txt",
+    "selectionDocumentationSha256": "e4f110d133d1078fffa1b2266c2745c3bc069f14d92ff67d10044035784c32cb",
+    "sourceKind": "actual_imagegen_request",
+    "actualRequestPromptVerified": true
+  },
+  "ownership": {
+    "path": "client/godot/assets/pets/wuli_normal_fast_wind10/portrait/source-and-ownership.md",
+    "sha256": "2d2cf0d6db21f4cfcc32b54b82e06f1f686896945e069557555602deeea3d339"
+  },
+  "processing": {
+    "edgeContractVersion": 1,
+    "safeMarginContract": {
+      "version": 1,
+      "minimumRatio": 0.08,
+      "rounding": "ceil",
+      "visibleAlphaThreshold": 8,
+      "masterPixels": 82,
+      "runtimePixels": 41
+    },
+    "alphaMatte": {
+      "method": "distance_alpha_matte_v1",
+      "key": "#EE17DA",
+      "transparentDistance": 36.0,
+      "opaqueDistance": 140.0,
+      "alphaThreshold": 8,
+      "cornerDistances": [
+        11.402,
+        8.602,
+        13.892,
+        6.083
+      ],
+      "candidatePixels": 1131242,
+      "eligiblePixels": 1808,
+      "transparentPixels": 1129434,
+      "partialAlphaPixels": 1803,
+      "despill": {
+        "helper": "sprite_alpha_despill.despill_transparent_alpha",
+        "scope": "same_operation_exact_eligibility_mask_only",
+        "despillApplied": true,
+        "globalColorAdjustmentApplied": false,
+        "changedPixelCount": 1801,
+        "changedOutsideEligibilityPixels": 0,
+        "alphaPixelsChanged": 0,
+        "beforeRgbaSha256": "399f2acd0fee23287be5ffc21e0dccba9d4f4a004311287bc5ea1b96737364ce",
+        "afterRgbaSha256": "45d090d68ce98015b1c567df0335dedc572957b29d61417a76c956ffed0f6b6e",
+        "helperMetrics": {
+          "edgePixelCount": 8762,
+          "strongMagentaEdgePixelsBefore": 1801,
+          "strongMagentaEdgePixelsAfter": 37,
+          "strongMagentaEdgeRatioAfter": 0.004223,
+          "despilledPixels": 1801,
+          "alphaPixelsChanged": 0
+        }
+      }
+    },
+    "masterCanvas": {
+      "width": 1024,
+      "height": 1024,
+      "cropApplied": false,
+      "fitRule": "complete_source_canvas_contain_center",
+      "resampleMode": "premultiplied_lanczos"
+    },
+    "runtimeDerivation": {
+      "source": "client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/headshot-master-1024.png",
+      "width": 512,
+      "height": 512,
+      "function": "build_pet_art_bundle.resize_rgba_premultiplied",
+      "resampleMode": "premultiplied_lanczos",
+      "postResizeColorPassApplied": false,
+      "postResizeDespillApplied": false
+    },
+    "duplicateGuard": {
+      "method": "normalized_rgba_scaled_copy_guard_v1",
+      "checkedExistingImages": 218,
+      "normalizedSize": 128,
+      "coarseNormalizedSize": 64,
+      "alphaIouThreshold": 0.995,
+      "meanAbsoluteErrorThreshold": 2.0,
+      "semanticProof": false
+    }
+  },
+  "assets": {
+    "originalGeneratedPng": {
+      "path": "client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/headshot-original-generated.png",
+      "sha256": "98ee76f76c8bffbcd207c41ed5fcf765437ba7b84ff07173795871884b36c5b8",
+      "rgbaSha256": "4abd46cd24b3fa15caccb094e07056d24241013ccf52ad39a4420d65b7d66085",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "PNG"
+    },
+    "rawLossless": {
+      "path": "client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/headshot-raw-lossless.webp",
+      "sha256": "a59b9e4b359c7ab506a08f0d43dad1eed1a0140f534a228d96649fdd31ac3bdb",
+      "rgbaSha256": "4abd46cd24b3fa15caccb094e07056d24241013ccf52ad39a4420d65b7d66085",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGB",
+      "format": "WEBP"
+    },
+    "master": {
+      "path": "client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/headshot-master-1024.png",
+      "sha256": "7091f836a4296a4139c528af426f5b0a76ca1857bb7c96f40d681923db578363",
+      "rgbaSha256": "240ef02031fb0469fb0a514325367311e6a24f8888160132202270e02b1a0f24",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "runtime": {
+      "path": "client/godot/assets/pets/wuli_normal_fast_wind10/portrait/default.png",
+      "sha256": "fca540b4a58f9c572f7ff7bef8c72b96199dc099a9074369ad5d2ae87e8a33af",
+      "rgbaSha256": "014d13c10511bb941169e865951430872d1490721365993783a6f1c1fe9a5dbd",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "eligibilityMask": {
+      "path": "client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/headshot-chroma-eligibility-mask.png",
+      "sha256": "1c26898dffdd035d4570adfc075c422d78f44dac44d3ff351ba99c681b51dba6",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 1808
+    },
+    "alphaMask": {
+      "path": "client/godot/assets/pets/wuli_normal_fast_wind10/source/portrait/headshot-alpha-mask.png",
+      "sha256": "07f15fa7e1b1d618823b19bf886213a354b869eb29b14668b774bbdf45632eb6",
+      "width": 1254,
+      "height": 1254,
+      "mode": "L",
+      "format": "PNG",
+      "nonzeroPixels": 443082
+    }
+  },
+  "composition": {
+    "master": {
+      "visibleCoverage": 0.282706,
+      "transparentCoverage": 0.717294,
+      "visiblePixelCount": 296439,
+      "visibleBbox": [
+        232,
+        196,
+        883,
+        890
+      ],
+      "minimumEdgeMargin": 82,
+      "edgeMargins": {
+        "left": 232,
+        "top": 196,
+        "right": 141,
+        "bottom": 134
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    },
+    "runtime": {
+      "visibleCoverage": 0.284225,
+      "transparentCoverage": 0.715775,
+      "visiblePixelCount": 74508,
+      "visibleBbox": [
+        116,
+        98,
+        442,
+        445
+      ],
+      "minimumEdgeMargin": 41,
+      "edgeMargins": {
+        "left": 116,
+        "top": 98,
+        "right": 70,
+        "bottom": 67
+      },
+      "cornerPatchSize": 8,
+      "cornerMaxAlpha": {
+        "topLeft": 0,
+        "topRight": 0,
+        "bottomLeft": 0,
+        "bottomRight": 0
+      }
+    }
+  },
+  "evidence": {
+    "contactSheet": {
+      "path": "client/godot/assets/pets/wuli_normal_fast_wind10/qa/portrait/contact-sheet.png",
+      "sha256": "827538bcddd8a55602918455533feadf702c431b07fbea70093fcb72286f912d",
+      "rgbaSha256": "63a4a182afe4679e616b2b255c55bc4dbc8dbb38976fae87cb7a02a616bbcbdc",
+      "width": 1600,
+      "height": 1180,
+      "mode": "RGBA",
+      "format": "PNG"
+    },
+    "compactSizes": [
+      48,
+      64,
+      96,
+      128
+    ],
+    "nativeSize": 1024
+  },
+  "ownerReview": {
+    "required": true,
+    "status": "owner_review_pending",
+    "evidencePaths": []
+  }
+}
