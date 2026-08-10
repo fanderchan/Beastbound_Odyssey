@@ -5,6 +5,7 @@ const EncounterModel := preload("res://scripts/world/encounter_model.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 
 const DATA_PATH := "res://data/map_visual_catalog.json"
+const REVIEW_DATA_PATH := "res://data/map_visual_review_catalog.json"
 const SCHEMA_VERSION := 1
 const TILE_SIZE := Vector2i(80, 40)
 const STATUS_OWNER_REVIEW_PENDING := "owner_review_pending"
@@ -20,6 +21,9 @@ const COLLISION_ROLES: Array[String] = ["none", "decorative", "blocking", "inter
 static var _catalog_loaded := false
 static var _catalog_errors: Array[String] = []
 static var _entries_by_map_id: Dictionary = {}
+static var _review_catalog_loaded := false
+static var _review_catalog_errors: Array[String] = []
+static var _review_entries_by_map_id: Dictionary = {}
 static var _json_cache: Dictionary = {}
 static var _contract_cache: Dictionary = {}
 static var _release_attestation_cache: Dictionary = {}
@@ -57,6 +61,38 @@ static func catalog_binding_path(map_id: String) -> String:
 	return str(entry.get("bindingPath", ""))
 
 
+static func catalog_manifest_path(map_id: String) -> String:
+	_ensure_catalog_loaded()
+	var entry := _entries_by_map_id.get(map_id, {}) as Dictionary
+	return str(entry.get("bundleManifest", ""))
+
+
+static func review_catalog_map_ids() -> Array[String]:
+	_ensure_review_catalog_loaded()
+	var result: Array[String] = []
+	for map_id_value in _review_entries_by_map_id.keys():
+		result.append(str(map_id_value))
+	result.sort()
+	return result
+
+
+static func review_catalog_errors() -> Array[String]:
+	_ensure_review_catalog_loaded()
+	return _review_catalog_errors.duplicate()
+
+
+static func review_catalog_binding_path(map_id: String) -> String:
+	_ensure_review_catalog_loaded()
+	var entry := _review_entries_by_map_id.get(map_id, {}) as Dictionary
+	return str(entry.get("bindingPath", ""))
+
+
+static func review_catalog_manifest_path(map_id: String) -> String:
+	_ensure_review_catalog_loaded()
+	var entry := _review_entries_by_map_id.get(map_id, {}) as Dictionary
+	return str(entry.get("bundleManifest", ""))
+
+
 static func errors_for_map(map_id: String) -> Array[String]:
 	var value: Variant = _map_errors.get(map_id, [])
 	return (value as Array[String]).duplicate() if value is Array else []
@@ -75,10 +111,27 @@ static func debug_io_counts() -> Dictionary:
 
 
 static func prepare_map(map_id: String, map_data: Dictionary, qa_preview: bool = false) -> Dictionary:
+	return _prepare_map(map_id, map_data, qa_preview, true)
+
+
+static func prepare_primary_catalog_map(
+	map_id: String,
+	map_data: Dictionary,
+	qa_preview: bool = false
+) -> Dictionary:
+	return _prepare_map(map_id, map_data, qa_preview, false)
+
+
+static func _prepare_map(
+	map_id: String,
+	map_data: Dictionary,
+	qa_preview: bool,
+	allow_review_catalog: bool
+) -> Dictionary:
 	_ensure_catalog_loaded()
 	var errors: Array[String] = []
 	_map_errors[map_id] = errors
-	if map_id == "" or not _entries_by_map_id.has(map_id):
+	if map_id == "":
 		return {}
 	if not _catalog_errors.is_empty():
 		errors.append_array(_catalog_errors)
@@ -93,16 +146,43 @@ static func prepare_map(map_id: String, map_data: Dictionary, qa_preview: bool =
 		errors.append("地图视觉只接受 80x40 权威格：%s" % map_id)
 		return {}
 
-	var contract := _contract_for_map(map_id, errors)
+	var active_review_entries: Dictionary = {}
+	var active_review_errors: Array[String] = []
+	if qa_preview and allow_review_catalog:
+		_ensure_review_catalog_loaded()
+		active_review_entries = _review_entries_by_map_id
+		active_review_errors = _review_catalog_errors
+	var selection := _select_catalog_entry(
+		map_id,
+		qa_preview,
+		_entries_by_map_id,
+		active_review_entries,
+		active_review_errors,
+		errors
+	)
+	if selection.is_empty():
+		return {}
+	var catalog_source := str(selection.get("source", "normal"))
+	var contract := _contract_for_entry(
+		map_id,
+		selection.get("entry", {}) as Dictionary,
+		catalog_source,
+		errors
+	)
 	if contract.is_empty():
 		return {}
 	var manifest := contract.get("manifest", {}) as Dictionary
-	if not _access_allowed(
-		manifest,
-		str(contract.get("bundleRoot", "")),
-		qa_preview,
-		errors
-	):
+	var access_allowed := (
+		_review_candidate_access_allowed(manifest, qa_preview, errors)
+		if catalog_source == "review"
+		else _access_allowed(
+			manifest,
+			str(contract.get("bundleRoot", "")),
+			qa_preview,
+			errors
+		)
+	)
+	if not access_allowed:
 		return {}
 
 	var binding := contract.get("binding", {}) as Dictionary
@@ -126,7 +206,19 @@ static func prepare_map(map_id: String, map_data: Dictionary, qa_preview: bool =
 	var tile_rects := _tile_rects_for_manifest(manifest, atlas_dimensions, errors)
 	var ground_rules := binding.get("ground", {}) as Dictionary
 	_validate_ground_tile_ids(ground_rules, tile_rects, errors)
-	var ground_state := _build_ground_state(map_data, ground_rules, tile_rects, errors)
+	var tile_variant_config := _compile_ground_tile_variants(
+		map_id,
+		ground_rules,
+		tile_rects,
+		errors
+	)
+	var ground_state := _build_ground_state(
+		map_data,
+		ground_rules,
+		tile_rects,
+		tile_variant_config,
+		errors
+	)
 	var protected_lookup := _build_protected_lookup(
 		map_data,
 		ground_state.get("pathLookup", {}) as Dictionary,
@@ -146,6 +238,9 @@ static func prepare_map(map_id: String, map_data: Dictionary, qa_preview: bool =
 
 	var ground_draws: Array[Dictionary] = []
 	var tile_ids_by_cell := ground_state.get("tileIdsByCell", {}) as Dictionary
+	var semantic_tile_ids_by_cell := (
+		ground_state.get("semanticTileIdsByCell", {}) as Dictionary
+	)
 	for y in range(grid_size.y):
 		for x in range(grid_size.x):
 			var cell := Vector2i(x, y)
@@ -156,6 +251,7 @@ static func prepare_map(map_id: String, map_data: Dictionary, qa_preview: bool =
 			ground_draws.append({
 				"cell": cell,
 				"tileId": tile_id,
+				"semanticTileId": str(semantic_tile_ids_by_cell.get(key, tile_id)),
 				"destination": Rect2(center - Vector2(TILE_SIZE) * 0.5, Vector2(TILE_SIZE)),
 				"source": source_rect,
 			})
@@ -163,7 +259,8 @@ static func prepare_map(map_id: String, map_data: Dictionary, qa_preview: bool =
 		map_data,
 		ground_rules,
 		tile_rects,
-		errors
+		errors,
+		tile_variant_config
 	)
 	if not errors.is_empty():
 		return {}
@@ -175,13 +272,22 @@ static func prepare_map(map_id: String, map_data: Dictionary, qa_preview: bool =
 		"mapStyleId": str(manifest.get("mapStyleId", "")),
 		"status": str(manifest.get("status", "")),
 		"qaPreview": qa_preview,
+		"catalogSource": catalog_source,
+		"reviewCandidate": catalog_source == "review",
+		"manifestPath": str((contract.get("entry", {}) as Dictionary).get("bundleManifest", "")),
+		"bindingPath": str((contract.get("entry", {}) as Dictionary).get("bindingPath", "")),
 		"tileSize": TILE_SIZE,
 		"gridSize": grid_size,
 		"atlasTexture": atlas_texture,
 		"groundDraws": ground_draws,
 		"edgeGroundDraws": edge_ground_draws,
 		"tileIdsByCell": tile_ids_by_cell,
+		"semanticTileIdsByCell": semantic_tile_ids_by_cell,
 		"tileCounts": ground_state.get("tileCounts", {}),
+		"semanticTileCounts": ground_state.get("semanticTileCounts", {}),
+		"variantSeed": int(tile_variant_config.get("seed", 0)),
+		"variantClusterSize": int(tile_variant_config.get("clusterSize", 1)),
+		"tileVariantConfig": tile_variant_config.duplicate(true),
 		"pathLookup": ground_state.get("pathLookup", {}),
 		"plazaLookup": ground_state.get("plazaLookup", {}),
 		"encounterLookup": ground_state.get("encounterLookup", {}),
@@ -201,6 +307,13 @@ static func prepared_tile_id(prepared: Dictionary, cell: Vector2i) -> String:
 	return str(lookup.get(IsoMapModel.cell_key(cell), ""))
 
 
+static func prepared_semantic_tile_id(prepared: Dictionary, cell: Vector2i) -> String:
+	if not bool(prepared.get("active", false)):
+		return ""
+	var lookup := prepared.get("semanticTileIdsByCell", {}) as Dictionary
+	return str(lookup.get(IsoMapModel.cell_key(cell), ""))
+
+
 static func prepared_objects(prepared: Dictionary, render_layer: String = "world") -> Array[Dictionary]:
 	if not bool(prepared.get("active", false)) or not RENDER_LAYERS.has(render_layer):
 		return []
@@ -213,40 +326,100 @@ static func _ensure_catalog_loaded() -> void:
 	if _catalog_loaded:
 		return
 	_catalog_loaded = true
-	var catalog := _read_json_cached(DATA_PATH, _catalog_errors, "地图视觉 catalog")
+	_load_catalog_entries(
+		DATA_PATH,
+		_entries_by_map_id,
+		_catalog_errors,
+		"地图视觉 catalog"
+	)
+
+
+static func _ensure_review_catalog_loaded() -> void:
+	if _review_catalog_loaded:
+		return
+	_review_catalog_loaded = true
+	_load_catalog_entries(
+		REVIEW_DATA_PATH,
+		_review_entries_by_map_id,
+		_review_catalog_errors,
+		"地图视觉 review catalog"
+	)
+
+
+static func _load_catalog_entries(
+	path: String,
+	output: Dictionary,
+	errors: Array[String],
+	label: String
+) -> void:
+	var catalog := _read_json_cached(path, errors, label)
 	if catalog.is_empty():
 		return
 	if int(catalog.get("schemaVersion", 0)) != SCHEMA_VERSION:
-		_catalog_errors.append("地图视觉 catalog schemaVersion 必须为 1")
+		errors.append("%s schemaVersion 必须为 1" % label)
 	var entries_value: Variant = catalog.get("entries", [])
 	if not (entries_value is Array):
-		_catalog_errors.append("地图视觉 catalog.entries 必须是数组")
+		errors.append("%s.entries 必须是数组" % label)
 		return
 	for index in range((entries_value as Array).size()):
 		var value: Variant = (entries_value as Array)[index]
 		if not (value is Dictionary):
-			_catalog_errors.append("地图视觉 catalog entry[%d] 必须是对象" % index)
+			errors.append("%s entry[%d] 必须是对象" % [label, index])
 			continue
 		var entry := value as Dictionary
 		var map_id := str(entry.get("mapId", ""))
 		var manifest_path := str(entry.get("bundleManifest", ""))
 		var binding_path := str(entry.get("bindingPath", ""))
-		if map_id == "" or _entries_by_map_id.has(map_id):
-			_catalog_errors.append("地图视觉 catalog mapId 缺失或重复：%s" % map_id)
+		if map_id == "" or output.has(map_id):
+			errors.append("%s mapId 缺失或重复：%s" % [label, map_id])
 			continue
 		if not _is_resource_path(manifest_path) or not _is_resource_path(binding_path):
-			_catalog_errors.append("地图视觉 catalog 路径必须是 res://：%s" % map_id)
+			errors.append("%s 路径必须是 res://：%s" % [label, map_id])
 			continue
-		_entries_by_map_id[map_id] = entry.duplicate(true)
+		output[map_id] = entry.duplicate(true)
 
 
-static func _contract_for_map(map_id: String, errors: Array[String]) -> Dictionary:
-	if _contract_cache.has(map_id):
-		var cached := _contract_cache.get(map_id, {}) as Dictionary
+static func _select_catalog_entry(
+	map_id: String,
+	qa_preview: bool,
+	normal_entries: Dictionary,
+	review_entries: Dictionary,
+	review_errors: Array[String],
+	errors: Array[String]
+) -> Dictionary:
+	if map_id == "":
+		return {}
+	if not qa_preview:
+		if not normal_entries.has(map_id):
+			return {}
+		return {"source": "normal", "entry": (normal_entries.get(map_id, {}) as Dictionary).duplicate(true)}
+	if not review_errors.is_empty():
+		errors.append_array(review_errors)
+		return {}
+	if review_entries.has(map_id):
+		return {"source": "review", "entry": (review_entries.get(map_id, {}) as Dictionary).duplicate(true)}
+	if not normal_entries.has(map_id):
+		return {}
+	return {"source": "normal", "entry": (normal_entries.get(map_id, {}) as Dictionary).duplicate(true)}
+
+
+static func _contract_for_entry(
+	map_id: String,
+	entry: Dictionary,
+	catalog_source: String,
+	errors: Array[String]
+) -> Dictionary:
+	var cache_key := "%s|%s|%s|%s" % [
+		catalog_source,
+		map_id,
+		str(entry.get("bundleManifest", "")),
+		str(entry.get("bindingPath", "")),
+	]
+	if _contract_cache.has(cache_key):
+		var cached := _contract_cache.get(cache_key, {}) as Dictionary
 		errors.append_array(cached.get("errors", []) as Array[String])
 		return cached.get("contract", {}) as Dictionary
 	var contract_errors: Array[String] = []
-	var entry := _entries_by_map_id.get(map_id, {}) as Dictionary
 	var manifest_path := str(entry.get("bundleManifest", ""))
 	var binding_path := str(entry.get("bindingPath", ""))
 	var manifest := _read_json_cached(manifest_path, contract_errors, "地图视觉 manifest")
@@ -266,7 +439,7 @@ static func _contract_for_map(map_id: String, errors: Array[String]) -> Dictiona
 			"binding": binding,
 			"bundleRoot": bundle_root,
 		}
-	_contract_cache[map_id] = {"contract": contract, "errors": contract_errors.duplicate()}
+	_contract_cache[cache_key] = {"contract": contract, "errors": contract_errors.duplicate()}
 	errors.append_array(contract_errors)
 	return contract
 
@@ -360,6 +533,30 @@ static func _access_allowed(
 	)
 	if not pending:
 		errors.append("地图视觉生命周期门禁组合无效")
+	return pending
+
+
+static func _review_candidate_access_allowed(
+	manifest: Dictionary,
+	qa_preview: bool,
+	errors: Array[String]
+) -> bool:
+	if not qa_preview or not OS.is_debug_build():
+		return false
+	if typeof(manifest.get("releaseApproved")) != TYPE_BOOL:
+		errors.append("review 地图视觉 releaseApproved 必须是布尔值")
+		return false
+	if typeof(manifest.get("runtimeEnabled")) != TYPE_BOOL:
+		errors.append("review 地图视觉 runtimeEnabled 必须是布尔值")
+		return false
+	var pending := (
+		str(manifest.get("status", "")) == STATUS_OWNER_REVIEW_PENDING
+		and str(manifest.get("ownerReviewStatus", "")) == OWNER_REVIEW_PENDING
+		and not bool(manifest.get("releaseApproved", false))
+		and not bool(manifest.get("runtimeEnabled", false))
+	)
+	if not pending:
+		errors.append("review catalog 只允许 owner_review_pending 候选")
 	return pending
 
 
@@ -698,13 +895,163 @@ static func _validate_ground_tile_ids(
 		var tile_id := str(ground.get(key, ""))
 		if tile_id == "" or not tile_rects.has(tile_id):
 			errors.append("地图视觉 ground.%s 未解析到 tile：%s" % [key, tile_id])
+	if ground.has("edgeTileId"):
+		var edge_tile_id := str(ground.get("edgeTileId", ""))
+		if edge_tile_id == "" or not tile_rects.has(edge_tile_id):
+			errors.append("地图视觉 ground.edgeTileId 未解析到 tile：%s" % edge_tile_id)
+
+
+static func _compile_ground_tile_variants(
+	map_id: String,
+	ground: Dictionary,
+	tile_rects: Dictionary,
+	errors: Array[String]
+) -> Dictionary:
+	var seed := _stable_tile_hash("map:%s" % map_id) & 0x7fffffff
+	var cluster_size := 1
+	if ground.has("variantSeed"):
+		var seed_value: Variant = ground.get("variantSeed")
+		if not (seed_value is int or seed_value is float) or seed_value is bool:
+			errors.append("地图视觉 ground.variantSeed 必须是 32 位整数")
+		else:
+			var seed_number := float(seed_value)
+			if (
+				not is_finite(seed_number)
+				or seed_number != floor(seed_number)
+				or seed_number < -2147483648.0
+				or seed_number > 2147483647.0
+			):
+				errors.append("地图视觉 ground.variantSeed 必须是 32 位整数")
+			else:
+				seed = int(seed_number)
+	if ground.has("variantClusterSize"):
+		var cluster_value: Variant = ground.get("variantClusterSize")
+		if not (cluster_value is int or cluster_value is float) or cluster_value is bool:
+			errors.append("地图视觉 ground.variantClusterSize 必须是 1..8 整数")
+		else:
+			var cluster_number := float(cluster_value)
+			if (
+				not is_finite(cluster_number)
+				or cluster_number != floor(cluster_number)
+				or cluster_number < 1.0
+				or cluster_number > 8.0
+			):
+				errors.append("地图视觉 ground.variantClusterSize 必须是 1..8 整数")
+			else:
+				cluster_size = int(cluster_number)
+
+	var result: Dictionary = {"seed": seed, "clusterSize": cluster_size, "pools": {}}
+	if not ground.has("tileVariants"):
+		return result
+	var variants_value: Variant = ground.get("tileVariants")
+	if not (variants_value is Dictionary):
+		errors.append("地图视觉 ground.tileVariants 必须是对象")
+		return result
+	var variants := variants_value as Dictionary
+	var base_ids: Dictionary = {}
+	for base_value in variants.keys():
+		var base_tile_id := str(base_value)
+		if not (base_value is String) or not _is_stable_id(base_tile_id):
+			errors.append("地图视觉 tileVariants base tileId 非法：%s" % base_tile_id)
+			continue
+		if not tile_rects.has(base_tile_id):
+			errors.append("地图视觉 tileVariants base 未解析到 tile：%s" % base_tile_id)
+			continue
+		base_ids[base_tile_id] = true
+
+	var candidate_owner: Dictionary = {}
+	var pools := result.get("pools", {}) as Dictionary
+	for base_value in variants.keys():
+		var base_tile_id := str(base_value)
+		if not base_ids.has(base_tile_id):
+			continue
+		var pool_value: Variant = variants.get(base_value)
+		if not (pool_value is Array) or (pool_value as Array).is_empty():
+			errors.append("地图视觉 tileVariants 候选必须是非空数组：%s" % base_tile_id)
+			continue
+		var pool: Array[String] = []
+		for candidate_value in pool_value as Array:
+			var candidate_tile_id := str(candidate_value)
+			if not (candidate_value is String) or not _is_stable_id(candidate_tile_id):
+				errors.append(
+					"地图视觉 tileVariants 候选 tileId 非法：%s/%s"
+					% [base_tile_id, candidate_tile_id]
+				)
+				continue
+			if not tile_rects.has(candidate_tile_id):
+				errors.append(
+					"地图视觉 tileVariants 候选未解析到 tile：%s/%s"
+					% [base_tile_id, candidate_tile_id]
+				)
+				continue
+			if pool.has(candidate_tile_id):
+				errors.append(
+					"地图视觉 tileVariants 候选重复：%s/%s"
+					% [base_tile_id, candidate_tile_id]
+				)
+				continue
+			if base_ids.has(candidate_tile_id) and candidate_tile_id != base_tile_id:
+				errors.append(
+					"地图视觉 tileVariants 候选跨越其他语义 base：%s/%s"
+					% [base_tile_id, candidate_tile_id]
+				)
+				continue
+			var previous_owner := str(candidate_owner.get(candidate_tile_id, ""))
+			if previous_owner != "" and previous_owner != base_tile_id:
+				errors.append(
+					"地图视觉 tileVariants 候选同时属于多个语义：%s/%s/%s"
+					% [candidate_tile_id, previous_owner, base_tile_id]
+				)
+				continue
+			candidate_owner[candidate_tile_id] = base_tile_id
+			pool.append(candidate_tile_id)
+		if not pool.has(base_tile_id):
+			errors.append("地图视觉 tileVariants 候选必须显式包含 base：%s" % base_tile_id)
+			continue
+		pools[base_tile_id] = pool
+	return result
+
+
+static func _select_tile_variant(
+	map_id: String,
+	cell: Vector2i,
+	base_tile_id: String,
+	variant_config: Dictionary
+) -> String:
+	var pools := variant_config.get("pools", {}) as Dictionary
+	if not pools.has(base_tile_id):
+		return base_tile_id
+	var pool_value: Variant = pools.get(base_tile_id)
+	if not (pool_value is Array) or (pool_value as Array).is_empty():
+		return base_tile_id
+	var pool := pool_value as Array
+	var cluster_size := maxi(1, int(variant_config.get("clusterSize", 1)))
+	var cluster_x := floori(float(cell.x) / float(cluster_size))
+	var cluster_y := floori(float(cell.y) / float(cluster_size))
+	var identity := "%s|%d|%d|%d|%s" % [
+		map_id,
+		int(variant_config.get("seed", 0)),
+		cluster_x,
+		cluster_y,
+		base_tile_id,
+	]
+	var index := int(_stable_tile_hash(identity) % pool.size())
+	return str(pool[index])
+
+
+static func _stable_tile_hash(value: String) -> int:
+	var accumulator: int = 2166136261
+	for byte_value in value.to_utf8_buffer():
+		accumulator = int(((accumulator ^ int(byte_value)) * 16777619) & 0xffffffff)
+	return accumulator
 
 
 static func _build_edge_ground_draws(
 	map_data: Dictionary,
 	ground: Dictionary,
 	tile_rects: Dictionary,
-	errors: Array[String]
+	errors: Array[String],
+	variant_config: Dictionary = {}
 ) -> Array[Dictionary]:
 	var padding_value: Variant = ground.get("edgePaddingCells", 0)
 	if not (padding_value is int or padding_value is float) or padding_value is bool:
@@ -720,11 +1067,18 @@ static func _build_edge_ground_draws(
 		return []
 	if padding == 0:
 		return []
-	var default_tile_id := str(ground.get("defaultTileId", ""))
-	if not tile_rects.has(default_tile_id):
-		errors.append("地图视觉 edge skirt 未解析到 defaultTileId")
+	var edge_tile_id := str(ground.get("edgeTileId", ground.get("defaultTileId", "")))
+	if not tile_rects.has(edge_tile_id):
+		errors.append("地图视觉 edge skirt 未解析到 edgeTileId/defaultTileId")
 		return []
-	var source_rect := tile_rects.get(default_tile_id, Rect2()) as Rect2
+	var resolved_variant_config := variant_config
+	if resolved_variant_config.is_empty():
+		resolved_variant_config = _compile_ground_tile_variants(
+			str(map_data.get("id", "")),
+			ground,
+			tile_rects,
+			errors
+		)
 	var grid_size := IsoMapModel.grid_size(map_data)
 	var result: Array[Dictionary] = []
 	for y in range(-padding, grid_size.y + padding):
@@ -732,10 +1086,21 @@ static func _build_edge_ground_draws(
 			var cell := Vector2i(x, y)
 			if _cell_in_size(cell, grid_size):
 				continue
+			var selected_tile_id := _select_tile_variant(
+				str(map_data.get("id", "")),
+				cell,
+				edge_tile_id,
+				resolved_variant_config
+			)
+			if not tile_rects.has(selected_tile_id):
+				errors.append("地图视觉 edge skirt 变体未解析到 tile：%s" % selected_tile_id)
+				continue
+			var source_rect := tile_rects.get(selected_tile_id, Rect2()) as Rect2
 			var center := IsoMapModel.grid_to_world(map_data, cell)
 			result.append({
 				"cell": cell,
-				"tileId": default_tile_id,
+				"tileId": selected_tile_id,
+				"semanticTileId": edge_tile_id,
 				"destination": Rect2(center - Vector2(TILE_SIZE) * 0.5, Vector2(TILE_SIZE)),
 				"source": source_rect,
 			})
@@ -746,6 +1111,7 @@ static func _build_ground_state(
 	map_data: Dictionary,
 	ground: Dictionary,
 	tile_rects: Dictionary,
+	variant_config: Dictionary,
 	errors: Array[String]
 ) -> Dictionary:
 	var grid_size := IsoMapModel.grid_size(map_data)
@@ -774,30 +1140,45 @@ static func _build_ground_state(
 
 	var tile_ids_by_cell: Dictionary = {}
 	var tile_counts: Dictionary = {}
+	var semantic_tile_ids_by_cell: Dictionary = {}
+	var semantic_tile_counts: Dictionary = {}
 	for y in range(grid_size.y):
 		for x in range(grid_size.x):
 			var cell := Vector2i(x, y)
 			var key := IsoMapModel.cell_key(cell)
-			var tile_id := str(overrides.get(key, default_tile_id))
+			var semantic_tile_id := str(overrides.get(key, default_tile_id))
 			# Semantic ground wins over cosmetic overrides in this exact order.
 			if path_lookup.has(key):
-				tile_id = str(ground.get("pathTileId", tile_id))
+				semantic_tile_id = str(ground.get("pathTileId", semantic_tile_id))
 			if plaza_lookup.has(key):
-				tile_id = str(ground.get("plazaTileId", tile_id))
+				semantic_tile_id = str(ground.get("plazaTileId", semantic_tile_id))
 			if encounter_lookup.has(key):
-				tile_id = str(ground.get("encounterTileId", tile_id))
+				semantic_tile_id = str(ground.get("encounterTileId", semantic_tile_id))
 			if blocked_lookup.has(key):
-				tile_id = str(ground.get("blockedTileId", tile_id))
+				semantic_tile_id = str(ground.get("blockedTileId", semantic_tile_id))
 			if warp_lookup.has(key):
-				tile_id = str(ground.get("warpTileId", tile_id))
+				semantic_tile_id = str(ground.get("warpTileId", semantic_tile_id))
+			if not tile_rects.has(semantic_tile_id):
+				errors.append("地图视觉格子未解析到语义 tile：%s/%s" % [key, semantic_tile_id])
+				continue
+			var tile_id := _select_tile_variant(
+				str(map_data.get("id", "")),
+				cell,
+				semantic_tile_id,
+				variant_config
+			)
 			if not tile_rects.has(tile_id):
 				errors.append("地图视觉格子未解析到 tile：%s/%s" % [key, tile_id])
 				continue
 			tile_ids_by_cell[key] = tile_id
+			semantic_tile_ids_by_cell[key] = semantic_tile_id
 			tile_counts[tile_id] = int(tile_counts.get(tile_id, 0)) + 1
+			semantic_tile_counts[semantic_tile_id] = int(semantic_tile_counts.get(semantic_tile_id, 0)) + 1
 	return {
 		"tileIdsByCell": tile_ids_by_cell,
 		"tileCounts": tile_counts,
+		"semanticTileIdsByCell": semantic_tile_ids_by_cell,
+		"semanticTileCounts": semantic_tile_counts,
 		"pathLookup": path_lookup,
 		"plazaLookup": plaza_lookup,
 		"encounterLookup": encounter_lookup,
@@ -1123,6 +1504,9 @@ static func _build_object_draws(
 		_validate_object_definition_collision(definition, object_id, errors)
 
 	var authoritative_blocked := IsoMapModel.blocked_lookup(map_data)
+	var grid_size := IsoMapModel.grid_size(map_data)
+	var ground_rules := binding.get("ground", {}) as Dictionary
+	var edge_padding_value: Variant = ground_rules.get("edgePaddingCells", 0)
 	var instance_ids: Dictionary = {}
 	for value in binding.get("objectPlacements", []):
 		if not (value is Dictionary):
@@ -1142,13 +1526,28 @@ static func _build_object_draws(
 			errors.append("地图视觉 objectPlacement 引用未知 objectId：%s" % object_id)
 			continue
 		var definition := definitions[object_id] as Dictionary
-		var cell := _vector2i_from_value(placement.get("grid"), Vector2i(-1, -1))
-		if not IsoMapModel.is_inside(map_data, cell):
-			errors.append("地图视觉物件锚点越界：%s" % instance_id)
-			continue
 		var collision_role := str(definition.get("collisionRole", ""))
 		if not COLLISION_ROLES.has(collision_role):
 			errors.append("地图视觉物件 collisionRole 不在白名单：%s/%s" % [instance_id, collision_role])
+		var grid_value: Variant = placement.get("grid")
+		if not _is_integral_grid_pair(grid_value):
+			errors.append("地图视觉物件 grid 必须是整数坐标：%s" % instance_id)
+			continue
+		var cell := _vector2i_from_value(grid_value, Vector2i.ZERO)
+		if not _object_anchor_within_contract(
+			cell,
+			grid_size,
+			collision_role,
+			edge_padding_value
+		):
+			if collision_role == "none" or collision_role == "decorative":
+				errors.append(
+					"地图视觉纯布景锚点必须在权威网格或 edgePaddingCells skirt 内：%s"
+					% instance_id
+				)
+			else:
+				errors.append("blocking/interaction 地图物件锚点必须在权威网格内：%s" % instance_id)
+			continue
 		var collision := definition.get("collision", {}) as Dictionary
 		var collision_mode := str(collision.get("mode", ""))
 		var interaction_link: Variant = placement.get("interactionLink")
@@ -1398,6 +1797,50 @@ static func _rect2i_from_value(value: Variant) -> Rect2i:
 
 static func _cell_in_size(cell: Vector2i, grid_size: Vector2i) -> bool:
 	return cell.x >= 0 and cell.y >= 0 and cell.x < grid_size.x and cell.y < grid_size.y
+
+
+static func _object_anchor_within_contract(
+	cell: Vector2i,
+	grid_size: Vector2i,
+	collision_role: String,
+	edge_padding_value: Variant
+) -> bool:
+	if _cell_in_size(cell, grid_size):
+		return true
+	if collision_role != "none" and collision_role != "decorative":
+		return false
+	if (
+		not (edge_padding_value is int or edge_padding_value is float)
+		or edge_padding_value is bool
+	):
+		return false
+	var padding_number := float(edge_padding_value)
+	if (
+		not is_finite(padding_number)
+		or padding_number != floor(padding_number)
+		or padding_number < 1.0
+		or padding_number > 32.0
+	):
+		return false
+	var padding := int(padding_number)
+	return (
+		cell.x >= -padding
+		and cell.y >= -padding
+		and cell.x < grid_size.x + padding
+		and cell.y < grid_size.y + padding
+	)
+
+
+static func _is_integral_grid_pair(value: Variant) -> bool:
+	if not (value is Array) or (value as Array).size() != 2:
+		return false
+	for part in value as Array:
+		if not (part is int or part is float) or part is bool:
+			return false
+		var number := float(part)
+		if not is_finite(number) or number != floor(number):
+			return false
+	return true
 
 
 static func _normalized_point(point: Vector2) -> bool:

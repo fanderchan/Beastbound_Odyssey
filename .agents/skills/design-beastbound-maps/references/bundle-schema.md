@@ -145,6 +145,31 @@ normally use `opaque`.
       "tileId": "warm_grass_a",
       "rect": [0, 0, 80, 40],
       "role": "ground"
+    },
+    {
+      "tileId": "warm_grass_b",
+      "rect": [80, 0, 80, 40],
+      "role": "ground"
+    },
+    {
+      "tileId": "warm_path_a",
+      "rect": [160, 0, 80, 40],
+      "role": "ground"
+    },
+    {
+      "tileId": "warm_path_worn_b",
+      "rect": [240, 0, 80, 40],
+      "role": "ground"
+    },
+    {
+      "tileId": "meadow_far",
+      "rect": [320, 0, 80, 40],
+      "role": "ground"
+    },
+    {
+      "tileId": "meadow_far_b",
+      "rect": [400, 0, 80, 40],
+      "role": "ground"
     }
   ],
   "objects": [
@@ -270,8 +295,9 @@ Collision must be declared even for decorative objects:
   least three local image-space points inside the PNG dimensions.
 
 `collisionRole=blocking` requires polygon collision. `none` and `decorative`
-require `collision.mode=none`. The binding still records the actual occupied
-map cells; neither declaration changes authoritative gameplay blockers alone.
+require `collision.mode=none`. The binding records occupied map cells only in
+`collisionFootprint`; a placement anchor, including an edge-skirt scenery
+anchor, never changes authoritative gameplay blockers by itself.
 
 At placement time, `objectId` resolves this collision role. A `blocking` object
 must have a non-empty, valid `collisionFootprint`; `none` and `decorative` must
@@ -295,7 +321,15 @@ Each binding reference must parse as JSON and contain the same `schemaVersion`,
   "mapGridSize": [48, 36],
   "ground": {
     "defaultTileId": "warm_grass_a",
+    "edgeTileId": "meadow_far",
     "edgePaddingCells": 20,
+    "variantSeed": 314159,
+    "variantClusterSize": 3,
+    "tileVariants": {
+      "warm_grass_a": ["warm_grass_a", "warm_grass_b"],
+      "warm_path_a": ["warm_path_a", "warm_path_worn_b"],
+      "meadow_far": ["meadow_far", "meadow_far_b"]
+    },
     "overrides": [
       {"grid": [12, 8], "tileId": "warm_path_a"}
     ]
@@ -316,19 +350,47 @@ Each binding reference must parse as JSON and contain the same `schemaVersion`,
 
 `ground.defaultTileId`, `ground.overrides`, and `objectPlacements` are required;
 the two arrays may be empty. `ground.edgePaddingCells` is optional and must be
-an integer from 0 through 32; formal 1280x720 map art should normally use 20
-unless frozen viewport evidence proves a smaller skirt sufficient. It creates
-visual-only `defaultTileId` diamonds outside `mapGridSize`. These cells never
-enter authoritative `tileIdsByCell`, pathfinding, blocked/protected lookups,
-collision, interactions, encounters, spawns or warps, and are never gameplay
-coordinates. Every override and placement `grid` is a
-non-negative integer pair. Every placement has a unique stable `instanceId`, a
-finite numeric two-value `offset`, explicit `mirrored: false`, an
-`interactionLink` that is either `null` or a stable ID, and a
-`collisionFootprint` array of non-negative integer map cells. When optional
-`mapGridSize` is present it is a positive integer `[width, height]`, and every
-override, placement, and footprint cell must satisfy `0 <= x < width` and
-`0 <= y < height`.
+an integer from 0 through 32. Optional `ground.edgeTileId` selects an independent
+manifest tile for the visual-only diamonds outside `mapGridSize`; when omitted
+it falls back exactly to `defaultTileId`. These cells never enter authoritative
+`tileIdsByCell`, pathfinding, blocked/protected lookups, collision, interactions,
+encounters, spawns or warps, and are never gameplay coordinates.
+
+`ground.tileVariants` is an optional object from semantic base tileId to a
+non-empty candidate array. Every base and candidate must resolve to the same
+manifest; a pool explicitly contains its own base, contains no duplicate, may
+not contain another declared semantic base, and may not share a candidate with
+another pool. `ground.variantSeed` is an optional signed 32-bit JSON integer;
+when absent runtime derives a stable seed from `mapId`. Optional
+`ground.variantClusterSize` is a JSON integer from 1 through 8 and defaults to
+1. Selection hashes `floor(cell.x / clusterSize)` and
+`floor(cell.y / clusterSize)` during map preparation, so values such as 3 form
+macro color patches while semantic tile lookup remains per-cell. The final
+visual tile IDs/counts may change, but path/plaza/blocked/encounter/warp meaning,
+collision, protected cells and authoritative map JSON never do. Draw-time
+randomness is prohibited.
+
+Every override `grid` is a non-negative integer pair and remains inside the
+authoritative map. A placement `grid` is an integer pair and normally follows
+the same rule. The only exception is an object whose manifest definition uses
+`collisionRole=none` or `collisionRole=decorative`: with a present positive
+`ground.edgePaddingCells` and a present `mapGridSize`, its anchor may be outside
+the authoritative grid while staying inside the exact visual skirt rectangle
+`-padding <= x < width + padding` and
+`-padding <= y < height + padding`. At least one axis must be outside the map;
+this is an independently drawn scenery anchor, not a gameplay cell. A skirt
+anchor beyond that rectangle fails closed. `blocking` and `interaction`
+anchors always remain inside the authoritative map.
+
+Every placement has a unique stable `instanceId`, a finite numeric two-value
+`offset`, explicit `mirrored: false`, an `interactionLink` that is either
+`null` or a stable ID, and a `collisionFootprint` array of non-negative integer
+map cells. Off-grid `none`/`decorative` scenery uses `interactionLink: null` and
+an empty footprint. When optional `mapGridSize` is present it is a positive
+integer `[width, height]`; every override and every footprint cell, including
+footprints belonging to an otherwise valid object, must satisfy
+`0 <= x < width` and `0 <= y < height`. The existing blocking, protected-cell,
+and interaction-footprint rules remain unchanged.
 
 All nested `tileId` and `objectId` values must resolve to this manifest. Any
 `mirrored: true` or `bakedActors: true` anywhere in the manifest, provenance, or
@@ -343,8 +405,16 @@ The required `catalogContractCheck` is a frozen JSON report produced by the
 Godot runtime/catalog check. It uses report type
 `beastbound.map_visual_catalog_contract`, a valid UTC `generatedAtUtc`, matching
 `bundleId`, `result: "PASS"`, and `testedMapIds` exactly covering the bundle. It
-freezes the current `map_visual_catalog.json` SHA in `catalogSha256`, and
-`bindingHashes`/`mapDataHashes` contain exactly one SHA-256 per `mapId`; every
+freezes the selected live catalog SHA in `catalogSha256`: released runtime art
+uses `map_visual_catalog.json`, while an exact
+`owner_review_pending`/`pending`/`false`/`false` QA candidate uses
+`map_visual_review_catalog.json`. The review entry's `bundleManifest` and
+`bindingPath` must be in-project `res://` files resolving to the audited bundle
+and its byte-identical binding. A pending review report may be structurally
+`PASS`, but it never makes the bundle release-ready; owner acceptance, released
+lifecycle, release attestation, Computer Use, performance and other release
+gates remain independent. `bindingHashes`/`mapDataHashes` contain exactly one
+SHA-256 per `mapId`; every
 binding hash must equal its manifest binding reference. `maps` exactly covers
 the bundle and each entry has positive `groundDraws`, `objects`, and
 `protectedCells`. Every named `checks` boolean shown below must be true and

@@ -1,0 +1,435 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "firebud_region_visual_v2",
+  "status": "generated_original",
+  "productionState": "generated_original",
+  "origin": "AI-generated original",
+  "owner": "Beastbound Odyssey project",
+  "licenseBasis": "project-owned generated output",
+  "reviewState": "owner_review_pending",
+  "ownerReviewStatus": "pending",
+  "releaseApproved": false,
+  "runtimeEnabled": false,
+  "generatedAt": "2026-08-02",
+  "tool": "OpenAI image_gen",
+  "rawFiles": [
+    {
+      "path": "source/raw/firebud-ground-sheet-v3.png",
+      "sha256": "234c201cf2f39ac58a2505c753b0b05d85ca154b2be802f6a726378c9375dae4",
+      "dimensions": [1254, 1254],
+      "generationCallId": "exec-c556629a-c088-430a-8000-dcaa499be290",
+      "generatedAt": "2026-08-02T00:44:02+08:00",
+      "promptPath": "source/prompts/firebud-ground-v3.md",
+      "promptTextSha256": "cbd5ad1a700c8045ef83eed56514b96fe029c45a9e71a673a14a072b72dc7d73",
+      "promptFileSha256": "cbd5ad1a700c8045ef83eed56514b96fe029c45a9e71a673a14a072b72dc7d73",
+      "lineageRole": "accepted_base_ground_sheet",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-meadow-variants-v1.png",
+      "sha256": "f873213dc56895f03e64ce15c6e72160eb951315c3791014c2e892e9e7bb9cd0",
+      "dimensions": [1254, 1254],
+      "generationCallId": "exec-ea389845-729f-4248-9be0-908c2086b604",
+      "generatedAt": "2026-08-02T01:05:52.721+08:00",
+      "promptPath": "source/prompts/firebud-meadow-variants-v1.md",
+      "promptTextSha256": "0473ac81556a3a27bef96c1d5d3979b6398c2bd6e03b0592e258da5217ad1f78",
+      "promptFileSha256": "596e4417f56572798a1e2a4d753fe176ef5bf3ac2e967c54a6579a2ebbed182b",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-semantic-variants-v1.png",
+      "sha256": "6cbf32f7f276cf771eaf3d8057438afb708ff539f2c2bd7752fc00bb719aa1db",
+      "dimensions": [1254, 1254],
+      "generationCallId": "exec-31e82953-d8c0-4a5b-b969-7fa7b82aa5a5",
+      "generatedAt": "2026-08-02T01:08:40.995+08:00",
+      "promptPath": "source/prompts/firebud-semantic-variants-v1.md",
+      "promptTextSha256": "9794b4e65034d3bb7f111fb652f57b646cad557fd34b8ba1b2ea50222bbdb938",
+      "promptFileSha256": "4bf25fec9a1a9d7b34eed1d783dc8fecfea4b624b3fcae94b165b447273c53e0",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-seamless-meadow-v2.png",
+      "sha256": "bc47b5e3881617fae599272edb7f6bc092c783072ac3005f5c71b26085a3b272",
+      "dimensions": [1254, 1254],
+      "generationCallId": "exec-026034c5-74d7-4f82-8f8e-6feb7e1307ed",
+      "generatedAt": "2026-08-01T18:40:00Z",
+      "promptPath": "source/prompts/firebud-seamless-meadow-v2.md",
+      "promptTextSha256": "dd5e6324a55ebca4233cc74401287c316afadd7ccf8a1adfd78bba8f941413f8",
+      "promptFileSha256": "dd5e6324a55ebca4233cc74401287c316afadd7ccf8a1adfd78bba8f941413f8",
+      "lineageRole": "accepted_low_contrast_seamless_meadow_source",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-tree-landmark-v1.png",
+      "sha256": "0f45e533ba766c001c6c47be030c0f671aba57909e2ff9f87bb6d2bbaf709c63",
+      "dimensions": [1358, 1159],
+      "generationCallId": "exec-0f06fb09-8ac7-46b7-b503-0d38a16fe0c1",
+      "generatedAt": "2026-08-02T00:48:05.653+08:00",
+      "promptPath": "source/prompts/firebud-ancient-tree-v1.md",
+      "promptTextSha256": "ddaf2eee361f93796512c610dd7d451849ae692778fa823b1b8ca155233687b3",
+      "promptFileSha256": "c4ebacbadd25e91cda332b6e3299c86223a9f92c7a53f31b501f142eebf4b49a",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-compact-props-v1.png",
+      "sha256": "0b7e3525cb8ff25e7cb8ec71c40b40eab4d7d9cecbadff0539ba77b85cc46415",
+      "dimensions": [1254, 1254],
+      "generationCallId": "exec-e7761ed2-6e27-4c05-a29a-88a0bd54dc16",
+      "generatedAt": "2026-08-02T00:50:18.060+08:00",
+      "promptPath": "source/prompts/firebud-compact-props-v1.md",
+      "promptTextSha256": "431d024563f7a196b113c90476dec38c7c3db015ac80b74f73c34c634538e714",
+      "promptFileSha256": "d9f645a71fbf9960716f8148b76c8bc4dbba4ffbde8ef980313003708b407545",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/reused-v1/firebud-low-props-sheet-v2.png",
+      "sha256": "a311c693c4cb5093a7b74b59e84014f22026662d36d1ece1c35b895551fdacc5",
+      "dimensions": [1254, 1254],
+      "sourceBundleId": "firebud_region_visual_v1",
+      "sourcePath": "source/generated/firebud-low-props-sheet-v2.png",
+      "reuseMode": "same-volume-hardlink-byte-identical",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/reused-v1/firebud-service-pavilion-v1.png",
+      "sha256": "a0258aaeb9d64d8ae82a926469c7aa7bb904bebb7e9d90e0a6936e37c915a1ae",
+      "dimensions": [1254, 1254],
+      "sourceBundleId": "firebud_region_visual_v1",
+      "sourcePath": "source/generated/firebud-service-pavilion-v1.png",
+      "reuseMode": "same-volume-hardlink-byte-identical",
+      "generatedOriginal": true
+    }
+  ],
+  "buildArtifacts": [
+    {
+      "path": "source/processed/firebud-ground-sheet-v3-alpha.png",
+      "sha256": "9dec63d7a15a5dbf7e47512ebdf7d4aae24615e3c6b30276f01bae4fea5c869f",
+      "dimensions": [1254, 1254]
+    },
+    {
+      "path": "source/processed/firebud-meadow-variants-v1-alpha.png",
+      "sha256": "b6237e41b0af7caf1b0f2d7a9cc95694b26cf1b1718814d4b0124a14bfcff6be",
+      "dimensions": [1254, 1254]
+    },
+    {
+      "path": "source/processed/firebud-semantic-variants-v1-alpha.png",
+      "sha256": "691683544da118285ad09b752c466324fda1a84c56945d6c6f7b62618c755eb5",
+      "dimensions": [1254, 1254]
+    },
+    {
+      "path": "source/processed/firebud-ground-sheet-v3-combined-12tiles.png",
+      "sha256": "f3bd54ca34a7c89a84145a89bbefa124759ba0d4a5c6cab709b7ec18a6dff4b8",
+      "dimensions": [1254, 3762]
+    },
+    {
+      "path": "source/processed/firebud-tree-landmark-v1-alpha.png",
+      "sha256": "100f95b7b755991bab16729d43952fed82a3e7ff5d87ebf23b526754ae561915",
+      "dimensions": [1358, 1159]
+    },
+    {
+      "path": "source/processed/firebud-compact-props-v1-alpha.png",
+      "sha256": "32a7d69f180e778483173451c17126728f36f79a5199ec46f410a645126aaad8",
+      "dimensions": [1254, 1254]
+    },
+    {
+      "path": "source/processed/firebud-ancient-tree-manifest.json",
+      "sha256": "c46e034e8eb19cb0e165767fce2f3e3674b9508e65c6421ceb611864cddefeb5"
+    },
+    {
+      "path": "source/processed/firebud-compact-props-manifest.json",
+      "sha256": "ea3fe59ee6d63520f73a9a9f4c7803e773457b936782e95c8102dae76e2f7a0a"
+    },
+    {
+      "path": "source/processed/reused-v1/firebud-low-props-sheet-v2-alpha.png",
+      "sha256": "c4b28e15d42048c63429caccfd08153101f047a2519ed88216c40b1fc2156126",
+      "dimensions": [1254, 1254],
+      "sourceBundleId": "firebud_region_visual_v1",
+      "reuseMode": "same-volume-hardlink-byte-identical"
+    },
+    {
+      "path": "source/processed/reused-v1/firebud-service-pavilion-v1-alpha.png",
+      "sha256": "ed193e22a3445cbe8324272c6775436059c5caf25eeebfb4cf8bf59a9f695cc8",
+      "dimensions": [1254, 1254],
+      "sourceBundleId": "firebud_region_visual_v1",
+      "reuseMode": "same-volume-hardlink-byte-identical"
+    }
+  ],
+  "assets": [
+    {
+      "assetId": "firebud_ground_atlas_12tiles",
+      "path": "runtime/ground/atlas.png",
+      "sha256": "8f4699454f45e3e5f54907a63aa59069313bb42bac29c5edb7efd9d13a373cdb",
+      "dimensions": [320, 120],
+      "tileSize": [80, 40],
+      "atlasColumns": 4,
+      "tileIds": [
+        "firebud_meadow_a",
+        "firebud_ochre_path_a",
+        "firebud_honey_stone_a",
+        "firebud_dark_root_soil_a",
+        "firebud_meadow_b",
+        "firebud_meadow_dry_b",
+        "firebud_meadow_clover_c",
+        "firebud_meadow_far",
+        "firebud_ochre_path_worn_b",
+        "firebud_honey_stone_moss_b",
+        "firebud_tall_grass_encounter",
+        "firebud_warp_stone"
+      ],
+      "rawPaths": [
+        "source/raw/firebud-ground-sheet-v3.png",
+        "source/raw/firebud-meadow-variants-v1.png",
+        "source/raw/firebud-semantic-variants-v1.png",
+        "source/raw/firebud-seamless-meadow-v2.png"
+      ],
+      "tool": "OpenAI image_gen plus deterministic ffmpeg atlas assembly",
+      "promptPath": "source/prompts/firebud-seamless-meadow-v2.md",
+      "rawPath": "source/raw/firebud-seamless-meadow-v2.png",
+      "generatedAt": "2026-08-01T18:42:21Z",
+      "operations": [
+        "four bounded meadow crops from the accepted generated source",
+        "Lanczos downsample to 80x40 with canonical 2:1 diamond and bounded 10% anti-seam alpha bleed",
+        "low-detail edge-skirt blur and desaturation",
+        "path and plaza texture crops rebuilt without high-contrast perimeter",
+        "deterministic 12-tile 320x120 RGBA atlas assembly"
+      ]
+    },
+    {
+      "assetId": "firebud_ancient_tree",
+      "path": "runtime/objects/firebud_ancient_tree.png",
+      "sha256": "c0a4309a3bd0065cea2fab35167a27d8ed6f22441d7e88bbcd850b165d9a0e4c",
+      "dimensions": [512, 412],
+      "anchor": [0.5, 1.0],
+      "promptPath": "source/prompts/firebud-ancient-tree-v1.md",
+      "rawPath": "source/raw/firebud-tree-landmark-v1.png",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "generatedAt": "2026-08-02T00:48:05.653+08:00",
+      "operations": [
+        "chroma-key alpha cleanup",
+        "alpha bbox crop",
+        "premultiplied-alpha downsample",
+        "transparent padding"
+      ]
+    },
+    {
+      "assetId": "firebud_ancient_tree_scenery",
+      "path": "runtime/objects/firebud_ancient_tree_scenery.png",
+      "sha256": "c0a4309a3bd0065cea2fab35167a27d8ed6f22441d7e88bbcd850b165d9a0e4c",
+      "dimensions": [512, 412],
+      "anchor": [0.5, 1.0],
+      "promptPath": "source/prompts/firebud-ancient-tree-v1.md",
+      "rawPath": "source/raw/firebud-tree-landmark-v1.png",
+      "tool": "same-bundle byte-identical scenery derivative",
+      "generatedAt": "2026-08-01T18:42:21Z",
+      "operations": [
+        "byte-identical dedicated runtime copy for non-colliding edge scenery",
+        "runtime display size and sort offset are declared in the manifest"
+      ]
+    },
+    {
+      "assetId": "firebud_ember_shrub",
+      "path": "runtime/objects/firebud_ember_shrub.png",
+      "sha256": "15ea9686ff9f1ba3946dfca282154415593b7b5caf78dd058db2a2cfc97f0a43",
+      "dimensions": [256, 197],
+      "anchor": [0.5, 1.0],
+      "promptPath": "source/prompts/firebud-compact-props-v1.md",
+      "rawPath": "source/raw/firebud-compact-props-v1.png",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "generatedAt": "2026-08-02T00:50:18.060+08:00",
+      "operations": [
+        "chroma-key alpha cleanup",
+        "alpha bbox crop",
+        "premultiplied-alpha downsample",
+        "transparent padding"
+      ]
+    },
+    {
+      "assetId": "firebud_honey_rock_cluster",
+      "path": "runtime/objects/firebud_honey_rock_cluster.png",
+      "sha256": "d16e453237d3a982ff947777332a65925c754cd595738ce9c357ff4339ab02ca",
+      "dimensions": [256, 228],
+      "anchor": [0.5, 1.0],
+      "promptPath": "source/prompts/firebud-compact-props-v1.md",
+      "rawPath": "source/raw/firebud-compact-props-v1.png",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "generatedAt": "2026-08-02T00:50:18.060+08:00",
+      "operations": [
+        "chroma-key alpha cleanup",
+        "alpha bbox crop",
+        "premultiplied-alpha downsample",
+        "transparent padding"
+      ]
+    },
+    {
+      "assetId": "firebud_flower_meadow_decal",
+      "path": "runtime/objects/firebud_flower_meadow_decal.png",
+      "sha256": "f730db7af306dd08969faac93a1c77067b22dfc54bc4cc9cdffc676a555afe7f",
+      "dimensions": [256, 164],
+      "anchor": [0.5, 1.0],
+      "promptPath": "source/prompts/firebud-compact-props-v1.md",
+      "rawPath": "source/raw/firebud-compact-props-v1.png",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "generatedAt": "2026-08-02T00:50:18.060+08:00",
+      "operations": [
+        "chroma-key alpha cleanup",
+        "alpha bbox crop",
+        "premultiplied-alpha downsample",
+        "transparent padding"
+      ]
+    },
+    {
+      "assetId": "firebud_stone_totem",
+      "path": "runtime/objects/firebud_stone_totem.png",
+      "sha256": "19473e3291ce971e54165a96d974cf8577f00d4821450fad0c4ca01098da2d81",
+      "dimensions": [235, 256],
+      "anchor": [0.5, 1.0],
+      "promptPath": "source/prompts/firebud-compact-props-v1.md",
+      "rawPath": "source/raw/firebud-compact-props-v1.png",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "generatedAt": "2026-08-02T00:50:18.060+08:00",
+      "operations": [
+        "chroma-key alpha cleanup",
+        "alpha bbox crop",
+        "premultiplied-alpha downsample",
+        "transparent padding"
+      ]
+    },
+    {
+      "assetId": "firebud_training_target",
+      "path": "runtime/objects/firebud_training_target.png",
+      "sha256": "9286753d988db31c6503f3522ce7ee7c8576b4f0f95e30c4edd0ed34b776a8d4",
+      "tool": "reused_project_owned",
+      "promptPath": "source/prompts/reused-v1/firebud-low-props.md",
+      "rawPath": "source/raw/reused-v1/firebud-low-props-sheet-v2.png",
+      "generatedAt": "2026-07-23T03:31:45+08:00",
+      "operations": ["same-volume hardlink reuse; no pixel copy or transform"],
+      "reusedFrom": {
+        "bundleId": "firebud_region_visual_v1",
+        "path": "runtime/objects/firebud_training_target.png",
+        "sha256": "9286753d988db31c6503f3522ce7ee7c8576b4f0f95e30c4edd0ed34b776a8d4"
+      }
+    },
+    {
+      "assetId": "firebud_supply_pots",
+      "path": "runtime/objects/firebud_supply_pots.png",
+      "sha256": "6b7051bf7f5c6250759066d90a08ea86c9c592c3c26365ceba11f151baaebb21",
+      "tool": "reused_project_owned",
+      "promptPath": "source/prompts/reused-v1/firebud-low-props.md",
+      "rawPath": "source/raw/reused-v1/firebud-low-props-sheet-v2.png",
+      "generatedAt": "2026-07-23T03:31:45+08:00",
+      "operations": ["same-volume hardlink reuse; no pixel copy or transform"],
+      "reusedFrom": {
+        "bundleId": "firebud_region_visual_v1",
+        "path": "runtime/objects/firebud_supply_pots.png",
+        "sha256": "6b7051bf7f5c6250759066d90a08ea86c9c592c3c26365ceba11f151baaebb21"
+      }
+    },
+    {
+      "assetId": "firebud_low_planter",
+      "path": "runtime/objects/firebud_low_planter.png",
+      "sha256": "ccff5c7242ac8f27526ef76b006ace872dbca12929f0f60e3b3e972233e61380",
+      "tool": "reused_project_owned",
+      "promptPath": "source/prompts/reused-v1/firebud-low-props.md",
+      "rawPath": "source/raw/reused-v1/firebud-low-props-sheet-v2.png",
+      "generatedAt": "2026-07-23T03:31:45+08:00",
+      "operations": ["same-volume hardlink reuse; no pixel copy or transform"],
+      "reusedFrom": {
+        "bundleId": "firebud_region_visual_v1",
+        "path": "runtime/objects/firebud_low_planter.png",
+        "sha256": "ccff5c7242ac8f27526ef76b006ace872dbca12929f0f60e3b3e972233e61380"
+      }
+    },
+    {
+      "assetId": "firebud_low_fence",
+      "path": "runtime/objects/firebud_low_fence.png",
+      "sha256": "1741d5f9be507da0926ea7a72246b177773aaee9e930b25f9cf5c4aa12685fee",
+      "tool": "reused_project_owned",
+      "promptPath": "source/prompts/reused-v1/firebud-low-props.md",
+      "rawPath": "source/raw/reused-v1/firebud-low-props-sheet-v2.png",
+      "generatedAt": "2026-07-23T03:31:45+08:00",
+      "operations": ["same-volume hardlink reuse; no pixel copy or transform"],
+      "reusedFrom": {
+        "bundleId": "firebud_region_visual_v1",
+        "path": "runtime/objects/firebud_low_fence.png",
+        "sha256": "1741d5f9be507da0926ea7a72246b177773aaee9e930b25f9cf5c4aa12685fee"
+      }
+    },
+    {
+      "assetId": "firebud_service_pavilion",
+      "path": "runtime/objects/firebud_service_pavilion.png",
+      "sha256": "1eaa9f5a13781419a0c6ea1c611cfcdd60a28bc2fbabce237789631de0740eec",
+      "tool": "reused_project_owned",
+      "promptPath": "source/prompts/reused-v1/firebud-service-pavilion.md",
+      "rawPath": "source/raw/reused-v1/firebud-service-pavilion-v1.png",
+      "generatedAt": "2026-07-23T03:46:46+08:00",
+      "operations": ["same-volume hardlink reuse; no pixel copy or transform"],
+      "reusedFrom": {
+        "bundleId": "firebud_region_visual_v1",
+        "path": "runtime/objects/firebud_service_pavilion.png",
+        "sha256": "1eaa9f5a13781419a0c6ea1c611cfcdd60a28bc2fbabce237789631de0740eec"
+      }
+    }
+  ],
+  "toolchain": {
+    "python": "3.14.3",
+    "pillow": "12.2.0",
+    "externalChromaKeyTool": {
+      "path": "source/tools/remove_chroma_key.py",
+      "sha256": "3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e",
+      "repositoryOwned": true
+    },
+    "objectExtractionTool": {
+      "path": ".agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py",
+      "sha256": "61dadc1e76cf50aa2a73e1e13c674f8bad2fa94ff5a84bc5e0fe7080809e9e5a"
+    },
+    "groundAtlasBuilder": {
+      "path": ".agents/skills/design-beastbound-maps/scripts/build_isometric_tile_atlas.py",
+      "sha256": "fe8e7f6ee6288b8f6ff51813273fb717046e939edf75d38f023b30ece98eeb44"
+    },
+    "ffmpeg": "8.1.1"
+  },
+  "sourceIngestion": {
+    "method": "same-filesystem hardlink from immutable image_gen output",
+    "authoritativeIdentity": "raw file SHA-256",
+    "externalRuntimeDependency": false
+  },
+  "processing": [
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-ground-sheet-v3.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-sheet-v3-alpha.png --key-color '#ff00ff' --soft-matte --transparent-threshold 10 --opaque-threshold 72 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-meadow-variants-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-meadow-variants-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill --force",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-semantic-variants-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-semantic-variants-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill --force",
+    "ffmpeg -y -i client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-sheet-v3-alpha.png -i client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-meadow-variants-v1-alpha.png -i client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-semantic-variants-v1-alpha.png -filter_complex '[0:v][1:v][2:v]vstack=inputs=3,format=rgba' -frames:v 1 client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-sheet-v3-combined-12tiles.png",
+    "python3 .agents/skills/design-beastbound-maps/scripts/build_isometric_tile_atlas.py client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-sheet-v3-combined-12tiles.png --rows 6 --columns 2 --labels firebud_meadow_a firebud_ochre_path_a firebud_honey_stone_a firebud_dark_root_soil_a firebud_meadow_b firebud_meadow_dry_b firebud_meadow_clover_c firebud_meadow_far firebud_ochre_path_worn_b firebud_honey_stone_moss_b firebud_tall_grass_encounter firebud_warp_stone --output-dir .run/rebuild/firebud-v2-ground-12tiles-a16-20260802 --atlas-columns 4 --alpha-threshold 16 --atlas-name atlas.png --manifest-name ground-12tiles-manifest.json",
+    "cp .run/rebuild/firebud-v2-ground-12tiles-a16-20260802/atlas.png client/godot/assets/maps/firebud_region_visual_v2/runtime/ground/atlas.png",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-tree-landmark-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-tree-landmark-v1-alpha.png --key-color '#ff00ff' --soft-matte --transparent-threshold 10 --opaque-threshold 72 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-compact-props-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-compact-props-v1-alpha.png --key-color '#ff00ff' --soft-matte --transparent-threshold 10 --opaque-threshold 72 --edge-contract 1 --despill",
+    "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-tree-landmark-v1-alpha.png --rows 1 --columns 1 --labels firebud_ancient_tree --output-dir client/godot/assets/maps/firebud_region_visual_v2/runtime/objects --padding 8 --max-dimension 512 --alpha-threshold 4 --anchor 0.5 1.0 --manifest-name firebud-ancient-tree-manifest.json",
+    "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-compact-props-v1-alpha.png --rows 2 --columns 2 --labels firebud_ember_shrub firebud_honey_rock_cluster firebud_flower_meadow_decal firebud_stone_totem --output-dir client/godot/assets/maps/firebud_region_visual_v2/runtime/objects --padding 8 --max-dimension 256 --alpha-threshold 4 --anchor 0.5 1.0 --manifest-name firebud-compact-props-manifest.json",
+    "mv client/godot/assets/maps/firebud_region_visual_v2/runtime/objects/firebud-ancient-tree-manifest.json client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ancient-tree-manifest.json and rewrite its relative source/runtime paths without changing declared asset hashes",
+    "mv client/godot/assets/maps/firebud_region_visual_v2/runtime/objects/firebud-compact-props-manifest.json client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-compact-props-manifest.json and rewrite its relative source/runtime paths without changing declared asset hashes",
+    "ln client/godot/assets/maps/firebud_region_visual_v1/runtime/objects/firebud_training_target.png client/godot/assets/maps/firebud_region_visual_v2/runtime/objects/firebud_training_target.png",
+    "ln client/godot/assets/maps/firebud_region_visual_v1/runtime/objects/firebud_supply_pots.png client/godot/assets/maps/firebud_region_visual_v2/runtime/objects/firebud_supply_pots.png",
+    "ln client/godot/assets/maps/firebud_region_visual_v1/runtime/objects/firebud_low_planter.png client/godot/assets/maps/firebud_region_visual_v2/runtime/objects/firebud_low_planter.png",
+    "ln client/godot/assets/maps/firebud_region_visual_v1/runtime/objects/firebud_low_fence.png client/godot/assets/maps/firebud_region_visual_v2/runtime/objects/firebud_low_fence.png",
+    "ln client/godot/assets/maps/firebud_region_visual_v1/runtime/objects/firebud_service_pavilion.png client/godot/assets/maps/firebud_region_visual_v2/runtime/objects/firebud_service_pavilion.png"
+  ],
+  "reproducibility": {
+    "rawToProcessedByteExact": true,
+    "processedToRuntimeByteExact": true,
+    "outputPrecondition": "Every .run rebuild output directory and every v2 runtime hardlink destination must not exist before its producing command runs.",
+    "externalToolVendored": true,
+    "releaseBlocker": null
+  },
+  "qualityChecks": {
+    "cellEdgeTouches": 0,
+    "groundAtlasTileCount": 12,
+    "groundAtlasAlphaThreshold": 16,
+    "groundAtlasSourceCellEdgeTouchesAtBuildThreshold": 0,
+    "runtimeBorderMaxAlpha": 0,
+    "runtimeVisibleMagentaLikePixels": 0,
+    "visualAlphaEdgeReview": "pass",
+    "visualReviewNote": "Crisp silhouettes, transparent padding, no visible magenta fringe; object styles remain consistent with the Firebud v2 ground palette."
+  },
+  "mirrored": false,
+  "bakedActors": false,
+  "replacementPath": "Regenerate from the frozen prompts, then reproduce chroma-key cleanup and object extraction using the listed deterministic commands."
+}

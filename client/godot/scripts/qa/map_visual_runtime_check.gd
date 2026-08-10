@@ -70,12 +70,23 @@ func _initialize() -> void:
 static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 	var errors: Array[String] = []
 	var summaries: Array[Dictionary] = []
+	var review_candidate_summaries: Array[Dictionary] = []
 	var binding_hashes: Dictionary = {}
 	var map_data_hashes: Dictionary = {}
+	var review_map_ids_by_bundle: Dictionary = {}
+	var review_expected_map_ids_by_bundle: Dictionary = {}
+	var review_manifest_paths_by_bundle: Dictionary = {}
+	var review_binding_hashes_by_bundle: Dictionary = {}
+	var review_map_data_hashes_by_bundle: Dictionary = {}
+	var review_summaries_by_bundle: Dictionary = {}
+	var review_paths_exact_by_bundle: Dictionary = {}
 	var catalog_manifest_paths := _catalog_manifest_paths(errors)
 	var catalog_initialized := MapVisualCatalog.initialize()
 	if not catalog_initialized:
 		errors.append_array(MapVisualCatalog.catalog_errors())
+	var review_catalog_load_errors := MapVisualCatalog.review_catalog_errors()
+	if not review_catalog_load_errors.is_empty():
+		errors.append_array(review_catalog_load_errors)
 	var catalog_ids := MapVisualCatalog.catalog_map_ids()
 	var catalog_coverage_exact := catalog_ids.size() == EXPECTED_MAP_IDS.size()
 	var catalog_paths_exact := true
@@ -145,20 +156,161 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 			errors.append("owner_review_pending 地图绕过 QA 开关：%s" % map_id)
 		if map_data != before:
 			errors.append("normal prepare 修改了权威 mapData：%s" % map_id)
-		var preview := MapVisualCatalog.prepare_map(map_id, map_data, true)
-		if preview.is_empty():
-			errors.append("QA preview 地图准备失败：%s" % map_id)
+		var primary_preview := MapVisualCatalog.prepare_primary_catalog_map(
+			map_id,
+			map_data,
+			true
+		)
+		if primary_preview.is_empty():
+			errors.append("主 catalog QA preview 地图准备失败：%s" % map_id)
 			errors.append_array(MapVisualCatalog.errors_for_map(map_id))
 			continue
 		if map_data != before:
-			errors.append("QA prepare 修改了权威 mapData：%s" % map_id)
-		_validate_prepared_map(map_id, map_data, manifest, preview, errors)
+			errors.append("主 catalog QA prepare 修改了权威 mapData：%s" % map_id)
+		_validate_prepared_map(map_id, map_data, manifest, primary_preview, errors)
 		summaries.append({
 			"mapId": map_id,
-			"groundDraws": MapVisualRenderer.ground_draw_count(preview),
-			"objects": MapVisualRenderer.object_draw_count(preview),
-			"protectedCells": (preview.get("protectedLookup", {}) as Dictionary).size(),
+			"groundDraws": MapVisualRenderer.ground_draw_count(primary_preview),
+			"objects": MapVisualRenderer.object_draw_count(primary_preview),
+			"protectedCells": (primary_preview.get("protectedLookup", {}) as Dictionary).size(),
 		})
+
+		var selected_preview := MapVisualCatalog.prepare_map(map_id, map_data, true)
+		if selected_preview.is_empty():
+			errors.append("QA review/fallback 地图准备失败：%s" % map_id)
+			errors.append_array(MapVisualCatalog.errors_for_map(map_id))
+			continue
+		if map_data != before:
+			errors.append("QA review/fallback prepare 修改了权威 mapData：%s" % map_id)
+		if bool(selected_preview.get("reviewCandidate", false)):
+			var review_manifest_path := str(selected_preview.get("manifestPath", ""))
+			var review_binding_path := str(selected_preview.get("bindingPath", ""))
+			if (
+				review_manifest_path != MapVisualCatalog.review_catalog_manifest_path(map_id)
+				or review_binding_path != MapVisualCatalog.review_catalog_binding_path(map_id)
+			):
+				errors.append("QA review candidate 路径未绑定 review catalog：%s" % map_id)
+			var review_manifest := _read_json(
+				review_manifest_path,
+				errors,
+				"地图视觉 review manifest %s" % map_id
+			)
+			var review_binding := _read_json(
+				review_binding_path,
+				errors,
+				"地图视觉 review binding %s" % map_id
+			)
+			_validate_authority_contract(
+				map_id,
+				map_data,
+				review_binding,
+				review_manifest,
+				errors
+			)
+			_validate_prepared_map(
+				map_id,
+				map_data,
+				review_manifest,
+				selected_preview,
+				errors
+			)
+			var review_bundle_id := str(selected_preview.get("bundleId", ""))
+			var review_binding_hash := (
+				FileAccess.get_sha256(review_binding_path)
+				if FileAccess.file_exists(review_binding_path)
+				else ""
+			)
+			if review_bundle_id == "":
+				errors.append("QA review candidate 缺少 bundleId：%s" % map_id)
+			if review_binding_hash.length() != 64:
+				errors.append("无法冻结 review 地图视觉 binding SHA-256：%s" % map_id)
+			var normal_bundle_id := str(normal.get("bundleId", ""))
+			if (
+				normal.is_empty()
+				or bool(normal.get("reviewCandidate", false))
+				or str(normal.get("catalogSource", "")) != "normal"
+				or normal_bundle_id == review_bundle_id
+			):
+				errors.append("pending review candidate 污染了普通 released catalog：%s" % map_id)
+
+			var expected_review_map_ids_value: Variant = review_manifest.get("mapIds", [])
+			if not (expected_review_map_ids_value is Array):
+				errors.append("QA review manifest.mapIds 必须是数组：%s" % map_id)
+			else:
+				var expected_review_map_ids := expected_review_map_ids_value as Array
+				if review_expected_map_ids_by_bundle.has(review_bundle_id):
+					if not _same_string_set(
+						review_expected_map_ids_by_bundle.get(review_bundle_id, []) as Array,
+						expected_review_map_ids
+					):
+						errors.append("同 review bundle 的 manifest.mapIds 不一致：%s" % review_bundle_id)
+				else:
+					review_expected_map_ids_by_bundle[review_bundle_id] = expected_review_map_ids.duplicate()
+			var seen_review_map_ids := review_map_ids_by_bundle.get(review_bundle_id, []) as Array
+			if seen_review_map_ids.has(map_id):
+				errors.append("review bundle mapId 重复：%s/%s" % [review_bundle_id, map_id])
+			else:
+				seen_review_map_ids.append(map_id)
+			review_map_ids_by_bundle[review_bundle_id] = seen_review_map_ids
+			var prior_manifest_path := str(review_manifest_paths_by_bundle.get(review_bundle_id, ""))
+			if prior_manifest_path != "" and prior_manifest_path != review_manifest_path:
+				errors.append("同 review bundle 的 manifest 路径不一致：%s" % review_bundle_id)
+			review_manifest_paths_by_bundle[review_bundle_id] = review_manifest_path
+			var review_bundle_binding_hashes := (
+				review_binding_hashes_by_bundle.get(review_bundle_id, {}) as Dictionary
+			)
+			review_bundle_binding_hashes[map_id] = review_binding_hash
+			review_binding_hashes_by_bundle[review_bundle_id] = review_bundle_binding_hashes
+			var review_bundle_map_hashes := (
+				review_map_data_hashes_by_bundle.get(review_bundle_id, {}) as Dictionary
+			)
+			review_bundle_map_hashes[map_id] = map_data_hash
+			review_map_data_hashes_by_bundle[review_bundle_id] = review_bundle_map_hashes
+
+			var review_summary := {
+				"mapId": map_id,
+				"groundDraws": MapVisualRenderer.ground_draw_count(selected_preview),
+				"objects": MapVisualRenderer.object_draw_count(selected_preview),
+				"protectedCells": (
+					selected_preview.get("protectedLookup", {}) as Dictionary
+				).size(),
+			}
+			review_candidate_summaries.append(review_summary.merged({"bundleId": review_bundle_id}))
+			var review_bundle_summaries := (
+				review_summaries_by_bundle.get(review_bundle_id, []) as Array
+			)
+			review_bundle_summaries.append(review_summary)
+			review_summaries_by_bundle[review_bundle_id] = review_bundle_summaries
+			var path_exact := (
+				review_manifest_path == MapVisualCatalog.review_catalog_manifest_path(map_id)
+				and review_binding_path == MapVisualCatalog.review_catalog_binding_path(map_id)
+			)
+			review_paths_exact_by_bundle[review_bundle_id] = (
+				bool(review_paths_exact_by_bundle.get(review_bundle_id, true)) and path_exact
+			)
+			if validate_frozen_catalog_contract:
+				_validate_frozen_catalog_contract(
+					map_id,
+					review_manifest_path,
+					review_manifest,
+					review_binding_hash,
+					map_data_hash,
+					errors
+				)
+		elif str(selected_preview.get("catalogSource", "")) != "normal":
+			errors.append("QA preview 未解析到 review 或 normal catalog：%s" % map_id)
+
+	for review_bundle_id_value in review_expected_map_ids_by_bundle.keys():
+		var review_bundle_id := str(review_bundle_id_value)
+		var expected_review_map_ids := (
+			review_expected_map_ids_by_bundle.get(review_bundle_id, []) as Array
+		)
+		var seen_review_map_ids := review_map_ids_by_bundle.get(review_bundle_id, []) as Array
+		if not _same_string_set(seen_review_map_ids, expected_review_map_ids):
+			errors.append(
+				"review catalog 未精确覆盖 bundle mapIds：%s expected=%s actual=%s"
+				% [review_bundle_id, str(expected_review_map_ids), str(seen_review_map_ids)]
+			)
 
 	var counts_after_first_pass := MapVisualCatalog.debug_io_counts()
 	for map_id in EXPECTED_MAP_IDS:
@@ -182,12 +334,17 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 	if not unknown_map_failed_closed:
 		errors.append("未知地图视觉没有失败关闭到旧 renderer")
 
-	var result := "PASS" if errors.is_empty() else "FAIL"
 	var generated_at_utc := _utc_timestamp()
 	var catalog_hash := FileAccess.get_sha256(MapVisualCatalog.DATA_PATH) if FileAccess.file_exists(MapVisualCatalog.DATA_PATH) else ""
 	if catalog_hash.length() != 64:
 		errors.append("无法冻结地图视觉 catalog SHA-256")
-		result = "FAIL"
+	var review_catalog_hash := (
+		FileAccess.get_sha256(MapVisualCatalog.REVIEW_DATA_PATH)
+		if FileAccess.file_exists(MapVisualCatalog.REVIEW_DATA_PATH)
+		else ""
+	)
+	if not review_expected_map_ids_by_bundle.is_empty() and review_catalog_hash.length() != 64:
+		errors.append("无法冻结地图视觉 review catalog SHA-256")
 	var current_hashes_complete := catalog_hash.length() == 64
 	for map_id in EXPECTED_MAP_IDS:
 		current_hashes_complete = (
@@ -212,6 +369,7 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 		"allIndependentChecksPassed": errors.is_empty(),
 		"frozenReportValidationSkippedForGeneration": not validate_frozen_catalog_contract,
 	}
+	var result := "PASS" if errors.is_empty() else "FAIL"
 	var bundle_reports: Dictionary = {}
 	for bundle_id_value in BUNDLE_MAP_IDS.keys():
 		var bundle_id := str(bundle_id_value)
@@ -240,6 +398,58 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 			"checks": checks.duplicate(true),
 			"errors": errors.duplicate(),
 		}
+	var review_bundle_ids: Array[String] = []
+	for review_bundle_id_value in review_expected_map_ids_by_bundle.keys():
+		var review_bundle_id := str(review_bundle_id_value)
+		review_bundle_ids.append(review_bundle_id)
+		var expected_review_map_ids := (
+			review_expected_map_ids_by_bundle.get(review_bundle_id, []) as Array
+		)
+		var seen_review_map_ids := review_map_ids_by_bundle.get(review_bundle_id, []) as Array
+		var review_bundle_binding_hashes := (
+			review_binding_hashes_by_bundle.get(review_bundle_id, {}) as Dictionary
+		)
+		var review_bundle_map_hashes := (
+			review_map_data_hashes_by_bundle.get(review_bundle_id, {}) as Dictionary
+		)
+		var review_bundle_summaries := (
+			review_summaries_by_bundle.get(review_bundle_id, []) as Array
+		)
+		var review_hashes_complete := review_catalog_hash.length() == 64
+		for map_id_value in expected_review_map_ids:
+			var map_id := str(map_id_value)
+			review_hashes_complete = (
+				review_hashes_complete
+				and str(review_bundle_binding_hashes.get(map_id, "")).length() == 64
+				and str(review_bundle_map_hashes.get(map_id, "")).length() == 64
+			)
+		var review_checks := {
+			"catalogInitialized": review_catalog_load_errors.is_empty(),
+			"catalogCoverageExact": _same_string_set(seen_review_map_ids, expected_review_map_ids),
+			"catalogPathsExact": bool(review_paths_exact_by_bundle.get(review_bundle_id, false)),
+			"currentHashesComplete": review_hashes_complete,
+			"normalLifecycleAccessValid": lifecycle_valid,
+			"qaPreviewEnabled": _same_string_set(seen_review_map_ids, expected_review_map_ids),
+			"repeatPrepareIoStable": repeat_prepare_io_stable,
+			"unknownMapFailedClosed": unknown_map_failed_closed,
+			"allIndependentChecksPassed": errors.is_empty(),
+			"frozenReportValidationSkippedForGeneration": not validate_frozen_catalog_contract,
+		}
+		bundle_reports[review_bundle_id] = {
+			"schemaVersion": 1,
+			"reportType": CATALOG_CONTRACT_REPORT_TYPE,
+			"generatedAtUtc": generated_at_utc,
+			"bundleId": review_bundle_id,
+			"result": result,
+			"testedMapIds": expected_review_map_ids.duplicate(),
+			"catalogSha256": review_catalog_hash,
+			"bindingHashes": review_bundle_binding_hashes.duplicate(true),
+			"mapDataHashes": review_bundle_map_hashes.duplicate(true),
+			"maps": review_bundle_summaries.duplicate(true),
+			"checks": review_checks,
+			"errors": errors.duplicate(),
+		}
+	review_bundle_ids.sort()
 
 	return {
 		"schemaVersion": 1,
@@ -252,11 +462,13 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 		"bindingHashes": binding_hashes,
 		"mapDataHashes": map_data_hashes,
 		"bundleReports": bundle_reports,
+		"reviewBundleIds": review_bundle_ids,
 		"normalPendingDisabled": errors.filter(func(error: String) -> bool: return error.contains("绕过 QA")).is_empty(),
 		"normalLifecycleAccessValid": lifecycle_valid,
 		"qaPreviewEnabled": qa_preview_enabled,
 		"ioCounts": counts_after_second_pass,
 		"maps": summaries,
+		"reviewCandidates": review_candidate_summaries,
 		"checks": checks,
 		"errors": errors,
 	}
@@ -298,12 +510,26 @@ static func _write_catalog_contract_reports(
 		if not bool(checks.get("frozenReportValidationSkippedForGeneration", false)):
 			errors.append("generation 模式没有正确跳过旧冻结报告门禁")
 
-	var targets := _catalog_contract_report_targets(errors)
 	var bundle_reports_value: Variant = run_report.get("bundleReports", {})
 	if not (bundle_reports_value is Dictionary):
 		errors.append("generation 报告缺少 bundleReports")
 	var bundle_reports := bundle_reports_value as Dictionary if bundle_reports_value is Dictionary else {}
-	for bundle_id_value in BUNDLE_MAP_IDS.keys():
+	var review_bundle_ids_value: Variant = run_report.get("reviewBundleIds", [])
+	var review_bundle_ids: Array = (
+		review_bundle_ids_value as Array if review_bundle_ids_value is Array else []
+	)
+	var bundle_ids_to_write: Array = (
+		review_bundle_ids.duplicate()
+		if not review_bundle_ids.is_empty()
+		else BUNDLE_MAP_IDS.keys()
+	)
+	var targets := _catalog_contract_report_targets(
+		errors,
+		bundle_ids_to_write,
+		review_bundle_ids,
+		bundle_reports
+	)
+	for bundle_id_value in bundle_ids_to_write:
 		var bundle_id := str(bundle_id_value)
 		if not targets.has(bundle_id):
 			errors.append("catalog contract 缺少 bundle 写入目标：%s" % bundle_id)
@@ -319,7 +545,7 @@ static func _write_catalog_contract_reports(
 		return {"result": "FAIL", "atomicity": "per_bundle_file", "written": [], "errors": errors}
 
 	var staged: Array[Dictionary] = []
-	for bundle_id_value in BUNDLE_MAP_IDS.keys():
+	for bundle_id_value in bundle_ids_to_write:
 		var bundle_id := str(bundle_id_value)
 		var target_path := str(targets.get(bundle_id, ""))
 		var temp_path := "%s.tmp.%d.%d" % [
@@ -370,12 +596,26 @@ static func _write_catalog_contract_reports(
 	return {"result": "PASS", "atomicity": "per_bundle_file", "written": written, "errors": []}
 
 
-static func _catalog_contract_report_targets(errors: Array[String]) -> Dictionary:
+static func _catalog_contract_report_targets(
+	errors: Array[String],
+	bundle_ids: Array,
+	review_bundle_ids: Array,
+	bundle_reports: Dictionary
+) -> Dictionary:
 	var targets: Dictionary = {}
-	var manifest_paths := _catalog_manifest_paths(errors)
-	for bundle_id_value in BUNDLE_MAP_IDS.keys():
+	var primary_manifest_paths := _catalog_manifest_paths(errors)
+	var review_manifest_paths := _review_catalog_manifest_paths(errors)
+	for bundle_id_value in bundle_ids:
 		var bundle_id := str(bundle_id_value)
-		var map_ids: Array = BUNDLE_MAP_IDS.get(bundle_id, [])
+		var report := bundle_reports.get(bundle_id, {}) as Dictionary
+		var map_ids_value: Variant = report.get("testedMapIds", [])
+		if not (map_ids_value is Array) or (map_ids_value as Array).is_empty():
+			errors.append("catalog contract bundle 报告缺少 testedMapIds：%s" % bundle_id)
+			continue
+		var map_ids := map_ids_value as Array
+		var manifest_paths := (
+			review_manifest_paths if review_bundle_ids.has(bundle_id) else primary_manifest_paths
+		)
 		var manifest_path := ""
 		for map_id_value in map_ids:
 			var map_id := str(map_id_value)
@@ -484,11 +724,31 @@ static func _read_json(path: String, errors: Array[String], label: String) -> Di
 
 
 static func _catalog_manifest_paths(errors: Array[String]) -> Dictionary:
+	return _manifest_paths_from_catalog(
+		MapVisualCatalog.DATA_PATH,
+		"地图视觉 catalog 独立读取",
+		errors
+	)
+
+
+static func _review_catalog_manifest_paths(errors: Array[String]) -> Dictionary:
+	return _manifest_paths_from_catalog(
+		MapVisualCatalog.REVIEW_DATA_PATH,
+		"地图视觉 review catalog 独立读取",
+		errors
+	)
+
+
+static func _manifest_paths_from_catalog(
+	catalog_path: String,
+	label: String,
+	errors: Array[String]
+) -> Dictionary:
 	var result: Dictionary = {}
-	var catalog := _read_json(MapVisualCatalog.DATA_PATH, errors, "地图视觉 catalog 独立读取")
+	var catalog := _read_json(catalog_path, errors, label)
 	var entries_value: Variant = catalog.get("entries", [])
 	if not (entries_value is Array):
-		errors.append("地图视觉 catalog.entries 不是数组")
+		errors.append("%s.entries 不是数组" % label)
 		return result
 	for index in range((entries_value as Array).size()):
 		var entry_value: Variant = (entries_value as Array)[index]
@@ -499,7 +759,7 @@ static func _catalog_manifest_paths(errors: Array[String]) -> Dictionary:
 		var map_id := str(entry.get("mapId", ""))
 		var manifest_path := str(entry.get("bundleManifest", ""))
 		if map_id == "" or result.has(map_id):
-			errors.append("地图视觉 catalog mapId 缺失或重复：%s" % map_id)
+			errors.append("%s mapId 缺失或重复：%s" % [label, map_id])
 			continue
 		result[map_id] = manifest_path
 	return result
@@ -578,15 +838,23 @@ static func _validate_frozen_catalog_contract(
 		errors.append("catalogContractCheck bundleId 与 manifest 不一致：%s" % map_id)
 	if str(report.get("result", "")) != "PASS":
 		errors.append("catalogContractCheck 不是 PASS：%s" % map_id)
-	var expected_map_ids_value: Variant = BUNDLE_MAP_IDS.get(bundle_id, [])
-	if not (expected_map_ids_value is Array):
-		errors.append("runtime check 不认识 catalogContractCheck bundleId：%s" % bundle_id)
+	var expected_map_ids_value: Variant = manifest.get("mapIds", [])
+	if not (expected_map_ids_value is Array) or (expected_map_ids_value as Array).is_empty():
+		errors.append("catalogContractCheck manifest.mapIds 无效：%s" % bundle_id)
 		return
 	var expected_map_ids := expected_map_ids_value as Array
 	var tested_value: Variant = report.get("testedMapIds", [])
 	if not (tested_value is Array) or not _same_string_set(tested_value as Array, expected_map_ids):
 		errors.append("catalogContractCheck testedMapIds 必须精确覆盖 bundle：%s" % map_id)
-	if str(report.get("catalogSha256", "")) != FileAccess.get_sha256(MapVisualCatalog.DATA_PATH):
+	var selected_catalog_path := (
+		MapVisualCatalog.REVIEW_DATA_PATH
+		if str(manifest.get("status", "")) == MapVisualCatalog.STATUS_OWNER_REVIEW_PENDING
+		else MapVisualCatalog.DATA_PATH
+	)
+	if (
+		not FileAccess.file_exists(selected_catalog_path)
+		or str(report.get("catalogSha256", "")) != FileAccess.get_sha256(selected_catalog_path)
+	):
 		errors.append("catalogContractCheck catalog hash 已过期：%s" % map_id)
 	var frozen_binding_hashes_value: Variant = report.get("bindingHashes", {})
 	var frozen_map_hashes_value: Variant = report.get("mapDataHashes", {})
@@ -980,6 +1248,9 @@ static func _validate_raw_object_contract(
 		_validate_raw_collision_definition(map_id, object_id, definition, errors)
 
 	var authoritative_blocked := IsoMapModel.blocked_lookup(map_data)
+	var grid_size := IsoMapModel.grid_size(map_data)
+	var ground := binding.get("ground", {}) as Dictionary
+	var edge_padding_value: Variant = ground.get("edgePaddingCells", 0)
 	for value in binding.get("objectPlacements", []):
 		if not (value is Dictionary):
 			errors.append("独立检查：objectPlacement 不是对象：%s" % map_id)
@@ -995,7 +1266,21 @@ static func _validate_raw_object_contract(
 		if not COLLISION_ROLES.has(role):
 			errors.append("独立检查：collisionRole 不在白名单：%s/%s/%s" % [map_id, instance_id, role])
 			continue
-		var grid := _cell(placement.get("grid"))
+		var grid_value: Variant = placement.get("grid")
+		if not MapVisualCatalog._is_integral_grid_pair(grid_value):
+			errors.append("独立检查：placement grid 不是整数坐标：%s/%s" % [map_id, instance_id])
+			continue
+		var grid := _cell(grid_value)
+		if not MapVisualCatalog._object_anchor_within_contract(
+			grid,
+			grid_size,
+			role,
+			edge_padding_value
+		):
+			if role == "none" or role == "decorative":
+				errors.append("独立检查：纯布景锚点超出 edge skirt：%s/%s" % [map_id, instance_id])
+			else:
+				errors.append("独立检查：blocking/interaction placement 锚点越界：%s/%s" % [map_id, instance_id])
 		var footprint_value: Variant = placement.get("collisionFootprint", [])
 		if not (footprint_value is Array):
 			errors.append("独立检查：collisionFootprint 不是数组：%s/%s" % [map_id, instance_id])
@@ -1014,8 +1299,6 @@ static func _validate_raw_object_contract(
 			footprint_keys.append(key)
 			footprint_cells.append(footprint_cell)
 		if role == "blocking":
-			if not IsoMapModel.is_inside(map_data, grid):
-				errors.append("独立检查：blocking placement 锚点越界：%s/%s/%s" % [map_id, instance_id, IsoMapModel.cell_key(grid)])
 			if footprint_keys.is_empty():
 				errors.append("独立检查：blocking footprint 为空：%s/%s" % [map_id, instance_id])
 			elif not _footprint_near_grid(grid, footprint_cells):
@@ -1177,6 +1460,13 @@ static func _validate_prepared_map(
 
 	var ground := prepared.get("groundRules", {}) as Dictionary
 	var ground_draws: Array = prepared.get("groundDraws", [])
+	var variant_config := prepared.get("tileVariantConfig", {}) as Dictionary
+	var expected_cluster_size := int(ground.get("variantClusterSize", 1))
+	if (
+		int(variant_config.get("clusterSize", 0)) != expected_cluster_size
+		or int(prepared.get("variantClusterSize", 0)) != expected_cluster_size
+	):
+		errors.append("prepared variantClusterSize 与 binding 不一致：%s" % map_id)
 	if ground_draws.size() != grid_size.x * grid_size.y:
 		errors.append("地表绘制命令数不等于完整地图网格：%s" % map_id)
 	var seen_cells: Dictionary = {}
@@ -1186,6 +1476,7 @@ static func _validate_prepared_map(
 			continue
 		var command := value as Dictionary
 		var cell: Variant = command.get("cell")
+		var semantic_tile_id := str(command.get("semanticTileId", ""))
 		var destination: Variant = command.get("destination")
 		var source: Variant = command.get("source")
 		if not (cell is Vector2i) or not IsoMapModel.is_inside(map_data, cell as Vector2i):
@@ -1195,6 +1486,19 @@ static func _validate_prepared_map(
 		if seen_cells.has(key):
 			errors.append("地表绘制命令格子重复：%s/%s" % [map_id, key])
 		seen_cells[key] = true
+		if semantic_tile_id != MapVisualCatalog.prepared_semantic_tile_id(
+			prepared,
+			cell as Vector2i
+		):
+			errors.append("地表命令语义 tile 与 prepared lookup 不一致：%s/%s" % [map_id, key])
+		var expected_visual_tile_id := MapVisualCatalog._select_tile_variant(
+			map_id,
+			cell as Vector2i,
+			semantic_tile_id,
+			variant_config
+		)
+		if str(command.get("tileId", "")) != expected_visual_tile_id:
+			errors.append("地表命令变体选择不确定：%s/%s" % [map_id, key])
 		if not (destination is Rect2) or Vector2i((destination as Rect2).size) != TILE_SIZE:
 			errors.append("地表 destination 不是 80x40：%s/%s" % [map_id, key])
 		if not (source is Rect2) or Vector2i((source as Rect2).size) != TILE_SIZE:
@@ -1209,6 +1513,9 @@ static func _validate_prepared_map(
 	if edge_draws.size() != expected_edge_draws:
 		errors.append("视觉 edge skirt 绘制命令数不完整：%s" % map_id)
 	var edge_seen: Dictionary = {}
+	var edge_semantic_tile_id := str(
+		ground.get("edgeTileId", ground.get("defaultTileId", ""))
+	)
 	var tile_ids := prepared.get("tileIdsByCell", {}) as Dictionary
 	var blocked := prepared.get("blockedLookup", {}) as Dictionary
 	var protected := prepared.get("protectedLookup", {}) as Dictionary
@@ -1233,8 +1540,16 @@ static func _validate_prepared_map(
 		edge_seen[edge_key] = true
 		if tile_ids.has(edge_key) or blocked.has(edge_key) or protected.has(edge_key):
 			errors.append("视觉 edge skirt 污染玩法 lookup：%s/%s" % [map_id, edge_key])
-		if str(command.get("tileId", "")) != str(ground.get("defaultTileId", "")):
-			errors.append("视觉 edge skirt 未使用 defaultTileId：%s/%s" % [map_id, edge_key])
+		if str(command.get("semanticTileId", "")) != edge_semantic_tile_id:
+			errors.append("视觉 edge skirt 未使用 edgeTileId/defaultTileId 语义：%s/%s" % [map_id, edge_key])
+		var expected_edge_tile_id := MapVisualCatalog._select_tile_variant(
+			map_id,
+			edge_cell,
+			edge_semantic_tile_id,
+			variant_config
+		)
+		if str(command.get("tileId", "")) != expected_edge_tile_id:
+			errors.append("视觉 edge skirt 变体选择不确定：%s/%s" % [map_id, edge_key])
 		if not (destination_value is Rect2) or Vector2i((destination_value as Rect2).size) != TILE_SIZE:
 			errors.append("视觉 edge skirt destination 不是 80x40：%s/%s" % [map_id, edge_key])
 		if not (source_value is Rect2) or Vector2i((source_value as Rect2).size) != TILE_SIZE:
@@ -1278,9 +1593,9 @@ static func _validate_ground_priority(
 				expected = str(ground.get("blockedTileId", expected))
 			if warp.has(key):
 				expected = str(ground.get("warpTileId", expected))
-			var actual := MapVisualCatalog.prepared_tile_id(prepared, cell)
+			var actual := MapVisualCatalog.prepared_semantic_tile_id(prepared, cell)
 			if actual != expected:
-				errors.append("地表优先级错误：%s/%s expected=%s actual=%s" % [map_id, key, expected, actual])
+				errors.append("地表语义优先级错误：%s/%s expected=%s actual=%s" % [map_id, key, expected, actual])
 				return
 
 
@@ -1335,6 +1650,9 @@ static func _validate_object_footprints(
 ) -> void:
 	var authoritative_blocked := IsoMapModel.blocked_lookup(map_data)
 	var protected := prepared.get("protectedLookup", {}) as Dictionary
+	var grid_size := IsoMapModel.grid_size(map_data)
+	var ground := prepared.get("groundRules", {}) as Dictionary
+	var edge_padding_value: Variant = ground.get("edgePaddingCells", 0)
 	var seen_instances: Dictionary = {}
 	for layer in MapVisualCatalog.RENDER_LAYERS:
 		for command in MapVisualCatalog.prepared_objects(prepared, layer):
@@ -1344,11 +1662,19 @@ static func _validate_object_footprints(
 				continue
 			seen_instances[instance_id] = true
 			var grid: Variant = command.get("grid")
-			if not (grid is Vector2i) or not IsoMapModel.is_inside(map_data, grid as Vector2i):
-				errors.append("地图物件锚点越界：%s/%s" % [map_id, instance_id])
 			var role := str(command.get("collisionRole", ""))
 			if not COLLISION_ROLES.has(role):
 				errors.append("地图物件 collisionRole 不在白名单：%s/%s/%s" % [map_id, instance_id, role])
+			if (
+				not (grid is Vector2i)
+				or not MapVisualCatalog._object_anchor_within_contract(
+					grid as Vector2i,
+					grid_size,
+					role,
+					edge_padding_value
+				)
+			):
+				errors.append("地图物件锚点不符合权威网格/edge skirt 合同：%s/%s" % [map_id, instance_id])
 			var footprint: Array = command.get("collisionFootprint", [])
 			if role == "blocking" and footprint.is_empty():
 				errors.append("blocking 地图物件 footprint 为空：%s/%s" % [map_id, instance_id])

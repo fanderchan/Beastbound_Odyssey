@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "firebud_region_visual_v2",
+  "mapId": "firebud_training_yard",
+  "mapGridSize": [36, 34],
+  "ground": {
+    "edgePaddingCells": 16,
+    "edgeTileId": "firebud_meadow_far",
+    "defaultTileId": "firebud_meadow_a",
+    "blockedTileId": "firebud_dark_root_soil_a",
+    "encounterTileId": "firebud_tall_grass_encounter",
+    "warpTileId": "firebud_warp_stone",
+    "pathTileId": "firebud_ochre_path_a",
+    "plazaTileId": "firebud_honey_stone_a",
+    "variantSeed": 38301,
+    "variantClusterSize": 3,
+    "tileVariants": {
+      "firebud_meadow_a": [
+        "firebud_meadow_a",
+        "firebud_meadow_b",
+        "firebud_meadow_dry_b",
+        "firebud_meadow_clover_c"
+      ]
+    },
+    "pathDilation": 1,
+    "pathLinks": [
+      {
+        "from": [14, 12],
+        "to": [6, 10]
+      },
+      {
+        "from": [6, 10],
+        "to": [30, 28]
+      }
+    ],
+    "plazaRects": [
+      [4, 9, 4, 4],
+      [12, 10, 6, 4]
+    ],
+    "plazaCells": [],
+    "overrides": []
+  },
+  "objectPlacements": [
+    {
+      "instanceId": "training_target_blocked_cluster_01",
+      "objectId": "firebud_training_target",
+      "grid": [4, 4],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[3, 3], [4, 3], [4, 4]]
+    },
+    {
+      "instanceId": "training_fence_blocked_cluster_01",
+      "objectId": "firebud_low_fence",
+      "grid": [8, 4],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[7, 4], [8, 4], [7, 5]]
+    },
+    {
+      "instanceId": "training_supplies_blocked_cluster_01",
+      "objectId": "firebud_supply_pots",
+      "grid": [15, 7],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[14, 6], [15, 6], [15, 7]]
+    },
+    {
+      "instanceId": "training_planter_blocked_cluster_01",
+      "objectId": "firebud_low_planter",
+      "grid": [23, 17],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[21, 16], [22, 16], [23, 17]]
+    },
+    {
+      "instanceId": "training_ember_shrub_blocked_cluster_01",
+      "objectId": "firebud_ember_shrub",
+      "grid": [3, 7],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[2, 7], [3, 7]]
+    },
+    {
+      "instanceId": "training_honey_rocks_blocked_cluster_01",
+      "objectId": "firebud_honey_rock_cluster",
+      "grid": [9, 3],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[9, 2], [9, 3]]
+    },
+    {
+      "instanceId": "training_stone_totem_blocked_cluster_01",
+      "objectId": "firebud_stone_totem",
+      "grid": [20, 12],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[18, 11], [19, 11], [20, 12]]
+    },
+    {
+      "instanceId": "training_ground_decal_grass_01",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [1, 2],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ground_decal_grass_02",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [2, 2],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ground_decal_flower_01",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [6, 2],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ground_decal_grass_03",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [6, 6],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ground_decal_flower_02",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [10, 6],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ground_decal_grass_04",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [13, 9],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ground_decal_flower_03",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [17, 13],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ground_decal_grass_05",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [24, 15],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ground_decal_flower_04",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [6, 17],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ground_decal_grass_06",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [28, 24],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ground_decal_flower_05",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [30, 28],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    }
+  ]
+}

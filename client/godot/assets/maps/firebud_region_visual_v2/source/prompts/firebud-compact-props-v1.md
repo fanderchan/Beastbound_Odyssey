@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: compact 2x2 production prop sheet for a Godot 4 isometric 2.5D RPG village map
+Input images: use the supplied firebud ground atlas for perspective/palette and the supplied ancient tree for silhouette language, outline weight and foliage rendering.
+Primary request: Create exactly four separate compact environmental props arranged in a strict equal 2x2 grid, one centered prop per cell. Top-left: a low rounded ember-leaf shrub with olive-green, orange and coral foliage. Top-right: a honey-gold boulder cluster with a few broad grass blades and one tiny ivory flower. Bottom-left: a flat irregular meadow flower patch used as a ground decal, with sparse cream/coral flowers and soft grass tufts, no solid square base. Bottom-right: a small primitive stacked-stone firebud totem with warm carved spiral motifs but absolutely no letters or readable text.
+Style/medium: premium clean hand-painted HD 2D game assets, rounded prehistoric fantasy forms, crisp espresso-brown edges, controlled painterly texture, original commercial MMORPG quality, not pixel art, not photorealistic.
+Composition/framing: consistent 3/4 top-down isometric view; strict 2x2 cells; one isolated object per cell; each prop fully visible with 14% clean padding and no edge touch; no cell dividers or frames.
+Lighting/mood: same warm upper-left sunlight and restrained cool occlusion as references. Shrub, rock and totem may have a small integrated soft contact shadow; the flower patch remains a flat ground decal.
+Scene/backdrop: perfectly flat uniform #ff00ff chroma-key background.
+Constraints: no characters, NPCs, pets, buildings, UI, labels, numbers, watermark, detached particles, multiple objects inside a cell, square ground platforms, baked road, or full landscape. No #ff00ff in the props. Background has no gradient, shadow, texture or floor plane. Crisp separated alpha-friendly edges.
+Avoid: wide trees, fences, gates, long logs, photorealism, neon colors, tiny noisy detail, cropped silhouettes, copied game art.

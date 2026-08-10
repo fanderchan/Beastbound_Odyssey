@@ -1,0 +1,149 @@
+{
+  "cellEdgePolicy": {
+    "overrideFlag": "",
+    "overrideUsed": false,
+    "visibleAlphaMustBeInsideCell": true
+  },
+  "defaultAnchor": [
+    0.5,
+    1.0
+  ],
+  "maxDimension": 256,
+  "objects": [
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        256,
+        197
+      ],
+      "label": "firebud_ember_shrub",
+      "path": "../../runtime/objects/firebud_ember_shrub.png",
+      "sha256": "15ea9686ff9f1ba3946dfca282154415593b7b5caf78dd058db2a2cfc97f0a43",
+      "sourceBbox": [
+        70,
+        141,
+        552,
+        416
+      ],
+      "sourceCell": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        0
+      ]
+    },
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        256,
+        228
+      ],
+      "label": "firebud_honey_rock_cluster",
+      "path": "../../runtime/objects/firebud_honey_rock_cluster.png",
+      "sha256": "d16e453237d3a982ff947777332a65925c754cd595738ce9c357ff4339ab02ca",
+      "sourceBbox": [
+        662,
+        89,
+        525,
+        463
+      ],
+      "sourceCell": [
+        627,
+        0,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        1
+      ]
+    },
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        256,
+        164
+      ],
+      "label": "firebud_flower_meadow_decal",
+      "path": "../../runtime/objects/firebud_flower_meadow_decal.png",
+      "sha256": "f730db7af306dd08969faac93a1c77067b22dfc54bc4cc9cdffc676a555afe7f",
+      "sourceBbox": [
+        88,
+        777,
+        530,
+        327
+      ],
+      "sourceCell": [
+        0,
+        627,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        1,
+        0
+      ]
+    },
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        235,
+        256
+      ],
+      "label": "firebud_stone_totem",
+      "path": "../../runtime/objects/firebud_stone_totem.png",
+      "sha256": "19473e3291ce971e54165a96d974cf8577f00d4821450fad0c4ca01098da2d81",
+      "sourceBbox": [
+        703,
+        655,
+        417,
+        457
+      ],
+      "sourceCell": [
+        627,
+        627,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        1,
+        1
+      ]
+    }
+  ],
+  "padding": 8,
+  "schemaVersion": 1,
+  "source": {
+    "alphaThreshold": 4,
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "grid": {
+      "columns": 2,
+      "rows": 2
+    },
+    "path": "firebud-compact-props-v1-alpha.png",
+    "sha256": "32a7d69f180e778483173451c17126728f36f79a5199ec46f410a645126aaad8"
+  }
+}

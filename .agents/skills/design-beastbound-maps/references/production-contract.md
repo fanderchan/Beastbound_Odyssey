@@ -13,7 +13,9 @@
   - `warps`：出口、入口、目标地图、目标落点与朝向。
   - `encounters`：野外遭遇区域、表或规则引用；不得烘焙进地表图。
 - 允许制作一张完整的 `dressed_reference` 供构图和审美评审，但禁止把单张 baked 大图作为正式运行时地图。
-- 允许 binding 用可选 `ground.edgePaddingCells`（整数 0..32，正式 1280x720 默认建议 20）在权威网格外绘制纯视觉 edge skirt，避免摄像机边缘露黑。skirt 只能复用 `defaultTileId`，其格坐标必须全部在权威 grid 外，且不得进入 tileIds、blocked/protected、碰撞、寻路、交互、遭遇、spawn 或 warp；它不是地图扩容。
+- 允许 binding 用可选 `ground.edgePaddingCells`（整数 0..32，正式 1280x720 默认建议按实机镜头确定）在权威网格外绘制纯视觉 edge skirt，避免摄像机边缘露黑。可选 `ground.edgeTileId` 可为 skirt 指定独立、已在 manifest 注册的地砖；缺省时严格回退 `defaultTileId`。skirt 格坐标必须全部在权威 grid 外，且不得进入 tileIds、blocked/protected、碰撞、寻路、交互、遭遇、spawn 或 warp；它不是地图扩容。
+- `collisionRole=none|decorative` 的纯布景物件允许把 placement `grid` 锚点放在权威网格外，但必须已有正数 `ground.edgePaddingCells`，并严格落在同一个 edge skirt 扩展矩形内；最外允许坐标与 skirt 绘制范围一致，即 `-padding <= x < width + padding`、`-padding <= y < height + padding`，且锚点本身必须位于权威网格外。此能力只让大树、岩石等独立美术覆盖镜头边缘，不产生可走格、碰撞、交互或玩法空间。`blocking|interaction` 锚点仍必须在图内，所有 `collisionFootprint` 仍必须逐格位于权威网格内并沿用既有 blocked/protected/interaction 规则。
+- 可选 `ground.tileVariants` 只用于同一语义地砖的视觉变化：对象 key 是语义 base tileId，value 是非空候选数组；base 必须显式包含自身，所有 ID 必须存在，同一候选不得重复、跨入另一语义 base 或同时属于多个池。可选 `ground.variantSeed` 是有符号 32 位整数；缺省时由 `mapId` 稳定派生。可选 `ground.variantClusterSize` 是 1..8 整数，缺省 1；大于 1 时只把哈希坐标按固定方块聚类（例如 3 形成约 3×3 宏观色斑），不得改变逐格 semantic lookup、碰撞、寻路、遭遇、warp 或 protected 状态。所有选择必须在 prepare 阶段确定，禁止在 draw 热路径随机。
 - 禁止把 NPC、玩家角色、坐骑、宠物、可拾取物、交互标识或动态效果烘焙到任何正式地表或场景物件贴图中。
 
 ## 2. 城镇与野外职责
@@ -63,6 +65,7 @@ helper 先写临时目录、最后发布 manifest；成功输出仍只是构建�
 ## 4. 物件锚点、排序与碰撞
 
 - 每个 `sceneObject` 必须显式记录资源 ID、格坐标、世界偏移、缩放、底部接地点锚点、排序基线和稳定对象 ID。
+- 普通 placement 锚点使用图内非负整数格。仅 `none|decorative` 可使用带符号整数格进入已声明的 edge skirt；没有 `mapGridSize`、没有正数 `edgePaddingCells`、超出 skirt、或试图让 `blocking|interaction` 越界都必须失败关闭。越界纯布景的 `interactionLink` 必须为 `null` 且 `collisionFootprint` 必须为空。
 - 锚点以物件与地面接触处为准，不以画布中心或透明边界为准；预览、碰撞、点击和运行时绘制必须使用同一锚点。
 - 高物件按接地点的项目 Y-sort 键排序，并以稳定对象 ID 处理同键次序；玩家在物件前后移动时必须产生正确遮挡。
 - 阻挡范围使用独立占地格或碰撞多边形，并与视觉脚底对齐。装饰层不得无意阻挡，建筑和大型物件不得允许角色穿入可见实体。

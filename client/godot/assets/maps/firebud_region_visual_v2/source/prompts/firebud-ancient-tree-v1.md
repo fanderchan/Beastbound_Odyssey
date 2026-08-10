@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: separate production environment prop for a Godot 4 isometric 2.5D RPG map
+Input image: use the supplied firebud ground atlas as the exact palette, painting density, upper-left lighting and 3/4 isometric perspective reference.
+Primary request: Create one original dominant ancient “firebud” village tree as a single complete environment prop. It has a thick twisting warm-brown trunk, broad low canopy shaped like a protective arch, layered rounded leaves shifting from deep olive green to ember orange and coral-red tips, exposed roots gripping several honey-gold stones, and three small ivory flowers near the base. It should feel like a memorable village landmark, not a generic forest tree.
+Style/medium: premium clean hand-painted HD 2D game asset, rounded prehistoric fantasy forms, crisp dark-brown silhouette, controlled painterly texture, commercial MMORPG quality, original design, not pixel art and not photorealistic.
+Composition/framing: 3/4 top-down isometric view matching the supplied ground atlas; one centered tree; wide canopy but clear trunk and ground-contact base; full object visible with generous padding; bottom contact point centered; designed to display around 420×390 px in a 1280×720 game view.
+Lighting/mood: warm soft sunlight from upper-left, cool restrained occlusion under canopy, subtle soft contact shadow integrated only around the roots.
+Scene/backdrop: perfectly flat solid #ff00ff chroma-key background.
+Constraints: exactly one tree landmark; no characters, NPCs, pets, buildings, UI, text, symbols, letters, numbers, watermark, detached particles or separate objects. Background must be one uniform #ff00ff with no gradient, texture, floor plane or reflection. Do not use #ff00ff in the tree. Keep leaves separated from background with crisp readable edges. No cropped canopy or roots.
+Avoid: realistic photo tree, thin spindly branches, muddy gray bark, neon green leaves, excessive micro-leaf noise, square base, baked road or grass patch, multiple trees, copied game art.

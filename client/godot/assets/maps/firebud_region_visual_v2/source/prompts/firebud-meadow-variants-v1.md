@@ -1,0 +1,8 @@
+Use case: precise-object-edit
+Asset type: second production source sheet for a Godot 4 isometric RPG 80x40 ground atlas
+Reference image: use the supplied accepted Firebud 2x2 ground sheet as the exact geometry, palette family, dark-brown edge weight, upper-left light and painterly density reference.
+Primary request: Create exactly four NEW meadow-family terrain variants in a strict equal 2x2 grid. Every tile is an identical perfectly flat 2:1 isometric rhombus, centered in its quadrant with generous separation. Top-left: calm olive meadow A with broad low-frequency grass color shapes and only a few blades. Top-right: sun-warmed dry meadow B with muted honey-green patches and sparse tiny straw tufts. Bottom-left: clover meadow C with subtle rounded dark-olive clover patches and no flowers. Bottom-right: far-edge meadow designed for camera padding, noticeably lower contrast and about 60% less surface detail than the other three.
+Style/medium: premium clean hand-painted HD 2D prehistoric fantasy MMORPG ground tiles, readable after downscaling to 80x40, flat surface only, original design, not pixel art and not photorealistic.
+Scene/backdrop: perfectly flat uniform #ff00ff chroma-key background.
+Constraints: strict 2x2 ordering; exactly one isolated rhombus per quadrant; all four silhouettes and dimensions must match exactly; no visible tile thickness, soil sides, raised bevels, cast shadows, props, flowers, rocks, roads, actors, buildings, UI, text, labels, watermark, or grid dividers. No #ff00ff inside tiles. Keep every tile fully in frame and away from quadrant edges.
+Avoid: noisy grass strands, checkerboard texture, black seams, square platforms, 1:1 diamonds, repeated identical texture, copied game art.

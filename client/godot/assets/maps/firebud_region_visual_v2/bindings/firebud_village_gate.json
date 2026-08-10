@@ -1,0 +1,328 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "firebud_region_visual_v2",
+  "mapId": "firebud_village_gate",
+  "mapGridSize": [28, 24],
+  "ground": {
+    "edgePaddingCells": 16,
+    "edgeTileId": "firebud_meadow_far",
+    "defaultTileId": "firebud_meadow_a",
+    "blockedTileId": "firebud_dark_root_soil_a",
+    "encounterTileId": "firebud_tall_grass_encounter",
+    "warpTileId": "firebud_warp_stone",
+    "pathTileId": "firebud_ochre_path_a",
+    "plazaTileId": "firebud_honey_stone_a",
+    "variantSeed": 38302,
+    "variantClusterSize": 3,
+    "tileVariants": {
+      "firebud_meadow_a": [
+        "firebud_meadow_a",
+        "firebud_meadow_b",
+        "firebud_meadow_dry_b",
+        "firebud_meadow_clover_c"
+      ]
+    },
+    "pathDilation": 1,
+    "pathLinks": [
+      {
+        "from": [3, 15],
+        "to": [10, 15]
+      },
+      {
+        "from": [10, 15],
+        "to": [25, 5]
+      },
+      {
+        "from": [10, 15],
+        "to": [23, 15]
+      },
+      {
+        "from": [10, 15],
+        "to": [19, 20]
+      }
+    ],
+    "plazaRects": [
+      [3, 13, 8, 5]
+    ],
+    "plazaCells": [
+      [11, 14],
+      [12, 14],
+      [12, 16],
+      [13, 15],
+      [13, 16]
+    ],
+    "overrides": []
+  },
+  "objectPlacements": [
+    {
+      "instanceId": "village_service_pavilion_blocked_cluster_01",
+      "objectId": "firebud_service_pavilion",
+      "grid": [10, 5],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[8, 4], [9, 4], [10, 5]]
+    },
+    {
+      "instanceId": "village_ancient_tree_blocked_cluster_01",
+      "objectId": "firebud_ancient_tree",
+      "grid": [16, 8],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[14, 7], [15, 7], [16, 8]]
+    },
+    {
+      "instanceId": "village_edge_scenery_tree_west_01",
+      "objectId": "firebud_ancient_tree_scenery",
+      "grid": [-4, 17],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_edge_scenery_tree_southwest_02",
+      "objectId": "firebud_ancient_tree_scenery",
+      "grid": [1, 25],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_edge_flower_patch_west_01",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [-1, 14],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_edge_flower_patch_southwest_03",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [2, 23],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_edge_flower_patch_west_02",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [-3, 19],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_fence_blocked_cluster_01",
+      "objectId": "firebud_low_fence",
+      "grid": [20, 13],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[18, 12], [19, 12], [20, 13]]
+    },
+    {
+      "instanceId": "village_planter_blocked_cluster_02",
+      "objectId": "firebud_low_planter",
+      "grid": [7, 18],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[6, 18], [7, 18]]
+    },
+    {
+      "instanceId": "village_honey_rocks_blocked_cluster_01",
+      "objectId": "firebud_honey_rock_cluster",
+      "grid": [23, 19],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[22, 18], [23, 19]]
+    },
+    {
+      "instanceId": "village_ground_decal_grass_01",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [4, 14],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_flower_01",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [6, 13],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_02",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [10, 10],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_flower_02",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [13, 13],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_03",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [12, 16],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_04",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [16, 16],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_flower_03",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [18, 17],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_05",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [17, 16],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_flower_04",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [21, 10],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_06",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [23, 6],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_flower_05",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [24, 7],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_07",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [23, 8],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_flower_06",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [24, 9],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_08",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [25, 10],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_09",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [25, 5],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_flower_07",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [26, 5],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_10",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [24, 17],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_11",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [18, 20],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_flower_08",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [19, 20],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "village_ground_decal_grass_12",
+      "objectId": "firebud_flower_meadow_decal",
+      "grid": [20, 21],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    }
+  ]
+}

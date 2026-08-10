@@ -1,0 +1,59 @@
+{
+  "cellEdgePolicy": {
+    "overrideFlag": "",
+    "overrideUsed": false,
+    "visibleAlphaMustBeInsideCell": true
+  },
+  "defaultAnchor": [
+    0.5,
+    1.0
+  ],
+  "maxDimension": 512,
+  "objects": [
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        512,
+        412
+      ],
+      "label": "firebud_ancient_tree",
+      "path": "../../runtime/objects/firebud_ancient_tree.png",
+      "sha256": "c0a4309a3bd0065cea2fab35167a27d8ed6f22441d7e88bbcd850b165d9a0e4c",
+      "sourceBbox": [
+        33,
+        66,
+        1284,
+        1026
+      ],
+      "sourceCell": [
+        0,
+        0,
+        1358,
+        1159
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        0
+      ]
+    }
+  ],
+  "padding": 8,
+  "schemaVersion": 1,
+  "source": {
+    "alphaThreshold": 4,
+    "dimensions": [
+      1358,
+      1159
+    ],
+    "grid": {
+      "columns": 1,
+      "rows": 1
+    },
+    "path": "firebud-tree-landmark-v1-alpha.png",
+    "sha256": "100f95b7b755991bab16729d43952fed82a3e7ff5d87ebf23b526754ae561915"
+  }
+}

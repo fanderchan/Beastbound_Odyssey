@@ -42,6 +42,8 @@ VALID_ALPHA_MODES = {"opaque", "mixed"}
 VALID_RENDER_LAYERS = {"ground_decal", "world", "foreground"}
 VALID_COLLISION_ROLES = {"none", "decorative", "blocking", "interaction"}
 VALID_SCREENSHOT_MODES = {"idle", "moving", "transition", "occlusion"}
+MIN_VARIANT_SEED = -(2**31)
+MAX_VARIANT_SEED = 2**31 - 1
 MAX_PNG_PIXELS = 64 * 1024 * 1024
 MAIN_SCENE = "res://scenes/Main.tscn"
 MAIN_VIEWPORT = [1280, 720]
@@ -515,6 +517,62 @@ def validate_grid_cell(
         audit.error(field_name, f"grid coordinate lies outside mapGridSize {map_grid_size!r}")
         return None
     return int(x), int(y)
+
+
+def validate_object_anchor_cell(
+    audit: Audit,
+    value: Any,
+    field_name: str,
+    map_grid_size: list[int | float] | None,
+    collision_role: str | None,
+    edge_padding_cells: int,
+) -> tuple[int, int] | None:
+    """Validate a placement anchor without turning scenery into gameplay space.
+
+    Legacy in-grid anchors keep their original contract. Only ``none`` and
+    ``decorative`` objects may use a signed grid coordinate outside the
+    authoritative map, and then only when ``mapGridSize`` proves that the
+    anchor is one of the visual-only cells covered by ``edgePaddingCells``.
+    """
+    checked = validate_number_pair(audit, value, field_name, integer=True)
+    if checked is None:
+        return None
+    x, y = int(checked[0]), int(checked[1])
+    if map_grid_size is None:
+        if x < 0 or y < 0:
+            audit.error(
+                field_name,
+                "off-grid scenery anchors require mapGridSize and edgePaddingCells",
+            )
+            return None
+        return x, y
+
+    width, height = int(map_grid_size[0]), int(map_grid_size[1])
+    inside_authoritative_grid = 0 <= x < width and 0 <= y < height
+    if inside_authoritative_grid:
+        return x, y
+    if collision_role not in {"none", "decorative"}:
+        audit.error(
+            field_name,
+            "blocking and interaction anchors must stay inside mapGridSize",
+        )
+        return None
+    if edge_padding_cells <= 0:
+        audit.error(
+            field_name,
+            "off-grid scenery anchors require positive ground.edgePaddingCells",
+        )
+        return None
+    if not (
+        -edge_padding_cells <= x < width + edge_padding_cells
+        and -edge_padding_cells <= y < height + edge_padding_cells
+    ):
+        audit.error(
+            field_name,
+            "off-grid scenery anchor lies outside the edgePaddingCells skirt",
+        )
+        return None
+    return x, y
 
 
 def file_ref_key(value: Any) -> tuple[str, str] | None:
@@ -1350,6 +1408,119 @@ def walk_references(
             walk_references(audit, nested, f"{field_name}[{index}]", tile_ids, object_ids)
 
 
+def validate_ground_visual_contract(
+    audit: Audit,
+    ground: Any,
+    tile_ids: set[str],
+    field_name: str,
+) -> None:
+    """Validate optional visual-only ground selection without changing semantics.
+
+    Older bindings remain valid: ``edgeTileId`` falls back to
+    ``defaultTileId`` and both deterministic-variant fields may be absent.
+    """
+    if not isinstance(ground, dict):
+        audit.error(field_name, "expected an object")
+        return
+
+    default_tile_id = ground.get("defaultTileId")
+    if default_tile_id not in tile_ids:
+        audit.error(
+            f"{field_name}.defaultTileId",
+            f"unknown tileId {default_tile_id!r}",
+        )
+
+    edge_tile_id = ground.get("edgeTileId", default_tile_id)
+    if edge_tile_id not in tile_ids:
+        audit.error(
+            f"{field_name}.edgeTileId",
+            f"unknown tileId {edge_tile_id!r}",
+        )
+
+    if "edgePaddingCells" in ground:
+        edge_padding = ground.get("edgePaddingCells")
+        if (
+            not isinstance(edge_padding, int)
+            or isinstance(edge_padding, bool)
+            or not 0 <= edge_padding <= 32
+        ):
+            audit.error(
+                f"{field_name}.edgePaddingCells",
+                "must be an integer in the inclusive range 0..32",
+            )
+
+    if "variantSeed" in ground:
+        variant_seed = ground.get("variantSeed")
+        if (
+            not isinstance(variant_seed, int)
+            or isinstance(variant_seed, bool)
+            or not MIN_VARIANT_SEED <= variant_seed <= MAX_VARIANT_SEED
+        ):
+            audit.error(
+                f"{field_name}.variantSeed",
+                "must be a signed 32-bit integer",
+            )
+
+    if "variantClusterSize" in ground:
+        cluster_size = ground.get("variantClusterSize")
+        if (
+            not isinstance(cluster_size, int)
+            or isinstance(cluster_size, bool)
+            or not 1 <= cluster_size <= 8
+        ):
+            audit.error(
+                f"{field_name}.variantClusterSize",
+                "must be an integer in the inclusive range 1..8",
+            )
+
+    variants = ground.get("tileVariants")
+    if variants is None:
+        return
+    if not isinstance(variants, dict):
+        audit.error(f"{field_name}.tileVariants", "expected an object")
+        return
+
+    semantic_bases = set(variants)
+    candidate_owner: dict[str, str] = {}
+    for base_tile_id, candidates in variants.items():
+        base_field = f"{field_name}.tileVariants.{base_tile_id}"
+        if not is_id(base_tile_id):
+            audit.error(base_field, "base key must be a lowercase stable tile ID")
+        elif base_tile_id not in tile_ids:
+            audit.error(base_field, f"unknown base tileId {base_tile_id!r}")
+        if not isinstance(candidates, list) or not candidates:
+            audit.error(base_field, "expected a non-empty array of tile IDs")
+            continue
+
+        seen_in_pool: set[str] = set()
+        for index, candidate in enumerate(candidates):
+            candidate_field = f"{base_field}[{index}]"
+            if not is_id(candidate):
+                audit.error(candidate_field, "expected a lowercase stable tile ID")
+                continue
+            if candidate not in tile_ids:
+                audit.error(candidate_field, f"unknown tileId {candidate!r}")
+            if candidate in seen_in_pool:
+                audit.error(candidate_field, "duplicates another candidate in this pool")
+                continue
+            seen_in_pool.add(candidate)
+            if candidate in semantic_bases and candidate != base_tile_id:
+                audit.error(
+                    candidate_field,
+                    f"cannot cross into semantic base {candidate!r}",
+                )
+            previous_owner = candidate_owner.get(candidate)
+            if previous_owner is not None and previous_owner != base_tile_id:
+                audit.error(
+                    candidate_field,
+                    f"is already owned by semantic base {previous_owner!r}",
+                )
+            else:
+                candidate_owner[candidate] = str(base_tile_id)
+        if base_tile_id not in seen_in_pool:
+            audit.error(base_field, "must explicitly include its base tile ID")
+
+
 def validate_bindings(
     audit: Audit,
     bindings: Any,
@@ -1407,26 +1578,21 @@ def validate_bindings(
             )
 
         ground = binding.get("ground")
-        if not isinstance(ground, dict):
-            audit.error(f"{field_name}.binding.ground", "expected an object")
-        else:
-            default_tile_id = ground.get("defaultTileId")
-            if default_tile_id not in tile_ids:
-                audit.error(
-                    f"{field_name}.binding.ground.defaultTileId",
-                    f"unknown tileId {default_tile_id!r}",
-                )
-            if "edgePaddingCells" in ground:
-                edge_padding = ground.get("edgePaddingCells")
-                if (
-                    not isinstance(edge_padding, int)
-                    or isinstance(edge_padding, bool)
-                    or not 0 <= edge_padding <= 32
-                ):
-                    audit.error(
-                        f"{field_name}.binding.ground.edgePaddingCells",
-                        "must be an integer in the inclusive range 0..32",
-                    )
+        validate_ground_visual_contract(
+            audit,
+            ground,
+            tile_ids,
+            f"{field_name}.binding.ground",
+        )
+        edge_padding_cells = 0
+        if isinstance(ground, dict):
+            edge_padding_value = ground.get("edgePaddingCells", 0)
+            if (
+                isinstance(edge_padding_value, int)
+                and not isinstance(edge_padding_value, bool)
+                and 0 <= edge_padding_value <= 32
+            ):
+                edge_padding_cells = edge_padding_value
             overrides = ground.get("overrides")
             if not isinstance(overrides, list):
                 audit.error(
@@ -1492,11 +1658,14 @@ def validate_bindings(
                         f"{placement_field}.objectId",
                         f"unknown objectId {object_id!r}",
                     )
-                validate_grid_cell(
+                collision_role = collision_roles.get(object_id)
+                anchor_cell = validate_object_anchor_cell(
                     audit,
                     placement.get("grid"),
                     f"{placement_field}.grid",
                     map_grid_size,
+                    collision_role,
+                    edge_padding_cells,
                 )
                 validate_number_pair(
                     audit,
@@ -1517,6 +1686,20 @@ def validate_bindings(
                             f"{placement_field}.interactionLink",
                             "expected null or a lowercase stable ID",
                         )
+                    if (
+                        interaction_link is not None
+                        and collision_role in {"none", "decorative"}
+                        and anchor_cell is not None
+                        and map_grid_size is not None
+                        and not (
+                            0 <= anchor_cell[0] < int(map_grid_size[0])
+                            and 0 <= anchor_cell[1] < int(map_grid_size[1])
+                        )
+                    ):
+                        audit.error(
+                            f"{placement_field}.interactionLink",
+                            "off-grid none/decorative scenery must use null",
+                        )
                 footprint = placement.get("collisionFootprint")
                 if not isinstance(footprint, list):
                     audit.error(
@@ -1524,7 +1707,6 @@ def validate_bindings(
                             "expected an array; use [] for no occupied cells",
                         )
                 else:
-                    collision_role = collision_roles.get(object_id)
                     if collision_role == "blocking" and not footprint:
                         audit.error(
                             f"{placement_field}.collisionFootprint",
@@ -2268,12 +2450,153 @@ def validate_report(
     return nested_evidence
 
 
+def pending_review_lifecycle_valid(manifest: dict[str, Any]) -> bool:
+    return (
+        manifest.get("status") == "owner_review_pending"
+        and manifest.get("ownerReviewStatus") == "pending"
+        and manifest.get("releaseApproved") is False
+        and manifest.get("runtimeEnabled") is False
+    )
+
+
+def resolve_godot_resource_path(
+    audit: Audit,
+    godot_root: Path,
+    path_value: Any,
+    field_name: str,
+) -> Path | None:
+    if not isinstance(path_value, str) or not path_value.startswith("res://"):
+        audit.error(field_name, "expected a res:// path")
+        return None
+    candidate = godot_root.joinpath(path_value[len("res://") :])
+    try:
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(godot_root.resolve())
+    except (FileNotFoundError, OSError, ValueError) as exc:
+        audit.error(field_name, f"cannot resolve inside the Godot project ({exc})")
+        return None
+    if not resolved.is_file():
+        audit.error(field_name, "must resolve to a regular file")
+        return None
+    return resolved
+
+
+def validate_live_catalog_registration(
+    audit: Audit,
+    catalog_path: Path,
+    godot_root: Path,
+    manifest: dict[str, Any],
+    map_ids: set[str],
+    manifest_binding_hashes: dict[str, str],
+) -> None:
+    """Bind a bundle to the correct primary or pending-review live catalog."""
+    is_pending_review_candidate = pending_review_lifecycle_valid(manifest)
+    if catalog_path.name == "map_visual_review_catalog.json" and not is_pending_review_candidate:
+        audit.error(
+            "reviewCatalog.lifecycle",
+            "review catalog requires exactly owner_review_pending/pending/false/false",
+        )
+    try:
+        live_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        audit.error(
+            "catalogContractCheck.catalogSha256",
+            f"live map visual catalog cannot be parsed ({exc})",
+        )
+        return
+    if not isinstance(live_catalog, dict):
+        audit.error("liveCatalog", "expected an object")
+        return
+    if live_catalog.get("schemaVersion") != SCHEMA_VERSION:
+        audit.error("liveCatalog.schemaVersion", f"must equal {SCHEMA_VERSION}")
+    entries = live_catalog.get("entries")
+    if not isinstance(entries, list):
+        audit.error("catalogContractCheck.catalogSha256", "live catalog entries must be an array")
+        return
+
+    catalog_entries: dict[str, dict[str, Any]] = {}
+    for index, entry in enumerate(entries):
+        entry_field = f"liveCatalog.entries[{index}]"
+        if not isinstance(entry, dict):
+            audit.error(entry_field, "expected an object")
+            continue
+        map_id = entry.get("mapId")
+        if not is_id(map_id):
+            audit.error(f"{entry_field}.mapId", "expected a lowercase stable ID")
+            continue
+        if map_id in catalog_entries:
+            audit.error(f"{entry_field}.mapId", "duplicates another live catalog entry")
+        catalog_entries[map_id] = entry
+
+    expected_lifecycle = {
+        "status": "owner_review_pending",
+        "ownerReviewStatus": "pending",
+        "releaseApproved": False,
+        "runtimeEnabled": False,
+    }
+    for map_id in sorted(map_ids):
+        entry = catalog_entries.get(map_id)
+        if entry is None:
+            audit.error(
+                "catalogContractCheck.catalogSha256",
+                f"live catalog is missing map {map_id!r}",
+            )
+            continue
+        manifest_path = resolve_godot_resource_path(
+            audit,
+            godot_root,
+            entry.get("bundleManifest"),
+            f"liveCatalog.{map_id}.bundleManifest",
+        )
+        if (
+            manifest_path is not None
+            and manifest_path.resolve() != audit.manifest_path.resolve()
+        ):
+            audit.error(
+                f"liveCatalog.{map_id}.bundleManifest",
+                "must resolve to the audited bundle manifest",
+            )
+        if manifest_path is not None and is_pending_review_candidate:
+            try:
+                live_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                audit.error(
+                    f"liveCatalog.{map_id}.bundleManifest",
+                    f"cannot parse pending candidate manifest ({exc})",
+                )
+            else:
+                actual_lifecycle = {
+                    key: live_manifest.get(key)
+                    for key in expected_lifecycle
+                } if isinstance(live_manifest, dict) else {}
+                if actual_lifecycle != expected_lifecycle:
+                    audit.error(
+                        f"liveCatalog.{map_id}.lifecycle",
+                        "pending candidate must be exactly owner_review_pending/pending/false/false",
+                    )
+        binding_path = resolve_godot_resource_path(
+            audit,
+            godot_root,
+            entry.get("bindingPath"),
+            f"liveCatalog.{map_id}.bindingPath",
+        )
+        if binding_path is not None:
+            actual_binding_digest = hashlib.sha256(binding_path.read_bytes()).hexdigest()
+            expected_binding_digest = manifest_binding_hashes.get(map_id)
+            if actual_binding_digest != expected_binding_digest:
+                audit.error(
+                    f"liveCatalog.{map_id}.bindingPath",
+                    "live binding bytes must match the manifest binding SHA-256",
+                )
+
+
 def validate_catalog_contract_check(
     audit: Audit,
     value: Any,
     bundle_id: str | None,
     map_ids: set[str],
     manifest_binding_hashes: dict[str, str],
+    manifest: dict[str, Any],
 ) -> dict[str, dict[str, str]]:
     snapshots: dict[str, dict[str, str]] = {
         "bindingHashes": {},
@@ -2343,7 +2666,12 @@ def validate_catalog_contract_check(
             "cannot locate the owning Godot project",
         )
     else:
-        catalog_path = godot_root / "data" / "map_visual_catalog.json"
+        catalog_name = (
+            "map_visual_review_catalog.json"
+            if manifest.get("status") == "owner_review_pending"
+            else "map_visual_catalog.json"
+        )
+        catalog_path = godot_root / "data" / catalog_name
 
     catalog_digest = report.get("catalogSha256")
     if not isinstance(catalog_digest, str) or not SHA256_RE.fullmatch(catalog_digest):
@@ -2363,7 +2691,7 @@ def validate_catalog_contract_check(
             if catalog_digest != actual_catalog_digest:
                 audit.error(
                     "catalogContractCheck.catalogSha256",
-                    "must equal the live map_visual_catalog.json SHA-256",
+                    f"must equal the live {catalog_path.name} SHA-256",
                 )
 
     report_maps = _validate_report_map_entries(
@@ -2447,79 +2775,14 @@ def validate_catalog_contract_check(
                 )
 
     if godot_root is not None and catalog_path is not None:
-        try:
-            live_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            audit.error(
-                "catalogContractCheck.catalogSha256",
-                f"live map visual catalog cannot be parsed ({exc})",
-            )
-            live_catalog = None
-        catalog_entries: dict[str, dict[str, Any]] = {}
-        if isinstance(live_catalog, dict):
-            entries = live_catalog.get("entries")
-            if not isinstance(entries, list):
-                audit.error("catalogContractCheck.catalogSha256", "live catalog entries must be an array")
-            else:
-                for index, entry in enumerate(entries):
-                    entry_field = f"liveCatalog.entries[{index}]"
-                    if not isinstance(entry, dict):
-                        audit.error(entry_field, "expected an object")
-                        continue
-                    map_id = entry.get("mapId")
-                    if not is_id(map_id):
-                        audit.error(f"{entry_field}.mapId", "expected a lowercase stable ID")
-                        continue
-                    if map_id in catalog_entries:
-                        audit.error(f"{entry_field}.mapId", "duplicates another live catalog entry")
-                    catalog_entries[map_id] = entry
-
-        def resolve_res_path(path_value: Any, field_name: str) -> Path | None:
-            if not isinstance(path_value, str) or not path_value.startswith("res://"):
-                audit.error(field_name, "expected a res:// path")
-                return None
-            candidate = godot_root.joinpath(path_value[len("res://") :])
-            try:
-                resolved = candidate.resolve(strict=True)
-                resolved.relative_to(godot_root.resolve())
-            except (FileNotFoundError, OSError, ValueError) as exc:
-                audit.error(field_name, f"cannot resolve inside the Godot project ({exc})")
-                return None
-            if not resolved.is_file():
-                audit.error(field_name, "must resolve to a regular file")
-                return None
-            return resolved
-
-        for map_id in sorted(map_ids):
-            entry = catalog_entries.get(map_id)
-            if entry is None:
-                audit.error(
-                    "catalogContractCheck.catalogSha256",
-                    f"live catalog is missing map {map_id!r}",
-                )
-                continue
-            manifest_path = resolve_res_path(
-                entry.get("bundleManifest"),
-                f"liveCatalog.{map_id}.bundleManifest",
-            )
-            if manifest_path is not None and manifest_path != audit.manifest_path:
-                audit.error(
-                    f"liveCatalog.{map_id}.bundleManifest",
-                    "must resolve to the audited bundle manifest",
-                )
-            binding_path = resolve_res_path(
-                entry.get("bindingPath"),
-                f"liveCatalog.{map_id}.bindingPath",
-            )
-            if binding_path is not None:
-                actual_binding_digest = hashlib.sha256(binding_path.read_bytes()).hexdigest()
-                expected_binding_digest = manifest_binding_hashes.get(map_id)
-                if actual_binding_digest != expected_binding_digest:
-                    audit.error(
-                        f"liveCatalog.{map_id}.bindingPath",
-                        "live binding bytes must match the manifest binding SHA-256",
-                    )
-
+        validate_live_catalog_registration(
+            audit,
+            catalog_path,
+            godot_root,
+            manifest,
+            map_ids,
+            manifest_binding_hashes,
+        )
         map_data_catalog_path = godot_root / "scripts" / "world" / "map_data_catalog.gd"
         try:
             map_data_catalog_text = map_data_catalog_path.read_text(encoding="utf-8")
@@ -2545,7 +2808,9 @@ def validate_catalog_contract_check(
         declared_map_hashes = report.get("mapDataHashes")
         if isinstance(declared_map_hashes, dict):
             for map_id in sorted(map_ids):
-                map_data_path = resolve_res_path(
+                map_data_path = resolve_godot_resource_path(
+                    audit,
+                    godot_root,
                     map_data_paths.get(map_id),
                     f"catalogContractCheck.mapDataHashes.{map_id}.path",
                 )
@@ -3276,6 +3541,7 @@ def audit_manifest(manifest_path: Path) -> Audit:
         bundle_id,
         map_ids,
         binding_hashes,
+        manifest,
     )
 
     if frozen_required and audit.provenance_release_gates:

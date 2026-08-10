@@ -4,8 +4,12 @@ const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
+const ShowcaseProfile := preload(
+	"res://scripts/qa/map_visual_review_showcase_profile.gd"
+)
 
 const CAPTURE_FLAG := "--map-visual-review-capture"
+const SHOWCASE_PROFILE_FLAG := "--map-visual-review-showcase-profile"
 const QA_PREVIEW_PREFIX := "--map-art-review-preview="
 const ARG_MAP_ID := "--map-visual-review-map-id"
 const ARG_OUTPUT := "--map-visual-review-output"
@@ -45,6 +49,20 @@ const FORBIDDEN_AUTH_PREFIXES: Array[String] = [
 	"--server-url",
 	"--auth-server-url",
 ]
+const NETWORK_REQUEST_NAMES: Array[String] = [
+	"auth_http_request",
+	"profile_sync_http_request",
+	"chat_http_request",
+	"mailbox_http_request",
+	"market_http_request",
+	"bank_http_request",
+	"party_http_request",
+	"party_invite_http_request",
+	"family_http_request",
+	"online_position_http_request",
+	"player_action_http_request",
+	"battle_invite_http_request",
+]
 
 var host
 
@@ -58,6 +76,7 @@ static func request_from_args(args: PackedStringArray) -> Dictionary:
 		"enabled": false,
 		"qaPreviewFlagPresent": false,
 		"qaPreviewMapId": "",
+		"showcaseProfileRequested": false,
 		"mapId": "",
 		"outputPath": "",
 		"reportPath": "",
@@ -67,6 +86,7 @@ static func request_from_args(args: PackedStringArray) -> Dictionary:
 	var counts: Dictionary = {}
 	var capture_count := 0
 	var preview_count := 0
+	var showcase_profile_count := 0
 	for index in range(args.size()):
 		var arg := str(args[index]).strip_edges()
 		if _is_forbidden_auth_arg(arg):
@@ -76,6 +96,9 @@ static func request_from_args(args: PackedStringArray) -> Dictionary:
 			continue
 		if arg == CAPTURE_FLAG:
 			capture_count += 1
+			continue
+		if arg == SHOWCASE_PROFILE_FLAG:
+			showcase_profile_count += 1
 			continue
 		if arg.begins_with(QA_PREVIEW_PREFIX):
 			preview_count += 1
@@ -105,11 +128,16 @@ static func request_from_args(args: PackedStringArray) -> Dictionary:
 			(request["parseErrors"] as Array).append("地图 Main 取证不接受无关参数：%s" % arg)
 	request["enabled"] = capture_count == 1
 	request["qaPreviewFlagPresent"] = preview_count == 1
+	request["showcaseProfileRequested"] = showcase_profile_count == 1
 	if capture_count != 1:
 		(request["parseErrors"] as Array).append("%s 必须且只能出现一次" % CAPTURE_FLAG)
 	if preview_count != 1:
 		(request["parseErrors"] as Array).append(
 			"--map-art-review-preview=<mapId> 必须且只能出现一次"
+		)
+	if showcase_profile_count > 1:
+		(request["parseErrors"] as Array).append(
+			"%s 最多只能出现一次" % SHOWCASE_PROFILE_FLAG
 		)
 	for flag in REQUIRED_VALUE_FLAGS:
 		if int(counts.get(flag, 0)) != 1:
@@ -151,6 +179,8 @@ func run(request: Dictionary) -> Dictionary:
 		errors.append("地图候选美术没有真实 ground draw commands")
 	if int(report.get("objectCount", 0)) <= 0:
 		errors.append("地图候选美术没有独立 scene object draw commands")
+	if errors.is_empty() and bool(request.get("showcaseProfileRequested", false)):
+		_apply_showcase_profile(request, prepared, report, errors)
 	if not errors.is_empty():
 		return _finish_report(report, errors, report_path)
 
@@ -316,6 +346,107 @@ func _validate_runtime_isolation(
 		errors.append("地图视觉取证画面不得显示 QA/GM/agent 调试控件")
 
 
+func _apply_showcase_profile(
+	request: Dictionary,
+	prepared: Dictionary,
+	report: Dictionary,
+	errors: Array[String]
+) -> void:
+	var map_id := str(request.get("mapId", ""))
+	var bundle_id := str(prepared.get("bundleId", ""))
+	if not ShowcaseProfile.context_allowed(map_id, bundle_id):
+		errors.append(
+			"内存展示档案只允许 Phase383 Firebud v2 owner-review capture"
+		)
+		return
+	if not bool(report.get("defaultProfileIsolation", false)):
+		errors.append("内存展示档案注入前没有先通过默认档案隔离验证")
+		return
+	if bool(host.account_authenticated) or bool(host.auth_auto_bypass):
+		errors.append("内存展示档案注入前认证状态不安全")
+		return
+	if bool(host.profile_save_enabled) or bool(host._is_server_account_session()):
+		errors.append("内存展示档案注入前仍连接存档或服务端会话")
+		return
+
+	var showcase_profile := ShowcaseProfile.build()
+	var profile_errors := ShowcaseProfile.errors_for(showcase_profile)
+	if not profile_errors.is_empty():
+		errors.append_array(profile_errors)
+		return
+	host.player_profile = showcase_profile
+	if host.has_method("_sync_player_mount_visual_if_needed"):
+		host.call("_sync_player_mount_visual_if_needed", true)
+	if host.has_method("_mark_progress_ui_caches_dirty"):
+		host.call("_mark_progress_ui_caches_dirty")
+	if host.has_method("_update_hud_text"):
+		host.call("_update_hud_text", true)
+	if host.has_method("_layout_hud"):
+		host.call("_layout_hud")
+	host.queue_redraw()
+
+	var player_value = showcase_profile.get("player", {})
+	var player := player_value as Dictionary if player_value is Dictionary else {}
+	var active_pet := PlayerProgressModel.pet_instance_by_id(
+		showcase_profile,
+		ShowcaseProfile.ACTIVE_PET_INSTANCE_ID
+	)
+	var active_pet_form_id := str(
+		active_pet.get("formId", active_pet.get("templateId", ""))
+	)
+	var in_memory_applied: bool = host.player_profile == showcase_profile
+	var post_injection_is_default: bool = (
+		host.player_profile == PlayerProgressModel.default_profile()
+	)
+	report["profileIsolation"] = (
+		"default_profile_verified_then_showcase_ephemeral_no_save"
+	)
+	report["showcaseProfileInMemory"] = in_memory_applied
+	report["showcaseProfilePostInjectionIsDefault"] = post_injection_is_default
+	report["showcaseProfileId"] = ShowcaseProfile.PROFILE_ID
+	report["showcasePlayerAppearanceId"] = str(player.get("appearanceId", ""))
+	report["showcaseActivePetFormId"] = active_pet_form_id
+	report["showcaseProfilePersisted"] = false
+	var network_state := _network_request_state()
+	report["networkRequestStatuses"] = network_state.get("statuses", {})
+	report["networkRequestsDisconnected"] = bool(
+		network_state.get("allDisconnected", false)
+	)
+	if not in_memory_applied or post_injection_is_default:
+		errors.append("Phase383 内存展示档案没有稳定应用到 Main")
+	if bool(host.account_authenticated) or bool(host.auth_auto_bypass):
+		errors.append("Phase383 内存展示档案错误启用了认证或 GM bypass")
+	if bool(host.profile_save_enabled) or bool(host._is_server_account_session()):
+		errors.append("Phase383 内存展示档案错误启用了存档或服务端会话")
+	if not bool(network_state.get("allDisconnected", false)):
+		var active_requests: Array[String] = _string_array(
+			network_state.get("active", [])
+		)
+		errors.append(
+			"Phase383 内存展示档案运行时存在活动网络请求：%s"
+			% ",".join(active_requests)
+		)
+
+
+func _network_request_state() -> Dictionary:
+	var statuses := {}
+	var active: Array[String] = []
+	for request_name in NETWORK_REQUEST_NAMES:
+		var value = host.get(request_name)
+		if not (value is HTTPRequest):
+			continue
+		var request := value as HTTPRequest
+		var status := request.get_http_client_status()
+		statuses[request_name] = status
+		if status != HTTPClient.STATUS_DISCONNECTED:
+			active.append(request_name)
+	return {
+		"statuses": statuses,
+		"active": active,
+		"allDisconnected": active.is_empty(),
+	}
+
+
 func _find_reachable_visible_target(start_cell: Vector2i) -> Dictionary:
 	var offsets: Array[Vector2i] = [
 		Vector2i(3, -3),
@@ -428,6 +559,9 @@ static func _base_report(request: Dictionary) -> Dictionary:
 		"mode": str(request.get("mode", "")),
 		"qaPreviewFlagPresent": bool(request.get("qaPreviewFlagPresent", false)),
 		"qaPreviewMapId": str(request.get("qaPreviewMapId", "")),
+		"showcaseProfileRequested": bool(
+			request.get("showcaseProfileRequested", false)
+		),
 		"displayServer": DisplayServer.get_name(),
 		"debugBuild": OS.is_debug_build(),
 		"profileIsolation": "default_profile_ephemeral_no_save",
@@ -437,6 +571,14 @@ static func _base_report(request: Dictionary) -> Dictionary:
 		"profileSaveEnabled": false,
 		"serverAccountSession": false,
 		"networkRequestAttempted": false,
+		"networkRequestStatuses": {},
+		"networkRequestsDisconnected": false,
+		"showcaseProfileInMemory": false,
+		"showcaseProfilePostInjectionIsDefault": true,
+		"showcaseProfileId": "",
+		"showcasePlayerAppearanceId": "",
+		"showcaseActivePetFormId": "",
+		"showcaseProfilePersisted": false,
 		"authPanelVisible": false,
 		"qaMenuVisible": false,
 		"qaPanelVisible": false,

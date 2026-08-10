@@ -247,5 +247,353 @@ class ReleaseAttestationTests(unittest.TestCase):
                 self.assertNotEqual([], audit.errors)
 
 
+class GroundVisualContractTests(unittest.TestCase):
+    def _audit(self, root: Path) -> AUDITOR.Audit:
+        return AUDITOR.Audit(root / AUDITOR.MANIFEST_NAME, root)
+
+    def test_legacy_ground_remains_valid_and_edge_falls_back_to_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            audit = self._audit(root)
+            AUDITOR.validate_ground_visual_contract(
+                audit,
+                {"defaultTileId": "grass"},
+                {"grass"},
+                "ground",
+            )
+        self.assertEqual([], audit.errors)
+
+    def test_valid_deterministic_visual_variants_pass(self) -> None:
+        tiles = {"grass", "grass_b", "path", "path_b", "edge", "edge_b"}
+        ground = {
+            "defaultTileId": "grass",
+            "edgeTileId": "edge",
+            "edgePaddingCells": 8,
+            "variantSeed": -2147483648,
+            "variantClusterSize": 3,
+            "tileVariants": {
+                "grass": ["grass", "grass_b"],
+                "path": ["path", "path_b"],
+                "edge": ["edge", "edge_b"],
+            },
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            audit = self._audit(root)
+            AUDITOR.validate_ground_visual_contract(audit, ground, tiles, "ground")
+        self.assertEqual([], audit.errors)
+
+    def test_invalid_optional_ground_fields_fail_closed(self) -> None:
+        tiles = {"grass", "grass_b", "path", "path_b", "shared"}
+        fixtures = {
+            "unknown edge": {
+                "defaultTileId": "grass",
+                "edgeTileId": "missing",
+            },
+            "boolean seed": {
+                "defaultTileId": "grass",
+                "variantSeed": True,
+            },
+            "oversized seed": {
+                "defaultTileId": "grass",
+                "variantSeed": 2**31,
+            },
+            "cluster below range": {
+                "defaultTileId": "grass",
+                "variantClusterSize": 0,
+            },
+            "cluster above range": {
+                "defaultTileId": "grass",
+                "variantClusterSize": 9,
+            },
+            "unknown candidate": {
+                "defaultTileId": "grass",
+                "tileVariants": {"grass": ["grass", "missing"]},
+            },
+            "base omitted": {
+                "defaultTileId": "grass",
+                "tileVariants": {"grass": ["grass_b"]},
+            },
+            "duplicate candidate": {
+                "defaultTileId": "grass",
+                "tileVariants": {"grass": ["grass", "grass"]},
+            },
+            "crossed semantic base": {
+                "defaultTileId": "grass",
+                "tileVariants": {
+                    "grass": ["grass", "path"],
+                    "path": ["path", "path_b"],
+                },
+            },
+            "candidate shared by pools": {
+                "defaultTileId": "grass",
+                "tileVariants": {
+                    "grass": ["grass", "shared"],
+                    "path": ["path", "shared"],
+                },
+            },
+        }
+        for label, ground in fixtures.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                audit = self._audit(root)
+                AUDITOR.validate_ground_visual_contract(audit, ground, tiles, "ground")
+                self.assertNotEqual([], audit.errors)
+
+
+class ObjectPlacementAnchorContractTests(unittest.TestCase):
+    def _validate(
+        self,
+        cell: list[int],
+        role: str,
+        *,
+        grid_size: list[int] | None = None,
+        padding: int = 0,
+    ) -> AUDITOR.Audit:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        audit = AUDITOR.Audit(root / AUDITOR.MANIFEST_NAME, root)
+        AUDITOR.validate_object_anchor_cell(
+            audit,
+            cell,
+            "placement.grid",
+            grid_size,
+            role,
+            padding,
+        )
+        return audit
+
+    def _validate_binding(
+        self,
+        role: str,
+        cell: list[int],
+        footprint: list[list[int]],
+    ) -> AUDITOR.Audit:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        (root / "bindings").mkdir()
+        binding = {
+            "schemaVersion": 1,
+            "bundleId": "test_bundle",
+            "mapId": "test_map",
+            "mapGridSize": [10, 8],
+            "ground": {
+                "defaultTileId": "grass",
+                "edgePaddingCells": 2,
+                "overrides": [],
+            },
+            "objectPlacements": [
+                {
+                    "instanceId": "tree_01",
+                    "objectId": "tree",
+                    "grid": cell,
+                    "offset": [0, 0],
+                    "mirrored": False,
+                    "interactionLink": "test_link" if role == "interaction" else None,
+                    "collisionFootprint": footprint,
+                }
+            ],
+        }
+        binding_path = root / "bindings" / "test_map.json"
+        binding_path.write_text(
+            json.dumps(binding, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        audit = AUDITOR.Audit(root / AUDITOR.MANIFEST_NAME, root)
+        AUDITOR.validate_bindings(
+            audit,
+            [
+                {
+                    "mapId": "test_map",
+                    "binding": {
+                        "path": "bindings/test_map.json",
+                        "sha256": hashlib.sha256(binding_path.read_bytes()).hexdigest(),
+                    },
+                }
+            ],
+            "test_bundle",
+            {"test_map"},
+            {"grass"},
+            {"tree"},
+            {"tree": role},
+        )
+        return audit
+
+    def test_legacy_in_grid_anchor_remains_valid(self) -> None:
+        self.assertEqual([], self._validate([3, 4], "blocking").errors)
+        self.assertEqual(
+            [],
+            self._validate([9, 7], "interaction", grid_size=[10, 8]).errors,
+        )
+
+    def test_visual_only_roles_may_anchor_on_edge_skirt(self) -> None:
+        for role in ("none", "decorative"):
+            for cell in ([-2, 0], [0, -2], [11, 7], [9, 9], [-2, -2], [11, 9]):
+                with self.subTest(role=role, cell=cell):
+                    self.assertEqual(
+                        [],
+                        self._validate(
+                            cell,
+                            role,
+                            grid_size=[10, 8],
+                            padding=2,
+                        ).errors,
+                    )
+
+        self.assertEqual(
+            [],
+            self._validate_binding("decorative", [-2, 9], []).errors,
+        )
+
+    def test_visual_only_anchor_outside_skirt_fails_closed(self) -> None:
+        for cell in ([-3, 0], [0, -3], [12, 7], [9, 10]):
+            with self.subTest(cell=cell):
+                self.assertNotEqual(
+                    [],
+                    self._validate(
+                        cell,
+                        "decorative",
+                        grid_size=[10, 8],
+                        padding=2,
+                    ).errors,
+                )
+        self.assertNotEqual(
+            [],
+            self._validate(
+                [-1, 0],
+                "none",
+                grid_size=[10, 8],
+                padding=0,
+            ).errors,
+        )
+        self.assertNotEqual([], self._validate([-1, 0], "none").errors)
+
+    def test_physical_roles_and_footprints_stay_inside_authoritative_grid(self) -> None:
+        for role in ("blocking", "interaction"):
+            with self.subTest(role=role):
+                self.assertNotEqual(
+                    [],
+                    self._validate(
+                        [-1, 0],
+                        role,
+                        grid_size=[10, 8],
+                        padding=2,
+                    ).errors,
+                )
+        for footprint in ([-1, 0], [10, 0], [0, 8]):
+            with self.subTest(footprint=footprint), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                audit = AUDITOR.Audit(root / AUDITOR.MANIFEST_NAME, root)
+                AUDITOR.validate_grid_cell(
+                    audit,
+                    footprint,
+                    "placement.collisionFootprint[0]",
+                    [10, 8],
+                )
+                self.assertNotEqual([], audit.errors)
+        self.assertNotEqual(
+            [],
+            self._validate_binding("blocking", [-1, 0], [[0, 0]]).errors,
+        )
+        self.assertNotEqual(
+            [],
+            self._validate_binding("interaction", [10, 0], []).errors,
+        )
+
+
+class ReviewCatalogContractTests(unittest.TestCase):
+    def _write_candidate(self, root: Path) -> tuple[dict, Path, Path, Path]:
+        (root / "data").mkdir(parents=True)
+        bundle_root = root / "assets" / "maps" / "candidate"
+        (bundle_root / "bindings").mkdir(parents=True)
+        manifest = sample_manifest()
+        manifest_path = bundle_root / AUDITOR.MANIFEST_NAME
+        binding_path = bundle_root / "bindings" / "solo_map.json"
+        binding_path.write_text('{"mapId":"solo_map"}\n', encoding="utf-8")
+        manifest_path.write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        catalog_path = root / "data" / "map_visual_review_catalog.json"
+        catalog_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "entries": [
+                        {
+                            "mapId": "solo_map",
+                            "bundleManifest": (
+                                "res://assets/maps/candidate/map-visual-bundle.json"
+                            ),
+                            "bindingPath": (
+                                "res://assets/maps/candidate/bindings/solo_map.json"
+                            ),
+                        }
+                    ],
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (root / "project.godot").write_text("[application]\n", encoding="utf-8")
+        return manifest, manifest_path, binding_path, catalog_path
+
+    def test_pending_candidate_paths_and_lifecycle_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest, manifest_path, binding_path, catalog_path = self._write_candidate(root)
+            audit = AUDITOR.Audit(manifest_path, manifest_path.parent)
+            AUDITOR.validate_live_catalog_registration(
+                audit,
+                catalog_path,
+                root,
+                manifest,
+                {"solo_map"},
+                {"solo_map": hashlib.sha256(binding_path.read_bytes()).hexdigest()},
+            )
+        self.assertEqual([], audit.errors)
+
+    def test_review_catalog_rejects_non_pending_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest, manifest_path, binding_path, catalog_path = self._write_candidate(root)
+            manifest.update(
+                {
+                    "status": "released",
+                    "ownerReviewStatus": "approved",
+                    "releaseApproved": True,
+                    "runtimeEnabled": True,
+                }
+            )
+            manifest_path.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            audit = AUDITOR.Audit(manifest_path, manifest_path.parent)
+            AUDITOR.validate_live_catalog_registration(
+                audit,
+                catalog_path,
+                root,
+                manifest,
+                {"solo_map"},
+                {"solo_map": hashlib.sha256(binding_path.read_bytes()).hexdigest()},
+            )
+        self.assertTrue(any("reviewCatalog.lifecycle" in error for error in audit.errors))
+
+    def test_pending_candidate_cannot_be_release_ready(self) -> None:
+        manifest = sample_manifest()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            audit = AUDITOR.Audit(root / AUDITOR.MANIFEST_NAME, root)
+            AUDITOR.evaluate_release_readiness(audit, manifest, {"solo_map"})
+        self.assertFalse(audit.release_ready)
+        self.assertIn("lifecycle_released_and_enabled", audit.missing_release_gates)
+        self.assertIn("release_attestation", audit.missing_release_gates)
+
+
 if __name__ == "__main__":
     unittest.main()

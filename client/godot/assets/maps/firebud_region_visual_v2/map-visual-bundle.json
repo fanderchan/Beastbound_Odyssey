@@ -1,0 +1,468 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "firebud_region_visual_v2",
+  "mapStyleId": "firebud_warm_stone_v2",
+  "mapIds": [
+    "firebud_training_yard",
+    "firebud_village_gate"
+  ],
+  "status": "owner_review_pending",
+  "ownerReviewStatus": "pending",
+  "releaseApproved": false,
+  "runtimeEnabled": false,
+  "releaseAttestation": null,
+  "tileSize": [80, 40],
+  "catalogContractCheck": {
+      "path": "evidence/catalog-contract-check.json",
+      "sha256": "1db21a33b9591c3e56e19ed52837861d325ae1db3fc15405ecf31d05a90a4395"
+  },
+  "source": {
+    "origin": "AI-generated original",
+    "owner": "Beastbound Odyssey project",
+    "licenseBasis": "project-owned generated output",
+    "mirrored": false,
+    "bakedActors": false,
+    "rawFiles": [
+      {
+        "path": "source/raw/firebud-ground-sheet-v3.png",
+        "sha256": "234c201cf2f39ac58a2505c753b0b05d85ca154b2be802f6a726378c9375dae4",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/raw/firebud-meadow-variants-v1.png",
+        "sha256": "f873213dc56895f03e64ce15c6e72160eb951315c3791014c2e892e9e7bb9cd0",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/raw/firebud-semantic-variants-v1.png",
+        "sha256": "6cbf32f7f276cf771eaf3d8057438afb708ff539f2c2bd7752fc00bb719aa1db",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/raw/firebud-seamless-meadow-v2.png",
+        "sha256": "bc47b5e3881617fae599272edb7f6bc092c783072ac3005f5c71b26085a3b272",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/raw/firebud-tree-landmark-v1.png",
+        "sha256": "0f45e533ba766c001c6c47be030c0f671aba57909e2ff9f87bb6d2bbaf709c63",
+        "dimensions": [1358, 1159]
+      },
+      {
+        "path": "source/raw/firebud-compact-props-v1.png",
+        "sha256": "0b7e3525cb8ff25e7cb8ec71c40b40eab4d7d9cecbadff0539ba77b85cc46415",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/raw/reused-v1/firebud-low-props-sheet-v2.png",
+        "sha256": "a311c693c4cb5093a7b74b59e84014f22026662d36d1ece1c35b895551fdacc5",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/raw/reused-v1/firebud-service-pavilion-v1.png",
+        "sha256": "a0258aaeb9d64d8ae82a926469c7aa7bb904bebb7e9d90e0a6936e37c915a1ae",
+        "dimensions": [1254, 1254]
+      }
+    ],
+    "buildArtifacts": [
+      {
+        "path": "source/processed/firebud-ground-sheet-v3-alpha.png",
+        "sha256": "9dec63d7a15a5dbf7e47512ebdf7d4aae24615e3c6b30276f01bae4fea5c869f",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/processed/firebud-meadow-variants-v1-alpha.png",
+        "sha256": "b6237e41b0af7caf1b0f2d7a9cc95694b26cf1b1718814d4b0124a14bfcff6be",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/processed/firebud-semantic-variants-v1-alpha.png",
+        "sha256": "691683544da118285ad09b752c466324fda1a84c56945d6c6f7b62618c755eb5",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/processed/firebud-ground-sheet-v3-combined-12tiles.png",
+        "sha256": "f3bd54ca34a7c89a84145a89bbefa124759ba0d4a5c6cab709b7ec18a6dff4b8",
+        "dimensions": [1254, 3762]
+      },
+      {
+        "path": "source/processed/firebud-tree-landmark-v1-alpha.png",
+        "sha256": "100f95b7b755991bab16729d43952fed82a3e7ff5d87ebf23b526754ae561915",
+        "dimensions": [1358, 1159]
+      },
+      {
+        "path": "source/processed/firebud-compact-props-v1-alpha.png",
+        "sha256": "32a7d69f180e778483173451c17126728f36f79a5199ec46f410a645126aaad8",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/processed/firebud-ancient-tree-manifest.json",
+        "sha256": "c46e034e8eb19cb0e165767fce2f3e3674b9508e65c6421ceb611864cddefeb5"
+      },
+      {
+        "path": "source/processed/firebud-compact-props-manifest.json",
+        "sha256": "ea3fe59ee6d63520f73a9a9f4c7803e773457b936782e95c8102dae76e2f7a0a"
+      },
+      {
+        "path": "source/processed/reused-v1/firebud-low-props-sheet-v2-alpha.png",
+        "sha256": "c4b28e15d42048c63429caccfd08153101f047a2519ed88216c40b1fc2156126",
+        "dimensions": [1254, 1254]
+      },
+      {
+        "path": "source/processed/reused-v1/firebud-service-pavilion-v1-alpha.png",
+        "sha256": "ed193e22a3445cbe8324272c6775436059c5caf25eeebfb4cf8bf59a9f695cc8",
+        "dimensions": [1254, 1254]
+      }
+    ],
+    "promptFiles": [
+      {
+        "path": "source/prompts/firebud-ground-v3.md",
+        "sha256": "cbd5ad1a700c8045ef83eed56514b96fe029c45a9e71a673a14a072b72dc7d73"
+      },
+      {
+        "path": "source/prompts/firebud-meadow-variants-v1.md",
+        "sha256": "596e4417f56572798a1e2a4d753fe176ef5bf3ac2e967c54a6579a2ebbed182b"
+      },
+      {
+        "path": "source/prompts/firebud-semantic-variants-v1.md",
+        "sha256": "4bf25fec9a1a9d7b34eed1d783dc8fecfea4b624b3fcae94b165b447273c53e0"
+      },
+      {
+        "path": "source/prompts/firebud-seamless-meadow-v2.md",
+        "sha256": "dd5e6324a55ebca4233cc74401287c316afadd7ccf8a1adfd78bba8f941413f8"
+      },
+      {
+        "path": "source/prompts/firebud-ancient-tree-v1.md",
+        "sha256": "c4ebacbadd25e91cda332b6e3299c86223a9f92c7a53f31b501f142eebf4b49a"
+      },
+      {
+        "path": "source/prompts/firebud-compact-props-v1.md",
+        "sha256": "d9f645a71fbf9960716f8148b76c8bc4dbba4ffbde8ef980313003708b407545"
+      },
+      {
+        "path": "source/prompts/reused-v1/firebud-low-props.md",
+        "sha256": "99cf8a4a367f9c279508ff96bcc2cf19c3acbee042ca0b0dd4e24b9a1805b58f"
+      },
+      {
+        "path": "source/prompts/reused-v1/firebud-service-pavilion.md",
+        "sha256": "be8362d85d347b6a3a24282ab81854a0b6fbde4f0c0ccb8d04cdda8ffb44b179"
+      }
+    ],
+    "provenance": {
+      "path": "source/provenance.json",
+      "sha256": "b070b7055822d2c80e9a2f757dc9e44d420c4d4b2cf241d4bad91c7fb3ff8b0d"
+    }
+  },
+  "groundAtlas": {
+    "path": "runtime/ground/atlas.png",
+    "sha256": "8f4699454f45e3e5f54907a63aa59069313bb42bac29c5edb7efd9d13a373cdb",
+    "dimensions": [320, 120],
+    "alphaMode": "mixed"
+  },
+  "tiles": [
+    {
+      "tileId": "firebud_meadow_a",
+      "rect": [0, 0, 80, 40],
+      "role": "ground"
+    },
+    {
+      "tileId": "firebud_ochre_path_a",
+      "rect": [80, 0, 80, 40],
+      "role": "path"
+    },
+    {
+      "tileId": "firebud_honey_stone_a",
+      "rect": [160, 0, 80, 40],
+      "role": "plaza_transition"
+    },
+    {
+      "tileId": "firebud_dark_root_soil_a",
+      "rect": [240, 0, 80, 40],
+      "role": "blocked"
+    },
+    {
+      "tileId": "firebud_meadow_b",
+      "rect": [0, 40, 80, 40],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "firebud_meadow_dry_b",
+      "rect": [80, 40, 80, 40],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "firebud_meadow_clover_c",
+      "rect": [160, 40, 80, 40],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "firebud_meadow_far",
+      "rect": [240, 40, 80, 40],
+      "role": "edge_skirt"
+    },
+    {
+      "tileId": "firebud_ochre_path_worn_b",
+      "rect": [0, 80, 80, 40],
+      "role": "path_variant"
+    },
+    {
+      "tileId": "firebud_honey_stone_moss_b",
+      "rect": [80, 80, 80, 40],
+      "role": "plaza_variant"
+    },
+    {
+      "tileId": "firebud_tall_grass_encounter",
+      "rect": [160, 80, 80, 40],
+      "role": "encounter"
+    },
+    {
+      "tileId": "firebud_warp_stone",
+      "rect": [240, 80, 80, 40],
+      "role": "warp"
+    }
+  ],
+  "objects": [
+    {
+      "objectId": "firebud_training_target",
+      "asset": {
+        "path": "runtime/objects/firebud_training_target.png",
+        "sha256": "9286753d988db31c6503f3522ce7ee7c8576b4f0f95e30c4edd0ed34b776a8d4",
+        "dimensions": [256, 233],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [112, 102],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 0.92],
+      "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {
+        "mode": "polygon",
+        "points": [[64, 180], [192, 180], [210, 220], [46, 220]]
+      }
+    },
+    {
+      "objectId": "firebud_supply_pots",
+      "asset": {
+        "path": "runtime/objects/firebud_supply_pots.png",
+        "sha256": "6b7051bf7f5c6250759066d90a08ea86c9c592c3c26365ceba11f151baaebb21",
+        "dimensions": [256, 220],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [112, 96],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 0.92],
+      "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {
+        "mode": "polygon",
+        "points": [[60, 164], [196, 164], [220, 208], [36, 208]]
+      }
+    },
+    {
+      "objectId": "firebud_low_planter",
+      "asset": {
+        "path": "runtime/objects/firebud_low_planter.png",
+        "sha256": "ccff5c7242ac8f27526ef76b006ace872dbca12929f0f60e3b3e972233e61380",
+        "dimensions": [256, 204],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [120, 96],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 0.92],
+      "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {
+        "mode": "polygon",
+        "points": [[42, 150], [214, 150], [226, 192], [30, 192]]
+      }
+    },
+    {
+      "objectId": "firebud_low_fence",
+      "asset": {
+        "path": "runtime/objects/firebud_low_fence.png",
+        "sha256": "1741d5f9be507da0926ea7a72246b177773aaee9e930b25f9cf5c4aa12685fee",
+        "dimensions": [256, 222],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [128, 111],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 0.92],
+      "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {
+        "mode": "polygon",
+        "points": [[38, 174], [218, 174], [228, 210], [28, 210]]
+      }
+    },
+    {
+      "objectId": "firebud_service_pavilion",
+      "asset": {
+        "path": "runtime/objects/firebud_service_pavilion.png",
+        "sha256": "1eaa9f5a13781419a0c6ea1c611cfcdd60a28bc2fbabce237789631de0740eec",
+        "dimensions": [319, 320],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [220, 221],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 0.92],
+      "sortPoint": [0.5, 0.92],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {
+        "mode": "polygon",
+        "points": [[56, 244], [263, 244], [286, 304], [34, 304]]
+      }
+    },
+    {
+      "objectId": "firebud_ancient_tree",
+      "asset": {
+        "path": "runtime/objects/firebud_ancient_tree.png",
+        "sha256": "c0a4309a3bd0065cea2fab35167a27d8ed6f22441d7e88bbcd850b165d9a0e4c",
+        "dimensions": [512, 412],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [360, 290],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 1.0],
+      "sortPoint": [0.5, 1.0],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {
+        "mode": "polygon",
+        "points": [[134, 334], [378, 334], [414, 394], [98, 394]]
+      }
+    },
+    {
+      "objectId": "firebud_ancient_tree_scenery",
+      "asset": {
+        "path": "runtime/objects/firebud_ancient_tree_scenery.png",
+        "sha256": "c0a4309a3bd0065cea2fab35167a27d8ed6f22441d7e88bbcd850b165d9a0e4c",
+        "dimensions": [512, 412],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [300, 242],
+      "renderLayer": "world",
+      "collisionRole": "decorative",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 1.0],
+      "sortPoint": [0.5, 1.0],
+      "sort": {"mode": "y", "offset": -240},
+      "collision": {
+        "mode": "none",
+        "points": []
+      }
+    },
+    {
+      "objectId": "firebud_ember_shrub",
+      "asset": {
+        "path": "runtime/objects/firebud_ember_shrub.png",
+        "sha256": "15ea9686ff9f1ba3946dfca282154415593b7b5caf78dd058db2a2cfc97f0a43",
+        "dimensions": [256, 197],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [120, 92],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 1.0],
+      "sortPoint": [0.5, 1.0],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {
+        "mode": "polygon",
+        "points": [[64, 154], [192, 154], [212, 188], [44, 188]]
+      }
+    },
+    {
+      "objectId": "firebud_honey_rock_cluster",
+      "asset": {
+        "path": "runtime/objects/firebud_honey_rock_cluster.png",
+        "sha256": "d16e453237d3a982ff947777332a65925c754cd595738ce9c357ff4339ab02ca",
+        "dimensions": [256, 228],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [120, 107],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 1.0],
+      "sortPoint": [0.5, 1.0],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {
+        "mode": "polygon",
+        "points": [[50, 176], [206, 176], [226, 216], [30, 216]]
+      }
+    },
+    {
+      "objectId": "firebud_flower_meadow_decal",
+      "asset": {
+        "path": "runtime/objects/firebud_flower_meadow_decal.png",
+        "sha256": "f730db7af306dd08969faac93a1c77067b22dfc54bc4cc9cdffc676a555afe7f",
+        "dimensions": [256, 164],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [104, 67],
+      "renderLayer": "ground_decal",
+      "collisionRole": "decorative",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 1.0],
+      "sortPoint": [0.5, 1.0],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {"mode": "none", "points": []}
+    },
+    {
+      "objectId": "firebud_stone_totem",
+      "asset": {
+        "path": "runtime/objects/firebud_stone_totem.png",
+        "sha256": "19473e3291ce971e54165a96d974cf8577f00d4821450fad0c4ca01098da2d81",
+        "dimensions": [235, 256],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [130, 142],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [1.0, 1.0],
+      "anchor": [0.5, 1.0],
+      "sortPoint": [0.5, 1.0],
+      "sort": {"mode": "y", "offset": 0},
+      "collision": {
+        "mode": "polygon",
+        "points": [[48, 206], [187, 206], [207, 244], [28, 244]]
+      }
+    }
+  ],
+  "mapBindings": [
+    {
+      "mapId": "firebud_training_yard",
+      "binding": {
+        "path": "bindings/firebud_training_yard.json",
+        "sha256": "017eb8c50479df409250f23429f8b7992c2632d49ab80bf8cf579e6fb8cf7445"
+      }
+    },
+    {
+      "mapId": "firebud_village_gate",
+      "binding": {
+        "path": "bindings/firebud_village_gate.json",
+        "sha256": "b80720402c92463c2d0babf382c3fae49dd1d45fbae4c7baf58f642547d75d15"
+      }
+    }
+  ],
+  "evidence": {
+    "dressedReference": null,
+    "layeredPreview": null,
+    "runtimeScreenshots": [],
+    "computerUseReport": null,
+    "collisionAudit": null,
+    "performanceReport": null,
+    "ownerAcceptance": null
+  }
+}
