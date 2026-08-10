@@ -180,6 +180,7 @@ static func _build_projection_state(
 			"lineName": str(selected_template.get("lineName", "未知种系")),
 			"subtypeName": str(selected_template.get("subtypeName", "未知亚种")),
 			"recordLabel": str(selected_entry.get("recordLabel", "已遇见")),
+			"ownedCount": maxi(0, int(selected_entry.get("ownedCount", 0))),
 		}, true)
 		growth = _growth_for_form(selected_id)
 		attributes = _attributes_for_form(selected_id, selected_entry)
@@ -566,6 +567,7 @@ static func _legacy_detail_text(
 			selected_pet.get("name", selected_pet.get("formName", "宠物"))
 		),
 		"记录：%s" % str(selected_pet.get("recordLabel", "已遇见")),
+		"持有 %d" % maxi(0, int(selected_pet.get("ownedCount", 0))),
 	]
 	var growth_label := str(growth.get("totalLabel", "")).strip_edges()
 	if growth_label != "":

@@ -1,7 +1,16 @@
 extends RefCounted
 
 const PetArtCatalog := preload("res://scripts/pet/pet_art_catalog.gd")
+const StandalonePetArtOverlay := preload(
+	"res://scripts/pet/standalone_pet_art_overlay.gd"
+)
 const WorldVisualDirectionContract := preload("res://scripts/world/world_visual_direction_contract.gd")
+const ISOLATED_SCOPE_WORLD_PET_ONLY := (
+	StandalonePetArtOverlay.SCOPE_WORLD_PET_ONLY
+)
+const ISOLATED_SCOPE_BATTLE_STANDALONE := (
+	StandalonePetArtOverlay.SCOPE_BATTLE_STANDALONE
+)
 
 # Legacy constants remain public because the first Bui canary and its focused QA
 # checks predate the data-driven catalog. New forms read their own bundle metadata.
@@ -49,6 +58,85 @@ static var _metadata_cache: Dictionary = {}
 static var _world_warmed: Dictionary = {}
 static var _battle_warmed: Dictionary = {}
 static var _qa_preview_forms: Dictionary = {}
+
+
+static func enable_standalone_review_overlay_from_cli(
+	form_id: String,
+	root_value: String,
+	scope: String = ISOLATED_SCOPE_BATTLE_STANDALONE
+) -> Dictionary:
+	return _enable_standalone_review_overlay(
+		form_id,
+		root_value,
+		OS.get_cmdline_user_args(),
+		scope
+	)
+
+
+static func enable_standalone_review_overlay_for_auto_check(
+	form_id: String,
+	root_value: String,
+	simulated_review_args: PackedStringArray,
+	scope: String = ISOLATED_SCOPE_BATTLE_STANDALONE
+) -> Dictionary:
+	if not OS.get_cmdline_user_args().has(
+		"--auto-standalone-pet-art-overlay-check"
+	):
+		return {
+			"ok": false,
+			"formId": form_id.strip_edges(),
+			"root": "",
+			"errors": [
+				"测试 overlay 注册只允许 focused auto-check 入口",
+			],
+		}
+	return _enable_standalone_review_overlay(
+		form_id,
+		root_value,
+		simulated_review_args,
+		scope
+	)
+
+
+static func _enable_standalone_review_overlay(
+	form_id: String,
+	root_value: String,
+	args: PackedStringArray,
+	scope: String = ISOLATED_SCOPE_BATTLE_STANDALONE
+) -> Dictionary:
+	var normalized := form_id.strip_edges()
+	var previous_form_id := StandalonePetArtOverlay.active_form_id()
+	var previous_root := StandalonePetArtOverlay.root_for_form(
+		previous_form_id
+	)
+	var report := StandalonePetArtOverlay.enable_from_cli(
+		normalized,
+		root_value,
+		args,
+		scope
+	)
+	_clear_form_caches(previous_form_id, previous_root)
+	if normalized != previous_form_id:
+		_clear_form_caches(normalized)
+	if bool(report.get("ok", false)):
+		_clear_form_caches(
+			normalized,
+			StandalonePetArtOverlay.root_for_form(normalized)
+		)
+	return report
+
+
+static func disable_standalone_review_overlay(form_id: String = "") -> void:
+	var active_form_id := StandalonePetArtOverlay.active_form_id()
+	if form_id.strip_edges() != "" and form_id.strip_edges() != active_form_id:
+		return
+	var active_root := StandalonePetArtOverlay.root_for_form(active_form_id)
+	StandalonePetArtOverlay.disable()
+	_clear_form_caches(active_form_id, active_root)
+
+
+static func is_standalone_review_overlay_enabled(form_id: String) -> bool:
+	return StandalonePetArtOverlay.is_enabled_for(form_id)
 
 
 static func enable_qa_preview_form(form_id: String) -> bool:
@@ -286,7 +374,10 @@ static func validation_errors() -> Array[String]:
 static func validation_errors_for_form(form_id: String, require_full_battle: bool = true) -> Array[String]:
 	var errors: Array[String] = []
 	var normalized := form_id.strip_edges()
-	if PetArtCatalog.form_record(normalized).is_empty():
+	if (
+		PetArtCatalog.form_record(normalized).is_empty()
+		and not StandalonePetArtOverlay.is_enabled_for(normalized)
+	):
 		return ["宠物美术目录不存在 formId：%s" % normalized]
 	var metadata := _bundle_metadata(normalized)
 	if metadata.is_empty():
@@ -303,15 +394,11 @@ static func validation_errors_for_form(form_id: String, require_full_battle: boo
 			var count := frame_count_for_action(normalized, action)
 			for frame_index in range(1, count + 1):
 				var path := _frame_path(normalized, view, action, frame_index)
-				if not ResourceLoader.exists(path):
-					errors.append("缺少帧：%s" % path)
-					continue
-				var texture = load(path)
-				if not (texture is Texture2D):
+				var texture := _load_texture(path)
+				if texture == null:
 					errors.append("不是 Texture2D：%s" % path)
 					continue
-				var typed_texture := texture as Texture2D
-				if typed_texture.get_width() != 256 or typed_texture.get_height() != 256:
+				if texture.get_width() != 256 or texture.get_height() != 256:
 					errors.append("运行帧尺寸不是 256x256：%s" % path)
 				seen_count += 1
 	var expected_count := 0
@@ -325,15 +412,11 @@ static func validation_errors_for_form(form_id: String, require_full_battle: boo
 		for action in WORLD_ACTIONS:
 			for frame_index in range(1, _world_frame_count(normalized, action) + 1):
 				var path := world_frame_path_for_form(normalized, direction, action, frame_index)
-				if not ResourceLoader.exists(path):
-					errors.append("缺少宠物世界八向帧：%s" % path)
-					continue
-				var texture = load(path)
-				if not (texture is Texture2D):
+				var texture := _load_texture(path)
+				if texture == null:
 					errors.append("宠物世界八向帧不是 Texture2D：%s" % path)
 					continue
-				var typed_texture := texture as Texture2D
-				if typed_texture.get_width() != 256 or typed_texture.get_height() != 256:
+				if texture.get_width() != 256 or texture.get_height() != 256:
 					errors.append("宠物世界八向帧尺寸不是 256x256：%s" % path)
 				seen_world_count += 1
 	if seen_world_count != 40:
@@ -400,6 +483,10 @@ static func _load_texture(path: String) -> Texture2D:
 		if loaded is Texture2D:
 			_texture_cache[path] = loaded
 			return loaded as Texture2D
+	var overlay_texture := StandalonePetArtOverlay.load_texture(path)
+	if overlay_texture != null:
+		_texture_cache[path] = overlay_texture
+		return overlay_texture
 	# Owner-pending art is intentionally not runtime-enabled and may not have a
 	# generated Godot import sidecar yet.  A specifically enabled debug QA
 	# preview may still inspect its world PNGs directly; normal gameplay and
@@ -441,6 +528,9 @@ static func _world_root(form_id: String) -> String:
 
 
 static func _pet_root(form_id: String) -> String:
+	var overlay_root := StandalonePetArtOverlay.root_for_form(form_id)
+	if overlay_root != "":
+		return overlay_root
 	var record := PetArtCatalog.form_record(form_id)
 	var value = record.get("pet", {})
 	if not (value is Dictionary):
@@ -450,6 +540,9 @@ static func _pet_root(form_id: String) -> String:
 
 static func _bundle_metadata(form_id: String) -> Dictionary:
 	var normalized := form_id.strip_edges()
+	var overlay_metadata := StandalonePetArtOverlay.metadata_for_form(normalized)
+	if not overlay_metadata.is_empty():
+		return overlay_metadata
 	var cached = _metadata_cache.get(normalized, null)
 	if cached is Dictionary:
 		return cached as Dictionary
@@ -495,11 +588,19 @@ static func _world_frame_count(form_id: String, action: String) -> int:
 
 
 static func _world_access_allowed(form_id: String) -> bool:
-	return PetArtCatalog.supports_form(form_id) or is_qa_preview_enabled(form_id)
+	return (
+		PetArtCatalog.supports_form(form_id)
+		or is_qa_preview_enabled(form_id)
+		or StandalonePetArtOverlay.is_enabled_for(form_id)
+	)
 
 
 static func _battle_access_allowed(form_id: String) -> bool:
-	return _world_access_allowed(form_id)
+	return (
+		PetArtCatalog.supports_form(form_id)
+		or is_qa_preview_enabled(form_id)
+		or StandalonePetArtOverlay.allows_battle_for(form_id)
+	)
 
 
 static func _normalized_view(view: String) -> String:
@@ -521,3 +622,18 @@ static func _resource_path(repo_relative_path: String) -> String:
 	if normalized.begins_with(prefix):
 		return "res://%s" % normalized.substr(prefix.length())
 	return ""
+
+
+static func _clear_form_caches(form_id: String, root_path: String = "") -> void:
+	var normalized := form_id.strip_edges()
+	if normalized != "":
+		_metadata_cache.erase(normalized)
+		_world_warmed.erase(normalized)
+		_battle_warmed.erase(normalized)
+	var normalized_root := root_path.strip_edges().trim_suffix("/")
+	if normalized_root == "":
+		return
+	for path_value in _texture_cache.keys():
+		var path := str(path_value)
+		if path == normalized_root or path.begins_with("%s/" % normalized_root):
+			_texture_cache.erase(path_value)

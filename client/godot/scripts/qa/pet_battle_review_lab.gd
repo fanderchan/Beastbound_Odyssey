@@ -12,6 +12,9 @@ const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_char
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const PetBattleReviewModel := preload("res://scripts/battle/pet_battle_review_model.gd")
+const StandalonePetArtReviewGate := preload(
+	"res://scripts/qa/standalone_pet_art_review_gate.gd"
+)
 
 const SPEED_STEPS: Array[float] = [0.25, 0.5, 1.0, 1.25, 1.5, 2.0]
 const DEFAULT_SEED := 309001
@@ -46,6 +49,7 @@ var director_step_id: String = ""
 var coverage: Dictionary = {}
 var quit_after_director_loop: bool = false
 var director_step_filter: Array[String] = []
+var standalone_pet_only_review: bool = false
 
 var _generation: int = 0
 var _observed_event_sequence: int = 0
@@ -68,6 +72,8 @@ func _enable_preview_assets() -> void:
 	_preview_pet_form_ids.clear()
 	_preview_mount_form_ids.clear()
 	_random_mount_form_ids.clear()
+	if standalone_pet_only_review:
+		return
 	var character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
 	# Pending art is exposed only inside this explicit debug lab. Normal world
 	# and battle paths still require runtimeEnabled in their authoritative
@@ -125,14 +131,51 @@ func open(
 	start_collapsed: bool = false,
 	requested_mount_form_id: String = "",
 	quit_after_one_director_loop: bool = false,
-	requested_director_step_ids: Array[String] = []
+	requested_director_step_ids: Array[String] = [],
+	requested_standalone_pet_only_review: bool = false
 ) -> void:
 	if active:
 		close(false)
 	active = true
-	mode = requested_mode if [PetBattleReviewModel.MODE_BRAWL, PetBattleReviewModel.MODE_DIRECTOR].has(requested_mode) else PetBattleReviewModel.MODE_BRAWL
+	standalone_pet_only_review = requested_standalone_pet_only_review
+	mode = (
+		PetBattleReviewModel.MODE_DIRECTOR
+		if standalone_pet_only_review
+		else (
+			requested_mode
+			if [
+				PetBattleReviewModel.MODE_BRAWL,
+				PetBattleReviewModel.MODE_DIRECTOR,
+			].has(requested_mode)
+			else PetBattleReviewModel.MODE_BRAWL
+		)
+	)
 	focus_form_id = PetBattleReviewModel.normalized_form_id(requested_form_id)
-	mount_form_id = PetBattleReviewModel.normalized_mount_form_id(requested_mount_form_id)
+	mount_form_id = (
+		""
+		if standalone_pet_only_review
+		else PetBattleReviewModel.normalized_mount_form_id(
+			requested_mount_form_id
+		)
+	)
+	if standalone_pet_only_review:
+		var gate_errors := StandalonePetArtReviewGate.request_errors(
+			focus_form_id,
+			requested_mode,
+			requested_mount_form_id,
+			requested_director_step_ids
+		)
+		if not gate_errors.is_empty():
+			PetActionAssetCatalog.disable_standalone_review_overlay(
+				focus_form_id
+			)
+			active = false
+			standalone_pet_only_review = false
+			push_error(
+				"standalone pet art review gate rejected: %s"
+				% str(gate_errors)
+			)
+			return
 	_enable_preview_assets()
 	seed_value = PetBattleReviewModel.normalized_seed(requested_seed)
 	placement = PetBattleReviewModel.PLACEMENT_RANDOM_ALL
@@ -145,10 +188,14 @@ func open(
 	director_step_id = ""
 	_last_ai_intent = ""
 	quit_after_director_loop = quit_after_one_director_loop
-	director_step_filter = PetBattleReviewModel.normalized_director_step_ids(
-		requested_director_step_ids,
-		focus_form_id,
-		mount_form_id
+	director_step_filter = (
+		StandalonePetArtReviewGate.director_step_ids()
+		if standalone_pet_only_review
+		else PetBattleReviewModel.normalized_director_step_ids(
+			requested_director_step_ids,
+			focus_form_id,
+			mount_form_id
+		)
 	)
 	_last_revive_sequence.clear()
 	coverage.clear()
@@ -168,6 +215,8 @@ func open(
 func close(restore_world: bool = true) -> void:
 	if not active and root == null:
 		return
+	var overlay_form_id := focus_form_id
+	var disable_standalone_overlay := standalone_pet_only_review
 	active = false
 	for form_id in _preview_pet_form_ids:
 		PetActionAssetCatalog.disable_qa_preview_form(form_id)
@@ -180,6 +229,11 @@ func close(restore_world: bool = true) -> void:
 	_preview_pet_form_ids.clear()
 	_preview_mount_form_ids.clear()
 	_random_mount_form_ids.clear()
+	standalone_pet_only_review = false
+	if disable_standalone_overlay:
+		PetActionAssetCatalog.disable_standalone_review_overlay(
+			overlay_form_id
+		)
 	_generation += 1
 	director_step_id = ""
 	paused = false
@@ -236,6 +290,10 @@ func current_mount_form_id() -> String:
 
 func current_director_step_ids() -> Array[String]:
 	return director_step_filter.duplicate()
+
+
+func is_standalone_pet_only_review() -> bool:
+	return standalone_pet_only_review
 
 
 func random_mount_form_count() -> int:
@@ -351,6 +409,9 @@ func handle_key_event(event: InputEvent) -> bool:
 func start_brawl(requested_seed: int = 0) -> void:
 	if not active:
 		return
+	if standalone_pet_only_review:
+		start_director()
+		return
 	_generation += 1
 	mode = PetBattleReviewModel.MODE_BRAWL
 	director_step_id = ""
@@ -376,6 +437,9 @@ func start_brawl(requested_seed: int = 0) -> void:
 func start_director() -> void:
 	if not active:
 		return
+	if standalone_pet_only_review:
+		mount_form_id = ""
+		director_step_filter = StandalonePetArtReviewGate.director_step_ids()
 	_generation += 1
 	mode = PetBattleReviewModel.MODE_DIRECTOR
 	paused = false
@@ -395,6 +459,9 @@ func replay() -> void:
 
 
 func new_random_brawl() -> void:
+	if standalone_pet_only_review:
+		start_director()
+		return
 	var next_seed := int(Time.get_ticks_usec() % 2147483647)
 	if next_seed <= 0 or next_seed == seed_value:
 		next_seed = seed_value + 7919
@@ -428,6 +495,11 @@ func step_one_frame() -> void:
 
 
 func cycle_speed() -> void:
+	if standalone_pet_only_review:
+		speed_scale = 1.0
+		_scaled_delta_frame = -1
+		_refresh_status()
+		return
 	var current_index := SPEED_STEPS.find(speed_scale)
 	var next_index := 0 if current_index < 0 or current_index >= SPEED_STEPS.size() - 1 else current_index + 1
 	speed_scale = SPEED_STEPS[next_index]
@@ -472,12 +544,25 @@ func return_to_real_grass() -> void:
 
 func _run_director(token: int) -> void:
 	while _director_is_current(token):
-		for step in PetBattleReviewModel.director_steps_for_ids(focus_form_id, mount_form_id, director_step_filter):
+		var director_steps := (
+			StandalonePetArtReviewGate.director_steps(focus_form_id)
+			if standalone_pet_only_review
+			else PetBattleReviewModel.director_steps_for_ids(
+				focus_form_id,
+				mount_form_id,
+				director_step_filter
+			)
+		)
+		for step in director_steps:
 			if not _director_is_current(token):
 				return
 			director_step_id = str(step.get("id", ""))
 			_observed_event_sequence = 0
 			var state := PetBattleReviewModel.build_director_state(focus_form_id, seed_value, director_step_id, mount_form_id)
+			if standalone_pet_only_review:
+				state = StandalonePetArtReviewGate.apply_visual_isolation(
+					state
+				)
 			state["reviewTopInset"] = _review_top_inset()
 			host._start_battle(state)
 			host._set_battle_auto_attack_enabled(false, false)
@@ -500,12 +585,37 @@ func _run_director(token: int) -> void:
 			if quit_after_director_loop:
 				if not await _wait_scaled(0.85, token):
 					return
-				host.get_tree().quit()
+				await _finish_single_loop_recording(token)
 				return
 
 
 func _director_is_current(token: int) -> bool:
 	return active and mode == PetBattleReviewModel.MODE_DIRECTOR and token == _generation
+
+
+func _finish_single_loop_recording(token: int) -> void:
+	if not _director_is_current(token):
+		return
+	if (
+		host.game_audio_manager != null
+		and is_instance_valid(host.game_audio_manager)
+	):
+		host.game_audio_manager.stop_all()
+	var tree: SceneTree = host.get_tree()
+	if tree == null:
+		return
+	# MovieWriter and AudioServer submit their last frame asynchronously. Keep
+	# isolated review textures alive through those drain frames, then release
+	# their ImageTexture cache immediately before quitting so the QA process
+	# does not leave resources behind or flash runtime placeholders.
+	await tree.process_frame
+	await tree.process_frame
+	await RenderingServer.frame_post_draw
+	if standalone_pet_only_review:
+		PetActionAssetCatalog.disable_standalone_review_overlay(
+			focus_form_id
+		)
+	tree.quit()
 
 
 func _queue_director_events(raw_events) -> void:
@@ -743,9 +853,13 @@ func _build_ui() -> void:
 	column.add_child(header)
 	var title := Label.new()
 	title.text = (
-		"Lv140随机10V10 · AI观战场"
-		if mount_form_id == ""
-		else "Lv140全员骑乘 · 动作验收场"
+		"独立战宠完整包 · 14场动作验收"
+		if standalone_pet_only_review
+		else (
+			"Lv140随机10V10 · AI观战场"
+			if mount_form_id == ""
+			else "Lv140全员骑乘 · 动作验收场"
+		)
 	)
 	title.add_theme_font_size_override("font_size", 20)
 	title.add_theme_color_override("font_color", Color(1.0, 0.84, 0.38, 1.0))
@@ -777,17 +891,32 @@ func _build_ui() -> void:
 	focus_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	focus_option.item_selected.connect(_on_focus_selected)
 	option_row.add_child(focus_option)
-	placement_option = OptionButton.new()
-	placement_option.custom_minimum_size = Vector2(190, 34)
-	placement_option.item_selected.connect(_on_placement_selected)
-	option_row.add_child(placement_option)
-	pool_option = OptionButton.new()
-	pool_option.custom_minimum_size = Vector2(190, 34)
-	pool_option.item_selected.connect(_on_pool_selected)
-	option_row.add_child(pool_option)
-	option_row.add_child(_button("换一场", 88.0, new_random_brawl))
-	option_row.add_child(_button("复盘本场", 88.0, replay))
-	option_row.add_child(_button("动作验收", 96.0, start_director))
+	placement_option = null
+	pool_option = null
+	if standalone_pet_only_review:
+		focus_option.disabled = true
+		var standalone_label := Label.new()
+		standalone_label.text = "pet-only · 固定14场 · mounted=0 · 速度1x"
+		standalone_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		standalone_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		standalone_label.add_theme_color_override(
+			"font_color",
+			Color(0.72, 0.88, 0.82, 1.0)
+		)
+		option_row.add_child(standalone_label)
+		option_row.add_child(_button("从第1场复盘", 112.0, start_director))
+	else:
+		placement_option = OptionButton.new()
+		placement_option.custom_minimum_size = Vector2(190, 34)
+		placement_option.item_selected.connect(_on_placement_selected)
+		option_row.add_child(placement_option)
+		pool_option = OptionButton.new()
+		pool_option.custom_minimum_size = Vector2(190, 34)
+		pool_option.item_selected.connect(_on_pool_selected)
+		option_row.add_child(pool_option)
+		option_row.add_child(_button("换一场", 88.0, new_random_brawl))
+		option_row.add_child(_button("复盘本场", 88.0, replay))
+		option_row.add_child(_button("动作验收", 96.0, start_director))
 
 	var control_row := HBoxContainer.new()
 	control_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -797,11 +926,17 @@ func _build_ui() -> void:
 	control_row.add_child(pause_button)
 	control_row.add_child(_button("单帧 .", 76.0, step_one_frame))
 	speed_button = _button("速度 x1", 86.0, cycle_speed)
+	speed_button.disabled = standalone_pet_only_review
 	control_row.add_child(speed_button)
 	control_row.add_child(_button("清零覆盖", 88.0, clear_coverage))
-	control_row.add_child(_button("真实10V10草丛", 132.0, return_to_real_grass))
+	if not standalone_pet_only_review:
+		control_row.add_child(_button("真实10V10草丛", 132.0, return_to_real_grass))
 	var hint := Label.new()
-	hint.text = "快捷键：空格暂停  .单帧  N换一场  R复盘  D动作验收  H隐藏/显示"
+	hint.text = (
+		"快捷键：空格暂停  .单帧  R/D从头复盘  H隐藏/显示"
+		if standalone_pet_only_review
+		else "快捷键：空格暂停  .单帧  N换一场  R复盘  D动作验收  H隐藏/显示"
+	)
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hint.add_theme_font_size_override("font_size", 13)
@@ -815,12 +950,21 @@ func _build_ui() -> void:
 	body.add_child(coverage_label)
 
 	host.hud_root.add_child(root)
-	restore_button = _button("GM工具", 60.0, toggle_collapsed)
+	var restore_width := 82.0 if standalone_pet_only_review else 60.0
+	restore_button = _button(
+		"1× · 工具" if standalone_pet_only_review else "GM工具",
+		restore_width,
+		toggle_collapsed
+	)
 	restore_button.name = "PetBattleReviewRestore"
 	restore_button.z_index = 61
-	restore_button.tooltip_text = "恢复观战工具（快捷键 H）"
+	restore_button.tooltip_text = (
+		"固定速度 1×；恢复动作验收工具（快捷键 H）"
+		if standalone_pet_only_review
+		else "恢复观战工具（快捷键 H）"
+	)
 	restore_button.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	restore_button.offset_left = -74.0
+	restore_button.offset_left = -restore_width - 14.0
 	restore_button.offset_top = -17.0
 	restore_button.offset_right = -12.0
 	restore_button.offset_bottom = 17.0
@@ -847,9 +991,35 @@ func _button(text: String, minimum_width: float, callback: Callable) -> Button:
 
 func _refresh_option_controls() -> void:
 	_option_refreshing = true
-	_populate_option(focus_option, PetBattleReviewModel.pet_options(), focus_form_id, "formId")
-	_populate_option(placement_option, PetBattleReviewModel.placement_options(), placement, "id")
-	_populate_option(pool_option, PetBattleReviewModel.pool_options(), pool_id, "id")
+	if standalone_pet_only_review:
+		_populate_option(
+			focus_option,
+			[{
+				"formId": focus_form_id,
+				"label": "%s · 隔离完整包" % focus_form_id,
+			}],
+			focus_form_id,
+			"formId"
+		)
+	else:
+		_populate_option(
+			focus_option,
+			PetBattleReviewModel.pet_options(),
+			focus_form_id,
+			"formId"
+		)
+		_populate_option(
+			placement_option,
+			PetBattleReviewModel.placement_options(),
+			placement,
+			"id"
+		)
+		_populate_option(
+			pool_option,
+			PetBattleReviewModel.pool_options(),
+			pool_id,
+			"id"
+		)
 	_option_refreshing = false
 	_refresh_status()
 
@@ -869,21 +1039,21 @@ func _populate_option(option: OptionButton, values: Array[Dictionary], selected_
 
 
 func _on_focus_selected(index: int) -> void:
-	if _option_refreshing:
+	if _option_refreshing or standalone_pet_only_review:
 		return
 	focus_form_id = PetBattleReviewModel.normalized_form_id(str(focus_option.get_item_metadata(index)))
 	replay()
 
 
 func _on_placement_selected(index: int) -> void:
-	if _option_refreshing:
+	if _option_refreshing or standalone_pet_only_review:
 		return
 	placement = str(placement_option.get_item_metadata(index))
 	start_brawl(seed_value)
 
 
 func _on_pool_selected(index: int) -> void:
-	if _option_refreshing:
+	if _option_refreshing or standalone_pet_only_review:
 		return
 	pool_id = str(pool_option.get_item_metadata(index))
 	start_brawl(seed_value)
@@ -893,9 +1063,13 @@ func _refresh_status() -> void:
 	if root == null:
 		return
 	var mode_text := (
-		"战术AI观战 · 随机人物/坐骑/宠物/属性"
-		if mode == PetBattleReviewModel.MODE_BRAWL
-		else "动作必现"
+		"独立战宠 · 固定14场 · 骑乘0 · 速度1x"
+		if standalone_pet_only_review
+		else (
+			"战术AI观战 · 随机人物/坐骑/宠物/属性"
+			if mode == PetBattleReviewModel.MODE_BRAWL
+			else "动作必现"
+		)
 	)
 	var arena_name := str(host.battle_state.get("reviewArenaName", "")).strip_edges()
 	if arena_name != "":

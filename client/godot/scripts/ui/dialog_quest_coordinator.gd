@@ -5,6 +5,9 @@ const NpcDialogPresenter := preload("res://scripts/ui/npc_dialog_presenter.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
+const QuestAwakenedPresenter := preload(
+	"res://scripts/ui/quest_awakened_presenter.gd"
+)
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
 
 const DIALOG_ACTION_ACK := "ack"
@@ -51,8 +54,12 @@ func _open_quest_panel() -> void:
 	host._close_mailbox_panel()
 	host._close_hang_matchmaking_panel(false)
 	host._close_auto_settings_panel()
-	host.quest_panel.visible = true
 	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
+	if host.quest_panel.has_method("prepare_open"):
+		host.quest_panel.prepare_open(
+			PlayerProgressModel.active_quest_id(host.player_profile, true)
+		)
+	host.quest_panel.visible = true
 	_refresh_quest_panel()
 	host._sync_battle_buttons()
 	host._layout_hud()
@@ -62,6 +69,9 @@ func _close_quest_panel() -> void:
 
 func _refresh_quest_panel() -> void:
 	if host.quest_panel == null or host.quest_title_label == null or host.quest_detail_label == null:
+		return
+	if host.quest_panel.has_method("is_awakened_quest_panel"):
+		_refresh_awakened_quest_panel()
 		return
 	var quest = PlayerProgressModel.active_quest(host.player_profile)
 	if quest.is_empty():
@@ -211,6 +221,77 @@ func _refresh_quest_panel() -> void:
 		host.quest_route_button.text = "自动寻路"
 		host.quest_route_button.disabled = host.battle_active or host._navigation_target_for_quest(quest).is_empty()
 
+func _refresh_awakened_quest_panel() -> void:
+	var selected_id := ""
+	if host.quest_panel.has_method("selected_quest_id"):
+		selected_id = str(host.quest_panel.selected_quest_id())
+	var view_state := QuestAwakenedPresenter.build_view_state(
+		host.player_profile,
+		selected_id
+	)
+	var detail_value = view_state.get("detail", {})
+	var detail := (
+		(detail_value as Dictionary).duplicate(true)
+		if detail_value is Dictionary
+		else {}
+	)
+	var selected_quest_id := str(view_state.get("selectedQuestId", ""))
+	var selected_quest := QuestModel.quest_for_id(selected_quest_id)
+	var route_target := _navigation_target_for_quest_panel_selection(selected_quest)
+	detail["routeEnabled"] = (
+		not host.battle_active
+		and bool(detail.get("routeAllowedByState", false))
+		and not route_target.is_empty()
+	)
+	view_state["detail"] = detail
+	host.quest_panel.apply_view_state(view_state)
+
+	# Keep the stable legacy labels meaningful for old smoke checks and any
+	# compatibility consumers without exposing duplicate text to players.
+	host.quest_title_label.text = str(detail.get("legacyTitle", "任务"))
+	host.quest_detail_label.text = str(detail.get("legacyDetail", ""))
+	var active_quest_id := PlayerProgressModel.active_quest_id(host.player_profile)
+	if selected_quest_id == active_quest_id and not selected_quest.is_empty():
+		var active_state := PlayerProgressModel.active_quest_state(host.player_profile)
+		_set_quest_reward_controls(
+			selected_quest,
+			str(active_state.get("status", QuestModel.STATUS_ACTIVE))
+		)
+	else:
+		_set_quest_reward_controls({}, "")
+	if host.quest_route_button != null:
+		host.quest_route_button.text = str(
+			detail.get("routeButtonText", "立即前往")
+		)
+		host.quest_route_button.disabled = not bool(detail.get("routeEnabled", false))
+
+func _navigation_target_for_quest_panel_selection(quest: Dictionary) -> Dictionary:
+	if quest.is_empty():
+		return {}
+	var quest_id := str(quest.get("id", ""))
+	var normalized := PlayerProgressModel.normalize_profile(host.player_profile)
+	var states_value = normalized.get("questStates", {})
+	var states := states_value as Dictionary if states_value is Dictionary else {}
+	var has_state := (
+		states.has(quest_id)
+		or quest_id == PlayerProgressModel.active_quest_id(normalized, true)
+	)
+	if has_state:
+		var state := PlayerProgressModel.quest_state_for_id(
+			normalized,
+			quest_id,
+			true
+		)
+		var status := str(state.get("status", QuestModel.STATUS_ACTIVE))
+		if status == QuestModel.STATUS_CLAIMED:
+			return {}
+		if status == QuestModel.STATUS_READY:
+			return host._navigation_target_for_interaction_id(
+				QuestModel.turn_in_id_for(quest)
+			)
+		return host._navigation_target_for_quest(quest)
+	return host._navigation_target_for_interaction_id(QuestModel.giver_id_for(quest))
+
 func _set_quest_reward_controls(quest: Dictionary, status: String) -> void:
 	var can_claim = status == QuestModel.STATUS_READY and PlayerProgressModel.can_claim_active_quest(host.player_profile)
 	var choices: Array[Dictionary] = []
@@ -263,7 +344,8 @@ func _on_quest_claim_pressed() -> void:
 		host._set_world_log_message("\n".join(host._string_array_values(parsed.get("logLines", []))))
 		if bool(parsed.get("ok", false)):
 			host.quest_selected_reward_choice_id = ""
-		_refresh_quest_panel()
+			_prepare_quest_panel_for_active_quest()
+			_refresh_quest_panel()
 		if host.status_label != null:
 			host._update_hud_text()
 		return
@@ -278,6 +360,7 @@ func _on_quest_claim_pressed() -> void:
 	host._set_world_log_message(str(claim_result.get("message", "")))
 	if bool(claim_result.get("ok", false)):
 		host.quest_selected_reward_choice_id = ""
+		_prepare_quest_panel_for_active_quest()
 	_refresh_quest_panel()
 	if host.status_label != null:
 		host._update_hud_text()
@@ -286,12 +369,26 @@ func _on_quest_route_pressed() -> void:
 	if host.battle_active:
 		_refresh_quest_panel()
 		return
-	var target = host._current_task_navigation_target()
+	var target: Dictionary = {}
+	if host.quest_panel != null and host.quest_panel.has_method("selected_quest_id"):
+		var selected_quest := QuestModel.quest_for_id(
+			str(host.quest_panel.selected_quest_id())
+		)
+		target = _navigation_target_for_quest_panel_selection(selected_quest)
+	else:
+		target = host._current_task_navigation_target()
 	if target.is_empty():
-		host._set_world_log_message("当前任务没有可寻路目标。")
+		host._set_world_log_message("所选任务当前没有可前往目标。")
 		return
 	_close_quest_panel()
 	host._route_to_quest_target(target)
+
+func _prepare_quest_panel_for_active_quest() -> void:
+	if host.quest_panel == null or not host.quest_panel.has_method("prepare_open"):
+		return
+	host.quest_panel.prepare_open(
+		PlayerProgressModel.active_quest_id(host.player_profile)
+	)
 
 func _on_task_tracker_route_pressed() -> void:
 	var target = host._current_task_navigation_target()
@@ -363,9 +460,10 @@ func _perform_dialog_action(action_id: String) -> void:
 		DIALOG_ACTION_RECLAIM_BATTLE_PET_EGG:
 			_reclaim_battle_pet_tutorial_egg()
 		DIALOG_ACTION_SHOP:
-			var next_shop_id = str(host.active_dialog_interaction.get("shopId", ""))
+			var shop_interaction: Dictionary = host.active_dialog_interaction.duplicate(true)
+			var next_shop_id = str(shop_interaction.get("shopId", ""))
 			_close_dialog()
-			host._open_shop_panel(next_shop_id)
+			host._open_shop_panel(next_shop_id, shop_interaction)
 		DIALOG_ACTION_OPEN_QUEST:
 			_close_dialog()
 			_open_quest_panel()
@@ -385,8 +483,9 @@ func _perform_dialog_action(action_id: String) -> void:
 			_close_dialog()
 			host._open_family_panel_for_manor(manor_id)
 		DIALOG_ACTION_BANK:
+			var bank_interaction: Dictionary = host.active_dialog_interaction.duplicate(true)
 			_close_dialog()
-			host._open_bank_panel()
+			host._open_bank_panel(bank_interaction)
 		_:
 			_close_dialog()
 

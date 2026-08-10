@@ -38,6 +38,12 @@ const AutoBattleSettingsModel := preload("res://scripts/progression/auto_battle_
 const AutoCaptureFilterModel := preload("res://scripts/progression/auto_capture_filter_model.gd")
 const AutoCaptureSettingsModel := preload("res://scripts/progression/auto_capture_settings_model.gd")
 const AutoCaptureSettingsPresenter := preload("res://scripts/ui/auto_capture_settings_presenter.gd")
+const AutoSettingsAwakenedPresenter := preload(
+	"res://scripts/ui/auto_settings_awakened_presenter.gd"
+)
+const AutoSettingsAwakenedPanel := preload(
+	"res://scripts/ui/auto_settings_awakened_panel.gd"
+)
 const PetGrowthManualEvaluationModel := preload("res://scripts/progression/pet_growth_manual_evaluation_model.gd")
 const PetGrowthManualEvaluationPanel := preload("res://scripts/ui/pet_growth_manual_evaluation_panel.gd")
 const PetPaidResetClientModel := preload("res://scripts/progression/pet_paid_reset_client_model.gd")
@@ -55,6 +61,19 @@ const CombatFormulaDriverABModel := preload("res://scripts/progression/combat_fo
 const CombatFormulaShadowModel := preload("res://scripts/progression/combat_formula_shadow_model.gd")
 const EquipmentModel := preload("res://scripts/progression/equipment_model.gd")
 const EquipmentSynthesisModel := preload("res://scripts/progression/equipment_synthesis_model.gd")
+const EquipmentSynthesisAwakenedPresenter := preload(
+	"res://scripts/ui/equipment_synthesis_awakened_presenter.gd"
+)
+const EquipmentSynthesisAwakenedPanel := preload(
+	"res://scripts/ui/equipment_synthesis_awakened_panel.gd"
+)
+const ShopAwakenedPanel := preload("res://scripts/ui/shop_awakened_panel.gd")
+const BankAwakenedPanel := preload("res://scripts/ui/bank_awakened_panel.gd")
+const MarketAwakenedPanel := preload("res://scripts/ui/market_awakened_panel.gd")
+const CommerceServiceIdentityPresenter := preload(
+	"res://scripts/ui/commerce_service_identity_presenter.gd"
+)
+const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
 const GmQaProfileClientModel := preload("res://scripts/progression/gm_qa_profile_client_model.gd")
 const GmQaPetSamplesClientModel := preload("res://scripts/progression/gm_qa_pet_samples_client_model.gd")
 const GmQaAssetsClientModel := preload("res://scripts/progression/gm_qa_assets_client_model.gd")
@@ -68,19 +87,32 @@ const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const MapRoutePlanner := preload("res://scripts/world/map_route_planner.gd")
+const QuestAwakenedPanel := preload("res://scripts/ui/quest_awakened_panel.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
 const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_economy_ledger_model.gd")
 const NumericExperimentModel := preload("res://scripts/progression/numeric_experiment_model.gd")
 const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbench_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
+const PetGrowthQualityModel := preload("res://scripts/progression/pet_growth_quality_model.gd")
 const PetLevelOnePercentileModel := preload("res://scripts/progression/pet_level_one_percentile_model.gd")
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
+const PetGrowthOverviewPanel := preload("res://scripts/ui/pet_growth_overview_panel.gd")
+const PetGrowthStageButton := preload("res://scripts/ui/pet_growth_stage_button.gd")
+const PetSkillOverviewPanel := preload("res://scripts/ui/pet_skill_overview_panel.gd")
 const PetListEntryButton := preload("res://scripts/ui/pet_list_entry_button.gd")
 const PetCodexPresenter := preload("res://scripts/ui/pet_codex_presenter.gd")
 const PetCodexAwakenedPanel := preload(
 	"res://scripts/ui/pet_codex_awakened_panel.gd"
 )
+const FamilyAwakenedPresenter := preload(
+	"res://scripts/ui/family_awakened_presenter.gd"
+)
+const FamilyAwakenedPanel := preload(
+	"res://scripts/ui/family_awakened_panel.gd"
+)
+const PetShowcasePanel := preload("res://scripts/ui/pet_showcase_panel.gd")
+const PetManagementVisualSkin := preload("res://scripts/ui/pet_management_visual_skin.gd")
 const ItemSlotButton := preload("res://scripts/ui/item_slot_button.gd")
 const ItemDropZone := preload("res://scripts/ui/item_drop_zone.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
@@ -89,7 +121,6 @@ const BackpackAwakenedPanelView := preload("res://scripts/ui/backpack_awakened_p
 const BackpackAwakenedVisualSkin := preload(
 	"res://scripts/ui/backpack_awakened_visual_skin.gd"
 )
-const MarketAwakenedPanel := preload("res://scripts/ui/market_awakened_panel.gd")
 const HangMatchmakingAwakenedPanel := preload(
 	"res://scripts/ui/hang_matchmaking_awakened_panel.gd"
 )
@@ -267,6 +298,7 @@ const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
 const PET_DETAIL_MODE_INSTANCE := "instance"
 const PET_DETAIL_MODE_CODEX := "codex"
 const PET_DETAIL_MODE_GROWTH := "growth"
+const PET_DETAIL_MODE_SKILLS := "skills"
 const PET_FILTER_ALL := "all"
 const PET_FILTER_PARTY := "party"
 const PET_FILTER_STORAGE := "storage"
@@ -383,6 +415,17 @@ var _pet_growth_radar_row: HBoxContainer
 var _pet_level_one_radar: Control
 var _pet_level_one_radar_title: Label
 var _pet_growth_radar_title: Label
+var _pet_growth_overview_panel: Control
+var _pet_skill_overview_panel: Control
+var _pet_growth_details_expanded: bool = false
+var _pet_showcase_panel: Control
+var _pet_roster_scroll: ScrollContainer
+var _pet_roster_toolbar: HBoxContainer
+var _pet_roster_toolbar_toggle_button: Button
+var _pet_roster_codex_gap: Control
+var _pet_manage_action_row: HBoxContainer
+var _pet_primary_action_row: HBoxContainer
+var _pet_detail_mode_column: VBoxContainer
 var market_http_retry_state = IdempotentHttpRetryState.new()
 var market_sell_selected_source_key: String = ""
 var mailbox_http_retry_state = IdempotentHttpRetryState.new()
@@ -6462,323 +6505,195 @@ func _build_hud() -> void:
 	equipment_detail_scroll.add_child(equipment_detail_label)
 	hud_root.add_child(equipment_detail_popup_panel)
 
-	equipment_synthesis_panel = _panel_container("EquipmentSynthesisPanel")
+	equipment_synthesis_panel = EquipmentSynthesisAwakenedPanel.new()
+	equipment_synthesis_panel.prepare()
 	equipment_synthesis_panel.visible = false
 	equipment_synthesis_panel.z_index = 24
-	var synthesis_column = VBoxContainer.new()
-	synthesis_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	synthesis_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	synthesis_column.add_theme_constant_override("separation", 8)
-	equipment_synthesis_panel.add_child(synthesis_column)
-
-	var synthesis_header = HBoxContainer.new()
-	synthesis_header.add_theme_constant_override("separation", 10)
-	synthesis_column.add_child(synthesis_header)
-	var synthesis_title = Label.new()
-	synthesis_title.text = "装备合成"
-	synthesis_title.add_theme_font_size_override("font_size", 21)
-	synthesis_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	synthesis_header.add_child(synthesis_title)
-	equipment_synthesis_close_button = Button.new()
-	equipment_synthesis_close_button.text = "关闭"
-	equipment_synthesis_close_button.custom_minimum_size = Vector2(92, 44)
-	equipment_synthesis_close_button.pressed.connect(_close_equipment_synthesis_panel)
-	synthesis_header.add_child(equipment_synthesis_close_button)
-
-	var synthesis_body = HBoxContainer.new()
-	synthesis_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	synthesis_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	synthesis_body.add_theme_constant_override("separation", 10)
-	synthesis_column.add_child(synthesis_body)
-
-	var synthesis_list_scroll = ScrollContainer.new()
-	synthesis_list_scroll.custom_minimum_size = Vector2(236, 0)
-	synthesis_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	synthesis_body.add_child(synthesis_list_scroll)
-	equipment_synthesis_list_container = VBoxContainer.new()
-	equipment_synthesis_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	equipment_synthesis_list_container.add_theme_constant_override("separation", 7)
-	synthesis_list_scroll.add_child(equipment_synthesis_list_container)
-
-	var synthesis_detail_column = VBoxContainer.new()
-	synthesis_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	synthesis_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	synthesis_detail_column.add_theme_constant_override("separation", 8)
-	synthesis_body.add_child(synthesis_detail_column)
-	var synthesis_detail_scroll = ScrollContainer.new()
-	synthesis_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	synthesis_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	synthesis_detail_column.add_child(synthesis_detail_scroll)
-	equipment_synthesis_detail_label = RichTextLabel.new()
-	equipment_synthesis_detail_label.bbcode_enabled = true
-	equipment_synthesis_detail_label.fit_content = true
-	equipment_synthesis_detail_label.scroll_active = false
-	equipment_synthesis_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	equipment_synthesis_detail_label.add_theme_font_size_override("font_size", 16)
-	equipment_synthesis_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	synthesis_detail_scroll.add_child(equipment_synthesis_detail_label)
-
-	var synthesis_button_row = HBoxContainer.new()
-	synthesis_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	synthesis_button_row.add_theme_constant_override("separation", 8)
-	synthesis_detail_column.add_child(synthesis_button_row)
-	equipment_synthesis_back_button = Button.new()
-	equipment_synthesis_back_button.text = "装备栏"
-	equipment_synthesis_back_button.custom_minimum_size = Vector2(0, 46)
-	equipment_synthesis_back_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	equipment_synthesis_back_button.pressed.connect(_open_equipment_panel)
-	synthesis_button_row.add_child(equipment_synthesis_back_button)
-	equipment_synthesis_action_button = Button.new()
-	equipment_synthesis_action_button.text = "合成"
-	equipment_synthesis_action_button.custom_minimum_size = Vector2(0, 46)
-	equipment_synthesis_action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	equipment_synthesis_action_button.pressed.connect(_on_equipment_synthesis_pressed)
-	synthesis_button_row.add_child(equipment_synthesis_action_button)
+	equipment_synthesis_list_container = equipment_synthesis_panel.list_container
+	equipment_synthesis_detail_label = equipment_synthesis_panel.detail_label
+	equipment_synthesis_back_button = equipment_synthesis_panel.back_button
+	equipment_synthesis_action_button = equipment_synthesis_panel.action_button
+	equipment_synthesis_close_button = equipment_synthesis_panel.close_button
+	equipment_synthesis_panel.close_requested.connect(_close_equipment_synthesis_panel)
+	equipment_synthesis_panel.back_requested.connect(_open_equipment_panel)
+	equipment_synthesis_panel.synthesis_confirmed.connect(_on_equipment_synthesis_pressed)
 	hud_root.add_child(equipment_synthesis_panel)
 
-	shop_panel = _panel_container("ShopPanel")
+	shop_panel = ShopAwakenedPanel.new()
+	shop_panel.prepare()
 	shop_panel.visible = false
 	shop_panel.z_index = 24
-	var shop_column = VBoxContainer.new()
-	shop_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	shop_column.add_theme_constant_override("separation", 8)
-	shop_panel.add_child(shop_column)
-
-	var shop_header = HBoxContainer.new()
-	shop_header.add_theme_constant_override("separation", 10)
-	shop_column.add_child(shop_header)
-	shop_title_label = Label.new()
-	shop_title_label.text = "道具店"
-	shop_title_label.add_theme_font_size_override("font_size", 21)
-	shop_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_header.add_child(shop_title_label)
-	shop_coin_label = Label.new()
-	shop_coin_label.text = "石币 0"
-	shop_coin_label.add_theme_font_size_override("font_size", 17)
-	shop_coin_label.custom_minimum_size = Vector2(112, 0)
-	shop_header.add_child(shop_coin_label)
-	shop_close_button = Button.new()
-	shop_close_button.text = "关闭"
-	shop_close_button.custom_minimum_size = Vector2(92, 44)
-	shop_close_button.pressed.connect(_close_shop_panel)
-	shop_header.add_child(shop_close_button)
-
-	var shop_tabs = HBoxContainer.new()
-	shop_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_tabs.add_theme_constant_override("separation", 8)
-	shop_column.add_child(shop_tabs)
-	shop_buy_button = Button.new()
-	shop_buy_button.text = "购买"
-	shop_buy_button.toggle_mode = true
-	shop_buy_button.custom_minimum_size = Vector2(0, 42)
-	shop_buy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_buy_button.pressed.connect(func() -> void:
-		_set_shop_mode("buy")
-	)
-	shop_tabs.add_child(shop_buy_button)
-	shop_sell_button = Button.new()
-	shop_sell_button.text = "出售"
-	shop_sell_button.toggle_mode = true
-	shop_sell_button.custom_minimum_size = Vector2(0, 42)
-	shop_sell_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_sell_button.pressed.connect(func() -> void:
-		_set_shop_mode("sell")
-	)
-	shop_tabs.add_child(shop_sell_button)
-	shop_repair_button = Button.new()
-	shop_repair_button.text = "修理"
-	shop_repair_button.visible = false
-	shop_repair_button.custom_minimum_size = Vector2(0, 42)
-	shop_repair_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_repair_button.pressed.connect(_on_shop_repair_pressed)
-	shop_tabs.add_child(shop_repair_button)
-
-	var shop_scroll = ScrollContainer.new()
-	shop_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	shop_column.add_child(shop_scroll)
-	shop_list_container = VBoxContainer.new()
-	shop_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_list_container.add_theme_constant_override("separation", 7)
-	shop_scroll.add_child(shop_list_container)
-
-	shop_detail_label = RichTextLabel.new()
-	shop_detail_label.bbcode_enabled = true
-	shop_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	shop_detail_label.fit_content = false
-	shop_detail_label.scroll_active = true
-	shop_detail_label.custom_minimum_size = Vector2(0, 126)
-	shop_detail_label.add_theme_font_size_override("font_size", 16)
-	shop_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_column.add_child(shop_detail_label)
-	shop_equip_after_buy_button = Button.new()
-	shop_equip_after_buy_button.text = "购买后装备"
-	shop_equip_after_buy_button.toggle_mode = true
-	shop_equip_after_buy_button.visible = false
-	shop_equip_after_buy_button.custom_minimum_size = Vector2(0, 40)
-	shop_equip_after_buy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_equip_after_buy_button.pressed.connect(_on_shop_equip_after_buy_pressed)
-	shop_column.add_child(shop_equip_after_buy_button)
-	var shop_quantity_row = HBoxContainer.new()
-	shop_quantity_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_quantity_row.add_theme_constant_override("separation", 8)
-	shop_column.add_child(shop_quantity_row)
-	shop_quantity_minus_button = Button.new()
-	shop_quantity_minus_button.text = "-"
-	shop_quantity_minus_button.custom_minimum_size = Vector2(56, 44)
-	shop_quantity_minus_button.pressed.connect(func() -> void:
-		_set_shop_quantity(shop_quantity - 1)
-	)
-	shop_quantity_row.add_child(shop_quantity_minus_button)
-	shop_quantity_spinbox = SpinBox.new()
-	shop_quantity_spinbox.min_value = 1
-	shop_quantity_spinbox.max_value = 999
-	shop_quantity_spinbox.step = 1
-	shop_quantity_spinbox.value = 1
-	shop_quantity_spinbox.rounded = true
-	shop_quantity_spinbox.custom_minimum_size = Vector2(118, 44)
-	shop_quantity_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_quantity_spinbox.value_changed.connect(func(value: float) -> void:
-		_set_shop_quantity(int(value))
-	)
-	shop_quantity_row.add_child(shop_quantity_spinbox)
-	shop_quantity_plus_button = Button.new()
-	shop_quantity_plus_button.text = "+"
-	shop_quantity_plus_button.custom_minimum_size = Vector2(56, 44)
-	shop_quantity_plus_button.pressed.connect(func() -> void:
-		_set_shop_quantity(shop_quantity + 1)
-	)
-	shop_quantity_row.add_child(shop_quantity_plus_button)
-	shop_quantity_max_button = Button.new()
-	shop_quantity_max_button.text = "最大"
-	shop_quantity_max_button.custom_minimum_size = Vector2(86, 44)
-	shop_quantity_max_button.pressed.connect(func() -> void:
+	shop_title_label = shop_panel.title_label
+	shop_coin_label = shop_panel.currency_label
+	shop_buy_button = shop_panel.buy_button
+	shop_sell_button = shop_panel.sell_button
+	shop_list_container = shop_panel.list_container
+	shop_detail_label = shop_panel.detail_label
+	shop_quantity_minus_button = shop_panel.quantity_minus_button
+	shop_quantity_spinbox = shop_panel.quantity_spinbox
+	shop_quantity_plus_button = shop_panel.quantity_plus_button
+	shop_quantity_max_button = shop_panel.quantity_max_button
+	shop_equip_after_buy_button = shop_panel.equip_after_buy_button
+	shop_action_button = shop_panel.action_button
+	shop_repair_button = shop_panel.repair_button
+	shop_close_button = shop_panel.close_button
+	shop_panel.close_requested.connect(_close_shop_panel)
+	shop_panel.mode_requested.connect(_set_shop_mode)
+	shop_panel.quantity_requested.connect(_set_shop_quantity)
+	shop_panel.maximum_requested.connect(func() -> void:
 		_set_shop_quantity(_shop_quantity_max(shop_selected_item_id))
 	)
-	shop_quantity_row.add_child(shop_quantity_max_button)
-	shop_action_button = ItemSlotButton.new()
-	shop_action_button.text = "购买"
-	shop_action_button.custom_minimum_size = Vector2(0, 46)
-	shop_action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_action_button.pressed.connect(_on_shop_action_pressed)
+	shop_panel.equip_after_buy_requested.connect(func(_enabled: bool) -> void:
+		_on_shop_equip_after_buy_pressed()
+	)
+	shop_panel.repair_requested.connect(_on_shop_repair_pressed)
+	shop_panel.action_requested.connect(_on_shop_action_pressed)
 	(shop_action_button as ItemSlotButton).slot_dropped.connect(_on_item_slot_dropped)
-	shop_column.add_child(shop_action_button)
 	hud_root.add_child(shop_panel)
 
 	pet_panel = _panel_container("PetPanel")
 	pet_panel.visible = false
 	pet_panel.z_index = 24
+	pet_panel.add_theme_stylebox_override(
+		"panel",
+		PetManagementVisualSkin.transparent_panel_style()
+	)
+	PetManagementVisualSkin.add_backdrop(pet_panel)
+	var pet_screen_margin = MarginContainer.new()
+	pet_screen_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_screen_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_screen_margin.add_theme_constant_override("margin_left", 32)
+	pet_screen_margin.add_theme_constant_override("margin_top", 8)
+	pet_screen_margin.add_theme_constant_override("margin_right", 56)
+	pet_screen_margin.add_theme_constant_override("margin_bottom", 10)
+	pet_panel.add_child(pet_screen_margin)
 	var pet_column = VBoxContainer.new()
 	pet_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pet_column.add_theme_constant_override("separation", 8)
-	pet_panel.add_child(pet_column)
+	pet_column.add_theme_constant_override("separation", 2)
+	pet_screen_margin.add_child(pet_column)
 
 	var pet_header = HBoxContainer.new()
-	pet_header.add_theme_constant_override("separation", 10)
+	pet_header.custom_minimum_size = Vector2(0, 48)
+	pet_header.add_theme_constant_override("separation", 7)
 	pet_column.add_child(pet_header)
+	var pet_title_leading_space = Control.new()
+	pet_title_leading_space.custom_minimum_size = Vector2(80, 0)
+	pet_header.add_child(pet_title_leading_space)
+	var pet_header_paw := TextureRect.new()
+	pet_header_paw.custom_minimum_size = Vector2(36, 36)
+	pet_header_paw.texture = PetManagementVisualSkin.content_trimmed_texture(
+		PetManagementVisualSkin.HEADER_PAW_TEXTURE
+	)
+	pet_header_paw.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pet_header_paw.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pet_header_paw.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	pet_header_paw.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pet_header.add_child(pet_header_paw)
 	var pet_title = Label.new()
 	pet_title.text = "宠物"
-	pet_title.add_theme_font_size_override("font_size", 21)
-	pet_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	PetManagementVisualSkin.apply_title(pet_title, 27)
 	pet_header.add_child(pet_title)
+	var pet_header_help := TextureRect.new()
+	pet_header_help.custom_minimum_size = Vector2(28, 28)
+	pet_header_help.texture = PetManagementVisualSkin.content_trimmed_texture(
+		PetManagementVisualSkin.HELP_MEDALLION_TEXTURE
+	)
+	pet_header_help.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pet_header_help.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pet_header_help.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	pet_header_help.tooltip_text = "成长颜色取决于实测成长；Lv1四维独立显示。"
+	pet_header.add_child(pet_header_help)
+	var pet_header_spacer := Control.new()
+	pet_header_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_header.add_child(pet_header_spacer)
 	pet_close_button = Button.new()
-	pet_close_button.text = "关闭"
-	pet_close_button.custom_minimum_size = Vector2(92, 44)
+	PetManagementVisualSkin.apply_close_button(pet_close_button)
 	pet_close_button.pressed.connect(_close_pet_panel)
 	pet_header.add_child(pet_close_button)
 
 	var pet_body = HBoxContainer.new()
 	pet_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pet_body.add_theme_constant_override("separation", 8)
+	pet_body.add_theme_constant_override("separation", 4)
 	pet_column.add_child(pet_body)
 
-	var pet_left_column = VBoxContainer.new()
-	pet_left_column.custom_minimum_size = Vector2(220, 0)
-	pet_left_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pet_left_column.add_theme_constant_override("separation", 6)
-	pet_body.add_child(pet_left_column)
-	var pet_manage_row = HBoxContainer.new()
-	pet_manage_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_manage_row.add_theme_constant_override("separation", 6)
-	pet_left_column.add_child(pet_manage_row)
-	pet_filter_option = _pet_management_option(_pet_filter_options(), pet_filter_mode)
-	pet_filter_option.custom_minimum_size = Vector2(0, 36)
-	pet_filter_option.item_selected.connect(func(index: int) -> void:
-		pet_filter_mode = str(pet_filter_option.get_item_metadata(index))
-		pet_clear_confirm_instance_id = ""
-		_refresh_pet_panel()
-	)
-	pet_manage_row.add_child(pet_filter_option)
-	pet_sort_option = _pet_management_option(_pet_sort_options(), pet_sort_mode)
-	pet_sort_option.custom_minimum_size = Vector2(0, 36)
-	pet_sort_option.item_selected.connect(func(index: int) -> void:
-		var next_sort_mode = str(pet_sort_option.get_item_metadata(index))
-		if next_sort_mode != pet_sort_mode:
-			pet_sort_mode = next_sort_mode
-			pet_sort_descending = _pet_default_sort_descending(pet_sort_mode)
-		else:
-			pet_sort_mode = next_sort_mode
-		pet_clear_confirm_instance_id = ""
-		_refresh_pet_panel()
-	)
-	pet_manage_row.add_child(pet_sort_option)
-	pet_sort_direction_button = Button.new()
-	pet_sort_direction_button.custom_minimum_size = Vector2(40, 36)
-	pet_sort_direction_button.add_theme_font_size_override("font_size", 15)
-	pet_sort_direction_button.pressed.connect(_on_pet_sort_direction_pressed)
-	pet_manage_row.add_child(pet_sort_direction_button)
-	var pet_scroll = ScrollContainer.new()
-	pet_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pet_left_column.add_child(pet_scroll)
-	pet_list_container = VBoxContainer.new()
-	pet_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_list_container.add_theme_constant_override("separation", 7)
-	pet_scroll.add_child(pet_list_container)
-
+	_pet_showcase_panel = PetShowcasePanel.new()
+	_pet_showcase_panel.name = "PetShowcasePanel"
+	_pet_showcase_panel.rename_requested.connect(_on_pet_rename_pressed)
+	pet_body.add_child(_pet_showcase_panel)
+	var pet_detail_shell = HBoxContainer.new()
+	pet_detail_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_shell.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_detail_shell.add_theme_constant_override("separation", 8)
+	pet_body.add_child(pet_detail_shell)
+	var pet_detail_margin = MarginContainer.new()
+	pet_detail_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_detail_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_detail_margin.add_theme_constant_override("margin_left", 57)
+	pet_detail_margin.add_theme_constant_override("margin_top", 47)
+	pet_detail_margin.add_theme_constant_override("margin_right", 34)
+	pet_detail_margin.add_theme_constant_override("margin_bottom", 32)
+	pet_detail_shell.add_child(pet_detail_margin)
 	var pet_detail_column = VBoxContainer.new()
 	pet_detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pet_detail_column.add_theme_constant_override("separation", 6)
-	pet_body.add_child(pet_detail_column)
-	var pet_detail_mode_row = HBoxContainer.new()
-	pet_detail_mode_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_detail_mode_row.add_theme_constant_override("separation", 8)
-	pet_detail_column.add_child(pet_detail_mode_row)
+	pet_detail_margin.add_child(pet_detail_column)
+	var pet_detail_tab_margin = MarginContainer.new()
+	pet_detail_tab_margin.custom_minimum_size = Vector2(138, 0)
+	pet_detail_tab_margin.add_theme_constant_override("margin_top", 34)
+	pet_detail_tab_margin.add_theme_constant_override("margin_left", 2)
+	pet_detail_shell.add_child(pet_detail_tab_margin)
+	_pet_detail_mode_column = VBoxContainer.new()
+	_pet_detail_mode_column.name = "PetDetailModeTabs"
+	_pet_detail_mode_column.custom_minimum_size = Vector2(126, 0)
+	_pet_detail_mode_column.add_theme_constant_override("separation", 8)
+	pet_detail_tab_margin.add_child(_pet_detail_mode_column)
 	pet_detail_instance_button = Button.new()
-	pet_detail_instance_button.text = "个体"
+	pet_detail_instance_button.text = "属性"
 	pet_detail_instance_button.toggle_mode = true
 	pet_detail_instance_button.button_pressed = true
-	pet_detail_instance_button.custom_minimum_size = Vector2(0, 36)
-	pet_detail_instance_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	PetManagementVisualSkin.apply_tab_button(pet_detail_instance_button)
 	pet_detail_instance_button.pressed.connect(func() -> void:
 		_set_pet_detail_mode(PET_DETAIL_MODE_INSTANCE)
 	)
-	pet_detail_mode_row.add_child(pet_detail_instance_button)
-	pet_detail_codex_button = Button.new()
-	pet_detail_codex_button.text = "图鉴"
-	pet_detail_codex_button.toggle_mode = true
-	pet_detail_codex_button.custom_minimum_size = Vector2(0, 36)
-	pet_detail_codex_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_detail_codex_button.pressed.connect(func() -> void:
-		_set_pet_detail_mode(PET_DETAIL_MODE_CODEX)
-	)
-	pet_detail_mode_row.add_child(pet_detail_codex_button)
+	_pet_detail_mode_column.add_child(pet_detail_instance_button)
 	pet_detail_growth_button = Button.new()
 	pet_detail_growth_button.text = "成长"
 	pet_detail_growth_button.toggle_mode = true
-	pet_detail_growth_button.custom_minimum_size = Vector2(0, 36)
-	pet_detail_growth_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	PetManagementVisualSkin.apply_tab_button(pet_detail_growth_button)
 	pet_detail_growth_button.pressed.connect(func() -> void:
 		_set_pet_detail_mode(PET_DETAIL_MODE_GROWTH)
 	)
-	pet_detail_mode_row.add_child(pet_detail_growth_button)
+	_pet_detail_mode_column.add_child(pet_detail_growth_button)
+	pet_skill_button = Button.new()
+	pet_skill_button.text = "技能"
+	pet_skill_button.toggle_mode = true
+	PetManagementVisualSkin.apply_tab_button(pet_skill_button)
+	pet_skill_button.pressed.connect(func() -> void:
+		pet_skill_training_mode = false
+		_set_pet_detail_mode(PET_DETAIL_MODE_SKILLS)
+	)
+	_pet_detail_mode_column.add_child(pet_skill_button)
+	pet_cultivation_button = Button.new()
+	pet_cultivation_button.text = "培养"
+	PetManagementVisualSkin.apply_tab_button(pet_cultivation_button)
+	pet_cultivation_button.pressed.connect(_on_pet_cultivation_pressed)
+	_pet_detail_mode_column.add_child(pet_cultivation_button)
+	pet_detail_codex_button = Button.new()
+	pet_detail_codex_button.text = "图鉴"
+	pet_detail_codex_button.toggle_mode = true
+	PetManagementVisualSkin.apply_codex_button(pet_detail_codex_button)
+	pet_detail_codex_button.pressed.connect(func() -> void:
+		_set_pet_detail_mode(PET_DETAIL_MODE_CODEX)
+	)
 	pet_detail_scroll = ScrollContainer.new()
 	pet_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_detail_scroll.clip_contents = true
+	pet_detail_scroll.get_v_scroll_bar().custom_minimum_size = Vector2(6, 0)
+	pet_detail_scroll.get_v_scroll_bar().modulate = Color(0.72, 0.55, 0.31, 0.46)
 	pet_detail_column.add_child(pet_detail_scroll)
 	var pet_detail_content = VBoxContainer.new()
 	pet_detail_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -6790,17 +6705,36 @@ func _build_hud() -> void:
 	pet_growth_stage_row.add_theme_constant_override("separation", 6)
 	pet_detail_content.add_child(pet_growth_stage_row)
 	for stage in [0, 1, 2]:
-		var stage_button = Button.new()
+		var stage_button = PetGrowthStageButton.new()
 		var stage_index = int(stage)
-		stage_button.text = "%d转成长" % stage_index
-		stage_button.toggle_mode = true
-		stage_button.custom_minimum_size = Vector2(0, 30)
+		stage_button.call("configure_stage", "%d转成长" % stage_index, "", false)
 		stage_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		stage_button.pressed.connect(func() -> void:
 			_set_pet_growth_stage(stage_index)
 		)
 		pet_growth_stage_row.add_child(stage_button)
 		pet_growth_stage_buttons[stage_index] = stage_button
+	_pet_showcase_panel.call("mount_growth_stage_row", pet_growth_stage_row)
+	_pet_growth_overview_panel = PetGrowthOverviewPanel.new()
+	_pet_growth_overview_panel.name = "PetGrowthOverviewPanel"
+	_pet_growth_overview_panel.visible = false
+	_pet_growth_overview_panel.details_toggled.connect(
+		_set_pet_growth_details_expanded
+	)
+	pet_detail_content.add_child(_pet_growth_overview_panel)
+	_pet_skill_overview_panel = PetSkillOverviewPanel.new()
+	_pet_skill_overview_panel.name = "PetSkillOverviewPanel"
+	_pet_skill_overview_panel.visible = false
+	_pet_skill_overview_panel.slot_selected.connect(
+		_on_embedded_pet_skill_slot_selected
+	)
+	_pet_skill_overview_panel.card_selected.connect(
+		_on_embedded_pet_skill_card_selected
+	)
+	_pet_skill_overview_panel.learn_requested.connect(
+		_on_embedded_pet_skill_learn_requested
+	)
+	pet_detail_content.add_child(_pet_skill_overview_panel)
 	pet_growth_table_grid = GridContainer.new()
 	pet_growth_table_grid.columns = 6
 	pet_growth_table_grid.visible = false
@@ -6865,96 +6799,230 @@ func _build_hud() -> void:
 		_on_pet_paid_reset_quote_refresh_requested,
 		_on_pet_paid_reset_confirm_requested
 	)
-	var pet_manage_action_row = HBoxContainer.new()
-	pet_manage_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_manage_action_row.add_theme_constant_override("separation", 8)
-	pet_detail_column.add_child(pet_manage_action_row)
+	_pet_manage_action_row = HBoxContainer.new()
+	_pet_manage_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_pet_manage_action_row.add_theme_constant_override("separation", 5)
+	pet_detail_column.add_child(_pet_manage_action_row)
 	pet_party_up_button = Button.new()
 	pet_party_up_button.text = "上移"
-	pet_party_up_button.custom_minimum_size = Vector2(0, 38)
+	PetManagementVisualSkin.apply_action_button(pet_party_up_button, true)
 	pet_party_up_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_party_up_button.pressed.connect(func() -> void:
 		_on_pet_party_move_pressed(-1)
 	)
-	pet_manage_action_row.add_child(pet_party_up_button)
+	_pet_manage_action_row.add_child(pet_party_up_button)
 	pet_party_down_button = Button.new()
 	pet_party_down_button.text = "下移"
-	pet_party_down_button.custom_minimum_size = Vector2(0, 38)
+	PetManagementVisualSkin.apply_action_button(pet_party_down_button, true)
 	pet_party_down_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_party_down_button.pressed.connect(func() -> void:
 		_on_pet_party_move_pressed(1)
 	)
-	pet_manage_action_row.add_child(pet_party_down_button)
+	_pet_manage_action_row.add_child(pet_party_down_button)
 	pet_lock_button = Button.new()
 	pet_lock_button.text = "锁定"
-	pet_lock_button.custom_minimum_size = Vector2(0, 38)
+	PetManagementVisualSkin.apply_action_button(pet_lock_button, true)
 	pet_lock_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_lock_button.pressed.connect(_on_pet_lock_pressed)
-	pet_manage_action_row.add_child(pet_lock_button)
+	_pet_manage_action_row.add_child(pet_lock_button)
 	pet_batch_store_button = Button.new()
 	pet_batch_store_button.text = "批存"
-	pet_batch_store_button.custom_minimum_size = Vector2(0, 38)
+	PetManagementVisualSkin.apply_action_button(pet_batch_store_button, true)
 	pet_batch_store_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_batch_store_button.pressed.connect(_on_pet_batch_store_pressed)
-	pet_manage_action_row.add_child(pet_batch_store_button)
+	_pet_manage_action_row.add_child(pet_batch_store_button)
 	pet_batch_standby_button = Button.new()
 	pet_batch_standby_button.text = "批待"
-	pet_batch_standby_button.custom_minimum_size = Vector2(0, 38)
+	PetManagementVisualSkin.apply_action_button(pet_batch_standby_button, true)
 	pet_batch_standby_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_batch_standby_button.pressed.connect(func() -> void:
 		_on_pet_batch_state_pressed(PlayerProgressModel.PET_STATE_STANDBY)
 	)
-	pet_manage_action_row.add_child(pet_batch_standby_button)
+	_pet_manage_action_row.add_child(pet_batch_standby_button)
 	pet_batch_rest_button = Button.new()
 	pet_batch_rest_button.text = "批休"
-	pet_batch_rest_button.custom_minimum_size = Vector2(0, 38)
+	PetManagementVisualSkin.apply_action_button(pet_batch_rest_button, true)
 	pet_batch_rest_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_batch_rest_button.pressed.connect(func() -> void:
 		_on_pet_batch_state_pressed(PlayerProgressModel.PET_STATE_REST)
 	)
-	pet_manage_action_row.add_child(pet_batch_rest_button)
-	var pet_button_row = HBoxContainer.new()
-	pet_button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_button_row.add_theme_constant_override("separation", 8)
-	pet_detail_column.add_child(pet_button_row)
+	_pet_manage_action_row.add_child(pet_batch_rest_button)
+	_pet_primary_action_row = HBoxContainer.new()
+	_pet_primary_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_pet_primary_action_row.add_theme_constant_override("separation", 5)
+	pet_detail_column.add_child(_pet_primary_action_row)
 	pet_state_cycle_button = Button.new()
 	pet_state_cycle_button.text = "休息"
-	pet_state_cycle_button.custom_minimum_size = Vector2(0, 42)
-	pet_state_cycle_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	PetManagementVisualSkin.apply_action_button(pet_state_cycle_button)
 	pet_state_cycle_button.pressed.connect(_on_pet_state_cycle_pressed)
-	pet_button_row.add_child(pet_state_cycle_button)
+	_pet_showcase_panel.call("mount_primary_action", pet_state_cycle_button)
 	pet_stable_button = Button.new()
 	pet_stable_button.text = "存入"
-	pet_stable_button.custom_minimum_size = Vector2(0, 42)
+	PetManagementVisualSkin.apply_action_button(pet_stable_button)
 	pet_stable_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_stable_button.pressed.connect(_on_pet_stable_pressed)
-	pet_button_row.add_child(pet_stable_button)
+	_pet_primary_action_row.add_child(pet_stable_button)
 	pet_rename_button = Button.new()
 	pet_rename_button.text = "改名"
-	pet_rename_button.custom_minimum_size = Vector2(0, 42)
+	PetManagementVisualSkin.apply_action_button(pet_rename_button)
 	pet_rename_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_rename_button.pressed.connect(_on_pet_rename_pressed)
-	pet_button_row.add_child(pet_rename_button)
-	pet_skill_button = Button.new()
-	pet_skill_button.text = "宠技"
-	pet_skill_button.custom_minimum_size = Vector2(0, 42)
-	pet_skill_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_skill_button.pressed.connect(func() -> void:
-		_open_pet_skill_panel(false)
-	)
-	pet_button_row.add_child(pet_skill_button)
-	pet_cultivation_button = Button.new()
-	pet_cultivation_button.text = "转强"
-	pet_cultivation_button.custom_minimum_size = Vector2(0, 42)
-	pet_cultivation_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pet_cultivation_button.pressed.connect(_on_pet_cultivation_pressed)
-	pet_button_row.add_child(pet_cultivation_button)
+	_pet_primary_action_row.add_child(pet_rename_button)
 	pet_drop_button = Button.new()
 	pet_drop_button.text = "丢弃"
-	pet_drop_button.custom_minimum_size = Vector2(0, 42)
+	PetManagementVisualSkin.apply_action_button(pet_drop_button)
 	pet_drop_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pet_drop_button.pressed.connect(_on_pet_drop_pressed)
-	pet_button_row.add_child(pet_drop_button)
+	_pet_primary_action_row.add_child(pet_drop_button)
+	_pet_roster_toolbar = HBoxContainer.new()
+	_pet_roster_toolbar.name = "PetRosterToolbar"
+	_pet_roster_toolbar.custom_minimum_size = Vector2(0, 30)
+	_pet_roster_toolbar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_pet_roster_toolbar.add_theme_constant_override("separation", 6)
+	_pet_roster_toolbar.visible = false
+	pet_column.add_child(_pet_roster_toolbar)
+	var pet_roster_title = Label.new()
+	pet_roster_title.text = "宠物栏"
+	pet_roster_title.custom_minimum_size = Vector2(68, 32)
+	pet_roster_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	pet_roster_title.add_theme_font_size_override("font_size", 15)
+	pet_roster_title.add_theme_color_override("font_color", Color(0.96, 0.86, 0.48, 1.0))
+	_pet_roster_toolbar.add_child(pet_roster_title)
+	pet_filter_option = _pet_management_option(_pet_filter_options(), pet_filter_mode)
+	pet_filter_option.custom_minimum_size = Vector2(132, 32)
+	PetManagementVisualSkin.apply_option_button(pet_filter_option)
+	pet_filter_option.item_selected.connect(func(index: int) -> void:
+		pet_filter_mode = str(pet_filter_option.get_item_metadata(index))
+		pet_clear_confirm_instance_id = ""
+		_refresh_pet_panel()
+	)
+	_pet_roster_toolbar.add_child(pet_filter_option)
+	pet_sort_option = _pet_management_option(_pet_sort_options(), pet_sort_mode)
+	pet_sort_option.custom_minimum_size = Vector2(132, 32)
+	PetManagementVisualSkin.apply_option_button(pet_sort_option)
+	pet_sort_option.item_selected.connect(func(index: int) -> void:
+		var next_sort_mode = str(pet_sort_option.get_item_metadata(index))
+		if next_sort_mode != pet_sort_mode:
+			pet_sort_mode = next_sort_mode
+			pet_sort_descending = _pet_default_sort_descending(pet_sort_mode)
+		else:
+			pet_sort_mode = next_sort_mode
+		pet_clear_confirm_instance_id = ""
+		_refresh_pet_panel()
+	)
+	_pet_roster_toolbar.add_child(pet_sort_option)
+	pet_sort_direction_button = Button.new()
+	PetManagementVisualSkin.apply_action_button(pet_sort_direction_button, true)
+	pet_sort_direction_button.custom_minimum_size = Vector2(54, 32)
+	pet_sort_direction_button.add_theme_font_size_override("font_size", 15)
+	pet_sort_direction_button.pressed.connect(_on_pet_sort_direction_pressed)
+	_pet_roster_toolbar.add_child(pet_sort_direction_button)
+	var pet_roster_hint = Label.new()
+	pet_roster_hint.text = "左键查看｜右键驯宠"
+	pet_roster_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_roster_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	pet_roster_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	pet_roster_hint.add_theme_font_size_override("font_size", 12)
+	pet_roster_hint.add_theme_color_override("font_color", Color(0.64, 0.68, 0.66, 1.0))
+	_pet_roster_toolbar.add_child(pet_roster_hint)
+	var pet_roster_shell := HBoxContainer.new()
+	pet_roster_shell.custom_minimum_size = Vector2(0, 102)
+	pet_roster_shell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pet_roster_shell.add_theme_constant_override("separation", 7)
+	pet_column.add_child(pet_roster_shell)
+	_pet_roster_scroll = ScrollContainer.new()
+	_pet_roster_scroll.name = "PetRosterScroll"
+	_pet_roster_scroll.custom_minimum_size = Vector2(0, 102)
+	_pet_roster_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_pet_roster_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_pet_roster_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	pet_roster_shell.add_child(_pet_roster_scroll)
+	pet_list_container = HBoxContainer.new()
+	pet_list_container.name = "PetRosterCards"
+	pet_list_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pet_list_container.add_theme_constant_override("separation", 7)
+	_pet_roster_scroll.add_child(pet_list_container)
+	pet_list_container.add_child(pet_detail_codex_button)
+	_pet_roster_codex_gap = Control.new()
+	_pet_roster_codex_gap.custom_minimum_size.x = 22.0
+	_pet_roster_codex_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pet_list_container.add_child(_pet_roster_codex_gap)
+	var pet_roster_controls := Control.new()
+	pet_roster_controls.custom_minimum_size = Vector2(94, 98)
+	pet_roster_shell.add_child(pet_roster_controls)
+	var pet_roster_page_texture := TextureRect.new()
+	pet_roster_page_texture.position = Vector2(0, 10)
+	pet_roster_page_texture.size = Vector2(42, 78)
+	pet_roster_page_texture.texture = PetManagementVisualSkin.content_trimmed_texture(
+		PetManagementVisualSkin.ROSTER_UP_DOWN_CONTROL_TEXTURE
+	)
+	pet_roster_page_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pet_roster_page_texture.stretch_mode = TextureRect.STRETCH_SCALE
+	pet_roster_page_texture.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	pet_roster_page_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pet_roster_controls.add_child(pet_roster_page_texture)
+	var pet_roster_previous_button := Button.new()
+	pet_roster_previous_button.text = "前"
+	pet_roster_previous_button.position = Vector2(2, 12)
+	pet_roster_previous_button.size = Vector2(38, 35)
+	pet_roster_previous_button.flat = true
+	pet_roster_previous_button.add_theme_font_override(
+		"font",
+		PetManagementVisualSkin.display_font()
+	)
+	pet_roster_previous_button.add_theme_font_size_override("font_size", 14)
+	pet_roster_previous_button.add_theme_color_override(
+		"font_color",
+		PetManagementVisualSkin.BROWN_TEXT
+	)
+	pet_roster_previous_button.tooltip_text = "向前翻宠物栏"
+	pet_roster_previous_button.pressed.connect(func() -> void:
+		_pet_roster_scroll.scroll_horizontal = maxi(
+			0,
+			_pet_roster_scroll.scroll_horizontal - 282
+		)
+	)
+	pet_roster_controls.add_child(pet_roster_previous_button)
+	var pet_roster_next_button := Button.new()
+	pet_roster_next_button.text = "后"
+	pet_roster_next_button.position = Vector2(2, 50)
+	pet_roster_next_button.size = Vector2(38, 35)
+	pet_roster_next_button.flat = true
+	pet_roster_next_button.add_theme_font_override(
+		"font",
+		PetManagementVisualSkin.display_font()
+	)
+	pet_roster_next_button.add_theme_font_size_override("font_size", 14)
+	pet_roster_next_button.add_theme_color_override(
+		"font_color",
+		PetManagementVisualSkin.BROWN_TEXT
+	)
+	pet_roster_next_button.tooltip_text = "向后翻宠物栏"
+	pet_roster_next_button.pressed.connect(func() -> void:
+		_pet_roster_scroll.scroll_horizontal += 282
+	)
+	pet_roster_controls.add_child(pet_roster_next_button)
+	_pet_roster_toolbar_toggle_button = Button.new()
+	_pet_roster_toolbar_toggle_button.text = "状\n态"
+	PetManagementVisualSkin.apply_action_button(
+		_pet_roster_toolbar_toggle_button,
+		true
+	)
+	_pet_roster_toolbar_toggle_button.position = Vector2(48, 7)
+	_pet_roster_toolbar_toggle_button.size = Vector2(44, 84)
+	_pet_roster_toolbar_toggle_button.add_theme_font_size_override("font_size", 15)
+	_pet_roster_toolbar_toggle_button.tooltip_text = "展开筛选、排序与状态管理"
+	_pet_roster_toolbar_toggle_button.pressed.connect(func() -> void:
+		_pet_roster_toolbar.visible = not _pet_roster_toolbar.visible
+		_pet_roster_toolbar_toggle_button.text = (
+			"收\n起" if _pet_roster_toolbar.visible else "状\n态"
+		)
+	)
+	pet_roster_controls.add_child(_pet_roster_toolbar_toggle_button)
+	var pet_roster_trailing_space := Control.new()
+	pet_roster_trailing_space.custom_minimum_size.x = 21.0
+	pet_roster_trailing_space.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pet_roster_shell.add_child(pet_roster_trailing_space)
 	hud_root.add_child(pet_panel)
 	pet_context_menu = PopupMenu.new()
 	pet_context_menu.name = "PetContextMenu"
@@ -6980,61 +7048,22 @@ func _build_hud() -> void:
 	codex_close_button = codex_view.close_button
 	hud_root.add_child(codex_panel)
 
-	quest_panel = _panel_container("QuestPanel")
+	var awakened_quest_panel := QuestAwakenedPanel.new()
+	awakened_quest_panel.apply_view_state({})
+	quest_panel = awakened_quest_panel
 	quest_panel.visible = false
 	quest_panel.z_index = 24
-	var quest_column = VBoxContainer.new()
-	quest_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	quest_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	quest_column.add_theme_constant_override("separation", 10)
-	quest_panel.add_child(quest_column)
-
-	var quest_header = HBoxContainer.new()
-	quest_header.add_theme_constant_override("separation", 10)
-	quest_column.add_child(quest_header)
-	quest_title_label = Label.new()
-	quest_title_label.text = "任务"
-	quest_title_label.add_theme_font_size_override("font_size", 21)
-	quest_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	quest_header.add_child(quest_title_label)
-	quest_close_button = Button.new()
-	quest_close_button.text = "关闭"
-	quest_close_button.custom_minimum_size = Vector2(92, 44)
-	quest_close_button.pressed.connect(_close_quest_panel)
-	quest_header.add_child(quest_close_button)
-
-	var quest_detail_scroll = ScrollContainer.new()
-	quest_detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	quest_detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	quest_column.add_child(quest_detail_scroll)
-	quest_detail_label = Label.new()
-	quest_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	quest_detail_label.add_theme_font_size_override("font_size", 17)
-	quest_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	quest_detail_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	quest_detail_scroll.add_child(quest_detail_label)
-
-	quest_reward_choice_option = OptionButton.new()
-	quest_reward_choice_option.visible = false
-	quest_reward_choice_option.custom_minimum_size = Vector2(0, 44)
-	quest_reward_choice_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quest_title_label = awakened_quest_panel.legacy_title_label
+	quest_detail_label = awakened_quest_panel.legacy_detail_label
+	quest_reward_choice_option = awakened_quest_panel.reward_choice_option
+	quest_claim_button = awakened_quest_panel.claim_button
+	quest_route_button = awakened_quest_panel.route_button
+	quest_close_button = awakened_quest_panel.close_button
+	awakened_quest_panel.close_requested.connect(_close_quest_panel)
+	awakened_quest_panel.quest_selected.connect(_on_quest_catalog_selected)
 	quest_reward_choice_option.item_selected.connect(_on_quest_reward_choice_selected)
-	quest_column.add_child(quest_reward_choice_option)
-
-	quest_claim_button = Button.new()
-	quest_claim_button.text = "领取奖励"
-	quest_claim_button.visible = false
-	quest_claim_button.custom_minimum_size = Vector2(0, 48)
-	quest_claim_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	quest_claim_button.pressed.connect(_on_quest_claim_pressed)
-	quest_column.add_child(quest_claim_button)
-
-	quest_route_button = Button.new()
-	quest_route_button.text = "自动寻路"
-	quest_route_button.custom_minimum_size = Vector2(0, 48)
-	quest_route_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	quest_route_button.pressed.connect(_on_quest_route_pressed)
-	quest_column.add_child(quest_route_button)
 	hud_root.add_child(quest_panel)
 
 	var awakened_map_panel := MapAwakenedPanel.new()
@@ -7277,98 +7306,31 @@ func _build_hud() -> void:
 	party_invite_panel.add_child(party_invite_http_request)
 	hud_root.add_child(party_invite_panel)
 
-	family_panel = _panel_container("FamilyPanel")
+	var family_view := FamilyAwakenedPanel.new()
+	family_view.apply_view_state({})
+	family_panel = family_view
 	family_panel.visible = false
 	family_panel.z_index = 24
-	var family_column = VBoxContainer.new()
-	family_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	family_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	family_column.add_theme_constant_override("separation", 8)
-	family_panel.add_child(family_column)
-
-	var family_header = HBoxContainer.new()
-	family_header.add_theme_constant_override("separation", 10)
-	family_column.add_child(family_header)
-	var family_title_label = Label.new()
-	family_title_label.text = "家族与庄园"
-	family_title_label.add_theme_font_size_override("font_size", 21)
-	family_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	family_header.add_child(family_title_label)
-	family_refresh_button = Button.new()
-	family_refresh_button.text = "刷新"
-	family_refresh_button.custom_minimum_size = Vector2(80, 44)
-	family_refresh_button.pressed.connect(_request_family_state)
-	family_header.add_child(family_refresh_button)
-	family_leave_button = Button.new()
-	family_leave_button.text = "离族"
-	family_leave_button.custom_minimum_size = Vector2(80, 44)
-	family_leave_button.pressed.connect(_on_family_leave_pressed)
-	family_header.add_child(family_leave_button)
-	var family_close_button = Button.new()
-	family_close_button.text = "关闭"
-	family_close_button.custom_minimum_size = Vector2(92, 44)
-	family_close_button.pressed.connect(_close_family_panel)
-	family_header.add_child(family_close_button)
-
-	family_status_label = Label.new()
-	family_status_label.text = ""
-	family_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	family_status_label.add_theme_font_size_override("font_size", 15)
-	family_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
-	family_status_label.custom_minimum_size = Vector2(0, 30)
-	family_column.add_child(family_status_label)
-
-	var family_create_row = HBoxContainer.new()
-	family_create_row.add_theme_constant_override("separation", 8)
-	family_column.add_child(family_create_row)
-	family_name_input = LineEdit.new()
-	family_name_input.placeholder_text = "输入家族名"
-	family_name_input.max_length = 12
-	family_name_input.custom_minimum_size = Vector2(0, 42)
-	family_name_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	family_create_row.add_child(family_name_input)
-	family_create_button = Button.new()
-	family_create_button.text = "成立"
-	family_create_button.custom_minimum_size = Vector2(92, 42)
+	family_view.close_requested.connect(_close_family_panel)
+	family_view.refresh_requested.connect(_request_family_state)
+	family_view.leave_requested.connect(_on_family_leave_pressed)
+	family_view.join_requested.connect(_on_family_join_pressed)
+	family_view.tab_selected.connect(_on_family_awakened_tab_selected)
+	family_view.challenge_requested.connect(_on_family_challenge_manor_pressed)
+	family_view.war_enter_requested.connect(_on_family_enter_manor_war_pressed)
+	family_view.war_leave_requested.connect(_on_family_leave_manor_war_pressed)
+	family_view.war_battle_requested.connect(_on_family_start_manor_war_battle_pressed)
+	family_view.war_resolve_requested.connect(_on_family_resolve_manor_war_pressed)
+	family_view.shop_requested.connect(_on_family_open_manor_shop_pressed)
+	family_status_label = family_view.status_label
+	family_name_input = family_view.name_input
+	family_create_button = family_view.create_button
+	family_refresh_button = family_view.refresh_button
+	family_leave_button = family_view.leave_button
+	family_summary_container = family_view.family_summary_container
+	family_list_container = family_view.family_list_container
+	manor_list_container = family_view.manor_list_container
 	family_create_button.pressed.connect(_on_family_create_pressed)
-	family_create_row.add_child(family_create_button)
-
-	var family_scroll = ScrollContainer.new()
-	family_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	family_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	family_column.add_child(family_scroll)
-	var family_content = VBoxContainer.new()
-	family_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	family_content.add_theme_constant_override("separation", 10)
-	family_scroll.add_child(family_content)
-
-	var family_summary_title = Label.new()
-	family_summary_title.text = "我的家族"
-	family_summary_title.add_theme_font_size_override("font_size", 17)
-	family_content.add_child(family_summary_title)
-	family_summary_container = VBoxContainer.new()
-	family_summary_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	family_summary_container.add_theme_constant_override("separation", 7)
-	family_content.add_child(family_summary_container)
-
-	var family_list_title = Label.new()
-	family_list_title.text = "家族列表"
-	family_list_title.add_theme_font_size_override("font_size", 17)
-	family_content.add_child(family_list_title)
-	family_list_container = VBoxContainer.new()
-	family_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	family_list_container.add_theme_constant_override("separation", 7)
-	family_content.add_child(family_list_container)
-
-	var manor_list_title = Label.new()
-	manor_list_title.text = "九大庄园"
-	manor_list_title.add_theme_font_size_override("font_size", 17)
-	family_content.add_child(manor_list_title)
-	manor_list_container = VBoxContainer.new()
-	manor_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	manor_list_container.add_theme_constant_override("separation", 7)
-	family_content.add_child(manor_list_container)
-
 	family_http_request = HTTPRequest.new()
 	family_http_request.timeout = 8.0
 	family_http_request.request_completed.connect(_on_family_http_request_completed)
@@ -7648,153 +7610,36 @@ func _build_hud() -> void:
 
 	_build_market_panel()
 
-	bank_panel = _panel_container("BankPanel")
+	bank_panel = BankAwakenedPanel.new()
+	bank_panel.prepare()
 	bank_panel.visible = false
 	bank_panel.z_index = 24
-	var bank_column = VBoxContainer.new()
-	bank_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bank_column.add_theme_constant_override("separation", 8)
-	bank_panel.add_child(bank_column)
-
-	var bank_header = HBoxContainer.new()
-	bank_header.add_theme_constant_override("separation", 10)
-	bank_column.add_child(bank_header)
-	var bank_title = Label.new()
-	bank_title.text = "银行"
-	bank_title.add_theme_font_size_override("font_size", 21)
-	bank_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_header.add_child(bank_title)
-	bank_close_button = Button.new()
-	bank_close_button.text = "关闭"
-	bank_close_button.custom_minimum_size = Vector2(92, 44)
-	bank_close_button.pressed.connect(_close_bank_panel)
-	bank_header.add_child(bank_close_button)
-
-	var bank_body = HBoxContainer.new()
-	bank_body.add_theme_constant_override("separation", 10)
-	bank_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bank_column.add_child(bank_body)
-	var bank_list_scroll = ScrollContainer.new()
-	bank_list_scroll.custom_minimum_size = Vector2(600, 0)
-	bank_list_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bank_body.add_child(bank_list_scroll)
-	bank_list_container = VBoxContainer.new()
-	bank_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_list_container.add_theme_constant_override("separation", 7)
-	bank_list_scroll.add_child(bank_list_container)
-
-	var bank_detail_column = VBoxContainer.new()
-	bank_detail_column.custom_minimum_size = Vector2(280, 0)
-	bank_detail_column.size_flags_horizontal = Control.SIZE_FILL
-	bank_detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bank_detail_column.add_theme_constant_override("separation", 8)
-	bank_body.add_child(bank_detail_column)
-	bank_detail_label = RichTextLabel.new()
-	bank_detail_label.bbcode_enabled = false
-	bank_detail_label.fit_content = false
-	bank_detail_label.scroll_active = true
-	bank_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	bank_detail_label.custom_minimum_size = Vector2(0, 150)
-	bank_detail_label.add_theme_font_size_override("font_size", 16)
-	bank_detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_detail_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bank_detail_column.add_child(bank_detail_label)
-	bank_unlock_tab_button = Button.new()
-	bank_unlock_tab_button.text = "解锁银行页"
-	bank_unlock_tab_button.custom_minimum_size = Vector2(0, 44)
-	bank_unlock_tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_unlock_tab_button.pressed.connect(_on_bank_unlock_tab_pressed)
-	bank_detail_column.add_child(bank_unlock_tab_button)
-
-	var bank_item_quantity_label := Label.new()
-	bank_item_quantity_label.text = "物品数量"
-	bank_item_quantity_label.add_theme_font_size_override("font_size", 14)
-	bank_item_quantity_label.add_theme_color_override("font_color", Color(0.82, 0.80, 0.70, 0.92))
-	bank_detail_column.add_child(bank_item_quantity_label)
-	bank_quantity_spinbox = SpinBox.new()
-	bank_quantity_spinbox.min_value = 1
-	bank_quantity_spinbox.max_value = 999
-	bank_quantity_spinbox.step = 1
-	bank_quantity_spinbox.value = 1
-	bank_quantity_spinbox.rounded = true
-	bank_quantity_spinbox.custom_minimum_size = Vector2(0, 42)
-	bank_quantity_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_quantity_spinbox.value_changed.connect(func(value: float) -> void:
-		_set_bank_quantity(int(value))
-	)
-	bank_detail_column.add_child(bank_quantity_spinbox)
-
-	var bank_item_row = HBoxContainer.new()
-	bank_item_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_item_row.add_theme_constant_override("separation", 8)
-	bank_detail_column.add_child(bank_item_row)
-	bank_deposit_button = ItemSlotButton.new()
-	bank_deposit_button.text = "存入物品"
-	bank_deposit_button.custom_minimum_size = Vector2(0, 46)
-	bank_deposit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_deposit_button.pressed.connect(_on_bank_deposit_pressed)
-	(bank_deposit_button as ItemSlotButton).slot_dropped.connect(_on_item_slot_dropped)
-	bank_item_row.add_child(bank_deposit_button)
-	bank_withdraw_button = ItemSlotButton.new()
-	bank_withdraw_button.text = "取出物品"
-	bank_withdraw_button.custom_minimum_size = Vector2(0, 46)
-	bank_withdraw_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_withdraw_button.pressed.connect(_on_bank_withdraw_pressed)
-	(bank_withdraw_button as ItemSlotButton).slot_dropped.connect(_on_item_slot_dropped)
-	bank_item_row.add_child(bank_withdraw_button)
-
-	var bank_coin_quantity_label := Label.new()
-	bank_coin_quantity_label.text = "石币数量"
-	bank_coin_quantity_label.add_theme_font_size_override("font_size", 14)
-	bank_coin_quantity_label.add_theme_color_override("font_color", Color(0.82, 0.80, 0.70, 0.92))
-	bank_detail_column.add_child(bank_coin_quantity_label)
-	bank_coin_quantity_spinbox = SpinBox.new()
-	bank_coin_quantity_spinbox.min_value = 1
-	bank_coin_quantity_spinbox.max_value = 100000000
-	bank_coin_quantity_spinbox.step = 1
-	bank_coin_quantity_spinbox.value = 1000
-	bank_coin_quantity_spinbox.rounded = true
-	bank_coin_quantity_spinbox.custom_minimum_size = Vector2(0, 42)
-	bank_coin_quantity_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_coin_quantity_spinbox.value_changed.connect(func(value: float) -> void:
-		_set_bank_coin_quantity(int(value))
-	)
-	bank_detail_column.add_child(bank_coin_quantity_spinbox)
-
-	var bank_coin_row = HBoxContainer.new()
-	bank_coin_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_coin_row.add_theme_constant_override("separation", 8)
-	bank_detail_column.add_child(bank_coin_row)
-	bank_coin_deposit_button = Button.new()
-	bank_coin_deposit_button.text = "存石币"
-	bank_coin_deposit_button.custom_minimum_size = Vector2(0, 44)
-	bank_coin_deposit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_coin_deposit_button.pressed.connect(func() -> void:
+	bank_list_container = bank_panel.list_container
+	bank_detail_label = bank_panel.detail_label
+	bank_quantity_spinbox = bank_panel.quantity_spinbox
+	bank_coin_quantity_spinbox = bank_panel.coin_quantity_spinbox
+	bank_deposit_button = bank_panel.deposit_button
+	bank_withdraw_button = bank_panel.withdraw_button
+	bank_coin_deposit_button = bank_panel.coin_deposit_button
+	bank_coin_withdraw_button = bank_panel.coin_withdraw_button
+	bank_unlock_tab_button = bank_panel.unlock_tab_button
+	bank_status_label = bank_panel.status_label
+	bank_close_button = bank_panel.close_button
+	bank_http_request = bank_panel.http_request
+	bank_panel.close_requested.connect(_close_bank_panel)
+	bank_panel.item_quantity_requested.connect(_set_bank_quantity)
+	bank_panel.coin_quantity_requested.connect(_set_bank_coin_quantity)
+	bank_panel.deposit_requested.connect(_on_bank_deposit_pressed)
+	bank_panel.withdraw_requested.connect(_on_bank_withdraw_pressed)
+	bank_panel.coin_deposit_requested.connect(func() -> void:
 		_start_bank_coin_transaction("deposit")
 	)
-	bank_coin_row.add_child(bank_coin_deposit_button)
-	bank_coin_withdraw_button = Button.new()
-	bank_coin_withdraw_button.text = "取石币"
-	bank_coin_withdraw_button.custom_minimum_size = Vector2(0, 44)
-	bank_coin_withdraw_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_coin_withdraw_button.pressed.connect(func() -> void:
+	bank_panel.coin_withdraw_requested.connect(func() -> void:
 		_start_bank_coin_transaction("withdraw")
 	)
-	bank_coin_row.add_child(bank_coin_withdraw_button)
-
-	bank_status_label = Label.new()
-	bank_status_label.text = ""
-	bank_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	bank_status_label.add_theme_font_size_override("font_size", 14)
-	bank_status_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45, 1.0))
-	bank_status_label.custom_minimum_size = Vector2(0, 34)
-	bank_detail_column.add_child(bank_status_label)
-	bank_http_request = HTTPRequest.new()
-	bank_http_request.timeout = 8.0
-	bank_panel.add_child(bank_http_request)
+	bank_panel.unlock_requested.connect(_on_bank_unlock_tab_pressed)
+	(bank_deposit_button as ItemSlotButton).slot_dropped.connect(_on_item_slot_dropped)
+	(bank_withdraw_button as ItemSlotButton).slot_dropped.connect(_on_item_slot_dropped)
 	hud_root.add_child(bank_panel)
 
 	_build_item_stack_split_panel(hud_root)
@@ -7802,68 +7647,18 @@ func _build_hud() -> void:
 	_build_item_slot_detail_panel(hud_root)
 	_build_backpack_discard_confirm_panel(hud_root)
 
-	auto_settings_panel = _panel_container("AutoBattleSettingsPanel")
+	auto_settings_panel = AutoSettingsAwakenedPanel.new()
 	auto_settings_panel.visible = false
 	auto_settings_panel.z_index = 24
-	var auto_settings_column = VBoxContainer.new()
-	auto_settings_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	auto_settings_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	auto_settings_column.add_theme_constant_override("separation", 8)
-	auto_settings_panel.add_child(auto_settings_column)
-
-	var auto_settings_header = HBoxContainer.new()
-	auto_settings_header.add_theme_constant_override("separation", 10)
-	auto_settings_column.add_child(auto_settings_header)
-	var auto_settings_title = Label.new()
-	auto_settings_title.text = "内挂设置"
-	auto_settings_title.add_theme_font_size_override("font_size", 21)
-	auto_settings_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	auto_settings_header.add_child(auto_settings_title)
-	auto_settings_close_button = Button.new()
-	auto_settings_close_button.text = "关闭"
-	auto_settings_close_button.custom_minimum_size = Vector2(92, 44)
-	auto_settings_close_button.pressed.connect(_close_auto_settings_panel)
-	auto_settings_header.add_child(auto_settings_close_button)
-
-	var auto_settings_tab_row = HBoxContainer.new()
-	auto_settings_tab_row.add_theme_constant_override("separation", 8)
-	auto_settings_column.add_child(auto_settings_tab_row)
-	auto_settings_battle_tab_button = Button.new()
-	auto_settings_battle_tab_button.text = "战斗"
-	auto_settings_battle_tab_button.toggle_mode = true
-	auto_settings_battle_tab_button.custom_minimum_size = Vector2(0, 42)
-	auto_settings_battle_tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	auto_settings_battle_tab_button.pressed.connect(func() -> void:
-		_set_auto_settings_tab("battle")
-	)
-	auto_settings_tab_row.add_child(auto_settings_battle_tab_button)
-	auto_settings_hang_tab_button = Button.new()
-	auto_settings_hang_tab_button.text = "挂机"
-	auto_settings_hang_tab_button.toggle_mode = true
-	auto_settings_hang_tab_button.custom_minimum_size = Vector2(0, 42)
-	auto_settings_hang_tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	auto_settings_hang_tab_button.pressed.connect(func() -> void:
-		_set_auto_settings_tab("hang")
-	)
-	auto_settings_tab_row.add_child(auto_settings_hang_tab_button)
-	auto_settings_capture_tab_button = Button.new()
-	auto_settings_capture_tab_button.text = "捕捉"
-	auto_settings_capture_tab_button.toggle_mode = true
-	auto_settings_capture_tab_button.custom_minimum_size = Vector2(0, 42)
-	auto_settings_capture_tab_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	auto_settings_capture_tab_button.pressed.connect(func() -> void:
-		_set_auto_settings_tab("capture")
-	)
-	auto_settings_tab_row.add_child(auto_settings_capture_tab_button)
-
-	var auto_settings_scroll = ScrollContainer.new()
-	auto_settings_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	auto_settings_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	auto_settings_column.add_child(auto_settings_scroll)
-	auto_settings_content = VBoxContainer.new()
-	auto_settings_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	auto_settings_content.add_theme_constant_override("separation", 8)
-	auto_settings_scroll.add_child(auto_settings_content)
+	auto_settings_close_button = auto_settings_panel.close_button
+	auto_settings_battle_tab_button = auto_settings_panel.battle_tab_button
+	auto_settings_hang_tab_button = auto_settings_panel.hang_tab_button
+	auto_settings_capture_tab_button = auto_settings_panel.capture_tab_button
+	auto_settings_content = auto_settings_panel.legacy_content
+	auto_settings_panel.close_requested.connect(_close_auto_settings_panel)
+	auto_settings_panel.tab_requested.connect(_set_auto_settings_tab)
+	auto_settings_panel.setting_requested.connect(_set_auto_settings_value)
+	auto_settings_panel.heal_priority_requested.connect(_set_auto_settings_heal_priority)
 	hud_root.add_child(auto_settings_panel)
 
 	qa_panel = _panel_container("QAPanel")
@@ -8408,7 +8203,6 @@ func _build_hud() -> void:
 	_build_hang_matchmaking_ui()
 	_build_world_hud_awakened()
 	_register_hud_panels()
-
 
 func _build_hang_matchmaking_ui() -> void:
 	host.hang_matchmaking_controller = HangMatchmakingController.new()
@@ -10983,11 +10777,14 @@ func _refresh_gm_visibility() -> void:
 		_close_numeric_workbench_panel(false)
 
 func _sync_action_bar_state() -> void:
-	if action_bar_scroll != null:
-		action_bar_scroll.visible = not action_bar_collapsed
-	if action_bar_collapse_button != null:
-		action_bar_collapse_button.text = "◀" if action_bar_collapsed else "▶"
-		action_bar_collapse_button.tooltip_text = "展开工具栏" if action_bar_collapsed else "收起工具栏"
+	if host.world_hud_awakened_view != null:
+		host.world_hud_awakened_view.set_collapsed(action_bar_collapsed)
+	else:
+		if action_bar_scroll != null:
+			action_bar_scroll.visible = not action_bar_collapsed
+		if action_bar_collapse_button != null:
+			action_bar_collapse_button.text = "展开" if action_bar_collapsed else "收起"
+			action_bar_collapse_button.tooltip_text = "展开工具栏" if action_bar_collapsed else "收起工具栏"
 	if account_menu_button != null:
 		account_menu_button.disabled = not account_authenticated
 	if qa_menu_button != null:
@@ -14076,6 +13873,8 @@ func _open_equipment_synthesis_panel() -> void:
 	host.call_deferred("_layout_hud")
 
 func _close_equipment_synthesis_panel(update_layout: bool = true) -> void:
+	if equipment_synthesis_panel != null and equipment_synthesis_panel.has_method("hide_confirmation"):
+		equipment_synthesis_panel.hide_confirmation()
 	_hide_control(equipment_synthesis_panel, update_layout)
 
 func _close_equipment_detail_popup(update_layout: bool = true) -> void:
@@ -15194,6 +14993,7 @@ func _refresh_equipment_synthesis_panel() -> void:
 		for recipe in recipes:
 			var recipe_id = str(recipe.get("id", ""))
 			var button = Button.new()
+			button.set_meta("output_item_id", EquipmentSynthesisModel.output_item_id(recipe))
 			button.toggle_mode = true
 			button.button_pressed = recipe_id == equipment_synthesis_selected_recipe_id
 			button.text = "%s\n%s" % [
@@ -15210,12 +15010,26 @@ func _refresh_equipment_synthesis_panel() -> void:
 			equipment_synthesis_recipe_buttons[recipe_id] = button
 	var selected_recipe = EquipmentSynthesisModel.recipe_for_id(equipment_synthesis_selected_recipe_id)
 	equipment_synthesis_detail_label.text = _equipment_synthesis_detail_text(selected_recipe)
+	if equipment_synthesis_panel.has_method("apply_view_state"):
+		equipment_synthesis_panel.apply_view_state(
+			EquipmentSynthesisAwakenedPresenter.build_view_state(
+				player_profile,
+				equipment_synthesis_selected_recipe_id
+			)
+		)
 	if equipment_synthesis_action_button != null:
 		var can_synthesize = false
 		if not selected_recipe.is_empty():
 			can_synthesize = bool(PlayerProgressModel.can_synthesize_equipment(player_profile, equipment_synthesis_selected_recipe_id).get("ok", false))
 		equipment_synthesis_action_button.disabled = equipment_action_request_pending or not can_synthesize
-		equipment_synthesis_action_button.text = "合成中" if equipment_action_request_pending else "合成"
+		equipment_synthesis_action_button.text = "合成中" if equipment_action_request_pending else "开始合成"
+	if equipment_synthesis_panel.has_method("decorate_recipe_buttons"):
+		equipment_synthesis_panel.decorate_recipe_buttons(
+			equipment_synthesis_recipe_buttons,
+			equipment_synthesis_selected_recipe_id
+		)
+	if equipment_action_request_pending and equipment_synthesis_panel.has_method("hide_confirmation"):
+		equipment_synthesis_panel.hide_confirmation()
 
 func _select_equipment_synthesis_recipe(recipe_id: String) -> void:
 	equipment_synthesis_selected_recipe_id = recipe_id
@@ -16942,7 +16756,49 @@ func _spawn_backpack_heal_popup(target: Control, healed_amount: int) -> void:
 	tween.tween_property(label, "offset_bottom", -7.0, BACKPACK_HEAL_POPUP_DURATION_SECONDS).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tween.chain().tween_callback(Callable(label, "queue_free"))
 
-func _open_shop_panel(next_shop_id: String = "") -> void:
+func _commerce_identity_portrait(identity: Dictionary) -> Texture2D:
+	var appearance_id := str(identity.get("appearanceId", "")).strip_edges()
+	if appearance_id == "" or not NpcArtCatalog.warm_appearance(appearance_id):
+		return null
+	return NpcArtCatalog.portrait_texture(
+		appearance_id,
+		str(identity.get("portraitState", "neutral"))
+	)
+
+
+func _apply_shop_service_identity(service_interaction: Dictionary = {}) -> void:
+	if not (shop_panel is ShopAwakenedPanel):
+		return
+	var current_map_data: Dictionary = host.map_data if host != null else {}
+	var identity := CommerceServiceIdentityPresenter.shop_identity(
+		shop_active_id,
+		current_map_data,
+		service_interaction
+	)
+	(shop_panel as ShopAwakenedPanel).apply_service_identity(
+		identity,
+		_commerce_identity_portrait(identity)
+	)
+
+
+func _apply_bank_service_identity(service_interaction: Dictionary = {}) -> void:
+	if not (bank_panel is BankAwakenedPanel):
+		return
+	var current_map_data: Dictionary = host.map_data if host != null else {}
+	var identity := CommerceServiceIdentityPresenter.bank_identity(
+		current_map_data,
+		service_interaction
+	)
+	(bank_panel as BankAwakenedPanel).apply_service_identity(
+		identity,
+		_commerce_identity_portrait(identity)
+	)
+
+
+func _open_shop_panel(
+	next_shop_id: String = "",
+	service_interaction: Dictionary = {}
+) -> void:
 	if battle_active:
 		return
 	host._set_hang_mode(false)
@@ -16965,6 +16821,7 @@ func _open_shop_panel(next_shop_id: String = "") -> void:
 	shop_active_id = resolved_shop_id
 	shop_mode = "buy"
 	shop_selected_item_id = _first_shop_item_id_for_mode(shop_mode)
+	_apply_shop_service_identity(service_interaction)
 	shop_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_shop_panel()
@@ -16974,6 +16831,8 @@ func _close_shop_panel() -> void:
 	if _hide_control(shop_panel):
 		shop_selected_item_id = ""
 		shop_detail_update_queued = false
+		if shop_panel is ShopAwakenedPanel:
+			(shop_panel as ShopAwakenedPanel).clear_service_identity()
 		_apply_deferred_server_profile_pull_if_idle()
 	_clear_shop_refresh_cache()
 
@@ -17197,6 +17056,10 @@ func _refresh_shop_panel(rebuild_list: bool = true, previous_selected_item_id: S
 				shop_repair_button.text = "修理"
 			if not shop_repair_button.disabled:
 				shop_repair_button.disabled = true
+	if shop_panel.has_method("apply_selection"):
+		shop_panel.apply_selection(shop_selected_item_id, shop_mode)
+	if shop_panel.has_method("decorate_item_buttons"):
+		shop_panel.decorate_item_buttons(shop_item_buttons, shop_selected_item_id)
 
 func _shop_item_ids_for_mode(mode: String, counts: Dictionary = {}) -> Array[String]:
 	var result: Array[String] = []
@@ -17676,6 +17539,7 @@ func _create_pet_cultivation_panel() -> void:
 func _open_pet_panel(stable_access_override: bool = false) -> void:
 	if battle_active:
 		return
+	pet_skill_training_mode = false
 	host._set_hang_mode(false)
 	host._close_dialog()
 	_close_encounter()
@@ -17707,6 +17571,7 @@ func _close_pet_panel() -> void:
 	pet_context_screen_position = Vector2.ZERO
 	var changed = _hide_control(pet_panel, false)
 	pet_panel_stable_access_override = false
+	pet_skill_training_mode = false
 	_close_pet_rename_panel()
 	_close_pet_cultivation_panel()
 	if _pet_paid_reset_panel != null:
@@ -17722,22 +17587,6 @@ func _pet_panel_has_stable_access() -> bool:
 func _open_pet_skill_panel(training_mode: bool = false, trainer_id: String = PetSkillTrainingModel.DEFAULT_TRAINER_ID) -> void:
 	if battle_active:
 		return
-	host._set_hang_mode(false)
-	host._close_dialog()
-	_close_encounter()
-	_close_player_status_panel()
-	_close_backpack_panel()
-	_close_equipment_panel()
-	_close_shop_panel()
-	_close_pet_panel()
-	_close_pet_skill_panel()
-	_close_codex_panel()
-	_close_quest_panel()
-	_close_map_panel()
-	_close_chat_panel()
-	_close_mailbox_panel()
-	_close_auto_settings_panel()
-	pet_skill_training_mode = training_mode
 	pet_skill_trainer_id = trainer_id if trainer_id != "" else PetSkillTrainingModel.DEFAULT_TRAINER_ID
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	if pet_selected_instance_id == "" or PlayerProgressModel.pet_instance_by_id(player_profile, pet_selected_instance_id).is_empty():
@@ -17749,14 +17598,24 @@ func _open_pet_skill_panel(training_mode: bool = false, trainer_id: String = Pet
 				pet_selected_instance_id = str(instance.get("instanceId", ""))
 				break
 	pet_skill_selected_slot = clampi(pet_skill_selected_slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
-	pet_skill_panel.visible = true
-	_refresh_pet_skill_panel()
-	host._layout_hud()
+	_open_pet_panel()
+	pet_skill_training_mode = training_mode
+	pet_detail_mode = PET_DETAIL_MODE_SKILLS
+	_refresh_pet_panel()
+	if pet_detail_scroll != null:
+		pet_detail_scroll.scroll_vertical = 0
 
 func _close_pet_skill_panel() -> void:
 	_hide_control(pet_skill_panel)
 
 func _refresh_pet_skill_panel() -> void:
+	if (
+		pet_panel != null
+		and pet_panel.visible
+		and pet_detail_mode == PET_DETAIL_MODE_SKILLS
+	):
+		_refresh_pet_panel()
+		return
 	if pet_skill_panel == null or pet_skill_pet_option == null or pet_skill_detail_label == null:
 		return
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
@@ -17894,7 +17753,54 @@ func _on_pet_skill_pet_selected(index: int) -> void:
 
 func _select_pet_skill_slot(slot: int) -> void:
 	pet_skill_selected_slot = clampi(slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
+	if (
+		pet_panel != null
+		and pet_panel.visible
+		and pet_detail_mode == PET_DETAIL_MODE_SKILLS
+		and _pet_skill_overview_panel != null
+	):
+		_pet_skill_overview_panel.call(
+			"set_selected_slot",
+			pet_skill_selected_slot
+		)
+		return
 	_refresh_pet_skill_panel()
+
+
+func _on_embedded_pet_skill_slot_selected(slot: int) -> void:
+	pet_skill_selected_slot = clampi(
+		slot,
+		1,
+		PetTemplateCatalog.MAX_PET_SKILL_SLOTS
+	)
+
+
+func _on_embedded_pet_skill_card_selected(card_view: Dictionary) -> void:
+	var slot := int(card_view.get("slot", 0))
+	if slot > 0:
+		pet_skill_selected_slot = clampi(
+			slot,
+			1,
+			PetTemplateCatalog.MAX_PET_SKILL_SLOTS
+		)
+
+
+func _on_embedded_pet_skill_learn_requested(skill_id: String) -> void:
+	if not pet_skill_training_mode:
+		return
+	var selected = PlayerProgressModel.pet_instance_by_id(
+		player_profile,
+		pet_selected_instance_id
+	)
+	if selected.is_empty():
+		return
+	var existing_skill_id := _pet_skill_id_for_selected_slot(selected)
+	if skill_id.strip_edges() == "" and existing_skill_id == "":
+		return
+	if existing_skill_id == skill_id:
+		return
+	_open_pet_skill_overwrite_dialog(skill_id)
+
 
 func _on_pet_skill_move_pressed(direction: int) -> void:
 	if _is_server_account_session():
@@ -17979,24 +17885,60 @@ func _open_pet_skill_overwrite_dialog(skill_id: String) -> void:
 		return
 	var slot = clampi(pet_skill_selected_slot, 1, PetTemplateCatalog.MAX_PET_SKILL_SLOTS)
 	var existing_skill_id = _pet_skill_id_for_selected_slot(selected)
-	if existing_skill_id == "":
-		_apply_pet_skill_to_selected_slot(skill_id)
-		return
-	var existing_label = BattleActionCatalog.label_for(existing_skill_id, existing_skill_id)
+	var existing_label = (
+		BattleActionCatalog.label_for(existing_skill_id, existing_skill_id)
+		if existing_skill_id != ""
+		else "空技能位"
+	)
 	var next_label = "空技能" if skill_id == "" else BattleActionCatalog.label_for(skill_id, skill_id)
+	var cost := (
+		PetSkillTrainingModel.skill_cost(skill_id)
+		if skill_id != ""
+		else 0
+	)
+	var is_empty_learning := existing_skill_id == "" and skill_id != ""
+	var dialog_lines: Array[String] = []
+	if is_empty_learning:
+		dialog_lines = [
+			"%s 的技%d 当前为空。" % [str(selected.get("name", "宠物")), slot],
+			"花费%d石币学习%s？" % [cost, next_label],
+		]
+	elif skill_id == "":
+		dialog_lines = [
+			"%s 的技%d 当前是%s。" % [
+				str(selected.get("name", "宠物")),
+				slot,
+				existing_label,
+			],
+			"是否清空这个技能槽？",
+		]
+	else:
+		dialog_lines = [
+			"%s 的技%d 当前是%s。" % [
+				str(selected.get("name", "宠物")),
+				slot,
+				existing_label,
+			],
+			"花费%d石币覆盖为%s？" % [cost, next_label],
+		]
 	active_dialog_interaction = {
 		"id": "pet_skill_overwrite_%s_%d" % [pet_selected_instance_id, slot],
-		"name": "确认覆盖",
+		"name": (
+			"确认学习"
+			if is_empty_learning
+			else ("确认清空" if skill_id == "" else "确认覆盖")
+		),
 		"actionType": DIALOG_ACTION_PET_SKILL_OVERWRITE,
 		"instanceId": pet_selected_instance_id,
 		"trainerId": pet_skill_trainer_id,
 		"slot": slot,
 		"skillId": skill_id,
-		"option": "覆盖",
-		"dialog": [
-			"%s 的技%d 当前是%s。" % [str(selected.get("name", "宠物")), slot, existing_label],
-			"是否覆盖为%s？" % next_label,
-		],
+		"option": (
+			"学习"
+			if is_empty_learning
+			else ("清空" if skill_id == "" else "覆盖")
+		),
+		"dialog": dialog_lines,
 	}
 	host._update_dialog_text()
 	dialog_panel.move_to_front()
@@ -19224,6 +19166,37 @@ func _close_family_panel(update_layout: bool = true) -> void:
 	_hide_control(family_panel, update_layout)
 
 func _refresh_family_panel() -> void:
+	if family_panel is FamilyAwakenedPanel:
+		var family_view := family_panel as FamilyAwakenedPanel
+		var current_family := _family_current_family()
+		var account_id := str(current_account_session.get("accountId", "")).strip_edges()
+		if account_id == "":
+			account_id = _current_account_id_for_party()
+		var preferred_tab := family_view.active_tab()
+		if family_focus_manor_id.strip_edges() != "":
+			preferred_tab = FamilyAwakenedPresenter.TAB_MANORS
+		var state := FamilyAwakenedPresenter.build_view_state(
+			current_family,
+			family_list,
+			family_manors,
+			account_id,
+			family_request_pending,
+			_is_server_account_session(),
+			family_status_label.text if family_status_label != null else "",
+			preferred_tab,
+			family_focus_manor_id
+		)
+		family_view.apply_view_state(state)
+		family_status_label = family_view.status_label
+		family_name_input = family_view.name_input
+		family_create_button = family_view.create_button
+		family_refresh_button = family_view.refresh_button
+		family_leave_button = family_view.leave_button
+		family_summary_container = family_view.family_summary_container
+		family_list_container = family_view.family_list_container
+		manor_list_container = family_view.manor_list_container
+		_refresh_family_request_controls()
+		return
 	if family_panel == null or family_summary_container == null or family_list_container == null or manor_list_container == null:
 		return
 	_clear_container_children(family_summary_container)
@@ -19309,6 +19282,10 @@ func _family_summary_card(current_family: Dictionary) -> Control:
 func _on_family_detail_toggle_pressed() -> void:
 	family_detail_expanded = not family_detail_expanded
 	_refresh_family_panel()
+
+func _on_family_awakened_tab_selected(tab_id: String) -> void:
+	if tab_id != FamilyAwakenedPresenter.TAB_MANORS:
+		family_focus_manor_id = ""
 
 func _family_member_row(member: Dictionary) -> Control:
 	var row = PanelContainer.new()
@@ -22307,7 +22284,7 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 	_refresh_mailbox_request_controls()
 	_continue_event_reset_domain("mail")
 
-func _open_bank_panel() -> void:
+func _open_bank_panel(service_interaction: Dictionary = {}) -> void:
 	if not battle_active:
 		host._set_hang_mode(false)
 	host._close_dialog()
@@ -22329,13 +22306,15 @@ func _open_bank_panel() -> void:
 	_close_auto_settings_panel()
 	_close_qa_panel(false)
 	if bank_panel != null:
+		_apply_bank_service_identity(service_interaction)
 		bank_panel.visible = true
 	player_profile = PlayerProgressModel.normalize_profile(player_profile)
 	_refresh_bank_panel()
 	host._layout_hud()
 
 func _close_bank_panel(update_layout: bool = true) -> void:
-	_hide_control(bank_panel, update_layout)
+	if _hide_control(bank_panel, update_layout) and bank_panel is BankAwakenedPanel:
+		(bank_panel as BankAwakenedPanel).clear_service_identity()
 
 func _refresh_bank_panel() -> void:
 	if bank_panel == null or bank_list_container == null or bank_detail_label == null:
@@ -22473,6 +22452,10 @@ func _refresh_bank_panel() -> void:
 		bank_coin_withdraw_button.disabled = bank_request_pending or not has_server or withdraw_coins <= 0
 	if bank_status_label != null and not has_server:
 		bank_status_label.text = "需要服务器账号登录。"
+	if bank_panel.has_method("apply_selection"):
+		bank_panel.apply_selection(bank_selected_item_id)
+	if bank_panel.has_method("decorate_dynamic_content"):
+		bank_panel.decorate_dynamic_content(bank_item_buttons, bank_tab_buttons)
 
 func _select_bank_item(item_id: String) -> void:
 	var next_data := _first_bank_slot_data_for_item(item_id)
@@ -24048,6 +24031,8 @@ func _refresh_auto_settings_panel() -> void:
 	auto_settings_controls.clear()
 	for child in auto_settings_content.get_children():
 		child.queue_free()
+	if auto_settings_panel.has_method("set_active_tab"):
+		auto_settings_panel.set_active_tab(auto_settings_active_tab)
 	_apply_auto_settings_tab_buttons()
 	if auto_settings_active_tab == "hang":
 		_refresh_hang_settings_tab()
@@ -24055,62 +24040,21 @@ func _refresh_auto_settings_panel() -> void:
 		_refresh_auto_capture_settings_tab()
 	else:
 		_refresh_auto_battle_settings_tab()
+	if auto_settings_active_tab != "battle" and auto_settings_panel.has_method("decorate_legacy_content"):
+		auto_settings_panel.decorate_legacy_content()
 
 func _refresh_auto_battle_settings_tab() -> void:
 	var settings = PlayerProgressModel.auto_battle_settings(player_profile)
-	var player_action_options = _auto_settings_player_action_options()
-	_add_auto_settings_section("人物动作")
-	_add_auto_settings_option(
-		"首回合",
-		AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY,
-		player_action_options,
-		str(settings.get(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY, AutoBattleSettingsModel.ACTION_ATTACK))
+	auto_settings_panel.apply_battle_state(
+		AutoSettingsAwakenedPresenter.battle_state(
+			player_profile,
+			settings,
+			_auto_settings_player_action_options(),
+			_auto_settings_pet_slot_options(),
+			_auto_settings_heal_source_options()
+		)
 	)
-	_add_auto_settings_option(
-		"一般回合",
-		AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY,
-		player_action_options,
-		str(settings.get(AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY, AutoBattleSettingsModel.ACTION_ATTACK))
-	)
-	_add_auto_settings_section("宠物动作")
-	_add_auto_settings_pet_slot_option(
-		"首回合",
-		AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY,
-		int(settings.get(AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY, 1))
-	)
-	_add_auto_settings_pet_slot_option(
-		"一般回合",
-		AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY,
-		int(settings.get(AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY, 1))
-	)
-	_add_auto_settings_section("目标与回血")
-	_add_auto_settings_option(
-		"攻击目标",
-		AutoBattleSettingsModel.TARGET_MODE_KEY,
-		AutoBattleSettingsModel.target_mode_options(),
-		str(settings.get(AutoBattleSettingsModel.TARGET_MODE_KEY, AutoBattleSettingsModel.TARGET_FIRST_LIVING))
-	)
-	_add_auto_settings_checkbox(
-		"自动回血",
-		AutoBattleSettingsModel.HEALING_ENABLED_KEY,
-		bool(settings.get(AutoBattleSettingsModel.HEALING_ENABLED_KEY, true))
-	)
-	_add_auto_settings_spinbox(
-		"人物血线",
-		AutoBattleSettingsModel.PLAYER_HP_PERCENT_KEY,
-		int(settings.get(AutoBattleSettingsModel.PLAYER_HP_PERCENT_KEY, 45)),
-		"%"
-	)
-	_add_auto_settings_spinbox(
-		"宠物血线",
-		AutoBattleSettingsModel.PET_HP_PERCENT_KEY,
-		int(settings.get(AutoBattleSettingsModel.PET_HP_PERCENT_KEY, 45)),
-		"%"
-	)
-	_add_auto_settings_section("回血优先级")
-	var heal_priority = _auto_settings_heal_priority_slots(settings)
-	for index in range(AutoBattleSettingsModel.MAX_HEAL_PRIORITY_SLOTS):
-		_add_auto_settings_heal_option(index, str(heal_priority[index]))
+	auto_settings_controls = auto_settings_panel.semantic_controls()
 
 func _refresh_hang_settings_tab() -> void:
 	var settings = PlayerProgressModel.hang_settings(player_profile)
@@ -24880,6 +24824,9 @@ func _set_auto_settings_heal_priority(index: int, source_id: String) -> void:
 func _refresh_quest_panel() -> void:
 	host._dialog_quest()._refresh_quest_panel()
 
+func _on_quest_catalog_selected(_quest_id: String) -> void:
+	host._dialog_quest()._refresh_quest_panel()
+
 func _set_quest_reward_controls(quest: Dictionary, status: String) -> void:
 	host._dialog_quest()._set_quest_reward_controls(quest, status)
 
@@ -25395,7 +25342,6 @@ func _on_map_marker_pressed(target: Dictionary) -> void:
 	_close_map_panel()
 	_route_to_quest_target(target)
 
-
 func _on_map_destination_requested(map_id: String, label: String) -> void:
 	var destination_map_id := map_id.strip_edges()
 	if destination_map_id == "" or battle_active:
@@ -25700,6 +25646,8 @@ func _route_to_quest_target(target: Dictionary) -> void:
 		_set_world_log_message("正在前往%s。" % str(warp.get("name", label)))
 		return
 	match str(target.get("kind", "")):
+		"map_destination":
+			_set_world_log_message("已到达%s。" % label)
 		"interaction":
 			var interaction = target.get("interaction", {})
 			if interaction is Dictionary and not (interaction as Dictionary).is_empty():
@@ -26202,7 +26150,10 @@ func _refresh_pet_growth_table(instance: Dictionary) -> void:
 	if instance.is_empty() or str(instance.get("growthSpeciesProfileId", "")) == "":
 		pet_growth_table_grid.visible = false
 		return
-	pet_growth_table_grid.visible = pet_detail_mode == PET_DETAIL_MODE_GROWTH
+	pet_growth_table_grid.visible = (
+		pet_detail_mode == PET_DETAIL_MODE_GROWTH
+		and _pet_growth_details_expanded
+	)
 	for header in ["属性", "初始", "当前", PetGrowthObservationModel.target_column_label(instance, pet_growth_stage), "成长/级", "评级"]:
 		pet_growth_table_grid.add_child(_pet_growth_table_cell(header, true, ""))
 	for row in PetGrowthObservationModel.attribute_table_rows_for_stage(instance, pet_growth_stage, 140):
@@ -26219,9 +26170,7 @@ func _pet_growth_grade_text(row: Dictionary) -> String:
 	var percentile = row.get("percentile", "")
 	if grade == "" or grade == "未观察":
 		return "未观察"
-	if percentile is int or percentile is float:
-		return "%s %.0f%%" % [grade, float(percentile)]
-	return grade
+	return PetGrowthQualityModel.grade_display_text(grade, percentile)
 
 func _pet_growth_table_cell(text: String, is_header: bool, grade: String) -> Label:
 	var label = Label.new()
@@ -26241,22 +26190,40 @@ func _pet_growth_table_cell(text: String, is_header: bool, grade: String) -> Lab
 func _pet_growth_table_color(grade: String, is_header: bool) -> Color:
 	if is_header:
 		return Color(0.96, 0.86, 0.48, 1.0)
-	match grade:
-		"S":
-			return Color(1.0, 0.88, 0.24, 1.0)
-		"A":
-			return Color(0.48, 1.0, 0.58, 1.0)
-		"B":
-			return Color(0.72, 0.94, 1.0, 1.0)
-		"C":
-			return Color(0.93, 0.90, 0.78, 1.0)
-		"D":
-			return Color(1.0, 0.58, 0.48, 1.0)
+	if ["S", "A", "B", "C", "D"].has(grade):
+		return PetGrowthQualityModel.color_for_grade(grade)
 	return Color(0.94, 0.94, 0.90, 1.0)
 
 func _set_pet_growth_stage(stage: int) -> void:
 	pet_growth_stage = clampi(stage, 0, 2)
 	_refresh_pet_panel()
+
+
+func _set_pet_growth_details_expanded(expanded: bool) -> void:
+	_pet_growth_details_expanded = expanded
+	if _pet_growth_overview_panel != null:
+		_pet_growth_overview_panel.call("set_details_expanded", expanded)
+	var selected := PlayerProgressModel.pet_instance_by_id(
+		player_profile,
+		pet_selected_instance_id
+	)
+	var growth_visible: bool = (
+		pet_detail_mode == PET_DETAIL_MODE_GROWTH
+		and not selected.is_empty()
+		and str(selected.get("growthSpeciesProfileId", "")).strip_edges() != ""
+	)
+	_refresh_pet_growth_table(selected if growth_visible else {})
+	if _pet_growth_radar_row != null:
+		_pet_growth_radar_row.visible = growth_visible and expanded
+	if _pet_level_one_radar != null:
+		_pet_level_one_radar.visible = growth_visible and expanded
+	if pet_growth_radar != null:
+		pet_growth_radar.visible = growth_visible and expanded
+	if pet_detail_label != null:
+		pet_detail_label.visible = (
+			pet_detail_mode != PET_DETAIL_MODE_GROWTH
+			or expanded
+		)
 
 func _sync_pet_growth_stage_tabs(instance: Dictionary) -> void:
 	if pet_growth_stage_row == null:
@@ -26284,10 +26251,27 @@ func _sync_pet_growth_stage_tabs(instance: Dictionary) -> void:
 			continue
 		var stage_button = button as Button
 		var enabled = bool(entry.get("enabled", false))
-		stage_button.text = str(entry.get("label", "%d转成长" % stage))
+		var stage_label := str(entry.get("label", "%d转成长" % stage))
 		stage_button.disabled = not enabled
 		stage_button.button_pressed = enabled and pet_growth_stage == stage
 		stage_button.modulate = Color(1, 1, 1, 1) if enabled else Color(0.58, 0.58, 0.58, 0.72)
+		var stage_instance := PetGrowthObservationModel.level_one_instance_for_stage(
+			instance,
+			stage
+		)
+		var stage_form_id := str(stage_instance.get(
+			"formId",
+			instance.get("formId", instance.get("templateId", ""))
+		)).strip_edges()
+		if stage_button.has_method("configure_stage"):
+			stage_button.call(
+				"configure_stage",
+				stage_label,
+				stage_form_id,
+				enabled and pet_growth_stage == stage
+			)
+		else:
+			stage_button.text = stage_label
 
 
 func _pet_growth_evaluation_policy() -> Dictionary:
@@ -26347,6 +26331,77 @@ func _pet_growth_manual_evaluation_snapshot() -> Dictionary:
 	snapshot["levelOneRadarTitle"] = _pet_level_one_radar_title.text if _pet_level_one_radar_title != null else ""
 	snapshot["growthRadarTitle"] = _pet_growth_radar_title.text if _pet_growth_radar_title != null else ""
 	snapshot["levelOneSummary"] = PetLevelOnePercentileModel.summary_text(selected) if not selected.is_empty() else ""
+	snapshot["qualityOverview"] = (
+		_pet_growth_overview_panel.call("snapshot")
+		if _pet_growth_overview_panel != null
+		else {}
+	)
+	snapshot["showcase"] = (
+		_pet_showcase_panel.call("snapshot")
+		if _pet_showcase_panel != null
+		else {}
+	)
+	var showcase_snapshot := snapshot.get("showcase", {}) as Dictionary
+	var growth_stage_formal_art_count := 0
+	if pet_growth_stage_row != null:
+		for child in pet_growth_stage_row.get_children():
+			if child.has_method("uses_formal_art") and bool(child.call("uses_formal_art")):
+				growth_stage_formal_art_count += 1
+	snapshot["rosterHorizontal"] = (
+		_pet_roster_scroll != null
+		and pet_list_container is HBoxContainer
+	)
+	snapshot["rosterCardCount"] = pet_list_buttons.size()
+	snapshot["rosterToolbarVisible"] = (
+		_pet_roster_toolbar != null
+		and _pet_roster_toolbar.visible
+	)
+	snapshot["rosterToolbarTogglePresent"] = (
+		_pet_roster_toolbar_toggle_button != null
+	)
+	snapshot["rosterPagerPresent"] = (
+		_pet_roster_toolbar_toggle_button != null
+		and _pet_roster_toolbar_toggle_button.get_parent() != null
+		and _node_tree_has_button_text(
+			_pet_roster_toolbar_toggle_button.get_parent(),
+			"前"
+		)
+		and _node_tree_has_button_text(
+			_pet_roster_toolbar_toggle_button.get_parent(),
+			"后"
+		)
+	)
+	snapshot["codexInRoster"] = (
+		pet_list_container != null
+		and pet_detail_codex_button != null
+		and pet_list_container.is_ancestor_of(pet_detail_codex_button)
+	)
+	snapshot["showcaseUsesHighRes"] = bool(
+		showcase_snapshot.get("usesShowcaseArt", false)
+	)
+	snapshot["growthStageFormalArtCount"] = growth_stage_formal_art_count
+	snapshot["detailTabsVertical"] = _pet_detail_mode_column != null
+	snapshot["awakenedSkin"] = (
+		pet_panel != null
+		and pet_panel.get_node_or_null("PetManagementBackdrop") != null
+	)
+	snapshot["fullScreenAt1280"] = (
+		pet_panel != null
+		and pet_panel.size.x >= 1279.0
+		and pet_panel.size.y >= 719.0
+	)
+	snapshot["growthStageInShowcase"] = (
+		_pet_showcase_panel != null
+		and pet_growth_stage_row != null
+		and _pet_showcase_panel.is_ancestor_of(pet_growth_stage_row)
+	)
+	snapshot["growthActionsQuiet"] = (
+		pet_detail_mode != PET_DETAIL_MODE_GROWTH
+		or (
+			(_pet_manage_action_row == null or not _pet_manage_action_row.visible)
+			and (_pet_primary_action_row == null or not _pet_primary_action_row.visible)
+		)
+	)
 	return snapshot
 
 
@@ -26726,7 +26781,13 @@ func _refresh_pet_panel() -> void:
 		if not bool(follow_check.get("ok", false)):
 			host._set_pet_follow_enabled(false)
 	for child in pet_list_container.get_children():
+		if child == pet_detail_codex_button or child == _pet_roster_codex_gap:
+			continue
 		child.queue_free()
+	if pet_detail_codex_button != null:
+		pet_list_container.move_child(pet_detail_codex_button, 0)
+	if _pet_roster_codex_gap != null:
+		pet_list_container.move_child(_pet_roster_codex_gap, 1)
 	pet_list_buttons.clear()
 	_sync_pet_management_options()
 
@@ -26758,73 +26819,22 @@ func _refresh_pet_panel() -> void:
 			for instance in storage:
 				if _pet_panel_instance_passes_filter(instance):
 					_add_pet_list_button(instance)
-		_sync_pet_growth_stage_tabs(selected)
-		var growth_visuals_visible: bool = pet_detail_mode == PET_DETAIL_MODE_GROWTH and not selected.is_empty() and str(selected.get("growthSpeciesProfileId", "")) != ""
-		if _pet_growth_radar_row != null:
-			_pet_growth_radar_row.visible = growth_visuals_visible
-		if _pet_level_one_radar != null:
-			_pet_level_one_radar.visible = growth_visuals_visible
-		if pet_growth_radar != null:
-			pet_growth_radar.visible = growth_visuals_visible
-		if pet_growth_table_grid != null:
-			pet_growth_table_grid.visible = pet_detail_mode == PET_DETAIL_MODE_GROWTH and not selected.is_empty() and str(selected.get("growthSpeciesProfileId", "")) != ""
-		if pet_detail_mode == PET_DETAIL_MODE_CODEX:
-			pet_detail_label.text = "\n".join(PlayerProgressModel.pet_codex_detail_lines(selected))
-		elif pet_detail_mode == PET_DETAIL_MODE_GROWTH:
-			if selected.is_empty():
-				pet_detail_label.text = "请选择宠物。"
-				_refresh_pet_growth_table({})
-			elif str(selected.get("growthSpeciesProfileId", "")) == "":
-				pet_detail_label.text = "这只宠物暂无成长观察档。"
-				_refresh_pet_growth_table({})
-				if _pet_level_one_radar != null and _pet_level_one_radar.has_method("set_growth_data"):
-					_pet_level_one_radar.call("set_growth_data", {}, {})
-				if pet_growth_radar != null and pet_growth_radar.has_method("set_growth_data"):
-					pet_growth_radar.call("set_growth_data", {}, {})
-			else:
-				_refresh_pet_growth_table(selected)
-				pet_detail_label.text = "\n".join(PetGrowthObservationModel.detail_lines_for_stage(selected, pet_growth_stage))
-				var observation = PetGrowthObservationModel.evaluate_pet_for_stage(selected, pet_growth_stage)
-				var grades = {}
-				if observation is Dictionary:
-					var raw_grades = (observation as Dictionary).get("statGrades", {})
-					if raw_grades is Dictionary:
-						grades = raw_grades as Dictionary
-				var level_one_display_instance := PetGrowthObservationModel.level_one_instance_for_stage(selected, pet_growth_stage)
-				if _pet_level_one_radar != null and _pet_level_one_radar.has_method("set_growth_data"):
-					_pet_level_one_radar.call(
-						"set_growth_data",
-						PetLevelOnePercentileModel.radar_values(level_one_display_instance),
-						PetLevelOnePercentileModel.radar_labels(level_one_display_instance)
-					)
-				if _pet_level_one_radar_title != null:
-					_pet_level_one_radar_title.text = "进化前 Lv1 4V分位（物种内）" if PetGrowthObservationModel.is_evolution_history_stage(selected, pet_growth_stage) else "Lv1 4V分位（物种内）"
-				if _pet_growth_radar_title != null:
-					if PetGrowthObservationModel.is_evolution_history_stage(selected, pet_growth_stage):
-						_pet_growth_radar_title.text = "进化前%d转成长分位" % pet_growth_stage
-					elif PetGrowthObservationModel.is_evolution_pet(selected) and pet_growth_stage == 2:
-						_pet_growth_radar_title.text = "进化后二代成长分位"
-					elif PetGrowthObservationModel.is_fusion_pet(selected) and pet_growth_stage == 2:
-						_pet_growth_radar_title.text = "融合成长分位"
-					elif pet_growth_stage == 0:
-						_pet_growth_radar_title.text = "实测成长分位"
-					else:
-						_pet_growth_radar_title.text = "%d转增量分位" % pet_growth_stage
-						if observation is Dictionary and bool((observation as Dictionary).get("hasRollRecord", false)):
-							_pet_growth_radar_title.text += "｜运气 %s %.0f%%" % [
-								str((observation as Dictionary).get("rollGrade", "D")),
-								float((observation as Dictionary).get("rollPercentile", 0.0)),
-							]
-				if pet_growth_radar != null and pet_growth_radar.has_method("set_growth_data"):
-					pet_growth_radar.call("set_growth_data", PetGrowthObservationModel.radar_values_for_stage(selected, pet_growth_stage), grades)
-		else:
-			_sync_pet_growth_stage_tabs({})
-			_refresh_pet_growth_table({})
-			if _pet_growth_radar_row != null:
-				_pet_growth_radar_row.visible = false
-			if _pet_level_one_radar != null and _pet_level_one_radar.has_method("set_growth_data"):
-				_pet_level_one_radar.call("set_growth_data", {}, {})
-			pet_detail_label.text = "\n".join(PlayerProgressModel.pet_detail_lines(selected))
+		var empty_slot_count := maxi(0, 10 - visible_instances.size())
+		for _empty_index in range(empty_slot_count):
+			_add_pet_empty_slot()
+	else:
+		for instance in visible_instances:
+			_add_pet_list_button(instance)
+	_refresh_pet_detail_display(selected)
+	var management_actions_visible: bool = (
+		pet_detail_mode != PET_DETAIL_MODE_GROWTH
+		and pet_detail_mode != PET_DETAIL_MODE_SKILLS
+		and not selected.is_empty()
+	)
+	if _pet_manage_action_row != null:
+		_pet_manage_action_row.visible = management_actions_visible
+	if _pet_primary_action_row != null:
+		_pet_primary_action_row.visible = management_actions_visible
 	if _pet_growth_manual_evaluation_panel != null:
 		_pet_growth_manual_evaluation_panel.refresh(
 			selected,
@@ -26910,6 +26920,9 @@ func _refresh_pet_panel() -> void:
 	if pet_skill_button != null:
 		pet_skill_button.visible = not selected.is_empty()
 		pet_skill_button.disabled = selected.is_empty()
+		pet_skill_button.button_pressed = (
+			pet_detail_mode == PET_DETAIL_MODE_SKILLS
+		)
 	if pet_cultivation_button != null:
 		pet_cultivation_button.visible = not selected.is_empty()
 		pet_cultivation_button.disabled = selected.is_empty()
@@ -26923,6 +26936,182 @@ func _refresh_pet_panel() -> void:
 			var drop_check = PlayerProgressModel.can_drop_pet(player_profile, pet_selected_instance_id)
 			pet_drop_button.disabled = selected.is_empty() or not bool(drop_check.get("ok", false))
 			pet_drop_button.text = "丢弃"
+
+
+func _refresh_pet_detail_display(selected: Dictionary) -> void:
+	var has_growth := (
+		not selected.is_empty()
+		and str(selected.get("growthSpeciesProfileId", "")).strip_edges() != ""
+	)
+	if pet_detail_mode == PET_DETAIL_MODE_GROWTH:
+		_sync_pet_growth_stage_tabs(selected)
+	else:
+		_sync_pet_growth_stage_tabs({})
+	var growth_visuals_visible: bool = pet_detail_mode == PET_DETAIL_MODE_GROWTH and has_growth
+	var quality_stage: int = (
+		pet_growth_stage
+		if growth_visuals_visible
+		else PetGrowthQualityModel.default_stage_for_instance(selected)
+	)
+	var quality_view := (
+		PetGrowthQualityModel.presentation_for_instance(selected, quality_stage)
+		if not selected.is_empty()
+		else PetGrowthQualityModel.unobserved_presentation()
+	)
+	if _pet_showcase_panel != null:
+		var showcase_instance := selected.duplicate(true)
+		if not showcase_instance.is_empty():
+			showcase_instance["combatPower"] = PetPowerModel.combat_power_for_pet(selected)
+			showcase_instance["_uiStateText"] = _pet_state_badge_label(
+				str(selected.get("state", ""))
+			)
+		_pet_showcase_panel.call("configure", showcase_instance, quality_view)
+	if _pet_growth_overview_panel != null:
+		_pet_growth_overview_panel.visible = growth_visuals_visible
+		_pet_growth_overview_panel.call(
+			"set_details_expanded",
+			_pet_growth_details_expanded
+		)
+		_pet_growth_overview_panel.call("configure", quality_view)
+	var skill_visuals_visible: bool = (
+		pet_detail_mode == PET_DETAIL_MODE_SKILLS
+		and not selected.is_empty()
+	)
+	if _pet_skill_overview_panel != null:
+		_pet_skill_overview_panel.visible = skill_visuals_visible
+		if skill_visuals_visible:
+			var training_options: Array[Dictionary] = []
+			if pet_skill_training_mode:
+				training_options = PlayerProgressModel.learnable_pet_skill_options(
+					player_profile,
+					pet_selected_instance_id,
+					pet_skill_trainer_id
+				)
+			_pet_skill_overview_panel.call(
+				"configure",
+				selected,
+				pet_skill_selected_slot,
+				pet_skill_training_mode,
+				training_options
+			)
+	if _pet_growth_radar_row != null:
+		_pet_growth_radar_row.visible = (
+			growth_visuals_visible
+			and _pet_growth_details_expanded
+		)
+	if _pet_level_one_radar != null:
+		_pet_level_one_radar.visible = (
+			growth_visuals_visible
+			and _pet_growth_details_expanded
+		)
+	if pet_growth_radar != null:
+		pet_growth_radar.visible = (
+			growth_visuals_visible
+			and _pet_growth_details_expanded
+		)
+	if pet_detail_label != null:
+		pet_detail_label.visible = (
+			not skill_visuals_visible
+			and (
+				pet_detail_mode != PET_DETAIL_MODE_GROWTH
+				or _pet_growth_details_expanded
+			)
+		)
+	if pet_detail_mode == PET_DETAIL_MODE_SKILLS:
+		_refresh_pet_growth_table({})
+		_clear_pet_growth_radars()
+		return
+	if pet_detail_mode == PET_DETAIL_MODE_CODEX:
+		_refresh_pet_growth_table({})
+		pet_detail_label.text = "\n".join(
+			PlayerProgressModel.pet_codex_detail_lines(selected)
+		)
+		_clear_pet_growth_radars()
+		return
+	if pet_detail_mode != PET_DETAIL_MODE_GROWTH:
+		_refresh_pet_growth_table({})
+		_clear_pet_growth_radars()
+		pet_detail_label.text = "\n".join(PlayerProgressModel.pet_detail_lines(selected))
+		return
+	if selected.is_empty():
+		pet_detail_label.text = "请选择宠物。"
+		_refresh_pet_growth_table({})
+		_clear_pet_growth_radars()
+		return
+	if not has_growth:
+		pet_detail_label.text = "这只宠物暂无成长观察档。"
+		_refresh_pet_growth_table({})
+		_clear_pet_growth_radars()
+		return
+	_refresh_pet_growth_table(selected)
+	pet_detail_label.text = "\n".join(
+		PetGrowthObservationModel.detail_lines_for_stage(selected, pet_growth_stage)
+	)
+	var observation = PetGrowthObservationModel.evaluate_pet_for_stage(
+		selected,
+		pet_growth_stage
+	)
+	var grades = {}
+	if observation is Dictionary:
+		var raw_grades = (observation as Dictionary).get("statGrades", {})
+		if raw_grades is Dictionary:
+			grades = raw_grades as Dictionary
+	var level_one_display_instance := PetGrowthObservationModel.level_one_instance_for_stage(
+		selected,
+		pet_growth_stage
+	)
+	if _pet_level_one_radar != null and _pet_level_one_radar.has_method("set_growth_data"):
+		_pet_level_one_radar.call(
+			"set_growth_data",
+			PetLevelOnePercentileModel.radar_values(level_one_display_instance),
+			PetLevelOnePercentileModel.radar_labels(level_one_display_instance)
+		)
+	if _pet_level_one_radar_title != null:
+		_pet_level_one_radar_title.text = (
+			"进化前 Lv1 4V分位（物种内）"
+			if PetGrowthObservationModel.is_evolution_history_stage(
+				selected,
+				pet_growth_stage
+			)
+			else "Lv1 4V分位（物种内）"
+		)
+	if _pet_growth_radar_title != null:
+		if PetGrowthObservationModel.is_evolution_history_stage(selected, pet_growth_stage):
+			_pet_growth_radar_title.text = "进化前%d转成长分位" % pet_growth_stage
+		elif PetGrowthObservationModel.is_evolution_pet(selected) and pet_growth_stage == 2:
+			_pet_growth_radar_title.text = "进化后二代成长分位"
+		elif PetGrowthObservationModel.is_fusion_pet(selected) and pet_growth_stage == 2:
+			_pet_growth_radar_title.text = "融合成长分位"
+		elif pet_growth_stage == 0:
+			_pet_growth_radar_title.text = "实测成长分位"
+		else:
+			_pet_growth_radar_title.text = "%d转增量分位" % pet_growth_stage
+			if observation is Dictionary and bool(
+				(observation as Dictionary).get("hasRollRecord", false)
+			):
+				_pet_growth_radar_title.text += "｜运气 %s %.0f%%" % [
+					str((observation as Dictionary).get("rollGrade", "D")),
+					float((observation as Dictionary).get("rollPercentile", 0.0)),
+				]
+	if pet_growth_radar != null and pet_growth_radar.has_method("set_growth_data"):
+		pet_growth_radar.call(
+			"set_growth_data",
+			PetGrowthObservationModel.radar_values_for_stage(
+				selected,
+				pet_growth_stage
+			),
+			grades
+		)
+
+
+func _clear_pet_growth_radars() -> void:
+	if _pet_growth_radar_row != null:
+		_pet_growth_radar_row.visible = false
+	if _pet_level_one_radar != null and _pet_level_one_radar.has_method("set_growth_data"):
+		_pet_level_one_radar.call("set_growth_data", {}, {})
+	if pet_growth_radar != null and pet_growth_radar.has_method("set_growth_data"):
+		pet_growth_radar.call("set_growth_data", {}, {})
+
 
 func _pet_filter_options() -> Array[Dictionary]:
 	return [
@@ -27098,24 +27287,39 @@ func _pet_state_badge_label(state: String) -> String:
 	return _pet_state_button_label(state)
 
 func _set_pet_detail_mode(mode: String) -> void:
-	if mode != PET_DETAIL_MODE_INSTANCE and mode != PET_DETAIL_MODE_CODEX and mode != PET_DETAIL_MODE_GROWTH:
+	if (
+		mode != PET_DETAIL_MODE_INSTANCE
+		and mode != PET_DETAIL_MODE_CODEX
+		and mode != PET_DETAIL_MODE_GROWTH
+		and mode != PET_DETAIL_MODE_SKILLS
+	):
 		return
 	pet_detail_mode = mode
+	if mode != PET_DETAIL_MODE_SKILLS:
+		pet_skill_training_mode = false
 	_pet_paid_reset_status_message = ""
 	_pet_evolution_status_message = ""
 	if _pet_paid_reset_panel != null:
 		_pet_paid_reset_panel.reset_confirmation()
 	if _pet_evolution_panel != null:
 		_pet_evolution_panel.reset_confirmation()
+	if pet_detail_scroll != null:
+		pet_detail_scroll.scroll_vertical = 0
 	_refresh_pet_panel()
 	if mode == PET_DETAIL_MODE_GROWTH:
 		_request_pet_paid_reset_quote()
 		_request_pet_evolution_quote()
 
 func _add_pet_section_label(text: String) -> void:
+	if text == "队伍" or text == "兽栏":
+		return
 	var label = Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 16)
+	label.custom_minimum_size = Vector2(62, 100)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_color_override("font_color", Color(0.78, 0.72, 0.58, 1.0))
 	pet_list_container.add_child(label)
 
 func _add_pet_list_button(instance: Dictionary) -> void:
@@ -27124,12 +27328,21 @@ func _add_pet_list_button(instance: Dictionary) -> void:
 		return
 	var button = PetListEntryButton.new()
 	var state_id := str(instance.get("state", PlayerProgressModel.PET_STATE_STANDBY))
+	var quality_stage := PetGrowthQualityModel.default_stage_for_instance(instance)
 	button.configure({
 		"stateId": state_id,
 		"stateText": _pet_state_badge_label(state_id),
 		"name": str(instance.get("name", "宠物")),
+		"formId": str(instance.get(
+			"formId",
+			instance.get("templateId", instance.get("speciesId", ""))
+		)),
 		"level": int(instance.get("level", 1)),
 		"power": PetPowerModel.combat_power_for_pet(instance),
+		"quality": PetGrowthQualityModel.presentation_for_instance(
+			instance,
+			quality_stage
+		),
 		"selected": instance_id == pet_selected_instance_id,
 		"following": host.pet_follow_enabled and host.pet_follow_instance_id == instance_id,
 		"isNew": bool(instance.get("isNew", false)),
@@ -27146,6 +27359,20 @@ func _add_pet_list_button(instance: Dictionary) -> void:
 	)
 	pet_list_container.add_child(button)
 	pet_list_buttons[instance_id] = button
+
+
+func _add_pet_empty_slot() -> void:
+	var slot := Button.new()
+	slot.text = ""
+	slot.disabled = true
+	slot.custom_minimum_size = Vector2(87.0, 98.0)
+	var style := PetManagementVisualSkin.roster_style(
+		false,
+		Color(0.58, 0.50, 0.38, 0.72)
+	)
+	slot.add_theme_stylebox_override("disabled", style)
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pet_list_container.add_child(slot)
 
 func _on_pet_list_button_gui_input(event: InputEvent, instance_id: String) -> void:
 	if not (event is InputEventMouseButton):
@@ -27424,10 +27651,12 @@ func _refresh_pet_cultivation_panel() -> void:
 			PlayerProgressModel.state_label(str(selected.get("state", PlayerProgressModel.PET_STATE_STANDBY))),
 		])
 	var raw_preview_lines = preview.get("lines", [])
+	var preview_line_count := 0
 	if raw_preview_lines is Array:
 		for line_value in raw_preview_lines:
 			lines.append(str(line_value))
-	if lines.is_empty():
+			preview_line_count += 1
+	if preview_line_count == 0:
 		lines.append(str(preview.get("message", "请选择宠物。")))
 	if pet_cultivation_title_label != null:
 		pet_cultivation_title_label.text = str(preview.get("title", "宠物培养"))

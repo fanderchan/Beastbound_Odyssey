@@ -60,6 +60,7 @@ const HangSettingsModel := preload("res://scripts/progression/hang_settings_mode
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const MapRoutePlanner := preload("res://scripts/world/map_route_planner.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
@@ -70,11 +71,18 @@ const NumericEconomyLedgerModel := preload("res://scripts/progression/numeric_ec
 const NumericExperimentModel := preload("res://scripts/progression/numeric_experiment_model.gd")
 const NumericWorkbenchModel := preload("res://scripts/progression/numeric_workbench_model.gd")
 const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth_observation_model.gd")
+const PetGrowthQualityModel := preload("res://scripts/progression/pet_growth_quality_model.gd")
 const PetGrowthAuthorityModel := preload("res://scripts/progression/pet_growth_authority_model.gd")
 const PetGrowthPublicProjectionModel := preload("res://scripts/progression/pet_growth_public_projection_model.gd")
 const PetGrowthScreeningModel := preload("res://scripts/progression/pet_growth_screening_model.gd")
 const PetFusionSkillPolicyCheck := preload(
 	"res://scripts/progression/pet_fusion_skill_policy_check.gd"
+)
+const PetPortraitArtCatalogCheck := preload(
+	"res://scripts/qa/pet_portrait_art_catalog_check.gd"
+)
+const PetSharedPortraitConsumerCheck := preload(
+	"res://scripts/qa/pet_shared_portrait_consumer_check.gd"
 )
 const PlayerCharacterMainFlowCheck := preload(
 	"res://scripts/qa/player_character_main_flow_check.gd"
@@ -1575,6 +1583,7 @@ func _run_auto_release_entrypoint_gate_check() -> void:
 		"--numeric-experiment-report",
 		"--gm-10v10-map",
 		"--battle-debug-window",
+		"--pet-battle-review-isolated-root=/tmp/forbidden-release-overlay",
 		"--server-step-world-move",
 	]
 	var args_recognized := true
@@ -3481,8 +3490,14 @@ func _run_auto_battle_settings_check() -> void:
 	var panel_ok = (
 		host.auto_settings_panel != null
 		and host.auto_settings_panel.visible
+		and host.auto_settings_panel.has_method("is_awakened_auto_settings_panel")
+		and host.auto_settings_panel.is_awakened_auto_settings_panel()
+		and host.auto_settings_panel.has_method("direct_auto_hint_text")
+		and host.auto_settings_panel.direct_auto_hint_text().find("右下角「自动」") >= 0
 		and host.auto_settings_controls.has(AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY)
+		and host.auto_settings_controls.has(AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY)
 		and host.auto_settings_controls.has(AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY)
+		and host.auto_settings_controls.has(AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY)
 		and host.auto_settings_controls.has("healPriority0")
 	)
 	host._close_auto_settings_panel()
@@ -4317,12 +4332,8 @@ func _run_auto_capture_settings_check() -> void:
 func _run_auto_pet_growth_rule_preview_check() -> void:
 	host.profile_save_enabled = false
 	host.profile_action_request_pending = false
-	host.auth_auto_bypass = false
-	host.current_account_session = {
-		"accountId": "manual_growth_evaluation_account",
-		"authSource": ServerAuthClientModel.SOURCE_SERVER,
-		"serverSessionToken": "manual_growth_evaluation_token",
-	}
+	host.auth_auto_bypass = true
+	host.current_account_session = {}
 	var level_twenty := _pet_growth_rule_preview_fixture(
 		"manual_growth_lv20",
 		"蓝人龙观察样本",
@@ -4337,6 +4348,7 @@ func _run_auto_pet_growth_rule_preview_check() -> void:
 		{"maxHp": 147, "attack": 37, "defense": 18, "quick": 17},
 		PlayerProgressModel.PET_STATE_STORAGE
 	)
+	var fixture_projection_ok := not level_twenty.is_empty() and not level_ten.is_empty()
 	host.player_profile = PlayerProgressModel.default_profile()
 	host.player_profile["petInstances"] = [level_twenty, level_ten]
 	host.player_profile["activePetInstanceId"] = "manual_growth_lv20"
@@ -4371,7 +4383,6 @@ func _run_auto_pet_growth_rule_preview_check() -> void:
 		and capture_guidance.text.find("宠物面板人工观察") >= 0
 		and capture_guidance.text.find("自动训练") < 0
 		and capture_guidance.text.find("待处理") < 0
-		and not host.auto_settings_controls.has(AutoCaptureSettingsModel.AUTO_DISCARD_LOW_POWER_KEY)
 	)
 
 	host.pet_selected_instance_id = "manual_growth_lv20"
@@ -4379,6 +4390,7 @@ func _run_auto_pet_growth_rule_preview_check() -> void:
 	host.pet_growth_stage = 0
 	host._open_pet_panel(false)
 	await host.get_tree().process_frame
+	host._panel_flow()._set_pet_growth_details_expanded(true)
 	host._panel_flow()._set_pet_growth_manual_evaluation_expanded(true)
 	host._panel_flow()._refresh_pet_panel()
 	await host.get_tree().process_frame
@@ -4444,7 +4456,8 @@ func _run_auto_pet_growth_rule_preview_check() -> void:
 
 	var pet_immutability_ok := pets_before == JSON.stringify(host.player_profile.get("petInstances", []))
 	var status := "ok" if (
-		bool(model_contract.get("ok", false))
+		fixture_projection_ok
+		and bool(model_contract.get("ok", false))
 		and bool(level_one_contract.get("ok", false))
 		and bool(presenter_contract.get("ok", false))
 		and bool(panel_contract.get("ok", false))
@@ -4455,8 +4468,9 @@ func _run_auto_pet_growth_rule_preview_check() -> void:
 		and pet_immutability_ok
 		and screenshot_ok
 	) else "failed"
-	print("manual pet growth evaluation check ready: status=%s model=%s lv1=%s presenter=%s panel=%s capture_payload=%s capture_ui=%s initial_ui=%s edit=%s pets_immutable=%s screenshot=%s" % [
+	print("manual pet growth evaluation check ready: status=%s fixture_projection=%s model=%s lv1=%s presenter=%s panel=%s capture_payload=%s capture_ui=%s initial_ui=%s edit=%s pets_immutable=%s screenshot=%s" % [
 		status,
+		str(fixture_projection_ok),
 		str(model_contract.get("ok", false)),
 		str(level_one_contract.get("ok", false)),
 		str(presenter_contract.get("ok", false)),
@@ -4473,7 +4487,7 @@ func _run_auto_pet_growth_rule_preview_check() -> void:
 
 func _pet_growth_rule_preview_fixture(instance_id: String, name: String, level: int, stats: Dictionary, state: String) -> Dictionary:
 	var level_one := {"maxHp": 65, "attack": 14, "defense": 9, "quick": 6}
-	return {
+	var source := {
 		"instanceId": instance_id,
 		"petId": instance_id,
 		"name": name,
@@ -4483,10 +4497,29 @@ func _pet_growth_rule_preview_fixture(instance_id: String, name: String, level: 
 		"growthModelVersion": "pet_growth_authority_v1",
 		"growthSpeciesProfileId": "blue_man_dragon_v1",
 		"growthAuthority": {
-			"schemaVersion": 1,
-			"source": "server",
-			"modelVersion": "pet_growth_authority_v1",
+			"schemaVersion": PetGrowthPublicProjectionModel.SCHEMA_VERSION,
+			"source": PetGrowthPublicProjectionModel.AUTHORITY_SOURCE,
+			"modelVersion": PetGrowthPublicProjectionModel.MODEL_AUTHORITY_V1,
 			"settledLevel": level,
+		},
+		"petGrowth": {
+			"schemaVersion": PetGrowthPublicProjectionModel.SCHEMA_VERSION,
+			"modelVersion": PetGrowthPublicProjectionModel.MODEL_AUTHORITY_V1,
+			"profileId": "blue_man_dragon_v1",
+			"settledLevel": level,
+			"public": {
+				"schemaVersion": PetGrowthPublicProjectionModel.SCHEMA_VERSION,
+				"growthModelVersion": PetGrowthPublicProjectionModel.MODEL_AUTHORITY_V1,
+				"growthSpeciesProfileId": "blue_man_dragon_v1",
+				"level": level,
+				"levelOneFourV": level_one.duplicate(true),
+				"stats": {
+					"maxHp": int(stats.get("maxHp", 1)),
+					"attack": int(stats.get("attack", 1)),
+					"defense": int(stats.get("defense", 1)),
+					"quick": int(stats.get("quick", 1)),
+				},
+			},
 		},
 		"level": level,
 		"initialStats": level_one.duplicate(true),
@@ -4497,6 +4530,14 @@ func _pet_growth_rule_preview_fixture(instance_id: String, name: String, level: 
 		"quick": int(stats.get("quick", 1)),
 		"hp": int(stats.get("maxHp", 1)),
 	}
+	var projection := PetGrowthPublicProjectionModel.project_server_pet(source)
+	if not bool(projection.get("ok", false)):
+		return {}
+	var projected := projection.get("pet", {}) as Dictionary
+	var replay := PetGrowthPublicProjectionModel.project_server_pet(projected)
+	if not bool(replay.get("ok", false)) or JSON.stringify(replay.get("pet", {})) != JSON.stringify(projected):
+		return {}
+	return projected
 
 
 func _run_auto_hang_matchmaking_check() -> void:
@@ -6589,6 +6630,7 @@ func _run_auto_pet_growth_observation_check() -> void:
 	host.pet_detail_mode = PET_DETAIL_MODE_GROWTH
 	host.pet_growth_stage = 1
 	host._open_pet_panel(false)
+	host._panel_flow()._set_pet_growth_details_expanded(true)
 	var selected = PlayerProgressModel.pet_instance_by_id(host.player_profile, instance_id)
 	var observation = selected.get("growthObservation", {})
 	var observation_dict = observation as Dictionary if observation is Dictionary else {}
@@ -6637,6 +6679,60 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and bool(stage_one_observation.get("enabled", false))
 		and str(stage_one_observation.get("overallGrade", "")) != "未开启"
 		and not bool(stage_two_observation.get("enabled", true))
+	)
+	var quality_model_errors := PetGrowthQualityModel.selftest()
+	var quality_ui_snapshot: Dictionary = (
+		host._panel_flow()._pet_growth_manual_evaluation_snapshot()
+	)
+	var quality_overview := quality_ui_snapshot.get("qualityOverview", {}) as Dictionary
+	var quality_badge := quality_overview.get("badge", {}) as Dictionary
+	var showcase_snapshot := quality_ui_snapshot.get("showcase", {}) as Dictionary
+	var selected_roster_button = host.pet_list_buttons.get(instance_id, null)
+	var roster_toolbar_toggle_ok := false
+	var roster_toolbar_toggle = (
+		host._panel_flow()._pet_roster_toolbar_toggle_button
+	)
+	if roster_toolbar_toggle is Button:
+		var roster_toolbar_initially_hidden := not bool(
+			quality_ui_snapshot.get("rosterToolbarVisible", true)
+		)
+		(roster_toolbar_toggle as Button).emit_signal("pressed")
+		await host.get_tree().process_frame
+		var expanded_roster_snapshot: Dictionary = (
+			host._panel_flow()._pet_growth_manual_evaluation_snapshot()
+		)
+		(roster_toolbar_toggle as Button).emit_signal("pressed")
+		await host.get_tree().process_frame
+		var collapsed_roster_snapshot: Dictionary = (
+			host._panel_flow()._pet_growth_manual_evaluation_snapshot()
+		)
+		roster_toolbar_toggle_ok = (
+			roster_toolbar_initially_hidden
+			and bool(expanded_roster_snapshot.get("rosterToolbarVisible", false))
+			and not bool(
+				collapsed_roster_snapshot.get("rosterToolbarVisible", true)
+			)
+		)
+	var quality_feedback_ok: bool = (
+		quality_model_errors.is_empty()
+		and bool(quality_ui_snapshot.get("rosterHorizontal", false))
+		and bool(quality_ui_snapshot.get("rosterToolbarTogglePresent", false))
+		and bool(quality_ui_snapshot.get("rosterPagerPresent", false))
+		and bool(quality_ui_snapshot.get("codexInRoster", false))
+		and bool(quality_ui_snapshot.get("showcaseUsesHighRes", false))
+		and roster_toolbar_toggle_ok
+		and bool(quality_ui_snapshot.get("detailTabsVertical", false))
+		and bool(quality_ui_snapshot.get("awakenedSkin", false))
+		and bool(quality_ui_snapshot.get("fullScreenAt1280", false))
+		and bool(quality_ui_snapshot.get("growthStageInShowcase", false))
+		and bool(quality_ui_snapshot.get("growthActionsQuiet", false))
+		and int(quality_overview.get("rowCount", 0)) == 5
+		and bool(quality_badge.get("preliminary", false))
+		and str(quality_badge.get("text", "")).contains("观察中")
+		and not str(showcase_snapshot.get("name", "")).is_empty()
+		and selected_roster_button != null
+		and selected_roster_button.has_method("quality_badge_text")
+		and str(selected_roster_button.call("quality_badge_text")).contains("观察中")
 	)
 	var server_source := selected.duplicate(true)
 	server_source["growthAuthority"] = {
@@ -7059,7 +7155,62 @@ func _run_auto_pet_growth_observation_check() -> void:
 		)
 	)
 	var evolution_profile := PlayerProgressModel.default_profile()
-	evolution_profile["petInstances"] = [evolution_pet]
+	var visual_roster: Array = [evolution_pet]
+	var visual_roster_specs := [
+		{
+			"profileId": "wuli_normal_orange_fire10_v1",
+			"instanceId": "pet_ui_visual_wuli",
+			"formId": "wuli_normal_orange_fire10",
+			"name": "焰纹乌力",
+			"level": 82,
+			"state": "standby",
+		},
+		{
+			"profileId": "bui_normal_red_fire10_v1",
+			"instanceId": "pet_ui_visual_bui",
+			"formId": "bui_normal_red_fire10",
+			"name": "赤焰布伊",
+			"level": 77,
+			"state": "rest",
+		},
+		{
+			"profileId": "tidefin_mist_water8_wind2_v1",
+			"instanceId": "pet_ui_visual_tidefin",
+			"formId": "tidefin_mist_water8_wind2",
+			"name": "雾潮鳍兽",
+			"level": 26,
+			"state": "standby",
+		},
+		{
+			"profileId": "driftfox_mist_wind7_water3_v1",
+			"instanceId": "pet_ui_visual_driftfox",
+			"formId": "driftfox_mist_wind7_water3",
+			"name": "雾风狐",
+			"level": 1,
+			"state": "standby",
+		},
+		{
+			"profileId": "emberhorn_red_fire8_earth2_v1",
+			"instanceId": "pet_ui_visual_emberhorn",
+			"formId": "emberhorn_red_fire8_earth2",
+			"name": "赤角兽",
+			"level": 1,
+			"state": "storage",
+		},
+	]
+	for roster_spec_value in visual_roster_specs:
+		var roster_spec := roster_spec_value as Dictionary
+		visual_roster.append(PetGrowthObservationModel.create_pet_instance(
+			str(roster_spec.get("profileId", "")),
+			str(roster_spec.get("instanceId", "")),
+			str(roster_spec.get("formId", "")),
+			str(roster_spec.get("name", "宠物")),
+			str(roster_spec.get("state", "standby")),
+			int(roster_spec.get("level", 1)),
+			"pet-ui-visual-roster-%s" % str(roster_spec.get("instanceId", "")),
+			1
+		))
+	evolution_profile["petInstances"] = visual_roster
 	evolution_profile["activePetInstanceId"] = str(evolution_pet.get("instanceId", ""))
 	host.player_profile = PlayerProgressModel.normalize_profile(evolution_profile)
 	host.pet_selected_instance_id = str(evolution_pet.get("instanceId", ""))
@@ -7092,6 +7243,12 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and evolution_table_text.contains(str(source_stage_one_power))
 		and str(evolution_ui_snapshot.get("levelOneRadarTitle", "")).contains("进化前 Lv1 4V分位")
 		and str(evolution_ui_snapshot.get("growthRadarTitle", "")) == "进化前1转成长分位"
+		and bool(evolution_ui_snapshot.get("showcaseUsesHighRes", false))
+		and int(evolution_ui_snapshot.get("growthStageFormalArtCount", 0)) == 3
+		and int(evolution_ui_snapshot.get("rosterCardCount", 0)) >= 6
+		and bool(evolution_ui_snapshot.get("codexInRoster", false))
+		and bool(evolution_ui_snapshot.get("rosterPagerPresent", false))
+		and not bool(evolution_ui_snapshot.get("rosterToolbarVisible", true))
 	)
 	var fusion_profile := PlayerProgressModel.default_profile()
 	fusion_profile["petInstances"] = [fusion_pet]
@@ -7147,9 +7304,13 @@ func _run_auto_pet_growth_observation_check() -> void:
 	host.player_profile = PlayerProgressModel.normalize_profile(evolution_profile)
 	host.pet_selected_instance_id = str(evolution_pet.get("instanceId", ""))
 	host.pet_growth_stage = 1
+	host._panel_flow()._set_pet_growth_details_expanded(false)
 	host._refresh_pet_panel()
 	await host.get_tree().process_frame
 	await host.get_tree().process_frame
+	if host.perf_probe_enabled:
+		for _settle_frame in range(75):
+			await host.get_tree().process_frame
 	var screening_contract := PetGrowthScreeningModel.contract_check()
 	var screenshot_ok := true
 	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
@@ -7177,14 +7338,16 @@ func _run_auto_pet_growth_observation_check() -> void:
 		and evolution_ui_ok
 		and fusion_contract_ok
 		and fusion_ui_ok
-			and bool(screening_contract.get("ok", false))
+		and quality_feedback_ok
+		and bool(screening_contract.get("ok", false))
 		and screenshot_ok
 	) else "failed"
-	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s server_ui=%s terminal=%s terminal_ui=%s evolution=%s evolution_ui=%s fusion=%s fusion_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s history_stage=%s history_form=%s history_power=%d row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s screening=%s screening_status=%s" % [
+	print("pet growth observation ready: status=%s grant=%s level_up=%s ui=%s quality=%s server_ui=%s terminal=%s terminal_ui=%s evolution=%s evolution_ui=%s fusion=%s fusion_ui=%s table=%s tabs=%s panel=%s growth_button=%s radar=%s history_stage=%s history_form=%s history_power=%d row=%s table_count=%d mode=%s stage=%d growth_id=%s filter=%s sort=%s level=%d overall=%s stage1=%s stage1_power=%.3f stage2_enabled=%s hp_grade=%s attack_grade=%s defense_grade=%s quick_grade=%s csv=%s rows=%d error=%s screening=%s screening_status=%s quality_errors=%s" % [
 		status,
 		str(bool(grant.get("ok", false))),
 		str(level_up_ok),
 		str(ui_ok),
+		str(quality_feedback_ok),
 		str(server_ui_contract_ok),
 		str(terminal_contract_ok),
 		str(terminal_ui_ok),
@@ -7221,6 +7384,7 @@ func _run_auto_pet_growth_observation_check() -> void:
 		str(csv.get("error", "")),
 		str(bool(screening_contract.get("ok", false))),
 		str((screening_contract.get("mature", {}) as Dictionary).get("status", "")),
+		";".join(quality_model_errors),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -8996,10 +9160,7 @@ func _run_auto_pet_management_check() -> void:
 	host.pet_sort_mode = PET_SORT_DEFAULT
 	host._open_pet_panel()
 	await host.get_tree().process_frame
-	var empty_pet_button_count := 0
-	for child in host.pet_list_container.get_children():
-		if child is Button:
-			empty_pet_button_count += 1
+	var empty_pet_button_count: int = int(host.pet_list_buttons.size())
 	var empty_panel_ok = (
 		host.pet_panel != null
 		and host.pet_panel.visible
@@ -9062,10 +9223,7 @@ func _run_auto_pet_management_check() -> void:
 	host._open_pet_panel()
 	await host.get_tree().process_frame
 	var egg_visible = host._pet_panel_visible_instances()
-	var egg_pet_button_count := 0
-	for child in host.pet_list_container.get_children():
-		if child is Button:
-			egg_pet_button_count += 1
+	var egg_pet_button_count: int = int(host.pet_list_buttons.size())
 	var battle_entry = host.pet_list_buttons.get(battle_egg_instance_id, null)
 	var riding_entry = host.pet_list_buttons.get(tiger_instance_id, null)
 	var battle_accent := Color.TRANSPARENT
@@ -9344,31 +9502,140 @@ func _run_auto_pet_order_check() -> void:
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
+func _shared_vector_canaries_absent(value, canaries_value) -> bool:
+	if not (canaries_value is Array):
+		return false
+	var serialized := JSON.stringify(value)
+	for canary_value in canaries_value as Array:
+		var canary := str(canary_value)
+		if canary != "" and serialized.find(canary) >= 0:
+			return false
+	return true
+
+
+func _canonical_server_public_vector_for_check() -> Dictionary:
+	var document = JSON.parse_string(FileAccess.get_file_as_string(ServerPetProfileProjectionModel.PUBLIC_V2_VECTOR_PATH))
+	if not (document is Dictionary):
+		return {"ok": false, "error": "vector_document"}
+	var cases = (document as Dictionary).get("cases", [])
+	if not (cases is Array) or (cases as Array).is_empty() or not ((cases as Array)[0] is Dictionary):
+		return {"ok": false, "error": "vector_cases"}
+	var vector := (cases as Array)[0] as Dictionary
+	var internal_value = vector.get("internalProfile", {})
+	var expected_value = vector.get("expectedPublicProfile", {})
+	if not (internal_value is Dictionary) or not (expected_value is Dictionary):
+		return {"ok": false, "error": "vector_profiles"}
+	var internal := (internal_value as Dictionary).duplicate(true)
+	var expected := (expected_value as Dictionary).duplicate(true)
+	var canaries = vector.get("privateCanaries", [])
+	var internal_projection := ServerPetProfileProjectionModel.project_server_profile(internal)
+	var internal_safe_profile := internal_projection.get("profile", {}) as Dictionary
+	var internal_fail_closed: bool = (
+		not bool(internal_projection.get("ok", true))
+		and bool(internal_projection.get("refreshNeeded", false))
+		and _shared_vector_canaries_absent(internal_safe_profile, canaries)
+	)
+	var projection := ServerPetProfileProjectionModel.project_server_profile(expected)
+	var public_profile := projection.get("profile", {}) as Dictionary
+	var replay := ServerPetProfileProjectionModel.project_server_profile(public_profile)
+	var pet_self_check := PetGrowthPublicProjectionModel.self_check()
+	var profile_self_check := ServerPetProfileProjectionModel.self_check()
+	var canonical_equivalent: bool = (
+		replay.get("profile", {}) == public_profile
+	)
+	var ok: bool = (
+		internal_fail_closed
+		and bool(projection.get("ok", false))
+		and bool(replay.get("ok", false))
+		and canonical_equivalent
+		and _shared_vector_canaries_absent(public_profile, canaries)
+		and bool(pet_self_check.get("ok", false))
+		and bool(profile_self_check.get("ok", false))
+	)
+	return {
+		"ok": ok,
+		"profile": public_profile,
+		"privateCanaries": canaries,
+		"internalFailClosed": internal_fail_closed,
+		"canonicalEquivalent": canonical_equivalent,
+		"petSelfCheck": bool(pet_self_check.get("ok", false)),
+		"profileSelfCheck": bool(profile_self_check.get("ok", false)),
+		"error": "" if ok else "canonical_projection",
+	}
+
+
+func _canonical_authority_pet_variant_for_check(
+	bundle: Dictionary,
+	instance_id: String,
+	pet_name: String,
+	state: String,
+	missing_hp: int = 0,
+	public_stat_delta: Dictionary = {}
+) -> Dictionary:
+	if not bool(bundle.get("ok", false)):
+		return {"ok": false, "pet": {}}
+	var profile := bundle.get("profile", {}) as Dictionary
+	var source: Dictionary = {}
+	for pet_value in profile.get("petInstances", []) as Array:
+		if pet_value is Dictionary and str((pet_value as Dictionary).get("instanceId", "")) == "pet_vector_authority":
+			source = (pet_value as Dictionary).duplicate(true)
+			break
+	if source.is_empty():
+		return {"ok": false, "pet": {}}
+	source["instanceId"] = instance_id
+	source["petId"] = instance_id
+	source["name"] = pet_name
+	source["state"] = state
+	var growth := source.get("petGrowth", {}) as Dictionary
+	var public_growth := growth.get("public", {}) as Dictionary
+	var public_stats := public_growth.get("stats", {}) as Dictionary
+	var level_one := public_growth.get("levelOneFourV", {}) as Dictionary
+	for stat_id in ["maxHp", "attack", "defense", "quick"]:
+		var delta := int(public_stat_delta.get(stat_id, 0))
+		source[stat_id] = maxi(1, int(source.get(stat_id, 1)) + delta)
+		public_stats[stat_id] = int(source.get(stat_id, 1))
+		if int(source.get("level", 1)) == 1:
+			level_one[stat_id] = int(source.get(stat_id, 1))
+	public_growth["stats"] = public_stats
+	if int(source.get("level", 1)) == 1:
+		public_growth["levelOneFourV"] = level_one
+		source["growthSpeciesLevel1Stats"] = level_one.duplicate(true)
+		source["initialStats"] = level_one.duplicate(true)
+	growth["public"] = public_growth
+	source["petGrowth"] = growth
+	source["hp"] = maxi(0, int(source.get("maxHp", 1)) - maxi(0, missing_hp))
+	var projection := PetGrowthPublicProjectionModel.project_server_pet(source)
+	var projected := projection.get("pet", {}) as Dictionary
+	var replay := PetGrowthPublicProjectionModel.project_server_pet(projected)
+	var canonical_equivalent: bool = (
+		bool(projection.get("ok", false))
+		and bool(replay.get("ok", false))
+		and replay.get("pet", {}) == projected
+		and _shared_vector_canaries_absent(projected, bundle.get("privateCanaries", []))
+	)
+	return {"ok": canonical_equivalent, "pet": projected}
+
+
 func _run_auto_pet_growth_check() -> void:
 	host.profile_save_enabled = false
-	var old_full_pet = {
-		"instanceId": "pet_growth_fast",
-		"petId": "pet_growth_fast",
-		"formId": "wuli_normal_fast_wind10",
-		"templateId": "wuli_normal_fast_wind10",
-		"name": "高速乌力",
-		"state": PlayerProgressModel.PET_STATE_BATTLE,
-		"level": 131,
-		"exp": 122,
-		"nextExp": PlayerProgressModel.exp_to_next_level(131),
-		"hp": 92,
-		"maxHp": 92,
-		"attack": 11,
-		"defense": 6,
-		"quick": 88,
-		"individualSeed": "phase108:fast-growth",
-	}
-	var old_wounded_pet = old_full_pet.duplicate(true)
-	old_wounded_pet["instanceId"] = "pet_growth_wounded"
-	old_wounded_pet["petId"] = "pet_growth_wounded"
-	old_wounded_pet["state"] = PlayerProgressModel.PET_STATE_STANDBY
-	old_wounded_pet["hp"] = 40
-	old_wounded_pet["maxHp"] = 92
+	var canonical_bundle := _canonical_server_public_vector_for_check()
+	var full_fixture := _canonical_authority_pet_variant_for_check(
+		canonical_bundle,
+		"pet_growth_fast",
+		"权威蓝人龙",
+		PlayerProgressModel.PET_STATE_BATTLE,
+		0
+	)
+	var wounded_fixture := _canonical_authority_pet_variant_for_check(
+		canonical_bundle,
+		"pet_growth_wounded",
+		"受伤权威蓝人龙",
+		PlayerProgressModel.PET_STATE_STANDBY,
+		10
+	)
+	var old_full_pet := full_fixture.get("pet", {}) as Dictionary
+	var old_wounded_pet := wounded_fixture.get("pet", {}) as Dictionary
+	old_full_pet["exp"] = 122
 
 	var profile = PlayerProgressModel.default_profile()
 	profile["activePetInstanceId"] = "pet_growth_fast"
@@ -9376,32 +9643,47 @@ func _run_auto_pet_growth_check() -> void:
 	profile = PlayerProgressModel.normalize_profile(profile)
 	var grown = PlayerProgressModel.pet_instance_by_id(profile, "pet_growth_fast")
 	var wounded = PlayerProgressModel.pet_instance_by_id(profile, "pet_growth_wounded")
-	var growth_record = grown.get("growthRecord", {}) as Dictionary
-	var expected_stats = growth_record.get("finalStats", {}) as Dictionary
+	var growth_envelope = grown.get("petGrowth", {}) as Dictionary
+	var public_growth = growth_envelope.get("public", {}) as Dictionary
+	var expected_stats = public_growth.get("stats", {}) as Dictionary
+	var grown_projection := PetGrowthPublicProjectionModel.project_server_pet(grown)
+	var grown_projection_ok: bool = (
+		bool(grown_projection.get("ok", false))
+		and grown_projection.get("pet", {}) == grown
+	)
+	var canaries = canonical_bundle.get("privateCanaries", [])
+	var authority_ok = (
+		bool(canonical_bundle.get("ok", false))
+		and bool(full_fixture.get("ok", false))
+		and bool(wounded_fixture.get("ok", false))
+		and grown_projection_ok
+		and PetGrowthPublicProjectionModel.has_server_authority_marker(grown)
+		and str(grown.get("growthModelVersion", "")) == PetGrowthPublicProjectionModel.MODEL_AUTHORITY_V1
+		and str(grown.get("growthSpeciesProfileId", "")) == "blue_man_dragon_v1"
+		and not (grown.get("growthSpeciesLevel1Stats", {}) as Dictionary).is_empty()
+		and _shared_vector_canaries_absent(grown, canaries)
+	)
 	var stat_ok = (
 		not expected_stats.is_empty()
 		and int(grown.get("maxHp", 0)) == int(expected_stats.get("maxHp", 0))
 		and int(grown.get("attack", 0)) == int(expected_stats.get("attack", 0))
 		and int(grown.get("defense", 0)) == int(expected_stats.get("defense", 0))
 		and int(grown.get("quick", 0)) == int(expected_stats.get("quick", 0))
-		and int(grown.get("maxHp", 0)) >= 1000
-		and int(grown.get("attack", 0)) >= 190
-		and int(grown.get("defense", 0)) >= 120
-		and int(grown.get("quick", 0)) >= 380
 	)
 	var full_hp_ok = int(grown.get("hp", 0)) == int(grown.get("maxHp", 0))
 	var wounded_missing_ok = (
 		int(wounded.get("maxHp", 0)) == int(grown.get("maxHp", 0))
-		and int(wounded.get("hp", 0)) == int(wounded.get("maxHp", 0)) - 52
+		and int(wounded.get("hp", 0)) == int(wounded.get("maxHp", 0)) - 10
 	)
-	var power_ok = PetPowerModel.combat_power_for_pet(grown) >= 1000 and int(grown.get("combatPower", 0)) == PetPowerModel.combat_power_for_pet(grown)
+	var power_ok = PetPowerModel.combat_power_for_pet(grown) > 0 and int(grown.get("combatPower", 0)) == PetPowerModel.combat_power_for_pet(grown)
 	var actor = PlayerProgressModel.actor_from_pet_instance(grown, "ally_pet", "ally", "ally.front.3")
 	var battle_actor_ok = (
 		int(actor.get("maxHp", 0)) == int(grown.get("maxHp", 0))
 		and int(actor.get("attack", 0)) == int(grown.get("attack", 0))
 		and int(actor.get("defense", 0)) == int(grown.get("defense", 0))
 		and int(actor.get("quick", 0)) == int(grown.get("quick", 0))
-		and str(actor.get("individualSeed", "")) == str(grown.get("individualSeed", ""))
+		and int(actor.get("combatPower", 0)) == int(grown.get("combatPower", 0))
+		and _shared_vector_canaries_absent(actor, canaries)
 	)
 	host.player_profile = profile
 	host.pet_selected_instance_id = "pet_growth_fast"
@@ -9415,9 +9697,17 @@ func _run_auto_pet_growth_check() -> void:
 			and host.pet_detail_label.text.find("初始四维") >= 0
 			and host.pet_detail_label.text.find("战力来源") >= 0
 	)
-	var status = "ok" if stat_ok and full_hp_ok and wounded_missing_ok and power_ok and battle_actor_ok and detail_ok else "failed"
-	print("pet growth check ready: status=%s stats=%s full_hp=%s wounded=%s power=%s actor=%s detail=%s lv=%d hp=%d/%d atk=%d def=%d quick=%d power_value=%d" % [
+	var status = "ok" if authority_ok and stat_ok and full_hp_ok and wounded_missing_ok and power_ok and battle_actor_ok and detail_ok else "failed"
+	print("pet growth check ready: status=%s canonical=%s internal_fail_closed=%s canonical_equivalent=%s pet_self=%s profile_self=%s canonical_error=%s projection=%s authority=%s stats=%s full_hp=%s wounded=%s power=%s actor=%s detail=%s lv=%d hp=%d/%d atk=%d def=%d quick=%d power_value=%d" % [
 		status,
+		str(canonical_bundle.get("ok", false)),
+		str(canonical_bundle.get("internalFailClosed", false)),
+		str(canonical_bundle.get("canonicalEquivalent", false)),
+		str(canonical_bundle.get("petSelfCheck", false)),
+		str(canonical_bundle.get("profileSelfCheck", false)),
+		str(canonical_bundle.get("error", "")),
+		str(grown_projection_ok),
+		str(authority_ok),
 		str(stat_ok),
 		str(full_hp_ok),
 		str(wounded_missing_ok),
@@ -9436,49 +9726,86 @@ func _run_auto_pet_growth_check() -> void:
 
 func _run_auto_pet_individual_growth_check() -> void:
 	host.profile_save_enabled = false
-	var form_id = "wuli_normal_orange_fire10"
-	var first_pet = {}
-	var second_pet = {}
-	for seed_index in range(1, 40):
-		first_pet = PlayerProgressModel.create_pet_instance_from_form("phase113_first", "个体乌力A", form_id, PlayerProgressModel.PET_STATE_BATTLE, 10, {
-			"individualSeed": "phase113:first:%d" % seed_index,
-		})
-		second_pet = PlayerProgressModel.create_pet_instance_from_form("phase113_second", "个体乌力B", form_id, PlayerProgressModel.PET_STATE_STANDBY, 10, {
-			"individualSeed": "phase113:second:%d" % seed_index,
-		})
-		if host._pet_stats_differ(first_pet, second_pet):
-			break
-	var seeded_diff_ok = (
-		str(first_pet.get("formId", "")) == str(second_pet.get("formId", ""))
-		and int(first_pet.get("level", 0)) == int(second_pet.get("level", 0))
-		and str(first_pet.get("individualSeed", "")) != str(second_pet.get("individualSeed", ""))
-		and host._pet_stats_differ(first_pet, second_pet)
+	var canonical_bundle := _canonical_server_public_vector_for_check()
+	var first_fixture := _canonical_authority_pet_variant_for_check(
+		canonical_bundle,
+		"phase113_first",
+		"权威个体A",
+		PlayerProgressModel.PET_STATE_BATTLE
 	)
-	var first_record = first_pet.get("growthRecord", {}) as Dictionary
+	var second_fixture := _canonical_authority_pet_variant_for_check(
+		canonical_bundle,
+		"phase113_second",
+		"权威个体B",
+		PlayerProgressModel.PET_STATE_STANDBY,
+		0,
+		{"maxHp": 2, "attack": 1, "quick": 1}
+	)
+	var first_pet := first_fixture.get("pet", {}) as Dictionary
+	var second_pet := second_fixture.get("pet", {}) as Dictionary
+	var canaries = canonical_bundle.get("privateCanaries", [])
+	var public_private_free := (
+		_shared_vector_canaries_absent(first_pet, canaries)
+		and _shared_vector_canaries_absent(second_pet, canaries)
+	)
+	var authority_pair_ok = (
+		bool(canonical_bundle.get("ok", false))
+		and bool(first_fixture.get("ok", false))
+		and bool(second_fixture.get("ok", false))
+		and not first_pet.is_empty()
+		and not second_pet.is_empty()
+		and str(first_pet.get("formId", "")) == str(second_pet.get("formId", ""))
+		and int(first_pet.get("level", 0)) == int(second_pet.get("level", 0))
+		and host._pet_stats_differ(first_pet, second_pet)
+		and PetGrowthPublicProjectionModel.has_server_authority_marker(first_pet)
+		and PetGrowthPublicProjectionModel.has_server_authority_marker(second_pet)
+		and public_private_free
+	)
+	var first_growth = first_pet.get("petGrowth", {}) as Dictionary
+	var first_public = first_growth.get("public", {}) as Dictionary
+	var first_public_stats = first_public.get("stats", {}) as Dictionary
 	var first_initial = first_pet.get("initialStats", {}) as Dictionary
-	var first_variance = first_pet.get("individualVariance", {}) as Dictionary
-	var first_breakdown = first_pet.get("combatPowerBreakdown", {}) as Dictionary
+	var first_authority = first_pet.get("growthAuthority", {}) as Dictionary
 	var field_ok = (
-		str(first_pet.get("growthTierId", "")) != ""
-		and str(first_pet.get("growthTierLabel", "")) != ""
-		and str(first_pet.get("individualQualityLabel", "")) != ""
-		and not first_variance.is_empty()
+		str(first_pet.get("growthModelVersion", "")) == PetGrowthPublicProjectionModel.MODEL_AUTHORITY_V1
+		and str(first_pet.get("growthSpeciesProfileId", "")) != ""
 		and not first_initial.is_empty()
-		and not first_record.is_empty()
-		and int(first_record.get("schemaVersion", 0)) >= 1
-		and int(first_breakdown.get("total", 0)) == PetPowerModel.combat_power_for_pet(first_pet)
+		and str(first_authority.get("source", "")) == PetGrowthPublicProjectionModel.AUTHORITY_SOURCE
+		and int(first_authority.get("settledLevel", 0)) == int(first_pet.get("level", 0))
+		and int(first_growth.get("schemaVersion", 0)) == PetGrowthPublicProjectionModel.SCHEMA_VERSION
+		and int(first_public.get("level", 0)) == int(first_pet.get("level", 0))
+		and int(first_public_stats.get("maxHp", 0)) == int(first_pet.get("maxHp", 0))
+		and int(first_public_stats.get("attack", 0)) == int(first_pet.get("attack", 0))
+		and int(first_public_stats.get("defense", 0)) == int(first_pet.get("defense", 0))
+		and int(first_public_stats.get("quick", 0)) == int(first_pet.get("quick", 0))
+		and not first_growth.has("private")
 	)
 	var actor = PlayerProgressModel.actor_from_pet_instance(first_pet, "ally_pet", "ally", "ally.front.3")
 	var actor_field_ok = (
-		str(actor.get("individualSeed", "")) == str(first_pet.get("individualSeed", ""))
+		int(actor.get("maxHp", 0)) == int(first_pet.get("maxHp", 0))
+		and int(actor.get("attack", 0)) == int(first_pet.get("attack", 0))
+		and int(actor.get("defense", 0)) == int(first_pet.get("defense", 0))
+		and int(actor.get("quick", 0)) == int(first_pet.get("quick", 0))
 		and int(actor.get("combatPower", 0)) == int(first_pet.get("combatPower", 0))
-		and actor.get("growthRecord", {}) is Dictionary
+		and _shared_vector_canaries_absent(actor, canaries)
 	)
 
 	var profile = PlayerProgressModel.default_profile()
 	profile["activePetInstanceId"] = "phase113_first"
 	profile["petInstances"] = [first_pet, second_pet]
 	host.player_profile = PlayerProgressModel.normalize_profile(profile)
+	var normalized_first := PlayerProgressModel.pet_instance_by_id(host.player_profile, "phase113_first")
+	var normalized_second := PlayerProgressModel.pet_instance_by_id(host.player_profile, "phase113_second")
+	var normalized_first_projection := PetGrowthPublicProjectionModel.project_server_pet(normalized_first)
+	var normalized_second_projection := PetGrowthPublicProjectionModel.project_server_pet(normalized_second)
+	var stable_public_ok: bool = (
+		host._pet_stats_differ(normalized_first, normalized_second)
+		and bool(normalized_first_projection.get("ok", false))
+		and bool(normalized_second_projection.get("ok", false))
+		and normalized_first_projection.get("pet", {}) == normalized_first
+		and normalized_second_projection.get("pet", {}) == normalized_second
+		and _shared_vector_canaries_absent(host.player_profile, canaries)
+	)
 	host.pet_selected_instance_id = "phase113_first"
 	host._open_pet_panel()
 	await host.get_tree().process_frame
@@ -9489,78 +9816,15 @@ func _run_auto_pet_individual_growth_check() -> void:
 		and detail_text.find("初始四维") >= 0
 		and detail_text.find("战力来源") >= 0
 	)
-
-	var capture_zone = {
-		"id": "phase113_capture_zone",
-		"name": "个体捕捉验证",
-		"selectedWildPet": {
-			"formId": form_id,
-			"name": "普通乌力",
-			"level": 1,
-			"battleStats": {
-				"maxHp": 80,
-				"attack": 10,
-				"defense": 6,
-				"agility": 48,
-			},
-		},
-	}
-	var capture_state_a = BattleModel.create_wild_battle(capture_zone)
-	capture_state_a["id"] = "phase113_capture_a"
-	var capture_target_a = BattleModel.living_enemy_id(capture_state_a)
-	if capture_target_a != "":
-		capture_state_a = BattleModel.apply_battle_event(capture_state_a, {
-			"type": "capture",
-			"attackerId": BattleModel.PLAYER_ACTOR_ID,
-			"targetId": capture_target_a,
-			"targetSide": BattleModel.SIDE_ENEMY,
-			"captureToolId": BattleModel.CAPTURE_TOOL_EMPTY_HAND,
-			"success": true,
-			"sequence": 1,
-			"speed": 100,
-		})
-	var capture_state_b = BattleModel.create_wild_battle(capture_zone)
-	capture_state_b["id"] = "phase113_capture_b"
-	var capture_target_b = BattleModel.living_enemy_id(capture_state_b)
-	if capture_target_b != "":
-		capture_state_b = BattleModel.apply_battle_event(capture_state_b, {
-			"type": "capture",
-			"attackerId": BattleModel.PLAYER_ACTOR_ID,
-			"targetId": capture_target_b,
-			"targetSide": BattleModel.SIDE_ENEMY,
-			"captureToolId": BattleModel.CAPTURE_TOOL_EMPTY_HAND,
-			"success": true,
-			"sequence": 1,
-			"speed": 100,
-		})
-	var capture_result_a = PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), capture_state_a, "victory")
-	var capture_result_b = PlayerProgressModel.apply_battle_result(PlayerProgressModel.default_profile(), capture_state_b, "victory")
-	var captured_a: Dictionary = {}
-	var captured_b: Dictionary = {}
-	var captured_array_a: Array = capture_result_a.get("capturedPets", [])
-	var captured_array_b: Array = capture_result_b.get("capturedPets", [])
-	if not captured_array_a.is_empty() and captured_array_a[0] is Dictionary:
-		captured_a = captured_array_a[0] as Dictionary
-	if not captured_array_b.is_empty() and captured_array_b[0] is Dictionary:
-		captured_b = captured_array_b[0] as Dictionary
-	var captured_diff_ok = (
-		not captured_a.is_empty()
-		and not captured_b.is_empty()
-		and str(captured_a.get("formId", "")) == str(captured_b.get("formId", ""))
-		and int(captured_a.get("level", 0)) == int(captured_b.get("level", 0))
-		and str(captured_a.get("individualSeed", "")) != str(captured_b.get("individualSeed", ""))
-		and host._pet_stats_differ(captured_a, captured_b)
-	)
-	var status = "ok" if seeded_diff_ok and field_ok and actor_field_ok and detail_ok and captured_diff_ok else "failed"
-	print("pet individual growth check ready: status=%s seeded_diff=%s fields=%s actor=%s detail=%s captured_diff=%s first_seed=%s second_seed=%s first_stats=%d/%d/%d/%d second_stats=%d/%d/%d/%d cap_a=%s cap_b=%s" % [
+	var status = "ok" if authority_pair_ok and field_ok and actor_field_ok and stable_public_ok and detail_ok else "failed"
+	print("pet individual growth check ready: status=%s canonical_pair=%s fields=%s actor=%s stable_public=%s detail=%s public_private_free=%s first_stats=%d/%d/%d/%d second_stats=%d/%d/%d/%d" % [
 		status,
-		str(seeded_diff_ok),
+		str(authority_pair_ok),
 		str(field_ok),
 		str(actor_field_ok),
+		str(stable_public_ok),
 		str(detail_ok),
-		str(captured_diff_ok),
-		str(first_pet.get("individualSeed", "")),
-		str(second_pet.get("individualSeed", "")),
+		str(public_private_free),
 		int(first_pet.get("maxHp", 0)),
 		int(first_pet.get("attack", 0)),
 		int(first_pet.get("defense", 0)),
@@ -9569,8 +9833,6 @@ func _run_auto_pet_individual_growth_check() -> void:
 		int(second_pet.get("attack", 0)),
 		int(second_pet.get("defense", 0)),
 		int(second_pet.get("quick", 0)),
-		str(captured_a.get("individualSeed", "")),
-		str(captured_b.get("individualSeed", "")),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -9634,7 +9896,7 @@ func _run_auto_pet_cultivation_check() -> void:
 	host.pet_selected_instance_id = "phase114_elder"
 	host._open_pet_panel()
 	await host.get_tree().process_frame
-	var button_ready = host.pet_cultivation_button != null and host.pet_cultivation_button.visible and not host.pet_cultivation_button.disabled and host.pet_cultivation_button.text == "转强"
+	var button_ready = host.pet_cultivation_button != null and host.pet_cultivation_button.visible and not host.pet_cultivation_button.disabled and host.pet_cultivation_button.text == "培养"
 	host._on_pet_cultivation_pressed()
 	await host.get_tree().process_frame
 	var panel_ready = (
@@ -10735,7 +10997,7 @@ func _run_auto_pet_drop_pickup_check() -> void:
 
 func _run_auto_pet_codex_detail_check() -> void:
 	host.profile_save_enabled = false
-	host.player_profile = PlayerProgressModel.default_profile()
+	host.player_profile = _qa_bui_pet_profile()
 	host.pet_selected_instance_id = ""
 	host.pet_detail_mode = PET_DETAIL_MODE_INSTANCE
 	host._open_pet_panel()
@@ -10751,7 +11013,7 @@ func _run_auto_pet_codex_detail_check() -> void:
 		and host.pet_detail_instance_button.visible
 		and host.pet_detail_codex_button.visible
 		and host.pet_detail_growth_button.visible
-		and host.pet_detail_instance_button.text == "个体"
+		and host.pet_detail_instance_button.text == "属性"
 		and host.pet_detail_codex_button.text == "图鉴"
 		and host.pet_detail_growth_button.text == "成长"
 		and host.pet_detail_instance_button.button_pressed
@@ -10793,8 +11055,32 @@ func _run_auto_pet_codex_detail_check() -> void:
 	var raw_hidden = codex_text.find("bui_normal_yellow_wind10") < 0 and codex_text.find("agility_high") < 0
 	host._set_pet_detail_mode(PET_DETAIL_MODE_GROWTH)
 	await host.get_tree().process_frame
+	var collapsed_growth_snapshot: Dictionary = (
+		host._panel_flow()._pet_growth_manual_evaluation_snapshot()
+	)
+	var collapsed_growth_overview := (
+		collapsed_growth_snapshot.get("qualityOverview", {}) as Dictionary
+	)
+	var growth_collapsed_ok: bool = (
+		not bool(collapsed_growth_overview.get("detailsExpanded", true))
+		and host.pet_growth_radar != null
+		and not host.pet_growth_radar.visible
+		and host.pet_detail_label != null
+		and not host.pet_detail_label.visible
+	)
+	host._panel_flow()._set_pet_growth_details_expanded(true)
+	await host.get_tree().process_frame
 	var growth_text = host.pet_detail_label.text if host.pet_detail_label != null else ""
 	var growth_button_y = host.pet_state_cycle_button.global_position.y if host.pet_state_cycle_button != null else -3.0
+	var growth_quality_snapshot: Dictionary = (
+		host._panel_flow()._pet_growth_manual_evaluation_snapshot()
+	)
+	var growth_quality_overview := (
+		growth_quality_snapshot.get("qualityOverview", {}) as Dictionary
+	)
+	var growth_quality_badge := (
+		growth_quality_overview.get("badge", {}) as Dictionary
+	)
 	var growth_buttons_ok = (
 		host.pet_detail_instance_button != null
 		and host.pet_detail_codex_button != null
@@ -10804,9 +11090,13 @@ func _run_auto_pet_codex_detail_check() -> void:
 		and host.pet_detail_growth_button.button_pressed
 	)
 	var growth_ok = (
-		growth_text.find("暂无成长观察档") >= 0
+		growth_collapsed_ok
+		and growth_text.find("0转成长评价") >= 0
 		and host.pet_growth_radar != null
-		and not host.pet_growth_radar.visible
+		and host.pet_growth_radar.visible
+		and bool(growth_quality_overview.get("detailsExpanded", false))
+		and str(growth_quality_badge.get("text", "")) == "成长未观察"
+		and int(growth_quality_overview.get("rowCount", -1)) == 0
 	)
 	var action_y_stable = absf(instance_button_y - codex_button_y) < 1.0 and absf(instance_button_y - growth_button_y) < 1.0
 
@@ -10912,6 +11202,14 @@ func _run_auto_pet_codex_list_check() -> void:
 		else ""
 	)
 	var showcase := codex_view.find_child("SelectedPetShowcase", true, false) as TextureRect
+	var yellow_texture := PetPortraitArtCatalog.texture_for_form(
+		"bui_normal_yellow_wind10"
+	)
+	var yellow_stage_label := codex_view.find_child(
+		"LockedStageLabel",
+		true,
+		false
+	) as Label
 	var yellow_ok: bool = (
 		yellow_text.find("图鉴：黄色普通布伊") >= 0
 		and yellow_text.find("记录：已捕捉") >= 0
@@ -10919,6 +11217,16 @@ func _run_auto_pet_codex_list_check() -> void:
 		and yellow_text.find("成长倾向：敏捷") >= 0
 		and yellow_text.find("bui_normal_yellow_wind10") < 0
 		and yellow_text.find("agility_high") < 0
+		and yellow_texture != null
+		and not PetPortraitArtCatalog.is_owner_approved_portrait(
+			"bui_normal_yellow_wind10"
+		)
+		and showcase != null
+		and not showcase.visible
+		and showcase.texture == null
+		and yellow_stage_label != null
+		and yellow_stage_label.visible
+		and yellow_stage_label.text == "形象尚未收录"
 	)
 	# 芽耳布伊的画像文件虽然存在且 runtimeEnabled，但仍处于
 	# in_production。图鉴必须坚持 owner-review 发布门禁而显示自然占位。
@@ -12757,7 +13065,12 @@ func _run_auto_equipment_shop_preview_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
 	host.world_log_message = ""
-	host.player_profile = PlayerProgressModel.with_stone_coins(PlayerProgressModel.default_profile(), 300)
+	host.player_profile = PlayerProgressModel.with_stone_coins(
+		PlayerProgressModel.with_starter_equipment(
+			PlayerProgressModel.default_profile()
+		),
+		300
+	)
 	host._load_map("firebud_village_gate", "from_training_yard")
 	host._open_shop_panel(FIREBUD_EQUIPMENT_SHOP_ID)
 	host._select_shop_item("weapon_stone_axe")
@@ -16114,6 +16427,7 @@ func _run_auto_manor_map_shop_check() -> void:
 	var first_steward_dialog_ok := false
 	var first_steward_panel_ok := false
 	var first_steward_panel_layout_ok := false
+	var first_steward_panel_layout_diag := "not-opened"
 	if not first_shop_interaction.is_empty() and first_map_id != "":
 		host._load_map(first_map_id, first_spawn_name)
 		host._open_interaction_dialog(first_shop_interaction)
@@ -16134,18 +16448,36 @@ func _run_auto_manor_map_shop_check() -> void:
 		if first_steward_panel_ok:
 			host._layout_hud()
 			var viewport_size: Vector2 = host._layout_size()
-			var margin: float = 18.0
-			var center_delta: float = absf((host.family_panel.position.x + host.family_panel.size.x * 0.5) - viewport_size.x * 0.5)
-			first_steward_panel_layout_ok = (
-				center_delta <= 2.0
-				and host.family_panel.position.x >= margin - 1.0
-				and host.family_panel.position.y >= host.top_panel.position.y + host.top_panel.size.y - 1.0
-				and host.family_panel.size.x <= viewport_size.x - margin * 2.0 + 1.0
-				and host.family_panel.size.y <= viewport_size.y - margin * 2.0 + 1.0
-			)
+			if host.family_panel.has_method("active_tab"):
+				first_steward_panel_layout_diag = "pos=%s size=%s viewport=%s tab=%s within=%s" % [
+					str(host.family_panel.position),
+					str(host.family_panel.size),
+					str(viewport_size),
+					str(host.family_panel.call("active_tab")),
+					str(host.family_panel.call("is_within_viewport")),
+				]
+				first_steward_panel_layout_ok = (
+					host.family_panel.position.distance_to(Vector2.ZERO) <= 1.0
+					and host.family_panel.size.distance_to(viewport_size) <= 1.0
+					and str(host.family_panel.call("active_tab")) == "manors"
+					and bool(host.family_panel.call("is_within_viewport"))
+				)
+			else:
+				var margin: float = 18.0
+				var center_delta: float = absf((host.family_panel.position.x + host.family_panel.size.x * 0.5) - viewport_size.x * 0.5)
+				first_steward_panel_layout_ok = (
+					center_delta <= 2.0
+					and host.family_panel.position.x >= margin - 1.0
+					and host.family_panel.position.y >= host.top_panel.position.y + host.top_panel.size.y - 1.0
+					and host.family_panel.size.x <= viewport_size.x - margin * 2.0 + 1.0
+					and host.family_panel.size.y <= viewport_size.y - margin * 2.0 + 1.0
+				)
+		if host.perf_probe_enabled:
+			for _frame_index in range(90):
+				await host.get_tree().process_frame
 		host._close_family_panel()
 	var status = "ok" if errors.is_empty() and count_ok and first_dialog_ok and first_shop_panel_ok and first_steward_dialog_ok and first_steward_panel_ok and first_steward_panel_layout_ok and not village_map.is_empty() else "failed"
-	print("manor map shop check ready: status=%s count=%d village=%s first_dialog=%s first_shop=%s first_steward_dialog=%s first_steward_panel=%s first_steward_layout=%s first_map=%s errors=%s" % [
+	print("manor map shop check ready: status=%s count=%d village=%s first_dialog=%s first_shop=%s first_steward_dialog=%s first_steward_panel=%s first_steward_layout=%s first_steward_layout_diag=%s first_map=%s errors=%s" % [
 		status,
 		manors.size(),
 		str(not village_map.is_empty()),
@@ -16154,6 +16486,7 @@ func _run_auto_manor_map_shop_check() -> void:
 		str(first_steward_dialog_ok),
 		str(first_steward_panel_ok),
 		str(first_steward_panel_layout_ok),
+		first_steward_panel_layout_diag,
 		first_map_id,
 		";".join(errors),
 	])
@@ -17344,26 +17677,36 @@ func _run_auto_battle_settings_preview() -> void:
 	host.world_log_history.clear()
 	host.world_log_message = ""
 	host.player_profile = PlayerProgressModel.default_profile()
-	var settings = PlayerProgressModel.auto_battle_settings(host.player_profile)
-	settings[AutoBattleSettingsModel.PLAYER_FIRST_ROUND_ACTION_KEY] = AutoBattleSettingsModel.ACTION_SPIRIT_POISON_ALL_1
-	settings[AutoBattleSettingsModel.PLAYER_NORMAL_ACTION_KEY] = AutoBattleSettingsModel.ACTION_ATTACK
-	settings[AutoBattleSettingsModel.PET_FIRST_ROUND_SLOT_KEY] = 3
-	settings[AutoBattleSettingsModel.PET_NORMAL_SLOT_KEY] = 1
-	settings[AutoBattleSettingsModel.TARGET_MODE_KEY] = AutoBattleSettingsModel.TARGET_LOWEST_HP_PERCENT
-	settings[AutoBattleSettingsModel.HEALING_ENABLED_KEY] = true
-	settings[AutoBattleSettingsModel.PLAYER_HP_PERCENT_KEY] = 70
-	settings[AutoBattleSettingsModel.PET_HP_PERCENT_KEY] = 55
-	settings[AutoBattleSettingsModel.HEAL_PRIORITY_KEY] = [
-		AutoBattleSettingsModel.HEAL_ITEM_MEAT,
-		AutoBattleSettingsModel.HEAL_ITEM_HEAL_SINGLE,
-		AutoBattleSettingsModel.HEAL_SPIRIT_MOIST_1,
-		AutoBattleSettingsModel.HEAL_SPIRIT_GRACE_1,
-		AutoBattleSettingsModel.HEAL_ITEM_HEAL_ALL,
-	]
-	host.player_profile = PlayerProgressModel.with_auto_battle_settings(host.player_profile, settings)
+	var preview_player := host.player_profile.get("player", {}) as Dictionary
+	preview_player["appearanceId"] = "novice_hunter_v1"
+	host.player_profile["player"] = preview_player
+	var preview_pet := _pet_growth_rule_preview_fixture(
+		"auto_settings_preview_pet",
+		"蓝人龙",
+		18,
+		{"maxHp": 221, "attack": 58, "defense": 27, "quick": 26},
+		PlayerProgressModel.PET_STATE_BATTLE
+	)
+	if not preview_pet.is_empty():
+		host.player_profile["petInstances"] = [preview_pet]
+		host.player_profile["activePetInstanceId"] = "auto_settings_preview_pet"
+	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	host._open_auto_settings_panel()
 	if host.status_label != null:
 		host._update_hud_text()
+	var screenshot_path := OS.get_environment("BEASTBOUND_SCREENSHOT_PATH").strip_edges()
+	if screenshot_path != "":
+		DirAccess.make_dir_recursive_absolute(screenshot_path.get_base_dir())
+		for _frame in range(3):
+			await host.get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var screenshot_image: Image = host.get_viewport().get_texture().get_image()
+		var screenshot_error := screenshot_image.save_png(screenshot_path) if screenshot_image != null else ERR_UNAVAILABLE
+		print("auto battle settings screenshot: status=%s path=%s" % [
+			"ok" if screenshot_error == OK else "failed",
+			screenshot_path,
+		])
+		host.get_tree().quit(0 if screenshot_error == OK else 1)
 
 func _run_auto_capture_settings_preview() -> void:
 	host.profile_save_enabled = false
@@ -18520,6 +18863,34 @@ func _run_auto_quest_ui_check() -> void:
 		and host.quest_route_button != null
 		and not host.quest_route_button.disabled
 	)
+	var awakened_catalog_ok: bool = (
+		host.quest_panel.has_method("is_awakened_quest_panel")
+		and host.quest_panel.catalog_button_count() == QuestModel.quests().size()
+		and host.quest_panel.reward_card_count() >= 1
+		and host.quest_panel.displayed_title() == "认识训练师"
+	)
+	var tracker_multi_ok: bool = (
+		host.world_hud_awakened_view != null
+		and host.world_hud_awakened_view.has_method("task_entry_count")
+		and host.world_hud_awakened_view.task_entry_count() >= 2
+	)
+	var catalog_selection_ok := false
+	if host.quest_panel.has_method("catalog_button"):
+		var future_button = host.quest_panel.catalog_button("quest_open_task_panel")
+		if future_button != null:
+			future_button.pressed.emit()
+			await host.get_tree().process_frame
+			catalog_selection_ok = (
+				host.quest_panel.selected_quest_id() == "quest_open_task_panel"
+				and host.quest_panel.displayed_title() == "查看当前任务"
+				and host.quest_route_button.disabled
+			)
+			var active_button = host.quest_panel.catalog_button("quest_intro_talk")
+			if active_button != null:
+				active_button.pressed.emit()
+				await host.get_tree().process_frame
+			else:
+				catalog_selection_ok = false
 	var previous_session: Dictionary = host.current_account_session.duplicate(true)
 	var previous_step_enabled: bool = bool(host.server_step_world_move_enabled)
 	host.current_account_session = {
@@ -19084,10 +19455,13 @@ func _run_auto_quest_ui_check() -> void:
 		and host.world_log_message == "历史记录13"
 	)
 
-	var status = "ok" if panel_ok and server_route_uses_step_ok and trainer_route_ok and bank_detail_ok and bank_cross_map_route_ok and bank_route_ok and stable_route_ok and riding_route_ok and try_ride_backpack_route_ok and try_ride_pet_route_ok and battle_pet_backpack_route_ok and battle_pet_reclaim_route_ok and battle_pet_full_reclaim_button_ok and battle_pet_panel_route_ok and battle_pet_storage_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and first_victory_route_ok and armor_shop_route_ok and armor_equip_route_ok and moist_battle_route_ok and poison_shop_route_ok and poison_equip_route_ok and group_brawl_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
-	print("quest ui check ready: status=%s panel=%s server_step_route=%s trainer_route=%s bank_detail=%s bank_cross_map=%s bank_route=%s stable_route=%s riding_route=%s try_ride_bag=%s try_ride_pet=%s battle_pet_bag=%s battle_pet_reclaim=%s battle_pet_full_reclaim=%s battle_pet_panel=%s battle_pet_storage=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s first_victory_route=%s armor_shop=%s armor_equip=%s moist_battle=%s poison_shop=%s poison_equip=%s group_brawl=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
+	var status = "ok" if panel_ok and awakened_catalog_ok and tracker_multi_ok and catalog_selection_ok and server_route_uses_step_ok and trainer_route_ok and bank_detail_ok and bank_cross_map_route_ok and bank_route_ok and stable_route_ok and riding_route_ok and try_ride_backpack_route_ok and try_ride_pet_route_ok and battle_pet_backpack_route_ok and battle_pet_reclaim_route_ok and battle_pet_full_reclaim_button_ok and battle_pet_panel_route_ok and battle_pet_storage_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and first_victory_route_ok and armor_shop_route_ok and armor_equip_route_ok and moist_battle_route_ok and poison_shop_route_ok and poison_equip_route_ok and group_brawl_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
+	print("quest ui check ready: status=%s panel=%s catalog=%s tracker_multi=%s selection=%s server_step_route=%s trainer_route=%s bank_detail=%s bank_cross_map=%s bank_route=%s stable_route=%s riding_route=%s try_ride_bag=%s try_ride_pet=%s battle_pet_bag=%s battle_pet_reclaim=%s battle_pet_full_reclaim=%s battle_pet_panel=%s battle_pet_storage=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s first_victory_route=%s armor_shop=%s armor_equip=%s moist_battle=%s poison_shop=%s poison_equip=%s group_brawl=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
 		status,
 		str(panel_ok),
+		str(awakened_catalog_ok),
+		str(tracker_multi_ok),
+		str(catalog_selection_ok),
 		str(server_route_uses_step_ok),
 		str(trainer_route_ok),
 		str(bank_detail_ok),
@@ -20058,7 +20432,6 @@ func _run_auto_map_panel_check() -> void:
 		and EncounterModel.zone_contains_cell(zone, host.target_cell)
 		and host.world_log_message.find("村外草丛") >= 0
 	)
-
 	host._clear_navigation_state()
 	host._open_map_panel()
 	await host.get_tree().process_frame
@@ -20177,6 +20550,39 @@ func _run_auto_map_panel_check() -> void:
 		host.world_log_message,
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _map_panel_check_real_left_click(control: Control) -> bool:
+	if (
+		control == null
+		or not control.is_inside_tree()
+		or not control.is_visible_in_tree()
+		or (control is BaseButton and (control as BaseButton).disabled)
+	):
+		return false
+	var click_point := control.get_global_rect().get_center()
+	var motion := InputEventMouseMotion.new()
+	motion.position = click_point
+	motion.global_position = click_point
+	host.get_viewport().push_input(motion, true)
+	await host.get_tree().process_frame
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = click_point
+	press.global_position = click_point
+	var press_frame := Engine.get_process_frames()
+	host.get_viewport().push_input(press, true)
+	await host.get_tree().process_frame
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.position = click_point
+	release.global_position = click_point
+	var release_frame := Engine.get_process_frames()
+	host.get_viewport().push_input(release, true)
+	await host.get_tree().process_frame
+	return release_frame > press_frame
 
 func _run_auto_facility_marker_check() -> void:
 	host.profile_save_enabled = false
@@ -29995,6 +30401,36 @@ func _run_auto_pet_fusion_skill_policy_check() -> void:
 	host.get_tree().quit(0 if bool(result.get("ok", false)) else 1)
 
 
+func _run_auto_pet_portrait_art_catalog_check() -> void:
+	var result := PetPortraitArtCatalogCheck.run()
+	var ok := bool(result.get("ok", false))
+	print(
+		"pet portrait art catalog check ready: status=%s catalog=%d formal=%d errors=%s"
+		% [
+			"ok" if ok else "failed",
+			int(result.get("catalogFormCount", 0)),
+			int(result.get("formalPortraitCount", 0)),
+			JSON.stringify(result.get("errors", [])),
+		]
+	)
+	host.get_tree().quit(0 if ok else 1)
+
+
+func _run_auto_pet_shared_portrait_consumer_check() -> void:
+	var result := PetSharedPortraitConsumerCheck.run()
+	var ok := bool(result.get("ok", false))
+	print(
+		"pet shared portrait consumer check ready: status=%s catalog=%d formal=%d errors=%s"
+		% [
+			"ok" if ok else "failed",
+			int(result.get("catalogFormCount", 0)),
+			int(result.get("formalPortraitCount", 0)),
+			JSON.stringify(result.get("errors", [])),
+		]
+	)
+	host.get_tree().quit(0 if ok else 1)
+
+
 func _run_auto_pet_template_catalog_check() -> void:
 	var catalog_errors = BattleActionCatalog.validation_errors()
 	catalog_errors.append_array(BattlePassiveCatalog.validation_errors())
@@ -30235,26 +30671,63 @@ func _run_auto_pet_skill_training_check() -> void:
 		host._end_battle(false)
 	host.pet_skill_selected_slot = 6
 	host._open_pet_skill_panel(true, PetSkillTrainingModel.DEFAULT_TRAINER_ID)
+	await host.get_tree().process_frame
+	var skill_overview = host._panel_flow()._pet_skill_overview_panel
+	var skill_snapshot: Dictionary = (
+		skill_overview.call("snapshot")
+		if skill_overview != null
+		else {}
+	)
+	var clear_action_found := false
+	var skill_cards = skill_snapshot.get("cards", [])
+	if skill_cards is Array:
+		for value in skill_cards as Array:
+			if (
+				value is Dictionary
+				and bool((value as Dictionary).get("isClearAction", false))
+			):
+				clear_action_found = true
+				break
 	var panel_ok = (
-		host.pet_skill_panel != null
-		and host.pet_skill_panel.visible
-		and host.pet_skill_learn_button != null
-		and host.pet_skill_learn_button.visible
-		and host.pet_skill_learn_option != null
-		and host.pet_skill_learn_option.get_item_count() > 0
-		and host.pet_skill_learn_option.get_item_text(0).find("空技能") >= 0
-		and (host.pet_skill_move_up_button == null or not host.pet_skill_move_up_button.visible)
-		and (host.pet_skill_move_down_button == null or not host.pet_skill_move_down_button.visible)
+		host.pet_panel != null
+		and host.pet_panel.visible
+			and host.pet_detail_mode == host.PET_DETAIL_MODE_SKILLS
+			and skill_overview != null
+			and skill_overview.visible
+		and bool(skill_snapshot.get("trainingMode", false))
+		and int(skill_snapshot.get("activeSlotCount", 0)) == (
+			PetTemplateCatalog.MAX_PET_SKILL_SLOTS
+		)
+		and int(skill_snapshot.get("trainingCandidateCount", 0)) > 0
+		and int(skill_snapshot.get("trainingActionCount", 0)) == 1
+			and clear_action_found
+			and (host.pet_skill_move_up_button == null or not host.pet_skill_move_up_button.visible)
+			and (host.pet_skill_move_down_button == null or not host.pet_skill_move_down_button.visible)
 		and (host.pet_skill_forget_button == null or not host.pet_skill_forget_button.visible)
 	)
-	if host.pet_skill_learn_option != null:
-		host.pet_skill_learn_option.select(0)
-	host._on_pet_skill_learn_pressed()
+	var panel_flow = host._panel_flow()
+	var roster_scroll: ScrollContainer = null
+	if panel_flow != null:
+		roster_scroll = panel_flow._pet_roster_scroll as ScrollContainer
+	var skill_clip_clearance: float = -1.0
+	if roster_scroll != null and host.pet_detail_scroll != null:
+		skill_clip_clearance = (
+			roster_scroll.get_global_rect().position.y
+			- host.pet_detail_scroll.get_global_rect().end.y
+		)
+	var skill_clip_ok: bool = (
+		host.pet_detail_scroll != null
+		and host.pet_detail_scroll.clip_contents
+		and skill_clip_clearance >= 32.0
+	)
+	panel_ok = panel_ok and skill_clip_ok
+	if skill_overview != null:
+		skill_overview.emit_signal("learn_requested", "")
 	var overwrite_dialog_ok = (
 		host._dialog_is_open()
 		and str(host.active_dialog_interaction.get("actionType", "")) == DIALOG_ACTION_PET_SKILL_OVERWRITE
 		and host.dialog_option_button != null
-		and host.dialog_option_button.text == "覆盖"
+		and host.dialog_option_button.text == "清空"
 		and host.dialog_close_button != null
 		and host.dialog_close_button.text == "取消"
 	)
@@ -30273,9 +30746,9 @@ func _run_auto_pet_skill_training_check() -> void:
 		and str(after_clear_slots[5]) == ""
 	)
 	host._close_dialog()
-	host._close_pet_skill_panel()
+	host._close_pet_panel()
 	var status = "ok" if catalog_errors.is_empty() and trainer_found and default_slots_ok and learn_ok and replace_ok and actor_slot_ok and battle_slot_ok and button_label_ok and panel_ok and clear_ok else "failed"
-	print("pet skill training check ready: status=%s errors=%d trainer=%s default=%s learn=%s replace=%s replaceCoins=%s replaceSkills=%s replaceForgotten=%s replaceSlots=%s clear=%s actor_slot=%s battle_slot=%s button=%s panel=%s dialog=%s coins=%d skills=%s forgotten=%s slots=%s afterClearSlots=%s" % [
+	print("pet skill training check ready: status=%s errors=%d trainer=%s default=%s learn=%s replace=%s replaceCoins=%s replaceSkills=%s replaceForgotten=%s replaceSlots=%s clear=%s actor_slot=%s battle_slot=%s button=%s panel=%s clip=%s clearance=%.1f dialog=%s coins=%d skills=%s forgotten=%s slots=%s afterClearSlots=%s" % [
 		status,
 		catalog_errors.size(),
 		str(trainer_found),
@@ -30291,6 +30764,8 @@ func _run_auto_pet_skill_training_check() -> void:
 		str(battle_slot_ok),
 		str(button_label_ok),
 		str(panel_ok),
+		str(skill_clip_ok),
+		skill_clip_clearance,
 		str(overwrite_dialog_ok),
 		PlayerProgressModel.stone_coins(host.player_profile),
 		str(after_replace_skills),

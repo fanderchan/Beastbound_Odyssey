@@ -66,6 +66,7 @@ const BattleAudioTimelineController := preload(
 )
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
+const WorldPresentationProfile := preload("res://scripts/world/world_presentation_profile.gd")
 const WorldDepthLayer := preload("res://scripts/world/world_depth_layer.gd")
 const WorldOverlayLayer := preload("res://scripts/world/world_overlay_layer.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
@@ -79,6 +80,12 @@ const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
 const AdventureGoalPresenter := preload("res://scripts/ui/adventure_goal_presenter.gd")
+const WorldHudAwakenedPresenter := preload(
+	"res://scripts/ui/world_hud_awakened_presenter.gd"
+)
+const QuestAwakenedPresenter := preload(
+	"res://scripts/ui/quest_awakened_presenter.gd"
+)
 const NpcHoverIdentityPresenter := preload("res://scripts/ui/npc_hover_identity_presenter.gd")
 const PanelRegistry := preload("res://scripts/ui/panel_registry.gd")
 const QaPanelCatalog := preload("res://scripts/ui/qa_panel_catalog.gd")
@@ -109,6 +116,12 @@ const AudioMusicReviewPreview := preload(
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
 const NpcArtCatalogCheck := preload("res://scripts/qa/npc_art_catalog_check.gd")
 const MapVisualRuntimeCheck := preload("res://scripts/qa/map_visual_runtime_check.gd")
+const WorldPresentationProfileCheck := preload(
+	"res://scripts/qa/world_presentation_profile_check.gd"
+)
+const MapVisualReviewShowcaseProfileCheck := preload(
+	"res://scripts/qa/map_visual_review_showcase_profile_check.gd"
+)
 const WorldDepthLayerCheck := preload("res://scripts/qa/world_depth_layer_check.gd")
 const MapVisualReviewCapture := preload("res://scripts/qa/map_visual_review_capture.gd")
 const NpcMainReviewCapture := preload("res://scripts/qa/npc_main_review_capture.gd")
@@ -121,8 +134,17 @@ const CharacterRuntimeAppearanceCheck := preload(
 	"res://scripts/qa/character_runtime_appearance_check.gd"
 )
 const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd")
+const PetManagementReviewCapture := preload(
+	"res://scripts/qa/pet_management_review_capture.gd"
+)
+const PetSkillPageReviewCapture := preload(
+	"res://scripts/qa/pet_skill_page_review_capture.gd"
+)
 const BackpackAwakenedOwnerReviewCapture := preload(
 	"res://scripts/qa/backpack_awakened_owner_review_capture.gd"
+)
+const CommerceAwakenedOwnerReviewCapture := preload(
+	"res://scripts/qa/commerce_awakened_owner_review_capture.gd"
 )
 const MarketAwakenedOwnerReviewCapture := preload(
 	"res://scripts/qa/market_awakened_owner_review_capture.gd"
@@ -142,12 +164,21 @@ const HangMatchmakingWorldHudOwnerReviewCapture := preload(
 const BattleCommandAwakenedOwnerReviewCapture := preload(
 	"res://scripts/qa/battle_command_awakened_owner_review_capture.gd"
 )
+const WorldHudOwnerReviewCapture := preload(
+	"res://scripts/qa/world_hud_owner_review_capture.gd"
+)
+const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
 const BattleCommandAwakenedViewCheck := preload(
 	"res://scripts/qa/battle_command_awakened_view_check.gd"
 )
-const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
 const PetBattleReviewLab := preload("res://scripts/qa/pet_battle_review_lab.gd")
 const PetBattleReviewLabCheck := preload("res://scripts/qa/pet_battle_review_lab_check.gd")
+const StandalonePetArtOverlayCheck := preload(
+	"res://scripts/qa/standalone_pet_art_overlay_check.gd"
+)
+const StandalonePetArtReviewGate := preload(
+	"res://scripts/qa/standalone_pet_art_review_gate.gd"
+)
 const PetGrowthSpeciesSimulationModel := preload("res://scripts/progression/pet_growth_species_simulation_model.gd")
 const PetPowerModel := preload("res://scripts/progression/pet_power_model.gd")
 const PetRebirthMmModel := preload("res://scripts/progression/pet_rebirth_mm_model.gd")
@@ -196,6 +227,7 @@ const PET_REST_RECOVER_INTERVAL_SECONDS := 5.0
 const PET_DETAIL_MODE_INSTANCE := "instance"
 const PET_DETAIL_MODE_CODEX := "codex"
 const PET_DETAIL_MODE_GROWTH := "growth"
+const PET_DETAIL_MODE_SKILLS := "skills"
 const PET_FILTER_ALL := "all"
 const PET_FILTER_PARTY := "party"
 const PET_FILTER_STORAGE := "storage"
@@ -309,6 +341,8 @@ var player: CharacterBody2D
 var pet
 var path_line_node: Line2D
 var hud_root: Control
+var world_hud_awakened_state_signature_cache := ""
+var world_hud_minimap_visual_signature_cache := ""
 var panel_registry
 var npc_hover_identity_presenter
 var npc_hover_last_screen_point := Vector2.ZERO
@@ -496,7 +530,7 @@ var pet_panel: PanelContainer
 var pet_filter_option: OptionButton
 var pet_sort_option: OptionButton
 var pet_sort_direction_button: Button
-var pet_list_container: VBoxContainer
+var pet_list_container: Container
 var pet_detail_scroll: ScrollContainer
 var pet_detail_label: Label
 var pet_detail_instance_button: Button
@@ -576,6 +610,7 @@ var map_detail_label: Label
 var map_marker_container: VBoxContainer
 var map_close_button: Button
 var map_marker_buttons: Dictionary = {}
+var map_panel_map_name_cache: Dictionary = {}
 var chat_panel: PanelContainer
 var chat_system_button: Button
 var chat_nearby_button: Button
@@ -840,6 +875,8 @@ var auto_facing_check: bool = false
 var auto_right_click_facing_check: bool = false
 var auto_camera_check: bool = false
 var auto_camera_click_check: bool = false
+var auto_world_presentation_profile_check: bool = false
+var auto_map_visual_review_showcase_profile_check: bool = false
 var auto_animation_state_check: bool = false
 var auto_pet_follow_check: bool = false
 var auto_npc_interaction_check: bool = false
@@ -857,6 +894,7 @@ var auto_battle_command_awakened_ui_check: bool = false
 var auto_battle_auto_attack_check: bool = false
 var auto_battle_auto_10v10_check: bool = false
 var auto_pet_battle_review_lab_check: bool = false
+var auto_standalone_pet_art_overlay_check: bool = false
 var auto_battle_settings_check: bool = false
 var auto_capture_settings_check: bool = false
 var auto_pet_growth_rule_preview_check: bool = false
@@ -923,6 +961,8 @@ var auto_pet_encounter_table_check: bool = false
 var auto_pet_capture_feedback_check: bool = false
 var auto_pet_storage_capture_check: bool = false
 var auto_pet_template_catalog_check: bool = false
+var auto_pet_portrait_art_catalog_check: bool = false
+var auto_pet_shared_portrait_consumer_check: bool = false
 var auto_pet_instance_passive_check: bool = false
 var auto_pet_fusion_skill_policy_check: bool = false
 var auto_pet_action_asset_check: bool = false
@@ -1081,6 +1121,7 @@ var quest_reward_choice_preview: bool = false
 var quest_equipment_tutorial_preview: bool = false
 var task_tracker_route_preview: bool = false
 var map_panel_preview: bool = false
+var map_world_panel_preview: bool = false
 var facility_marker_preview: bool = false
 var npc_quest_marker_preview: bool = false
 var qa_panel_preview: bool = false
@@ -1091,13 +1132,17 @@ var equipment_swap_preview: bool = false
 var equipment_spirit_preview: bool = false
 var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
+var pet_management_review_capture: bool = false
+var pet_skill_page_review_capture: bool = false
 var backpack_awakened_owner_review_capture: bool = false
+var commerce_awakened_owner_review_capture: bool = false
 var market_awakened_owner_review_capture: bool = false
 var map_awakened_owner_review_capture: bool = false
 var character_entry_owner_review_capture: bool = false
 var player_character_owner_review_capture: bool = false
 var hang_matchmaking_world_hud_owner_review_capture: bool = false
 var battle_command_awakened_owner_review_capture: bool = false
+var world_hud_owner_review_capture: bool = false
 var pet_action_art_preview: bool = false
 var battle_visual_review_scenario: String = ""
 var audio_impact_review_preview: bool = false
@@ -1115,11 +1160,13 @@ var capture_tools_preview: bool = false
 var capture_capacity_preview: bool = false
 var capture_capacity_preview_screenshot_path: String = ""
 var battle_preview: bool = false
+var battle_command_preview_mode: String = "player"
 var battle_formation_preview: bool = false
 var battle_auto_10v10_preview: bool = false
 var pet_battle_review_preview_mode: String = ""
 var pet_battle_review_preview_form_id: String = ""
 var pet_battle_review_preview_mount_form_id: String = ""
+var pet_battle_review_isolated_root: String = ""
 var pet_battle_review_preview_seed: int = 309001
 var pet_battle_review_preview_collapsed: bool = false
 var pet_battle_review_preview_single_loop: bool = false
@@ -1336,6 +1383,7 @@ var current_task_text_cache: String = ""
 var task_tracker_cache_dirty: bool = true
 var task_tracker_source_signature_cache: String = ""
 var task_tracker_text_cache: String = "当前没有任务"
+var task_tracker_entries_cache: Array[Dictionary] = []
 var task_tracker_hud_prefix_cache: String = "目标  当前没有任务\n行动  探索营地，寻找新的委托"
 var task_tracker_target_cache: Dictionary = {}
 var task_tracker_has_target_cache: bool = false
@@ -1696,6 +1744,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_battle_auto_10v10_check")
 	elif auto_pet_battle_review_lab_check:
 		call_deferred("_run_auto_pet_battle_review_lab_check")
+	elif auto_standalone_pet_art_overlay_check:
+		call_deferred("_run_auto_standalone_pet_art_overlay_check")
 	elif auto_battle_settings_check:
 		call_deferred("_run_auto_battle_settings_check")
 	elif auto_capture_settings_check:
@@ -1798,6 +1848,10 @@ func _ready() -> void:
 		call_deferred("_run_auto_pet_storage_capture_check")
 	elif auto_pet_template_catalog_check:
 		call_deferred("_run_auto_pet_template_catalog_check")
+	elif auto_pet_portrait_art_catalog_check:
+		call_deferred("_run_auto_pet_portrait_art_catalog_check")
+	elif auto_pet_shared_portrait_consumer_check:
+		call_deferred("_run_auto_pet_shared_portrait_consumer_check")
 	elif auto_pet_instance_passive_check:
 		call_deferred("_run_auto_pet_instance_passive_check")
 	elif auto_pet_fusion_skill_policy_check:
@@ -2026,6 +2080,8 @@ func _ready() -> void:
 		call_deferred("_run_task_tracker_route_preview")
 	elif map_panel_preview:
 		call_deferred("_run_map_panel_preview")
+	elif map_world_panel_preview:
+		call_deferred("_run_map_world_panel_preview")
 	elif facility_marker_preview:
 		call_deferred("_run_facility_marker_preview")
 	elif npc_quest_marker_preview:
@@ -2046,8 +2102,14 @@ func _ready() -> void:
 		call_deferred("_run_equipment_compare_preview")
 	elif pet_management_preview:
 		call_deferred("_run_pet_management_preview")
+	elif pet_management_review_capture:
+		call_deferred("_run_pet_management_review_capture")
+	elif pet_skill_page_review_capture:
+		call_deferred("_run_pet_skill_page_review_capture")
 	elif backpack_awakened_owner_review_capture:
 		call_deferred("_run_backpack_awakened_owner_review_capture")
+	elif commerce_awakened_owner_review_capture:
+		call_deferred("_run_commerce_awakened_owner_review_capture")
 	elif market_awakened_owner_review_capture:
 		call_deferred("_run_market_awakened_owner_review_capture")
 	elif map_awakened_owner_review_capture:
@@ -2060,6 +2122,8 @@ func _ready() -> void:
 		call_deferred("_run_hang_matchmaking_world_hud_owner_review_capture")
 	elif battle_command_awakened_owner_review_capture:
 		call_deferred("_run_battle_command_awakened_owner_review_capture")
+	elif world_hud_owner_review_capture:
+		call_deferred("_run_world_hud_owner_review_capture")
 	elif pet_action_art_preview:
 		call_deferred("_run_pet_action_art_preview")
 	elif battle_visual_review_scenario != "":
@@ -2140,6 +2204,10 @@ func _ready() -> void:
 		call_deferred("_run_auto_animation_state_check")
 	elif auto_camera_click_check:
 		call_deferred("_run_auto_camera_click_check")
+	elif auto_world_presentation_profile_check:
+		call_deferred("_run_auto_world_presentation_profile_check")
+	elif auto_map_visual_review_showcase_profile_check:
+		call_deferred("_run_auto_map_visual_review_showcase_profile_check")
 	elif auto_camera_check:
 		call_deferred("_run_auto_camera_check")
 	elif auto_right_click_facing_check:
@@ -2302,12 +2370,14 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == MapVisualReviewCapture.CAPTURE_FLAG
 		or normalized == NpcMainReviewCapture.CAPTURE_FLAG
 		or normalized == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG
+		or normalized == CommerceAwakenedOwnerReviewCapture.CAPTURE_FLAG
 		or MarketAwakenedOwnerReviewCapture.is_flag(normalized)
 		or MapAwakenedOwnerReviewCapture.is_flag(normalized)
 		or normalized == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == "--hang-matchmaking-world-hud-owner-review-capture"
 		or normalized == BattleCommandAwakenedOwnerReviewCapture.CAPTURE_FLAG
+		or normalized == WorldHudOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == "--server-step-world-move"
 	)
 
@@ -2419,6 +2489,10 @@ func _apply_preview_window_args() -> void:
 			auto_camera_check = true
 		elif arg == "--auto-camera-click-check":
 			auto_camera_click_check = true
+		elif arg == "--auto-world-presentation-profile-check":
+			auto_world_presentation_profile_check = true
+		elif arg == "--auto-map-visual-review-showcase-profile-check":
+			auto_map_visual_review_showcase_profile_check = true
 		elif arg == "--auto-animation-state-check":
 			auto_animation_state_check = true
 		elif arg == "--auto-pet-follow-check":
@@ -2452,6 +2526,8 @@ func _apply_preview_window_args() -> void:
 			auto_battle_auto_10v10_check = true
 		elif arg == "--auto-pet-battle-review-lab-check":
 			auto_pet_battle_review_lab_check = true
+		elif arg == "--auto-standalone-pet-art-overlay-check":
+			auto_standalone_pet_art_overlay_check = true
 		elif arg == "--auto-battle-settings-check":
 			auto_battle_settings_check = true
 		elif arg == "--auto-capture-settings-check":
@@ -2584,6 +2660,10 @@ func _apply_preview_window_args() -> void:
 			auto_pet_storage_capture_check = true
 		elif arg == "--auto-pet-template-catalog-check":
 			auto_pet_template_catalog_check = true
+		elif arg == "--auto-pet-portrait-art-catalog-check":
+			auto_pet_portrait_art_catalog_check = true
+		elif arg == "--auto-pet-shared-portrait-consumer-check":
+			auto_pet_shared_portrait_consumer_check = true
 		elif arg == "--auto-pet-instance-passive-check":
 			auto_pet_instance_passive_check = true
 		elif arg == "--auto-pet-fusion-skill-policy-check":
@@ -2901,6 +2981,8 @@ func _apply_preview_window_args() -> void:
 			task_tracker_route_preview = true
 		elif arg == "--map-panel-preview":
 			map_panel_preview = true
+		elif arg == "--map-world-panel-preview":
+			map_world_panel_preview = true
 		elif arg == "--facility-marker-preview":
 			facility_marker_preview = true
 		elif arg == "--npc-quest-marker-preview":
@@ -2921,8 +3003,14 @@ func _apply_preview_window_args() -> void:
 			equipment_compare_preview = true
 		elif arg == "--pet-management-preview":
 			pet_management_preview = true
+		elif arg == "--pet-management-review-capture":
+			pet_management_review_capture = true
+		elif arg == "--pet-skill-page-review-capture":
+			pet_skill_page_review_capture = true
 		elif arg == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG:
 			backpack_awakened_owner_review_capture = true
+		elif arg == CommerceAwakenedOwnerReviewCapture.CAPTURE_FLAG:
+			commerce_awakened_owner_review_capture = true
 		elif MarketAwakenedOwnerReviewCapture.is_flag(arg):
 			market_awakened_owner_review_capture = true
 		elif MapAwakenedOwnerReviewCapture.is_flag(arg):
@@ -2935,6 +3023,8 @@ func _apply_preview_window_args() -> void:
 			hang_matchmaking_world_hud_owner_review_capture = true
 		elif arg == BattleCommandAwakenedOwnerReviewCapture.CAPTURE_FLAG:
 			battle_command_awakened_owner_review_capture = true
+		elif arg == WorldHudOwnerReviewCapture.CAPTURE_FLAG:
+			world_hud_owner_review_capture = true
 		elif arg == "--pet-action-art-preview":
 			pet_action_art_preview = true
 		elif arg.begins_with("--battle-visual-review="):
@@ -2970,6 +3060,9 @@ func _apply_preview_window_args() -> void:
 			capture_capacity_preview_screenshot_path = arg.trim_prefix("--capture-capacity-preview-screenshot=").strip_edges()
 		elif arg == "--battle-preview":
 			battle_preview = true
+		elif arg.begins_with("--battle-command-preview="):
+			battle_preview = true
+			battle_command_preview_mode = arg.trim_prefix("--battle-command-preview=").strip_edges().to_lower()
 		elif arg == "--battle-preview-10v10":
 			battle_formation_preview = true
 		elif arg == "--battle-auto-10v10-preview":
@@ -2983,6 +3076,12 @@ func _apply_preview_window_args() -> void:
 			pet_battle_review_preview_form_id = arg.trim_prefix("--pet-battle-review-form=").strip_edges()
 		elif arg.begins_with("--pet-battle-review-mount-form="):
 			pet_battle_review_preview_mount_form_id = arg.trim_prefix("--pet-battle-review-mount-form=").strip_edges()
+		elif arg.begins_with("--pet-battle-review-isolated-root="):
+			pet_battle_review_isolated_root = arg.trim_prefix(
+				"--pet-battle-review-isolated-root="
+			).strip_edges()
+			if pet_battle_review_preview_mode == "":
+				pet_battle_review_preview_mode = "director"
 		elif arg.begins_with("--pet-battle-review-seed="):
 			pet_battle_review_preview_seed = maxi(1, int(arg.trim_prefix("--pet-battle-review-seed=").strip_edges()))
 		elif arg.begins_with("--pet-battle-review-steps="):
@@ -3204,6 +3303,7 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 			pet_follow_points.append(player.global_position)
 			pet.set_follow_target(pet.global_position)
 	if game_camera != null:
+		_apply_world_presentation_profile()
 		_update_camera_limits()
 		_update_camera_position(true)
 	if status_label != null:
@@ -3543,6 +3643,18 @@ func _run_auto_camera_click_check() -> void:
 	await _auto_checks()._run_auto_camera_click_check()
 
 
+func _run_auto_world_presentation_profile_check() -> void:
+	var report := WorldPresentationProfileCheck.run(self)
+	print("world presentation profile check: %s" % JSON.stringify(report))
+	get_tree().quit(0 if str(report.get("result", "FAIL")) == "PASS" else 1)
+
+
+func _run_auto_map_visual_review_showcase_profile_check() -> void:
+	var report := MapVisualReviewShowcaseProfileCheck.run()
+	print("map visual review showcase profile check: %s" % JSON.stringify(report))
+	get_tree().quit(0 if str(report.get("result", "FAIL")) == "PASS" else 1)
+
+
 func _run_auto_animation_state_check() -> void:
 	await _auto_checks()._run_auto_animation_state_check()
 
@@ -3644,6 +3756,10 @@ func _run_auto_battle_auto_10v10_check() -> void:
 
 func _run_auto_pet_battle_review_lab_check() -> void:
 	await PetBattleReviewLabCheck.new(self).run()
+
+
+func _run_auto_standalone_pet_art_overlay_check() -> void:
+	await StandalonePetArtOverlayCheck.new(self).run()
 
 
 func _run_auto_battle_settings_check() -> void:
@@ -4170,8 +4286,20 @@ func _run_pet_management_preview() -> void:
 	_select_pet_instance("pet_bui_speed")
 
 
+func _run_pet_management_review_capture() -> void:
+	await PetManagementReviewCapture.new(self).run()
+
+
+func _run_pet_skill_page_review_capture() -> void:
+	await PetSkillPageReviewCapture.new(self).run()
+
+
 func _run_backpack_awakened_owner_review_capture() -> void:
 	await BackpackAwakenedOwnerReviewCapture.new(self).run()
+
+
+func _run_commerce_awakened_owner_review_capture() -> void:
+	await CommerceAwakenedOwnerReviewCapture.new(self).run()
 
 
 func _run_market_awakened_owner_review_capture() -> void:
@@ -4196,6 +4324,10 @@ func _run_hang_matchmaking_world_hud_owner_review_capture() -> void:
 
 func _run_battle_command_awakened_owner_review_capture() -> void:
 	await BattleCommandAwakenedOwnerReviewCapture.new(self).run()
+
+
+func _run_world_hud_owner_review_capture() -> void:
+	await WorldHudOwnerReviewCapture.new(self).run()
 
 
 func _run_pet_action_art_preview() -> void:
@@ -4919,6 +5051,20 @@ func _run_quest_ui_preview() -> void:
 	_open_quest_panel()
 	if status_label != null:
 		_update_hud_text()
+	var screenshot_path := OS.get_environment(
+		"BEASTBOUND_SCREENSHOT_PATH"
+	).strip_edges()
+	if screenshot_path != "":
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var screenshot := get_viewport().get_texture().get_image()
+		var screenshot_error := screenshot.save_png(screenshot_path)
+		print("quest ui screenshot: status=%s path=%s" % [
+			"ok" if screenshot_error == OK else "failed",
+			screenshot_path,
+		])
+		get_tree().quit(0 if screenshot_error == OK else 1)
 
 
 func _run_tutorial_task_preview() -> void:
@@ -5034,6 +5180,20 @@ func _run_task_tracker_route_preview() -> void:
 	_set_world_log_message("Phase80：右上任务追踪可直接寻路。")
 	if status_label != null:
 		_update_hud_text()
+	var screenshot_path := OS.get_environment(
+		"BEASTBOUND_SCREENSHOT_PATH"
+	).strip_edges()
+	if screenshot_path != "":
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var screenshot := get_viewport().get_texture().get_image()
+		var screenshot_error := screenshot.save_png(screenshot_path)
+		print("task tracker screenshot: status=%s path=%s" % [
+			"ok" if screenshot_error == OK else "failed",
+			screenshot_path,
+		])
+		get_tree().quit(0 if screenshot_error == OK else 1)
 
 
 func _run_map_panel_preview() -> void:
@@ -5046,6 +5206,12 @@ func _run_map_panel_preview() -> void:
 	_open_map_panel()
 	if status_label != null:
 		_update_hud_text()
+
+
+func _run_map_world_panel_preview() -> void:
+	_run_map_panel_preview()
+	if map_panel != null and map_panel.has_method("show_mode"):
+		map_panel.call("show_mode", "world")
 
 
 func _run_facility_marker_preview() -> void:
@@ -6184,6 +6350,14 @@ func _run_auto_pet_template_catalog_check() -> void:
 	await _auto_checks()._run_auto_pet_template_catalog_check()
 
 
+func _run_auto_pet_portrait_art_catalog_check() -> void:
+	await _auto_checks()._run_auto_pet_portrait_art_catalog_check()
+
+
+func _run_auto_pet_shared_portrait_consumer_check() -> void:
+	await _auto_checks()._run_auto_pet_shared_portrait_consumer_check()
+
+
 func _run_auto_pet_instance_passive_check() -> void:
 	await _auto_checks()._run_auto_pet_instance_passive_check()
 
@@ -6754,6 +6928,22 @@ func _open_battle_preview() -> void:
 	if not loaded or zones.is_empty():
 		return
 	_start_battle(BattleModel.create_wild_battle(zones[0] as Dictionary))
+	match battle_command_preview_mode:
+		"pet":
+			_submit_player_battle_command("defend")
+		"auto", "auto-player":
+			_set_battle_auto_attack_enabled(true, false)
+			battle_auto_attack_delay = 9999.0
+			if battle_command_preview_mode == "auto-player" and battle_command_awakened_view != null:
+				battle_command_awakened_view.auto_player_button().pressed.emit()
+		"functions":
+			call_deferred("_open_battle_function_drawer_preview")
+
+
+func _open_battle_function_drawer_preview() -> void:
+	await get_tree().process_frame
+	if battle_active and battle_function_drawer != null:
+		battle_function_drawer.set_drawer_open(true)
 
 
 func _open_battle_label_preview() -> void:
@@ -6806,7 +6996,49 @@ func _open_pet_battle_review_lab(
 	single_loop: bool = false,
 	director_step_ids: Array[String] = []
 ) -> void:
-	_pet_battle_review().open(form_id, mode, seed_value, collapsed, mount_form_id, single_loop, director_step_ids)
+	var standalone_pet_only := pet_battle_review_isolated_root != ""
+	if standalone_pet_only:
+		var overlay_report := (
+			PetActionAssetCatalog
+			.enable_standalone_review_overlay_from_cli(
+				form_id,
+				pet_battle_review_isolated_root
+			)
+		)
+		var gate_errors: Array[String] = []
+		for value in overlay_report.get("errors", []):
+			gate_errors.append(str(value))
+		if gate_errors.is_empty():
+			gate_errors.append_array(
+				StandalonePetArtReviewGate.request_errors(
+					form_id,
+					mode,
+					mount_form_id,
+					director_step_ids
+				)
+			)
+		if not gate_errors.is_empty():
+			PetActionAssetCatalog.disable_standalone_review_overlay(form_id)
+			printerr(
+				"standalone pet art review rejected: %s"
+				% JSON.stringify({
+					"formId": form_id,
+					"root": pet_battle_review_isolated_root,
+					"errors": gate_errors,
+				})
+			)
+			get_tree().quit(1)
+			return
+	_pet_battle_review().open(
+		form_id,
+		mode,
+		seed_value,
+		collapsed,
+		mount_form_id,
+		single_loop,
+		director_step_ids,
+		standalone_pet_only
+	)
 
 
 func _create_auto_10v10_observation_battle(zone: Dictionary) -> Dictionary:
@@ -7065,7 +7297,7 @@ func _set_battle_command_owner(owner: String) -> void:
 func _on_battle_auto_button_pressed() -> void:
 	if battle_auto_button == null:
 		return
-	_set_battle_auto_attack_enabled(battle_auto_button.button_pressed)
+	_set_battle_auto_attack_enabled(not battle_auto_attack_enabled)
 
 
 func _on_battle_auto_stop_button_pressed() -> void:
@@ -8198,6 +8430,7 @@ func _mark_progress_ui_caches_dirty() -> void:
 	task_tracker_cache_dirty = true
 	task_tracker_source_signature_cache = ""
 	task_tracker_text_cache = "当前没有任务"
+	task_tracker_entries_cache.clear()
 	task_tracker_target_cache = {}
 	task_tracker_has_target_cache = false
 	quest_marker_cache_dirty = true
@@ -9056,6 +9289,7 @@ func _build_camera() -> void:
 	game_camera.position_smoothing_enabled = true
 	game_camera.position_smoothing_speed = 7.0
 	add_child(game_camera)
+	_apply_world_presentation_profile()
 	game_camera.make_current()
 	_update_camera_limits()
 	_update_camera_position(true)
@@ -9076,6 +9310,7 @@ func _build_hud() -> void:
 	npc_hover_identity_presenter = NpcHoverIdentityPresenter.new()
 	npc_hover_identity_presenter.build(hud_root)
 	npc_hover_identity_presenter.configure_map(map_data)
+
 
 func _build_online_position_sync() -> void:
 	online_position_http_request = HTTPRequest.new()
@@ -10212,8 +10447,11 @@ func _backpack_heal_popup_text_for_pet(instance_id: String) -> String:
 func _spawn_backpack_heal_popup(target: Control, healed_amount: int) -> void:
 	_panel_flow()._spawn_backpack_heal_popup(target, healed_amount)
 
-func _open_shop_panel(next_shop_id: String = "") -> void:
-	_panel_flow()._open_shop_panel(next_shop_id)
+func _open_shop_panel(
+	next_shop_id: String = "",
+	service_interaction: Dictionary = {}
+) -> void:
+	_panel_flow()._open_shop_panel(next_shop_id, service_interaction)
 
 func _close_shop_panel() -> void:
 	_panel_flow()._close_shop_panel()
@@ -10611,8 +10849,8 @@ func _refresh_market_panel() -> void:
 func _on_market_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	_panel_flow()._on_market_http_request_completed(result, response_code, _headers, body)
 
-func _open_bank_panel() -> void:
-	_panel_flow()._open_bank_panel()
+func _open_bank_panel(service_interaction: Dictionary = {}) -> void:
+	_panel_flow()._open_bank_panel(service_interaction)
 
 func _close_bank_panel(update_layout: bool = true) -> void:
 	_panel_flow()._close_bank_panel(update_layout)
@@ -11315,10 +11553,7 @@ func _on_battle_command_pressed(command_id: String) -> void:
 		"switch_pet":
 			_open_switch_pet_command_menu()
 		"help":
-			if _battle_is_server_authority():
-				_set_battle_message("选择攻击、防御、物品、精灵、捕捉、换宠或%s。" % _battle_player_run_label())
-			else:
-				_set_battle_message("选择攻击或逃跑。")
+			_set_battle_message("当前编队没有可触发的援助技。")
 		_:
 			_set_battle_message("这个指令稍后开放。")
 
@@ -13823,6 +14058,10 @@ func _refresh_task_tracker_cache_if_needed(force: bool = false) -> void:
 	current_task_text_signature_cache = signature
 	current_task_text_cache = _current_task_text_uncached()
 	task_tracker_text_cache = current_task_text_cache
+	task_tracker_entries_cache = QuestAwakenedPresenter.tracker_entries(
+		player_profile,
+		QuestAwakenedPresenter.MAX_TRACKER_ENTRIES
+	)
 	var guidance := _current_task_guidance_uncached()
 	task_tracker_hud_prefix_cache = AdventureGoalPresenter.task_prefix(
 		task_tracker_text_cache,
@@ -14300,9 +14539,9 @@ func _layout_hud() -> void:
 		backpack_target_scroll.custom_minimum_size = Vector2(0, 72.0 if compact_panel_content else 112.0)
 	if shop_detail_label != null:
 		shop_detail_label.custom_minimum_size = Vector2(0, 52.0 if compact_panel_content else 126.0)
-	if map_texture_rect != null:
+	if map_texture_rect != null and (map_panel == null or not map_panel.has_method("is_awakened_map_panel")):
 		map_texture_rect.custom_minimum_size = Vector2(0, 76.0 if compact_panel_content else 210.0)
-	if map_detail_label != null:
+	if map_detail_label != null and (map_panel == null or not map_panel.has_method("is_awakened_map_panel")):
 		map_detail_label.custom_minimum_size = Vector2(0, 42.0 if compact_panel_content else 58.0)
 	var pet_width: float = minf(viewport_size.x - margin * 2.0, PET_PANEL_MAX_SIZE.x)
 	var pet_height: float = minf(panel_available_height, PET_PANEL_MAX_SIZE.y)
@@ -14323,8 +14562,8 @@ func _layout_hud() -> void:
 	if player_rebirth_preview_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	backpack_panel.position = Vector2((viewport_size.x - pet_width) * 0.5, pet_panel_y)
-	backpack_panel.size = Vector2(pet_width, pet_height)
+	backpack_panel.position = Vector2.ZERO
+	backpack_panel.size = viewport_size
 	if backpack_grid != null:
 		backpack_grid.columns = _backpack_grid_columns()
 	if battle_active:
@@ -14344,13 +14583,16 @@ func _layout_hud() -> void:
 	if equipment_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	var synthesis_width: float = minf(viewport_size.x - margin * 2.0, 820.0)
-	var synthesis_height: float = minf(panel_available_height, 540.0)
-	synthesis_width = maxf(minf(620.0, viewport_size.x - margin * 2.0), synthesis_width)
-	synthesis_height = maxf(minf(420.0, panel_available_height), synthesis_height)
-	var synthesis_panel_y = minf(maxf(panel_top_y, (viewport_size.y - synthesis_height) * 0.5), viewport_size.y - synthesis_height - margin)
-	equipment_synthesis_panel.position = Vector2((viewport_size.x - synthesis_width) * 0.5, synthesis_panel_y)
-	equipment_synthesis_panel.size = Vector2(synthesis_width, synthesis_height)
+	if equipment_synthesis_panel.has_method("is_awakened_equipment_synthesis_panel"):
+		equipment_synthesis_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	else:
+		var synthesis_width: float = minf(viewport_size.x - margin * 2.0, 820.0)
+		var synthesis_height: float = minf(panel_available_height, 540.0)
+		synthesis_width = maxf(minf(620.0, viewport_size.x - margin * 2.0), synthesis_width)
+		synthesis_height = maxf(minf(420.0, panel_available_height), synthesis_height)
+		var synthesis_panel_y = minf(maxf(panel_top_y, (viewport_size.y - synthesis_height) * 0.5), viewport_size.y - synthesis_height - margin)
+		equipment_synthesis_panel.position = Vector2((viewport_size.x - synthesis_width) * 0.5, synthesis_panel_y)
+		equipment_synthesis_panel.size = Vector2(synthesis_width, synthesis_height)
 	if battle_active:
 		equipment_synthesis_panel.visible = false
 	if equipment_synthesis_panel.visible and action_bar != null:
@@ -14365,25 +14607,39 @@ func _layout_hud() -> void:
 				clampf(equipment_detail_popup_panel.position.y, margin, maxf(margin, viewport_size.y - detail_popup_size.y - margin))
 			)
 
-	var shop_width: float = minf(viewport_size.x - margin * 2.0, 940.0)
-	var shop_height: float = minf(panel_available_height, 620.0)
-	shop_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), shop_width)
-	shop_height = maxf(minf(PET_PANEL_MIN_SIZE.y, panel_available_height), shop_height)
-	var shop_panel_y = minf(maxf(panel_top_y, (viewport_size.y - shop_height) * 0.5), viewport_size.y - shop_height - margin)
-	shop_panel.position = Vector2((viewport_size.x - shop_width) * 0.5, shop_panel_y)
-	shop_panel.size = Vector2(shop_width, shop_height)
+	if shop_panel.has_method("is_awakened_shop_panel"):
+		shop_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	else:
+		var shop_width: float = minf(viewport_size.x - margin * 2.0, 940.0)
+		var shop_height: float = minf(panel_available_height, 620.0)
+		shop_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), shop_width)
+		shop_height = maxf(minf(PET_PANEL_MIN_SIZE.y, panel_available_height), shop_height)
+		var shop_panel_y = minf(maxf(panel_top_y, (viewport_size.y - shop_height) * 0.5), viewport_size.y - shop_height - margin)
+		shop_panel.position = Vector2((viewport_size.x - shop_width) * 0.5, shop_panel_y)
+		shop_panel.size = Vector2(shop_width, shop_height)
 	if battle_active:
 		shop_panel.visible = false
 	if shop_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	var pet_management_width: float = minf(viewport_size.x - margin * 2.0, PET_MANAGEMENT_PANEL_MAX_SIZE.x)
-	var pet_management_height: float = minf(panel_available_height, PET_MANAGEMENT_PANEL_MAX_SIZE.y)
-	pet_management_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), pet_management_width)
-	pet_management_height = maxf(minf(PET_PANEL_MIN_SIZE.y, panel_available_height), pet_management_height)
-	var pet_management_panel_y = minf(maxf(panel_top_y, (viewport_size.y - pet_management_height) * 0.5), viewport_size.y - pet_management_height - margin)
-	pet_panel.position = Vector2((viewport_size.x - pet_management_width) * 0.5, pet_management_panel_y)
-	pet_panel.size = Vector2(pet_management_width, pet_management_height)
+	var pet_management_width: float = minf(
+		viewport_size.x - margin * 2.0,
+		PET_MANAGEMENT_PANEL_MAX_SIZE.x
+	)
+	var pet_management_height: float = minf(
+		panel_available_height,
+		PET_MANAGEMENT_PANEL_MAX_SIZE.y
+	)
+	pet_management_width = maxf(
+		minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0),
+		pet_management_width
+	)
+	pet_management_height = maxf(
+		minf(PET_PANEL_MIN_SIZE.y, panel_available_height),
+		pet_management_height
+	)
+	pet_panel.position = Vector2.ZERO
+	pet_panel.size = viewport_size
 	if battle_active:
 		pet_panel.visible = false
 	if pet_panel.visible and action_bar != null:
@@ -14411,8 +14667,12 @@ func _layout_hud() -> void:
 	if codex_panel.visible and action_bar != null:
 		action_bar.visible = false
 
-	quest_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
-	quest_panel.size = Vector2(codex_width, codex_height)
+	if quest_panel.has_method("is_awakened_quest_panel"):
+		quest_panel.position = Vector2.ZERO
+		quest_panel.size = viewport_size
+	else:
+		quest_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
+		quest_panel.size = Vector2(codex_width, codex_height)
 	if quest_panel.visible and action_bar != null:
 		action_bar.visible = false
 
@@ -14438,13 +14698,7 @@ func _layout_hud() -> void:
 		action_bar.visible = false
 
 	if family_panel != null:
-		var family_width: float = minf(viewport_size.x - margin * 2.0, 860.0)
-		var family_height: float = minf(panel_available_height, 560.0)
-		family_width = maxf(minf(420.0, viewport_size.x - margin * 2.0), family_width)
-		family_height = maxf(minf(330.0, panel_available_height), family_height)
-		var family_panel_y = minf(maxf(panel_top_y, (viewport_size.y - family_height) * 0.5), viewport_size.y - family_height - margin)
-		family_panel.position = Vector2((viewport_size.x - family_width) * 0.5, family_panel_y)
-		family_panel.size = Vector2(family_width, family_height)
+		family_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		if battle_active:
 			family_panel.visible = false
 		if family_panel.visible and action_bar != null:
@@ -14527,13 +14781,16 @@ func _layout_hud() -> void:
 				battle_message_panel.visible = false
 
 		if bank_panel != null:
-			var bank_width: float = minf(viewport_size.x - margin * 2.0, 1120.0)
-			var bank_height: float = minf(panel_available_height, 620.0)
-			bank_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), bank_width)
-			bank_height = maxf(minf(PET_PANEL_MIN_SIZE.y, panel_available_height), bank_height)
-			var bank_panel_y = minf(maxf(panel_top_y, (viewport_size.y - bank_height) * 0.5), viewport_size.y - bank_height - margin)
-			bank_panel.position = Vector2((viewport_size.x - bank_width) * 0.5, bank_panel_y)
-			bank_panel.size = Vector2(bank_width, bank_height)
+			if bank_panel.has_method("is_awakened_bank_panel"):
+				bank_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			else:
+				var bank_width: float = minf(viewport_size.x - margin * 2.0, 1120.0)
+				var bank_height: float = minf(panel_available_height, 620.0)
+				bank_width = maxf(minf(PET_PANEL_MIN_SIZE.x, viewport_size.x - margin * 2.0), bank_width)
+				bank_height = maxf(minf(PET_PANEL_MIN_SIZE.y, panel_available_height), bank_height)
+				var bank_panel_y = minf(maxf(panel_top_y, (viewport_size.y - bank_height) * 0.5), viewport_size.y - bank_height - margin)
+				bank_panel.position = Vector2((viewport_size.x - bank_width) * 0.5, bank_panel_y)
+				bank_panel.size = Vector2(bank_width, bank_height)
 			if battle_active:
 				bank_panel.visible = false
 			if bank_panel.visible and action_bar != null:
@@ -14563,8 +14820,11 @@ func _layout_hud() -> void:
 		if battle_active or (hang_matchmaking_panel != null and hang_matchmaking_panel.visible):
 			hang_matchmaking_world_status.visible = false
 
-	auto_settings_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
-	auto_settings_panel.size = Vector2(codex_width, codex_height)
+	if auto_settings_panel.has_method("is_awakened_auto_settings_panel"):
+		auto_settings_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	else:
+		auto_settings_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, maxf(margin + 68.0, (viewport_size.y - codex_height) * 0.5))
+		auto_settings_panel.size = Vector2(codex_width, codex_height)
 	if auto_settings_panel.visible and action_bar != null:
 		action_bar.visible = false
 
@@ -14702,6 +14962,7 @@ func _layout_hud() -> void:
 	if player != null:
 		player.set_movement_bounds(_player_movement_bounds())
 	if game_camera != null:
+		_apply_world_presentation_profile()
 		_update_camera_limits()
 		_update_camera_position(true)
 	queue_redraw()
@@ -14713,17 +14974,16 @@ func _update_hud_text(force: bool = false) -> void:
 	var build_start := _perf_now()
 	var viewport_size := _layout_size()
 	var is_phone_shape := _is_phone_shape(viewport_size)
-	var layout_name := "手机" if is_phone_shape else "PC"
-	var move_name := _movement_status_name()
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var map_name := str(map_data.get("name", "未知地图"))
 	var status_text := ""
 	var detail_text := ""
 	if battle_active:
-		status_text = "万兽纪元  |  %s" % [move_name]
+		status_text = "战斗中"
 	elif is_phone_shape:
-		status_text = "万兽纪元  |  %s" % [move_name]
+		status_text = map_name
 	else:
-		status_text = "万兽纪元  |  %s  |  %s  |  %s" % [str(map_data.get("name", "未知地图")), layout_name, move_name]
+		status_text = "%s\n(%d, %d)" % [map_name, player_cell.x, player_cell.y]
 		detail_text = AdventureGoalPresenter.world_hud_text(
 			task_tracker_hud_prefix_cache,
 			player_cell,
@@ -14738,6 +14998,11 @@ func _update_hud_text(force: bool = false) -> void:
 	if detail_label != null and (force or detail_text != hud_detail_text_cache):
 		detail_label.text = detail_text
 		hud_detail_text_cache = detail_text
+	if world_hud_awakened_view != null:
+		world_hud_awakened_view.apply_location(map_name, player_cell)
+		world_hud_awakened_view.apply_task_text(detail_text)
+		world_hud_awakened_view.apply_task_entries(task_tracker_entries_cache)
+		_refresh_world_hud_awakened_state(force, player_cell, detail_text)
 	_perf_add("hud_label_apply", label_start)
 	var route_start := _perf_now()
 	var route_signature := "%s|%s|%s|%s|%s|%s|%s" % [
@@ -14755,6 +15020,83 @@ func _update_hud_text(force: bool = false) -> void:
 	_perf_add("hud_route", route_start)
 	_panel_flow()._refresh_world_hud_awakened(force)
 	_sync_world_hud_signature_after_text_update()
+
+
+func _refresh_world_hud_awakened_state(
+	force: bool,
+	player_cell: Vector2i,
+	task_text: String
+) -> void:
+	if world_hud_awakened_view == null:
+		return
+	var player_value = player_profile.get("player", {})
+	var player_state := player_value as Dictionary if player_value is Dictionary else {}
+	var party_value = party_current_state.get("party", {})
+	var party_state := party_value as Dictionary if party_value is Dictionary else {}
+	var latest_chat_id := ""
+	if not chat_messages.is_empty():
+		var latest_value = chat_messages.back()
+		if latest_value is Dictionary:
+			latest_chat_id = str((latest_value as Dictionary).get("messageId", ""))
+	var signature := "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % [
+		str(player_state.get("name", "")),
+		str(player_state.get("level", 1)),
+		str(player_state.get("hp", "")),
+		str(player_state.get("exp", "")),
+		str(player_state.get("appearanceId", "")),
+		str(player_profile.get("activePetInstanceId", "")),
+		str(party_state.get("partyId", "")),
+		latest_chat_id,
+		mailbox_menu_button.text if mailbox_menu_button != null else "",
+		str(account_authenticated),
+		str(battle_active),
+		current_map_id,
+		str(player_cell.x),
+		str(player_cell.y),
+	]
+	if not force and signature == world_hud_awakened_state_signature_cache:
+		return
+	world_hud_awakened_state_signature_cache = signature
+	var runtime := {
+		"mapName": str(map_data.get("name", "未知地图")),
+		"playerCell": player_cell,
+		"playerWorldPosition": player.global_position if player != null else Vector2.ZERO,
+		"taskText": task_text,
+		"party": party_state,
+		"chatMessages": chat_messages,
+		"chatActiveChannel": chat_active_channel,
+		"mailbox": {
+			"synced": false,
+			"state": mailbox_page_state,
+		},
+		"accountAuthenticated": account_authenticated,
+		"serverSession": not current_account_session.is_empty(),
+		"gmAccess": _can_use_gm_tools(),
+		"battleActive": battle_active,
+	}
+	var combined := WorldHudAwakenedPresenter.combined_state(player_profile, runtime)
+	var view_state := {}
+	var identity_value = combined.get("identity", {})
+	if identity_value is Dictionary:
+		view_state.merge(identity_value as Dictionary, true)
+	var runtime_value = combined.get("runtime", {})
+	if runtime_value is Dictionary:
+		view_state.merge(runtime_value as Dictionary, true)
+	var minimap_visual_signature := "%s|%s|%s|%s" % [
+		current_map_id,
+		str(map_visual_render_state.get("bundleId", "")),
+		str(map_visual_render_state.get("active", false)),
+		str(map_visual_render_state.get("qaPreview", false)),
+	]
+	if minimap_visual_signature != world_hud_minimap_visual_signature_cache:
+		world_hud_minimap_visual_signature_cache = minimap_visual_signature
+		if world_hud_awakened_view.has_method("configure_minimap"):
+			world_hud_awakened_view.configure_minimap(
+				map_visual_render_state,
+				_map_world_bounds(),
+				IsoMapModel.grid_size(map_data)
+			)
+	world_hud_awakened_view.apply_view_state(view_state)
 
 
 func _sync_world_hud_signature_after_text_update() -> void:
@@ -14816,6 +15158,15 @@ func _update_camera_limits() -> void:
 	game_camera.limit_top = -10000000
 	game_camera.limit_right = 10000000
 	game_camera.limit_bottom = 10000000
+
+
+func _apply_world_presentation_profile() -> void:
+	if game_camera == null:
+		return
+	game_camera.zoom = WorldPresentationProfile.camera_zoom_for(
+		map_art_review_preview and not battle_active,
+		map_visual_render_state
+	)
 
 
 func _update_camera_position(force: bool) -> void:
@@ -14941,8 +15292,12 @@ func _draw_isometric_map() -> void:
 	for cell in current_path_cells:
 		_draw_iso_tile(IsoMapModel.grid_to_world(map_data, cell), Color(0.96, 0.75, 0.25, 0.24), Color(0.98, 0.82, 0.32, 0.38))
 
-	_draw_encounter_zones()
-	_draw_decor_cells()
+	if not WorldPresentationProfile.uses_authored_ground_details(
+		map_art_review_preview,
+		map_visual_render_state
+	):
+		_draw_encounter_zones()
+		_draw_decor_cells()
 	_draw_interaction_points()
 	_draw_ground_pet_drops()
 
@@ -15089,8 +15444,16 @@ func _draw_battle_scene() -> void:
 		_draw_battle_formation_grid(rect)
 	_draw_battle_ranged_ground_projectiles()
 	var launched_draw_queue: Array[Dictionary] = []
+	var pet_only_visual_isolation := bool(
+		battle_state.get("reviewPetOnlyVisualIsolation", false)
+	)
 	for value in _battle_actors_sorted_by_depth():
 		var actor := value as Dictionary
+		if (
+			pet_only_visual_isolation
+			and str(actor.get("kind", "")) == "player"
+		):
+			continue
 		if _battle_actor_is_current_launch_target(str(actor.get("id", ""))):
 			launched_draw_queue.append(actor)
 		else:
@@ -16460,8 +16823,8 @@ func _viewport_world_rect() -> Rect2:
 	var zoom := Vector2.ONE
 	if game_camera != null:
 		center = game_camera.get_screen_center_position()
-		zoom = game_camera.zoom
-	var half_view := Vector2(viewport_size.x * zoom.x * 0.5, viewport_size.y * zoom.y * 0.5)
+		zoom = WorldPresentationProfile.safe_zoom(game_camera.zoom)
+	var half_view := Vector2(viewport_size.x / zoom.x, viewport_size.y / zoom.y) * 0.5
 	return Rect2(center - half_view, half_view * 2.0)
 
 
