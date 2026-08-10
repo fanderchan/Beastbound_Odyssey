@@ -4,6 +4,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const {MODEL_VERSION, STAT_KEYS} = require("./pet-growth-authority");
+const {
+  loadPetGrowthQualityPresentation,
+} = require("./pet-growth-quality-presentation");
 
 const SCREENING_SCHEMA_VERSION = 1;
 const OBSERVATION_SCHEMA_VERSION = 1;
@@ -382,6 +385,7 @@ function createPetObservedGrowthScreening({profileDocument, powerDocument} = {})
     throw new PetObservedGrowthConfigError(errors);
   }
   const frozenPowerFormula = deepFreeze(powerFormula);
+  const qualityPresenter = loadPetGrowthQualityPresentation();
 
   function evaluatePet(pet) {
     try {
@@ -462,12 +466,34 @@ function createPetObservedGrowthScreening({profileDocument, powerDocument} = {})
     }
   }
 
+  function qualityPresentationForPet(pet) {
+    const result = evaluatePet(pet);
+    if (!isObjectRecord(result.observation) || Object.keys(result.observation).length === 0) {
+      return qualityPresenter.unobservedPresentation(result.level, result.observedLevels);
+    }
+    const profile = profileById.get(result.observation.profileId);
+    if (!profile) {
+      return qualityPresenter.unobservedPresentation(result.level, result.observedLevels);
+    }
+    const benchmark = qualityPresenter.speciesBenchmark({
+      outputGrowth: profile.outputGrowth,
+      individualRules: {
+        growthOutputSpread: profile.growthOutputSpread,
+      },
+    }, frozenPowerFormula.weights);
+    return qualityPresenter.presentObservation(result.observation, benchmark, {
+      requiresObservationMaturity: true,
+    });
+  }
+
   return Object.freeze({
     schemaVersion: SCREENING_SCHEMA_VERSION,
     minimumLevel: MINIMUM_SCREENING_LEVEL,
     profileCount: profileById.size,
     powerFormulaId: frozenPowerFormula.id,
+    qualityPresentationId: qualityPresenter.presentationId,
     evaluatePet,
+    qualityPresentationForPet,
   });
 }
 

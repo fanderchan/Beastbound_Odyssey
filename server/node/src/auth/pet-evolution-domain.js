@@ -53,6 +53,7 @@ function createPetEvolutionDomain(ctx) {
     profileSummaryForAccount,
     publicAccount,
     rawBackpackAssetConflict,
+    recordProfilePetCodexForm,
     resolveSession,
     save,
   } = ctx;
@@ -177,6 +178,7 @@ function createPetEvolutionDomain(ctx) {
       return fail("pet_evolution_cost_apply_failed", "进化消耗校验失败，本次操作未执行。", context.publicExtra);
     }
     pets[petIndex] = evolved.pet;
+    recordProfilePetCodexForm(profile, route.targetFormId, true);
     const persisted = persistProfileForAccount(data, resolved.account, context.binding, profile, now);
     save(data);
     return ok({

@@ -21,9 +21,14 @@ const fixtureManualEncounterAccess = Object.freeze({
     return {ok: true, manual: false, notManual: true, schemaVersion: 1};
   },
 });
+const fixturePetServiceAccess = Object.freeze({
+  authorize() {
+    return {ok: true, mode: "test_fixture", service: null, schemaVersion: 1};
+  },
+});
 
-// 测试默认放开整档写入闸门并注入显式遭遇与战斗随机夹具，方便旧战斗用例精确造敌并保持确定性；
-// useStrictPetEncounterAuthority: true 会改走与生产相同的地图目录与位置校验。
+// 测试默认放开整档写入闸门并注入显式遭遇、宠物服务与战斗随机夹具，方便旧用例精确造状态并保持确定性；
+// useStrictPetEncounterAuthority / useStrictPetServiceAccess 会改走与生产相同的地图目录与位置校验。
 function createAuthService(options = {}) {
   const serviceOptions = {"allowFullProfileSave": true, ...options};
   // Most historical domain fixtures begin from an already-created legacy
@@ -45,12 +50,14 @@ function createAuthService(options = {}) {
   }
   const useStrictPetEncounterPermitAuthority = Boolean(serviceOptions.useStrictPetEncounterPermitAuthority);
   const useStrictManualEncounterAccess = Boolean(serviceOptions.useStrictManualEncounterAccess);
+  const useStrictPetServiceAccess = Boolean(serviceOptions.useStrictPetServiceAccess);
   const useStrictPetEncounterAuthority = Boolean(
     serviceOptions.useStrictPetEncounterAuthority || useStrictPetEncounterPermitAuthority
   );
   delete serviceOptions.useStrictPetEncounterAuthority;
   delete serviceOptions.useStrictPetEncounterPermitAuthority;
   delete serviceOptions.useStrictManualEncounterAccess;
+  delete serviceOptions.useStrictPetServiceAccess;
   if (serviceOptions.allowInitialPositionSeedForTests === undefined) {
     serviceOptions.allowInitialPositionSeedForTests = !useStrictPetEncounterAuthority;
   }
@@ -65,6 +72,9 @@ function createAuthService(options = {}) {
   }
   if (!useStrictManualEncounterAccess && !serviceOptions.manualEncounterAccess) {
     serviceOptions.manualEncounterAccess = fixtureManualEncounterAccess;
+  }
+  if (!useStrictPetServiceAccess && !serviceOptions.petServiceAccess) {
+    serviceOptions.petServiceAccess = fixturePetServiceAccess;
   }
   if (!serviceOptions.battleRandomAuthority) {
     serviceOptions.battleRandomAuthority = createFixtureBattleRandomAuthority();

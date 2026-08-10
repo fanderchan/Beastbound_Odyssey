@@ -4414,7 +4414,12 @@ function parsePersistentDataLines(lines, options = {}) {
     if (stateDocument && stateDocument.petPaidResetConfig && typeof stateDocument.petPaidResetConfig === "object" && !Array.isArray(stateDocument.petPaidResetConfig)) {
       data.petPaidResetConfig = stateDocument.petPaidResetConfig;
     }
+    const stateServiceEventSeq = Number(stateDocument && stateDocument.serviceEventSeq || 0);
+    if (!Number.isSafeInteger(stateServiceEventSeq) || stateServiceEventSeq < 0) {
+      throw new Error("MySQL服务事件高水位非法，拒绝加载。");
+    }
     data.serviceEventSeq = Math.max(
+      stateServiceEventSeq,
       Number(data.serviceEventSeq || 0),
       ...data.serviceEvents.map((event) => Number(event && event.eventSeq || 0)).filter((value) => Number.isFinite(value))
     );

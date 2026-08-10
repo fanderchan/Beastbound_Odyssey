@@ -138,7 +138,10 @@ test("HTTP profile action exposes the manual growth evaluation write path", asyn
 
   const updated = await fetchJson(`${base}/profile/action`, {
     method: "POST",
-    headers: {authorization: `Bearer ${registered.session.token}`},
+    headers: {
+      authorization: `Bearer ${registered.session.token}`,
+      "Idempotency-Key": "profile_action_growth_evaluation_0001",
+    },
     body: JSON.stringify({
       action: PET_GROWTH_EVALUATION_SETTINGS_ACTION_ID,
       payload: {policy: policy()},
@@ -151,6 +154,7 @@ test("HTTP profile action exposes the manual growth evaluation write path", asyn
 
   const unauthenticated = await fetchJson(`${base}/profile/action`, {
     method: "POST",
+    headers: {"Idempotency-Key": "profile_action_growth_unauthenticated_0002"},
     body: JSON.stringify({
       action: PET_GROWTH_EVALUATION_SETTINGS_ACTION_ID,
       payload: {policy: policy()},

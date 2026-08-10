@@ -81,6 +81,7 @@ test("evolution publishes no success, pet reroll, or asset debit before the owni
   });
   const beforePublished = structuredClone(internalProfileForAccount(service, fixture.account.account.accountId));
   const beforeStored = structuredClone(fixture.base.load());
+  assert.equal(beforePublished.petCodexCapturedFormIds.includes(TARGET_FORM_ID), false);
   let settled = false;
   const pending = service.invokeDurable("evolvePet", [
     fixture.account.session.token,
@@ -113,9 +114,19 @@ test("evolution publishes no success, pet reroll, or asset debit before the owni
   assert.equal(published.stoneCoins, 50000);
   assert.equal(itemCount(published, CORE_ITEM_ID), 0);
   assert.equal(itemCount(published, LINEAGE_ITEM_ID), 0);
+  assert.deepEqual(
+    published.petCodexCapturedFormIds.filter((formId) => formId === TARGET_FORM_ID),
+    [TARGET_FORM_ID],
+  );
   const stored = fixture.base.load();
   const binding = stored.profileBindings[fixture.account.account.accountId];
   assert.equal(stored.profiles[binding.playerId].profile.petInstances[0].formId, TARGET_FORM_ID);
+  assert.deepEqual(
+    stored.profiles[binding.playerId].profile.petCodexCapturedFormIds.filter(
+      (formId) => formId === TARGET_FORM_ID,
+    ),
+    [TARGET_FORM_ID],
+  );
 });
 
 test("confirmed evolution rollback leaves the source pet and every asset untouched", async () => {
@@ -152,4 +163,5 @@ test("confirmed evolution rollback leaves the source pet and every asset untouch
   assert.equal(published.stoneCoins, 100000);
   assert.equal(itemCount(published, CORE_ITEM_ID), 8);
   assert.equal(itemCount(published, LINEAGE_ITEM_ID), 12);
+  assert.equal(published.petCodexCapturedFormIds.includes(TARGET_FORM_ID), false);
 });

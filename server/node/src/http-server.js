@@ -164,8 +164,11 @@ const SHARED_ASSET_HTTP_READ_SERVICE_METHODS = new Set([
 const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
   "/characters",
   "/characters/allocate-elements",
+  "/profile/action",
   "/bank/deposit",
   "/bank/withdraw",
+  "/equipment/synthesize",
+  "/trade/accept",
   "/market/list",
   "/market/buy",
   "/market/cancel",

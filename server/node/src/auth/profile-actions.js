@@ -31,6 +31,7 @@ function createProfileActionsDomain(ctx) {
     objectOrEmpty,
     ok,
     partyForAccount,
+    petServiceAccess,
     persistProfileForAccount,
     profileActionLogLines,
     profileBackpackSlots,
@@ -304,10 +305,27 @@ function createProfileActionsDomain(ctx) {
         profileSummary: profileSummaryForAccount(resolved.account, data),
       });
     }
-    const profile = clone(profileDoc.profile);
     const params = action === AUTO_CAPTURE_SETTINGS_ACTION_ID
       ? (Object.hasOwn(payload, "payload") ? payload.payload : null)
       : objectOrEmpty(payload.payload || payload.params || payload);
+    const serviceAccess = petServiceAccess && typeof petServiceAccess.authorize === "function"
+      ? petServiceAccess.authorize({
+        action,
+        params,
+        profile: profileDoc.profile,
+        position: data.playerPositions && data.playerPositions[resolved.account.accountId]
+          ? data.playerPositions[resolved.account.accountId]
+          : null,
+      })
+      : {ok: false, code: "pet_service_access_unavailable", message: "宠物服务访问校验暂不可用，本次操作已取消。"};
+    if (!serviceAccess.ok) {
+      return fail(serviceAccess.code || "pet_service_access_denied", serviceAccess.message || "当前不能使用这项宠物服务。", {
+        profileBinding: binding,
+        profileSummary: profileSummaryForAccount(resolved.account, data),
+        result: publicProfileActionResult(action, serviceAccess),
+      });
+    }
+    const profile = clone(profileDoc.profile);
     const ridePetInstanceIdBefore = String(profile.ridePetInstanceId || "").trim();
     const actionResult = applyProfileActionToProfile(profile, action, params, now);
     if (!actionResult.ok) {

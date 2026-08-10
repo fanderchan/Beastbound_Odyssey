@@ -136,6 +136,7 @@ const {
 const {
   canonicalDurableReceiptReadView,
 } = require("./auth/durable-receipt-read-model");
+const {createPetServiceAccess} = require("./auth/pet-service-access");
 const {createPartyDomain} = require("./auth/party");
 const {createHangMatchmakingDomain} = require("./auth/hang-matchmaking");
 const {createBattleRoomDomain} = require("./auth/battle-room");
@@ -336,6 +337,7 @@ const MAX_SERVICE_EVENTS = 500;
 const MAX_BATTLE_RECORDS = 10000;
 const MAX_BATTLE_TRACE_ROWS = 1200;
 const DURABLE_RECEIPT_PRECHECK_METHODS = new Set([
+  "acceptTrade",
   "joinHangMatchmaking",
   "buyMarketListing",
   "cancelMarketListing",
@@ -348,6 +350,7 @@ const ACCOUNT_SCOPED_DURABLE_RECEIPT_METHODS = new Set([
   "createCharacter",
 ]);
 const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
+  "acceptTrade",
   "allocateCharacterElements",
   "bankDeposit",
   "bankWithdraw",
@@ -801,6 +804,10 @@ function createAuthService(options = {}) {
     || createPetFusionRandomAuthority({randomBytes});
   const petFusionTargetTemplateForFormId = options.petFusionTargetTemplateForFormId
     || petTemplateForFormId;
+  const petServiceAccess = options.petServiceAccess || createPetServiceAccess({
+    mapDocumentById,
+    playerPositionHasCell,
+  });
   const manualEncounterAccess = options.manualEncounterAccess || createManualEncounterAccess({
     catalog: petEncounterAuthority.catalog,
     rebirthTrials: rebirthTrialDocument(),
@@ -6105,6 +6112,7 @@ function createAuthService(options = {}) {
     petGrowthCatalog,
     petPaidResetPolicyCatalog,
     petRebirthGrowthCycle,
+    petServiceAccess,
     playerLevelRuntime,
     playerPositionHasCell,
     profileActionLogLines,

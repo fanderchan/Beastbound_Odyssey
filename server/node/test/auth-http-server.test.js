@@ -500,15 +500,34 @@ test("HTTP legacy trade routes exchange exact equipment without exposing reserva
   assert.equal(state.trades.received[0].schemaVersion, 2);
   assert.equal(JSON.stringify(state).includes("offerEquipmentReservations"), false);
 
-  const accepted = await fetchJson(`${base}/trade/accept`, {
+  const missingAcceptKey = await fetchJson(`${base}/trade/accept`, {
     method: "POST",
     headers: {authorization: `Bearer ${beta.session.token}`},
+    body: JSON.stringify({tradeId: proposal.trade.tradeId}),
+  });
+  assert.equal(missingAcceptKey.ok, false);
+  assert.equal(missingAcceptKey.code, "idempotency_key_required");
+
+  const acceptHeaders = {
+    authorization: `Bearer ${beta.session.token}`,
+    "Idempotency-Key": "http_trade_accept_equipment_0001",
+  };
+  const accepted = await fetchJson(`${base}/trade/accept`, {
+    method: "POST",
+    headers: acceptHeaders,
     body: JSON.stringify({tradeId: proposal.trade.tradeId}),
   });
   assert.equal(accepted.ok, true);
   assert.equal(accepted.trade.schemaVersion, 2);
   assert.equal(profileItemCount(accepted.profile, "weapon_wooden_club"), 1);
   assert.equal(JSON.stringify(accepted).includes("transferProvenance"), false);
+  const replayed = await fetchJson(`${base}/trade/accept`, {
+    method: "POST",
+    headers: acceptHeaders,
+    body: JSON.stringify({tradeId: proposal.trade.tradeId}),
+  });
+  assert.equal(replayed.ok, true);
+  assert.equal(replayed.durableCommit.replayed, true);
 });
 
 test("HTTP GM market config routes are command-scoped", async (t) => {
@@ -811,7 +830,7 @@ test("HTTP server exposes server-authoritative profile action endpoint", async (
   ];
   assert.equal(service.saveProfile(registered.session.token, {"expectedRevision": 0, profile}).ok, true);
 
-  const healed = await fetchJson(`${base}/profile/action`, {
+  const missingKey = await fetchJson(`${base}/profile/action`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${registered.session.token}`},
     "body": JSON.stringify({
@@ -819,12 +838,69 @@ test("HTTP server exposes server-authoritative profile action endpoint", async (
       "payload": {"itemId": "item_meat_small", "instanceId": "http_pet_action"},
     }),
   });
+  assert.equal(missingKey.ok, false);
+  assert.equal(missingKey.code, "idempotency_key_required");
+  const beforeAction = service.getProfile(registered.session.token);
+  assert.equal(beforeAction.profileSummary.profileRevision, 1);
+  assert.equal(beforeAction.profile.petInstances.find((pet) => pet.instanceId === "http_pet_action").hp, 10);
+  assert.equal(profileItemCount(beforeAction.profile, "item_meat_small"), 1);
+
+  const healOperationId = "profile_action_http_heal_0001";
+  const healBody = JSON.stringify({
+    "action": "world_item_use",
+    "payload": {"itemId": "item_meat_small", "instanceId": "http_pet_action"},
+  });
+  const healed = await fetchJson(`${base}/profile/action`, {
+    "method": "POST",
+    "headers": {
+      "authorization": `Bearer ${registered.session.token}`,
+      "Idempotency-Key": healOperationId,
+    },
+    "body": healBody,
+  });
   assert.equal(healed.ok, true);
+  assert.equal(healed.durableCommit.replayed, false);
   assert.equal(healed.profileSummary.serverAuthority, "profile_document");
   assert.equal(healed.profile.petInstances.find((pet) => pet.instanceId === "http_pet_action").hp, 38);
   assert.equal(profileItemCount(healed.profile, "item_meat_small"), 0);
+
+  const replayedHeal = await fetchJson(`${base}/profile/action`, {
+    "method": "POST",
+    "headers": {
+      "authorization": `Bearer ${registered.session.token}`,
+      "Idempotency-Key": healOperationId,
+    },
+    "body": healBody,
+  });
+  assert.equal(replayedHeal.ok, true);
+  assert.equal(replayedHeal.durableCommit.replayed, true);
+  assert.equal(replayedHeal.profileBinding.profileRevision, healed.profileBinding.profileRevision);
+  assert.equal(replayedHeal.profile.petInstances.find((pet) => pet.instanceId === "http_pet_action").hp, 38);
+  assert.equal(profileItemCount(replayedHeal.profile, "item_meat_small"), 0);
+
+  const changedIntent = await fetchJson(`${base}/profile/action`, {
+    "method": "POST",
+    "headers": {
+      "authorization": `Bearer ${registered.session.token}`,
+      "Idempotency-Key": healOperationId,
+    },
+    "body": JSON.stringify({
+      "action": "training_partner_set_count",
+      "payload": {"count": 2},
+    }),
+  });
+  assert.equal(changedIntent.ok, false);
+  assert.equal(changedIntent.code, "idempotency_key_conflict");
+  const afterReplayAndConflict = service.getProfile(registered.session.token);
+  assert.equal(afterReplayAndConflict.profileSummary.profileRevision, healed.profileBinding.profileRevision);
+  assert.equal((afterReplayAndConflict.profile.trainingPartners || []).length, 0);
+
   await new Promise((resolve) => setImmediate(resolve));
-  const profileActionRequestLog = structuredLogs.find((entry) => entry.type === "http.request" && entry.path === "/profile/action");
+  const profileActionRequestLog = structuredLogs.find((entry) => (
+    entry.type === "http.request"
+    && entry.path === "/profile/action"
+    && entry.statusCode === 200
+  ));
   assert.notEqual(profileActionRequestLog, undefined);
   assert.equal(profileActionRequestLog.statusCode, 200);
   assert.equal(profileActionRequestLog.durationMs >= 0, true);
@@ -836,7 +912,10 @@ test("HTTP server exposes server-authoritative profile action endpoint", async (
   const beforeRetiredTrainingAction = service.getProfile(registered.session.token);
   const retiredTrainingAction = await fetchJson(`${base}/profile/action`, {
     "method": "POST",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "headers": {
+      "authorization": `Bearer ${registered.session.token}`,
+      "Idempotency-Key": "profile_action_http_partners_0002",
+    },
     "body": JSON.stringify({
       "action": "training_partner_set_count",
       "payload": {"count": 2},
@@ -863,7 +942,10 @@ test("HTTP server exposes server-authoritative profile action endpoint", async (
 
   const invalid = await fetchJson(`${base}/profile/action`, {
     "method": "POST",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
+    "headers": {
+      "authorization": `Bearer ${registered.session.token}`,
+      "Idempotency-Key": "profile_action_http_invalid_0003",
+    },
     "body": JSON.stringify({"action": "unknown_local_mutation", "payload": {}}),
   });
   assert.equal(invalid.ok, false);
@@ -1169,10 +1251,27 @@ test("HTTP server exposes server-authoritative equipment synthesis endpoint", as
   const saved = service.saveProfile(registered.session.token, {"expectedRevision": 0, profile});
   assert.equal(saved.ok, true);
 
-  const synthesized = await fetchJson(`${base}/equipment/synthesize`, {
+  const synthesisBody = JSON.stringify({"recipeId": "craft_hardwood_club"});
+  const missingKey = await fetchJson(`${base}/equipment/synthesize`, {
     "method": "POST",
     "headers": {"authorization": `Bearer ${registered.session.token}`},
-    "body": JSON.stringify({"recipeId": "craft_hardwood_club"}),
+    "body": synthesisBody,
+  });
+  assert.equal(missingKey.ok, false);
+  assert.equal(missingKey.code, "idempotency_key_required");
+  const beforeSynthesis = service.getProfile(registered.session.token);
+  assert.equal(beforeSynthesis.profileSummary.profileRevision, 1);
+  assert.equal(beforeSynthesis.profile.stoneCoins, 50);
+  assert.equal(profileItemCount(beforeSynthesis.profile, "equip_frag_wood_basic"), 3);
+
+  const synthesisOperationId = "equipment_synthesis_http_0001";
+  const synthesized = await fetchJson(`${base}/equipment/synthesize`, {
+    "method": "POST",
+    "headers": {
+      "authorization": `Bearer ${registered.session.token}`,
+      "Idempotency-Key": synthesisOperationId,
+    },
+    "body": synthesisBody,
   });
   assert.equal(synthesized.ok, true);
   assert.equal(synthesized.profileSummary.profileRevision, 2);
@@ -1180,13 +1279,30 @@ test("HTTP server exposes server-authoritative equipment synthesis endpoint", as
   assert.equal(synthesized.profile.stoneCoins, 30);
   assert.equal(profileItemCount(synthesized.profile, "weapon_hardwood_club"), 1);
 
-  const denied = await fetchJson(`${base}/equipment/synthesize`, {
+  const replayed = await fetchJson(`${base}/equipment/synthesize`, {
     "method": "POST",
-    "headers": {"authorization": `Bearer ${registered.session.token}`},
-    "body": JSON.stringify({"recipeId": "craft_hardwood_club"}),
+    "headers": {
+      "authorization": `Bearer ${registered.session.token}`,
+      "Idempotency-Key": synthesisOperationId,
+    },
+    "body": synthesisBody,
   });
-  assert.equal(denied.ok, false);
-  assert.equal(denied.code, "equipment_synthesis_material_missing");
+  assert.equal(replayed.ok, true);
+  assert.equal(replayed.durableCommit.replayed, true);
+  assert.equal(replayed.profileSummary.profileRevision, 2);
+  assert.equal(replayed.profile.stoneCoins, 30);
+  assert.equal(profileItemCount(replayed.profile, "weapon_hardwood_club"), 1);
+
+  const changedIntent = await fetchJson(`${base}/equipment/synthesize`, {
+    "method": "POST",
+    "headers": {
+      "authorization": `Bearer ${registered.session.token}`,
+      "Idempotency-Key": synthesisOperationId,
+    },
+    "body": JSON.stringify({"recipeId": "craft_stitched_hide_vest"}),
+  });
+  assert.equal(changedIntent.ok, false);
+  assert.equal(changedIntent.code, "idempotency_key_conflict");
 });
 
 test("HTTP server exposes server-authoritative player rebirth endpoint", async (t) => {

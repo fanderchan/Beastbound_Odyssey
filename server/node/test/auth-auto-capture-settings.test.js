@@ -414,7 +414,10 @@ test("HTTP profile action exposes the authoritative auto-capture settings write 
 
   const updated = await fetchJson(`${base}/profile/action`, {
     method: "POST",
-    headers: {authorization: `Bearer ${registered.session.token}`},
+    headers: {
+      authorization: `Bearer ${registered.session.token}`,
+      "Idempotency-Key": "profile_action_auto_capture_0001",
+    },
     body: JSON.stringify({
       action: AUTO_CAPTURE_SETTINGS_ACTION_ID,
       payload: {settings: {enabled: true, autoDiscardLowPower: true}},

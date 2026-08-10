@@ -129,6 +129,8 @@ test("authoritative evolution rerolls the target while preserving source 0/1 pub
   const account = seedEvolutionAccount(service, {username: "evolutionhappy"});
   const before = structuredClone(internalProfileForAccount(service, account.account.accountId));
   const source = before.petInstances[0];
+  assert.equal(before.petCodexSeenFormIds.includes(TARGET_FORM_ID), false);
+  assert.equal(before.petCodexCapturedFormIds.includes(TARGET_FORM_ID), false);
 
   const quote = service.getPetEvolutionQuote(account.session.token, {
     instanceId: source.instanceId,
@@ -178,6 +180,14 @@ test("authoritative evolution rerolls the target while preserving source 0/1 pub
   assert.equal(result.profile.stoneCoins, 50000);
   assert.equal(itemCount(result.profile, CORE_ITEM_ID), 0);
   assert.equal(itemCount(result.profile, LINEAGE_ITEM_ID), 0);
+  assert.deepEqual(
+    result.profile.petCodexSeenFormIds.filter((formId) => formId === TARGET_FORM_ID),
+    [TARGET_FORM_ID],
+  );
+  assert.deepEqual(
+    result.profile.petCodexCapturedFormIds.filter((formId) => formId === TARGET_FORM_ID),
+    [TARGET_FORM_ID],
+  );
   assert.equal(JSON.stringify(result).includes(account.fixture.privateSeed), false);
 
   const publicPet = result.profile.petInstances[0];
@@ -208,18 +218,27 @@ test("authoritative evolution rerolls the target while preserving source 0/1 pub
   assert.equal(internal.stoneCoins, 50000);
   assert.equal(itemCount(internal, CORE_ITEM_ID), 0);
   assert.equal(itemCount(internal, LINEAGE_ITEM_ID), 0);
+  assert.deepEqual(
+    internal.petCodexCapturedFormIds.filter((formId) => formId === TARGET_FORM_ID),
+    [TARGET_FORM_ID],
+  );
   assert.equal(result.profileBinding.profileRevision, account.profileRevision + 1);
 
   const afterFirst = structuredClone(internal);
   const replay = await invokeEvolution(service, account, catalog);
   assert.equal(replay.ok, true);
 	assert.equal(replay.durableCommit.replayed, true);
+	assert.equal(replay.profileBinding.profileRevision, result.profileBinding.profileRevision);
 	assert.deepEqual(internalProfileForAccount(service, account.account.accountId), afterFirst);
 
 	const restarted = createAuthService({store, now: () => NOW_MS, petEvolutionRouteCatalog: catalog});
 	const restored = restarted.getProfile(account.session.token);
 	assert.equal(restored.ok, true);
 	assert.equal(restored.profile.petInstances[0].formId, TARGET_FORM_ID);
+	assert.deepEqual(
+		restored.profile.petCodexCapturedFormIds.filter((formId) => formId === TARGET_FORM_ID),
+		[TARGET_FORM_ID],
+	);
 	assert.deepEqual(
 		restored.profile.petInstances[0].evolutionLineage.stageSnapshots.map((entry) => entry.stage),
 		[0, 1],

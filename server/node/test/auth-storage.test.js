@@ -1761,6 +1761,9 @@ process.stdin.on("end", () => {
     ["server_state", "auth", {
       schemaVersion: 2,
       storage: "mysql_entity_tables",
+      // Runtime-only battle events may advance the global high-water without
+      // leaving durable service_events rows. Restart must preserve that gap.
+      serviceEventSeq: 9,
       offlineHangConfig: {rewardRateBps: 5000, maxMinutes: 480, battleIntervalSeconds: 30, revision: 2},
       petPaidResetConfig: {revision: 3, formOverrides: {blue_man_dragon_water10: {amount: 130000}}},
     }],
@@ -2000,7 +2003,8 @@ process.stdin.on("end", () => {
     assert.equal(loaded.marketListings.market_inner_shared, undefined);
     assert.equal(loaded.gmCommandGrants.acc_entity[0].commandId, "*");
     assert.equal(loaded.battleTrace[0].traceId, "trace_entity");
-    assert.equal(loaded.serviceEventSeq, 7);
+    assert.equal(loaded.serviceEvents.at(-1).eventSeq, 7);
+    assert.equal(loaded.serviceEventSeq, 9);
     assert.equal(loaded.offlineHangConfig.rewardRateBps, 5000);
     assert.equal(loaded.offlineHangConfig.maxMinutes, 480);
     assert.equal(loaded.petPaidResetConfig.revision, 3);
