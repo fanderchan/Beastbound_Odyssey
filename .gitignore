@@ -1,6 +1,10 @@
 .DS_Store
 .godot/
 client/godot/.godot/
+*.import
+*.uid
+__pycache__/
+*.py[cod]
 .run/
 dist/
 node_modules/
