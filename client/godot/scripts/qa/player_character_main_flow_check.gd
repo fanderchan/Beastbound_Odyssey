@@ -65,9 +65,17 @@ static func run(host: Node) -> Dictionary:
 
 	var flow = host._panel_flow()
 	var menu_button := host.player_status_menu_button as Button
+	var menu_caption := (
+		menu_button.get_parent().find_child("WorldHudIconCaption", false, false)
+		if menu_button != null and menu_button.get_parent() != null
+		else null
+	)
 	_expect(
 		menu_button != null
-			and menu_button.text == "角色"
+			and (
+				menu_button.text == "角色"
+				or (menu_caption is Label and (menu_caption as Label).text == "角色")
+			)
 			and menu_button.is_visible_in_tree(),
 		"右下角缺少可见的“角色”入口",
 		errors
