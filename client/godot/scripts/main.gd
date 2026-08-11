@@ -142,6 +142,9 @@ const PetActionArtPreview := preload("res://scripts/qa/pet_action_art_preview.gd
 const PetManagementReviewCapture := preload(
 	"res://scripts/qa/pet_management_review_capture.gd"
 )
+const PetFusionMainOwnerReviewCapture := preload(
+	"res://scripts/qa/pet_fusion_main_owner_review_capture.gd"
+)
 const PetSkillPageReviewCapture := preload(
 	"res://scripts/qa/pet_skill_page_review_capture.gd"
 )
@@ -1162,6 +1165,7 @@ var equipment_spirit_preview: bool = false
 var equipment_compare_preview: bool = false
 var pet_management_preview: bool = false
 var pet_management_review_capture: bool = false
+var pet_fusion_main_owner_review_capture: bool = false
 var pet_skill_page_review_capture: bool = false
 var backpack_awakened_owner_review_capture: bool = false
 var commerce_awakened_owner_review_capture: bool = false
@@ -1712,6 +1716,7 @@ func _ready() -> void:
 		if (
 			npc_main_review_capture
 			or map_visual_review_capture
+			or pet_fusion_main_owner_review_capture
 			or pet_codex_awakened_owner_review_capture
 			or battle_layout_owner_review_capture
 			or not account_authenticated
@@ -1739,6 +1744,7 @@ func _ready() -> void:
 	elif (
 		not npc_main_review_capture
 		and not map_visual_review_capture
+		and not pet_fusion_main_owner_review_capture
 		and not pet_codex_awakened_owner_review_capture
 		and not battle_layout_owner_review_capture
 	):
@@ -2207,6 +2213,8 @@ func _ready() -> void:
 		call_deferred("_run_pet_management_preview")
 	elif pet_management_review_capture:
 		call_deferred("_run_pet_management_review_capture")
+	elif pet_fusion_main_owner_review_capture:
+		call_deferred("_run_pet_fusion_main_owner_review_capture")
 	elif pet_skill_page_review_capture:
 		call_deferred("_run_pet_skill_page_review_capture")
 	elif backpack_awakened_owner_review_capture:
@@ -2500,6 +2508,7 @@ func _apply_preview_window_args() -> void:
 	qa_user_data_lane_arg_count = 0
 	startup_auth_login_arg_present = false
 	qa_entrypoint_requires_lane = false
+	pet_fusion_main_owner_review_capture = false
 	pet_codex_awakened_owner_review_capture = false
 	pet_codex_awakened_owner_review_capture_arg_count = 0
 	pet_codex_awakened_owner_review_native_perf_arg_count = 0
@@ -3143,6 +3152,8 @@ func _apply_preview_window_args() -> void:
 			pet_management_preview = true
 		elif arg == "--pet-management-review-capture":
 			pet_management_review_capture = true
+		elif PetFusionMainOwnerReviewCapture.is_flag(arg):
+			pet_fusion_main_owner_review_capture = true
 		elif arg == "--pet-skill-page-review-capture":
 			pet_skill_page_review_capture = true
 		elif arg == BackpackAwakenedOwnerReviewCapture.CAPTURE_FLAG:
@@ -3297,6 +3308,10 @@ func _apply_preview_window_args() -> void:
 		npc_main_review_capture_request = NpcMainReviewCapture.request_from_args(args)
 		startup_map_id = str(npc_main_review_capture_request.get("mapId", startup_map_id))
 		startup_spawn_name = str(npc_main_review_capture_request.get("spawnName", startup_spawn_name))
+	if pet_fusion_main_owner_review_capture:
+		# The formal fusion layout capture uses the real Main host with an
+		# isolated empty session. It must not inherit the generic dev-GM bypass.
+		auth_auto_bypass = false
 	if (
 		pet_codex_awakened_owner_review_capture_arg_count > 0
 		or pet_codex_awakened_owner_review_native_perf_arg_count > 0
@@ -4524,6 +4539,10 @@ func _run_pet_management_preview() -> void:
 
 func _run_pet_management_review_capture() -> void:
 	await PetManagementReviewCapture.new(self).run()
+
+
+func _run_pet_fusion_main_owner_review_capture() -> void:
+	await PetFusionMainOwnerReviewCapture.new(self).run()
 
 
 func _run_pet_skill_page_review_capture() -> void:
