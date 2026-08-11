@@ -4,6 +4,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const {MODEL_VERSION: PET_GROWTH_MODEL_VERSION} = require("./pet-growth-authority");
+const {
+  PetFusionReleaseAttestationError,
+  loadPetFusionReleaseAttestation,
+} = require("./pet-fusion-release-attestation");
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const DATA_DIR = path.join(REPO_ROOT, "client/godot/data");
@@ -80,6 +84,8 @@ function loadPetFusionRecipeCatalog(options = {}) {
     skillTrainingDocument: options.skillTrainingDocument || readJson(DEFAULT_SKILL_TRAINING_PATH),
     paidResetDocument: options.paidResetDocument || readJson(DEFAULT_PAID_RESET_PATH),
     allowTestOnlyRecipes: options.allowTestOnlyRecipes === true,
+    releaseAttestationPath: options.releaseAttestationPath,
+    releaseAttestationReadFile: options.releaseAttestationReadFile,
     catalogPath,
   });
 }
@@ -235,6 +241,42 @@ function createPetFusionRecipeCatalog(input = {}) {
   if (!allowTestOnlyRecipes && recipes.some((recipe) => recipe.assetGate.status === "test_only")) {
     errors.push("test-only fusion recipes require explicit test injection");
   }
+  const catalogPath = String(input.catalogPath || "");
+  const requestedTestBypass = input.allowUnattestedRuntimeForTests === true;
+  const testOnlyRuntimeBypass = (
+    requestedTestBypass
+    && allowTestOnlyRecipes
+    && catalogPath.startsWith("test://")
+  );
+  if (requestedTestBypass && !testOnlyRuntimeBypass) {
+    errors.push("unattested runtime bypass is restricted to explicit test:// catalogs");
+  }
+  let releaseAttestation = null;
+  if (document.runtimeEnabled === true && errors.length === 0) {
+    if (testOnlyRuntimeBypass) {
+      releaseAttestation = {
+        testOnly: true,
+        status: "test_only_unattested",
+        catalogPath,
+      };
+    } else {
+      try {
+        releaseAttestation = loadPetFusionReleaseAttestation({
+          repoRoot: input.repoRoot || REPO_ROOT,
+          attestationPath: input.releaseAttestationPath,
+          readFile: input.releaseAttestationReadFile,
+          expectedCatalogDocument: document,
+          expectedCatalogPath: catalogPath,
+        });
+      } catch (error) {
+        if (error instanceof PetFusionReleaseAttestationError) {
+          errors.push(...error.errors.map((entry) => `runtime release attestation: ${entry}`));
+        } else {
+          errors.push("runtime release attestation could not be loaded");
+        }
+      }
+    }
+  }
   if (errors.length > 0) {
     throw new PetFusionRecipeCatalogError(errors);
   }
@@ -252,7 +294,8 @@ function createPetFusionRecipeCatalog(input = {}) {
     recipesById,
     targetFormIds: Array.from(targetFormIds).sort(),
     terminalTargetFormIds,
-    catalogPath: String(input.catalogPath || ""),
+    ...(releaseAttestation ? {releaseAttestation} : {}),
+    catalogPath,
   });
 }
 

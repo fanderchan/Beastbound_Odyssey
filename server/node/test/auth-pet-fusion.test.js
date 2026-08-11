@@ -175,6 +175,31 @@ function fusionEconomicFingerprint(profile) {
   };
 }
 
+test("runtime fusion catalog with a forged release-shaped object fails closed", () => {
+  const catalog = structuredClone(createEnabledTestFusionCatalog());
+  catalog.releaseAttestation = {
+    releaseApproved: true,
+    runtimeEnabled: true,
+    playerEntryOpened: true,
+    catalogId: catalog.catalogId,
+    attestationSha256: "a".repeat(64),
+  };
+  const service = createFusionService({catalog});
+  const account = seedFusionAccount(service, {
+    catalog,
+    username: "fusionreleasegate",
+  });
+
+  const quote = service.getPetFusionQuote(
+    account.session.token,
+    quoteRequest(account),
+  );
+
+  assert.equal(quote.ok, false);
+  assert.equal(quote.code, "pet_fusion_release_gate");
+  assert.match(quote.message, /不会消耗宠物/);
+});
+
 test("fusion quote is read-only and authoritative fusion consumes three pets into one independent terminal result", async () => {
   const catalog = createEnabledTestFusionCatalog();
   const store = createMemoryAuthStore();

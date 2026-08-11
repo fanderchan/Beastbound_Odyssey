@@ -6,6 +6,9 @@ const {
   PET_FUSION_ROLE_IDS,
 } = require("./pet-fusion-recipe-catalog");
 const {
+  isVerifiedPetFusionReleaseAttestation,
+} = require("./pet-fusion-release-attestation");
+const {
   inspectCanonicalStageOneCultivation,
 } = require("./pet-evolution");
 const {
@@ -234,6 +237,12 @@ function createPetFusionDomain(ctx) {
           petFusionRecipeCatalog && petFusionRecipeCatalog.disabledMessage
           || "宠物融合尚未开放。",
         ),
+      );
+    }
+    if (!runtimeReleaseProofReady(petFusionRecipeCatalog)) {
+      return failure(
+        "pet_fusion_release_gate",
+        "融合发布凭据校验失败，当前不会消耗宠物。",
       );
     }
     if (
@@ -887,6 +896,27 @@ function roleLabel(roleId) {
   }[roleId] || "融合位";
 }
 
+function runtimeReleaseProofReady(catalogValue) {
+  const catalog = recordOrNull(catalogValue);
+  const attestation = recordOrNull(catalog && catalog.releaseAttestation);
+  if (!catalog || !attestation) return false;
+  if (
+    attestation.testOnly === true
+    && String(attestation.status || "") === "test_only_unattested"
+  ) {
+    return String(catalog.catalogPath || "").startsWith("test://");
+  }
+  return (
+    isVerifiedPetFusionReleaseAttestation(attestation)
+    && attestation.releaseApproved === true
+    && attestation.runtimeEnabled === true
+    && attestation.playerEntryOpened === true
+    && String(attestation.catalogId || "") === String(catalog.catalogId || "")
+    && typeof attestation.attestationSha256 === "string"
+    && /^[a-f0-9]{64}$/.test(attestation.attestationSha256)
+  );
+}
+
 function hasExactKeys(value, keys) {
   const actual = Object.keys(recordOrNull(value) || {}).sort();
   const expected = [...keys].sort();
@@ -911,4 +941,5 @@ function failure(code, message) {
 module.exports = {
   createPetFusionDomain,
   normalizeRequest,
+  runtimeReleaseProofReady,
 };

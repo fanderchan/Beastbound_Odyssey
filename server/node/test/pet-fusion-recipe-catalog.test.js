@@ -19,6 +19,7 @@ const {
   RECIPE_ID,
   TARGET_FORM_ID,
   TARGET_GROWTH_PROFILE_ID,
+  createEnabledTestFusionCatalog,
   createTestFusionCatalog,
   testFusionDocuments,
 } = require("../test-support/pet-fusion-fixture");
@@ -29,6 +30,7 @@ test("production fusion catalog registers two formal recipes while runtime stays
   assert.equal(catalog.schemaVersion, 2);
   assert.equal(catalog.catalogId, PET_FUSION_CATALOG_ID);
   assert.equal(catalog.runtimeEnabled, false);
+  assert.equal(Object.hasOwn(catalog, "releaseAttestation"), false);
   assert.deepEqual(catalog.rules.roleIds, PET_FUSION_ROLE_IDS);
   assert.equal(catalog.rules.minimumLevel, 131);
   assert.equal(catalog.rules.maximumLevel, 140);
@@ -225,6 +227,40 @@ test("production fusion catalog registers two formal recipes while runtime stays
   assert.equal(Object.isFrozen(catalog.geneProfiles[0]), true);
   assert.equal(Object.isFrozen(catalog.recipes[0]), true);
   assert.equal(Object.isFrozen(catalog.terminalTargetFormIds), true);
+});
+
+test("runtime fusion catalog requires a production release attestation", () => {
+  const document = structuredClone(
+    require("../../../client/godot/data/pet_fusion_recipes.json"),
+  );
+  document.runtimeEnabled = true;
+  assert.throws(
+    () => loadPetFusionRecipeCatalog({document}),
+    (error) => catalogErrorIncludes(error, "runtime release attestation"),
+  );
+});
+
+test("unattested runtime bypass is explicit and restricted to test:// fixtures", () => {
+  const catalog = createEnabledTestFusionCatalog();
+  assert.deepEqual(catalog.releaseAttestation, {
+    testOnly: true,
+    status: "test_only_unattested",
+    catalogPath: "test://pet_fusion_recipes.json",
+  });
+
+  const documents = testFusionDocuments();
+  assert.throws(
+    () => createPetFusionRecipeCatalog({
+      ...documents,
+      allowTestOnlyRecipes: true,
+      allowUnattestedRuntimeForTests: true,
+      catalogPath: "/tmp/pet_fusion_recipes.json",
+    }),
+    (error) => catalogErrorIncludes(
+      error,
+      "unattested runtime bypass is restricted to explicit test:// catalogs",
+    ),
+  );
 });
 
 test("staged fusion bloodline actives are distinct single-target non-training damage contracts", () => {

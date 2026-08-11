@@ -83,6 +83,7 @@ function createTestFusionCatalog(options = {}) {
   return createPetFusionRecipeCatalog({
     ...documents,
     allowTestOnlyRecipes: options.allowTestOnlyRecipes !== false,
+    allowUnattestedRuntimeForTests: true,
     catalogPath: "test://pet_fusion_recipes.json",
   });
 }
