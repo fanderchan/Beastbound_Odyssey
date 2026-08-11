@@ -196,6 +196,17 @@ class FusionMainOwnerReviewRecorderTest(unittest.TestCase):
                 main_source=main_source + "\n# pet_fusion_panel.gd\n"
             )
 
+    def test_missing_fail_closed_player_entry_is_rejected(self) -> None:
+        coordinator_source = TOOL.PANEL_FLOW_PATH.read_text(encoding="utf-8")
+        with self.assertRaises(TOOL.FusionMainRecordingError):
+            TOOL._require_main_hosted_capture_wiring(
+                panel_flow_source=coordinator_source.replace(
+                    '_pet_fusion_open_button.text = "融合"',
+                    '_pet_fusion_open_button.text = ""',
+                    1,
+                )
+            )
+
     def test_native_and_movie_commands_use_one_official_lane(self) -> None:
         native = TOOL._build_godot_command(
             godot="/Applications/Godot.app/Contents/MacOS/Godot",

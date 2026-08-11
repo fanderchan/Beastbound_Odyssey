@@ -11,6 +11,13 @@ const MAX_SAFE_INTEGER := 9007199254740991
 const RESULT_BINDING_BOUND := "bound"
 const RESULT_BINDING_UNBOUND := "unbound"
 const TRADE_ELIGIBILITY_NOT_ELIGIBLE := "not_eligible"
+const UNCERTAIN_RESULT_CODES := [
+	"network_failed",
+	"network_retry_failed",
+	"storage_commit_timeout",
+	"storage_outcome_unknown",
+	"storage_write_failed",
+]
 
 
 static func request_payload(
@@ -65,6 +72,10 @@ static func normalized_material_instance_ids(value) -> Dictionary:
 		result[role_id] = instance_id
 		unique_ids[instance_id] = true
 	return result
+
+
+static func operation_id_must_be_retained(code: String) -> bool:
+	return UNCERTAIN_RESULT_CODES.has(code.strip_edges())
 
 
 static func normalized_quote(value, catalog_document) -> Dictionary:

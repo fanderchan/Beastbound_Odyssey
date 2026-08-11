@@ -93,6 +93,19 @@ func _initialize() -> void:
 		"独立选择/展示领域层意外依赖网络请求实现",
 		errors
 	)
+	_expect(
+		PetFusionClientModel.operation_id_must_be_retained(
+			"storage_outcome_unknown"
+		)
+			and PetFusionClientModel.operation_id_must_be_retained(
+				"network_retry_failed"
+			)
+			and not PetFusionClientModel.operation_id_must_be_retained(
+				"revision_conflict"
+			),
+		"融合执行的幂等操作标识保留边界错误",
+		errors
+	)
 
 	var enabled_catalog := production_catalog.duplicate(true)
 	enabled_catalog["runtimeEnabled"] = true
@@ -445,7 +458,12 @@ func _initialize() -> void:
 			),
 			"closedZeroRequest": (
 				closed_request_payload.is_empty()
-				and no_network_dependency
+					and no_network_dependency
+			),
+			"uncertainOutcomeRetainsOperationId": (
+				PetFusionClientModel.operation_id_must_be_retained(
+					"storage_outcome_unknown"
+				)
 			),
 			"closedStaleQuoteRejected": (
 				closed_stale_quote_view.is_empty()

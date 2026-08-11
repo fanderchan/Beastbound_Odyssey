@@ -78,6 +78,9 @@ const PetGrowthScreeningModel := preload("res://scripts/progression/pet_growth_s
 const PetFusionSkillPolicyCheck := preload(
 	"res://scripts/progression/pet_fusion_skill_policy_check.gd"
 )
+const PetFusionSelectionModel := preload(
+	"res://scripts/progression/pet_fusion_selection_model.gd"
+)
 const PetPortraitArtCatalogCheck := preload(
 	"res://scripts/qa/pet_portrait_art_catalog_check.gd"
 )
@@ -9278,6 +9281,64 @@ func _run_auto_pet_management_check() -> void:
 	await host.get_tree().process_frame
 	var opened = host.pet_panel != null and host.pet_panel.visible
 	var selected_default = host.pet_selected_instance_id == "pet_bui_main"
+	var fusion_flow = host._panel_flow()
+	var fusion_button_ready: bool = (
+		fusion_flow._pet_fusion_open_button != null
+		and fusion_flow._pet_fusion_open_button.text == "融合"
+		and not fusion_flow._pet_fusion_open_button.disabled
+	)
+	if fusion_button_ready:
+		fusion_flow._pet_fusion_open_button.pressed.emit()
+	await host.get_tree().process_frame
+	var fusion_snapshot: Dictionary = (
+		fusion_flow._pet_fusion_panel.snapshot()
+		if fusion_flow._pet_fusion_panel != null
+		else {}
+	)
+	var fusion_visible_text := str(fusion_snapshot.get("visibleText", ""))
+	var fusion_screenshot_ok := true
+	var fusion_screenshot_path := OS.get_environment(
+		"BEASTBOUND_FUSION_ENTRY_SCREENSHOT_PATH"
+	).strip_edges()
+	if fusion_screenshot_path != "":
+		if DisplayServer.get_name().to_lower() == "headless":
+			fusion_screenshot_ok = false
+		else:
+			var fusion_screenshot_image: Image = (
+				host.get_viewport().get_texture().get_image()
+			)
+			fusion_screenshot_ok = (
+				fusion_screenshot_image != null
+				and fusion_screenshot_image.save_png(
+					fusion_screenshot_path
+				) == OK
+			)
+		print("pet fusion player entry screenshot: status=%s path=%s" % [
+			"ok" if fusion_screenshot_ok else "failed",
+			fusion_screenshot_path,
+		])
+	var fusion_closed_entry_ok: bool = (
+		fusion_button_ready
+		and fusion_flow._pet_fusion_panel != null
+		and fusion_flow._pet_fusion_panel.visible
+		and not host.pet_panel.visible
+		and bool(fusion_snapshot.get("closed", false))
+		and not bool(fusion_snapshot.get("runtime", true))
+		and int(fusion_snapshot.get("networkRequestCount", -1)) == 0
+		and bool(fusion_snapshot.get("confirmDisabled", false))
+		and fusion_visible_text.contains(
+			PetFusionSelectionModel.CLOSED_MESSAGE
+		)
+		and not fusion_visible_text.contains("QA")
+		and not fusion_visible_text.to_lower().contains("debug")
+		and fusion_screenshot_ok
+	)
+	fusion_flow._close_pet_fusion_panel(true)
+	await host.get_tree().process_frame
+	var fusion_return_ok: bool = (
+		host.pet_panel.visible
+		and not fusion_flow._pet_fusion_panel.visible
+	)
 	host._select_pet_instance("pet_bui_rest")
 	await host.get_tree().process_frame
 	var rest_detail = host.pet_detail_label.text if host.pet_detail_label != null else ""
@@ -9401,8 +9462,8 @@ func _run_auto_pet_management_check() -> void:
 	var storage_clear_ok = PlayerProgressModel.pet_instance_by_id(host.player_profile, "pet_manage_new").is_empty()
 	var management_enhanced_ok = power_sort_ok and sort_direction_ok and list_power_new_ok and detail_power_ok and storage_filter_ok and new_seen_ok and storage_clear_confirm_ok and storage_clear_ok
 
-	var status = "ok" if default_pet_empty_ok and empty_panel_ok and novice_egg_grant_ok and novice_pet_panel_ok and opened and selected_default and rest_to_standby_ready and rest_standby and standby_to_battle_ready and rest_battle and battle_to_rest_ready and rest_rest and no_pet_battle_ok and detail_ok and speed_standby_to_battle_ready and speed_battle and button_text_clean and button_y_stable and switched and battle_reads_active and management_enhanced_ok else "failed"
-	print("pet management check ready: status=%s default_empty=%s empty_panel=%s novice_eggs=%s novice_panel=%s opened=%s selected=%s rest_to_standby=%s rest_standby=%s standby_to_battle=%s rest_battle=%s battle_to_rest=%s rest_rest=%s no_pet_battle=%s detail=%s speed_standby_to_battle=%s speed_battle=%s button_text=%s button_y=%s switched=%s battle_active_pet=%s enhanced=%s sort=%s sort_direction=%s list_power_new=%s detail_power=%s storage_filter=%s new_seen=%s clear_confirm=%s clear=%s active=%s" % [
+	var status = "ok" if default_pet_empty_ok and empty_panel_ok and novice_egg_grant_ok and novice_pet_panel_ok and opened and selected_default and fusion_closed_entry_ok and fusion_return_ok and rest_to_standby_ready and rest_standby and standby_to_battle_ready and rest_battle and battle_to_rest_ready and rest_rest and no_pet_battle_ok and detail_ok and speed_standby_to_battle_ready and speed_battle and button_text_clean and button_y_stable and switched and battle_reads_active and management_enhanced_ok else "failed"
+	print("pet management check ready: status=%s default_empty=%s empty_panel=%s novice_eggs=%s novice_panel=%s opened=%s selected=%s fusion_entry=%s fusion_return=%s fusion_requests=%d rest_to_standby=%s rest_standby=%s standby_to_battle=%s rest_battle=%s battle_to_rest=%s rest_rest=%s no_pet_battle=%s detail=%s speed_standby_to_battle=%s speed_battle=%s button_text=%s button_y=%s switched=%s battle_active_pet=%s enhanced=%s sort=%s sort_direction=%s list_power_new=%s detail_power=%s storage_filter=%s new_seen=%s clear_confirm=%s clear=%s active=%s" % [
 		status,
 		str(default_pet_empty_ok),
 		str(empty_panel_ok),
@@ -9410,6 +9471,9 @@ func _run_auto_pet_management_check() -> void:
 		str(novice_pet_panel_ok),
 		str(opened),
 		str(selected_default),
+		str(fusion_closed_entry_ok),
+		str(fusion_return_ok),
+		int(fusion_snapshot.get("networkRequestCount", -1)),
 		str(rest_to_standby_ready),
 		str(rest_standby),
 		str(standby_to_battle_ready),

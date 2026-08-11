@@ -210,10 +210,22 @@ def _require_main_hosted_capture_wiring(
         "await PetFusionMainOwnerReviewCapture.new(self).run()",
     ):
         require_count(main_text, fragment)
-    if "pet_fusion_panel.gd" in main_text or "pet_fusion_panel.gd" in coordinator_text:
+    if "pet_fusion_panel.gd" in main_text:
         raise FusionMainRecordingError(
-            "融合面板不得直接接入 Main 或正常玩家 PanelFlowCoordinator"
+            "融合面板不得直接接入 Main 宿主"
         )
+    for fragment in (
+        'const PetFusionPanel := preload("res://scripts/ui/pet_fusion_panel.gd")',
+        '_pet_fusion_open_button.text = "融合"',
+        "_pet_fusion_panel.quote_requested.connect(_on_pet_fusion_quote_requested)",
+        "_pet_fusion_panel.fusion_requested.connect(_on_pet_fusion_confirm_requested)",
+        "if not PetFusionRecipeCatalogModel.runtime_available(catalog):",
+        "_pet_fusion_panel.configure_closed(catalog, candidate_pets)",
+    ):
+        if fragment not in coordinator_text:
+            raise FusionMainRecordingError(
+                f"正常玩家融合入口缺少关闭边界接线：{fragment}"
+            )
 
 
 def _build_godot_command(

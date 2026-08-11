@@ -1,5 +1,9 @@
 extends Control
 
+signal close_requested
+signal quote_requested(selection_state: Dictionary)
+signal fusion_requested(quote: Dictionary)
+
 const BattleActionCatalog := preload(
 	"res://scripts/battle/battle_action_catalog.gd"
 )
@@ -36,10 +40,17 @@ var _selection_state: Dictionary = {}
 var _quote: Dictionary = {}
 var _candidate_pets: Array[Dictionary] = []
 var _qa_preview := false
+var _runtime_mode := false
+var _runtime_interaction_enabled := false
+var _quote_pending := false
+var _mutation_pending := false
+var _runtime_status_message := ""
 var _preview_fixture_valid := false
 var _focused_role_id := "core"
 var _armed_fingerprint := ""
 var _second_confirmation_count := 0
+var _quote_request_count := 0
+var _fusion_request_count := 0
 
 var _status_banner: Label
 var _preview_badge: Label
@@ -50,6 +61,7 @@ var _target_placeholder: Label
 var _target_portrait_status := "none"
 var _target_portrait_frame: PanelContainer
 var _confirm_button: Button
+var _close_button: Button
 var _confirm_status_label: Label
 var _authority_label: Label
 var _base_skill_buttons: Array[Button] = []
@@ -95,9 +107,16 @@ func configure_closed(
 	_quote = {}
 	_candidate_pets = _duplicate_pet_array(candidate_pets)
 	_qa_preview = false
+	_runtime_mode = false
+	_runtime_interaction_enabled = false
+	_quote_pending = false
+	_mutation_pending = false
+	_runtime_status_message = ""
 	_preview_fixture_valid = false
 	_armed_fingerprint = ""
 	_second_confirmation_count = 0
+	_quote_request_count = 0
+	_fusion_request_count = 0
 	_focused_role_id = "core"
 	_rebuild_candidate_bar()
 	_refresh()
@@ -146,13 +165,100 @@ func configure_qa_preview(
 	_quote = quote
 	_candidate_pets = _duplicate_pet_array(candidate_pets)
 	_qa_preview = true
+	_runtime_mode = false
+	_runtime_interaction_enabled = false
+	_quote_pending = false
+	_mutation_pending = false
+	_runtime_status_message = ""
 	_preview_fixture_valid = true
 	_armed_fingerprint = ""
 	_second_confirmation_count = 0
+	_quote_request_count = 0
+	_fusion_request_count = 0
 	_focused_role_id = "core"
 	_rebuild_candidate_bar()
 	_refresh()
 	return true
+
+
+func configure_runtime(
+	catalog_document,
+	selected_by_role,
+	quote_value,
+	candidate_pets: Array[Dictionary],
+	quote_pending: bool = false,
+	mutation_pending: bool = false,
+	status_message: String = "",
+	interaction_enabled: bool = true
+) -> bool:
+	if (
+		not (catalog_document is Dictionary)
+		or not PetFusionRecipeCatalogModel.runtime_available(catalog_document)
+		or not (selected_by_role is Dictionary)
+	):
+		configure_closed(catalog_document, candidate_pets)
+		return false
+	var catalog := (catalog_document as Dictionary).duplicate(true)
+	var selections := (selected_by_role as Dictionary).duplicate(true)
+	var selection_state := PetFusionSelectionModel.selection_state(
+		selections,
+		catalog
+	)
+	var quote := PetFusionClientModel.normalized_quote(
+		quote_value,
+		catalog
+	)
+	if (
+		not quote.is_empty()
+		and not PetFusionClientModel.quote_matches_material_selection(
+			quote,
+			str(selection_state.get("resolvedRecipeId", "")),
+			selection_state.get("materialInstanceIds", {}),
+			catalog
+		)
+	):
+		quote = {}
+	var previous_fingerprint := PetFusionPresentationModel.confirmation_fingerprint(
+		_quote,
+		_catalog_document
+	)
+	var next_fingerprint := PetFusionPresentationModel.confirmation_fingerprint(
+		quote,
+		catalog
+	)
+	var entering_runtime := not _runtime_mode
+	_catalog_document = catalog
+	_selection = selections
+	_selection_state = selection_state
+	_quote = quote
+	_candidate_pets = _duplicate_pet_array(candidate_pets)
+	_qa_preview = false
+	_runtime_mode = true
+	_runtime_interaction_enabled = interaction_enabled
+	_quote_pending = quote_pending
+	_mutation_pending = mutation_pending
+	_runtime_status_message = status_message.strip_edges()
+	_preview_fixture_valid = false
+	if entering_runtime:
+		_quote_request_count = 0
+		_fusion_request_count = 0
+		_second_confirmation_count = 0
+	if previous_fingerprint != next_fingerprint:
+		_armed_fingerprint = ""
+		_second_confirmation_count = 0
+	if not ROLE_IDS.has(_focused_role_id):
+		_focused_role_id = "core"
+	_rebuild_candidate_bar()
+	_refresh()
+	return true
+
+
+func current_selection() -> Dictionary:
+	return _selection.duplicate(true)
+
+
+func current_selection_state() -> Dictionary:
+	return _selection_state.duplicate(true)
 
 
 func snapshot() -> Dictionary:
@@ -173,7 +279,9 @@ func snapshot() -> Dictionary:
 		special_chance_texts.append(_special_chance_labels[index].text)
 	return {
 		"visible": visible,
-		"closed": not _qa_preview,
+		"closed": not _qa_preview and not _runtime_mode,
+		"runtime": _runtime_mode,
+		"qaPreview": _qa_preview,
 		"previewFixtureValid": _preview_fixture_valid,
 		"messageText": _status_banner.text if _status_banner != null else "",
 		"materialSlotCount": _material_slots.size(),
@@ -208,7 +316,11 @@ func snapshot() -> Dictionary:
 		),
 		"buttonText": _confirm_button.text if _confirm_button != null else "",
 		"secondConfirmationCount": _second_confirmation_count,
-		"networkRequestCount": 0,
+		"quoteRequestCount": _quote_request_count,
+		"fusionRequestCount": _fusion_request_count,
+		"networkRequestCount": _quote_request_count + _fusion_request_count,
+		"quotePending": _quote_pending,
+		"mutationPending": _mutation_pending,
 		"authorityText": (
 			_authority_label.text
 			if _authority_label != null
@@ -285,12 +397,12 @@ func _build_header() -> void:
 	add_child(_preview_badge)
 	_place(_preview_badge, Rect2(980.0, 10.0, 190.0, 30.0))
 
-	var close_button := Button.new()
-	close_button.name = "CloseButton"
-	PetManagementVisualSkin.apply_close_button(close_button)
-	close_button.pressed.connect(func() -> void: visible = false)
-	add_child(close_button)
-	_place(close_button, Rect2(1190.0, 2.0, 62.0, 48.0))
+	_close_button = Button.new()
+	_close_button.name = "CloseButton"
+	PetManagementVisualSkin.apply_close_button(_close_button)
+	_close_button.pressed.connect(_close_pressed)
+	add_child(_close_button)
+	_place(_close_button, Rect2(1190.0, 2.0, 62.0, 48.0))
 
 
 func _build_status_banner() -> void:
@@ -686,28 +798,46 @@ func _build_candidate_bar() -> void:
 
 
 func _refresh() -> void:
+	_selection_state = PetFusionSelectionModel.selection_state(
+		_selection,
+		_catalog_document
+	)
 	_preview_badge.text = (
 		"体验预览・不会消耗宠物"
 		if _qa_preview
-		else "功能尚未开放"
+		else (
+			"服务器实时校验"
+			if _runtime_mode
+			else "功能尚未开放"
+		)
+	)
+	_preview_badge.add_theme_stylebox_override(
+		"normal",
+		_pill_style(
+			Color(0.19, 0.36, 0.25, 0.88)
+			if _qa_preview or _runtime_mode
+			else Color(0.45, 0.29, 0.16, 0.88)
+		)
 	)
 	_status_banner.text = (
 		"体验预览：本页只演示两段确认，不会执行融合或消耗宠物。"
 		if _qa_preview
-		else CLOSED_MESSAGE
+		else (
+			_runtime_banner_text()
+			if _runtime_mode
+			else CLOSED_MESSAGE
+		)
 	)
 	_status_banner.add_theme_stylebox_override(
 		"normal",
 		_notice_style(
 			Color(0.18, 0.48, 0.30, 0.76)
-			if _qa_preview
+			if _qa_preview or _runtime_mode
 			else Color(0.60, 0.35, 0.16, 0.72)
 		)
 	)
-	_selection_state = PetFusionSelectionModel.selection_state(
-		_selection,
-		_catalog_document
-	)
+	if _close_button != null:
+		_close_button.disabled = _runtime_mode and _mutation_pending
 	_refresh_material_slots()
 	_refresh_candidate_buttons()
 	_refresh_quote_and_target()
@@ -715,6 +845,7 @@ func _refresh() -> void:
 
 
 func _refresh_material_slots() -> void:
+	var can_select := _can_select_materials()
 	for role_id in ROLE_IDS:
 		var slot := _material_slots.get(role_id, {}) as Dictionary
 		var button := slot.get("button") as Button
@@ -727,23 +858,27 @@ func _refresh_material_slots() -> void:
 		if button == null:
 			continue
 		var selected := _selection.has(role_id)
+		var focused := (
+			(_qa_preview or _runtime_mode)
+			and role_id == _focused_role_id
+		)
 		var instance := (
 			_selection.get(role_id) as Dictionary
 			if selected and _selection.get(role_id) is Dictionary
 			else {}
 		)
-		button.disabled = not _qa_preview
+		button.disabled = not can_select
 		PetSkillVisualSkin.apply_card_button(
 			button,
 			"active",
-			role_id == _focused_role_id,
+			focused,
 			not selected
 		)
 		portrait_frame.add_theme_stylebox_override(
 			"panel",
 			PetSkillVisualSkin.icon_frame_style(
 				"active",
-				role_id == _focused_role_id,
+				focused,
 				not selected
 			)
 		)
@@ -773,17 +908,24 @@ func _refresh_material_slots() -> void:
 			placeholder.text = "未选"
 			name_label.text = "尚未选择"
 			level_label.text = ""
-			status_label.text = "尚未开放" if not _qa_preview else "点击此位置后选择候选宠"
+			status_label.text = (
+				"尚未开放"
+				if not _qa_preview and not _runtime_mode
+				else "点击此位置后选择候选宠"
+			)
 
 
 func _refresh_candidate_buttons() -> void:
 	for button in _candidate_buttons:
-		button.disabled = not _qa_preview or _second_confirmation_count > 0
+		button.disabled = (
+			not _can_select_materials()
+			or (_qa_preview and _second_confirmation_count > 0)
+		)
 
 
 func _refresh_quote_and_target() -> void:
 	var quote_matches := (
-		_qa_preview
+		(_qa_preview or _runtime_mode)
 		and not _quote.is_empty()
 		and bool(_selection_state.get("readyForQuoteHint", false))
 		and PetFusionClientModel.quote_matches_material_selection(
@@ -799,13 +941,21 @@ func _refresh_quote_and_target() -> void:
 		_confirm_button.disabled = true
 		_confirm_button.text = (
 			"融合尚未开放"
-			if not _qa_preview
-			else "当前组合没有报价"
+			if not _qa_preview and not _runtime_mode
+			else (
+				"正在获取报价…"
+				if _runtime_mode and _quote_pending
+				else "当前组合没有报价"
+			)
 		)
 		_confirm_status_label.text = (
 			CLOSED_MESSAGE
-			if not _qa_preview
-			else "本体验页不会为新组合获取报价。"
+			if not _qa_preview and not _runtime_mode
+			else (
+				_runtime_unquoted_status_text()
+				if _runtime_mode
+				else "本体验页不会为新组合获取报价。"
+			)
 		)
 		return
 
@@ -820,13 +970,40 @@ func _refresh_quote_and_target() -> void:
 	)
 	_set_target_from_quote(_quote)
 	_set_quote_rules(quote_view)
-	_confirm_button.disabled = _second_confirmation_count > 0
-	_confirm_button.text = (
-		"体验完成"
-		if _second_confirmation_count > 0
-		else str(confirmation_view.get("buttonText", "查看不可逆确认"))
+	_confirm_button.disabled = (
+		(_qa_preview and _second_confirmation_count > 0)
+		or (
+			_runtime_mode
+			and (
+				not _runtime_interaction_enabled
+				or _quote_pending
+				or _mutation_pending
+			)
+		)
 	)
-	if _second_confirmation_count > 0:
+	_confirm_button.text = (
+		(
+			"融合处理中…"
+			if _runtime_mode and _mutation_pending
+			else str(confirmation_view.get("buttonText", "查看不可逆确认"))
+		)
+		if _runtime_mode
+		else (
+			"体验完成"
+			if _second_confirmation_count > 0
+			else str(confirmation_view.get("buttonText", "查看不可逆确认"))
+		)
+	)
+	if _runtime_mode:
+		if _mutation_pending:
+			_confirm_status_label.text = "服务器正在执行融合，请勿关闭页面。"
+		elif _runtime_status_message != "":
+			_confirm_status_label.text = _runtime_status_message
+		elif _confirmation_armed():
+			_confirm_status_label.text = "再次点击将永久消耗三只材料宠。"
+		else:
+			_confirm_status_label.text = "第一次点击只展开不可逆确认，不会立即消耗宠物。"
+	elif _second_confirmation_count > 0:
 		_confirm_status_label.text = "体验预览已完成；没有消耗任何宠物。"
 	elif _confirmation_armed():
 		_confirm_status_label.text = "再次点击仅演示确认完成，仍不会消耗宠物。"
@@ -839,15 +1016,23 @@ func _set_closed_or_unquoted_target() -> void:
 	_target_placeholder.visible = true
 	_target_placeholder.text = (
 		"融合目标\n尚未开放"
-		if not _qa_preview
+		if not _qa_preview and not _runtime_mode
 		else "组合已变化\n等待新报价"
 	)
 	_target_portrait_status = "none"
-	_target_name_label.text = "目标待开放" if not _qa_preview else "尚无目标报价"
+	_target_name_label.text = (
+		"目标待开放"
+		if not _qa_preview and not _runtime_mode
+		else "尚无目标报价"
+	)
 	_target_route_label.text = (
 		"当前不会消耗宠物"
-		if not _qa_preview
-		else "体验页不会自动获取新报价"
+		if not _qa_preview and not _runtime_mode
+		else (
+			"材料齐全后由服务器返回目标"
+			if _runtime_mode
+			else "体验页不会自动获取新报价"
+		)
 	)
 	_target_portrait_frame.add_theme_stylebox_override(
 		"panel",
@@ -863,11 +1048,19 @@ func _set_target_from_quote(quote: Dictionary) -> void:
 	_target_portrait.texture = texture
 	_target_placeholder.visible = texture == null
 	_target_placeholder.text = (
-		"◇\n预览占位・正式画像待补"
+		(
+			"◇\n预览占位・正式画像待补"
+			if _qa_preview
+			else "◇\n画像加载失败"
+		)
 		if texture == null
 		else ""
 	)
-	_target_portrait_status = "formal" if texture != null else "qa_placeholder"
+	_target_portrait_status = (
+		"formal"
+		if texture != null
+		else ("qa_placeholder" if _qa_preview else "missing")
+	)
 	_target_name_label.text = target_name
 	_target_route_label.text = "%s・一转 Lv1" % _safe_route_text(target_name)
 	_target_portrait_frame.add_theme_stylebox_override(
@@ -893,9 +1086,13 @@ func _set_generic_rules() -> void:
 		"不可骑乘・终局：不能普通二转、再次进化/融合或付费重置。"
 	)
 	_authority_label.text = (
-		"正式执行时，最终结果以服务器确认为准。"
-		if _qa_preview
-		else "功能尚未开放；当前不会向服务器提交。"
+		"执行前服务器会再次校验，最终结果以服务器确认为准。"
+		if _runtime_mode
+		else (
+			"正式执行时，最终结果以服务器确认为准。"
+			if _qa_preview
+			else "功能尚未开放；当前不会向服务器提交。"
+		)
 	)
 
 
@@ -1011,14 +1208,14 @@ func _rebuild_candidate_bar() -> void:
 			"disabled",
 			PetManagementVisualSkin.roster_style(false, accent)
 		)
-		button.disabled = not _qa_preview
+		button.disabled = not _can_select_materials()
 		button.pressed.connect(_candidate_pressed.bind(instance))
 		_candidate_row.add_child(button)
 		_candidate_buttons.append(button)
 
 
 func _material_slot_pressed(role_id: String) -> void:
-	if not _qa_preview or not ROLE_IDS.has(role_id):
+	if not _can_select_materials() or not ROLE_IDS.has(role_id):
 		return
 	_focused_role_id = role_id
 	_armed_fingerprint = ""
@@ -1027,7 +1224,7 @@ func _material_slot_pressed(role_id: String) -> void:
 
 
 func _candidate_pressed(instance: Dictionary) -> void:
-	if not _qa_preview:
+	if not _can_select_materials():
 		return
 	var hint := PetFusionSelectionModel.candidate_hint(
 		instance,
@@ -1041,14 +1238,24 @@ func _candidate_pressed(instance: Dictionary) -> void:
 		)
 		return
 	_selection[_focused_role_id] = instance.duplicate(true)
+	_quote = {}
 	_armed_fingerprint = ""
 	_second_confirmation_count = 0
+	_focus_next_unselected_role()
 	_refresh()
+	if (
+		_runtime_mode
+		and bool(_selection_state.get("readyForQuoteHint", false))
+	):
+		_quote_pending = true
+		_quote_request_count += 1
+		_refresh()
+		quote_requested.emit(_selection_state.duplicate(true))
 
 
 func _confirm_pressed() -> void:
 	if (
-		not _qa_preview
+		(not _qa_preview and not _runtime_mode)
 		or _quote.is_empty()
 		or _confirm_button == null
 		or _confirm_button.disabled
@@ -1064,6 +1271,13 @@ func _confirm_pressed() -> void:
 		_armed_fingerprint = fingerprint
 		_refresh()
 		return
+	if _runtime_mode:
+		_mutation_pending = true
+		_second_confirmation_count += 1
+		_fusion_request_count += 1
+		_refresh()
+		fusion_requested.emit(_quote.duplicate(true))
+		return
 	_second_confirmation_count += 1
 	_refresh()
 
@@ -1078,6 +1292,69 @@ func _confirmation_armed() -> bool:
 		and _armed_fingerprint == fingerprint
 		and _second_confirmation_count == 0
 	)
+
+
+func _close_pressed() -> void:
+	if _runtime_mode and _mutation_pending:
+		return
+	if get_signal_connection_list("close_requested").is_empty():
+		visible = false
+	else:
+		close_requested.emit()
+
+
+func _can_select_materials() -> bool:
+	if _qa_preview:
+		return _second_confirmation_count == 0
+	return (
+		_runtime_mode
+		and _runtime_interaction_enabled
+		and not _quote_pending
+		and not _mutation_pending
+	)
+
+
+func _runtime_banner_text() -> String:
+	if not _runtime_interaction_enabled:
+		return (
+			_runtime_status_message
+			if _runtime_status_message != ""
+			else "请先登录角色，再选择三只融合材料宠。"
+		)
+	if _mutation_pending:
+		return "服务器正在确认材料、血脉与融合结果，请稍候。"
+	if _quote_pending:
+		return "正在获取服务器融合报价；本次查看不会消耗宠物。"
+	if _runtime_status_message != "":
+		return _runtime_status_message
+	return str(
+		_selection_state.get(
+			"messageText",
+			"请选择主宠、共鸣宠Ⅰ和共鸣宠Ⅱ。"
+		)
+	)
+
+
+func _runtime_unquoted_status_text() -> String:
+	if not _runtime_interaction_enabled:
+		return "请先登录角色，再选择融合材料。"
+	if _quote_pending:
+		return "正在等待服务器返回当前三宠组合的报价。"
+	if _runtime_status_message != "":
+		return _runtime_status_message
+	return str(
+		_selection_state.get(
+			"messageText",
+			"请先选择三只融合材料宠。"
+		)
+	)
+
+
+func _focus_next_unselected_role() -> void:
+	for role_id in ROLE_IDS:
+		if not _selection.has(role_id):
+			_focused_role_id = role_id
+			return
 
 
 func _safe_route_text(target_name: String) -> String:

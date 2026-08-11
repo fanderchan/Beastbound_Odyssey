@@ -23,6 +23,7 @@ const ROUTE_MOSS := "moss"
 
 var _errors: Array[String] = []
 var _route_reports: Array[Dictionary] = []
+var _runtime_report: Dictionary = {}
 
 
 func _initialize() -> void:
@@ -100,6 +101,7 @@ func _run() -> void:
 
 	for route_key in [ROUTE_SOLAR, ROUTE_MOSS]:
 		await _append_preview_route_errors(route_key)
+	await _append_runtime_interaction_errors()
 
 	_append_source_boundary_errors()
 	var report := {
@@ -118,6 +120,7 @@ func _run() -> void:
 				== CLOSED_MESSAGE
 		),
 		"routes": _route_reports,
+		"runtimeInteraction": _runtime_report,
 		"errors": _errors,
 	}
 	print("pet fusion panel check: %s" % JSON.stringify(report))
@@ -339,6 +342,135 @@ func _append_preview_route_errors(route_key: String) -> void:
 	await process_frame
 
 
+func _append_runtime_interaction_errors() -> void:
+	var fixture := preview_fixture(ROUTE_SOLAR)
+	var catalog := fixture.get("catalog", {}) as Dictionary
+	var candidates: Array[Dictionary] = fixture.get("candidates", [])
+	var panel := PetFusionPanel.new()
+	root.add_child(panel)
+	var quote_requests: Array[Dictionary] = []
+	var fusion_requests: Array[Dictionary] = []
+	panel.quote_requested.connect(func(state: Dictionary) -> void:
+		quote_requests.append(state.duplicate(true))
+	)
+	panel.fusion_requested.connect(func(quote: Dictionary) -> void:
+		fusion_requests.append(quote.duplicate(true))
+	)
+	var configured := panel.configure_runtime(
+		catalog,
+		{},
+		{},
+		candidates,
+		false,
+		false,
+		"",
+		true
+	)
+	await process_frame
+	panel.call("_candidate_pressed", candidates[0])
+	panel.call("_candidate_pressed", candidates[2])
+	panel.call("_candidate_pressed", candidates[1])
+	await process_frame
+	var pending_snapshot := panel.snapshot()
+	var selected := panel.current_selection()
+	_expect(configured, "真实运行态不能装载已开放目录", _errors)
+	_expect(
+		bool(pending_snapshot.get("runtime", false))
+			and bool(pending_snapshot.get("quotePending", false))
+			and int(pending_snapshot.get("quoteRequestCount", 0)) == 1
+			and int(pending_snapshot.get("fusionRequestCount", -1)) == 0
+			and quote_requests.size() == 1,
+		"三只材料选择没有精确触发一次报价请求",
+		_errors
+	)
+	_expect(
+		int(pending_snapshot.get("candidateDisabledCount", -1))
+			== candidates.size(),
+		"报价请求期间没有锁定材料选择",
+		_errors
+	)
+	panel.configure_runtime(
+		catalog,
+		selected,
+		fixture.get("quote", {}),
+		candidates,
+		false,
+		false,
+		"报价已由服务器确认，请核对后进行两次确认。",
+		true
+	)
+	await process_frame
+	var quoted_snapshot := panel.snapshot()
+	_expect(
+		bool(quoted_snapshot.get("quoteValid", false))
+			and not bool(quoted_snapshot.get("confirmDisabled", true))
+			and int(quoted_snapshot.get("networkRequestCount", 0)) == 1,
+		"服务器报价没有恢复真实确认控件",
+		_errors
+	)
+	panel.call("_confirm_pressed")
+	var armed_snapshot := panel.snapshot()
+	var first_confirm_local_only := (
+		bool(armed_snapshot.get("confirmationArmed", false))
+			and fusion_requests.is_empty()
+			and int(armed_snapshot.get("networkRequestCount", 0)) == 1
+	)
+	_expect(
+		first_confirm_local_only,
+		"真实运行态第一次点击越过了本地确认锁",
+		_errors
+	)
+	panel.call("_confirm_pressed")
+	var mutation_snapshot := panel.snapshot()
+	_expect(
+		bool(mutation_snapshot.get("mutationPending", false))
+			and bool(mutation_snapshot.get("confirmDisabled", false))
+			and int(mutation_snapshot.get("fusionRequestCount", 0)) == 1
+			and int(mutation_snapshot.get("networkRequestCount", 0)) == 2
+			and fusion_requests.size() == 1,
+		"真实运行态第二次点击没有精确触发一次融合请求并立即锁定",
+		_errors
+	)
+	var changed_selection := selected.duplicate(true)
+	changed_selection.erase("resonance_two")
+	panel.configure_runtime(
+		catalog,
+		changed_selection,
+		fixture.get("quote", {}),
+		candidates,
+		false,
+		false,
+		"",
+		true
+	)
+	var stale_snapshot := panel.snapshot()
+	_expect(
+		not bool(stale_snapshot.get("quoteValid", true)),
+		"材料变化后仍接受旧融合报价",
+		_errors
+	)
+	var visible_text := str(mutation_snapshot.get("visibleText", ""))
+	_expect(
+		not visible_text.contains("QA")
+			and not visible_text.to_lower().contains("debug")
+			and visible_text.contains("服务器"),
+		"真实运行态玩家文案泄露测试术语或缺少服务器权威说明",
+		_errors
+	)
+	_runtime_report = {
+		"configured": configured,
+		"quoteRequestCount": quote_requests.size(),
+		"firstConfirmLocalOnly": first_confirm_local_only,
+		"fusionRequestCount": fusion_requests.size(),
+		"staleQuoteRejected": not bool(stale_snapshot.get("quoteValid", true)),
+		"layoutWithinViewport": layout_errors(panel).is_empty(),
+	}
+	for layout_error in layout_errors(panel):
+		_errors.append("真实运行态布局：%s" % layout_error)
+	panel.queue_free()
+	await process_frame
+
+
 func _append_source_boundary_errors() -> void:
 	var panel_source := _read_text("res://scripts/ui/pet_fusion_panel.gd")
 	for marker in [
@@ -358,11 +490,23 @@ func _append_source_boundary_errors() -> void:
 		"res://scripts/ui/panel_flow_coordinator.gd"
 	)
 	_expect(
-		main_source.find("pet_fusion_panel.gd") < 0
-			and coordinator_source.find("pet_fusion_panel.gd") < 0,
-		"融合面板不应接入正常入口或面板协调器",
+		main_source.find("pet_fusion_panel.gd") < 0,
+		"融合面板不应直接进入 Main 宿主",
 		_errors
 	)
+	for marker in [
+		"const PetFusionPanel := preload(\"res://scripts/ui/pet_fusion_panel.gd\")",
+		"_pet_fusion_open_button.text = \"融合\"",
+		"_pet_fusion_panel.quote_requested.connect(_on_pet_fusion_quote_requested)",
+		"_pet_fusion_panel.fusion_requested.connect(_on_pet_fusion_confirm_requested)",
+		"ServerAuthClientModel.pet_fusion_quote_request(",
+		"ServerAuthClientModel.pet_fusion_request(",
+	]:
+		_expect(
+			coordinator_source.find(marker) >= 0,
+			"正常玩家融合入口缺少接线：%s" % marker,
+			_errors
+		)
 
 
 static func layout_errors(panel: Control) -> Array[String]:
