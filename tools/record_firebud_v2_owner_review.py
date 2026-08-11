@@ -4,8 +4,10 @@
 This recorder intentionally does *not* start a backend or offer an escape hatch
 for account, server, or arbitrary Godot arguments.  It invokes the existing
 ``MapVisualReviewCapture`` controller once for idle and once for a real
-cross-frame left-click movement on each Firebud review map, each time with a
-fresh user-data directory.  Every 30 fps clip keeps its captured motion at
+cross-frame left-click movement on each Firebud review map.  Every native and
+MovieWriter invocation is contained by the owner-attested ``automation`` QA
+user-data lane; the lane is cleaned before media processing and the real
+player directory is proven unchanged.  Every 30 fps clip keeps its motion at
 1.00x, then holds the final frame for four seconds so the owner can actually
 inspect the scene before the four clips are concatenated and frozen under
 ``.run/evidence``.
@@ -102,8 +104,7 @@ def _safe_mode(mode: str) -> str:
 def _build_godot_command(
     *,
     godot: str,
-    user_data_dir: Path,
-    avi_path: Path,
+    avi_path: Path | None,
     map_id: str,
     mode: str,
     screenshot_path: Path,
@@ -116,25 +117,30 @@ def _build_godot_command(
         raise FirebudV2RecordingError("截图和报告必须使用绝对路径")
     if screenshot_path.suffix.lower() != ".png" or report_path.suffix.lower() != ".json":
         raise FirebudV2RecordingError("截图必须为 PNG，报告必须为 JSON")
-    return [
+    command = [
         godot,
         "--path",
         str(GODOT_PROJECT),
-        "--user-data-dir",
-        str(user_data_dir),
         "--scene",
         MAIN_SCENE,
         "--windowed",
         "--resolution",
         f"{EXPECTED_WIDTH}x{EXPECTED_HEIGHT}",
         "--single-window",
-        "--fixed-fps",
-        str(EXPECTED_FPS),
         "--time-scale",
         "1.0",
-        "--disable-vsync",
-        "--write-movie",
-        str(avi_path),
+    ]
+    if avi_path is not None:
+        command.extend(
+            [
+                "--fixed-fps",
+                str(EXPECTED_FPS),
+                "--disable-vsync",
+                "--write-movie",
+                str(avi_path),
+            ]
+        )
+    command.extend([
         "--",
         f"--map-art-review-preview={safe_map}",
         DEFAULT_CAPTURE_FLAG,
@@ -143,7 +149,52 @@ def _build_godot_command(
         f"--map-visual-review-output={screenshot_path}",
         f"--map-visual-review-report={report_path}",
         f"--map-visual-review-mode={safe_mode}",
-    ]
+        CORE.QA_LANE_ARGUMENT,
+    ])
+    if (
+        command.count(DEFAULT_CAPTURE_FLAG) != 1
+        or command.count(CORE.QA_LANE_ARGUMENT) != 1
+        or "--user-data-dir" in command
+        or (avi_path is None and "--write-movie" in command)
+        or (avi_path is not None and command.count("--write-movie") != 1)
+    ):
+        raise FirebudV2RecordingError(
+            "Godot Firebud v2 验收命令的 QA lane 边界不精确"
+        )
+    return command
+
+
+def _validate_godot_log(path: Path, *, movie_mode: bool) -> dict[str, Any]:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if "SCRIPT ERROR:" in text or "Parse Error:" in text:
+        raise FirebudV2RecordingError("Godot Firebud v2 日志包含脚本错误")
+    if "Metal 4.0 - Forward Mobile" not in text:
+        raise FirebudV2RecordingError("Firebud v2 验收没有使用 Metal Forward Mobile")
+    movie_marker = "Movie Maker mode enabled, recording movie in 1280×720 @ 30 FPS"
+    if movie_mode and movie_marker not in text:
+        raise FirebudV2RecordingError("Firebud v2 MovieWriter 合同缺失")
+    if not movie_mode and movie_marker in text:
+        raise FirebudV2RecordingError("Firebud v2 原生预检意外进入 MovieWriter")
+    forbidden = (
+        "ERROR:",
+        "WARNING:",
+        "ObjectDB instances were leaked",
+        "resources still in use at exit",
+        "Orphan StringName",
+    )
+    found = [token for token in forbidden if token in text]
+    if found:
+        raise FirebudV2RecordingError(
+            "Firebud v2 Godot 日志存在错误或泄漏：" + ", ".join(found)
+        )
+    if "map visual review capture:" not in text:
+        raise FirebudV2RecordingError("Firebud v2 Godot 日志缺少 capture 回执")
+    return {
+        "status": "passed",
+        "renderer": "Metal 4.0 - Forward Mobile",
+        "movieWriter": "1280x720@30fps" if movie_mode else "disabled",
+        "runtimeLeakFree": True,
+    }
 
 
 def _read_capture_report(
@@ -199,6 +250,20 @@ def _read_capture_report(
         mismatches.append("groundDrawCount<=0")
     if int(report.get("objectCount", 0)) <= 0:
         mismatches.append("objectCount<=0")
+    cleanup = report.get("runtimeCleanup")
+    if not isinstance(cleanup, dict):
+        mismatches.append("runtimeCleanup 不是对象")
+    else:
+        for key, expected in {
+            "status": "passed",
+            "audioStopped": True,
+            "audioManagerReleased": True,
+            "drainFrames": 4,
+        }.items():
+            if cleanup.get(key) != expected:
+                mismatches.append(
+                    f"runtimeCleanup.{key}={cleanup.get(key)!r}"
+                )
     if mode == "moving":
         input_report = report.get("input")
         if not isinstance(input_report, dict):
@@ -408,7 +473,8 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
     ffprobe = CORE._require_executable(args.ffprobe, label="ffprobe")
     temporary_dir = run_dir / "tmp"
     temporary_dir.mkdir(parents=False, exist_ok=False)
-    environment = CORE._isolated_environment(temporary_dir)
+    base_environment = CORE._isolated_environment(temporary_dir)
+    environment = base_environment
     segment_dir = run_dir / "segments"
     segment_dir.mkdir(parents=False, exist_ok=False)
 
@@ -417,28 +483,56 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
     for map_id in REVIEW_MAPS:
         for mode in REVIEW_MODES:
             prefix = f"{map_id}-{mode}"
-            user_data_dir = segment_dir / f"{prefix}-user-data"
-            user_data_dir.mkdir(parents=False, exist_ok=False)
+            lane_dir = segment_dir / f"{prefix}-qa-lane"
+            lane_dir.mkdir(parents=False, exist_ok=False)
             avi_path = segment_dir / f"{prefix}.avi"
             video_path = segment_dir / f"{prefix}.mp4"
+            native_screenshot_path = (
+                segment_dir / f"{prefix}-native.png"
+            ).resolve()
+            native_report_path = (
+                segment_dir / f"{prefix}-native.json"
+            ).resolve()
             screenshot_path = (segment_dir / f"{prefix}.png").resolve()
             report_path = (segment_dir / f"{prefix}.json").resolve()
-            godot_log = segment_dir / f"{prefix}-godot.log"
+            native_log = segment_dir / f"{prefix}-native-godot.log"
+            movie_log = segment_dir / f"{prefix}-movie-godot.log"
             transcode_log = segment_dir / f"{prefix}-transcode.log"
-            command = _build_godot_command(
+            native_command = _build_godot_command(
                 godot=godot,
-                user_data_dir=user_data_dir,
+                avi_path=None,
+                map_id=map_id,
+                mode=mode,
+                screenshot_path=native_screenshot_path,
+                report_path=native_report_path,
+            )
+            movie_command = _build_godot_command(
+                godot=godot,
                 avi_path=avi_path,
                 map_id=map_id,
                 mode=mode,
                 screenshot_path=screenshot_path,
                 report_path=report_path,
             )
-            CORE._run_logged(
-                command,
-                log_path=godot_log,
+            lane_evidence = CORE._run_official_lane_godot_sequence(
+                run_dir=lane_dir,
+                godot=godot,
+                base_environment=base_environment,
+                native_command=native_command,
+                movie_command=movie_command,
+                native_log=native_log,
+                movie_log=movie_log,
                 timeout_seconds=timeout_seconds,
-                environment=environment,
+                native_log_validator=lambda path: _validate_godot_log(
+                    path, movie_mode=False
+                ),
+                movie_log_validator=lambda path: _validate_godot_log(
+                    path, movie_mode=True
+                ),
+            )
+            environment = lane_evidence["environment"]
+            native_capture_report = _read_capture_report(
+                native_report_path, map_id=map_id, mode=mode
             )
             capture_report = _read_capture_report(report_path, map_id=map_id, mode=mode)
             _transcode_segment(
@@ -455,16 +549,44 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
                 {
                     "mapId": map_id,
                     "mode": mode,
-                    "command": CORE._redacted_command(command),
+                    "commands": {
+                        "native": CORE._redacted_command(native_command),
+                        "movie30": CORE._redacted_command(movie_command),
+                    },
+                    "nativeCaptureReport": CORE._artifact_record(
+                        native_report_path
+                    ),
+                    "nativeCapture": native_capture_report,
+                    "nativeScreenshot": CORE._artifact_record(
+                        native_screenshot_path
+                    ),
                     "captureReport": CORE._artifact_record(report_path),
                     "capture": capture_report,
                     "screenshot": CORE._artifact_record(screenshot_path),
                     "rawMovie": CORE._artifact_record(avi_path),
                     "video": {**CORE._artifact_record(video_path), **segment_media, "playbackSpeed": 1.0},
                     "probe": CORE._artifact_record(segment_probe_path),
-                    "userData": CORE._user_data_inventory(user_data_dir),
+                    "qaLane": {
+                        "lane": CORE.QA_LANE,
+                        "feature": CORE.QA_LANE_FEATURE,
+                        "sourceCheck": lane_evidence["sourceCheck"],
+                        "nativeAttestation": lane_evidence["native"][
+                            "attestation"
+                        ],
+                        "movieAttestation": lane_evidence["movie"][
+                            "attestation"
+                        ],
+                        "cleanup": lane_evidence["cleanup"],
+                        "postCleanupInspect": lane_evidence[
+                            "postCleanupInspect"
+                        ],
+                        "lifecycle": CORE._artifact_record(
+                            lane_evidence["lifecyclePath"]
+                        ),
+                    },
                     "logs": {
-                        "godot": CORE._artifact_record(godot_log),
+                        "native": CORE._artifact_record(native_log),
+                        "movie": CORE._artifact_record(movie_log),
                         "transcode": CORE._artifact_record(transcode_log),
                     },
                 }
@@ -528,7 +650,8 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
         "fullDecodeStatus": "passed",
         "captureSequence": [f"{entry['mapId']}:{entry['mode']}" for entry in segments],
         "isolation": {
-            "freshUserDataDirectoryPerSegment": True,
+            "officialAutomationQaLanePerSegment": True,
+            "qaLaneCleanedAfterEverySegment": True,
             "normalPlayerSavePathUsed": False,
             "defaultProfileVerifiedBeforeInjection": True,
             "showcaseProfileId": "phase383_firebud_v2_owner_review",
@@ -549,18 +672,6 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
         },
     }
     CORE._write_json(metadata_path, metadata)
-    hash_paths = [
-        final_video_path, probe_path, metadata_path, concat_list, concat_log, decode_log,
-        run_dir / "contact-sheet.png",
-        *(REPO_ROOT / item["path"] for item in screenshots),
-        *(REPO_ROOT / item["log"]["path"] for item in screenshots),
-    ]
-    for segment in segments:
-        for key in ("captureReport", "screenshot", "rawMovie", "probe"):
-            hash_paths.append(REPO_ROOT / segment[key]["path"])
-        hash_paths.append(REPO_ROOT / segment["video"]["path"])
-        hash_paths.extend(REPO_ROOT / value["path"] for value in segment["logs"].values())
-    hash_manifest = CORE._write_sha256_manifest(run_dir, hash_paths)
     summary = {
         "schemaVersion": REPORT_SCHEMA_VERSION,
         "reportType": REPORT_TYPE,
@@ -575,12 +686,28 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
         "fullDecode": {"status": "passed", "videoStreamDecoded": True, "audioStreamDecoded": True, "log": CORE._artifact_record(decode_log)},
         "screenshots": screenshots,
         "contactSheet": contact,
-        "sha256Manifest": CORE._artifact_record(hash_manifest),
+        "sha256Manifest": {
+            "path": CORE._repo_relative(run_dir / "SHA256SUMS"),
+            "coversAllRetainedEvidenceFiles": True,
+            "coversThisSummary": True,
+            "writtenAfterSummary": True,
+        },
         "logs": {"concat": CORE._artifact_record(concat_log)},
         "ownerReviewStatus": "pending",
     }
     summary_path = run_dir / "summary.json"
     CORE._write_json(summary_path, summary)
+    hash_paths = sorted(
+        (
+            path
+            for path in run_dir.rglob("*")
+            if path.is_file()
+            and path.name != "SHA256SUMS"
+            and path.relative_to(run_dir).parts[0] != "tmp"
+        ),
+        key=lambda path: str(path.relative_to(run_dir)),
+    )
+    CORE._write_sha256_manifest(run_dir, hash_paths)
     print(json.dumps({"status": "passed", "runId": run_id, "video": summary["video"]["path"], "contactSheet": contact["path"], "summary": CORE._repo_relative(summary_path)}, ensure_ascii=False))
     return summary_path
 

@@ -38,6 +38,10 @@ def _capture_report(*, map_id: str, mode: str) -> dict:
         "networkRequestsDisconnected": True,
         "normalPlayerHud": True, "viewport": [1280, 720], "errors": [],
         "groundDrawCount": 100, "objectCount": 5,
+        "runtimeCleanup": {
+            "status": "passed", "audioStopped": True,
+            "audioManagerReleased": True, "drainFrames": 4,
+        },
         "playerCellChanged": mode == "moving",
         "input": ({"eventClass": "InputEventMouseButton", "delivery": "Input.parse_input_event", "frameSeparated": True} if mode == "moving" else {}),
     }
@@ -48,8 +52,8 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             command = TOOL._build_godot_command(
-                godot="/opt/godot", user_data_dir=root / "fresh-user",
-                avi_path=root / "review.avi", map_id="firebud_village_gate",
+                godot="/opt/godot", avi_path=root / "review.avi",
+                map_id="firebud_village_gate",
                 mode="moving", screenshot_path=(root / "frame.png").resolve(),
                 report_path=(root / "report.json").resolve(),
             )
@@ -57,7 +61,7 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
         engine, user = command[:separator], command[separator + 1:]
         self.assertEqual(command.count("--"), 1)
         self.assertIn(TOOL.MAIN_SCENE, engine)
-        self.assertIn("--user-data-dir", engine)
+        self.assertNotIn("--user-data-dir", engine)
         self.assertIn("1280x720", engine)
         self.assertEqual(engine[engine.index("--fixed-fps") + 1], "30")
         self.assertEqual(engine[engine.index("--time-scale") + 1], "1.0")
@@ -65,13 +69,23 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
         self.assertIn("--map-art-review-preview=firebud_village_gate", user)
         self.assertIn(TOOL.DEFAULT_CAPTURE_FLAG, user)
         self.assertEqual(user.count(TOOL.SHOWCASE_PROFILE_FLAG), 1)
+        self.assertEqual(user.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
         self.assertNotIn("--login", user)
         self.assertNotIn("--server-url", user)
+
+        native = TOOL._build_godot_command(
+            godot="/opt/godot", avi_path=None,
+            map_id="firebud_village_gate", mode="idle",
+            screenshot_path=(root / "native.png").resolve(),
+            report_path=(root / "native.json").resolve(),
+        )
+        self.assertNotIn("--write-movie", native)
+        self.assertEqual(native.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
 
     def test_rejects_non_review_maps_modes_and_non_absolute_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            kwargs = dict(godot="godot", user_data_dir=root / "u", avi_path=root / "a.avi", map_id="firebud_village_gate", mode="idle", screenshot_path=(root / "a.png").resolve(), report_path=(root / "a.json").resolve())
+            kwargs = dict(godot="godot", avi_path=root / "a.avi", map_id="firebud_village_gate", mode="idle", screenshot_path=(root / "a.png").resolve(), report_path=(root / "a.json").resolve())
             for key, value in (("map_id", "wetland"), ("mode", "battle"), ("screenshot_path", Path("relative.png"))):
                 altered = {**kwargs, key: value}
                 with self.subTest(key=key):
@@ -94,6 +108,7 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
                 ("showcasePlayerAppearanceId", ""),
                 ("showcaseActivePetFormId", ""),
                 ("networkRequestsDisconnected", False),
+                ("runtimeCleanup", {"status": "failed"}),
             ):
                 invalid = _capture_report(map_id="firebud_training_yard", mode="moving")
                 invalid[key] = value
@@ -115,6 +130,40 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
         with self.assertRaises(TOOL.FirebudV2RecordingError):
             TOOL._validate_segment_probe(probe)
 
+    def test_godot_log_rejects_missing_movie_contract_and_runtime_leaks(self) -> None:
+        clean_native = "\n".join((
+            "Metal 4.0 - Forward Mobile - Using Device #0",
+            "map visual review capture: {}",
+        ))
+        clean_movie = "\n".join((
+            clean_native,
+            "Movie Maker mode enabled, recording movie in 1280×720 @ 30 FPS...",
+        ))
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "godot.log"
+            path.write_text(clean_native, encoding="utf-8")
+            self.assertEqual(
+                TOOL._validate_godot_log(path, movie_mode=False)["status"],
+                "passed",
+            )
+            path.write_text(clean_movie, encoding="utf-8")
+            self.assertEqual(
+                TOOL._validate_godot_log(path, movie_mode=True)["status"],
+                "passed",
+            )
+            path.write_text(
+                clean_movie + "\nERROR: resources still in use at exit",
+                encoding="utf-8",
+            )
+            with self.assertRaises(TOOL.FirebudV2RecordingError):
+                TOOL._validate_godot_log(path, movie_mode=True)
+            path.write_text(
+                clean_movie + "\nWARNING: layout drift",
+                encoding="utf-8",
+            )
+            with self.assertRaises(TOOL.FirebudV2RecordingError):
+                TOOL._validate_godot_log(path, movie_mode=True)
+
     def test_source_keeps_limited_range_h264_concat_and_no_extra_godot_args(self) -> None:
         source = TOOL_PATH.read_text(encoding="utf-8")
         self.assertIn('"tpad=stop_mode=clone:stop_duration="', source)
@@ -124,6 +173,10 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
         self.assertIn('"-c",\n            "copy"', source)
         self.assertIn('loginOrServerArgumentsAccepted": False', source)
         self.assertIn('showcaseProfileInMemoryOnly": True', source)
+        self.assertIn('"officialAutomationQaLanePerSegment": True', source)
+        self.assertNotIn('"freshUserDataDirectoryPerSegment": True', source)
+        self.assertIn('"coversAllRetainedEvidenceFiles": True', source)
+        self.assertIn('"coversThisSummary": True', source)
         self.assertNotIn("--review-arg", source)
 
 

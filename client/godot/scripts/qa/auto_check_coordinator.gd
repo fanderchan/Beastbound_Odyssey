@@ -18933,6 +18933,19 @@ func _run_auto_quest_ui_check() -> void:
 		and host.quest_panel.reward_card_count() >= 1
 		and host.quest_panel.displayed_title() == "认识训练师"
 	)
+	var awakened_layout_ok: bool = (
+		is_equal_approx(host.quest_panel.anchor_left, 0.0)
+		and is_equal_approx(host.quest_panel.anchor_top, 0.0)
+		and is_equal_approx(host.quest_panel.anchor_right, 1.0)
+		and is_equal_approx(host.quest_panel.anchor_bottom, 1.0)
+		and is_zero_approx(host.quest_panel.offset_left)
+		and is_zero_approx(host.quest_panel.offset_top)
+		and is_zero_approx(host.quest_panel.offset_right)
+		and is_zero_approx(host.quest_panel.offset_bottom)
+		and host.quest_panel.size.is_equal_approx(
+			host.get_viewport().get_visible_rect().size
+		)
+	)
 	var tracker_multi_ok: bool = (
 		host.world_hud_awakened_view != null
 		and host.world_hud_awakened_view.has_method("task_entry_count")
@@ -19519,11 +19532,12 @@ func _run_auto_quest_ui_check() -> void:
 		and host.world_log_message == "历史记录13"
 	)
 
-	var status = "ok" if panel_ok and awakened_catalog_ok and tracker_multi_ok and catalog_selection_ok and server_route_uses_step_ok and trainer_route_ok and bank_detail_ok and bank_cross_map_route_ok and bank_route_ok and stable_route_ok and riding_route_ok and try_ride_backpack_route_ok and try_ride_pet_route_ok and battle_pet_backpack_route_ok and battle_pet_reclaim_route_ok and battle_pet_full_reclaim_button_ok and battle_pet_panel_route_ok and battle_pet_storage_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and first_victory_route_ok and armor_shop_route_ok and armor_equip_route_ok and moist_battle_route_ok and poison_shop_route_ok and poison_equip_route_ok and group_brawl_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
-	print("quest ui check ready: status=%s panel=%s catalog=%s tracker_multi=%s selection=%s server_step_route=%s trainer_route=%s bank_detail=%s bank_cross_map=%s bank_route=%s stable_route=%s riding_route=%s try_ride_bag=%s try_ride_pet=%s battle_pet_bag=%s battle_pet_reclaim=%s battle_pet_full_reclaim=%s battle_pet_panel=%s battle_pet_storage=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s first_victory_route=%s armor_shop=%s armor_equip=%s moist_battle=%s poison_shop=%s poison_equip=%s group_brawl=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
+	var status = "ok" if panel_ok and awakened_catalog_ok and awakened_layout_ok and tracker_multi_ok and catalog_selection_ok and server_route_uses_step_ok and trainer_route_ok and bank_detail_ok and bank_cross_map_route_ok and bank_route_ok and stable_route_ok and riding_route_ok and try_ride_backpack_route_ok and try_ride_pet_route_ok and battle_pet_backpack_route_ok and battle_pet_reclaim_route_ok and battle_pet_full_reclaim_button_ok and battle_pet_panel_route_ok and battle_pet_storage_route_ok and buy_detail_ok and cross_map_route_ok and shop_route_ok and use_route_ok and equipment_shop_route_ok and equip_route_ok and first_victory_route_ok and armor_shop_route_ok and armor_equip_route_ok and moist_battle_route_ok and poison_shop_route_ok and poison_equip_route_ok and group_brawl_route_ok and spirit_reward_detail_ok and battle_route_ok and log_scroll_ok else "failed"
+	print("quest ui check ready: status=%s panel=%s catalog=%s layout=%s tracker_multi=%s selection=%s server_step_route=%s trainer_route=%s bank_detail=%s bank_cross_map=%s bank_route=%s stable_route=%s riding_route=%s try_ride_bag=%s try_ride_pet=%s battle_pet_bag=%s battle_pet_reclaim=%s battle_pet_full_reclaim=%s battle_pet_panel=%s battle_pet_storage=%s buy_detail=%s cross_map=%s shop_route=%s use_route=%s equipment_shop=%s equip_route=%s first_victory_route=%s armor_shop=%s armor_equip=%s moist_battle=%s poison_shop=%s poison_equip=%s group_brawl=%s spirit_reward=%s battle_route=%s log_scroll=%s current_task=%s latest_log=%s" % [
 		status,
 		str(panel_ok),
 		str(awakened_catalog_ok),
+		str(awakened_layout_ok),
 		str(tracker_multi_ok),
 		str(catalog_selection_ok),
 		str(server_route_uses_step_ok),

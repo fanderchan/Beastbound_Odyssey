@@ -14994,8 +14994,10 @@ func _layout_hud() -> void:
 		action_bar.visible = false
 
 	if quest_panel.has_method("is_awakened_quest_panel"):
-		quest_panel.position = Vector2.ZERO
-		quest_panel.size = viewport_size
+		# The awakened quest page owns full-rect anchors. Assigning an explicit
+		# size while opposite anchors differ makes Godot override the value after
+		# `_ready()` and emits a warning on every normal Main launch.
+		quest_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	else:
 		quest_panel.position = Vector2((viewport_size.x - codex_width) * 0.5, pet_panel_y)
 		quest_panel.size = Vector2(codex_width, codex_height)

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -29,24 +30,25 @@ def _output(*, moving: bool) -> str:
 
 class RunFirebudV2PerformanceEvidenceTest(unittest.TestCase):
     def test_fixed_real_main_command_is_isolated_and_candidate_is_explicit(self) -> None:
-        command = TOOL._build_command(godot="/opt/godot", user_data_dir=Path("/tmp/v2-user"), map_id="firebud_village_gate", variant="candidate_v2_review", mode="moving")
+        command = TOOL._build_command(godot="/opt/godot", map_id="firebud_village_gate", variant="candidate_v2_review", mode="moving")
         separator = command.index("--")
         engine, user = command[:separator], command[separator + 1:]
         self.assertEqual(command.count("--"), 1)
         self.assertIn(TOOL.MAIN_SCENE, engine)
-        self.assertIn("--user-data-dir", engine)
+        self.assertNotIn("--user-data-dir", engine)
         self.assertIn("1280x720", engine)
         self.assertEqual(engine[engine.index("--fixed-fps") + 1], "60")
         self.assertEqual(engine[engine.index("--time-scale") + 1], "1.0")
         self.assertIn("--map-art-review-preview=firebud_village_gate", user)
         self.assertIn("--movement-spam-click-check", user)
         self.assertIn("--perf-probe", user)
+        self.assertEqual(command.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
         self.assertNotIn("--login", user)
         self.assertNotIn("--server-url", user)
 
     def test_only_fixed_matrix_values_are_permitted(self) -> None:
         for key, value in (("map_id", "mistcap_marsh"), ("variant", "candidate"), ("mode", "battle")):
-            kwargs = {"godot": "godot", "user_data_dir": Path("/tmp/u"), "map_id": "firebud_training_yard", "variant": "baseline_v1", "mode": "idle"}
+            kwargs = {"godot": "godot", "map_id": "firebud_training_yard", "variant": "baseline_v1", "mode": "idle"}
             kwargs[key] = value
             with self.subTest(key=key):
                 with self.assertRaises(TOOL.FirebudV2PerformanceError):
@@ -71,10 +73,23 @@ class RunFirebudV2PerformanceEvidenceTest(unittest.TestCase):
     def test_source_records_ps_and_fails_closed_on_extra_arguments(self) -> None:
         source = TOOL_PATH.read_text(encoding="utf-8")
         self.assertIn('["ps", "-o", "%cpu=", "-o", "rss="', source)
-        self.assertIn("freshUserDataDirectoryPerRun", source)
+        self.assertIn("officialAutomationQaLanePerRun", source)
+        self.assertNotIn("freshUserDataDirectoryPerRun", source)
         self.assertIn("loginOrServerArgumentsAccepted", source)
         self.assertNotIn("--review-arg", source)
         self.assertNotIn("--server-url", source)
+
+    def test_strict_log_gate_accepts_clean_metal_and_rejects_warnings(self) -> None:
+        clean = "$ godot\nMetal 4.0 - Forward Mobile\n" + _output(moving=False)
+        with tempfile.TemporaryDirectory() as temporary:
+            log_path = Path(temporary) / "godot.log"
+            log_path.write_text(clean, encoding="utf-8")
+            result = TOOL._validate_godot_perf_log(log_path, mode="idle")
+            self.assertEqual(result["strictLogGate"], "passed")
+            self.assertEqual(result["inGamePerfProbe"]["sampleCount"], 3)
+            log_path.write_text(clean + "\nWARNING: layout drift\n", encoding="utf-8")
+            with self.assertRaises(TOOL.FirebudV2PerformanceError):
+                TOOL._validate_godot_perf_log(log_path, mode="idle")
 
 
 if __name__ == "__main__":

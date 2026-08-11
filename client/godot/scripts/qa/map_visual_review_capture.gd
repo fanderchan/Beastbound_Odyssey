@@ -15,6 +15,7 @@ const ARG_MAP_ID := "--map-visual-review-map-id"
 const ARG_OUTPUT := "--map-visual-review-output"
 const ARG_REPORT := "--map-visual-review-report"
 const ARG_MODE := "--map-visual-review-mode"
+const QA_USER_DATA_LANE_PREFIX := "--beastbound-qa-user-data-lane="
 
 const REPORT_SCHEMA_VERSION := 1
 const REPORT_TYPE := "beastbound_map_visual_main_review_capture"
@@ -100,6 +101,11 @@ static func request_from_args(args: PackedStringArray) -> Dictionary:
 		if arg == SHOWCASE_PROFILE_FLAG:
 			showcase_profile_count += 1
 			continue
+		if arg.begins_with(QA_USER_DATA_LANE_PREFIX):
+			# Main performs the exact owner-attested lane validation before any
+			# runtime bootstrap. The focused parser only needs to avoid treating
+			# that mandatory global safety marker as an unrelated capture flag.
+			continue
 		if arg.begins_with(QA_PREVIEW_PREFIX):
 			preview_count += 1
 			request["qaPreviewMapId"] = arg.substr(QA_PREVIEW_PREFIX.length()).strip_edges()
@@ -154,7 +160,7 @@ func run(request: Dictionary) -> Dictionary:
 	var report_path := str(request.get("reportPath", "")).strip_edges()
 	var output_path := str(request.get("outputPath", "")).strip_edges()
 	if not errors.is_empty():
-		return _finish_report(report, errors, report_path)
+		return await _finish_capture(report, errors, report_path)
 
 	_validate_runtime_isolation(request, report, errors)
 	var prepared: Dictionary = host.map_visual_render_state
@@ -182,7 +188,7 @@ func run(request: Dictionary) -> Dictionary:
 	if errors.is_empty() and bool(request.get("showcaseProfileRequested", false)):
 		_apply_showcase_profile(request, prepared, report, errors)
 	if not errors.is_empty():
-		return _finish_report(report, errors, report_path)
+		return await _finish_capture(report, errors, report_path)
 
 	for _frame_index in range(SETTLE_FRAMES):
 		host.queue_redraw()
@@ -245,7 +251,7 @@ func run(request: Dictionary) -> Dictionary:
 	report["playerCellChanged"] = end_cell != start_cell
 	report["input"] = input_report
 	if not errors.is_empty():
-		return _finish_report(report, errors, report_path)
+		return await _finish_capture(report, errors, report_path)
 
 	for _frame_index in range(SETTLE_FRAMES):
 		host.queue_redraw()
@@ -259,18 +265,18 @@ func run(request: Dictionary) -> Dictionary:
 	var screenshot: Image = await _capture_complete_image()
 	if screenshot == null:
 		errors.append("Metal/viewport 未得到完整稳定画面")
-		return _finish_report(report, errors, report_path)
+		return await _finish_capture(report, errors, report_path)
 	if screenshot.get_width() != EXPECTED_VIEWPORT.x or screenshot.get_height() != EXPECTED_VIEWPORT.y:
 		errors.append("截图不是 1280x720")
-		return _finish_report(report, errors, report_path)
+		return await _finish_capture(report, errors, report_path)
 	var output_directory_error := DirAccess.make_dir_recursive_absolute(output_path.get_base_dir())
 	if output_directory_error != OK:
 		errors.append("无法创建截图目录：%s" % error_string(output_directory_error))
-		return _finish_report(report, errors, report_path)
+		return await _finish_capture(report, errors, report_path)
 	var save_error := screenshot.save_png(output_path)
 	if save_error != OK:
 		errors.append("无法保存 Main 地图截图：%s" % error_string(save_error))
-		return _finish_report(report, errors, report_path)
+		return await _finish_capture(report, errors, report_path)
 	var screenshot_hash := FileAccess.get_sha256(output_path)
 	if not _is_sha256(screenshot_hash):
 		errors.append("截图 SHA-256 失败")
@@ -283,7 +289,7 @@ func run(request: Dictionary) -> Dictionary:
 		"width": screenshot.get_width(),
 		"height": screenshot.get_height(),
 	}
-	return _finish_report(report, errors, report_path)
+	return await _finish_capture(report, errors, report_path)
 
 
 func write_parse_failure(request: Dictionary) -> Dictionary:
@@ -602,10 +608,57 @@ static func _base_report(request: Dictionary) -> Dictionary:
 		"screenshotPath": "",
 		"screenshotSha256": "",
 		"screenshot": {},
+		"runtimeCleanup": {},
 		"errors": [],
 		"result": "FAIL",
 		"ok": false,
 		"generatedAtUtc": "%sZ" % Time.get_datetime_string_from_system(true),
+	}
+
+
+func _finish_capture(
+	report: Dictionary,
+	errors: Array[String],
+	report_path: String
+) -> Dictionary:
+	var cleanup := await _drain_capture_runtime()
+	report["runtimeCleanup"] = cleanup
+	if str(cleanup.get("status", "")) != "passed":
+		errors.append(
+			"地图 Main 取证运行资源收口失败：%s"
+			% str(cleanup.get("reason", "unknown"))
+		)
+	return _finish_report(report, errors, report_path)
+
+
+func _drain_capture_runtime() -> Dictionary:
+	if host == null or not is_instance_valid(host):
+		return {"status": "failed", "reason": "main_host_missing"}
+	var timeline = host.get("battle_audio_timeline_controller")
+	if timeline != null and timeline.has_method("end_event"):
+		timeline.call("end_event")
+	host.battle_audio_timeline_controller = null
+	var manager := host.get("game_audio_manager") as Node
+	if manager == null or not is_instance_valid(manager):
+		return {"status": "failed", "reason": "audio_manager_missing"}
+	if not manager.has_method("stop_all"):
+		return {"status": "failed", "reason": "audio_stop_contract_missing"}
+	manager.call("stop_all")
+	for _frame_index in range(2):
+		await host.get_tree().process_frame
+		await RenderingServer.frame_post_draw
+	manager.queue_free()
+	for _frame_index in range(2):
+		await host.get_tree().process_frame
+		await RenderingServer.frame_post_draw
+	host.game_audio_manager = null
+	if is_instance_valid(manager):
+		return {"status": "failed", "reason": "audio_manager_not_released"}
+	return {
+		"status": "passed",
+		"audioStopped": true,
+		"audioManagerReleased": true,
+		"drainFrames": 4,
 	}
 
 

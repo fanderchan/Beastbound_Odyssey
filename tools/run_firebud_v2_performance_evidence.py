@@ -3,9 +3,10 @@
 
 This is deliberately separate from the released-map performance runner.  It
 compares the released v1 baseline with the explicit review-only v2 candidate
-for the village gate and training ground, using a fresh Godot user directory
-for every run.  It never accepts arbitrary Godot, login, or server arguments;
-it never starts the Node backend or accesses MySQL.
+for the village gate and training ground. Every run uses the owner-attested
+``automation`` QA user-data lane, proves the real player directory unchanged,
+and cleans the lane before the next matrix cell. It never accepts arbitrary
+Godot, login, or server arguments; it never starts Node or accesses MySQL.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ import os
 import re
 import subprocess
 import sys
-import time
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -112,7 +113,7 @@ def _build_identity() -> str:
     return digest.hexdigest()
 
 
-def _build_command(*, godot: str, user_data_dir: Path, map_id: str, variant: str, mode: str) -> list[str]:
+def _build_command(*, godot: str, map_id: str, variant: str, mode: str) -> list[str]:
     if map_id not in MAP_IDS:
         raise FirebudV2PerformanceError(f"未知 Firebud 审图地图：{map_id}")
     if variant not in VARIANTS or mode not in MODES:
@@ -120,7 +121,6 @@ def _build_command(*, godot: str, user_data_dir: Path, map_id: str, variant: str
     command = [
         godot,
         "--path", str(GODOT_PROJECT),
-        "--user-data-dir", str(user_data_dir),
         "--scene", MAIN_SCENE,
         "--windowed",
         "--resolution", f"{EXPECTED_WIDTH}x{EXPECTED_HEIGHT}",
@@ -138,6 +138,14 @@ def _build_command(*, godot: str, user_data_dir: Path, map_id: str, variant: str
     if mode == "moving":
         command.append("--movement-spam-click-check")
     command.append("--perf-probe")
+    command.append(CORE.QA_LANE_ARGUMENT)
+    if (
+        command.count(CORE.QA_LANE_ARGUMENT) != 1
+        or "--user-data-dir" in command
+    ):
+        raise FirebudV2PerformanceError(
+            "Firebud 性能命令的 QA lane 边界不精确"
+        )
     return command
 
 
@@ -213,38 +221,123 @@ def _ps_snapshot(pid: int) -> dict[str, Any] | None:
         return None
 
 
-def _run_segment(*, command: list[str], log_path: Path, timeout_seconds: float, environment: dict[str, str]) -> tuple[str, list[dict[str, Any]]]:
-    started = time.monotonic()
-    process = subprocess.Popen(
-        command,
-        cwd=REPO_ROOT,
-        env=environment,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        start_new_session=True,
+def _validate_godot_perf_log(path: Path, *, mode: str) -> dict[str, Any]:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    forbidden = (
+        "SCRIPT ERROR:",
+        "Parse Error:",
+        "ERROR:",
+        "WARNING:",
+        "ObjectDB instances were leaked",
+        "resources still in use at exit",
+        "Orphan StringName",
     )
+    found = [token for token in forbidden if token in text]
+    if found:
+        raise FirebudV2PerformanceError(
+            "Firebud 性能日志包含错误、警告或泄漏：" + ", ".join(found)
+        )
+    if "Metal 4.0 - Forward Mobile" not in text:
+        raise FirebudV2PerformanceError(
+            "Firebud 性能运行没有使用 Metal Forward Mobile"
+        )
+    output = text[text.find("\n") + 1 :] if text.startswith("$ ") else text
+    return {
+        "status": "passed",
+        "renderer": "Metal 4.0 - Forward Mobile",
+        "strictLogGate": "passed",
+        "inGamePerfProbe": _parse_in_game_probe(output=output, mode=mode),
+    }
+
+
+def _sampling_runner(
+    target_samples: list[dict[str, Any]],
+) -> Any:
+    def run(
+        command: Sequence[str],
+        *,
+        phase: str,
+        log_path: Path,
+        timeout_seconds: float,
+        environment: dict[str, str],
+        dependencies: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        samples: list[dict[str, Any]] = []
+        stop_event = threading.Event()
+        sampler: threading.Thread | None = None
+
+        def after_spawn(process: Any) -> None:
+            nonlocal sampler
+
+            def sample_process() -> None:
+                while not stop_event.is_set() and process.poll() is None:
+                    snapshot = _ps_snapshot(int(process.pid))
+                    if snapshot is not None:
+                        samples.append(snapshot)
+                    stop_event.wait(0.25)
+
+            sampler = threading.Thread(
+                target=sample_process,
+                name=f"firebud-perf-{phase}",
+                daemon=True,
+            )
+            sampler.start()
+
+        runner_dependencies = dict(dependencies or {})
+        if "after_spawn" in runner_dependencies:
+            raise FirebudV2PerformanceError(
+                "Firebud 性能采样不允许叠加第二个 after_spawn"
+            )
+        runner_dependencies["after_spawn"] = after_spawn
+        try:
+            result = CORE._run_godot_with_settlement(
+                command,
+                phase=phase,
+                log_path=log_path,
+                timeout_seconds=timeout_seconds,
+                environment=environment,
+                dependencies=runner_dependencies,
+            )
+        finally:
+            stop_event.set()
+            if sampler is not None:
+                sampler.join(timeout=2.0)
+        if phase == "native":
+            target_samples.extend(samples)
+        return result
+
+    return run
+
+
+def _run_official_segment(
+    *,
+    command: list[str],
+    segment_dir: Path,
+    godot: str,
+    mode: str,
+    timeout_seconds: float,
+    base_environment: dict[str, str],
+) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
+    log_path = segment_dir / "godot.log"
+    lane_dir = segment_dir / "qa-lane"
+    lane_dir.mkdir(parents=False, exist_ok=False)
     samples: list[dict[str, Any]] = []
-    try:
-        while process.poll() is None:
-            snapshot = _ps_snapshot(process.pid)
-            if snapshot is not None:
-                samples.append(snapshot)
-            if time.monotonic() - started > timeout_seconds:
-                CORE._terminate_process_group(process)
-                raise FirebudV2PerformanceError(f"性能运行超时 {timeout_seconds:.1f}s")
-            time.sleep(0.5)
-        stdout, _unused = process.communicate(timeout=10.0)
-    except BaseException:
-        CORE._terminate_process_group(process)
-        raise
-    log_path.write_text("$ %s\n%s" % (" ".join(CORE._redacted_command(command)), stdout or ""), encoding="utf-8")
-    if process.returncode != 0:
-        raise FirebudV2PerformanceError(f"Godot 性能运行 exit={process.returncode}，详见 {CORE._repo_relative(log_path)}")
+    lane_evidence = CORE._run_official_lane_godot_sequence(
+        run_dir=lane_dir,
+        godot=godot,
+        base_environment=base_environment,
+        native_command=command,
+        native_log=log_path,
+        timeout_seconds=timeout_seconds,
+        native_log_validator=lambda path: _validate_godot_perf_log(
+            path, mode=mode
+        ),
+        dependencies={"godot_runner": _sampling_runner(samples)},
+    )
     if not samples:
         raise FirebudV2PerformanceError("没有获得运行中 ps CPU/RSS 样本")
-    return stdout or "", samples
+    validation = lane_evidence["native"]["logValidation"]
+    return validation["inGamePerfProbe"], samples, lane_evidence
 
 
 def _ps_summary(samples: Sequence[dict[str, Any]]) -> dict[str, Any]:
@@ -280,7 +373,7 @@ def _record(args: argparse.Namespace) -> Path:
         build_identity = _build_identity()
         tmp_dir = run_dir / "tmp"
         tmp_dir.mkdir(parents=False, exist_ok=False)
-        environment = CORE._isolated_environment(tmp_dir)
+        base_environment = CORE._isolated_environment(tmp_dir)
         records: list[dict[str, Any]] = []
         for map_id in MAP_IDS:
             for variant in VARIANTS:
@@ -288,13 +381,22 @@ def _record(args: argparse.Namespace) -> Path:
                     segment_id = f"{map_id}-{variant}-{mode}"
                     segment_dir = run_dir / "segments" / segment_id
                     segment_dir.mkdir(parents=True, exist_ok=False)
-                    user_data_dir = segment_dir / "user-data"
-                    user_data_dir.mkdir(parents=False, exist_ok=False)
                     log_path = segment_dir / "godot.log"
-                    command = _build_command(godot=godot, user_data_dir=user_data_dir, map_id=map_id, variant=variant, mode=mode)
+                    command = _build_command(
+                        godot=godot,
+                        map_id=map_id,
+                        variant=variant,
+                        mode=mode,
+                    )
                     started = _utc_now()
-                    output, ps_samples = _run_segment(command=command, log_path=log_path, timeout_seconds=float(args.timeout_seconds), environment=environment)
-                    in_game = _parse_in_game_probe(output=output, mode=mode)
+                    in_game, ps_samples, lane_evidence = _run_official_segment(
+                        command=command,
+                        segment_dir=segment_dir,
+                        godot=godot,
+                        mode=mode,
+                        timeout_seconds=float(args.timeout_seconds),
+                        base_environment=base_environment,
+                    )
                     record = {
                         "schemaVersion": REPORT_SCHEMA_VERSION,
                         "recordType": "beastbound_firebud_v2_performance_segment",
@@ -311,12 +413,33 @@ def _record(args: argparse.Namespace) -> Path:
                         "candidateBundleIdExpected": EXPECTED_BUNDLE_ID if variant == "candidate_v2_review" else None,
                         "command": CORE._redacted_command(command),
                         "isolation": {
-                            "userData": CORE._user_data_inventory(user_data_dir),
+                            "officialAutomationQaLane": True,
+                            "laneFreshAtRecorderStart": True,
+                            "qaLaneCleaned": True,
+                            "containmentScope": CORE.CONTAINMENT_SCOPE,
+                            "qaLane": {
+                                "lane": CORE.QA_LANE,
+                                "owner": lane_evidence["session"]["owner"],
+                                "feature": CORE.QA_LANE_FEATURE,
+                                "customUserDirName": CORE.QA_LANE_CUSTOM_USER_DIR_NAME,
+                                "laneRoot": lane_evidence["session"]["godotLaneRoot"],
+                                "realRoot": lane_evidence["session"]["godotRealRoot"],
+                                "realBeforeSha256": lane_evidence["session"]["realInventorySha256"],
+                            },
                             "normalPlayerSavePathUsed": False,
+                            "profileSaveEnabled": False,
                             "backendProcessStartedByTool": False,
                             "mysqlAccessByTool": False,
                             "loginOrServerArgumentsAccepted": False,
                         },
+                        "qaLaneSourceCheck": lane_evidence["sourceCheck"],
+                        "qaLaneInitialVerification": lane_evidence["initialVerification"],
+                        "qaLanePreflight": lane_evidence["preflight"],
+                        "qaLaneNative": lane_evidence["native"],
+                        "qaLaneCleanup": lane_evidence["cleanup"],
+                        "qaLanePostCleanupInspect": lane_evidence["postCleanupInspect"],
+                        "qaLaneLifecycle": _artifact(lane_evidence["lifecyclePath"]),
+                        "qaLaneOwnerEvidence": _artifact(lane_evidence["ownerEvidencePath"]),
                         "inGamePerfProbe": in_game,
                         "process": _ps_summary(ps_samples),
                         "log": _artifact(log_path),
@@ -335,13 +458,30 @@ def _record(args: argparse.Namespace) -> Path:
             "buildIdentity": build_identity,
             "scene": MAIN_SCENE,
             "matrix": {"maps": list(MAP_IDS), "variants": list(VARIANTS), "modes": list(MODES), "expectedRuns": len(MAP_IDS) * len(VARIANTS) * len(MODES)},
-            "isolation": {"freshUserDataDirectoryPerRun": True, "normalPlayerSavePathUsed": False, "profileSaveEnabled": False, "backendProcessStartedByTool": False, "mysqlAccessByTool": False, "loginOrServerArgumentsAccepted": False},
+            "isolation": {
+                "officialAutomationQaLanePerRun": True,
+                "qaLaneCleanedAfterEveryRun": True,
+                "normalPlayerSavePathUsed": False,
+                "profileSaveEnabled": False,
+                "backendProcessStartedByTool": False,
+                "mysqlAccessByTool": False,
+                "loginOrServerArgumentsAccepted": False,
+            },
             "records": records,
             "ownerReviewStatus": "pending",
         }
         report_path = run_dir / "summary.json"
         _write_json(report_path, report)
-        hash_paths = [report_path, *(REPO_ROOT / record["record"]["path"] for record in records), *(REPO_ROOT / record["log"]["path"] for record in records)]
+        hash_paths = sorted(
+            (
+                path
+                for path in run_dir.rglob("*")
+                if path.is_file()
+                and path.name != "SHA256SUMS"
+                and path.relative_to(run_dir).parts[0] != "tmp"
+            ),
+            key=lambda path: str(path.relative_to(run_dir)),
+        )
         checksum_path = CORE._write_sha256_manifest(run_dir, hash_paths)
         print(json.dumps({"status": "passed", "runId": run_id, "summary": CORE._repo_relative(report_path), "sha256Manifest": CORE._repo_relative(checksum_path)}, ensure_ascii=False))
         return report_path
