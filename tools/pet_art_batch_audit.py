@@ -115,6 +115,8 @@ SAFE_EDGE_MARGIN = 4
 ALPHA_THRESHOLD = 24
 MAX_BASELINE_DRIFT_PX = 2
 MAX_CENTER_DRIFT_PX = 12.0
+SUPPORT_BAND_HEIGHT_PX = 18
+CENTER_GATE_METRIC = "alpha_bounds_support_pair_consensus_v1"
 MAX_ALPHA_HEIGHT_RATIO = 1.12
 MAX_STRONG_MAGENTA_EDGE_RATIO = 0.02
 
@@ -1200,6 +1202,77 @@ def _possible_magenta_fringe_pixels(image: Image.Image) -> int:
     return count
 
 
+def _support_center_x(
+    rgba: Image.Image,
+    bbox: tuple[int, int, int, int],
+) -> float:
+    """Measure the planted support center without following tails or horns.
+
+    The historical full alpha-bounds center is useful diagnostic evidence but
+    is not a reliable release anchor for a walk cycle: an independently drawn
+    tail, horn, or reaching leg can move either horizontal extreme while the
+    torso and feet remain planted.  Runtime world frames are fixed at 256 px,
+    so the bottom 18 px of the visible subject is a stable support band.  A
+    whole-frame horizontal slide still moves this weighted center exactly.
+    """
+
+    alpha = rgba.getchannel("A")
+    left, top, right, bottom = bbox
+    support_top = max(top, bottom - SUPPORT_BAND_HEIGHT_PX)
+    pixels = alpha.load()
+    weight = 0
+    weighted_x = 0.0
+    for y in range(support_top, bottom):
+        for x in range(left, right):
+            alpha_value = int(pixels[x, y])
+            if alpha_value < ALPHA_THRESHOLD:
+                continue
+            weight += alpha_value
+            weighted_x += (x + 0.5) * alpha_value
+    if weight <= 0:
+        return (left + right) / 2.0
+    return weighted_x / weight
+
+
+def _walk_motion_metrics(
+    walk_metrics: list[dict[str, Any]],
+) -> dict[str, Any]:
+    bottoms = [int(entry["bottomExclusive"]) for entry in walk_metrics]
+    bounds_centers = [float(entry["centerX"]) for entry in walk_metrics]
+    support_centers = [
+        float(entry["supportCenterX"]) for entry in walk_metrics
+    ]
+    heights = [int(entry["height"]) for entry in walk_metrics]
+    consensus_drifts: list[float] = []
+    for first in range(len(walk_metrics)):
+        for second in range(first + 1, len(walk_metrics)):
+            bounds_delta = bounds_centers[second] - bounds_centers[first]
+            support_delta = support_centers[second] - support_centers[first]
+            if bounds_delta * support_delta <= 0.0:
+                consensus_drifts.append(0.0)
+                continue
+            consensus_drifts.append(
+                min(abs(bounds_delta), abs(support_delta))
+            )
+    return {
+        "baselineDriftPx": max(bottoms) - min(bottoms),
+        # Preserve the historical diagnostic field for report consumers.  It
+        # is intentionally no longer the release gate metric.
+        "centerDriftPx": round(max(bounds_centers) - min(bounds_centers), 3),
+        "supportCenterDriftPx": round(
+            max(support_centers) - min(support_centers),
+            3,
+        ),
+        "anchorConsensusDriftPx": round(
+            max(consensus_drifts, default=0.0),
+            3,
+        ),
+        "centerGateMetric": CENTER_GATE_METRIC,
+        "supportBandHeightPx": SUPPORT_BAND_HEIGHT_PX,
+        "alphaHeightRatio": round(max(heights) / max(1, min(heights)), 5),
+    }
+
+
 def _inspect_png(path: Path) -> tuple[dict[str, Any] | None, list[dict[str, str]]]:
     issues: list[dict[str, str]] = []
     try:
@@ -1259,6 +1332,7 @@ def _inspect_png(path: Path) -> tuple[dict[str, Any] | None, list[dict[str, str]
         "width": bbox[2] - bbox[0],
         "height": bbox[3] - bbox[1],
         "centerX": round((bbox[0] + bbox[2]) / 2.0, 3),
+        "supportCenterX": round(_support_center_x(rgba, bbox), 3),
         "bottomExclusive": bbox[3],
         "magentaFringePixels": magenta_count,
         "transparentEdgePixels": edge_metrics["edgePixelCount"],
@@ -1348,37 +1422,36 @@ def _audit_world(
                 )
             bboxes = [entry.get("alphaBbox") for entry in walk_metrics]
             if all(bbox is not None for bbox in bboxes):
-                bottoms = [int(entry["bottomExclusive"]) for entry in walk_metrics]
-                centers = [float(entry["centerX"]) for entry in walk_metrics]
-                heights = [int(entry["height"]) for entry in walk_metrics]
-                baseline_drift = max(bottoms) - min(bottoms)
-                center_drift = round(max(centers) - min(centers), 3)
-                height_ratio = round(max(heights) / max(1, min(heights)), 5)
-                direction_result["motion"] = {
-                    "baselineDriftPx": baseline_drift,
-                    "centerDriftPx": center_drift,
-                    "alphaHeightRatio": height_ratio,
-                }
-                if baseline_drift > MAX_BASELINE_DRIFT_PX:
+                motion = _walk_motion_metrics(walk_metrics)
+                direction_result["motion"] = motion
+                if motion["baselineDriftPx"] > MAX_BASELINE_DRIFT_PX:
                     _add_asset_issue(
                         form_result,
                         bundle_result,
                         "baseline_drift",
-                        f"{direction} walk 脚底漂移 {baseline_drift}px，门槛 {MAX_BASELINE_DRIFT_PX}px",
+                        f"{direction} walk 脚底漂移 "
+                        f"{motion['baselineDriftPx']}px，门槛 "
+                        f"{MAX_BASELINE_DRIFT_PX}px",
                     )
-                if center_drift > MAX_CENTER_DRIFT_PX:
+                if motion["anchorConsensusDriftPx"] > MAX_CENTER_DRIFT_PX:
                     _add_asset_issue(
                         form_result,
                         bundle_result,
                         "center_drift",
-                        f"{direction} walk 中心漂移 {center_drift}px，门槛 {MAX_CENTER_DRIFT_PX}px",
+                        f"{direction} walk 整体锚点同向漂移 "
+                        f"{motion['anchorConsensusDriftPx']}px，门槛 "
+                        f"{MAX_CENTER_DRIFT_PX}px（透明外接框 "
+                        f"{motion['centerDriftPx']}px，底部支撑 "
+                        f"{motion['supportCenterDriftPx']}px）",
                     )
-                if height_ratio > MAX_ALPHA_HEIGHT_RATIO:
+                if motion["alphaHeightRatio"] > MAX_ALPHA_HEIGHT_RATIO:
                     _add_asset_issue(
                         form_result,
                         bundle_result,
                         "alpha_height_drift",
-                        f"{direction} walk alpha 高度比 {height_ratio:.3f}，门槛 {MAX_ALPHA_HEIGHT_RATIO:.3f}",
+                        f"{direction} walk alpha 高度比 "
+                        f"{motion['alphaHeightRatio']:.3f}，门槛 "
+                        f"{MAX_ALPHA_HEIGHT_RATIO:.3f}",
                     )
         bundle_result["world"]["directions"][direction] = direction_result
 

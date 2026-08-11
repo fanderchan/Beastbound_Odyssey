@@ -32,6 +32,7 @@ DIRECTIONS = (
 VIEWS = ("front_3quarter_sw", "back_3quarter_ne")
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
+import pet_art_batch_audit as AUDIT_MODULE  # noqa: E402
 from build_pet_art_bundle import derive_runtime_frame, rgba_hash  # noqa: E402
 import finalize_pet_identity_gate as identity_finalizer  # noqa: E402
 from install_pet_battle_bundle import (  # noqa: E402
@@ -616,6 +617,124 @@ def _issue_codes(report: dict[str, Any], key: str = "errors") -> list[str]:
 
 
 class PetArtBatchAuditTest(unittest.TestCase):
+    def test_walk_tail_extension_is_diagnostic_not_release_anchor_drift(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            pet_root = root / catalog["forms"][0]["pet"]["root"]
+            tail_boxes = (
+                (18, 118, 60, 130),
+                (34, 118, 60, 130),
+                (168, 118, 212, 130),
+                (168, 118, 232, 130),
+            )
+            for phase, tail_box in enumerate(tail_boxes, start=1):
+                path = (
+                    pet_root
+                    / "world/directions/south/walk"
+                    / f"walk-{phase}.png"
+                )
+                with Image.open(path) as opened:
+                    frame = opened.convert("RGBA")
+                ImageDraw.Draw(frame).rectangle(
+                    tail_box,
+                    fill=(92, 126, 151, 255),
+                )
+                frame.save(path)
+
+            completed, report = _run(root, catalog)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertNotIn("center_drift", _issue_codes(report))
+            motion = report["forms"][0]["pet"]["world"]["directions"][
+                "south"
+            ]["motion"]
+            self.assertGreater(
+                motion["centerDriftPx"],
+                AUDIT_MODULE.MAX_CENTER_DRIFT_PX,
+            )
+            self.assertLessEqual(
+                motion["supportCenterDriftPx"],
+                AUDIT_MODULE.MAX_CENTER_DRIFT_PX,
+            )
+            self.assertLessEqual(
+                motion["anchorConsensusDriftPx"],
+                AUDIT_MODULE.MAX_CENTER_DRIFT_PX,
+            )
+            self.assertEqual(
+                motion["centerGateMetric"],
+                AUDIT_MODULE.CENTER_GATE_METRIC,
+            )
+
+    def test_walk_whole_subject_slide_still_fails_center_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            pet_root = root / catalog["forms"][0]["pet"]["root"]
+            path = pet_root / "world/directions/south/walk/walk-4.png"
+            with Image.open(path) as opened:
+                source = opened.convert("RGBA")
+            shifted = Image.new("RGBA", source.size, (0, 0, 0, 0))
+            shifted.alpha_composite(source, (18, 0))
+            shifted.save(path)
+
+            completed, report = _run(root, catalog)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("center_drift", _issue_codes(report))
+            motion = report["forms"][0]["pet"]["world"]["directions"][
+                "south"
+            ]["motion"]
+            self.assertGreater(
+                motion["anchorConsensusDriftPx"],
+                AUDIT_MODULE.MAX_CENTER_DRIFT_PX,
+            )
+
+    def test_walk_alternating_feet_are_not_whole_subject_slide(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            pet_root = root / catalog["forms"][0]["pet"]["root"]
+            foot_boxes = (
+                (54, 206, 78, 223),
+                (82, 206, 106, 223),
+                (122, 206, 146, 223),
+                (150, 206, 174, 223),
+            )
+            for phase, foot_box in enumerate(foot_boxes, start=1):
+                path = (
+                    pet_root
+                    / "world/directions/south/walk"
+                    / f"walk-{phase}.png"
+                )
+                with Image.open(path) as opened:
+                    frame = opened.convert("RGBA")
+                draw = ImageDraw.Draw(frame)
+                draw.rectangle((54, 206, 174, 223), fill=(0, 0, 0, 0))
+                draw.rectangle(foot_box, fill=(92, 126, 151, 255))
+                frame.save(path)
+
+            completed, report = _run(root, catalog)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertNotIn("center_drift", _issue_codes(report))
+            motion = report["forms"][0]["pet"]["world"]["directions"][
+                "south"
+            ]["motion"]
+            self.assertGreater(
+                motion["supportCenterDriftPx"],
+                AUDIT_MODULE.MAX_CENTER_DRIFT_PX,
+            )
+            self.assertLessEqual(
+                motion["anchorConsensusDriftPx"],
+                AUDIT_MODULE.MAX_CENTER_DRIFT_PX,
+            )
+
     def test_complete_fixture_passes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
