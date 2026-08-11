@@ -65,6 +65,9 @@ func run() -> void:
 	if _failed:
 		return
 	await _hold("return_world", 2.0)
+	await _drain_main_audio_for_movie_shutdown()
+	if _failed:
+		return
 	var elapsed := float(Time.get_ticks_msec() - _started_msec) / 1000.0
 	print(
 		(
@@ -73,6 +76,35 @@ func run() -> void:
 		) % elapsed
 	)
 	host.get_tree().quit(0)
+
+
+func _drain_main_audio_for_movie_shutdown() -> void:
+	# The already-recorded town loop otherwise keeps its Ogg playback and
+	# cached streams alive through MovieWriter shutdown.  End any battle cue,
+	# stop the manager, let AudioServer drain, then release the manager before
+	# quitting.  These four silent frames still show the final world chapter.
+	var timeline = host.get("battle_audio_timeline_controller")
+	if timeline != null and timeline.has_method("end_event"):
+		timeline.call("end_event")
+	host.battle_audio_timeline_controller = null
+	var manager := host.get("game_audio_manager") as Node
+	if manager == null or not is_instance_valid(manager):
+		_fail_capture("Main 音频管理器不存在，无法安全收口 MovieWriter")
+		return
+	if not manager.has_method("stop_all"):
+		_fail_capture("Main 音频管理器缺少 stop_all 收口合同")
+		return
+	manager.call("stop_all")
+	for _frame_index in range(2):
+		await host.get_tree().process_frame
+		await RenderingServer.frame_post_draw
+	manager.queue_free()
+	for _frame_index in range(2):
+		await host.get_tree().process_frame
+		await RenderingServer.frame_post_draw
+	host.game_audio_manager = null
+	if is_instance_valid(manager):
+		_fail_capture("Main 音频管理器没有在 MovieWriter 退出前释放")
 
 
 func _configure_isolated_review_profile() -> void:
