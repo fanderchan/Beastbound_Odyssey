@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "registryId": "pet_battle_exact_form_release_v1",
+  "scope": "standalone_pet_battle",
+  "policy": {
+    "exactFormOnly": true,
+    "skeletonFallbackAllowed": false,
+    "unknownFormFallback": "same_actor_procedural_placeholder",
+    "inProductionRuntimeSwitchAllowed": false
+  },
+  "coverageContract": {
+    "source": "active progression_zones wild_training -> exact map encounterGroupId -> wildPetPool formId",
+    "formalWildTrainingExpectedCount": 13,
+    "formalWildTrainingDerivedSetSha256": "bd451a022f755b31126ea2f121ca29811091c97e3ab08c9f76e2692de601867e"
+  },
+  "formalReleaseEntries": [
+    {
+      "formId": "wuli_evolved_crystal_earth8_water2",
+      "artSkeletonId": "wuli_crystal_guardian_v1",
+      "petRoot": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2",
+      "metadataPath": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2/action-bundle-meta.json",
+      "metadataSha256": "05b8594e5641a635dbff3c7b877887227ea3f6d848fb91cf148584741bac2fd8",
+      "battleRuntimeRoot": "views",
+      "battleBundleDigest": "c1e8ab8538fb363a233b9f4b26568868e28dce7777fa6faf5d2b116a9a2651dd",
+      "battleRuntimeDigest": "fd9d81c177de380cb42124811d0a15962821e5d2626a334c6b923b5aec0db30b",
+      "battleRuntimeTreeSha256": "7a66a2dbcef76c59bfbd53f724c581162153a0ff2a4c250f3a1c1d8e6fd5a87d",
+      "battleInstallManifestSha256": "8b0473954982e4e00b622516b7a943d59b2dbc4b94a3adb41eda7bc1022ecd3c",
+      "releaseAuthority": {
+        "kind": "pet_evolution_runtime_release_v1",
+        "path": "client/godot/data/pet_evolution_release_attestation_v1.json",
+        "sha256": "b8ad6bce3e27910fe2ec39dd348a60c8582dfceb36a197f879dbb53afd887c9d"
+      }
+    },
+    {
+      "formId": "driftfox_evolved_moon_gale_wind7_water3",
+      "artSkeletonId": "driftfox_moon_gale_v1",
+      "petRoot": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3",
+      "metadataPath": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3/action-bundle-meta.json",
+      "metadataSha256": "6622e6033646bab602f26b7e26d13f38bb7cc93382e25b8c2da65215de23eff1",
+      "battleRuntimeRoot": "views",
+      "battleBundleDigest": "9d5230b9390d779404eda6b9deea300584e1af7bd08a6cbdd35246912e569074",
+      "battleRuntimeDigest": "8417eff751c825c1a177ca5697f0db797cbf638b533d3dc7a31396b4dd84aa9f",
+      "battleRuntimeTreeSha256": "b101df796f910ec159946c45084ddf3b38c65ac20389344916ec09a5d794c431",
+      "battleInstallManifestSha256": "e6cd2aca08e6028bc0546c33acc46950343545a4d59d32d519f5c6e1fe806cdd",
+      "releaseAuthority": {
+        "kind": "pet_evolution_runtime_release_v1",
+        "path": "client/godot/data/pet_evolution_release_attestation_v1.json",
+        "sha256": "b8ad6bce3e27910fe2ec39dd348a60c8582dfceb36a197f879dbb53afd887c9d"
+      }
+    }
+  ],
+  "legacyCompatibilityExceptions": [
+    {
+      "exceptionId": "legacy_bui_novice_battle_canary_v1",
+      "formId": "bui_novice_sprout_earth5_wind5",
+      "formalRelease": false,
+      "compatibilityOnly": true,
+      "artSkeletonId": "bui_novice_sprout_v1",
+      "petRoot": "client/godot/assets/pets/novice_sprout_bui",
+      "metadataPath": "client/godot/assets/pets/novice_sprout_bui/action-bundle-meta.json",
+      "metadataSha256": "f77fb79d2d24a6f85a57f23c5a65875b4511b90b1e3254c0da16ebe5edeb6ae1",
+      "battleRuntimeRoot": "views",
+      "battleBundleDigest": "d9d86bda4a30a3707d4104b24895e4a28f8dedd4cfc55f93fac10e4de135b414",
+      "battleRuntimeTreeSha256": "080b6726dfab7b35c7447055ba3bde0bd56e7422e566dd25c4977a17a7098911",
+      "battleInstallManifestSha256": "2763d484a7b553ba07451ed450975df29dc54e8ce9e4c9224ef84b7a1e9f8e99",
+      "legacyBattleActionIds": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "defend",
+        "stagger",
+        "down"
+      ],
+      "reason": "Preserve the currently visible seven-action canary until its own owner-approved exact-form release replaces this exception."
+    }
+  ],
+  "runtimeCache": {
+    "contractId": "beastbound_pet_battle_runtime_cache_v1",
+    "path": "client/godot/data/pet_battle_release_runtime_cache_v1.json",
+    "sha256": "b08ed4acb483fe233455edd51c0b45b4b552d6c927d5dae0f09854cf61f23307"
+  }
+}

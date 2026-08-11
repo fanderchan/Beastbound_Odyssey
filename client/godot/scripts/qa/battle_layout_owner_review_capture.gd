@@ -2623,7 +2623,7 @@ func _disconnect_perf_frame_sampler() -> bool:
 	var sampler := Callable(self, "_capture_perf_process_frame")
 	var disconnected := true
 	if host != null and is_instance_valid(host):
-		var tree := host.get_tree()
+		var tree: SceneTree = host.get_tree()
 		if tree != null and tree.process_frame.is_connected(sampler):
 			tree.process_frame.disconnect(sampler)
 		if tree != null and tree.process_frame.is_connected(sampler):

@@ -4,6 +4,7 @@ const PetArtCatalog := preload("res://scripts/pet/pet_art_catalog.gd")
 const StandalonePetArtOverlay := preload(
 	"res://scripts/pet/standalone_pet_art_overlay.gd"
 )
+const PetBattleReleaseGate := preload("res://scripts/pet/pet_battle_release_gate.gd")
 const WorldVisualDirectionContract := preload("res://scripts/world/world_visual_direction_contract.gd")
 const ISOLATED_SCOPE_WORLD_PET_ONLY := (
 	StandalonePetArtOverlay.SCOPE_WORLD_PET_ONLY
@@ -357,6 +358,23 @@ static func world_frame_path(direction: String, action: String, frame_index: int
 	return world_frame_path_for_form(FORM_ID, direction, action, frame_index)
 
 
+static func battle_frame_path_for_form(
+	form_id: String,
+	view: String,
+	action: String,
+	frame_index: int
+) -> String:
+	if (
+		form_id.strip_edges() == ""
+		or not VIEWS.has(view)
+		or not PetBattleReleaseGate.FORMAL_BATTLE_FRAME_COUNTS.has(action)
+		or frame_index < 1
+		or frame_index > int(PetBattleReleaseGate.FORMAL_BATTLE_FRAME_COUNTS[action])
+	):
+		return ""
+	return _frame_path(form_id.strip_edges(), view, action, frame_index)
+
+
 static func world_frame_path_for_form(form_id: String, direction: String, action: String, frame_index: int) -> String:
 	var normalized_direction := WorldVisualDirectionContract.normalize_direction(direction)
 	var normalized_action := _normalized_world_action(action)
@@ -596,8 +614,11 @@ static func _world_access_allowed(form_id: String) -> bool:
 
 
 static func _battle_access_allowed(form_id: String) -> bool:
+	# Normal battles may only resolve the exact requested form through the
+	# owner-approved release gate. Explicit isolated QA overlays and previews
+	# remain debug-only paths and do not mutate that production decision.
 	return (
-		PetArtCatalog.supports_form(form_id)
+		PetBattleReleaseGate.is_battle_runtime_allowed(form_id)
 		or is_qa_preview_enabled(form_id)
 		or StandalonePetArtOverlay.allows_battle_for(form_id)
 	)

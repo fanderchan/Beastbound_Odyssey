@@ -10,6 +10,9 @@ const WorldCameraSafeAreaModel := preload(
 )
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleLayoutConstants := preload("res://scripts/battle/battle_layout_constants.gd")
+const BattleLayoutSafeAreaModel := preload(
+	"res://scripts/battle/battle_layout_safe_area_model.gd"
+)
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
@@ -125,6 +128,11 @@ const NpcMainReviewCapture := preload("res://scripts/qa/npc_main_review_capture.
 const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.gd")
 const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd")
 const PetActionAssetCheck := preload("res://scripts/qa/pet_action_asset_check.gd")
+const PetBattleReleaseGate := preload("res://scripts/pet/pet_battle_release_gate.gd")
+const PET_BATTLE_USER_ROOT_PREFLIGHT_ENV := "BEASTBOUND_PET_BATTLE_USER_ROOT_PREFLIGHT"
+const PET_BATTLE_USER_ROOT_PREFLIGHT_PREFIX := "pet battle user root preflight: "
+const PET_BATTLE_REPO_ROOT_ENV := "BEASTBOUND_PET_BATTLE_REPO_ROOT"
+const PET_BATTLE_REPO_ROOT_SHA256_ENV := "BEASTBOUND_PET_BATTLE_REPO_ROOT_SHA256"
 const MountedActionAssetCheck := preload("res://scripts/qa/mounted_action_asset_check.gd")
 const CharacterMountArtCheck := preload("res://scripts/qa/character_mount_art_check.gd")
 const CharacterRuntimeAppearanceCheck := preload(
@@ -149,6 +157,9 @@ const MarketAwakenedOwnerReviewCapture := preload(
 const MapAwakenedOwnerReviewCapture := preload(
 	"res://scripts/qa/map_awakened_owner_review_capture.gd"
 )
+const PetCodexAwakenedOwnerReviewCapture := preload(
+	"res://scripts/qa/pet_codex_awakened_owner_review_capture.gd"
+)
 const CharacterEntryOwnerReviewCapture := preload(
 	"res://scripts/qa/character_entry_owner_review_capture.gd"
 )
@@ -165,6 +176,9 @@ const WorldHudOwnerReviewCapture := preload(
 	"res://scripts/qa/world_hud_owner_review_capture.gd"
 )
 const BattleVisualReviewPreview := preload("res://scripts/qa/battle_visual_review_preview.gd")
+const BattleLayoutOwnerReviewCapture := preload(
+	"res://scripts/qa/battle_layout_owner_review_capture.gd"
+)
 const BattleCommandAwakenedViewCheck := preload(
 	"res://scripts/qa/battle_command_awakened_view_check.gd"
 )
@@ -208,8 +222,24 @@ const CHAT_MAX_MESSAGES := 120
 const CHAT_CHANNEL_SYSTEM := "system"
 const CHAT_CHANNEL_NEARBY := "nearby"
 const CHAT_CHANNEL_TEAM := "team"
-const STARTUP_LOGIN_ISOLATION_ARG := "--manual-acceptance-isolated"
-const STARTUP_LOGIN_ISOLATION_ROOT := "res://../../.run/manual_acceptance"
+const QA_USER_DATA_LANE_ARG_PREFIX := "--beastbound-qa-user-data-lane="
+const QA_USER_DATA_LANE_ENV := "BEASTBOUND_QA_USER_DATA_LANE"
+const QA_USER_DATA_ROOT_ENV := "BEASTBOUND_QA_EXPECTED_USER_DATA_ROOT"
+const QA_USER_DATA_ATTESTATION_PREFIX := "BEASTBOUND_QA_USER_DATA_ATTESTATION: "
+const QA_USER_DATA_LANES := {
+	"automation": {
+		"feature": "beastbound_qa_automation",
+		"customUserDirName": "BeastboundOdysseyQA_Automation",
+	},
+	"client1": {
+		"feature": "beastbound_qa_client1",
+		"customUserDirName": "BeastboundOdysseyQA_Client1",
+	},
+	"client2": {
+		"feature": "beastbound_qa_client2",
+		"customUserDirName": "BeastboundOdysseyQA_Client2",
+	},
+}
 const ONLINE_POSITION_SYNC_INTERVAL_SECONDS := 10.0
 const ONLINE_POSITION_MAX_REMOTE_PLAYERS := 24
 const ONLINE_POSITION_AOI_RADIUS_CELLS := 18
@@ -1137,11 +1167,19 @@ var backpack_awakened_owner_review_capture: bool = false
 var commerce_awakened_owner_review_capture: bool = false
 var market_awakened_owner_review_capture: bool = false
 var map_awakened_owner_review_capture: bool = false
+var pet_codex_awakened_owner_review_capture: bool = false
+var pet_codex_awakened_owner_review_capture_arg_count: int = 0
+var pet_codex_awakened_owner_review_native_perf_arg_count: int = 0
+var pet_codex_awakened_owner_review_parse_error: String = ""
 var character_entry_owner_review_capture: bool = false
 var player_character_owner_review_capture: bool = false
 var hang_matchmaking_world_hud_owner_review_capture: bool = false
 var battle_command_awakened_owner_review_capture: bool = false
 var world_hud_owner_review_capture: bool = false
+var battle_layout_owner_review_capture: bool = false
+var battle_layout_owner_review_capture_arg_count: int = 0
+var battle_layout_perf_arg_count: int = 0
+var battle_layout_owner_review_parse_error: String = ""
 var pet_action_art_preview: bool = false
 var battle_visual_review_scenario: String = ""
 var audio_impact_review_preview: bool = false
@@ -1216,7 +1254,10 @@ var auth_request_pending: bool = false
 var startup_auth_username: String = ""
 var startup_auth_password: String = ""
 var startup_auth_base_url: String = ""
-var startup_login_isolation_applied: bool = false
+var startup_auth_login_arg_present: bool = false
+var qa_entrypoint_requires_lane: bool = false
+var qa_user_data_lane_arg: String = ""
+var qa_user_data_lane_arg_count: int = 0
 var current_account_session: Dictionary = {}
 var gm_tool_server_access_state: Dictionary = {}
 var gm_tool_server_access_request_pending: bool = false
@@ -1589,14 +1630,65 @@ func _configure_npc_art_runtime() -> void:
 			NpcArtCatalog.enable_qa_preview_appearance(appearance_id)
 
 
+func _run_pet_battle_user_root_preflight_if_requested() -> bool:
+	if OS.get_environment(PET_BATTLE_USER_ROOT_PREFLIGHT_ENV).strip_edges() != "1":
+		return false
+	var working_directory_handle := DirAccess.open(".")
+	var working_directory := ""
+	if working_directory_handle != null:
+		working_directory = working_directory_handle.get_current_dir().replace("\\", "/").simplify_path()
+	var resource_root := ProjectSettings.globalize_path("res://").replace("\\", "/").simplify_path()
+	var user_root := ProjectSettings.globalize_path("user://").replace("\\", "/").simplify_path()
+	var executable_path := OS.get_executable_path().replace("\\", "/").simplify_path()
+	var report := {
+		"ok": true,
+		"workingDir": working_directory,
+		"resourceRoot": resource_root,
+		"userRoot": user_root,
+		"executablePath": executable_path,
+		"repoRoot": OS.get_environment(PET_BATTLE_REPO_ROOT_ENV).strip_edges(),
+		"repoRootSha256": OS.get_environment(PET_BATTLE_REPO_ROOT_SHA256_ENV).strip_edges().to_lower(),
+	}
+	print("%s%s" % [PET_BATTLE_USER_ROOT_PREFLIGHT_PREFIX, JSON.stringify(report)])
+	get_tree().quit(0)
+	return true
+
+
 func _ready() -> void:
 	# `_process()` is enabled by default when the method exists. Keep it paused
-	# until every world dependency is built so early-exit bootstrap paths (most
-	# notably the startup-login user-data relaunch parent) cannot process a
-	# partially initialized scene while their deferred quit is draining.
+	# until every world dependency is built. QA user-data attestation must run
+	# before the Phase404 preflight/release gate, runtime configuration, auth,
+	# audio, profile reads, or HUD creation.
 	set_process(false)
-	_configure_runtime_performance()
 	_apply_preview_window_args()
+	if not _attest_qa_user_data_lane_or_exit():
+		return
+	if pet_codex_awakened_owner_review_parse_error != "":
+		print(
+			"PET_CODEX_AWAKENED_OWNER_REVIEW_FAILED reason=%s"
+			% pet_codex_awakened_owner_review_parse_error
+		)
+		push_error(
+			"pet codex awakened owner review arguments rejected: %s"
+			% pet_codex_awakened_owner_review_parse_error
+		)
+		get_tree().quit(2)
+		return
+	if battle_layout_owner_review_parse_error != "":
+		print(
+			"PHASE403_BATTLE_LAYOUT_OWNER_REVIEW_FAILED reason=%s"
+			% battle_layout_owner_review_parse_error
+		)
+		push_error(
+			"Phase403 battle layout arguments rejected: %s"
+			% battle_layout_owner_review_parse_error
+		)
+		get_tree().quit(2)
+		return
+	if _run_pet_battle_user_root_preflight_if_requested():
+		return
+	PetBattleReleaseGate.initialize()
+	_configure_runtime_performance()
 	if map_art_review_invalid_map_id != "":
 		push_error("未知地图美术预览 mapId：%s" % map_art_review_invalid_map_id)
 		get_tree().quit(2)
@@ -1611,15 +1703,19 @@ func _ready() -> void:
 		print("map visual review capture: %s" % JSON.stringify(rejected_report))
 		get_tree().quit(2)
 		return
-	if _restart_with_startup_login_user_data_dir_if_needed():
-		return
 	_bootstrap_auth_state()
 	_build_game_audio_manager()
 	# The real Main scene remains in use, but capture evidence must not even read
 	# a player's mount, quest markers, dialogue options, or persisted profile.
 	player_profile = (
 		PlayerProgressModel.default_profile()
-		if npc_main_review_capture or map_visual_review_capture or not account_authenticated
+		if (
+			npc_main_review_capture
+			or map_visual_review_capture
+			or pet_codex_awakened_owner_review_capture
+			or battle_layout_owner_review_capture
+			or not account_authenticated
+		)
 		else PlayerProgressModel.load_profile()
 	)
 	MapVisualCatalog.initialize()
@@ -1640,7 +1736,12 @@ func _ready() -> void:
 		_save_profile_after_exp_pill_starter_update()
 		_show_exp_pill_starter_notice_if_needed()
 		_refresh_mailbox_menu_button()
-	elif not npc_main_review_capture and not map_visual_review_capture:
+	elif (
+		not npc_main_review_capture
+		and not map_visual_review_capture
+		and not pet_codex_awakened_owner_review_capture
+		and not battle_layout_owner_review_capture
+	):
 		_open_auth_panel(false)
 	_refresh_gm_visibility()
 	_layout_hud()
@@ -2116,6 +2217,8 @@ func _ready() -> void:
 		call_deferred("_run_market_awakened_owner_review_capture")
 	elif map_awakened_owner_review_capture:
 		call_deferred("_run_map_awakened_owner_review_capture")
+	elif pet_codex_awakened_owner_review_capture:
+		call_deferred("_run_pet_codex_awakened_owner_review_capture")
 	elif character_entry_owner_review_capture:
 		call_deferred("_run_character_entry_owner_review_capture")
 	elif player_character_owner_review_capture:
@@ -2126,6 +2229,8 @@ func _ready() -> void:
 		call_deferred("_run_battle_command_awakened_owner_review_capture")
 	elif world_hud_owner_review_capture:
 		call_deferred("_run_world_hud_owner_review_capture")
+	elif battle_layout_owner_review_capture:
+		call_deferred("_run_battle_layout_owner_review_capture")
 	elif pet_action_art_preview:
 		call_deferred("_run_pet_action_art_preview")
 	elif battle_visual_review_scenario != "":
@@ -2365,6 +2470,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == "--gm-10v10-map"
 		or normalized == "--qa-viewport"
 		or normalized.begins_with("--qa-viewport=")
+		or normalized.begins_with(QA_USER_DATA_LANE_ARG_PREFIX)
 		or normalized == "--battle-debug-window"
 		or normalized.begins_with("--battle-visual-review=")
 		or normalized.begins_with("--pet-battle-review-")
@@ -2375,26 +2481,45 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized == CommerceAwakenedOwnerReviewCapture.CAPTURE_FLAG
 		or MarketAwakenedOwnerReviewCapture.is_flag(normalized)
 		or MapAwakenedOwnerReviewCapture.is_flag(normalized)
+		or PetCodexAwakenedOwnerReviewCapture.is_flag(normalized)
 		or normalized == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == "--hang-matchmaking-world-hud-owner-review-capture"
 		or normalized == BattleCommandAwakenedOwnerReviewCapture.CAPTURE_FLAG
 		or normalized == WorldHudOwnerReviewCapture.CAPTURE_FLAG
+		or BattleLayoutOwnerReviewCapture.is_flag(normalized)
 		or normalized == "--server-step-world-move"
+		or normalized == "--local-world-move"
 	)
 
 
 func _apply_preview_window_args() -> void:
 	var args := OS.get_cmdline_user_args()
 	release_dev_entrypoint_blocked = false
+	qa_user_data_lane_arg = ""
+	qa_user_data_lane_arg_count = 0
+	startup_auth_login_arg_present = false
+	qa_entrypoint_requires_lane = false
+	pet_codex_awakened_owner_review_capture = false
+	pet_codex_awakened_owner_review_capture_arg_count = 0
+	pet_codex_awakened_owner_review_native_perf_arg_count = 0
+	pet_codex_awakened_owner_review_parse_error = ""
+	battle_layout_owner_review_capture = false
+	battle_layout_owner_review_capture_arg_count = 0
+	battle_layout_perf_arg_count = 0
+	battle_layout_owner_review_parse_error = ""
 	for index in range(args.size()):
 		var arg := str(args[index])
+		if _startup_auth_cli_arg(arg):
+			startup_auth_login_arg_present = true
+		if _dev_entrypoint_arg(arg) and not arg.begins_with(QA_USER_DATA_LANE_ARG_PREFIX):
+			qa_entrypoint_requires_lane = true
 		if _release_entrypoints_locked() and _dev_entrypoint_arg(arg):
 			release_dev_entrypoint_blocked = true
 			continue
 		if _dev_entrypoint_arg(arg):
 			profile_save_enabled = false
-			if arg != "--auto-auth-check" and arg != "--auto-auth-server-live-check" and arg != "--auto-startup-login-check" and arg != "--auto-character-entry-live-check" and not arg.begins_with("--map-art-review-preview"):
+			if arg != "--auto-auth-check" and arg != "--auto-auth-server-live-check" and arg != "--auto-startup-login-check" and arg != "--auto-character-entry-live-check" and not arg.begins_with("--map-art-review-preview") and not arg.begins_with(QA_USER_DATA_LANE_ARG_PREFIX):
 				auth_auto_bypass = true
 		if arg == "--preview-mobile":
 			_apply_preview_window_size(Vector2i(1280, 720))
@@ -2425,8 +2550,9 @@ func _apply_preview_window_args() -> void:
 			startup_auth_base_url = arg.substr("--server-url=".length())
 		elif arg.begins_with("--auth-server-url="):
 			startup_auth_base_url = arg.substr("--auth-server-url=".length())
-		elif arg == STARTUP_LOGIN_ISOLATION_ARG:
-			startup_login_isolation_applied = true
+		elif arg.begins_with(QA_USER_DATA_LANE_ARG_PREFIX):
+			qa_user_data_lane_arg_count += 1
+			qa_user_data_lane_arg = arg.substr(QA_USER_DATA_LANE_ARG_PREFIX.length()).strip_edges()
 		elif arg == "--server-step-world-move":
 			server_step_world_move_enabled = true
 		elif arg == "--local-world-move":
@@ -3027,6 +3153,11 @@ func _apply_preview_window_args() -> void:
 			market_awakened_owner_review_capture = true
 		elif MapAwakenedOwnerReviewCapture.is_flag(arg):
 			map_awakened_owner_review_capture = true
+		elif arg == PetCodexAwakenedOwnerReviewCapture.CAPTURE_FLAG:
+			pet_codex_awakened_owner_review_capture = true
+			pet_codex_awakened_owner_review_capture_arg_count += 1
+		elif arg == PetCodexAwakenedOwnerReviewCapture.NATIVE_PERF_FLAG:
+			pet_codex_awakened_owner_review_native_perf_arg_count += 1
 		elif arg == CharacterEntryOwnerReviewCapture.CAPTURE_FLAG:
 			character_entry_owner_review_capture = true
 		elif arg == PlayerCharacterOwnerReviewCapture.CAPTURE_FLAG:
@@ -3037,6 +3168,12 @@ func _apply_preview_window_args() -> void:
 			battle_command_awakened_owner_review_capture = true
 		elif arg == WorldHudOwnerReviewCapture.CAPTURE_FLAG:
 			world_hud_owner_review_capture = true
+		elif arg == BattleLayoutOwnerReviewCapture.CAPTURE_FLAG:
+			battle_layout_owner_review_capture = true
+			battle_layout_owner_review_capture_arg_count += 1
+		elif arg == BattleLayoutOwnerReviewCapture.PERF_CAPTURE_FLAG:
+			battle_layout_owner_review_capture = true
+			battle_layout_perf_arg_count += 1
 		elif arg == "--pet-action-art-preview":
 			pet_action_art_preview = true
 		elif arg.begins_with("--battle-visual-review="):
@@ -3160,74 +3297,151 @@ func _apply_preview_window_args() -> void:
 		npc_main_review_capture_request = NpcMainReviewCapture.request_from_args(args)
 		startup_map_id = str(npc_main_review_capture_request.get("mapId", startup_map_id))
 		startup_spawn_name = str(npc_main_review_capture_request.get("spawnName", startup_spawn_name))
+	if (
+		pet_codex_awakened_owner_review_capture_arg_count > 0
+		or pet_codex_awakened_owner_review_native_perf_arg_count > 0
+	):
+		# Formal owner review uses an isolated player session, never the generic
+		# dev-GM bypass that other QA entrypoints may select above.
+		auth_auto_bypass = false
+		if pet_codex_awakened_owner_review_capture_arg_count != 1:
+			pet_codex_awakened_owner_review_parse_error = (
+				"图鉴验收 capture flag 必须且只能出现一次"
+			)
+		elif pet_codex_awakened_owner_review_native_perf_arg_count > 1:
+			pet_codex_awakened_owner_review_parse_error = (
+				"图鉴验收 native perf flag 最多出现一次"
+			)
+	if (
+		battle_layout_owner_review_capture_arg_count > 0
+		or battle_layout_perf_arg_count > 0
+	):
+		# Formal Phase403 evidence uses an isolated player session, never the
+		# generic dev-GM bypass selected by ordinary QA entrypoints.
+		auth_auto_bypass = false
+		if battle_layout_owner_review_capture_arg_count != 1:
+			battle_layout_owner_review_parse_error = (
+				"战斗布局验收 capture flag 必须且只能出现一次"
+			)
+		elif battle_layout_perf_arg_count > 1:
+			battle_layout_owner_review_parse_error = (
+				"战斗布局验收 perf flag 最多出现一次"
+			)
+	if (
+		(
+			pet_codex_awakened_owner_review_capture_arg_count > 0
+			or pet_codex_awakened_owner_review_native_perf_arg_count > 0
+		)
+		and (
+			battle_layout_owner_review_capture_arg_count > 0
+			or battle_layout_perf_arg_count > 0
+		)
+	):
+		var cross_capture_error := "图鉴验收与战斗布局验收入口不可同时启用"
+		pet_codex_awakened_owner_review_parse_error = cross_capture_error
+		battle_layout_owner_review_parse_error = cross_capture_error
 
 
-func _restart_with_startup_login_user_data_dir_if_needed() -> bool:
-	if map_visual_review_capture or startup_login_isolation_applied or not _startup_auth_login_requested():
-		return false
-	var username := AccountAuthModel.normalized_username(startup_auth_username)
-	if username == "":
-		return false
-	if _cmdline_engine_arg_present("--user-data-dir"):
-		return false
-	var target_dir := _startup_login_user_data_dir(username)
-	var current_dir := ProjectSettings.globalize_path("user://").simplify_path()
-	if current_dir.begins_with(target_dir):
-		return false
-	var err := DirAccess.make_dir_recursive_absolute(target_dir)
-	if err != OK:
-		push_warning("无法创建启动登录隔离目录：%s" % target_dir)
-		return false
-	var launch_args := _startup_login_relaunch_engine_args()
-	launch_args.append("--path")
-	launch_args.append(ProjectSettings.globalize_path("res://").simplify_path())
-	launch_args.append("--user-data-dir")
-	launch_args.append(target_dir)
-	launch_args.append("--scene")
-	launch_args.append("res://scenes/Main.tscn")
-	launch_args.append("--")
-	for value in OS.get_cmdline_user_args():
-		launch_args.append(str(value))
-	launch_args.append(STARTUP_LOGIN_ISOLATION_ARG)
-	var pid := OS.create_process(OS.get_executable_path(), launch_args)
-	if pid <= 0:
-		push_warning("启动登录隔离进程创建失败：%s" % target_dir)
-		return false
-	print("startup login user data isolated: username=%s dir=%s pid=%d" % [username, target_dir, pid])
-	get_tree().quit(0)
-	return true
+func _qa_user_data_root_text(value: String) -> String:
+	var raw_value := value.strip_edges()
+	if raw_value == "":
+		return ""
+	var normalized := raw_value.replace("\\", "/").simplify_path()
+	while normalized.length() > 1 and normalized.ends_with("/"):
+		normalized = normalized.left(normalized.length() - 1)
+	return normalized
 
 
-func _startup_login_user_data_dir(username: String) -> String:
-	return ProjectSettings.globalize_path("%s/%s" % [STARTUP_LOGIN_ISOLATION_ROOT, username]).simplify_path()
+func _startup_auth_cli_arg(value: String) -> bool:
+	var normalized := value.strip_edges()
+	return (
+		normalized == "--auto-startup-login-check"
+		or normalized == "--login"
+		or normalized == "--server-login"
+		or normalized == "--login-username"
+		or normalized == "--auth-username"
+		or normalized == "--auth-user"
+		or normalized.begins_with("--login-username=")
+		or normalized.begins_with("--auth-username=")
+		or normalized == "--login-password"
+		or normalized == "--auth-password"
+		or normalized == "--auth-pass"
+		or normalized.begins_with("--login-password=")
+		or normalized.begins_with("--auth-password=")
+	)
 
 
-func _startup_login_relaunch_engine_args() -> PackedStringArray:
-	var launch_args := PackedStringArray()
-	var engine_args := OS.get_cmdline_args()
-	for index in range(engine_args.size()):
-		var arg := str(engine_args[index])
-		if arg == "--":
-			break
-		if arg == "--headless":
-			launch_args.append(arg)
-		elif arg == "--quit-after" and index + 1 < engine_args.size():
-			launch_args.append(arg)
-			launch_args.append(str(engine_args[index + 1]))
-		elif arg.begins_with("--quit-after="):
-			launch_args.append(arg)
-	return launch_args
+func _active_qa_user_data_features() -> PackedStringArray:
+	var active := PackedStringArray()
+	for lane_value in QA_USER_DATA_LANES.values():
+		var lane_record: Dictionary = lane_value
+		var feature := str(lane_record.get("feature", ""))
+		if feature != "" and OS.has_feature(feature):
+			active.append(feature)
+	return active
 
 
-func _cmdline_engine_arg_present(flag: String) -> bool:
-	var engine_args := OS.get_cmdline_args()
-	for arg_value in engine_args:
-		var arg := str(arg_value)
-		if arg == "--":
-			break
-		if arg == flag or arg.begins_with("%s=" % flag):
-			return true
+func _reject_qa_user_data_lane(reason: String, details: Dictionary = {}) -> bool:
+	var report := {
+		"status": "failed",
+		"reason": reason,
+		"lane": qa_user_data_lane_arg,
+		"userDataRoot": _qa_user_data_root_text(ProjectSettings.globalize_path("user://")),
+	}
+	for key in details:
+		report[key] = details[key]
+	print("%s%s" % [QA_USER_DATA_ATTESTATION_PREFIX, JSON.stringify(report)])
+	push_error("QA user-data lane attestation failed: %s" % reason)
+	get_tree().quit(2)
 	return false
+
+
+func _attest_qa_user_data_lane_or_exit() -> bool:
+	var cli_lane := qa_user_data_lane_arg.strip_edges()
+	var env_lane := OS.get_environment(QA_USER_DATA_LANE_ENV).strip_edges()
+	var env_root := _qa_user_data_root_text(OS.get_environment(QA_USER_DATA_ROOT_ENV))
+	var active_features := _active_qa_user_data_features()
+	var lane_markers_absent := qa_user_data_lane_arg_count == 0 and cli_lane == "" and env_lane == "" and env_root == "" and active_features.is_empty()
+	if lane_markers_absent:
+		if startup_auth_login_arg_present or auto_startup_login_check:
+			return _reject_qa_user_data_lane("startup_login_requires_lane")
+		if qa_entrypoint_requires_lane:
+			return _reject_qa_user_data_lane("qa_entrypoint_requires_lane")
+		return true
+	if qa_user_data_lane_arg_count != 1:
+		return _reject_qa_user_data_lane("lane_argument_count_mismatch", {"argumentCount": qa_user_data_lane_arg_count})
+	if cli_lane == "" or env_lane == "" or env_root == "":
+		return _reject_qa_user_data_lane("incomplete_lane_markers")
+	if cli_lane != env_lane:
+		return _reject_qa_user_data_lane("lane_marker_mismatch", {"environmentLane": env_lane})
+	if not QA_USER_DATA_LANES.has(cli_lane):
+		return _reject_qa_user_data_lane("unknown_lane")
+	var lane_record: Dictionary = QA_USER_DATA_LANES[cli_lane]
+	var expected_feature := str(lane_record.get("feature", ""))
+	var expected_custom_name := str(lane_record.get("customUserDirName", ""))
+	if not OS.has_feature(expected_feature):
+		return _reject_qa_user_data_lane("missing_feature")
+	if active_features.size() != 1 or active_features[0] != expected_feature:
+		return _reject_qa_user_data_lane("reserved_feature_mismatch", {"activeFeatures": active_features})
+	var custom_user_dir_enabled := bool(ProjectSettings.get_setting_with_override("application/config/use_custom_user_dir"))
+	if not custom_user_dir_enabled:
+		return _reject_qa_user_data_lane("custom_user_dir_disabled")
+	var actual_custom_name := str(ProjectSettings.get_setting_with_override("application/config/custom_user_dir_name"))
+	if actual_custom_name != expected_custom_name:
+		return _reject_qa_user_data_lane("custom_user_dir_name_mismatch", {"customUserDirName": actual_custom_name})
+	var actual_root := _qa_user_data_root_text(ProjectSettings.globalize_path("user://"))
+	var expected_root := env_root
+	if actual_root != expected_root:
+		return _reject_qa_user_data_lane("user_data_root_mismatch", {"expectedRoot": expected_root})
+	var report := {
+		"status": "passed",
+		"lane": cli_lane,
+		"feature": expected_feature,
+		"customUserDirName": expected_custom_name,
+		"userDataRoot": actual_root,
+	}
+	print("%s%s" % [QA_USER_DATA_ATTESTATION_PREFIX, JSON.stringify(report)])
+	return true
 
 
 func _normalize_cmdline_url(value: String) -> String:
@@ -4332,6 +4546,10 @@ func _run_map_awakened_owner_review_capture() -> void:
 	await MapAwakenedOwnerReviewCapture.new(self).run()
 
 
+func _run_pet_codex_awakened_owner_review_capture() -> void:
+	await PetCodexAwakenedOwnerReviewCapture.new(self).run()
+
+
 func _run_character_entry_owner_review_capture() -> void:
 	await CharacterEntryOwnerReviewCapture.new(self).run()
 
@@ -4350,6 +4568,10 @@ func _run_battle_command_awakened_owner_review_capture() -> void:
 
 func _run_world_hud_owner_review_capture() -> void:
 	await WorldHudOwnerReviewCapture.new(self).run()
+
+
+func _run_battle_layout_owner_review_capture() -> void:
+	await BattleLayoutOwnerReviewCapture.new(self).run()
 
 
 func _run_pet_action_art_preview() -> void:
@@ -6390,6 +6612,19 @@ func _run_auto_pet_fusion_skill_policy_check() -> void:
 
 func _run_auto_pet_action_asset_check() -> void:
 	var result := PetActionAssetCheck.run(auto_pet_action_asset_form_id)
+	result["pckProfileSaveEnabled"] = profile_save_enabled
+	result["pckServerAccountSession"] = _is_server_account_session()
+	result["pckAuthAutoBypass"] = auth_auto_bypass
+	var working_directory_handle := DirAccess.open(".")
+	result["pckWorkingDir"] = (
+		working_directory_handle.get_current_dir().replace("\\", "/").simplify_path()
+		if working_directory_handle != null
+		else ""
+	)
+	result["pckUserRoot"] = ProjectSettings.globalize_path("user://").replace("\\", "/").simplify_path()
+	result["pckResourceRoot"] = ProjectSettings.globalize_path("res://").replace("\\", "/").simplify_path()
+	result["pckRepoRoot"] = OS.get_environment(PET_BATTLE_REPO_ROOT_ENV).strip_edges()
+	result["pckRepoRootSha256"] = OS.get_environment(PET_BATTLE_REPO_ROOT_SHA256_ENV).strip_edges().to_lower()
 	print("pet action asset check ready: %s" % JSON.stringify(result))
 	get_tree().quit(0 if bool(result.get("ok", false)) else 1)
 
@@ -8205,12 +8440,31 @@ func _battle_full_formation_screen_layout_ok() -> bool:
 	if not BattleModel.fills_full_formation(battle_state):
 		return false
 	var viewport_rect := Rect2(Vector2.ZERO, _layout_size())
+	var reference_safe_area_active := (
+		not bool(battle_state.get("reviewLab", false))
+		and BattleLayoutSafeAreaModel.supports_reference_safe_area_contract(
+			_layout_size()
+		)
+	)
 	var screen_points: Array[Vector2] = []
 	for value in battle_state.get("actors", []):
 		var actor := value as Dictionary
-		var screen_point := _world_to_screen(_battle_slot_world_position(str(actor.get("slotId", ""))))
+		var slot_id := str(actor.get("slotId", ""))
+		var screen_point := _world_to_screen(_battle_slot_world_position(slot_id))
 		if not viewport_rect.grow(-12.0).has_point(screen_point):
 			return false
+		if reference_safe_area_active:
+			var actor_envelope := (
+				BattleLayoutSafeAreaModel.reference_actor_envelope_for_anchor(
+					screen_point
+				)
+			)
+			if not viewport_rect.encloses(actor_envelope):
+				return false
+			if not BattleLayoutSafeAreaModel.reference_persistent_hud_intersections_for_rect(
+				actor_envelope
+			).is_empty():
+				return false
 		if _battle_point_overlaps_panel(screen_point):
 			return false
 		for previous in screen_points:
@@ -16737,23 +16991,23 @@ func _battle_slot_world_position(slot_id: String) -> Vector2:
 
 
 func _battle_enemy_slot_screen_position(row: String, slot_offset: int, viewport_size: Vector2) -> Vector2:
-	var lane := 0
-	var rank := slot_offset
-	if row == "front":
-		lane = 1
-	return _battle_grid_screen_position(lane, rank, viewport_size)
+	return (
+		_battle_grid_template_offset(viewport_size)
+		+ BattleLayoutSafeAreaModel.template_enemy_slot_anchor(
+			row,
+			slot_offset
+		) * _battle_grid_template_scale(viewport_size)
+	)
 
 
 func _battle_ally_slot_screen_position(row: String, slot_offset: int, viewport_size: Vector2) -> Vector2:
-	var lane := 4
-	var rank := 4 - slot_offset
-	if row == "back":
-		lane = 5
-	return _battle_grid_screen_position(lane, rank, viewport_size)
-
-
-func _battle_grid_screen_position(lane: int, rank: int, viewport_size: Vector2) -> Vector2:
-	return _battle_grid_origin(viewport_size) + _battle_grid_lane_step(viewport_size) * float(lane) + _battle_grid_rank_step(viewport_size) * float(rank)
+	return (
+		_battle_grid_template_offset(viewport_size)
+		+ BattleLayoutSafeAreaModel.template_ally_slot_anchor(
+			row,
+			slot_offset
+		) * _battle_grid_template_scale(viewport_size)
+	)
 
 
 func _battle_grid_origin(viewport_size: Vector2) -> Vector2:

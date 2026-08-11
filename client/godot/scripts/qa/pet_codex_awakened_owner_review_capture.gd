@@ -115,8 +115,8 @@ func _run() -> void:
 	if _host == null or not is_instance_valid(_host) or _host.get_tree() == null:
 		await _fail("正式 Main 宿主不存在")
 		return
-	var tree := _host.get_tree()
-	var root_window := tree.root
+	var tree: SceneTree = _host.get_tree()
+	var root_window: Window = tree.root
 	if (
 		tree.current_scene != _host
 		or str(_host.scene_file_path) != "res://scenes/Main.tscn"
@@ -585,7 +585,7 @@ func _run() -> void:
 func _wait_for_native_foreground_focus() -> bool:
 	# macOS treats activation as a request. Repeat it only inside a bounded
 	# window, and accept evidence solely after a fresh frame reports key focus.
-	var tree := _host.get_tree()
+	var tree: SceneTree = _host.get_tree()
 	var started_msec := Time.get_ticks_msec()
 	var next_request_msec := started_msec
 	var request_count := 0
@@ -905,7 +905,7 @@ func _hud_control_ready(control: Control) -> bool:
 	if control == null or not control.is_visible_in_tree():
 		return false
 	var rect := control.get_global_rect()
-	var viewport_rect := _host.get_tree().root.get_visible_rect()
+	var viewport_rect: Rect2 = _host.get_tree().root.get_visible_rect()
 	return (
 		rect.size.x > 0.5
 		and rect.size.y > 0.5
@@ -943,7 +943,7 @@ func _left_click(control: Control, label: String, require_button_ready := true) 
 		await _fail("%s不可见或不可用，无法执行真实左键" % label)
 		return
 	var viewport_point := control.get_global_rect().get_center()
-	var root_window := _host.get_tree().root
+	var root_window: Window = _host.get_tree().root
 	if not root_window.get_visible_rect().has_point(viewport_point):
 		await _fail("%s不在 1280×720 可点击区域内" % label)
 		return
@@ -954,7 +954,7 @@ func _left_click(control: Control, label: String, require_button_ready := true) 
 	_parse_input_event_with_perf(motion)
 	await _host.get_tree().process_frame
 	if require_button_ready:
-		var hovered := root_window.gui_get_hovered_control()
+		var hovered: Control = root_window.gui_get_hovered_control()
 		if hovered == null or (
 			hovered != control and not control.is_ancestor_of(hovered)
 		):

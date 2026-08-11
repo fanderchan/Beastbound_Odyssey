@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "cacheId": "pet_battle_release_runtime_cache_v1",
+  "registryId": "pet_battle_exact_form_release_v1",
+  "canonicalJsonContractId": "beastbound_sorted_compact_safe_integer_json_utf8_v2",
+  "releaseSubjectSha256": "5b06a88d6444941f8b281d1792245c83870c03971df040f58e64e1868b767dd1",
+  "sourceRuntimeFrameContract": {
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "frameCounts": {
+      "idle": 6,
+      "walk": 8,
+      "attack": 8,
+      "skill": 8,
+      "hurt": 6,
+      "defend": 6,
+      "dodge": 8,
+      "counter": 8,
+      "stagger": 8,
+      "knockaway": 8,
+      "down": 8,
+      "revive": 8
+    },
+    "expectedFrameCount": 180
+  },
+  "canonicalParityVectors": [
+    {
+      "id": "nested_unicode_v1",
+      "value": {
+        "array": [
+          3,
+          true,
+          null,
+          "月岚风狐"
+        ],
+        "object": {
+          "z": "末",
+          "a": "首"
+        }
+      },
+      "sha256": "d038c9f0bad87d2a6b7e8065d2a1505be286544746d6ff6ebec59d8e51b8453c"
+    },
+    {
+      "id": "release_shape_v1",
+      "value": {
+        "formId": "wuli_evolved_crystal_earth8_water2",
+        "formalRelease": true,
+        "frameCount": 180,
+        "views": [
+          "front_3quarter_sw",
+          "back_3quarter_ne"
+        ]
+      },
+      "sha256": "75019f51e2ee5d5745095a55613a9dda524f02229bb0a05dcaeafab594d7c6e2"
+    },
+    {
+      "id": "safe_integer_normalization_v2",
+      "value": {
+        "negativeZero": 0,
+        "positiveIntegral": 6,
+        "nested": {
+          "array": [
+            180,
+            -9007199254740991,
+            9007199254740991,
+            false
+          ]
+        }
+      },
+      "sha256": "9fcd4265dcff9c1b185150fdf1ed041a384375139506d747b276787487687d71"
+    }
+  ],
+  "entries": [
+    {
+      "formId": "wuli_evolved_crystal_earth8_water2",
+      "releaseMode": "formal_exact_asset",
+      "formalRelease": true,
+      "compatibilityException": false,
+      "assetFormId": "wuli_evolved_crystal_earth8_water2",
+      "catalogStatus": "approved",
+      "catalogRuntimeEnabled": true,
+      "artSkeletonId": "wuli_crystal_guardian_v1",
+      "petRoot": "client/godot/assets/pets/wuli_evolved_crystal_earth8_water2",
+      "battleRuntimeRoot": "views",
+      "battleRuntimeTreeSha256": "7a66a2dbcef76c59bfbd53f724c581162153a0ff2a4c250f3a1c1d8e6fd5a87d",
+      "sourceRuntimeFrameCount": 180,
+      "normalBattleActionIds": [
+        "idle",
+        "walk",
+        "attack",
+        "skill",
+        "hurt",
+        "defend",
+        "dodge",
+        "counter",
+        "stagger",
+        "knockaway",
+        "down",
+        "revive"
+      ],
+      "releaseEntrySha256": "baf0fff04fb42f3b2cb200fde352ec0fed40e6df3076e3b76c87f6c325c12995"
+    },
+    {
+      "formId": "driftfox_evolved_moon_gale_wind7_water3",
+      "releaseMode": "formal_exact_asset",
+      "formalRelease": true,
+      "compatibilityException": false,
+      "assetFormId": "driftfox_evolved_moon_gale_wind7_water3",
+      "catalogStatus": "approved",
+      "catalogRuntimeEnabled": true,
+      "artSkeletonId": "driftfox_moon_gale_v1",
+      "petRoot": "client/godot/assets/pets/driftfox_evolved_moon_gale_wind7_water3",
+      "battleRuntimeRoot": "views",
+      "battleRuntimeTreeSha256": "b101df796f910ec159946c45084ddf3b38c65ac20389344916ec09a5d794c431",
+      "sourceRuntimeFrameCount": 180,
+      "normalBattleActionIds": [
+        "idle",
+        "walk",
+        "attack",
+        "skill",
+        "hurt",
+        "defend",
+        "dodge",
+        "counter",
+        "stagger",
+        "knockaway",
+        "down",
+        "revive"
+      ],
+      "releaseEntrySha256": "e3b228eee34263ebf93daf0abb544b3b240a1d56012cfcec91c0017c0914023e"
+    },
+    {
+      "formId": "bui_novice_sprout_earth5_wind5",
+      "releaseMode": "legacy_exact_asset",
+      "formalRelease": false,
+      "compatibilityException": true,
+      "assetFormId": "bui_novice_sprout_earth5_wind5",
+      "catalogStatus": "in_production",
+      "catalogRuntimeEnabled": true,
+      "artSkeletonId": "bui_novice_sprout_v1",
+      "petRoot": "client/godot/assets/pets/novice_sprout_bui",
+      "battleRuntimeRoot": "views",
+      "battleRuntimeTreeSha256": "080b6726dfab7b35c7447055ba3bde0bd56e7422e566dd25c4977a17a7098911",
+      "sourceRuntimeFrameCount": 180,
+      "normalBattleActionIds": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "defend",
+        "stagger",
+        "down"
+      ],
+      "releaseEntrySha256": "85a21a2faf661b9a172c4e20c55e50689feb7342cc78062f5c8eace49ba7e818"
+    }
+  ]
+}

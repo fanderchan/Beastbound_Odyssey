@@ -7,6 +7,12 @@ config/description="Godot 4.7 2D client prototype for a StoneAge-inspired pet ad
 run/main_scene="res://scenes/Main.tscn"
 run/max_fps=60
 config/features=PackedStringArray("4.7", "Mobile")
+config/use_custom_user_dir.beastbound_qa_automation=true
+config/custom_user_dir_name.beastbound_qa_automation="BeastboundOdysseyQA_Automation"
+config/use_custom_user_dir.beastbound_qa_client1=true
+config/custom_user_dir_name.beastbound_qa_client1="BeastboundOdysseyQA_Client1"
+config/use_custom_user_dir.beastbound_qa_client2=true
+config/custom_user_dir_name.beastbound_qa_client2="BeastboundOdysseyQA_Client2"
 
 [display]
 
