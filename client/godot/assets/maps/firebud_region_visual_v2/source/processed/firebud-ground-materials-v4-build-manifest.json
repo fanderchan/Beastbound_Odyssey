@@ -1,0 +1,296 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound.firebud_ground_atlas_build",
+  "scriptVersion": "1.0.0",
+  "pillowVersion": "12.2.0",
+  "materialsSource": {
+    "path": "client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-ground-materials-v4.png",
+    "sha256": "65d015eb492237b3b4b0c5e5bd01d2c32843cce9aa99612eef361a2077bed45b",
+    "dimensions": [
+      1254,
+      1254
+    ]
+  },
+  "semanticSource": {
+    "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-semantic-variants-v1-alpha.png",
+    "sha256": "691683544da118285ad09b752c466324fda1a84c56945d6c6f7b62618c755eb5",
+    "dimensions": [
+      1254,
+      1254
+    ]
+  },
+  "atlas": {
+    "path": "client/godot/assets/maps/firebud_region_visual_v2/runtime/ground/atlas.png",
+    "sha256": "991e8c2010ade24738b8475db0549fe9dadb38874afc96ae5490a344c0638265",
+    "dimensions": [
+      320,
+      120
+    ],
+    "tileSize": [
+      80,
+      40
+    ],
+    "columns": 4
+  },
+  "renderContract": {
+    "mode": "layered_semantic_overlay",
+    "baseTiles": [
+      "firebud_meadow_a",
+      "firebud_meadow_b",
+      "firebud_meadow_dry_b",
+      "firebud_meadow_clover_c",
+      "firebud_meadow_far"
+    ],
+    "semanticOverlays": [
+      "firebud_ochre_path_a",
+      "firebud_honey_stone_a",
+      "firebud_dark_root_soil_a",
+      "firebud_ochre_path_worn_b",
+      "firebud_honey_stone_moss_b",
+      "firebud_tall_grass_encounter",
+      "firebud_warp_stone"
+    ]
+  },
+  "tiles": [
+    {
+      "tileId": "firebud_meadow_a",
+      "atlasRect": [
+        0,
+        0,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 960,
+        "opaquePixels": 1976,
+        "partialAlphaPixels": 264
+      },
+      "meanRgba": [
+        72.906,
+        90.889,
+        59.323,
+        167.089
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_a",
+      "atlasRect": [
+        80,
+        0,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1088,
+        "opaquePixels": 0,
+        "partialAlphaPixels": 2112
+      },
+      "meanRgba": [
+        131.84,
+        83.618,
+        47.898,
+        138.705
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_a",
+      "atlasRect": [
+        160,
+        0,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1088,
+        "opaquePixels": 0,
+        "partialAlphaPixels": 2112
+      },
+      "meanRgba": [
+        131.147,
+        116.471,
+        78.089,
+        138.705
+      ]
+    },
+    {
+      "tileId": "firebud_dark_root_soil_a",
+      "atlasRect": [
+        240,
+        0,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1088,
+        "opaquePixels": 0,
+        "partialAlphaPixels": 2112
+      },
+      "meanRgba": [
+        77.768,
+        58.281,
+        42.048,
+        44.273
+      ]
+    },
+    {
+      "tileId": "firebud_meadow_b",
+      "atlasRect": [
+        0,
+        40,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 960,
+        "opaquePixels": 1976,
+        "partialAlphaPixels": 264
+      },
+      "meanRgba": [
+        72.918,
+        90.899,
+        59.334,
+        167.089
+      ]
+    },
+    {
+      "tileId": "firebud_meadow_dry_b",
+      "atlasRect": [
+        80,
+        40,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 960,
+        "opaquePixels": 1976,
+        "partialAlphaPixels": 264
+      },
+      "meanRgba": [
+        74.588,
+        90.362,
+        57.764,
+        167.089
+      ]
+    },
+    {
+      "tileId": "firebud_meadow_clover_c",
+      "atlasRect": [
+        160,
+        40,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 960,
+        "opaquePixels": 1976,
+        "partialAlphaPixels": 264
+      },
+      "meanRgba": [
+        70.54,
+        91.41,
+        60.177,
+        167.089
+      ]
+    },
+    {
+      "tileId": "firebud_meadow_far",
+      "atlasRect": [
+        240,
+        40,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 784,
+        "opaquePixels": 1768,
+        "partialAlphaPixels": 648
+      },
+      "meanRgba": [
+        54.396,
+        70.82,
+        49.389,
+        167.11
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_worn_b",
+      "atlasRect": [
+        0,
+        80,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1088,
+        "opaquePixels": 0,
+        "partialAlphaPixels": 2112
+      },
+      "meanRgba": [
+        131.757,
+        83.618,
+        48.817,
+        138.705
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_moss_b",
+      "atlasRect": [
+        80,
+        80,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1088,
+        "opaquePixels": 0,
+        "partialAlphaPixels": 2112
+      },
+      "meanRgba": [
+        130.523,
+        115.867,
+        77.852,
+        138.705
+      ]
+    },
+    {
+      "tileId": "firebud_tall_grass_encounter",
+      "atlasRect": [
+        160,
+        80,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1351,
+        "opaquePixels": 0,
+        "partialAlphaPixels": 1849
+      },
+      "meanRgba": [
+        62.744,
+        69.711,
+        30.745,
+        116.933
+      ]
+    },
+    {
+      "tileId": "firebud_warp_stone",
+      "atlasRect": [
+        240,
+        80,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1355,
+        "opaquePixels": 0,
+        "partialAlphaPixels": 1845
+      },
+      "meanRgba": [
+        108.343,
+        87.625,
+        49.072,
+        116.883
+      ]
+    }
+  ]
+}

@@ -44,6 +44,8 @@ AUDITOR_PATH = (
     / ".agents/skills/design-beastbound-maps/scripts/audit_map_bundle.py"
 )
 MANIFEST_NAME = "map-visual-bundle.json"
+PRIMARY_CATALOG_PATH = Path("data/map_visual_catalog.json")
+REVIEW_CATALOG_PATH = Path("data/map_visual_review_catalog.json")
 OWNER_ACCEPTANCE_PATH = "evidence/owner-acceptance.json"
 RELEASE_ATTESTATION_PATH = "release-attestation.json"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -93,6 +95,9 @@ class PromotionCandidate:
     manifest_bytes: bytes
     owner_acceptance_bytes: bytes
     release_attestation_bytes: bytes
+    input_primary_catalog_sha256: str
+    input_review_catalog_sha256: str
+    primary_catalog_bytes: bytes
     approved_audit: AuditSnapshot
     released_audit: AuditSnapshot
     release_summary_sha256: str
@@ -109,6 +114,12 @@ class PromotionCandidate:
                 "path": RELEASE_ATTESTATION_PATH,
                 "sha256": _sha256_bytes(self.release_attestation_bytes),
                 "bundleSummarySha256": self.release_summary_sha256,
+            },
+            "catalogPromotion": {
+                "path": PRIMARY_CATALOG_PATH.as_posix(),
+                "inputSha256": self.input_primary_catalog_sha256,
+                "reviewSha256": self.input_review_catalog_sha256,
+                "releasedSha256": _sha256_bytes(self.primary_catalog_bytes),
             },
             "approvedAudit": self.approved_audit.summary(),
             "releasedAudit": self.released_audit.summary(),
@@ -169,6 +180,135 @@ def _read_json(path: Path, *, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise PromotionError(f"{label} 根节点必须是 JSON object：{path}")
     return value
+
+
+def _strict_catalog_entries(
+    path: Path,
+    *,
+    label: str,
+) -> tuple[dict[str, Any], dict[str, dict[str, str]]]:
+    catalog = _read_json(path, label=label)
+    if set(catalog) != {"schemaVersion", "entries"}:
+        raise PromotionError(
+            f"{label} 必须恰好包含 schemaVersion/entries"
+        )
+    if catalog.get("schemaVersion") != 1:
+        raise PromotionError(f"{label}.schemaVersion 必须严格等于 1")
+    entries = catalog.get("entries")
+    if not isinstance(entries, list):
+        raise PromotionError(f"{label}.entries 必须是数组")
+    by_map_id: dict[str, dict[str, str]] = {}
+    for index, value in enumerate(entries):
+        entry_label = f"{label}.entries[{index}]"
+        if not isinstance(value, dict) or set(value) != {
+            "mapId",
+            "bundleManifest",
+            "bindingPath",
+        }:
+            raise PromotionError(
+                f"{entry_label} 必须恰好包含 mapId/bundleManifest/bindingPath"
+            )
+        map_id = value.get("mapId")
+        manifest_path = value.get("bundleManifest")
+        binding_path = value.get("bindingPath")
+        if (
+            not isinstance(map_id, str)
+            or not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", map_id)
+            or map_id in by_map_id
+        ):
+            raise PromotionError(f"{entry_label}.mapId 缺失、重复或无效")
+        if not all(
+            isinstance(path, str)
+            and path.startswith("res://")
+            and "\\" not in path
+            and ".." not in Path(path.removeprefix("res://")).parts
+            for path in (manifest_path, binding_path)
+        ):
+            raise PromotionError(f"{entry_label} 资源路径无效")
+        by_map_id[map_id] = {
+            "mapId": map_id,
+            "bundleManifest": manifest_path,
+            "bindingPath": binding_path,
+        }
+    return catalog, by_map_id
+
+
+def _prepare_primary_catalog_promotion(
+    source_bundle: Path,
+) -> tuple[bytes, str, str]:
+    """Freeze a full staged catalog that changes only this bundle's maps."""
+    godot_root = _find_godot_root(source_bundle)
+    manifest = _read_json(source_bundle / MANIFEST_NAME, label=MANIFEST_NAME)
+    map_ids_value = manifest.get("mapIds")
+    if (
+        not isinstance(map_ids_value, list)
+        or not map_ids_value
+        or not all(isinstance(value, str) and value for value in map_ids_value)
+    ):
+        raise PromotionError("manifest.mapIds 必须是非空字符串数组")
+    map_ids = set(map_ids_value)
+    primary_path = godot_root / PRIMARY_CATALOG_PATH
+    review_path = godot_root / REVIEW_CATALOG_PATH
+    _primary, primary_entries = _strict_catalog_entries(
+        primary_path,
+        label=PRIMARY_CATALOG_PATH.name,
+    )
+    _review, review_entries = _strict_catalog_entries(
+        review_path,
+        label=REVIEW_CATALOG_PATH.name,
+    )
+    expected_review_ids = set(primary_entries) | map_ids
+    if set(review_entries) != expected_review_ids:
+        raise PromotionError(
+            "review catalog 必须是完整的下一版正式目录；"
+            f"missing={sorted(expected_review_ids - set(review_entries))!r} "
+            f"extra={sorted(set(review_entries) - expected_review_ids)!r}"
+        )
+    for map_id, primary_entry in primary_entries.items():
+        if map_id not in map_ids and review_entries.get(map_id) != primary_entry:
+            raise PromotionError(
+                f"review catalog 不得改动本 bundle 之外的地图：{map_id}"
+            )
+
+    relative_bundle = source_bundle.resolve().relative_to(godot_root)
+    expected_manifest_path = (
+        "res://" + (relative_bundle / MANIFEST_NAME).as_posix()
+    )
+    manifest_bindings: dict[str, str] = {}
+    bindings = manifest.get("mapBindings")
+    if isinstance(bindings, list):
+        for value in bindings:
+            if not isinstance(value, dict):
+                continue
+            map_id = value.get("mapId")
+            binding = value.get("binding")
+            if (
+                isinstance(map_id, str)
+                and isinstance(binding, dict)
+                and isinstance(binding.get("path"), str)
+            ):
+                manifest_bindings[map_id] = "res://" + (
+                    relative_bundle / binding["path"]
+                ).as_posix()
+    for map_id in sorted(map_ids):
+        entry = review_entries.get(map_id)
+        if entry is None or entry.get("bundleManifest") != expected_manifest_path:
+            raise PromotionError(
+                f"review catalog 的 {map_id} 未精确指向待发布 manifest"
+            )
+        expected_binding = manifest_bindings.get(map_id)
+        if expected_binding is None or entry.get("bindingPath") != expected_binding:
+            raise PromotionError(
+                f"review catalog 的 {map_id} 未精确指向 manifest binding"
+            )
+
+    primary_bytes = primary_path.read_bytes()
+    review_bytes = review_path.read_bytes()
+    return (
+        review_bytes,
+        _sha256_bytes(primary_bytes),
+        _sha256_bytes(review_bytes),
+    )
 
 
 def _resolve_bundle(value: str) -> Path:
@@ -247,9 +387,14 @@ def _create_candidate_project(
         label="project.godot",
     )
     _copy_file_exact(
-        source_godot_root / "data/map_visual_catalog.json",
-        mirror_root / "data/map_visual_catalog.json",
-        label="map_visual_catalog.json",
+        source_godot_root / PRIMARY_CATALOG_PATH,
+        mirror_root / PRIMARY_CATALOG_PATH,
+        label=PRIMARY_CATALOG_PATH.name,
+    )
+    _copy_file_exact(
+        source_godot_root / REVIEW_CATALOG_PATH,
+        mirror_root / REVIEW_CATALOG_PATH,
+        label=REVIEW_CATALOG_PATH.name,
     )
     map_data_catalog = source_godot_root / "scripts/world/map_data_catalog.gd"
     _copy_file_exact(
@@ -485,6 +630,11 @@ def _prepare_candidate(
     source_manifest_path = source_bundle / MANIFEST_NAME
     source_manifest_bytes = source_manifest_path.read_bytes()
     godot_root = _find_godot_root(source_bundle)
+    (
+        primary_catalog_bytes,
+        input_primary_catalog_sha256,
+        input_review_catalog_sha256,
+    ) = _prepare_primary_catalog_promotion(source_bundle)
     with tempfile.TemporaryDirectory(
         prefix=f".{source_bundle.name}-release-candidate-",
         dir=godot_root,
@@ -543,6 +693,15 @@ def _prepare_candidate(
                 "加入 detached releaseAttestation 后 auditor files_checked "
                 "不是原集合加 attestation"
             )
+
+        candidate_godot_root = _find_godot_root(candidate_bundle)
+        _write_bytes(
+            candidate_godot_root / PRIMARY_CATALOG_PATH,
+            primary_catalog_bytes,
+        )
+        _fsync_directory(
+            (candidate_godot_root / PRIMARY_CATALOG_PATH).parent
+        )
 
         owner_acceptance = _build_owner_acceptance(
             bundle_id=attested_pending_audit.bundle_id,
@@ -604,6 +763,9 @@ def _prepare_candidate(
             manifest_bytes=released_manifest_bytes,
             owner_acceptance_bytes=owner_bytes,
             release_attestation_bytes=attestation_bytes,
+            input_primary_catalog_sha256=input_primary_catalog_sha256,
+            input_review_catalog_sha256=input_review_catalog_sha256,
+            primary_catalog_bytes=primary_catalog_bytes,
             approved_audit=approved_audit,
             released_audit=released_audit,
             release_summary_sha256=release_summary_sha,
@@ -730,6 +892,13 @@ def _verify_input_unchanged(
     )
     if current_files != candidate.input_files:
         raise PromotionError("准备候选后 auditor files_checked 集合已变化")
+    godot_root = _find_godot_root(bundle)
+    primary_path = godot_root / PRIMARY_CATALOG_PATH
+    review_path = godot_root / REVIEW_CATALOG_PATH
+    if _sha256_file(primary_path) != candidate.input_primary_catalog_sha256:
+        raise PromotionError("准备候选后正式地图目录已变化，拒绝应用")
+    if _sha256_file(review_path) != candidate.input_review_catalog_sha256:
+        raise PromotionError("准备候选后审核地图目录已变化，拒绝应用")
 
 
 def _restore_manifest(
@@ -753,6 +922,27 @@ def _restore_manifest(
         return False
 
 
+def _restore_primary_catalog(
+    catalog_path: Path,
+    original_catalog: bytes,
+) -> bool:
+    rollback = catalog_path.with_name(
+        f".{catalog_path.name}.map-release-rollback-{os.getpid()}.tmp"
+    )
+    try:
+        rollback.unlink(missing_ok=True)
+        _write_bytes(rollback, original_catalog)
+        os.replace(rollback, catalog_path)
+        _fsync_directory(catalog_path.parent)
+        return True
+    except (OSError, PromotionError):
+        try:
+            rollback.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return False
+
+
 def _atomic_apply(
     bundle: Path,
     candidate: PromotionCandidate,
@@ -762,9 +952,12 @@ def _atomic_apply(
     manifest_path = bundle / MANIFEST_NAME
     owner_path = bundle / OWNER_ACCEPTANCE_PATH
     attestation_path = bundle / RELEASE_ATTESTATION_PATH
+    godot_root = _find_godot_root(bundle)
+    primary_catalog_path = godot_root / PRIMARY_CATALOG_PATH
     _verify_input_unchanged(bundle, candidate)
 
     original_manifest = manifest_path.read_bytes()
+    original_primary_catalog = primary_catalog_path.read_bytes()
     support_writes = (
         (
             "attestation",
@@ -775,6 +968,7 @@ def _atomic_apply(
     )
     pending_support: list[tuple[str, Path, bytes, Path]] = []
     temporary_paths: list[Path] = []
+    catalog_committed = False
     manifest_committed = False
     try:
         for index, (label, path, payload) in enumerate(support_writes):
@@ -802,6 +996,15 @@ def _atomic_apply(
             raise PromotionError(f"临时文件已存在：{manifest_temp}")
         _write_bytes(manifest_temp, candidate.manifest_bytes)
         temporary_paths.append(manifest_temp)
+        catalog_temp: Path | None = None
+        if original_primary_catalog != candidate.primary_catalog_bytes:
+            catalog_temp = primary_catalog_path.with_name(
+                f".{primary_catalog_path.name}.map-release-{os.getpid()}-catalog.tmp"
+            )
+            if catalog_temp.exists():
+                raise PromotionError(f"临时文件已存在：{catalog_temp}")
+            _write_bytes(catalog_temp, candidate.primary_catalog_bytes)
+            temporary_paths.append(catalog_temp)
 
         for label, path, _payload, temp in pending_support:
             os.replace(temp, path)
@@ -809,11 +1012,20 @@ def _atomic_apply(
             if _fault_hook is not None:
                 _fault_hook(f"after_{label}_install")
 
+        if catalog_temp is not None:
+            os.replace(catalog_temp, primary_catalog_path)
+            catalog_committed = True
+            _fsync_directory(primary_catalog_path.parent)
+        if _fault_hook is not None:
+            _fault_hook("after_catalog_install")
+
         os.replace(manifest_temp, manifest_path)
         manifest_committed = True
         _fsync_directory(bundle)
-        # The manifest replacement is the commit point.  All referenced
-        # supporting files were durable before it became visible.
+        # The manifest replacement is the commit point.  The staged catalog
+        # is fail-closed while it still points at a pending manifest, and all
+        # referenced supporting files were durable before release became
+        # visible.
         if _fault_hook is not None:
             _fault_hook("after_manifest_commit")
         validate_current_release(bundle)
@@ -824,15 +1036,24 @@ def _atomic_apply(
                 temp.unlink(missing_ok=True)
             except OSError:
                 pass
-        if manifest_committed and not _restore_manifest(
-            manifest_path, original_manifest
+        if manifest_committed:
+            if not _restore_manifest(manifest_path, original_manifest):
+                # Keep the promoted catalog and support records together with
+                # a possibly released manifest.  A subsequent --check-only
+                # can determine whether the committed candidate is valid.
+                raise PromotionError(
+                    "manifest 已提交但回滚失败；已保留 promoted catalog/"
+                    "attestation/owner 以避免 released 引用错配。"
+                    f"原始错误：{error}"
+                ) from error
+        if catalog_committed and not _restore_primary_catalog(
+            primary_catalog_path, original_primary_catalog
         ):
-            # Never remove the support records while a released manifest may
-            # still reference them.  A subsequent --check-only can determine
-            # whether the committed candidate is already valid.
+            # The restored pending manifest rejects the candidate art, so this
+            # is fail-closed even though the old released catalog needs repair.
             raise PromotionError(
-                "manifest 已提交但回滚失败；已保留 attestation/owner "
-                f"以避免 released 引用悬空。原始错误：{error}"
+                "manifest 已回滚，但正式地图目录回滚失败；当前仍会按 pending "
+                f"生命周期拒绝候选。原始错误：{error}"
             ) from error
         # Exact installed support files are deliberately retained.  A retry
         # with the same frozen inputs is idempotent and resumes safely.

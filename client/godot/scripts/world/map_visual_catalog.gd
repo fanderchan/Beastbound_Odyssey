@@ -12,6 +12,10 @@ const STATUS_OWNER_REVIEW_PENDING := "owner_review_pending"
 const STATUS_RELEASED := "released"
 const OWNER_REVIEW_PENDING := "pending"
 const OWNER_REVIEW_APPROVED := "approved"
+const GROUND_RENDER_MODE_SINGLE := "single_layer"
+const GROUND_RENDER_MODE_LAYERED := "layered_semantic_overlay"
+const BLOCKED_VISUAL_MODE_TILE := "blocked_tile"
+const BLOCKED_VISUAL_MODE_INHERIT := "inherit_surface"
 const RELEASE_ATTESTATION_PATH := "release-attestation.json"
 const RELEASE_ATTESTATION_TYPE := "beastbound_map_runtime_release_attestation"
 const RELEASE_ATTESTATION_STATUS := "passed"
@@ -219,6 +223,15 @@ static func _prepare_map(
 		tile_variant_config,
 		errors
 	)
+	var layered_ground_state := _build_layered_ground_draws(
+		map_id,
+		map_data,
+		ground_rules,
+		ground_state,
+		tile_rects,
+		tile_variant_config,
+		errors
+	)
 	var protected_lookup := _build_protected_lookup(
 		map_data,
 		ground_state.get("pathLookup", {}) as Dictionary,
@@ -281,6 +294,11 @@ static func _prepare_map(
 		"atlasTexture": atlas_texture,
 		"groundDraws": ground_draws,
 		"edgeGroundDraws": edge_ground_draws,
+		"groundRenderMode": str(
+			layered_ground_state.get("mode", GROUND_RENDER_MODE_SINGLE)
+		),
+		"baseGroundDraws": layered_ground_state.get("baseDraws", []),
+		"overlayGroundDraws": layered_ground_state.get("overlayDraws", []),
 		"tileIdsByCell": tile_ids_by_cell,
 		"semanticTileIdsByCell": semantic_tile_ids_by_cell,
 		"tileCounts": ground_state.get("tileCounts", {}),
@@ -397,7 +415,14 @@ static func _select_catalog_entry(
 		errors.append_array(review_errors)
 		return {}
 	if review_entries.has(map_id):
-		return {"source": "review", "entry": (review_entries.get(map_id, {}) as Dictionary).duplicate(true)}
+		var review_entry := review_entries.get(map_id, {}) as Dictionary
+		var normal_entry := normal_entries.get(map_id, {}) as Dictionary
+		# The review catalog is a complete staged next-primary snapshot so its
+		# byte hash can remain frozen across promotion.  Unchanged entries are
+		# exact mirrors and must stay on the released normal path in QA preview.
+		if normal_entries.has(map_id) and review_entry == normal_entry:
+			return {"source": "normal", "entry": normal_entry.duplicate(true)}
+		return {"source": "review", "entry": review_entry.duplicate(true)}
 	if not normal_entries.has(map_id):
 		return {}
 	return {"source": "normal", "entry": (normal_entries.get(map_id, {}) as Dictionary).duplicate(true)}
@@ -899,6 +924,101 @@ static func _validate_ground_tile_ids(
 		var edge_tile_id := str(ground.get("edgeTileId", ""))
 		if edge_tile_id == "" or not tile_rects.has(edge_tile_id):
 			errors.append("地图视觉 ground.edgeTileId 未解析到 tile：%s" % edge_tile_id)
+	if ground.has("layeredBaseTileId"):
+		var layered_base_tile_id := str(ground.get("layeredBaseTileId", ""))
+		if layered_base_tile_id == "" or not tile_rects.has(layered_base_tile_id):
+			errors.append(
+				"地图视觉 ground.layeredBaseTileId 未解析到 tile：%s"
+				% layered_base_tile_id
+			)
+		elif layered_base_tile_id != str(ground.get("defaultTileId", "")):
+			errors.append("地图视觉 layeredBaseTileId 必须等于 defaultTileId")
+	var blocked_visual_mode := str(
+		ground.get("blockedVisualMode", BLOCKED_VISUAL_MODE_TILE)
+	)
+	if not [BLOCKED_VISUAL_MODE_TILE, BLOCKED_VISUAL_MODE_INHERIT].has(blocked_visual_mode):
+		errors.append("地图视觉 ground.blockedVisualMode 只接受 blocked_tile/inherit_surface")
+
+
+static func _build_layered_ground_draws(
+	map_id: String,
+	map_data: Dictionary,
+	ground: Dictionary,
+	ground_state: Dictionary,
+	tile_rects: Dictionary,
+	variant_config: Dictionary,
+	errors: Array[String]
+) -> Dictionary:
+	if not ground.has("layeredBaseTileId"):
+		return {
+			"mode": GROUND_RENDER_MODE_SINGLE,
+			"baseDraws": [],
+			"overlayDraws": [],
+		}
+	var base_tile_id := str(ground.get("layeredBaseTileId", ""))
+	if base_tile_id == "" or not tile_rects.has(base_tile_id):
+		return {
+			"mode": GROUND_RENDER_MODE_SINGLE,
+			"baseDraws": [],
+			"overlayDraws": [],
+		}
+
+	var base_pool_value: Variant = (
+		variant_config.get("pools", {}) as Dictionary
+	).get(base_tile_id, [base_tile_id])
+	var base_pool: Array = base_pool_value as Array if base_pool_value is Array else [base_tile_id]
+	var tile_ids_by_cell := ground_state.get("tileIdsByCell", {}) as Dictionary
+	var semantic_ids_by_cell := ground_state.get("semanticTileIdsByCell", {}) as Dictionary
+	var grid_size := IsoMapModel.grid_size(map_data)
+	var base_draws: Array[Dictionary] = []
+	var overlay_draws: Array[Dictionary] = []
+	for y in range(grid_size.y):
+		for x in range(grid_size.x):
+			var cell := Vector2i(x, y)
+			var key := IsoMapModel.cell_key(cell)
+			var selected_base_tile_id := _select_tile_variant(
+				map_id,
+				cell,
+				base_tile_id,
+				variant_config
+			)
+			if not tile_rects.has(selected_base_tile_id):
+				errors.append(
+					"分层地表 base tile 未解析：%s/%s" % [key, selected_base_tile_id]
+				)
+				continue
+			var center := IsoMapModel.grid_to_world(map_data, cell)
+			var destination := Rect2(
+				center - Vector2(TILE_SIZE) * 0.5,
+				Vector2(TILE_SIZE)
+			)
+			base_draws.append({
+				"cell": cell,
+				"tileId": selected_base_tile_id,
+				"semanticTileId": base_tile_id,
+				"destination": destination,
+				"source": tile_rects.get(selected_base_tile_id, Rect2()) as Rect2,
+			})
+
+			var semantic_tile_id := str(semantic_ids_by_cell.get(key, ""))
+			var visual_tile_id := str(tile_ids_by_cell.get(key, ""))
+			if base_pool.has(semantic_tile_id) or base_pool.has(visual_tile_id):
+				continue
+			if not tile_rects.has(visual_tile_id):
+				errors.append("分层地表 overlay tile 未解析：%s/%s" % [key, visual_tile_id])
+				continue
+			overlay_draws.append({
+				"cell": cell,
+				"tileId": visual_tile_id,
+				"semanticTileId": semantic_tile_id,
+				"destination": destination,
+				"source": tile_rects.get(visual_tile_id, Rect2()) as Rect2,
+			})
+	return {
+		"mode": GROUND_RENDER_MODE_LAYERED,
+		"baseDraws": base_draws,
+		"overlayDraws": overlay_draws,
+	}
 
 
 static func _compile_ground_tile_variants(
@@ -1137,6 +1257,9 @@ static func _build_ground_state(
 	# Interaction blockers (NPCs, signs, record points) keep the surrounding
 	# plaza/encounter material and remain independently rendered actors.
 	var blocked_lookup: Dictionary = IsoMapModel.blocked_lookup(map_data)
+	var blocked_visual_mode := str(
+		ground.get("blockedVisualMode", BLOCKED_VISUAL_MODE_TILE)
+	)
 
 	var tile_ids_by_cell: Dictionary = {}
 	var tile_counts: Dictionary = {}
@@ -1154,7 +1277,7 @@ static func _build_ground_state(
 				semantic_tile_id = str(ground.get("plazaTileId", semantic_tile_id))
 			if encounter_lookup.has(key):
 				semantic_tile_id = str(ground.get("encounterTileId", semantic_tile_id))
-			if blocked_lookup.has(key):
+			if blocked_lookup.has(key) and blocked_visual_mode == BLOCKED_VISUAL_MODE_TILE:
 				semantic_tile_id = str(ground.get("blockedTileId", semantic_tile_id))
 			if warp_lookup.has(key):
 				semantic_tile_id = str(ground.get("warpTileId", semantic_tile_id))

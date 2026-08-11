@@ -1251,6 +1251,7 @@ static func _validate_raw_object_contract(
 	var grid_size := IsoMapModel.grid_size(map_data)
 	var ground := binding.get("ground", {}) as Dictionary
 	var edge_padding_value: Variant = ground.get("edgePaddingCells", 0)
+	var covered_blocked: Dictionary = {}
 	for value in binding.get("objectPlacements", []):
 		if not (value is Dictionary):
 			errors.append("独立检查：objectPlacement 不是对象：%s" % map_id)
@@ -1306,6 +1307,8 @@ static func _validate_raw_object_contract(
 			for key in footprint_keys:
 				if not authoritative_blocked.has(key):
 					errors.append("独立检查：blocking footprint 未绑定 blockedCells：%s/%s/%s" % [map_id, instance_id, key])
+				else:
+					covered_blocked[key] = true
 		elif role == "none" or role == "decorative":
 			if not footprint_keys.is_empty():
 				errors.append("独立检查：none/decorative footprint 非空：%s/%s" % [map_id, instance_id])
@@ -1320,9 +1323,14 @@ static func _validate_raw_object_contract(
 				placement.get("interactionLink"),
 				collision_mode,
 				footprint_keys,
-				authoritative_blocked,
-				errors
-			)
+					authoritative_blocked,
+					errors
+				)
+	if str(ground.get("blockedVisualMode", "blocked_tile")) == "inherit_surface":
+		for key_value in authoritative_blocked.keys():
+			var key := str(key_value)
+			if not covered_blocked.has(key):
+				errors.append("独立检查：inherit_surface 留下未被物件覆盖的阻挡格：%s/%s" % [map_id, key])
 
 
 static func _footprint_near_grid(grid: Vector2i, footprint_cells: Array[Vector2i]) -> bool:
@@ -1503,6 +1511,15 @@ static func _validate_prepared_map(
 			errors.append("地表 destination 不是 80x40：%s/%s" % [map_id, key])
 		if not (source is Rect2) or Vector2i((source as Rect2).size) != TILE_SIZE:
 			errors.append("地表 atlas source 不是 80x40：%s/%s" % [map_id, key])
+	_validate_layered_ground_draws(
+		map_id,
+		map_data,
+		prepared,
+		ground,
+		variant_config,
+		ground_draws,
+		errors
+	)
 
 	var edge_padding := int(ground.get("edgePaddingCells", 0))
 	var edge_draws: Array = prepared.get("edgeGroundDraws", [])
@@ -1563,6 +1580,116 @@ static func _validate_prepared_map(
 	_validate_object_footprints(map_id, map_data, prepared, errors)
 
 
+static func _validate_layered_ground_draws(
+	map_id: String,
+	map_data: Dictionary,
+	prepared: Dictionary,
+	ground: Dictionary,
+	variant_config: Dictionary,
+	ground_draws: Array,
+	errors: Array[String]
+) -> void:
+	var mode := str(prepared.get("groundRenderMode", ""))
+	var base_value: Variant = prepared.get("baseGroundDraws", [])
+	var overlay_value: Variant = prepared.get("overlayGroundDraws", [])
+	if not (base_value is Array) or not (overlay_value is Array):
+		errors.append("prepared 分层地表命令必须是数组：%s" % map_id)
+		return
+	var base_draws := base_value as Array
+	var overlay_draws := overlay_value as Array
+	if not ground.has("layeredBaseTileId"):
+		if mode != "single_layer" or not base_draws.is_empty() or not overlay_draws.is_empty():
+			errors.append("未声明分层地表的地图生成了分层命令：%s" % map_id)
+		return
+	if mode != "layered_semantic_overlay":
+		errors.append("声明分层地表的地图没有进入 layered_semantic_overlay：%s" % map_id)
+
+	var grid_size := IsoMapModel.grid_size(map_data)
+	if base_draws.size() != grid_size.x * grid_size.y:
+		errors.append("分层地表 base 命令没有覆盖完整网格：%s" % map_id)
+	var base_tile_id := str(ground.get("layeredBaseTileId", ""))
+	var base_pool_value: Variant = (
+		variant_config.get("pools", {}) as Dictionary
+	).get(base_tile_id, [base_tile_id])
+	var base_pool: Array = base_pool_value as Array if base_pool_value is Array else [base_tile_id]
+	var base_by_cell: Dictionary = {}
+	for value in base_draws:
+		if not (value is Dictionary):
+			errors.append("分层地表 base 命令不是对象：%s" % map_id)
+			continue
+		var command := value as Dictionary
+		var cell_value: Variant = command.get("cell")
+		if not (cell_value is Vector2i) or not IsoMapModel.is_inside(map_data, cell_value as Vector2i):
+			errors.append("分层地表 base 命令格子越界：%s" % map_id)
+			continue
+		var cell := cell_value as Vector2i
+		var key := IsoMapModel.cell_key(cell)
+		if base_by_cell.has(key):
+			errors.append("分层地表 base 命令格子重复：%s/%s" % [map_id, key])
+		base_by_cell[key] = command
+		var expected_tile_id := MapVisualCatalog._select_tile_variant(
+			map_id,
+			cell,
+			base_tile_id,
+			variant_config
+		)
+		if (
+			str(command.get("semanticTileId", "")) != base_tile_id
+			or str(command.get("tileId", "")) != expected_tile_id
+		):
+			errors.append("分层地表 base 语义或变体错误：%s/%s" % [map_id, key])
+		var destination: Variant = command.get("destination")
+		var source: Variant = command.get("source")
+		if not (destination is Rect2) or Vector2i((destination as Rect2).size) != TILE_SIZE:
+			errors.append("分层地表 base destination 不是 80x40：%s/%s" % [map_id, key])
+		if not (source is Rect2) or Vector2i((source as Rect2).size) != TILE_SIZE:
+			errors.append("分层地表 base source 不是 80x40：%s/%s" % [map_id, key])
+
+	var expected_overlays: Dictionary = {}
+	for value in ground_draws:
+		if not (value is Dictionary):
+			continue
+		var command := value as Dictionary
+		var cell_value: Variant = command.get("cell")
+		if not (cell_value is Vector2i):
+			continue
+		var semantic_tile_id := str(command.get("semanticTileId", ""))
+		var visual_tile_id := str(command.get("tileId", ""))
+		if base_pool.has(semantic_tile_id) or base_pool.has(visual_tile_id):
+			continue
+		expected_overlays[IsoMapModel.cell_key(cell_value as Vector2i)] = command
+	if overlay_draws.size() != expected_overlays.size():
+		errors.append(
+			"分层地表 overlay 命令数与非 base 语义格不一致：%s expected=%d actual=%d"
+			% [map_id, expected_overlays.size(), overlay_draws.size()]
+		)
+	var overlay_seen: Dictionary = {}
+	for value in overlay_draws:
+		if not (value is Dictionary):
+			errors.append("分层地表 overlay 命令不是对象：%s" % map_id)
+			continue
+		var command := value as Dictionary
+		var cell_value: Variant = command.get("cell")
+		if not (cell_value is Vector2i) or not IsoMapModel.is_inside(map_data, cell_value as Vector2i):
+			errors.append("分层地表 overlay 命令格子越界：%s" % map_id)
+			continue
+		var key := IsoMapModel.cell_key(cell_value as Vector2i)
+		if overlay_seen.has(key):
+			errors.append("分层地表 overlay 命令格子重复：%s/%s" % [map_id, key])
+		overlay_seen[key] = true
+		if not expected_overlays.has(key):
+			errors.append("分层地表 overlay 污染 base 语义格：%s/%s" % [map_id, key])
+			continue
+		var expected := expected_overlays.get(key, {}) as Dictionary
+		for field in ["tileId", "semanticTileId", "destination", "source"]:
+			if command.get(field) != expected.get(field):
+				errors.append("分层地表 overlay 与语义命令不一致：%s/%s/%s" % [map_id, key, field])
+	for key_value in expected_overlays.keys():
+		var key := str(key_value)
+		if not overlay_seen.has(key):
+			errors.append("分层地表 overlay 缺少语义格：%s/%s" % [map_id, key])
+
+
 static func _validate_ground_priority(
 	map_id: String,
 	map_data: Dictionary,
@@ -1589,7 +1716,10 @@ static func _validate_ground_priority(
 				expected = str(ground.get("plazaTileId", expected))
 			if encounter.has(key):
 				expected = str(ground.get("encounterTileId", expected))
-			if blocked.has(key):
+			if (
+				blocked.has(key)
+				and str(ground.get("blockedVisualMode", "blocked_tile")) == "blocked_tile"
+			):
 				expected = str(ground.get("blockedTileId", expected))
 			if warp.has(key):
 				expected = str(ground.get("warpTileId", expected))
@@ -1654,6 +1784,7 @@ static func _validate_object_footprints(
 	var ground := prepared.get("groundRules", {}) as Dictionary
 	var edge_padding_value: Variant = ground.get("edgePaddingCells", 0)
 	var seen_instances: Dictionary = {}
+	var covered_blocked: Dictionary = {}
 	for layer in MapVisualCatalog.RENDER_LAYERS:
 		for command in MapVisualCatalog.prepared_objects(prepared, layer):
 			var instance_id := str(command.get("instanceId", ""))
@@ -1691,12 +1822,19 @@ static func _validate_object_footprints(
 				if role == "blocking":
 					if not authoritative_blocked.has(key):
 						errors.append("blocking 物件碰撞格不属于权威 blockedCells：%s/%s/%s" % [map_id, instance_id, key])
+					else:
+						covered_blocked[key] = true
 					if protected.has(key):
 						errors.append("blocking 物件碰撞格侵入保护格：%s/%s/%s" % [map_id, instance_id, key])
 				elif role == "interaction" and not linked.is_empty():
 					var interaction_key := IsoMapModel.cell_key(_cell(linked.get("cell")))
 					if key != interaction_key and not authoritative_blocked.has(key):
 						errors.append("interaction 物件 footprint 未绑定 interaction/blockedCells：%s/%s/%s" % [map_id, instance_id, key])
+	if str(ground.get("blockedVisualMode", "blocked_tile")) == "inherit_surface":
+		for key_value in authoritative_blocked.keys():
+			var key := str(key_value)
+			if not covered_blocked.has(key):
+				errors.append("inherit_surface 地图存在未被 blocking 物件覆盖的阻挡格：%s/%s" % [map_id, key])
 
 
 static func _independent_ground_lookups(

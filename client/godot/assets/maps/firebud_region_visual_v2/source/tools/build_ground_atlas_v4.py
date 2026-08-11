@@ -1,0 +1,487 @@
+#!/usr/bin/env python3
+"""Build the Firebud v2 layered 12-tile ground atlas deterministically.
+
+The generated 2x2 material source supplies quiet grass, clay, flagstone, and
+root-soil surfaces. The existing generated semantic sheet supplies the tall
+grass and warp identities. Base meadow tiles use a small same-material bleed
+to prevent raster seams. Semantic tiles use a feathered alpha matte so Godot
+can draw them over the meadow base without exposing the grid as hard diamonds.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import tempfile
+from pathlib import Path
+
+from PIL import (
+    Image,
+    ImageEnhance,
+    ImageFilter,
+    ImageOps,
+    ImageStat,
+    __version__ as PILLOW_VERSION,
+)
+
+
+SCRIPT_VERSION = "1.0.0"
+TILE_SIZE = (80, 40)
+ATLAS_COLUMNS = 4
+TILE_ORDER = (
+    "firebud_meadow_a",
+    "firebud_ochre_path_a",
+    "firebud_honey_stone_a",
+    "firebud_dark_root_soil_a",
+    "firebud_meadow_b",
+    "firebud_meadow_dry_b",
+    "firebud_meadow_clover_c",
+    "firebud_meadow_far",
+    "firebud_ochre_path_worn_b",
+    "firebud_honey_stone_moss_b",
+    "firebud_tall_grass_encounter",
+    "firebud_warp_stone",
+)
+
+
+class BuildError(ValueError):
+    """Raised when an input or output violates the frozen build contract."""
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def portable_path(path: Path) -> str:
+    """Prefer a repository-relative path while retaining external diagnostics."""
+
+    try:
+        return path.relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def open_rgba(path: Path, label: str) -> Image.Image:
+    if not path.is_file():
+        raise BuildError(f"{label} does not exist: {path}")
+    with Image.open(path) as opened:
+        opened.load()
+        if opened.format != "PNG":
+            raise BuildError(f"{label} must be PNG, got {opened.format!r}")
+        if opened.width < 512 or opened.height < 512:
+            raise BuildError(f"{label} is too small: {opened.width}x{opened.height}")
+        return opened.convert("RGBA")
+
+
+def quadrant(image: Image.Image, column: int, row: int) -> Image.Image:
+    left = image.width * column // 2
+    top = image.height * row // 2
+    right = image.width * (column + 1) // 2
+    bottom = image.height * (row + 1) // 2
+    return image.crop((left, top, right, bottom))
+
+
+def centered_crop(
+    image: Image.Image,
+    offset_x: int,
+    offset_y: int,
+    crop_margin: int,
+) -> Image.Image:
+    crop_size = min(image.width, image.height) - crop_margin
+    if crop_size < 256:
+        raise BuildError("material quadrant does not permit the frozen safe crop")
+    travel_x = image.width - crop_size
+    travel_y = image.height - crop_size
+    left = max(0, min(travel_x, travel_x // 2 + offset_x))
+    top = max(0, min(travel_y, travel_y // 2 + offset_y))
+    return image.crop((left, top, left + crop_size, top + crop_size))
+
+
+def tint(image: Image.Image, color: tuple[int, int, int], amount: float) -> Image.Image:
+    alpha = image.getchannel("A")
+    rgb = image.convert("RGB")
+    wash = Image.new("RGB", image.size, color)
+    result = Image.blend(rgb, wash, amount).convert("RGBA")
+    result.putalpha(alpha)
+    return result
+
+
+def recolor_luminance(
+    image: Image.Image,
+    dark: tuple[int, int, int],
+    light: tuple[int, int, int],
+    amount: float,
+) -> Image.Image:
+    alpha = image.getchannel("A")
+    rgb = image.convert("RGB")
+    graded = ImageOps.colorize(ImageOps.grayscale(rgb), black=dark, white=light)
+    result = Image.blend(rgb, graded, amount).convert("RGBA")
+    result.putalpha(alpha)
+    return result
+
+
+def diamond_mask(*, overlay: bool) -> Image.Image:
+    width, height = TILE_SIZE
+    mask = Image.new("L", TILE_SIZE, 0)
+    pixels = mask.load()
+    for y in range(height):
+        for x in range(width):
+            distance = abs((x + 0.5 - width / 2.0) / (width / 2.0)) + abs(
+                (y + 0.5 - height / 2.0) / (height / 2.0)
+            )
+            if overlay:
+                if distance <= 0.82:
+                    alpha = 238
+                elif distance <= 1.06:
+                    alpha = round(238.0 - (distance - 0.82) / 0.24 * 42.0)
+                elif distance >= 1.18:
+                    alpha = 0
+                else:
+                    alpha = round(196.0 * (1.18 - distance) / 0.12)
+            else:
+                if distance <= 1.12:
+                    alpha = 255
+                elif distance >= 1.22:
+                    alpha = 0
+                else:
+                    alpha = round(255.0 * (1.22 - distance) / 0.10)
+            pixels[x, y] = max(0, min(255, alpha))
+    return mask
+
+
+def material_tile(
+    source: Image.Image,
+    *,
+    offset: tuple[int, int] = (0, 0),
+    color_tint: tuple[tuple[int, int, int], float] | None = None,
+    contrast: float = 1.0,
+    brightness: float = 1.0,
+    luminance_palette: (
+        tuple[tuple[int, int, int], tuple[int, int, int], float] | None
+    ) = None,
+    crop_margin: int = 96,
+    overlay: bool,
+    opacity: float = 1.0,
+) -> Image.Image:
+    crop = centered_crop(source, offset[0], offset[1], crop_margin)
+    tile = crop.resize(TILE_SIZE, Image.Resampling.LANCZOS)
+    if contrast != 1.0:
+        tile = ImageEnhance.Contrast(tile).enhance(contrast)
+    if brightness != 1.0:
+        tile = ImageEnhance.Brightness(tile).enhance(brightness)
+    if luminance_palette is not None:
+        tile = recolor_luminance(
+            tile,
+            luminance_palette[0],
+            luminance_palette[1],
+            luminance_palette[2],
+        )
+    if color_tint is not None:
+        tile = tint(tile, color_tint[0], color_tint[1])
+    if not 0.0 < opacity <= 1.0:
+        raise BuildError("tile opacity must be within (0, 1]")
+    mask = diamond_mask(overlay=overlay)
+    if opacity != 1.0:
+        mask = mask.point(lambda value: round(value * opacity))
+    tile.putalpha(mask)
+    return tile
+
+
+def semantic_tile(
+    source: Image.Image,
+    *,
+    column: int,
+    row: int,
+    color_tint: tuple[int, int, int],
+    tint_amount: float,
+    saturation: float,
+    brightness: float,
+) -> Image.Image:
+    cell = quadrant(source, column, row)
+    alpha_bbox = cell.getchannel("A").getbbox()
+    if alpha_bbox is None:
+        raise BuildError(f"semantic cell {column},{row} has no visible alpha")
+    tile = cell.crop(alpha_bbox).convert("RGBa").resize(
+        TILE_SIZE, Image.Resampling.LANCZOS
+    ).convert("RGBA")
+    alpha = tile.getchannel("A")
+    tile = ImageEnhance.Color(tile).enhance(saturation)
+    tile = ImageEnhance.Brightness(tile).enhance(brightness)
+    tile = tint(tile, color_tint, tint_amount)
+    combined_alpha = Image.new("L", TILE_SIZE, 0)
+    semantic_pixels = alpha.load()
+    feather_pixels = diamond_mask(overlay=True).load()
+    combined_pixels = combined_alpha.load()
+    for y in range(TILE_SIZE[1]):
+        for x in range(TILE_SIZE[0]):
+            combined_pixels[x, y] = min(semantic_pixels[x, y], feather_pixels[x, y])
+    tile.putalpha(combined_alpha)
+    return tile
+
+
+def alpha_stats(image: Image.Image) -> dict[str, int]:
+    alpha = image.getchannel("A")
+    histogram = alpha.histogram()
+    return {
+        "transparentPixels": histogram[0],
+        "opaquePixels": histogram[255],
+        "partialAlphaPixels": sum(histogram[1:255]),
+    }
+
+
+def build_tiles(materials: Image.Image, semantics: Image.Image) -> dict[str, Image.Image]:
+    meadow = quadrant(materials, 0, 0)
+    clay = quadrant(materials, 1, 0)
+    stone = quadrant(materials, 0, 1)
+    soil = quadrant(materials, 1, 1)
+
+    tiles = {
+        "firebud_meadow_a": material_tile(
+            meadow,
+            offset=(-22, -18),
+            contrast=0.82,
+            brightness=0.95,
+            luminance_palette=((40, 60, 44), (145, 166, 105), 0.88),
+            overlay=False,
+        ),
+        "firebud_ochre_path_a": material_tile(
+            clay,
+            offset=(-18, 14),
+            contrast=0.98,
+            brightness=0.90,
+            luminance_palette=((78, 46, 31), (197, 132, 78), 0.84),
+            crop_margin=260,
+            overlay=True,
+        ),
+        "firebud_honey_stone_a": material_tile(
+            stone,
+            offset=(16, -14),
+            contrast=0.92,
+            brightness=0.89,
+            luminance_palette=((73, 66, 49), (199, 182, 126), 0.80),
+            crop_margin=190,
+            overlay=True,
+        ),
+        "firebud_dark_root_soil_a": material_tile(
+            soil,
+            offset=(12, 18),
+            contrast=0.78,
+            brightness=0.94,
+            luminance_palette=((72, 55, 43), (151, 116, 82), 0.62),
+            crop_margin=170,
+            overlay=True,
+            opacity=0.32,
+        ),
+        "firebud_meadow_b": material_tile(
+            meadow,
+            offset=(24, -8),
+            contrast=0.82,
+            brightness=0.95,
+            luminance_palette=((40, 60, 44), (145, 166, 105), 0.88),
+            overlay=False,
+        ),
+        "firebud_meadow_dry_b": material_tile(
+            meadow,
+            offset=(-8, 24),
+            contrast=0.82,
+            brightness=0.95,
+            luminance_palette=((42, 60, 43), (147, 164, 102), 0.88),
+            overlay=False,
+        ),
+        "firebud_meadow_clover_c": material_tile(
+            meadow,
+            offset=(22, 22),
+            contrast=0.82,
+            brightness=0.95,
+            luminance_palette=((38, 60, 45), (141, 168, 106), 0.88),
+            overlay=False,
+        ),
+        "firebud_meadow_far": material_tile(
+            meadow,
+            offset=(0, 0),
+            contrast=0.72,
+            brightness=0.85,
+            luminance_palette=((32, 48, 38), (111, 132, 85), 0.92),
+            overlay=False,
+        ).filter(ImageFilter.GaussianBlur(radius=0.55)),
+        "firebud_ochre_path_worn_b": material_tile(
+            clay,
+            offset=(22, -16),
+            contrast=0.95,
+            brightness=0.90,
+            luminance_palette=((79, 47, 32), (196, 131, 78), 0.84),
+            crop_margin=260,
+            overlay=True,
+        ),
+        "firebud_honey_stone_moss_b": material_tile(
+            stone,
+            offset=(-20, 18),
+            contrast=0.90,
+            brightness=0.89,
+            luminance_palette=((74, 67, 50), (197, 180, 124), 0.80),
+            crop_margin=190,
+            overlay=True,
+        ),
+        "firebud_tall_grass_encounter": semantic_tile(
+            semantics,
+            column=0,
+            row=1,
+            color_tint=(62, 91, 43),
+            tint_amount=0.42,
+            saturation=0.72,
+            brightness=0.76,
+        ),
+        "firebud_warp_stone": semantic_tile(
+            semantics,
+            column=1,
+            row=1,
+            color_tint=(164, 135, 78),
+            tint_amount=0.24,
+            saturation=0.64,
+            brightness=0.78,
+        ),
+    }
+    if tuple(tiles) != TILE_ORDER:
+        raise BuildError("internal tile order drifted from the runtime contract")
+    return tiles
+
+
+def save_png_atomic(image: Image.Image, destination: Path, overwrite: bool) -> None:
+    if destination.exists() and not overwrite:
+        raise BuildError(f"output already exists: {destination}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
+    )
+    os.close(fd)
+    temporary = Path(temporary_name)
+    try:
+        image.save(temporary, format="PNG", optimize=False, compress_level=9)
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def write_json_atomic(payload: dict, destination: Path, overwrite: bool) -> None:
+    if destination.exists() and not overwrite:
+        raise BuildError(f"manifest already exists: {destination}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    rendered = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+    fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(rendered)
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def build(args: argparse.Namespace) -> dict:
+    materials_path = args.materials.resolve()
+    semantics_path = args.semantics.resolve()
+    output_path = args.output.resolve()
+    manifest_path = args.manifest.resolve()
+    if output_path == manifest_path:
+        raise BuildError("atlas output and manifest must be different paths")
+
+    materials = open_rgba(materials_path, "materials source")
+    semantics = open_rgba(semantics_path, "semantic source")
+    tiles = build_tiles(materials, semantics)
+    atlas = Image.new("RGBA", (TILE_SIZE[0] * ATLAS_COLUMNS, TILE_SIZE[1] * 3), (0, 0, 0, 0))
+    for index, tile_id in enumerate(TILE_ORDER):
+        row, column = divmod(index, ATLAS_COLUMNS)
+        atlas.alpha_composite(tiles[tile_id], (column * TILE_SIZE[0], row * TILE_SIZE[1]))
+    save_png_atomic(atlas, output_path, args.overwrite)
+
+    tile_entries = []
+    for index, tile_id in enumerate(TILE_ORDER):
+        row, column = divmod(index, ATLAS_COLUMNS)
+        tile_entries.append(
+            {
+                "tileId": tile_id,
+                "atlasRect": [column * TILE_SIZE[0], row * TILE_SIZE[1], *TILE_SIZE],
+                "alpha": alpha_stats(tiles[tile_id]),
+                "meanRgba": [round(value, 3) for value in ImageStat.Stat(tiles[tile_id]).mean],
+            }
+        )
+    payload = {
+        "schemaVersion": 1,
+        "reportType": "beastbound.firebud_ground_atlas_build",
+        "scriptVersion": SCRIPT_VERSION,
+        "pillowVersion": PILLOW_VERSION,
+        "materialsSource": {
+            "path": portable_path(materials_path),
+            "sha256": sha256(materials_path),
+            "dimensions": list(materials.size),
+        },
+        "semanticSource": {
+            "path": portable_path(semantics_path),
+            "sha256": sha256(semantics_path),
+            "dimensions": list(semantics.size),
+        },
+        "atlas": {
+            "path": portable_path(output_path),
+            "sha256": sha256(output_path),
+            "dimensions": list(atlas.size),
+            "tileSize": list(TILE_SIZE),
+            "columns": ATLAS_COLUMNS,
+        },
+        "renderContract": {
+            "mode": "layered_semantic_overlay",
+            "baseTiles": [
+                "firebud_meadow_a",
+                "firebud_meadow_b",
+                "firebud_meadow_dry_b",
+                "firebud_meadow_clover_c",
+                "firebud_meadow_far",
+            ],
+            "semanticOverlays": [
+                tile_id
+                for tile_id in TILE_ORDER
+                if tile_id
+                not in {
+                    "firebud_meadow_a",
+                    "firebud_meadow_b",
+                    "firebud_meadow_dry_b",
+                    "firebud_meadow_clover_c",
+                    "firebud_meadow_far",
+                }
+            ],
+        },
+        "tiles": tile_entries,
+    }
+    write_json_atomic(payload, manifest_path, args.overwrite)
+    return payload
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--materials", type=Path, required=True)
+    parser.add_argument("--semantics", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--overwrite", action="store_true")
+    return parser.parse_args()
+
+
+def main() -> int:
+    try:
+        payload = build(parse_args())
+    except (BuildError, OSError) as error:
+        print(f"ERROR: {error}")
+        return 1
+    print(json.dumps(payload["atlas"], ensure_ascii=False, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

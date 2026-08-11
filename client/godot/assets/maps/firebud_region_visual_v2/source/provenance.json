@@ -10,7 +10,7 @@
   "ownerReviewStatus": "pending",
   "releaseApproved": false,
   "runtimeEnabled": false,
-  "generatedAt": "2026-08-02",
+  "generatedAt": "2026-08-10T15:49:50+08:00",
   "tool": "OpenAI image_gen",
   "rawFiles": [
     {
@@ -57,6 +57,18 @@
       "promptTextSha256": "dd5e6324a55ebca4233cc74401287c316afadd7ccf8a1adfd78bba8f941413f8",
       "promptFileSha256": "dd5e6324a55ebca4233cc74401287c316afadd7ccf8a1adfd78bba8f941413f8",
       "lineageRole": "accepted_low_contrast_seamless_meadow_source",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-ground-materials-v4.png",
+      "sha256": "65d015eb492237b3b4b0c5e5bd01d2c32843cce9aa99612eef361a2077bed45b",
+      "dimensions": [1254, 1254],
+      "generationCallId": "exec-31269707-1b54-43e4-8847-305a199af238",
+      "generatedAt": "2026-08-10T15:49:50+08:00",
+      "promptPath": "source/prompts/firebud-ground-materials-v4.md",
+      "promptTextSha256": "8504e031c4eb2c99e21bfcb3b080fc7f12034781777b16581e5f6af88512bcf3",
+      "promptFileSha256": "8504e031c4eb2c99e21bfcb3b080fc7f12034781777b16581e5f6af88512bcf3",
+      "lineageRole": "accepted_layered_ground_material_source",
       "generatedOriginal": true
     },
     {
@@ -117,6 +129,10 @@
       "dimensions": [1254, 1254]
     },
     {
+      "path": "source/processed/firebud-ground-materials-v4-build-manifest.json",
+      "sha256": "02e4f7073c57561bdd6d1a4eb2be46cde1074db64879876dc1f08715ac051a67"
+    },
+    {
       "path": "source/processed/firebud-ground-sheet-v3-combined-12tiles.png",
       "sha256": "f3bd54ca34a7c89a84145a89bbefa124759ba0d4a5c6cab709b7ec18a6dff4b8",
       "dimensions": [1254, 3762]
@@ -158,7 +174,7 @@
     {
       "assetId": "firebud_ground_atlas_12tiles",
       "path": "runtime/ground/atlas.png",
-      "sha256": "8f4699454f45e3e5f54907a63aa59069313bb42bac29c5edb7efd9d13a373cdb",
+      "sha256": "991e8c2010ade24738b8475db0549fe9dadb38874afc96ae5490a344c0638265",
       "dimensions": [320, 120],
       "tileSize": [80, 40],
       "atlasColumns": 4,
@@ -177,20 +193,18 @@
         "firebud_warp_stone"
       ],
       "rawPaths": [
-        "source/raw/firebud-ground-sheet-v3.png",
-        "source/raw/firebud-meadow-variants-v1.png",
-        "source/raw/firebud-semantic-variants-v1.png",
-        "source/raw/firebud-seamless-meadow-v2.png"
+        "source/raw/firebud-ground-materials-v4.png",
+        "source/processed/firebud-semantic-variants-v1-alpha.png"
       ],
-      "tool": "OpenAI image_gen plus deterministic ffmpeg atlas assembly",
-      "promptPath": "source/prompts/firebud-seamless-meadow-v2.md",
-      "rawPath": "source/raw/firebud-seamless-meadow-v2.png",
-      "generatedAt": "2026-08-01T18:42:21Z",
+      "tool": "OpenAI image_gen plus deterministic vendored Pillow builder",
+      "promptPath": "source/prompts/firebud-ground-materials-v4.md",
+      "rawPath": "source/raw/firebud-ground-materials-v4.png",
+      "generatedAt": "2026-08-10T15:49:50+08:00",
       "operations": [
-        "four bounded meadow crops from the accepted generated source",
-        "Lanczos downsample to 80x40 with canonical 2:1 diamond and bounded 10% anti-seam alpha bleed",
-        "low-detail edge-skirt blur and desaturation",
-        "path and plaza texture crops rebuilt without high-contrast perimeter",
+        "bounded crops from the accepted four-quadrant meadow, clay, stone, and root-soil material source",
+        "deterministic luminance grading and Lanczos downsample to 80x40",
+        "same-material base bleed for seam-free meadow coverage",
+        "feathered partial-alpha semantic overlays for paths, stone, soil, encounters, and warps",
         "deterministic 12-tile 320x120 RGBA atlas assembly"
       ]
     },
@@ -383,13 +397,15 @@
       "sha256": "61dadc1e76cf50aa2a73e1e13c674f8bad2fa94ff5a84bc5e0fe7080809e9e5a"
     },
     "groundAtlasBuilder": {
-      "path": ".agents/skills/design-beastbound-maps/scripts/build_isometric_tile_atlas.py",
-      "sha256": "fe8e7f6ee6288b8f6ff51813273fb717046e939edf75d38f023b30ece98eeb44"
+      "path": "source/tools/build_ground_atlas_v4.py",
+      "sha256": "2e6ff866aeebc078179ffd79b5b34fd7b384c0fc8904cc6dff47953d95e36d70",
+      "repositoryOwned": true,
+      "version": "1.0.0"
     },
     "ffmpeg": "8.1.1"
   },
   "sourceIngestion": {
-    "method": "same-filesystem hardlink from immutable image_gen output",
+    "method": "immutable image_gen output copied byte-identically for v4 ground materials; reused v1 sources remain same-filesystem hardlinks",
     "authoritativeIdentity": "raw file SHA-256",
     "externalRuntimeDependency": false
   },
@@ -397,9 +413,7 @@
     "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-ground-sheet-v3.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-sheet-v3-alpha.png --key-color '#ff00ff' --soft-matte --transparent-threshold 10 --opaque-threshold 72 --edge-contract 1 --despill",
     "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-meadow-variants-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-meadow-variants-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill --force",
     "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-semantic-variants-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-semantic-variants-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill --force",
-    "ffmpeg -y -i client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-sheet-v3-alpha.png -i client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-meadow-variants-v1-alpha.png -i client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-semantic-variants-v1-alpha.png -filter_complex '[0:v][1:v][2:v]vstack=inputs=3,format=rgba' -frames:v 1 client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-sheet-v3-combined-12tiles.png",
-    "python3 .agents/skills/design-beastbound-maps/scripts/build_isometric_tile_atlas.py client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-sheet-v3-combined-12tiles.png --rows 6 --columns 2 --labels firebud_meadow_a firebud_ochre_path_a firebud_honey_stone_a firebud_dark_root_soil_a firebud_meadow_b firebud_meadow_dry_b firebud_meadow_clover_c firebud_meadow_far firebud_ochre_path_worn_b firebud_honey_stone_moss_b firebud_tall_grass_encounter firebud_warp_stone --output-dir .run/rebuild/firebud-v2-ground-12tiles-a16-20260802 --atlas-columns 4 --alpha-threshold 16 --atlas-name atlas.png --manifest-name ground-12tiles-manifest.json",
-    "cp .run/rebuild/firebud-v2-ground-12tiles-a16-20260802/atlas.png client/godot/assets/maps/firebud_region_visual_v2/runtime/ground/atlas.png",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/build_ground_atlas_v4.py --materials client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-ground-materials-v4.png --semantics client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-semantic-variants-v1-alpha.png --output client/godot/assets/maps/firebud_region_visual_v2/runtime/ground/atlas.png --manifest client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-materials-v4-build-manifest.json --overwrite",
     "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-tree-landmark-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-tree-landmark-v1-alpha.png --key-color '#ff00ff' --soft-matte --transparent-threshold 10 --opaque-threshold 72 --edge-contract 1 --despill",
     "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-compact-props-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-compact-props-v1-alpha.png --key-color '#ff00ff' --soft-matte --transparent-threshold 10 --opaque-threshold 72 --edge-contract 1 --despill",
     "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-tree-landmark-v1-alpha.png --rows 1 --columns 1 --labels firebud_ancient_tree --output-dir client/godot/assets/maps/firebud_region_visual_v2/runtime/objects --padding 8 --max-dimension 512 --alpha-threshold 4 --anchor 0.5 1.0 --manifest-name firebud-ancient-tree-manifest.json",
@@ -415,21 +429,22 @@
   "reproducibility": {
     "rawToProcessedByteExact": true,
     "processedToRuntimeByteExact": true,
-    "outputPrecondition": "Every .run rebuild output directory and every v2 runtime hardlink destination must not exist before its producing command runs.",
+    "outputPrecondition": "The frozen v4 builder refuses replacement unless --overwrite is supplied; every reused v1 runtime hardlink destination must not exist before its producing command runs.",
     "externalToolVendored": true,
     "releaseBlocker": null
   },
   "qualityChecks": {
     "cellEdgeTouches": 0,
     "groundAtlasTileCount": 12,
-    "groundAtlasAlphaThreshold": 16,
-    "groundAtlasSourceCellEdgeTouchesAtBuildThreshold": 0,
+    "groundRenderMode": "layered_semantic_overlay",
+    "baseAntiSeamBleed": true,
+    "semanticOverlayFeathering": true,
     "runtimeBorderMaxAlpha": 0,
     "runtimeVisibleMagentaLikePixels": 0,
     "visualAlphaEdgeReview": "pass",
-    "visualReviewNote": "Crisp silhouettes, transparent padding, no visible magenta fringe; object styles remain consistent with the Firebud v2 ground palette."
+    "visualReviewNote": "Calm sage meadow, muted terracotta path, irregular honey stone, and restrained root soil render without dark seams, checkerboard repetition, or visible magenta fringe."
   },
   "mirrored": false,
   "bakedActors": false,
-  "replacementPath": "Regenerate from the frozen prompts, then reproduce chroma-key cleanup and object extraction using the listed deterministic commands."
+  "replacementPath": "Regenerate from the frozen prompts, rebuild the layered ground atlas with source/tools/build_ground_atlas_v4.py, then reproduce chroma-key cleanup and object extraction using the listed deterministic commands."
 }

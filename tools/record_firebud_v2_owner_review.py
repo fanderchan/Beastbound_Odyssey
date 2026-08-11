@@ -1,0 +1,658 @@
+#!/usr/bin/env python3
+"""Record the isolated, real-Main Phase383 Firebud v2 art review.
+
+This recorder intentionally does *not* start a backend or offer an escape hatch
+for account, server, or arbitrary Godot arguments.  It invokes the existing
+``MapVisualReviewCapture`` controller once for idle and once for a real
+cross-frame left-click movement on each Firebud review map, each time with a
+fresh user-data directory.  Every 30 fps clip keeps its captured motion at
+1.00x, then holds the final frame for four seconds so the owner can actually
+inspect the scene before the four clips are concatenated and frozen under
+``.run/evidence``.
+
+Each segment first proves the fresh default profile, then the capture-only
+controller injects a fixed in-memory showcase identity so the normal player
+HUD can render real character and battle-pet portraits.  The profile remains
+unauthenticated, disconnected and non-persistent.
+
+It is a review-only gate.  The runtime candidate must remain
+``owner_review_pending`` and is accessed only through the explicit
+``--map-art-review-preview=<mapId>`` argument.
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import math
+import os
+import re
+import sys
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Sequence
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+CORE_PATH = REPO_ROOT / "tools" / "record_pet_management_owner_review.py"
+CORE_SPEC = importlib.util.spec_from_file_location(
+    "_beastbound_firebud_v2_media_core", CORE_PATH
+)
+if CORE_SPEC is None or CORE_SPEC.loader is None:
+    raise RuntimeError(f"无法加载媒体录制核心：{CORE_PATH}")
+CORE = importlib.util.module_from_spec(CORE_SPEC)
+CORE_SPEC.loader.exec_module(CORE)
+
+GODOT_PROJECT = REPO_ROOT / "client" / "godot"
+MAIN_SCENE = "res://scenes/Main.tscn"
+DEFAULT_CAPTURE_FLAG = "--map-visual-review-capture"
+SHOWCASE_PROFILE_FLAG = "--map-visual-review-showcase-profile"
+DEFAULT_OUTPUT_ROOT = Path(".run/evidence/phase383_firebud_v2_owner_review")
+REPORT_SCHEMA_VERSION = 1
+REPORT_TYPE = "beastbound_firebud_v2_main_owner_review_video"
+EXPECTED_WIDTH = 1280
+EXPECTED_HEIGHT = 720
+EXPECTED_FPS = 30
+EXPECTED_BUNDLE_ID = "firebud_region_visual_v2"
+EXPECTED_PIXEL_FORMAT = "yuv420p"
+EXPECTED_VIDEO_CODEC = "h264"
+EXPECTED_AUDIO_CODEC = "aac"
+POST_CAPTURE_HOLD_SECONDS = 4.0
+MIN_DURATION_SECONDS = 4.0
+MAX_DURATION_SECONDS = 90.0
+DEFAULT_SAMPLE_COUNT = 8
+MAX_SAMPLE_COUNT = 16
+SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+SAFE_MAP_ID = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
+REVIEW_MAPS = ("firebud_village_gate", "firebud_training_yard")
+REVIEW_MODES = ("idle", "moving")
+
+
+class FirebudV2RecordingError(RuntimeError):
+    """The isolated Phase383 review contract failed."""
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _new_run_id() -> str:
+    timestamp = _utc_now().strftime("%Y%m%dT%H%M%S.%fZ")
+    return f"phase383-{timestamp}-{uuid.uuid4().hex[:8]}"
+
+
+def _safe_map_id(map_id: str) -> str:
+    normalized = str(map_id).strip()
+    if normalized not in REVIEW_MAPS or SAFE_MAP_ID.fullmatch(normalized) is None:
+        raise FirebudV2RecordingError(
+            "只允许录制固定的 Firebud v2 审图地图：" + ", ".join(REVIEW_MAPS)
+        )
+    return normalized
+
+
+def _safe_mode(mode: str) -> str:
+    normalized = str(mode).strip()
+    if normalized not in REVIEW_MODES:
+        raise FirebudV2RecordingError("录制模式只能是 idle 或 moving")
+    return normalized
+
+
+def _build_godot_command(
+    *,
+    godot: str,
+    user_data_dir: Path,
+    avi_path: Path,
+    map_id: str,
+    mode: str,
+    screenshot_path: Path,
+    report_path: Path,
+) -> list[str]:
+    """Build the one intentionally closed Godot invocation for a segment."""
+    safe_map = _safe_map_id(map_id)
+    safe_mode = _safe_mode(mode)
+    if not screenshot_path.is_absolute() or not report_path.is_absolute():
+        raise FirebudV2RecordingError("截图和报告必须使用绝对路径")
+    if screenshot_path.suffix.lower() != ".png" or report_path.suffix.lower() != ".json":
+        raise FirebudV2RecordingError("截图必须为 PNG，报告必须为 JSON")
+    return [
+        godot,
+        "--path",
+        str(GODOT_PROJECT),
+        "--user-data-dir",
+        str(user_data_dir),
+        "--scene",
+        MAIN_SCENE,
+        "--windowed",
+        "--resolution",
+        f"{EXPECTED_WIDTH}x{EXPECTED_HEIGHT}",
+        "--single-window",
+        "--fixed-fps",
+        str(EXPECTED_FPS),
+        "--time-scale",
+        "1.0",
+        "--disable-vsync",
+        "--write-movie",
+        str(avi_path),
+        "--",
+        f"--map-art-review-preview={safe_map}",
+        DEFAULT_CAPTURE_FLAG,
+        SHOWCASE_PROFILE_FLAG,
+        f"--map-visual-review-map-id={safe_map}",
+        f"--map-visual-review-output={screenshot_path}",
+        f"--map-visual-review-report={report_path}",
+        f"--map-visual-review-mode={safe_mode}",
+    ]
+
+
+def _read_capture_report(
+    path: Path, *, map_id: str, mode: str
+) -> dict[str, Any]:
+    if not path.is_file():
+        raise FirebudV2RecordingError(f"Godot 没有写出地图 capture 报告：{path}")
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise FirebudV2RecordingError(f"地图 capture 报告无法解析：{path}") from error
+    if not isinstance(report, dict):
+        raise FirebudV2RecordingError("地图 capture 报告根节点必须是对象")
+    errors = report.get("errors", [])
+    required = {
+        "result": "PASS",
+        "ok": True,
+        "scene": MAIN_SCENE,
+        "mapId": map_id,
+        "mode": mode,
+        "qaPreviewFlagPresent": True,
+        "qaPreviewMapId": map_id,
+        "mapArtActive": True,
+        "mapArtQaPreview": True,
+        "mapArtStatus": "owner_review_pending",
+        "bundleId": EXPECTED_BUNDLE_ID,
+        "defaultProfileIsolation": True,
+        "profileIsolation": "default_profile_verified_then_showcase_ephemeral_no_save",
+        "showcaseProfileRequested": True,
+        "showcaseProfileInMemory": True,
+        "showcaseProfilePostInjectionIsDefault": False,
+        "showcaseProfileId": "phase383_firebud_v2_owner_review",
+        "showcasePlayerAppearanceId": "ember_spark_v1",
+        "showcaseActivePetFormId": "bui_novice_sprout_earth5_wind5",
+        "showcaseProfilePersisted": False,
+        "accountAuthenticated": False,
+        "profileSaveEnabled": False,
+        "serverAccountSession": False,
+        "networkRequestAttempted": False,
+        "networkRequestsDisconnected": True,
+        "normalPlayerHud": True,
+    }
+    mismatches = [
+        f"{key}={report.get(key)!r}" for key, expected in required.items()
+        if report.get(key) != expected
+    ]
+    viewport = report.get("viewport")
+    if viewport != [EXPECTED_WIDTH, EXPECTED_HEIGHT]:
+        mismatches.append(f"viewport={viewport!r}")
+    if not isinstance(errors, list) or errors:
+        mismatches.append(f"errors={errors!r}")
+    if int(report.get("groundDrawCount", 0)) <= 0:
+        mismatches.append("groundDrawCount<=0")
+    if int(report.get("objectCount", 0)) <= 0:
+        mismatches.append("objectCount<=0")
+    if mode == "moving":
+        input_report = report.get("input")
+        if not isinstance(input_report, dict):
+            mismatches.append("input 不是对象")
+        else:
+            for key, expected in {
+                "eventClass": "InputEventMouseButton",
+                "delivery": "Input.parse_input_event",
+                "frameSeparated": True,
+            }.items():
+                if input_report.get(key) != expected:
+                    mismatches.append(f"input.{key}={input_report.get(key)!r}")
+        if report.get("playerCellChanged") is not True:
+            mismatches.append("playerCellChanged!=true")
+    elif report.get("playerCellChanged") is not False:
+        mismatches.append("idle.playerCellChanged!=false")
+    if mismatches:
+        raise FirebudV2RecordingError(
+            "地图 capture 合同失败（%s/%s）：%s"
+            % (map_id, mode, "; ".join(mismatches))
+        )
+    return report
+
+
+def _transcode_segment(
+    *,
+    ffmpeg: str,
+    avi_path: Path,
+    video_path: Path,
+    log_path: Path,
+    timeout_seconds: float,
+    environment: dict[str, str],
+) -> None:
+    CORE._run_logged(
+        [
+            ffmpeg,
+            "-y",
+            "-v",
+            "warning",
+            "-i",
+            str(avi_path),
+            "-map",
+            "0:v:0",
+            "-map",
+            "0:a:0",
+            "-vf",
+            (
+                "tpad=stop_mode=clone:stop_duration="
+                f"{POST_CAPTURE_HOLD_SECONDS:.1f},"
+                "scale=in_range=pc:out_range=tv,format=yuv420p"
+            ),
+            "-c:v",
+            "libx264",
+            "-preset",
+            "slow",
+            "-crf",
+            "18",
+            "-pix_fmt",
+            EXPECTED_PIXEL_FORMAT,
+            "-color_range",
+            "tv",
+            "-c:a",
+            EXPECTED_AUDIO_CODEC,
+            "-af",
+            f"apad=pad_dur={POST_CAPTURE_HOLD_SECONDS:.1f}",
+            "-b:a",
+            "192k",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            "-map_metadata",
+            "-1",
+            "-movflags",
+            "+faststart",
+            str(video_path),
+        ],
+        log_path=log_path,
+        timeout_seconds=timeout_seconds,
+        environment=environment,
+    )
+
+
+def _validate_probe(probe: dict[str, Any]) -> dict[str, Any]:
+    try:
+        metadata = CORE._validate_probe(probe)
+    except CORE.PetManagementRecordingError as error:
+        raise FirebudV2RecordingError(str(error)) from error
+    duration = float(metadata.get("durationSeconds", -1.0))
+    if not math.isfinite(duration) or duration < MIN_DURATION_SECONDS or duration > MAX_DURATION_SECONDS:
+        raise FirebudV2RecordingError(
+            f"Firebud v2 录像时长必须为 {MIN_DURATION_SECONDS:.0f}-{MAX_DURATION_SECONDS:.0f} 秒，实际 {duration:.3f} 秒"
+        )
+    minimum_frames = int(math.floor(duration * EXPECTED_FPS) - 2)
+    if int(metadata.get("frameCount", -1)) < minimum_frames:
+        raise FirebudV2RecordingError("Firebud v2 录像帧数与 30fps 时长不一致")
+    return metadata
+
+
+def _validate_segment_probe(probe: dict[str, Any]) -> dict[str, Any]:
+    """Validate a short controller clip without imposing the final-film length.
+
+    The existing map controller deliberately finishes quickly after its stable
+    screenshot.  Its idle clip can therefore be below the generic pet-video
+    one-second minimum; that is safe when the final concatenated review still
+    meets the Phase383 lower bound.
+    """
+    streams = probe.get("streams")
+    if not isinstance(streams, list):
+        raise FirebudV2RecordingError("片段 ffprobe streams 不是数组")
+    video = next((item for item in streams if isinstance(item, dict) and item.get("codec_type") == "video"), None)
+    audio = next((item for item in streams if isinstance(item, dict) and item.get("codec_type") == "audio"), None)
+    if not isinstance(video, dict) or not isinstance(audio, dict):
+        raise FirebudV2RecordingError("片段必须同时含视频和音频流")
+    try:
+        fps = CORE._parse_fraction(video.get("avg_frame_rate") or video.get("r_frame_rate"), label="片段视频 fps")
+        duration = float(CORE._stream_duration(video, probe))
+        audio_duration = float(CORE._stream_duration(audio, probe))
+        frame_count = int(video.get("nb_read_frames") or video.get("nb_frames"))
+    except (TypeError, ValueError, CORE.PetManagementRecordingError) as error:
+        raise FirebudV2RecordingError("片段媒体元数据无法解析") from error
+    if (
+        video.get("codec_name") != EXPECTED_VIDEO_CODEC
+        or video.get("pix_fmt") != EXPECTED_PIXEL_FORMAT
+        or video.get("width") != EXPECTED_WIDTH
+        or video.get("height") != EXPECTED_HEIGHT
+        or float(fps) != float(EXPECTED_FPS)
+        or audio.get("codec_name") != EXPECTED_AUDIO_CODEC
+        or int(audio.get("sample_rate", 0)) != 48000
+        or int(audio.get("channels", 0)) != 2
+        or not math.isfinite(duration)
+        or duration <= 0
+        or not math.isfinite(audio_duration)
+        or abs(audio_duration - duration) > 0.25
+        or frame_count <= 0
+    ):
+        raise FirebudV2RecordingError("片段不是 1280x720/30fps/1× H.264/AAC 有声有效录像")
+    return {
+        "videoCodec": EXPECTED_VIDEO_CODEC,
+        "pixelFormat": EXPECTED_PIXEL_FORMAT,
+        "audioCodec": EXPECTED_AUDIO_CODEC,
+        "width": EXPECTED_WIDTH,
+        "height": EXPECTED_HEIGHT,
+        "fps": float(EXPECTED_FPS),
+        "durationSeconds": duration,
+        "audioDurationSeconds": audio_duration,
+        "frameCount": frame_count,
+    }
+
+
+def _concat_segments(
+    *,
+    ffmpeg: str,
+    videos: Sequence[Path],
+    list_path: Path,
+    output_path: Path,
+    log_path: Path,
+    timeout_seconds: float,
+    environment: dict[str, str],
+) -> None:
+    if len(videos) != len(REVIEW_MAPS) * len(REVIEW_MODES):
+        raise FirebudV2RecordingError("录像片段数量必须覆盖两张地图的 idle/moving")
+    # All paths are freshly created directly inside the immutable run directory;
+    # ffconcat quoting is still explicit so a future safe run id cannot alter it.
+    list_path.write_text(
+        "".join("file '%s'\n" % path.as_posix().replace("'", "'\\\\''") for path in videos),
+        encoding="utf-8",
+    )
+    CORE._run_logged(
+        [
+            ffmpeg,
+            "-y",
+            "-v",
+            "warning",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(list_path),
+            "-map",
+            "0:v:0",
+            "-map",
+            "0:a:0",
+            "-c",
+            "copy",
+            "-movflags",
+            "+faststart",
+            str(output_path),
+        ],
+        log_path=log_path,
+        timeout_seconds=timeout_seconds,
+        environment=environment,
+    )
+
+
+def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Path:
+    timeout_seconds = float(args.timeout_seconds)
+    if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
+        raise FirebudV2RecordingError("--timeout-seconds 必须大于 0")
+    if int(args.sample_count) < 2 or int(args.sample_count) > MAX_SAMPLE_COUNT:
+        raise FirebudV2RecordingError(
+            f"--sample-count 必须介于 2 和 {MAX_SAMPLE_COUNT}"
+        )
+    godot = CORE._require_executable(args.godot, label="Godot")
+    ffmpeg = CORE._require_executable(args.ffmpeg, label="ffmpeg")
+    ffprobe = CORE._require_executable(args.ffprobe, label="ffprobe")
+    temporary_dir = run_dir / "tmp"
+    temporary_dir.mkdir(parents=False, exist_ok=False)
+    environment = CORE._isolated_environment(temporary_dir)
+    segment_dir = run_dir / "segments"
+    segment_dir.mkdir(parents=False, exist_ok=False)
+
+    segments: list[dict[str, Any]] = []
+    videos: list[Path] = []
+    for map_id in REVIEW_MAPS:
+        for mode in REVIEW_MODES:
+            prefix = f"{map_id}-{mode}"
+            user_data_dir = segment_dir / f"{prefix}-user-data"
+            user_data_dir.mkdir(parents=False, exist_ok=False)
+            avi_path = segment_dir / f"{prefix}.avi"
+            video_path = segment_dir / f"{prefix}.mp4"
+            screenshot_path = (segment_dir / f"{prefix}.png").resolve()
+            report_path = (segment_dir / f"{prefix}.json").resolve()
+            godot_log = segment_dir / f"{prefix}-godot.log"
+            transcode_log = segment_dir / f"{prefix}-transcode.log"
+            command = _build_godot_command(
+                godot=godot,
+                user_data_dir=user_data_dir,
+                avi_path=avi_path,
+                map_id=map_id,
+                mode=mode,
+                screenshot_path=screenshot_path,
+                report_path=report_path,
+            )
+            CORE._run_logged(
+                command,
+                log_path=godot_log,
+                timeout_seconds=timeout_seconds,
+                environment=environment,
+            )
+            capture_report = _read_capture_report(report_path, map_id=map_id, mode=mode)
+            _transcode_segment(
+                ffmpeg=ffmpeg,
+                avi_path=avi_path,
+                video_path=video_path,
+                log_path=transcode_log,
+                timeout_seconds=timeout_seconds,
+                environment=environment,
+            )
+            segment_probe_path = segment_dir / f"{prefix}-ffprobe.json"
+            segment_media = _validate_segment_probe(CORE._write_probe(ffprobe, video_path, segment_probe_path))
+            segments.append(
+                {
+                    "mapId": map_id,
+                    "mode": mode,
+                    "command": CORE._redacted_command(command),
+                    "captureReport": CORE._artifact_record(report_path),
+                    "capture": capture_report,
+                    "screenshot": CORE._artifact_record(screenshot_path),
+                    "rawMovie": CORE._artifact_record(avi_path),
+                    "video": {**CORE._artifact_record(video_path), **segment_media, "playbackSpeed": 1.0},
+                    "probe": CORE._artifact_record(segment_probe_path),
+                    "userData": CORE._user_data_inventory(user_data_dir),
+                    "logs": {
+                        "godot": CORE._artifact_record(godot_log),
+                        "transcode": CORE._artifact_record(transcode_log),
+                    },
+                }
+            )
+            videos.append(video_path)
+
+    concat_list = run_dir / "concat-inputs.txt"
+    final_video_path = run_dir / "firebud-v2-owner-review-1x.mp4"
+    concat_log = run_dir / "ffmpeg-concat.log"
+    _concat_segments(
+        ffmpeg=ffmpeg,
+        videos=videos,
+        list_path=concat_list,
+        output_path=final_video_path,
+        log_path=concat_log,
+        timeout_seconds=timeout_seconds,
+        environment=environment,
+    )
+    probe_path = run_dir / "ffprobe.json"
+    media = _validate_probe(CORE._write_probe(ffprobe, final_video_path, probe_path))
+    decode_log = run_dir / "full-audio-video-decode.log"
+    CORE._run_logged(
+        [ffmpeg, "-v", "error", "-xerror", "-i", str(final_video_path), "-map", "0:v:0", "-map", "0:a:0", "-f", "null", "-"],
+        log_path=decode_log,
+        timeout_seconds=timeout_seconds,
+        environment=environment,
+    )
+    screenshots_dir = run_dir / "screenshots"
+    sample_times = CORE._selected_sample_times(
+        float(media["durationSeconds"]), requested=(), sample_count=int(args.sample_count)
+    )
+    screenshots = CORE._extract_review_frames(
+        ffmpeg=ffmpeg,
+        video_path=final_video_path,
+        screenshots_dir=screenshots_dir,
+        sample_times=sample_times,
+        timeout_seconds=timeout_seconds,
+    )
+    contact = CORE._build_contact_sheet(
+        ffmpeg=ffmpeg,
+        screenshots_dir=screenshots_dir,
+        output_path=run_dir / "contact-sheet.png",
+        sample_count=len(screenshots),
+        timeout_seconds=timeout_seconds,
+    )
+    metadata_path = run_dir / "metadata.json"
+    metadata = {
+        "schemaVersion": REPORT_SCHEMA_VERSION,
+        "reportType": REPORT_TYPE,
+        "scene": MAIN_SCENE,
+        "viewport": {"width": EXPECTED_WIDTH, "height": EXPECTED_HEIGHT},
+        "fps": EXPECTED_FPS,
+        "playbackSpeed": 1.0,
+        "motionPlaybackSpeed": 1.0,
+        "postCaptureHoldSecondsPerSegment": POST_CAPTURE_HOLD_SECONDS,
+        "candidateBundleId": EXPECTED_BUNDLE_ID,
+        "maps": list(REVIEW_MAPS),
+        "modes": list(REVIEW_MODES),
+        "durationSeconds": media["durationSeconds"],
+        "frameCount": media["frameCount"],
+        "fullDecodeStatus": "passed",
+        "captureSequence": [f"{entry['mapId']}:{entry['mode']}" for entry in segments],
+        "isolation": {
+            "freshUserDataDirectoryPerSegment": True,
+            "normalPlayerSavePathUsed": False,
+            "defaultProfileVerifiedBeforeInjection": True,
+            "showcaseProfileId": "phase383_firebud_v2_owner_review",
+            "showcaseProfileInMemoryOnly": True,
+            "showcaseProfilePersisted": False,
+            "profileSaveEnabled": False,
+            "backendProcessStartedByTool": False,
+            "mysqlAccessByTool": False,
+            "loginOrServerArgumentsAccepted": False,
+        },
+        "coverage": {
+            "idle": True,
+            "realCrossFrameMouseMovement": True,
+            "explicitCandidatePreview": True,
+            "normalHudVisible": True,
+            "landmarkDepthVisualReview": "owner_video_frames",
+            "hudCollapseRestore": "not_automated_by_existing_map_capture_controller",
+        },
+    }
+    CORE._write_json(metadata_path, metadata)
+    hash_paths = [
+        final_video_path, probe_path, metadata_path, concat_list, concat_log, decode_log,
+        run_dir / "contact-sheet.png",
+        *(REPO_ROOT / item["path"] for item in screenshots),
+        *(REPO_ROOT / item["log"]["path"] for item in screenshots),
+    ]
+    for segment in segments:
+        for key in ("captureReport", "screenshot", "rawMovie", "probe"):
+            hash_paths.append(REPO_ROOT / segment[key]["path"])
+        hash_paths.append(REPO_ROOT / segment["video"]["path"])
+        hash_paths.extend(REPO_ROOT / value["path"] for value in segment["logs"].values())
+    hash_manifest = CORE._write_sha256_manifest(run_dir, hash_paths)
+    summary = {
+        "schemaVersion": REPORT_SCHEMA_VERSION,
+        "reportType": REPORT_TYPE,
+        "status": "passed",
+        "runId": run_id,
+        "generatedAtUtc": _utc_now().isoformat().replace("+00:00", "Z"),
+        "scene": MAIN_SCENE,
+        "captureContract": metadata,
+        "segments": segments,
+        "video": {**CORE._artifact_record(final_video_path), **media, "playbackSpeed": 1.0, "decodeStatus": "passed"},
+        "probe": CORE._artifact_record(probe_path),
+        "fullDecode": {"status": "passed", "videoStreamDecoded": True, "audioStreamDecoded": True, "log": CORE._artifact_record(decode_log)},
+        "screenshots": screenshots,
+        "contactSheet": contact,
+        "sha256Manifest": CORE._artifact_record(hash_manifest),
+        "logs": {"concat": CORE._artifact_record(concat_log)},
+        "ownerReviewStatus": "pending",
+    }
+    summary_path = run_dir / "summary.json"
+    CORE._write_json(summary_path, summary)
+    print(json.dumps({"status": "passed", "runId": run_id, "video": summary["video"]["path"], "contactSheet": contact["path"], "summary": CORE._repo_relative(summary_path)}, ensure_ascii=False))
+    return summary_path
+
+
+def _write_failure_summary(run_dir: Path, *, run_id: str, error: BaseException) -> None:
+    try:
+        CORE._write_json(run_dir / "failure-summary.json", {
+            "schemaVersion": REPORT_SCHEMA_VERSION,
+            "reportType": REPORT_TYPE,
+            "status": "failed",
+            "runId": run_id,
+            "generatedAtUtc": _utc_now().isoformat().replace("+00:00", "Z"),
+            "errorType": type(error).__name__,
+            "error": str(error) or type(error).__name__,
+            "evidenceDirectoryPreserved": True,
+        })
+    except OSError:
+        pass
+
+
+def _record(args: argparse.Namespace) -> Path:
+    if Path.cwd().resolve() != REPO_ROOT:
+        raise FirebudV2RecordingError(f"必须从仓库根执行：cd {REPO_ROOT}")
+    if not GODOT_PROJECT.is_dir():
+        raise FirebudV2RecordingError(f"Godot 项目不存在：{GODOT_PROJECT}")
+    run_id = args.run_id or _new_run_id()
+    if SAFE_RUN_ID.fullmatch(run_id) is None:
+        raise FirebudV2RecordingError(f"不安全的 runId：{run_id!r}")
+    try:
+        output_root = CORE._resolve_output_root(args.output_root)
+    except CORE.PetManagementRecordingError as error:
+        raise FirebudV2RecordingError(str(error)) from error
+    output_root.mkdir(parents=True, exist_ok=True)
+    run_dir = output_root / run_id
+    run_dir.mkdir(parents=False, exist_ok=False)
+    try:
+        return _record_into(args=args, run_id=run_id, run_dir=run_dir)
+    except BaseException as error:
+        _write_failure_summary(run_dir, run_id=run_id, error=error)
+        raise
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description=(
+            "录制 Phase383 火芽 v2 的真实 Main.tscn 1280x720、30fps、1×验收片；"
+            "固定覆盖村口/训练场的 idle 与真实跨帧鼠标移动。此工具拒绝登录、服务器"
+            "和任意附加 Godot 参数。"
+        )
+    )
+    parser.add_argument("--run-id", help="可选的唯一安全 runId。")
+    parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    parser.add_argument("--sample-count", type=int, default=DEFAULT_SAMPLE_COUNT)
+    parser.add_argument("--godot", default=os.environ.get("GODOT_BIN", "godot"))
+    parser.add_argument("--ffmpeg", default=os.environ.get("FFMPEG_BIN", "ffmpeg"))
+    parser.add_argument("--ffprobe", default=os.environ.get("FFPROBE_BIN", "ffprobe"))
+    parser.add_argument("--timeout-seconds", type=float, default=600.0)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        _record(args)
+    except KeyboardInterrupt:
+        print("firebud v2 owner review interrupted", file=sys.stderr)
+        return 130
+    except (FirebudV2RecordingError, CORE.PetManagementRecordingError, FileExistsError, OSError, ValueError) as error:
+        print(f"firebud v2 owner review recording failed: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

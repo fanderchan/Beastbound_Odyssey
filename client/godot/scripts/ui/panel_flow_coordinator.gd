@@ -8351,7 +8351,7 @@ func _abort_world_hud_awakened_mount(
 	awakened.queue_free()
 
 
-func _refresh_world_hud_awakened(_force: bool = false) -> void:
+func _refresh_world_hud_awakened(force: bool = false) -> void:
 	if host.world_hud_awakened_view == null or player == null:
 		return
 	var awakened := host.world_hud_awakened_view as WorldHudAwakenedView
@@ -8360,22 +8360,11 @@ func _refresh_world_hud_awakened(_force: bool = false) -> void:
 		if not map_data.is_empty()
 		else Vector2i.ZERO
 	)
-	var presented := WorldHudAwakenedPresenter.combined_state(player_profile, {
-		"mapData": map_data,
-		"playerCell": player_cell,
-		"playerWorldPosition": player.global_position,
-		"taskText": (
-			detail_label.text
-			if detail_label != null
-			else host.task_tracker_hud_prefix_cache
-		),
-		"partyState": party_current_state,
-		"chatMessages": chat_messages,
-		"accountAuthenticated": account_authenticated,
-		"gmToolsVisible": _can_use_gm_tools(),
-		"battleActive": battle_active,
-	})
-	presented["activeSideTab"] = host.world_hud_active_side_tab
+	var task_text: String = str(
+		detail_label.text
+		if detail_label != null
+		else host.task_tracker_hud_prefix_cache
+	)
 	var minimap_needs_configure: bool = (
 		host.world_hud_minimap_map_id != current_map_id
 		or host.world_hud_minimap_render_revision != host.map_visual_render_revision
@@ -8388,12 +8377,92 @@ func _refresh_world_hud_awakened(_force: bool = false) -> void:
 		)
 		host.world_hud_minimap_map_id = current_map_id
 		host.world_hud_minimap_render_revision = host.map_visual_render_revision
-	awakened.apply_view_state(presented)
+	var static_signature := _world_hud_awakened_static_signature()
+	var full_state_refresh: bool = (
+		force
+		or static_signature != host.world_hud_awakened_state_signature_cache
+	)
+	var state_apply_start: int = host._perf_now()
+	if full_state_refresh:
+		var presented := WorldHudAwakenedPresenter.combined_state(player_profile, {
+			"mapData": map_data,
+			"playerCell": player_cell,
+			"playerWorldPosition": player.global_position,
+			"taskText": task_text,
+			"partyState": party_current_state,
+			"chatMessages": chat_messages,
+			"chatActiveChannel": chat_active_channel,
+			"mailbox": {
+				"synced": false,
+				"state": mailbox_page_state,
+			},
+			"accountAuthenticated": account_authenticated,
+			"serverSession": not current_account_session.is_empty(),
+			"gmToolsVisible": _can_use_gm_tools(),
+			"battleActive": battle_active,
+		})
+		presented["activeSideTab"] = host.world_hud_active_side_tab
+		awakened.apply_view_state(presented)
+		awakened.apply_task_entries(host.task_tracker_entries_cache)
+		host.world_hud_awakened_state_signature_cache = static_signature
+	else:
+		awakened.apply_location(str(map_data.get("name", "未知地图")), player_cell)
+		awakened.apply_task_text(task_text)
+		awakened.apply_world_position(player_cell, player.global_position)
+	host._perf_add(
+		"hud_full_state" if full_state_refresh else "hud_position_state",
+		state_apply_start
+	)
 	if party_roster_panel != null:
 		party_roster_panel.visible = false
 	if host.hang_matchmaking_world_status != null:
 		host.hang_matchmaking_world_status.visible = false
-	_refresh_world_hud_party_roster()
+	# Party/match mutations have dedicated refresh call sites.  A coordinate-only
+	# HUD refresh must not rebuild and stringify the full five-slot roster.
+	if full_state_refresh:
+		_refresh_world_hud_party_roster()
+
+
+func _world_hud_awakened_static_signature() -> String:
+	var player_value = player_profile.get("player", {})
+	var player_state := (
+		player_value as Dictionary
+		if player_value is Dictionary
+		else {}
+	)
+	var party_value = party_current_state.get("party", {})
+	var party_state := (
+		party_value as Dictionary
+		if party_value is Dictionary
+		else {}
+	)
+	var latest_chat_id := ""
+	if not chat_messages.is_empty():
+		var latest_value = chat_messages.back()
+		if latest_value is Dictionary:
+			latest_chat_id = str(
+				(latest_value as Dictionary).get("messageId", "")
+			)
+	return "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % [
+		str(player_state.get("name", "")),
+		str(player_state.get("level", 1)),
+		str(player_state.get("hp", "")),
+		str(player_state.get("exp", "")),
+		str(player_state.get("appearanceId", "")),
+		str(player_profile.get("activePetInstanceId", "")),
+		str(party_state.get("partyId", "")),
+		str(party_current_state.get("stateRevision", 0)),
+		latest_chat_id,
+		mailbox_menu_button.text if mailbox_menu_button != null else "",
+		str(account_authenticated),
+		str(not current_account_session.is_empty()),
+		str(battle_active),
+		current_map_id,
+		str(host.map_visual_render_revision),
+		host.world_hud_active_side_tab,
+		host._task_tracker_signature_for_hud(),
+		str(_can_use_gm_tools()),
+	]
 
 
 func _refresh_world_hud_party_roster(force: bool = false) -> void:

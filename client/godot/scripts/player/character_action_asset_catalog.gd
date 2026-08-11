@@ -242,6 +242,13 @@ static func world_action_fps(action: String, appearance_id: String = CHARACTER_I
 	return float(WORLD_ACTION_FPS[normalized])
 
 
+static func world_frame_count_for_action(
+	action: String,
+	appearance_id: String = CHARACTER_ID
+) -> int:
+	return _world_frame_count(appearance_id, _normalized_world_action(action))
+
+
 static func frame_index_for_elapsed(
 	action: String,
 	elapsed_seconds: float,
@@ -399,13 +406,25 @@ static func validation_errors_for_appearance(
 		var directions := _string_array(world.get("directions", []))
 		if directions.size() != WorldVisualDirectionContract.DIRECTIONS.size():
 			errors.append("人物世界动作必须声明八个独立方向：%s" % requested)
+	var idle_world_count := _world_frame_count(requested, "idle")
+	var walk_world_count := _world_frame_count(requested, "walk")
+	if idle_world_count != 1:
+		errors.append("人物世界待机必须恰好为 1 帧：%s/%d" % [requested, idle_world_count])
+	if walk_world_count < 4 or walk_world_count > 12 or walk_world_count % 2 != 0:
+		errors.append(
+			"人物世界行走必须为 4 到 12 之间的偶数帧：%s/%d" % [requested, walk_world_count]
+		)
 	var seen_world_count := _append_world_validation_errors(errors, requested)
-	for action in WORLD_FRAME_COUNTS.keys():
-		var action_id := str(action)
-		if _world_frame_count(requested, action_id) != int(WORLD_FRAME_COUNTS[action_id]):
-			errors.append("人物世界动作帧数不符合 idle1/walk4：%s/%s" % [requested, action_id])
-	if seen_world_count != 40:
-		errors.append("人物世界八向帧应为 40，实际可读 %d：%s" % [seen_world_count, requested])
+	var expected_world_count := (
+		WorldVisualDirectionContract.DIRECTIONS.size()
+		* (idle_world_count + walk_world_count)
+	)
+	if seen_world_count != expected_world_count:
+		errors.append("人物世界八向帧应为 %d，实际可读 %d：%s" % [
+			expected_world_count,
+			seen_world_count,
+			requested,
+		])
 	var actions := battle_actions_for_appearance(requested)
 	var expected_actions := FULL_BATTLE_ACTIONS if require_full_battle else actions
 	if require_full_battle and actions != FULL_BATTLE_ACTIONS:

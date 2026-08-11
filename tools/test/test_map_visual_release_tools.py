@@ -39,8 +39,53 @@ class MapVisualPromotionTest(unittest.TestCase):
                                 "res://assets/maps/fixture_map_visual_v1/"
                                 "bindings/fixture_map.json"
                             ),
+                        },
+                        {
+                            "mapId": "stable_map",
+                            "bundleManifest": (
+                                "res://assets/maps/stable_map_visual_v1/"
+                                "map-visual-bundle.json"
+                            ),
+                            "bindingPath": (
+                                "res://assets/maps/stable_map_visual_v1/"
+                                "bindings/stable_map.json"
+                            ),
                         }
-                    ]
+                    ],
+                    "schemaVersion": 1,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (godot_root / "data/map_visual_review_catalog.json").write_text(
+            json.dumps(
+                {
+                    "entries": [
+                        {
+                            "mapId": "fixture_map",
+                            "bundleManifest": (
+                                "res://assets/maps/fixture_map_visual_v2/"
+                                "map-visual-bundle.json"
+                            ),
+                            "bindingPath": (
+                                "res://assets/maps/fixture_map_visual_v2/"
+                                "bindings/fixture_map.json"
+                            ),
+                        },
+                        {
+                            "mapId": "stable_map",
+                            "bundleManifest": (
+                                "res://assets/maps/stable_map_visual_v1/"
+                                "map-visual-bundle.json"
+                            ),
+                            "bindingPath": (
+                                "res://assets/maps/stable_map_visual_v1/"
+                                "bindings/stable_map.json"
+                            ),
+                        },
+                    ],
+                    "schemaVersion": 1,
                 }
             )
             + "\n",
@@ -57,7 +102,7 @@ class MapVisualPromotionTest(unittest.TestCase):
         )
         bundle = (
             godot_root
-            / "assets/maps/fixture_map_visual_v1"
+            / "assets/maps/fixture_map_visual_v2"
         )
         (bundle / "evidence").mkdir(parents=True)
         (bundle / "bindings").mkdir()
@@ -83,7 +128,15 @@ class MapVisualPromotionTest(unittest.TestCase):
             "groundAtlas": None,
             "tiles": [],
             "objects": [],
-            "mapBindings": [],
+            "mapBindings": [
+                {
+                    "mapId": "fixture_map",
+                    "binding": {
+                        "path": "bindings/fixture_map.json",
+                        "sha256": "0" * 64,
+                    },
+                }
+            ],
             "evidence": {"ownerAcceptance": None},
         }
         (bundle / promotion.MANIFEST_NAME).write_text(
@@ -96,11 +149,23 @@ class MapVisualPromotionTest(unittest.TestCase):
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         godot_root = promotion._find_godot_root(manifest_path.parent)
         catalog = json.loads(
-            (godot_root / "data/map_visual_catalog.json").read_text(
+            (
+                godot_root
+                / "data"
+                / (
+                    "map_visual_review_catalog.json"
+                    if manifest.get("status") == "owner_review_pending"
+                    else "map_visual_catalog.json"
+                )
+            ).read_text(
                 encoding="utf-8"
             )
         )
-        catalog_manifest = catalog["entries"][0]["bundleManifest"]
+        catalog_manifest = next(
+            value["bundleManifest"]
+            for value in catalog["entries"]
+            if value["mapId"] == "fixture_map"
+        )
         self.assertEqual(
             (
                 godot_root
@@ -175,7 +240,7 @@ class MapVisualPromotionTest(unittest.TestCase):
                 [value["path"] for value in owner["acceptedFiles"]],
             )
             self.assertEqual(
-                list(godot_root.glob(".fixture_map_visual_v1-release-candidate-*")),
+                list(godot_root.glob(".fixture_map_visual_v2-release-candidate-*")),
                 [],
             )
 
@@ -206,6 +271,7 @@ class MapVisualPromotionTest(unittest.TestCase):
     def test_apply_uses_manifest_as_commit_point(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             bundle = self._fixture(Path(temporary))
+            godot_root = Path(temporary) / "client/godot"
             with mock.patch.object(
                 promotion, "_audit_snapshot", side_effect=self._fake_audit
             ):
@@ -222,6 +288,35 @@ class MapVisualPromotionTest(unittest.TestCase):
             self.assertTrue(manifest["releaseApproved"])
             self.assertTrue((bundle / promotion.OWNER_ACCEPTANCE_PATH).is_file())
             self.assertTrue((bundle / promotion.RELEASE_ATTESTATION_PATH).is_file())
+            self.assertEqual(
+                (godot_root / promotion.PRIMARY_CATALOG_PATH).read_bytes(),
+                (godot_root / promotion.REVIEW_CATALOG_PATH).read_bytes(),
+            )
+
+    def test_review_catalog_must_preserve_unrelated_primary_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle = self._fixture(Path(temporary))
+            review_path = (
+                Path(temporary)
+                / "client/godot"
+                / promotion.REVIEW_CATALOG_PATH
+            )
+            review = json.loads(review_path.read_text(encoding="utf-8"))
+            review["entries"] = [
+                value
+                for value in review["entries"]
+                if value["mapId"] != "stable_map"
+            ]
+            review_path.write_text(json.dumps(review) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                promotion.PromotionError,
+                "完整的下一版正式目录",
+            ):
+                promotion._prepare_candidate(
+                    bundle,
+                    reviewer="project-owner:test",
+                    reviewed_at="2026-07-23T12:00:00Z",
+                )
 
     def test_partial_support_install_is_idempotently_resumable(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -265,6 +360,37 @@ class MapVisualPromotionTest(unittest.TestCase):
             self.assertEqual(manifest["status"], "released")
             self.assertTrue((bundle / promotion.OWNER_ACCEPTANCE_PATH).is_file())
 
+    def test_catalog_install_failure_rolls_back_primary_catalog(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle = self._fixture(Path(temporary))
+            godot_root = Path(temporary) / "client/godot"
+            primary_path = godot_root / promotion.PRIMARY_CATALOG_PATH
+            original_primary = primary_path.read_bytes()
+            with mock.patch.object(
+                promotion, "_audit_snapshot", side_effect=self._fake_audit
+            ):
+                candidate = promotion._prepare_candidate(
+                    bundle,
+                    reviewer="project-owner:test",
+                    reviewed_at="2026-07-23T12:00:00Z",
+                )
+
+                def fail_after_catalog(stage: str) -> None:
+                    if stage == "after_catalog_install":
+                        raise promotion.PromotionError("fault injection")
+
+                with self.assertRaises(promotion.PromotionError):
+                    promotion._atomic_apply(
+                        bundle,
+                        candidate,
+                        _fault_hook=fail_after_catalog,
+                    )
+            manifest = json.loads(
+                (bundle / promotion.MANIFEST_NAME).read_text(encoding="utf-8")
+            )
+            self.assertEqual(manifest["status"], "owner_review_pending")
+            self.assertEqual(primary_path.read_bytes(), original_primary)
+
     def test_failed_manifest_rollback_never_removes_support_files(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             bundle = self._fixture(Path(temporary))
@@ -300,6 +426,11 @@ class MapVisualPromotionTest(unittest.TestCase):
                 (bundle / promotion.RELEASE_ATTESTATION_PATH).is_file()
             )
             self.assertTrue((bundle / promotion.OWNER_ACCEPTANCE_PATH).is_file())
+            godot_root = Path(temporary) / "client/godot"
+            self.assertEqual(
+                (godot_root / promotion.PRIMARY_CATALOG_PATH).read_bytes(),
+                (godot_root / promotion.REVIEW_CATALOG_PATH).read_bytes(),
+            )
 
 
 class MapVisualPreexportTest(unittest.TestCase):

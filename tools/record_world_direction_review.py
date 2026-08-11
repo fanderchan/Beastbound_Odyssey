@@ -3,8 +3,10 @@
 
 The review scene validates the exact requested world subjects that it loads.
 The legacy default remains character + pet + mounted (120 frames), while
-``--subjects pet`` records a non-rideable pet-only 40-frame review.  This
-wrapper makes that validation inseparable from a candidate movie:
+``--subjects pet`` records a non-rideable pet-only 40-frame review and
+``--subjects character`` resolves its frame count from the requested playable
+appearance metadata.  This wrapper makes that validation inseparable from a
+candidate movie:
 
 1. import the Godot project once;
 2. run a subject-bound parity-only preflight for every requested form;
@@ -62,8 +64,14 @@ INDEX_SCHEMA_VERSION = 1
 INDEX_TYPE = "beastbound_world_direction_review_evidence"
 PARITY_SCHEMA_VERSION = 1
 PARITY_KINDS = ("character", "pet", "mounted")
+CHARACTER_ONLY_SUBJECTS = ("character",)
 PET_ONLY_SUBJECTS = ("pet",)
-SUPPORTED_SUBJECTS = (PARITY_KINDS, PET_ONLY_SUBJECTS)
+SUPPORTED_SUBJECTS = (
+    PARITY_KINDS,
+    CHARACTER_ONLY_SUBJECTS,
+    PET_ONLY_SUBJECTS,
+)
+DEFAULT_CHARACTER_ID = "novice_hunter_v1"
 FRAMES_PER_SUBJECT = 40
 PARITY_DIRECTIONS = (
     "south",
@@ -469,24 +477,102 @@ def _selected_subjects(value: str | None) -> tuple[str, ...]:
     subjects = tuple(value.split(","))
     if subjects not in SUPPORTED_SUBJECTS:
         raise ReviewRecordingError(
-            "--subjects 仅允许 pet 或 character,pet,mounted，且不能重排、重复或混用"
+            "--subjects 仅允许 character、pet 或 character,pet,mounted，"
+            "且不能重排、重复或混用"
         )
     return subjects
 
 
 def _expected_parity_coverage(
     subjects: Sequence[str],
+    *,
+    character_id: str | None = None,
 ) -> frozenset[tuple[str, str, str, int]]:
     return frozenset(
         (kind, direction, action, frame_index)
         for kind in subjects
         for direction in PARITY_DIRECTIONS
-        for action, frame_index in PARITY_ACTION_FRAMES
+        for action, frame_index in _parity_action_frames_for_subject(
+            kind,
+            character_id=character_id,
+        )
     )
 
 
-def _expected_parity_frames(subjects: Sequence[str]) -> int:
-    return FRAMES_PER_SUBJECT * len(subjects)
+def _expected_parity_frames(
+    subjects: Sequence[str],
+    *,
+    character_id: str | None = None,
+) -> int:
+    return len(
+        _expected_parity_coverage(subjects, character_id=character_id)
+    )
+
+
+def _parity_action_frames_for_subject(
+    kind: str,
+    *,
+    character_id: str | None,
+) -> tuple[tuple[str, int], ...]:
+    if kind == "character" and character_id is not None:
+        return _character_parity_action_frames(character_id)
+    return PARITY_ACTION_FRAMES
+
+
+def _character_parity_action_frames(
+    character_id: str,
+) -> tuple[tuple[str, int], ...]:
+    if SAFE_ID.fullmatch(character_id) is None:
+        raise ReviewRecordingError(f"不安全的 characterId：{character_id!r}")
+    catalog = _read_json(
+        GODOT_PROJECT / "data" / "player_appearances.json",
+        label="人物形象目录",
+    )
+    appearances = catalog.get("appearances")
+    if not isinstance(appearances, list):
+        raise ReviewRecordingError("人物形象目录 appearances 不是数组")
+    entry = next(
+        (
+            value
+            for value in appearances
+            if isinstance(value, dict) and value.get("appearanceId") == character_id
+        ),
+        None,
+    )
+    if entry is None:
+        raise ReviewRecordingError(f"人物形象目录不存在：{character_id}")
+    asset_root = entry.get("characterAssetRoot")
+    if not isinstance(asset_root, str) or not asset_root.startswith("res://"):
+        raise ReviewRecordingError(f"人物资源根无效：{character_id}")
+    relative_root = Path(asset_root.removeprefix("res://"))
+    if ".." in relative_root.parts or relative_root.is_absolute():
+        raise ReviewRecordingError(f"人物资源根不安全：{asset_root!r}")
+    metadata = _read_json(
+        GODOT_PROJECT / relative_root / "action-bundle-meta.json",
+        label=f"人物动作 metadata {character_id}",
+    )
+    world_visual = metadata.get("worldVisual")
+    actions = world_visual.get("actions") if isinstance(world_visual, dict) else None
+    if not isinstance(actions, dict):
+        raise ReviewRecordingError(f"人物动作 metadata 缺少 worldVisual.actions：{character_id}")
+
+    counts: dict[str, int] = {}
+    for action in ("idle", "walk"):
+        spec = actions.get(action)
+        count = spec.get("frameCount") if isinstance(spec, dict) else None
+        if type(count) is not int:
+            raise ReviewRecordingError(f"人物世界动作帧数不是整数：{character_id}/{action}")
+        counts[action] = count
+    if counts["idle"] != 1:
+        raise ReviewRecordingError(f"人物世界待机必须恰好为 1 帧：{character_id}")
+    walk_count = counts["walk"]
+    if walk_count < 4 or walk_count > 12 or walk_count % 2 != 0:
+        raise ReviewRecordingError(
+            f"人物世界行走必须为 4 到 12 之间的偶数帧：{character_id}/{walk_count}"
+        )
+    return (("idle", 1),) + tuple(
+        ("walk", frame_index) for frame_index in range(1, walk_count + 1)
+    )
 
 
 def _parity_source_set_sha256(frames: Sequence[dict[str, Any]]) -> str:
@@ -508,14 +594,21 @@ def _validate_parity_report(
     run_id: str,
     label: str,
     subjects: Sequence[str] = PARITY_KINDS,
+    character_id: str | None = None,
     isolated_bundle: dict[str, Any] | None = None,
     expected_source_set_sha256: str | None = None,
 ) -> dict[str, Any]:
     selected_subjects = tuple(subjects)
     if selected_subjects not in SUPPORTED_SUBJECTS:
         raise ReviewRecordingError(f"{label} 请求了不支持的主体集合：{selected_subjects!r}")
-    expected_coverage = _expected_parity_coverage(selected_subjects)
-    expected_frames = _expected_parity_frames(selected_subjects)
+    expected_coverage = _expected_parity_coverage(
+        selected_subjects,
+        character_id=character_id,
+    )
+    expected_frames = _expected_parity_frames(
+        selected_subjects,
+        character_id=character_id,
+    )
     report = _read_json(path, label=label)
     errors: list[str] = []
     if type(report.get("schemaVersion")) is not int or report.get(
@@ -526,6 +619,8 @@ def _validate_parity_report(
         errors.append(f"status={report.get('status')!r}")
     if report.get("formId") != form_id:
         errors.append(f"formId={report.get('formId')!r}")
+    if character_id is not None and report.get("characterId") != character_id:
+        errors.append(f"characterId={report.get('characterId')!r}")
     if report.get("runId") != run_id:
         errors.append(f"runId={report.get('runId')!r}")
     if report.get("subjects") != list(selected_subjects):
@@ -680,8 +775,12 @@ def _parity_artifact(
     report: dict[str, Any],
     *,
     subjects: Sequence[str],
+    character_id: str | None = None,
 ) -> dict[str, Any]:
-    expected_frames = _expected_parity_frames(subjects)
+    expected_frames = _expected_parity_frames(
+        subjects,
+        character_id=character_id,
+    )
     return {
         **_artifact_record(path),
         "status": "passed",
@@ -739,9 +838,13 @@ def _validate_source_frame_independence(
     frames: Sequence[dict[str, Any]],
     *,
     subjects: Sequence[str],
+    character_id: str | None = None,
 ) -> None:
     """Reject filesystem aliases, duplicate pixels, and mirrored directions."""
-    expected_frames = _expected_parity_frames(subjects)
+    expected_frames = _expected_parity_frames(
+        subjects,
+        character_id=character_id,
+    )
     if len(frames) != expected_frames:
         raise ReviewRecordingError(
             f"源帧独立性检查收到 {len(frames)} 帧，期望 {expected_frames}"
@@ -939,6 +1042,7 @@ def _review_arguments(
     run_id: str,
     parity_report_path: Path,
     subjects: Sequence[str],
+    character_id: str | None = None,
     isolated_bundle: dict[str, Any] | None = None,
 ) -> list[str]:
     arguments = [
@@ -947,6 +1051,8 @@ def _review_arguments(
         f"--mount-review-parity-report={parity_report_path}",
         f"--mount-review-subjects={','.join(subjects)}",
     ]
+    if character_id is not None:
+        arguments.append(f"--mount-review-character={character_id}")
     if isolated_bundle is not None:
         arguments.append(
             f"--mount-review-pet-root={isolated_bundle['rootAbsolute']}"
@@ -964,6 +1070,7 @@ def _record_form(
     ffprobe: str,
     timeout_seconds: float,
     subjects: Sequence[str],
+    character_id: str | None = None,
     isolated_bundle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     form_dir.mkdir(parents=False, exist_ok=False)
@@ -983,6 +1090,7 @@ def _record_form(
                 run_id=run_id,
                 parity_report_path=preflight_report_path,
                 subjects=subjects,
+                character_id=character_id,
                 isolated_bundle=isolated_bundle,
             ),
             "--mount-review-parity-only",
@@ -996,11 +1104,13 @@ def _record_form(
         run_id=run_id,
         label=f"{form_id} parity-only 报告",
         subjects=subjects,
+        character_id=character_id,
         isolated_bundle=isolated_bundle,
     )
     _validate_source_frame_independence(
         preflight_report["frames"],
         subjects=subjects,
+        character_id=character_id,
     )
     source_set_sha256 = preflight_report["sourceSetSha256"]
 
@@ -1020,6 +1130,7 @@ def _record_form(
                 run_id=run_id,
                 parity_report_path=recording_report_path,
                 subjects=subjects,
+                character_id=character_id,
                 isolated_bundle=isolated_bundle,
             ),
             "--record-mount-directions",
@@ -1033,6 +1144,7 @@ def _record_form(
         run_id=run_id,
         label=f"{form_id} 录制进程 parity 报告",
         subjects=subjects,
+        character_id=character_id,
         isolated_bundle=isolated_bundle,
         expected_source_set_sha256=source_set_sha256,
     )
@@ -1105,6 +1217,7 @@ def _record_form(
                 run_id=run_id,
                 parity_report_path=grid_report_path,
                 subjects=subjects,
+                character_id=character_id,
                 isolated_bundle=isolated_bundle,
             ),
             f"--capture-mount-directions={grid_path}",
@@ -1118,6 +1231,7 @@ def _record_form(
         run_id=run_id,
         label=f"{form_id} 网格进程 parity 报告",
         subjects=subjects,
+        character_id=character_id,
         isolated_bundle=isolated_bundle,
         expected_source_set_sha256=source_set_sha256,
     )
@@ -1202,22 +1316,26 @@ def _record_form(
         recording_report_path,
         recording_report,
         subjects=subjects,
+        character_id=character_id,
     )
     result = {
         "formId": form_id,
         "runId": run_id,
         "status": "passed",
         "subjects": list(subjects),
+        "characterId": character_id,
         "parity": parity,
         "preflightParity": _parity_artifact(
             preflight_report_path,
             preflight_report,
             subjects=subjects,
+            character_id=character_id,
         ),
         "gridParity": _parity_artifact(
             grid_report_path,
             grid_report,
             subjects=subjects,
+            character_id=character_id,
         ),
         "video": {
             **_artifact_record(video_path),
@@ -1282,8 +1400,28 @@ def _record(args: argparse.Namespace) -> Path:
     if not GODOT_PROJECT.is_dir():
         raise ReviewRecordingError(f"Godot 项目不存在：{GODOT_PROJECT}")
 
-    forms = _selected_forms(args.form_ids)
     subjects = _selected_subjects(args.subjects)
+    if subjects == CHARACTER_ONLY_SUBJECTS and args.form_ids is None:
+        forms = (DEFAULT_FORM_IDS[0],)
+    else:
+        forms = _selected_forms(args.form_ids)
+    character_id: str | None = None
+    if args.character_id is not None:
+        if subjects != CHARACTER_ONLY_SUBJECTS:
+            raise ReviewRecordingError(
+                "--character-id 只允许与 --subjects character 同时使用"
+            )
+        if SAFE_ID.fullmatch(args.character_id) is None:
+            raise ReviewRecordingError(
+                f"不安全的 characterId：{args.character_id!r}"
+            )
+        character_id = args.character_id
+    elif subjects == CHARACTER_ONLY_SUBJECTS:
+        character_id = DEFAULT_CHARACTER_ID
+    if subjects == CHARACTER_ONLY_SUBJECTS and len(forms) != 1:
+        raise ReviewRecordingError(
+            "--subjects character 每次只允许一个 --form-id，避免重复录制同一人物"
+        )
     isolated_bundle: dict[str, Any] | None = None
     if args.pet_root is not None:
         if subjects != PET_ONLY_SUBJECTS:
@@ -1331,6 +1469,7 @@ def _record(args: argparse.Namespace) -> Path:
                 ffprobe=ffprobe,
                 timeout_seconds=timeout_seconds,
                 subjects=subjects,
+                character_id=character_id,
                 isolated_bundle=isolated_bundle,
             )
         )
@@ -1357,9 +1496,13 @@ def _record(args: argparse.Namespace) -> Path:
         "scene": REVIEW_SCENE,
         "formIds": list(forms),
         "subjects": list(subjects),
+        "characterId": character_id,
         "expected": {
             "subjects": list(subjects),
-            "parityFramesPerForm": _expected_parity_frames(subjects),
+            "parityFramesPerForm": _expected_parity_frames(
+                subjects,
+                character_id=character_id,
+            ),
             "width": EXPECTED_WIDTH,
             "height": EXPECTED_HEIGHT,
             "fps": float(EXPECTED_FPS),
@@ -1410,8 +1553,15 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--subjects",
         help=(
-            "验收主体：pet 或 character,pet,mounted。"
+            "验收主体：character、pet 或 character,pet,mounted。"
             "省略时保持旧版三主体 120 帧流程。"
+        ),
+    )
+    parser.add_argument(
+        "--character-id",
+        help=(
+            "仅用于 --subjects character：要录制的正式人物 appearanceId；"
+            f"省略时为 {DEFAULT_CHARACTER_ID}。"
         ),
     )
     parser.add_argument(

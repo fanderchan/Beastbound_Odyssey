@@ -3,11 +3,11 @@
   "characterId": "ember_spark_v1",
   "status": "passed",
   "counts": {
-    "worldRuntimeFrames": 40,
+    "worldRuntimeFrames": 56,
     "battleSourceFrames": 180,
     "battleRuntimeFrames": 180,
     "battleRuntimePerView": 90,
-    "hashLedgerEntries": 225
+    "hashLedgerEntries": 241
   },
   "contracts": {
     "runtimeFrameSize": [
@@ -19,6 +19,10 @@
       512
     ],
     "runtimeMirroring": false,
+    "worldWalkGaitV3": "contact_a_passing_a_recovery_a_contact_b_passing_b_recovery_b",
+    "worldWalkGaitV3PixelGatesPassed": true,
+    "worldWalkGaitV3RealGodotReviewPassed": true,
+    "worldWalkGaitV3RealMainReviewPassed": true,
     "downReviveDecodedRgbaExact": true,
     "noExactWithinActionDuplicates": true,
     "noExactWorldMirrors": true,
@@ -30,6 +34,21 @@
     "maximumStrongNearKeyRatio": 0.001874,
     "maximumFrame": "client/godot/assets/characters/ember_spark_v1/views/front_3quarter_sw/stagger_return/stagger_return-2.png",
     "note": "Conservative near-literal-key audit; max ratio remains below 0.2% and alpha is preserved."
+  },
+  "worldGaitV3": {
+    "status": "passed_real_godot_and_main_review_owner_pending",
+    "sourceWalkFrames": 48,
+    "runtimeWalkFrames": 48,
+    "godotParityFrames": 56,
+    "sourceMaximumBaselineDriftPx": 0,
+    "runtimeMaximumBaselineDriftPx": 1,
+    "exactDuplicateFrames": 0,
+    "exactCrossDirectionHorizontalMirrorPairs": 0,
+    "report": "qa/world-walk-gait-v3-report.json",
+    "buildReport": "qa/world-walk-gait-v3-build-report.json",
+    "contactSheet": "qa/world-walk-gait-v3-contact.png",
+    "realGodotVideoSha256": "ab58fc67def625f746ce3e333219a923ab8d655d70b5466c8cddd97f49660754",
+    "realMainVideoSha256": "6ab986d2b3633abd1164259cf539566b4315b682531cb993cef3dfe31588cfe7"
   },
   "errors": [],
   "warnings": [],

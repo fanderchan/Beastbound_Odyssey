@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
+import subprocess
 import sys
+import tempfile
 import unittest
+from unittest import mock
 
 
 MODULE_PATH = (
@@ -66,6 +70,12 @@ class PerformanceParserTests(unittest.TestCase):
         self.assertEqual(parsed["clicks"], parsed["accepted"])
         self.assertEqual(parsed["resolved"], parsed["applied"])
 
+    def test_moving_accepts_two_samples_after_real_target_settle(self) -> None:
+        record = _record("moving")
+        record["stdout"] = "\n".join(record["stdout"].splitlines()[1:]) + "\n"
+        parsed = builder.parse_perf_run(record)
+        self.assertEqual(parsed["samples"], 2)
+
     def test_moving_failure_is_rejected(self) -> None:
         record = _record("moving")
         record["stdout"] = record["stdout"].replace(
@@ -75,6 +85,88 @@ class PerformanceParserTests(unittest.TestCase):
         with self.assertRaises(builder.EvidenceError):
             builder.parse_perf_run(record)
 
+
+class CollisionReceiptTests(unittest.TestCase):
+    def _stdout(self) -> str:
+        payload = {
+            "mode": "strict_frozen_validation",
+            "result": "PASS",
+            "errors": [],
+            "bundleReports": {
+                "firebud_region_visual_v2": {
+                    "result": "PASS",
+                    "testedMapIds": [
+                        "firebud_training_yard",
+                        "firebud_village_gate",
+                    ],
+                }
+            },
+        }
+        return (
+            "Godot fixture\nmap visual runtime check: "
+            + json.dumps(payload)
+            + "\n"
+        )
+
+    def test_capture_installs_only_strict_pass_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            godot_root = root / "client/godot"
+            evidence = (
+                godot_root
+                / "assets/maps/firebud_region_visual_v2/evidence"
+            )
+            evidence.mkdir(parents=True)
+
+            def runner(*_args, **_kwargs):
+                return subprocess.CompletedProcess(
+                    args=list(builder.COLLISION_COMMAND_ARGS),
+                    returncode=0,
+                    stdout=self._stdout(),
+                    stderr="",
+                )
+
+            with (
+                mock.patch.object(builder, "REPO_ROOT", root),
+                mock.patch.object(builder, "GODOT_ROOT", godot_root),
+            ):
+                output = builder.capture_collision_receipt(
+                    "firebud_region_visual_v2",
+                    runner=runner,
+                )
+            self.assertEqual(output.read_text(encoding="utf-8"), self._stdout())
+
+    def test_capture_rejects_failed_runner_without_overwriting(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            godot_root = root / "client/godot"
+            output = (
+                godot_root
+                / "assets/maps/firebud_region_visual_v2/evidence/"
+                "collision-runner-receipt.log"
+            )
+            output.parent.mkdir(parents=True)
+            output.write_text("old receipt\n", encoding="utf-8")
+
+            def runner(*_args, **_kwargs):
+                return subprocess.CompletedProcess(
+                    args=list(builder.COLLISION_COMMAND_ARGS),
+                    returncode=1,
+                    stdout=self._stdout(),
+                    stderr="failure",
+                )
+
+            with (
+                mock.patch.object(builder, "REPO_ROOT", root),
+                mock.patch.object(builder, "GODOT_ROOT", godot_root),
+                self.assertRaises(builder.EvidenceError),
+            ):
+                builder.capture_collision_receipt(
+                    "firebud_region_visual_v2",
+                    runner=runner,
+                )
+            self.assertEqual(output.read_text(encoding="utf-8"), "old receipt\n")
+
     def test_nonzero_runner_exit_is_rejected(self) -> None:
         record = _record()
         record["returncode"] = 1
@@ -83,6 +175,15 @@ class PerformanceParserTests(unittest.TestCase):
 
 
 class ProjectSettingsIdentityTests(unittest.TestCase):
+    def test_runtime_identity_covers_map_facing_world_hud_dependencies(self) -> None:
+        self.assertTrue(
+            {
+                "scripts/ui/world_hud_awakened_presenter.gd",
+                "scripts/ui/world_hud_awakened_view.gd",
+                "scripts/ui/world_hud_minimap_render_canvas.gd",
+            }.issubset(set(builder.RUNTIME_IDENTITY_FILES))
+        )
+
     def test_editor_reformat_and_setting_reorder_are_identity_neutral(self) -> None:
         compact = """\
 config_version=5

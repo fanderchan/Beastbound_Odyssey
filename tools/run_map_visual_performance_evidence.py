@@ -6,9 +6,11 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 from typing import Any
 
 import map_visual_evidence_builder as builder
@@ -24,15 +26,30 @@ def _utc_now() -> str:
     )
 
 
-def _command(map_id: str, variant: str, mode: str) -> list[str]:
+def _command(
+    map_id: str,
+    variant: str,
+    mode: str,
+    *,
+    user_data_dir: Path,
+) -> list[str]:
     command = [
         GODOT,
         "--path",
         "client/godot",
+        "--user-data-dir",
+        str(user_data_dir),
         "--scene",
         "res://scenes/Main.tscn",
+        "--windowed",
+        "--resolution",
+        "1280x720",
+        "--single-window",
         "--fixed-fps",
         "60",
+        "--time-scale",
+        "1.0",
+        "--disable-vsync",
         "--quit-after",
         "480" if mode == "idle" else "2600",
         "--",
@@ -42,6 +59,7 @@ def _command(map_id: str, variant: str, mode: str) -> list[str]:
         command.append(f"--map-art-review-preview={map_id}")
     if mode == "moving":
         command.append("--movement-spam-click-check")
+        command.append("--movement-spam-click-limit=30")
     command.append("--perf-probe")
     return command
 
@@ -75,16 +93,36 @@ def _run(command: list[str], map_id: str, variant: str, mode: str) -> dict[str, 
     return record
 
 
-def _write_receipt(path: Path, records: list[dict[str, Any]]) -> None:
-    if path.exists():
-        raise builder.EvidenceError(f"refusing to overwrite receipt: {path}")
-    path.write_text(
-        "".join(
-            json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n"
-            for value in records
-        ),
-        encoding="utf-8",
+def _write_receipt(
+    path: Path,
+    records: list[dict[str, Any]],
+    *,
+    replace_existing: bool,
+) -> None:
+    payload = "".join(
+        json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n"
+        for value in records
     )
+    temp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    if temp.exists():
+        raise builder.EvidenceError(f"receipt temp already exists: {temp}")
+    try:
+        with temp.open("x", encoding="utf-8") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        if replace_existing:
+            os.replace(temp, path)
+        else:
+            try:
+                os.link(temp, path)
+            except FileExistsError as error:
+                raise builder.EvidenceError(
+                    f"refusing to overwrite receipt: {path}"
+                ) from error
+            temp.unlink()
+    finally:
+        temp.unlink(missing_ok=True)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -94,6 +132,17 @@ def main(argv: list[str] | None = None) -> int:
         required=True,
         help="Must equal the current map runtime identity.",
     )
+    parser.add_argument(
+        "--bundle-id",
+        action="append",
+        choices=tuple(builder.MAP_BUNDLES),
+        help="Run only the selected bundle; may be repeated. Defaults to every bundle.",
+    )
+    parser.add_argument(
+        "--replace-existing",
+        action="store_true",
+        help="Atomically replace an existing receipt after every new run validates.",
+    )
     args = parser.parse_args(argv)
     try:
         current_identity = builder.build_identity()
@@ -101,21 +150,31 @@ def main(argv: list[str] | None = None) -> int:
             raise builder.EvidenceError(
                 "build identity drifted before performance execution"
             )
+        selected_bundle_ids = args.bundle_id or list(builder.MAP_BUNDLES)
         all_records: dict[str, list[dict[str, Any]]] = {
-            bundle_id: [] for bundle_id in builder.MAP_BUNDLES
+            bundle_id: [] for bundle_id in selected_bundle_ids
         }
-        for bundle_id, (_root, map_ids) in builder.MAP_BUNDLES.items():
+        for bundle_id in selected_bundle_ids:
+            _root, map_ids = builder.MAP_BUNDLES[bundle_id]
             for map_id in map_ids:
                 for variant in ("baseline", "candidate"):
                     for mode in ("idle", "moving"):
-                        all_records[bundle_id].append(
-                            _run(
-                                _command(map_id, variant, mode),
-                                map_id,
-                                variant,
-                                mode,
+                        with tempfile.TemporaryDirectory(
+                            prefix=f"beastbound-map-perf-{map_id}-{variant}-{mode}-"
+                        ) as temporary:
+                            all_records[bundle_id].append(
+                                _run(
+                                    _command(
+                                        map_id,
+                                        variant,
+                                        mode,
+                                        user_data_dir=Path(temporary),
+                                    ),
+                                    map_id,
+                                    variant,
+                                    mode,
+                                )
                             )
-                        )
         if builder.build_identity() != current_identity:
             raise builder.EvidenceError(
                 "map runtime identity drifted during performance execution"
@@ -127,7 +186,11 @@ def main(argv: list[str] | None = None) -> int:
                 / relative_root
                 / "evidence/performance-runner-receipt.jsonl"
             )
-            _write_receipt(receipt, records)
+            _write_receipt(
+                receipt,
+                records,
+                replace_existing=args.replace_existing,
+            )
         print(
             json.dumps(
                 {
@@ -137,11 +200,10 @@ def main(argv: list[str] | None = None) -> int:
                     "receipts": {
                         bundle_id: str(
                             builder.GODOT_ROOT
-                            / relative_root
+                            / builder.MAP_BUNDLES[bundle_id][0]
                             / "evidence/performance-runner-receipt.jsonl"
                         )
-                        for bundle_id, (relative_root, _map_ids)
-                        in builder.MAP_BUNDLES.items()
+                        for bundle_id in all_records
                     },
                 },
                 ensure_ascii=False,

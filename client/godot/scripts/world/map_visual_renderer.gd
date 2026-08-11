@@ -1,6 +1,7 @@
 extends RefCounted
 
 const RENDER_LAYERS: Array[String] = ["ground_decal", "world", "foreground"]
+const GROUND_RENDER_MODE_LAYERED := "layered_semantic_overlay"
 
 
 static func has_prepared_visual(prepared: Dictionary) -> bool:
@@ -20,6 +21,18 @@ static func draw_ground(canvas: CanvasItem, prepared: Dictionary) -> int:
 		atlas,
 		prepared.get("edgeGroundDraws", [])
 	)
+	if str(prepared.get("groundRenderMode", "")) == GROUND_RENDER_MODE_LAYERED:
+		var base_count := _draw_ground_commands(
+			canvas,
+			atlas,
+			prepared.get("baseGroundDraws", [])
+		)
+		var overlay_count := _draw_ground_commands(
+			canvas,
+			atlas,
+			prepared.get("overlayGroundDraws", [])
+		)
+		return base_count + overlay_count
 	return _draw_ground_commands(
 		canvas,
 		atlas,
@@ -151,6 +164,20 @@ static func edge_ground_draw_count(prepared: Dictionary) -> int:
 	if not has_prepared_visual(prepared):
 		return 0
 	var values: Variant = prepared.get("edgeGroundDraws", [])
+	return (values as Array).size() if values is Array else 0
+
+
+static func base_ground_draw_count(prepared: Dictionary) -> int:
+	if not has_prepared_visual(prepared):
+		return 0
+	var values: Variant = prepared.get("baseGroundDraws", [])
+	return (values as Array).size() if values is Array else 0
+
+
+static func overlay_ground_draw_count(prepared: Dictionary) -> int:
+	if not has_prepared_visual(prepared):
+		return 0
+	var values: Variant = prepared.get("overlayGroundDraws", [])
 	return (values as Array).size() if values is Array else 0
 
 

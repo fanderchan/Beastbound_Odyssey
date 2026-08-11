@@ -29,10 +29,11 @@ def _parity_report(
     form_id: str = "fixture_form",
     run_id: str = "fixture-run",
     subjects: tuple[str, ...] = TOOL.PARITY_KINDS,
+    action_frames: tuple[tuple[str, int], ...] = TOOL.PARITY_ACTION_FRAMES,
 ) -> dict:
     frames = []
     for direction in TOOL.PARITY_DIRECTIONS:
-        for action, frame_index in TOOL.PARITY_ACTION_FRAMES:
+        for action, frame_index in action_frames:
             for kind in subjects:
                 ordinal = len(frames)
                 frames.append(
@@ -378,6 +379,7 @@ class RecordWorldDirectionReviewTest(unittest.TestCase):
         report: dict,
         *,
         subjects: tuple[str, ...] = TOOL.PARITY_KINDS,
+        character_id: str | None = None,
         isolated_bundle: dict | None = None,
     ) -> dict:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -389,6 +391,7 @@ class RecordWorldDirectionReviewTest(unittest.TestCase):
                 run_id="fixture-run",
                 label="fixture parity",
                 subjects=subjects,
+                character_id=character_id,
                 isolated_bundle=isolated_bundle,
             )
 
@@ -413,17 +416,52 @@ class RecordWorldDirectionReviewTest(unittest.TestCase):
 
     def test_subjects_are_exact_and_legacy_default_is_preserved(self) -> None:
         self.assertEqual(TOOL._selected_subjects(None), TOOL.PARITY_KINDS)
+        self.assertEqual(
+            TOOL._selected_subjects("character"),
+            TOOL.CHARACTER_ONLY_SUBJECTS,
+        )
         self.assertEqual(TOOL._selected_subjects("pet"), TOOL.PET_ONLY_SUBJECTS)
         self.assertEqual(
             TOOL._selected_subjects("character,pet,mounted"),
             TOOL.PARITY_KINDS,
         )
-        for invalid in ("character", "pet,character", "pet,pet", "pet,mounted"):
+        for invalid in ("pet,character", "pet,pet", "pet,mounted"):
             with self.subTest(invalid=invalid), self.assertRaisesRegex(
                 TOOL.ReviewRecordingError,
                 "仅允许",
             ):
                 TOOL._selected_subjects(invalid)
+
+    def test_character_only_arguments_and_parity_bind_appearance_id(self) -> None:
+        action_frames = TOOL._character_parity_action_frames("ember_spark_v1")
+        report = _parity_report(
+            subjects=TOOL.CHARACTER_ONLY_SUBJECTS,
+            action_frames=action_frames,
+        )
+        report["characterId"] = "ember_spark_v1"
+        validated = self._validate_parity(
+            report,
+            subjects=TOOL.CHARACTER_ONLY_SUBJECTS,
+            character_id="ember_spark_v1",
+        )
+        self.assertEqual(validated["checkedFrames"], 56)
+
+        with self.assertRaisesRegex(TOOL.ReviewRecordingError, "characterId"):
+            self._validate_parity(
+                report,
+                subjects=TOOL.CHARACTER_ONLY_SUBJECTS,
+                character_id="obsidian_scout_v1",
+            )
+
+        arguments = TOOL._review_arguments(
+            form_id="fixture_form",
+            run_id="fixture-run",
+            parity_report_path=Path("/tmp/parity.json"),
+            subjects=TOOL.CHARACTER_ONLY_SUBJECTS,
+            character_id="ember_spark_v1",
+        )
+        self.assertIn("--mount-review-subjects=character", arguments)
+        self.assertIn("--mount-review-character=ember_spark_v1", arguments)
 
     def test_source_independence_rejects_hardlink_alias_and_horizontal_mirror(
         self,

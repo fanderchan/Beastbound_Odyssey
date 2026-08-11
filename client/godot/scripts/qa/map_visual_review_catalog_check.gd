@@ -151,6 +151,21 @@ static func _validate_catalog_selection(errors: Array[String]) -> void:
 	)
 	if not fallback_errors.is_empty() or str(fallback.get("source", "")) != "normal":
 		errors.append("catalog selection QA preview did not fall back to normal catalog")
+	var mirrored_errors: Array[String] = []
+	var mirrored := MapVisualCatalog._select_catalog_entry(
+		"firebud_training_yard",
+		true,
+		normal_entries,
+		normal_entries.duplicate(true),
+		[],
+		mirrored_errors
+	)
+	if (
+		not mirrored_errors.is_empty()
+		or str(mirrored.get("source", "")) != "normal"
+		or mirrored.get("entry", {}) != normal_entry
+	):
+		errors.append("catalog selection mirrored review entry did not stay normal")
 	var review_only_errors: Array[String] = []
 	var review_only := MapVisualCatalog._select_catalog_entry(
 		"firebud_training_yard",

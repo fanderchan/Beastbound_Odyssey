@@ -80,9 +80,6 @@ const PetGrowthObservationModel := preload("res://scripts/progression/pet_growth
 const PetGrowthRadarControl := preload("res://scripts/ui/pet_growth_radar_control.gd")
 const BackpackPanelPresenter := preload("res://scripts/ui/backpack_panel_presenter.gd")
 const AdventureGoalPresenter := preload("res://scripts/ui/adventure_goal_presenter.gd")
-const WorldHudAwakenedPresenter := preload(
-	"res://scripts/ui/world_hud_awakened_presenter.gd"
-)
 const QuestAwakenedPresenter := preload(
 	"res://scripts/ui/quest_awakened_presenter.gd"
 )
@@ -299,6 +296,7 @@ const EQUIPMENT_COMPARE_LOSS_COLOR := "#ff746a"
 const ACTIVE_TARGET_FPS := 60
 const IDLE_TARGET_FPS := 30
 const WORLD_HUD_REFRESH_INTERVAL_SECONDS := 0.20
+const WORLD_REDRAW_SIGNATURE_INTERVAL_SECONDS := 0.10
 const CLICK_MOVE_REPATH_INTERVAL_SECONDS := 0.10
 const BACKPACK_HEAL_POPUP_DURATION_SECONDS := 2.0
 const DIALOG_ACTION_ACK := "ack"
@@ -342,7 +340,6 @@ var pet
 var path_line_node: Line2D
 var hud_root: Control
 var world_hud_awakened_state_signature_cache := ""
-var world_hud_minimap_visual_signature_cache := ""
 var panel_registry
 var npc_hover_identity_presenter
 var npc_hover_last_screen_point := Vector2.ZERO
@@ -865,6 +862,8 @@ var world_camera_hud_blocker_rects: Array[Rect2] = []
 var auto_movement_check: bool = false
 var movement_perf_check: bool = false
 var movement_spam_click_check: bool = false
+var movement_spam_click_limit: int = 0
+var movement_spam_click_limit_argument_error: String = ""
 var shop_select_perf_check: bool = false
 var auto_mouse_click_check: bool = false
 var auto_mobile_touch_check: bool = false
@@ -1388,6 +1387,7 @@ var task_tracker_hud_prefix_cache: String = "目标  当前没有任务\n行动 
 var task_tracker_target_cache: Dictionary = {}
 var task_tracker_has_target_cache: bool = false
 var world_hud_refresh_elapsed: float = WORLD_HUD_REFRESH_INTERVAL_SECONDS
+var world_redraw_signature_elapsed: float = WORLD_REDRAW_SIGNATURE_INTERVAL_SECONDS
 var map_world_bounds_cache := Rect2()
 var map_world_bounds_cache_valid: bool = false
 var runtime_target_fps_cache: int = 0
@@ -1398,6 +1398,8 @@ var perf_probe_frames: int = 0
 var perf_probe_totals: Dictionary = {}
 var perf_probe_frame_max_usec: Dictionary = {}
 var perf_probe_label_samples: Dictionary = {}
+var perf_probe_process_accounting_usec: int = 0
+var perf_probe_process_active: bool = false
 
 
 func _bootstrap_auth_state() -> void:
@@ -2467,6 +2469,16 @@ func _apply_preview_window_args() -> void:
 			movement_perf_check = true
 		elif arg == "--movement-spam-click-check":
 			movement_spam_click_check = true
+		elif arg.begins_with("--movement-spam-click-limit="):
+			var click_limit_text := arg.substr("--movement-spam-click-limit=".length()).strip_edges()
+			if not click_limit_text.is_valid_int():
+				movement_spam_click_limit_argument_error = "movement spam click limit must be an integer"
+			else:
+				var requested_click_limit := int(click_limit_text)
+				if requested_click_limit < 1 or requested_click_limit > 120:
+					movement_spam_click_limit_argument_error = "movement spam click limit must be between 1 and 120"
+				else:
+					movement_spam_click_limit = requested_click_limit
 		elif arg == "--shop-select-perf-check":
 			shop_select_perf_check = true
 		elif arg == "--auto-movement-check":
@@ -3277,6 +3289,7 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 	world_depth_drop_signature_cache = ""
 	world_depth_drop_signature_dirty = true
 	world_overlay_signature_cache = ""
+	world_redraw_signature_elapsed = WORLD_REDRAW_SIGNATURE_INTERVAL_SECONDS
 	if npc_hover_identity_presenter != null:
 		npc_hover_identity_presenter.configure_map(map_data)
 	map_world_bounds_cache_valid = false
@@ -3407,6 +3420,10 @@ func _run_auto_party_member_follow_check() -> void:
 
 
 func _run_movement_spam_click_check() -> void:
+	if not movement_spam_click_limit_argument_error.is_empty():
+		print("movement spam click check ready: status=failed reason=%s" % movement_spam_click_limit_argument_error)
+		get_tree().quit(1)
+		return
 	# Keep this probe deterministic and isolate input/movement cost. Encounter
 	# behavior has its own auto check and must not switch the probe into battle.
 	encounter_grace_remaining = 3600.0
@@ -3427,7 +3444,11 @@ func _run_movement_spam_click_check() -> void:
 	var mouse_event_count := 0
 	var viewport_rect := Rect2(Vector2.ZERO, _layout_size())
 	for frame_index in range(40):
+		if movement_spam_click_limit > 0 and click_count >= movement_spam_click_limit:
+			break
 		for burst_index in range(3):
+			if movement_spam_click_limit > 0 and click_count >= movement_spam_click_limit:
+				break
 			var index := frame_index * 3 + burst_index
 			var offset := Vector2i(4 + (index % 9), -4 - (index % 7))
 			var candidate := IsoMapModel.nearest_walkable_cell(map_data, start_cell + offset)
@@ -3500,9 +3521,10 @@ func _run_movement_spam_click_check() -> void:
 	)
 	var final_target_matches := final_player_cell == last_cell
 	var status := "ok" if click_count > 0 and moved and coalesced and input_fast and input_screen_roundtrip and settled and final_target_matches else "failed"
-	print("movement spam click check ready: status=%s clicks=%d ui_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d screen_matches=%d screen_mismatches=%d screen_roundtrip=%s avg_input_us=%d max_input_us=%d settle_frames=%d moved=%s coalesced=%s settled=%s final_match=%s auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
+	print("movement spam click check ready: status=%s clicks=%d click_limit=%d ui_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d screen_matches=%d screen_mismatches=%d screen_roundtrip=%s avg_input_us=%d max_input_us=%d settle_frames=%d moved=%s coalesced=%s settled=%s final_match=%s auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
 		status,
 		click_count,
+		movement_spam_click_limit,
 		ui_skipped_count,
 		mouse_event_count,
 		input_ui_reject_count,
@@ -8251,6 +8273,9 @@ func _path_has_same_screen_y(path_cells: Array[Vector2i]) -> bool:
 
 func _process(delta: float) -> void:
 	var frame_start := _perf_now()
+	if perf_probe_enabled:
+		perf_probe_process_accounting_usec = 0
+		perf_probe_process_active = true
 	_sync_keyboard_movement_input_gate()
 	_sync_player_mount_visual_if_needed()
 	_sync_world_layer_visibility()
@@ -8335,7 +8360,7 @@ func _process(delta: float) -> void:
 	_panel_flow()._flush_world_log_layout_if_needed(delta)
 	_perf_add("world_log_layout", section_start)
 	section_start = _perf_now()
-	_queue_world_redraw_if_needed()
+	_queue_world_redraw_if_needed(delta)
 	_perf_add("redraw_check", section_start)
 	_perf_add("process_total", frame_start)
 	_perf_report(delta)
@@ -8348,8 +8373,21 @@ func _perf_now() -> int:
 func _perf_add(label: String, start_usec: int) -> void:
 	if not perf_probe_enabled:
 		return
-	var duration := Time.get_ticks_usec() - start_usec
+	var accounting_start := Time.get_ticks_usec()
+	var duration := accounting_start - start_usec
+	if label == "process_total" and perf_probe_process_active:
+		duration = maxi(0, duration - perf_probe_process_accounting_usec)
 	perf_probe_totals[label] = int(perf_probe_totals.get(label, 0)) + duration
+	# All labels keep aggregate means for the probe report.  The native frame
+	# capture consumers only read process_total's per-frame max/sample count;
+	# maintaining two extra dictionaries for every sub-label distorted the very
+	# process_total value the probe is intended to measure.
+	if label != "process_total":
+		if perf_probe_process_active:
+			perf_probe_process_accounting_usec += (
+				Time.get_ticks_usec() - accounting_start
+			)
+		return
 	perf_probe_frame_max_usec[label] = maxi(
 		int(perf_probe_frame_max_usec.get(label, 0)),
 		duration
@@ -8357,6 +8395,7 @@ func _perf_add(label: String, start_usec: int) -> void:
 	perf_probe_label_samples[label] = int(
 		perf_probe_label_samples.get(label, 0)
 	) + 1
+	perf_probe_process_active = false
 
 
 func _perf_report(delta: float) -> void:
@@ -8386,6 +8425,8 @@ func _reset_perf_probe_counters() -> void:
 		return
 	perf_probe_elapsed = 0.0
 	perf_probe_frames = 0
+	perf_probe_process_accounting_usec = 0
+	perf_probe_process_active = false
 	perf_probe_totals.clear()
 	perf_probe_frame_max_usec.clear()
 	perf_probe_label_samples.clear()
@@ -8424,6 +8465,7 @@ func _save_player_profile_now() -> bool:
 func _mark_progress_ui_caches_dirty() -> void:
 	world_draw_signature_cache = ""
 	world_hud_signature_cache = ""
+	world_redraw_signature_elapsed = WORLD_REDRAW_SIGNATURE_INTERVAL_SECONDS
 	hud_task_route_signature_cache = ""
 	current_task_text_signature_cache = ""
 	current_task_text_cache = ""
@@ -8433,6 +8475,7 @@ func _mark_progress_ui_caches_dirty() -> void:
 	task_tracker_entries_cache.clear()
 	task_tracker_target_cache = {}
 	task_tracker_has_target_cache = false
+	world_hud_awakened_state_signature_cache = ""
 	quest_marker_cache_dirty = true
 	quest_marker_source_signature_cache = ""
 	quest_marker_signature_cache = ""
@@ -8591,7 +8634,14 @@ func _face_player_toward_screen_point(screen_point: Vector2) -> bool:
 	return true
 
 
-func _queue_world_redraw_if_needed() -> void:
+func _queue_world_redraw_if_needed(delta: float) -> void:
+	world_redraw_signature_elapsed += maxf(0.0, delta)
+	# Layer mutations also invalidate caches at their write sites. Keep a
+	# bounded fallback poll for missed invalidations without rebuilding several
+	# string signatures and issuing a target-marker call on every idle frame.
+	if world_redraw_signature_elapsed < WORLD_REDRAW_SIGNATURE_INTERVAL_SECONDS:
+		return
+	world_redraw_signature_elapsed = 0.0
 	var draw_signature := _world_draw_signature()
 	var overlay_signature := _world_overlay_signature()
 	var remote_signature := "%s|%s" % [current_map_id, online_position_draw_signature_cache]
@@ -8664,6 +8714,7 @@ func _invalidate_ground_pet_drop_depth_cache() -> void:
 	world_depth_drop_signature_dirty = true
 	world_depth_drop_content_signature_cache = ""
 	world_depth_drop_signature_cache = ""
+	world_redraw_signature_elapsed = WORLD_REDRAW_SIGNATURE_INTERVAL_SECONDS
 	if world_depth_layer != null:
 		world_depth_layer.clear_group("ground_pet_drops")
 
@@ -8984,15 +9035,17 @@ func _world_overlay_signature() -> String:
 
 func _update_world_hud_if_needed(delta: float, force: bool = false) -> void:
 	world_hud_refresh_elapsed += delta
+	# HUD mutations also have explicit refresh call sites.  Keep this poll as a
+	# bounded fallback instead of rebuilding its string signature every frame.
+	if not force and world_hud_refresh_elapsed < WORLD_HUD_REFRESH_INTERVAL_SECONDS:
+		return
+	world_hud_refresh_elapsed = 0.0
 	var signature_start := _perf_now()
 	var signature := _world_hud_signature()
 	_perf_add("hud_signature", signature_start)
 	if not force and signature == world_hud_signature_cache:
 		return
-	if not force and _world_needs_active_fps() and world_hud_refresh_elapsed < WORLD_HUD_REFRESH_INTERVAL_SECONDS:
-		return
 	world_hud_signature_cache = signature
-	world_hud_refresh_elapsed = 0.0
 	var apply_start := _perf_now()
 	_update_hud_text(force)
 	_perf_add("hud_apply", apply_start)
@@ -14998,11 +15051,6 @@ func _update_hud_text(force: bool = false) -> void:
 	if detail_label != null and (force or detail_text != hud_detail_text_cache):
 		detail_label.text = detail_text
 		hud_detail_text_cache = detail_text
-	if world_hud_awakened_view != null:
-		world_hud_awakened_view.apply_location(map_name, player_cell)
-		world_hud_awakened_view.apply_task_text(detail_text)
-		world_hud_awakened_view.apply_task_entries(task_tracker_entries_cache)
-		_refresh_world_hud_awakened_state(force, player_cell, detail_text)
 	_perf_add("hud_label_apply", label_start)
 	var route_start := _perf_now()
 	var route_signature := "%s|%s|%s|%s|%s|%s|%s" % [
@@ -15020,83 +15068,6 @@ func _update_hud_text(force: bool = false) -> void:
 	_perf_add("hud_route", route_start)
 	_panel_flow()._refresh_world_hud_awakened(force)
 	_sync_world_hud_signature_after_text_update()
-
-
-func _refresh_world_hud_awakened_state(
-	force: bool,
-	player_cell: Vector2i,
-	task_text: String
-) -> void:
-	if world_hud_awakened_view == null:
-		return
-	var player_value = player_profile.get("player", {})
-	var player_state := player_value as Dictionary if player_value is Dictionary else {}
-	var party_value = party_current_state.get("party", {})
-	var party_state := party_value as Dictionary if party_value is Dictionary else {}
-	var latest_chat_id := ""
-	if not chat_messages.is_empty():
-		var latest_value = chat_messages.back()
-		if latest_value is Dictionary:
-			latest_chat_id = str((latest_value as Dictionary).get("messageId", ""))
-	var signature := "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % [
-		str(player_state.get("name", "")),
-		str(player_state.get("level", 1)),
-		str(player_state.get("hp", "")),
-		str(player_state.get("exp", "")),
-		str(player_state.get("appearanceId", "")),
-		str(player_profile.get("activePetInstanceId", "")),
-		str(party_state.get("partyId", "")),
-		latest_chat_id,
-		mailbox_menu_button.text if mailbox_menu_button != null else "",
-		str(account_authenticated),
-		str(battle_active),
-		current_map_id,
-		str(player_cell.x),
-		str(player_cell.y),
-	]
-	if not force and signature == world_hud_awakened_state_signature_cache:
-		return
-	world_hud_awakened_state_signature_cache = signature
-	var runtime := {
-		"mapName": str(map_data.get("name", "未知地图")),
-		"playerCell": player_cell,
-		"playerWorldPosition": player.global_position if player != null else Vector2.ZERO,
-		"taskText": task_text,
-		"party": party_state,
-		"chatMessages": chat_messages,
-		"chatActiveChannel": chat_active_channel,
-		"mailbox": {
-			"synced": false,
-			"state": mailbox_page_state,
-		},
-		"accountAuthenticated": account_authenticated,
-		"serverSession": not current_account_session.is_empty(),
-		"gmAccess": _can_use_gm_tools(),
-		"battleActive": battle_active,
-	}
-	var combined := WorldHudAwakenedPresenter.combined_state(player_profile, runtime)
-	var view_state := {}
-	var identity_value = combined.get("identity", {})
-	if identity_value is Dictionary:
-		view_state.merge(identity_value as Dictionary, true)
-	var runtime_value = combined.get("runtime", {})
-	if runtime_value is Dictionary:
-		view_state.merge(runtime_value as Dictionary, true)
-	var minimap_visual_signature := "%s|%s|%s|%s" % [
-		current_map_id,
-		str(map_visual_render_state.get("bundleId", "")),
-		str(map_visual_render_state.get("active", false)),
-		str(map_visual_render_state.get("qaPreview", false)),
-	]
-	if minimap_visual_signature != world_hud_minimap_visual_signature_cache:
-		world_hud_minimap_visual_signature_cache = minimap_visual_signature
-		if world_hud_awakened_view.has_method("configure_minimap"):
-			world_hud_awakened_view.configure_minimap(
-				map_visual_render_state,
-				_map_world_bounds(),
-				IsoMapModel.grid_size(map_data)
-			)
-	world_hud_awakened_view.apply_view_state(view_state)
 
 
 func _sync_world_hud_signature_after_text_update() -> void:

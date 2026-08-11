@@ -42,9 +42,9 @@
     "runtimeMirroring": false,
     "actions": {
       "idle": {"frameCount": 1, "fps": 4, "loop": true, "status": "produced"},
-      "walk": {"frameCount": 4, "fps": 10, "loop": true, "status": "produced"}
+      "walk": {"frameCount": 6, "fps": 9, "loop": true, "status": "produced"}
     },
-    "totalFrameCount": 40
+    "totalFrameCount": 56
   },
   "source": {
     "kind": "project_original_ai_assisted",
@@ -59,6 +59,9 @@
   "quality": {
     "resolution": "hd_512_source_with_256_runtime_frames",
     "worldLocomotionDirectionContract": "independent_8_no_runtime_mirroring",
+    "worldWalkGaitContract": "contact_a_passing_a_recovery_a_contact_b_passing_b_recovery_b",
+    "worldWalkGaitRepair": "source/world-gait-v3-manifest.json",
+    "worldWalkGaitSelfReviewStatus": "passed_real_godot_and_main_review_owner_pending",
     "battleViewContract": "independent_front_and_back_no_runtime_mirroring",
     "selfReviewStatus": "passed_automated_qc_owner_review_pending",
     "ownerReviewStatus": "owner_review_pending"

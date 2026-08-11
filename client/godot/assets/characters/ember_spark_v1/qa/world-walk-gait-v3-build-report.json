@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "characterId": "ember_spark_v1",
+  "repairId": "ember_spark_world_gait_v3",
+  "status": "passed",
+  "contract": {
+    "directions": 8,
+    "walkFramesPerDirection": 6,
+    "runtimeFps": 9
+  },
+  "counts": {
+    "selectedInputs": 48,
+    "sourceWalkFrames": 48,
+    "runtimeWalkFrames": 48
+  },
+  "sets": {
+    "selectedInputsSha256": "53f84f736895bd468706eeb5c5ecc7a7e4a738bb1983d7da2742a85b0d543aa3",
+    "sourceFramesSha256": "c4de40f82cc68c5b4c8d0bb75f5dd8f8b8fe1ed9545be3f8a48eda08dab8f006",
+    "runtimeFramesSha256": "352d63321b4efa62a21c496d5bdd28d54b26ca5c360b24f0c9fbbc16eb6cdf00",
+    "contactSheetSha256": "ecb9e1eca4dcc35927f8723b7ec36c340ab6ef24266434ba993b1a3fe4ee4624"
+  },
+  "gates": {
+    "sourceEdgeTouches": 0,
+    "runtimeEdgeTouches": 0,
+    "sourceExactDuplicates": 0,
+    "runtimeExactDuplicates": 0,
+    "sourceExactCrossDirectionMirrors": 0,
+    "runtimeExactCrossDirectionMirrors": 0,
+    "sourceMaximumBaselineDriftPx": 0,
+    "runtimeMaximumBaselineDriftPx": 1
+  },
+  "sourceDirectionMetrics": {
+    "south": {
+      "baselineBottomExclusiveMin": 478,
+      "baselineBottomExclusiveMax": 478,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 0.5,
+      "alphaHeightRatio": 1.0
+    },
+    "southwest": {
+      "baselineBottomExclusiveMin": 478,
+      "baselineBottomExclusiveMax": 478,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 1.0,
+      "alphaHeightRatio": 1.0
+    },
+    "west": {
+      "baselineBottomExclusiveMin": 478,
+      "baselineBottomExclusiveMax": 478,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 1.0,
+      "alphaHeightRatio": 1.0
+    },
+    "northwest": {
+      "baselineBottomExclusiveMin": 478,
+      "baselineBottomExclusiveMax": 478,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 0.5,
+      "alphaHeightRatio": 1.0
+    },
+    "north": {
+      "baselineBottomExclusiveMin": 478,
+      "baselineBottomExclusiveMax": 478,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 1.0,
+      "alphaHeightRatio": 1.0
+    },
+    "northeast": {
+      "baselineBottomExclusiveMin": 478,
+      "baselineBottomExclusiveMax": 478,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 1.0,
+      "alphaHeightRatio": 1.0
+    },
+    "east": {
+      "baselineBottomExclusiveMin": 478,
+      "baselineBottomExclusiveMax": 478,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 1.0,
+      "alphaHeightRatio": 1.0
+    },
+    "southeast": {
+      "baselineBottomExclusiveMin": 478,
+      "baselineBottomExclusiveMax": 478,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 1.0,
+      "alphaHeightRatio": 1.0
+    }
+  },
+  "runtimeDirectionMetrics": {
+    "south": {
+      "baselineBottomExclusiveMin": 241,
+      "baselineBottomExclusiveMax": 241,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 0.5,
+      "alphaHeightRatio": 1.0
+    },
+    "southwest": {
+      "baselineBottomExclusiveMin": 240,
+      "baselineBottomExclusiveMax": 240,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 0.5,
+      "alphaHeightRatio": 1.0
+    },
+    "west": {
+      "baselineBottomExclusiveMin": 240,
+      "baselineBottomExclusiveMax": 240,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 0.5,
+      "alphaHeightRatio": 1.0
+    },
+    "northwest": {
+      "baselineBottomExclusiveMin": 240,
+      "baselineBottomExclusiveMax": 241,
+      "baselineDriftPx": 1,
+      "centerDriftPx": 0.5,
+      "alphaHeightRatio": 1.0098
+    },
+    "north": {
+      "baselineBottomExclusiveMin": 240,
+      "baselineBottomExclusiveMax": 241,
+      "baselineDriftPx": 1,
+      "centerDriftPx": 1.0,
+      "alphaHeightRatio": 1.00971
+    },
+    "northeast": {
+      "baselineBottomExclusiveMin": 240,
+      "baselineBottomExclusiveMax": 241,
+      "baselineDriftPx": 1,
+      "centerDriftPx": 0.5,
+      "alphaHeightRatio": 1.0098
+    },
+    "east": {
+      "baselineBottomExclusiveMin": 240,
+      "baselineBottomExclusiveMax": 241,
+      "baselineDriftPx": 1,
+      "centerDriftPx": 1.0,
+      "alphaHeightRatio": 1.00971
+    },
+    "southeast": {
+      "baselineBottomExclusiveMin": 240,
+      "baselineBottomExclusiveMax": 240,
+      "baselineDriftPx": 0,
+      "centerDriftPx": 0.5,
+      "alphaHeightRatio": 1.0
+    }
+  },
+  "errors": []
+}

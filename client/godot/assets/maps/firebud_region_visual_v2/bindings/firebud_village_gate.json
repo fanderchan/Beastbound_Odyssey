@@ -7,6 +7,8 @@
     "edgePaddingCells": 16,
     "edgeTileId": "firebud_meadow_far",
     "defaultTileId": "firebud_meadow_a",
+    "layeredBaseTileId": "firebud_meadow_a",
+    "blockedVisualMode": "inherit_surface",
     "blockedTileId": "firebud_dark_root_soil_a",
     "encounterTileId": "firebud_tall_grass_encounter",
     "warpTileId": "firebud_warp_stone",
@@ -20,6 +22,14 @@
         "firebud_meadow_b",
         "firebud_meadow_dry_b",
         "firebud_meadow_clover_c"
+      ],
+      "firebud_ochre_path_a": [
+        "firebud_ochre_path_a",
+        "firebud_ochre_path_worn_b"
+      ],
+      "firebud_honey_stone_a": [
+        "firebud_honey_stone_a",
+        "firebud_honey_stone_moss_b"
       ]
     },
     "pathDilation": 1,

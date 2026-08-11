@@ -18,6 +18,47 @@
     "east": "exec-45572ba2-8c13-40ab-bd71-908d2246ecad.png",
     "southeast": "exec-c3f37266-5cc4-4345-a864-6db7701c2eb9.png"
   },
+  "worldGaitV2": {
+    "reason": "semantic gait repair after real-client one-legged sliding review",
+    "status": "rejected_by_owner_one_legged_and_discontinuous",
+    "generatedImageArchiveRoot": "/Users/fander/.codex/generated_images/019fe7c8-2fd7-7972-94a7-98382ddfe591",
+    "south": "exec-2155f4f4-15f9-47cf-be2b-2fb1ac2df3bd.png",
+    "southwest": "exec-d8a52c2d-79b3-4c92-97d2-ef491929f143.png",
+    "west": "exec-a3b88c04-176e-4b5f-9d3e-769d8f1965b1.png",
+    "northwest": "exec-ab27d53b-d018-41b9-baa5-ea0afe9235fd.png",
+    "north": "exec-d45378bb-4155-4046-9cb5-3d4f3113cf4a.png",
+    "northeast": "exec-b078acfe-f0e2-4ed7-962d-2e857fb59a99.png",
+    "east": "exec-23d0cc5c-75e6-4ce3-8324-35464cd1754f.png",
+    "southeast": "exec-ba0e37bd-6e97-4165-850d-70345ec9d98a.png"
+  },
+  "worldGaitV3": {
+    "reason": "six-frame semantic gait repair after owner rejected the four-frame v2 loop as one-legged and discontinuous",
+    "status": "passed_real_godot_and_main_review_owner_pending",
+    "generatedImageArchiveRoot": "/Users/fander/.codex/generated_images/019fe7c8-2fd7-7972-94a7-98382ddfe591",
+    "manifest": "source/world-gait-v3-manifest.json",
+    "report": "qa/world-walk-gait-v3-report.json",
+    "normalization": "shared-height source normalization plus premultiplied-alpha Lanczos runtime downsample",
+    "fullCycleSheets": {
+      "south": "exec-d0e9de21-54d9-4246-888c-97a6001cee71.png",
+      "southwest": "exec-609034ce-4db7-46ff-8757-f5ff338140c5.png",
+      "west": "exec-dabfe039-f13d-469b-8507-e32fa499d1d1.png",
+      "northwest": "exec-56bf0ed7-f561-4e22-9951-e4427558d0a9.png",
+      "north": "exec-053fef0d-4048-4449-a5ac-dc11fcb99622.png",
+      "northeast": "exec-380bdb36-b08a-4a5b-ba98-0c9e9f37d884.png",
+      "east": "exec-6e04d23f-87b5-4ceb-b21f-afdb9166e904.png",
+      "southeast": "exec-6422a962-d253-4437-a35f-5400c2d3a28b.png"
+    },
+    "passingSheets": {
+      "south": ["exec-3a9fd255-8c11-4641-a5b7-dfd23c1c26f6.png"],
+      "southwest": ["exec-63e3871d-c7d3-49b7-9182-cad6b04464b6.png", "exec-05113f97-333f-4382-9a16-6f335d9227f3.png"],
+      "west": ["exec-9a8fdffd-a1f2-47d6-a411-42265b61fa3e.png"],
+      "northwest": ["exec-c9251b09-83a1-49b4-ab3d-22c79ce1b207.png", "exec-a7f3f9fe-ba15-4843-a5cc-83fd691c6849.png"],
+      "north": ["exec-9f8cb020-f85b-4897-9ea5-6bd4bce51e6f.png"],
+      "northeast": ["exec-63d8d75a-e540-4e2c-bbd9-cc72736318fd.png", "exec-45c54adc-0614-4981-b0bf-096ebcdaab93.png"],
+      "east": ["exec-fed62604-13e7-4b37-b115-87ea2d42dd01.png", "exec-258f46c8-7f16-408c-8de9-1e51aaa0f1c9.png"],
+      "southeast": ["exec-9012c865-5a6e-42f8-b0a3-bd1d7e1bfa60.png", "exec-c7e3dbc6-bcb3-48d2-9832-29b052866d0e.png"]
+    }
+  },
   "battle": {
     "front_3quarter_sw": {
       "idle": "exec-34342694-f7a9-4180-b2e4-0c491b989514.png",

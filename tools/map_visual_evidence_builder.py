@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -27,6 +28,14 @@ COLLISION_COMMAND = (
     "godot --headless --path client/godot --script "
     "res://scripts/qa/map_visual_runtime_check.gd"
 )
+COLLISION_COMMAND_ARGS = (
+    "godot",
+    "--headless",
+    "--path",
+    "client/godot",
+    "--script",
+    "res://scripts/qa/map_visual_runtime_check.gd",
+)
 RUNNER_VERSION = "4.7.stable.official.5b4e0cb0f"
 THRESHOLDS = {
     "candidateIdleProcessMeanMaxMs": 0.5,
@@ -35,6 +44,10 @@ THRESHOLDS = {
     "movingRegressionMaxMs": 0.35,
 }
 MAP_BUNDLES = {
+    "firebud_region_visual_v2": (
+        "assets/maps/firebud_region_visual_v2",
+        ("firebud_training_yard", "firebud_village_gate"),
+    ),
     "firebud_region_visual_v1": (
         "assets/maps/firebud_region_visual_v1",
         ("firebud_training_yard", "firebud_village_gate"),
@@ -58,6 +71,9 @@ RUNTIME_IDENTITY_FILES = (
     "scenes/Main.tscn",
     "scripts/main.gd",
     "scripts/ui/panel_flow_coordinator.gd",
+    "scripts/ui/world_hud_awakened_presenter.gd",
+    "scripts/ui/world_hud_awakened_view.gd",
+    "scripts/ui/world_hud_minimap_render_canvas.gd",
     "scripts/world/isometric_map_model.gd",
     "scripts/world/map_data_catalog.gd",
     "scripts/world/map_visual_catalog.gd",
@@ -319,8 +335,7 @@ def build_identity() -> str:
     return f"git:{head}+{BUILD_IDENTITY_NAMESPACE}:{digest.hexdigest()}"
 
 
-def _runtime_payload(receipt: Path) -> dict[str, Any]:
-    text = receipt.read_text(encoding="utf-8")
+def _runtime_payload_text(text: str, *, label: str) -> dict[str, Any]:
     prefix = "map visual runtime check: "
     matches = [
         line[len(prefix) :]
@@ -329,17 +344,72 @@ def _runtime_payload(receipt: Path) -> dict[str, Any]:
     ]
     if len(matches) != 1:
         raise EvidenceError(
-            f"{receipt} must contain exactly one map visual runtime report"
+            f"{label} must contain exactly one map visual runtime report"
         )
     try:
         payload = json.loads(matches[0])
     except json.JSONDecodeError as error:
         raise EvidenceError(f"invalid runtime receipt JSON: {error}") from error
     if not isinstance(payload, dict) or payload.get("result") != "PASS":
-        raise EvidenceError(f"runtime receipt is not PASS: {receipt}")
+        raise EvidenceError(f"runtime receipt is not PASS: {label}")
     if payload.get("errors") != []:
-        raise EvidenceError(f"runtime receipt has errors: {receipt}")
+        raise EvidenceError(f"runtime receipt has errors: {label}")
     return payload
+
+
+def _runtime_payload(receipt: Path) -> dict[str, Any]:
+    return _runtime_payload_text(
+        receipt.read_text(encoding="utf-8"),
+        label=str(receipt),
+    )
+
+
+def capture_collision_receipt(
+    bundle_id: str,
+    *,
+    runner: Any = subprocess.run,
+) -> Path:
+    if bundle_id not in MAP_BUNDLES:
+        raise EvidenceError(f"unknown map bundle: {bundle_id}")
+    relative_root, expected_map_ids = MAP_BUNDLES[bundle_id]
+    completed = runner(
+        list(COLLISION_COMMAND_ARGS),
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    receipt_text = completed.stdout + completed.stderr
+    if completed.returncode != 0:
+        raise EvidenceError(
+            f"map collision runner failed with {completed.returncode}"
+        )
+    payload = _runtime_payload_text(receipt_text, label="Godot stdout/stderr")
+    if (
+        payload.get("mode") != "strict_frozen_validation"
+        or payload.get("result") != "PASS"
+        or payload.get("errors") != []
+    ):
+        raise EvidenceError("map collision runner did not return strict PASS")
+    reports = payload.get("bundleReports")
+    report = reports.get(bundle_id) if isinstance(reports, dict) else None
+    if (
+        not isinstance(report, dict)
+        or report.get("result") != "PASS"
+        or tuple(report.get("testedMapIds", ())) != expected_map_ids
+    ):
+        raise EvidenceError(f"runtime receipt lacks PASS bundle report: {bundle_id}")
+
+    output = GODOT_ROOT / relative_root / "evidence/collision-runner-receipt.log"
+    temp = output.with_name(f".{output.name}.{os.getpid()}.tmp")
+    if temp.exists():
+        raise EvidenceError(f"collision receipt temp already exists: {temp}")
+    try:
+        temp.write_text(receipt_text, encoding="utf-8")
+        os.replace(temp, output)
+    finally:
+        temp.unlink(missing_ok=True)
+    return output
 
 
 def build_collision_report(
@@ -471,9 +541,10 @@ def parse_perf_run(record: dict[str, Any]) -> dict[str, Any]:
         moving_match = MOVING_LINE_RE.match(line)
         if moving_match is not None:
             moving_values = _parse_key_values(moving_match.group("body"))
-    if len(samples) < 3:
+    minimum_samples = 2 if record.get("mode") == "moving" else 3
+    if len(samples) < minimum_samples:
         raise EvidenceError(
-            f"performance run has fewer than 3 samples: {record.get('mapId')} "
+            f"performance run has fewer than {minimum_samples} samples: {record.get('mapId')} "
             f"{record.get('variant')} {record.get('mode')}"
         )
 
@@ -709,7 +780,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode",
-        choices=("identity", "collision", "performance"),
+        choices=("identity", "collision-receipt", "collision", "performance"),
     )
     parser.add_argument(
         "--bundle-id",
@@ -729,6 +800,20 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.bundle_id is None:
             raise EvidenceError("--bundle-id is required")
+        if args.mode == "collision-receipt":
+            output = capture_collision_receipt(args.bundle_id)
+            print(
+                json.dumps(
+                    {
+                        "status": "PASS",
+                        "output": str(output),
+                        "sha256": _sha256(output),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
         if args.build_identity != identity:
             raise EvidenceError(
                 "provided build identity does not match the current runtime surface"

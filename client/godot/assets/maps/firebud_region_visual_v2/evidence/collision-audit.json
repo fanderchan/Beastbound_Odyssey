@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound_map_collision_audit",
+  "bundleId": "firebud_region_visual_v2",
+  "result": "PASS",
+  "generatedAtUtc": "2026-08-10T20:42:45Z",
+  "scene": "res://scenes/Main.tscn",
+  "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd",
+  "testedMapIds": [
+    "firebud_training_yard",
+    "firebud_village_gate"
+  ],
+  "checks": {
+    "authoritativeBlockedCells": "PASS",
+    "objectCollisionFootprints": "PASS",
+    "pathLinkEndpointsAndExactReachability": "PASS",
+    "spawnProtection": "PASS",
+    "warpSourceAndDestinationProtection": "PASS",
+    "npcSourceAndReachableApproachProtection": "PASS",
+    "encounterCellsAndRectsRespectWalkability": "PASS",
+    "bindingAndMapDataHashes": "PASS"
+  },
+  "maps": [
+    {
+      "mapId": "firebud_training_yard",
+      "groundDraws": 1224,
+      "objectCount": 19,
+      "protectedCells": 123
+    },
+    {
+      "mapId": "firebud_village_gate",
+      "groundDraws": 672,
+      "objectCount": 30,
+      "protectedCells": 184
+    }
+  ],
+  "authoritySnapshot": {
+    "catalogContractSha256": "18e0f53de2ccbcc52e89f6033efbbb41ed41b189afdf9174e1f4426840ef7b23",
+    "bindingHashes": {
+      "firebud_training_yard": "d1b249a4aa923e07864358fea1bb4bc5a5fa82db4c1eaf7899378ca9312cc14b",
+      "firebud_village_gate": "b0c7335a9d40dffc24a7b0c4e7d5a86522d57b7b481cced458ca3374a1747962"
+    },
+    "mapDataHashes": {
+      "firebud_training_yard": "1c4cd89ec2dd1b7bbcf894afc7f9c5daab26133a82b62a63e3dbbe21ab9719f3",
+      "firebud_village_gate": "9acc9579c17249d3ed4db74faacd57fc21c1a38adc5ab3b7dffa4b82f91a127f"
+    }
+  },
+  "excludedReleaseGate": null,
+  "blockers": [],
+  "runnerIdentity": {
+    "runner": "godot",
+    "runnerVersion": "4.7.stable.official.5b4e0cb0f",
+    "buildIdentity": "git:23855b4636d1351e70f5cdaa1099dbb8fda62c81+beastbound-map-runtime-surface-v2:c2da47cd8c3341067ae0961091d85b63f8daa70db8acab0712014a6dbcdb5f28"
+  },
+  "rawRunnerReceipt": {
+    "path": "evidence/collision-runner-receipt.log",
+    "sha256": "0a560e69b083b0b770eefcb67600c71f7ecccef9c1cfb16c9cedb6633d2f7864"
+  },
+  "notes": [
+    "This report covers authoritative map, collision, protected-cell and exact-path contracts.",
+    "Tall-object front/behind presentation is independently gated by the formal Computer Use occlusion action."
+  ]
+}

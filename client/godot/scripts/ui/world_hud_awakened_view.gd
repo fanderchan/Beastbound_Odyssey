@@ -182,6 +182,8 @@ var _proxy_buttons: Dictionary = {}
 var _proxy_slots: Dictionary = {}
 var _minimap_viewport: SubViewport
 var _minimap_canvas: WorldHudMinimapRenderCanvas
+var _minimap_texture_rect: TextureRect
+var _minimap_player_marker: Label
 var _minimap_grid_size := Vector2i.ZERO
 var _minimap_configure_revision := 0
 var _last_apply_minimap_configure_revision := -1
@@ -523,17 +525,12 @@ func apply_view_state(state: Dictionary) -> void:
 			state.get("minimap_texture", state.get("minimapTexturePath", null))
 		)
 	)
-	var minimap_texture_rect := find_child(
-		"WorldHudMinimapTexture",
-		true,
-		false
-	) as TextureRect
 	var minimap_texture := WorldHudAwakenedVisualSkin.texture_from_path(minimap_value)
 	var prepared_minimap_available := (
 		_minimap_canvas != null and _minimap_canvas.has_visual()
 	)
-	if minimap_texture_rect != null and minimap_texture != null:
-		minimap_texture_rect.texture = minimap_texture
+	if _minimap_texture_rect != null and minimap_texture != null:
+		_minimap_texture_rect.texture = minimap_texture
 	var minimap_available := prepared_minimap_available or minimap_texture != null
 	var map_hotspot := entry_button("map")
 	if map_hotspot != null:
@@ -542,64 +539,20 @@ func apply_view_state(state: Dictionary) -> void:
 			if minimap_available
 			else WorldHudAwakenedVisualSkin.texture_for_entry("map")
 		)
-	var minimap_marker := find_child(
-		"WorldHudMinimapPlayerMarker",
-		true,
-		false
-	) as Label
-	if minimap_marker != null:
-		var world_position_value = state.get(
-			"playerWorldPosition",
-			state.get("player_world_position", {})
-		)
-		var world_position_state := (
-			world_position_value as Dictionary
-			if world_position_value is Dictionary
-			else {}
-		)
-		var grid := _cell_coordinates(minimap_state.get("grid", _minimap_grid_size))
-		var cell_value = state.get(
-			"playerCell",
-			state.get("player_cell", state.get("cell", Vector2i.ZERO))
-		)
-		var marker_cell := _cell_coordinates(cell_value)
-		var marker_available := bool(
-			minimap_state.get("available", minimap_available)
-		) and minimap_available and (
-			bool(world_position_state.get("available", false))
-			or (grid.x > 1 and grid.y > 1)
-		)
-		minimap_marker.visible = marker_available
-		if marker_available:
-			minimap_marker.size = Vector2(18.0, 18.0)
-			if (
-				bool(world_position_state.get("available", false))
-				and _minimap_canvas != null
-			):
-				var projected := _minimap_canvas.project_world_position(Vector2(
-					float(world_position_state.get("x", 0.0)),
-					float(world_position_state.get("y", 0.0))
-				))
-				minimap_marker.position = (
-					Vector2(4.0, 4.0)
-					+ projected * (99.0 / 256.0)
-					- minimap_marker.size * 0.5
-				)
-			else:
-				var normalized_x := clampf(
-					float(marker_cell.x) / float(grid.x - 1),
-					0.0,
-					1.0
-				)
-				var normalized_y := clampf(
-					float(marker_cell.y) / float(grid.y - 1),
-					0.0,
-					1.0
-				)
-				minimap_marker.position = Vector2(
-					4.0 + normalized_x * 82.0,
-					4.0 + normalized_y * 82.0
-				)
+	var world_position_value = state.get(
+		"playerWorldPosition",
+		state.get("player_world_position", {})
+	)
+	var marker_cell_value = state.get(
+		"playerCell",
+		state.get("player_cell", state.get("cell", Vector2i.ZERO))
+	)
+	_apply_minimap_player_position(
+		marker_cell_value,
+		world_position_value,
+		_cell_coordinates(minimap_state.get("grid", _minimap_grid_size)),
+		bool(minimap_state.get("available", minimap_available)) and minimap_available
+	)
 
 	if state.has("statusText") or state.has("status_text"):
 		_status_label.text = str(state.get("statusText", state.get("status_text", "")))
@@ -654,15 +607,95 @@ func apply_location(location_name: String, cell) -> void:
 	if clean_name == "":
 		clean_name = "当前区域"
 	var coordinates := _cell_coordinates(cell)
-	_map_name_label.text = clean_name
-	_map_cell_label.text = "(%d,%d)" % [coordinates.x, coordinates.y]
+	if _map_name_label.text != clean_name:
+		_map_name_label.text = clean_name
+	var coordinate_text := "(%d,%d)" % [coordinates.x, coordinates.y]
+	if _map_cell_label.text != coordinate_text:
+		_map_cell_label.text = coordinate_text
 	var map_button := entry_button("map")
 	if map_button != null:
-		map_button.tooltip_text = "%s  %d，%d" % [
+		var tooltip := "%s  %d，%d" % [
 			clean_name,
 			coordinates.x,
 			coordinates.y,
 		]
+		if map_button.tooltip_text != tooltip:
+			map_button.tooltip_text = tooltip
+
+
+func apply_world_position(cell, world_position) -> void:
+	_ensure_built()
+	if not _mounted:
+		return
+	var minimap_available := (
+		(_minimap_canvas != null and _minimap_canvas.has_visual())
+		or (_minimap_texture_rect != null and _minimap_texture_rect.texture != null)
+	)
+	_apply_minimap_player_position(
+		cell,
+		world_position,
+		_minimap_grid_size,
+		minimap_available
+	)
+
+
+func _apply_minimap_player_position(
+	cell,
+	world_position,
+	grid: Vector2i,
+	minimap_available: bool
+) -> void:
+	if _minimap_player_marker == null:
+		return
+	var world_position_available := false
+	var world_coordinates := Vector2.ZERO
+	if world_position is Vector2:
+		world_position_available = true
+		world_coordinates = world_position as Vector2
+	elif world_position is Vector2i:
+		world_position_available = true
+		world_coordinates = Vector2(world_position as Vector2i)
+	elif world_position is Dictionary:
+		var world_state := world_position as Dictionary
+		var has_coordinates := world_state.has("x") and world_state.has("y")
+		world_position_available = bool(
+			world_state.get("available", has_coordinates)
+		) and has_coordinates
+		if world_position_available:
+			world_coordinates = Vector2(
+				float(world_state.get("x", 0.0)),
+				float(world_state.get("y", 0.0))
+			)
+	var marker_cell := _cell_coordinates(cell)
+	var marker_available := minimap_available and (
+		world_position_available or (grid.x > 1 and grid.y > 1)
+	)
+	_minimap_player_marker.visible = marker_available
+	if not marker_available:
+		return
+	_minimap_player_marker.size = Vector2(18.0, 18.0)
+	if world_position_available and _minimap_canvas != null:
+		var projected := _minimap_canvas.project_world_position(world_coordinates)
+		_minimap_player_marker.position = (
+			Vector2(4.0, 4.0)
+			+ projected * (99.0 / 256.0)
+			- _minimap_player_marker.size * 0.5
+		)
+		return
+	var normalized_x := clampf(
+		float(marker_cell.x) / float(grid.x - 1),
+		0.0,
+		1.0
+	)
+	var normalized_y := clampf(
+		float(marker_cell.y) / float(grid.y - 1),
+		0.0,
+		1.0
+	)
+	_minimap_player_marker.position = Vector2(
+		4.0 + normalized_x * 82.0,
+		4.0 + normalized_y * 82.0
+	)
 
 
 func configure_minimap(
@@ -676,13 +709,8 @@ func configure_minimap(
 		return
 	_minimap_canvas.configure(prepared_visual, world_bounds, Vector2(256.0, 256.0))
 	_minimap_configure_revision += 1
-	var minimap_texture_rect := find_child(
-		"WorldHudMinimapTexture",
-		true,
-		false
-	) as TextureRect
-	if minimap_texture_rect != null:
-		minimap_texture_rect.texture = _minimap_viewport.get_texture()
+	if _minimap_texture_rect != null:
+		_minimap_texture_rect.texture = _minimap_viewport.get_texture()
 	_minimap_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	var map_hotspot := entry_button("map")
 	if map_hotspot != null:
@@ -703,7 +731,9 @@ func apply_task_text(text: String) -> void:
 	if not _mounted or _detail_label == null:
 		return
 	var clean_text := text.strip_edges()
-	_detail_label.text = clean_text if clean_text != "" else "暂无追踪任务"
+	var next_text := clean_text if clean_text != "" else "暂无追踪任务"
+	if _detail_label.text != next_text:
+		_detail_label.text = next_text
 
 
 func apply_task_entries(entries: Array[Dictionary]) -> void:
@@ -754,6 +784,7 @@ func _task_entry_button(entry: Dictionary) -> Button:
 	button.text = ""
 	button.custom_minimum_size = Vector2(0.0, 48.0)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.clip_contents = true
 	button.action_mode = BaseButton.ACTION_MODE_BUTTON_RELEASE
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.add_theme_stylebox_override(
@@ -790,6 +821,8 @@ func _task_entry_button(entry: Dictionary) -> Button:
 		str(entry.get("categoryLabel", "主线")),
 		str(entry.get("title", "任务")),
 	]
+	title.clip_text = true
+	title.max_lines_visible = 1
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	WorldHudAwakenedVisualSkin.apply_heading(title, 14)
@@ -803,6 +836,8 @@ func _task_entry_button(entry: Dictionary) -> Button:
 	objective.offset_right = -8.0
 	objective.offset_bottom = 43.0
 	objective.text = str(entry.get("objectiveText", ""))
+	objective.clip_text = true
+	objective.max_lines_visible = 1
 	objective.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	objective.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	WorldHudAwakenedVisualSkin.apply_label(objective, 12, true)
@@ -948,11 +983,11 @@ func _build_top_panel() -> void:
 	)
 	_top_surface.add_child(minimap_card)
 	minimap_card.set_meta("world_hud_layout_role", "minimap")
-	var minimap_texture := TextureRect.new()
-	minimap_texture.name = "WorldHudMinimapTexture"
-	minimap_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	minimap_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	minimap_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_minimap_texture_rect = TextureRect.new()
+	_minimap_texture_rect.name = "WorldHudMinimapTexture"
+	_minimap_texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_minimap_texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_minimap_texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	var circle_shader := Shader.new()
 	circle_shader.code = (
 		"shader_type canvas_item;\n"
@@ -965,8 +1000,8 @@ func _build_top_panel() -> void:
 	)
 	var circle_material := ShaderMaterial.new()
 	circle_material.shader = circle_shader
-	minimap_texture.material = circle_material
-	minimap_card.add_child(minimap_texture)
+	_minimap_texture_rect.material = circle_material
+	minimap_card.add_child(_minimap_texture_rect)
 	_minimap_viewport = SubViewport.new()
 	_minimap_viewport.name = "WorldHudMinimapViewport"
 	_minimap_viewport.size = Vector2i(256, 256)
@@ -976,16 +1011,16 @@ func _build_top_panel() -> void:
 	_minimap_canvas = WorldHudMinimapRenderCanvas.new()
 	_minimap_canvas.name = "WorldHudMinimapCanvas"
 	_minimap_viewport.add_child(_minimap_canvas)
-	minimap_texture.texture = _minimap_viewport.get_texture()
-	var minimap_marker := Label.new()
-	minimap_marker.name = "WorldHudMinimapPlayerMarker"
-	minimap_marker.text = "◆"
-	minimap_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	minimap_marker.visible = false
-	WorldHudAwakenedVisualSkin.apply_heading(minimap_marker, 18)
-	minimap_marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	minimap_marker.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	minimap_card.add_child(minimap_marker)
+	_minimap_texture_rect.texture = _minimap_viewport.get_texture()
+	_minimap_player_marker = Label.new()
+	_minimap_player_marker.name = "WorldHudMinimapPlayerMarker"
+	_minimap_player_marker.text = "◆"
+	_minimap_player_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_minimap_player_marker.visible = false
+	WorldHudAwakenedVisualSkin.apply_heading(_minimap_player_marker, 18)
+	_minimap_player_marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_minimap_player_marker.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	minimap_card.add_child(_minimap_player_marker)
 
 	var map_button := entry_button("map")
 	_reparent_control(map_button, minimap_card)
@@ -1186,6 +1221,7 @@ func _build_side_panel() -> void:
 	_task_body_panel = Panel.new()
 	_task_body_panel.name = "WorldHudTaskBody"
 	_task_body_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_task_body_panel.clip_contents = true
 	_task_body_panel.add_theme_stylebox_override(
 		"panel",
 		WorldHudAwakenedVisualSkin.task_panel_style()
@@ -1214,6 +1250,7 @@ func _build_side_panel() -> void:
 	_task_entries_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_task_entries_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	_task_entries_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	_task_entries_scroll.clip_contents = true
 	_task_body_panel.add_child(_task_entries_scroll)
 	_task_entries_container = VBoxContainer.new()
 	_task_entries_container.name = "WorldHudTaskEntries"
@@ -1496,19 +1533,43 @@ func _layout_side_contents(panel_width: float, panel_height: float) -> void:
 	party_tab.size = Vector2(80.0, 44.0)
 	_task_body_panel.position = Vector2(0.0, 158.0)
 	_task_body_panel.size = Vector2(inner_width, 307.0)
-	_side_title_label.position = Vector2(10.0, 8.0)
-	_side_title_label.size = Vector2(inner_width - 20.0, 30.0)
+	_side_title_label.anchor_left = 0.0
+	_side_title_label.anchor_top = 0.0
+	_side_title_label.anchor_right = 1.0
+	_side_title_label.anchor_bottom = 0.0
+	_side_title_label.offset_left = 10.0
+	_side_title_label.offset_top = 8.0
+	_side_title_label.offset_right = -10.0
+	_side_title_label.offset_bottom = 38.0
 	var route_height := 38.0
 	var route_y := 259.0
 	if _task_route_button != null:
-		_task_route_button.position = Vector2(8.0, route_y)
-		_task_route_button.size = Vector2(inner_width - 16.0, route_height)
+		_task_route_button.anchor_left = 0.0
+		_task_route_button.anchor_top = 0.0
+		_task_route_button.anchor_right = 1.0
+		_task_route_button.anchor_bottom = 0.0
+		_task_route_button.offset_left = 8.0
+		_task_route_button.offset_top = route_y
+		_task_route_button.offset_right = -8.0
+		_task_route_button.offset_bottom = route_y + route_height
 	if _detail_label != null:
-		_detail_label.position = Vector2(10.0, 40.0)
-		_detail_label.size = Vector2(inner_width - 20.0, 211.0)
+		_detail_label.anchor_left = 0.0
+		_detail_label.anchor_top = 0.0
+		_detail_label.anchor_right = 1.0
+		_detail_label.anchor_bottom = 0.0
+		_detail_label.offset_left = 10.0
+		_detail_label.offset_top = 40.0
+		_detail_label.offset_right = -10.0
+		_detail_label.offset_bottom = 251.0
 	if _task_entries_scroll != null:
-		_task_entries_scroll.position = Vector2(7.0, 39.0)
-		_task_entries_scroll.size = Vector2(inner_width - 14.0, 213.0)
+		_task_entries_scroll.anchor_left = 0.0
+		_task_entries_scroll.anchor_top = 0.0
+		_task_entries_scroll.anchor_right = 1.0
+		_task_entries_scroll.anchor_bottom = 0.0
+		_task_entries_scroll.offset_left = 7.0
+		_task_entries_scroll.offset_top = 39.0
+		_task_entries_scroll.offset_right = -7.0
+		_task_entries_scroll.offset_bottom = 252.0
 
 
 func _layout_message_contents(message_size: Vector2, expanded: bool) -> void:

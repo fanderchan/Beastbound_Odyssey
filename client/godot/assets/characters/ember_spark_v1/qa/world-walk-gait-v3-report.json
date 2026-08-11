@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "characterId": "ember_spark_v1",
+  "repairId": "ember_spark_world_gait_v3",
+  "status": "passed_real_godot_and_main_review_owner_pending",
+  "supersedes": {
+    "repairId": "ember_spark_world_gait_v2",
+    "reason": "The project owner rejected the four-frame result as one-legged and discontinuous."
+  },
+  "contract": {
+    "directions": 8,
+    "walkFramesPerDirection": 6,
+    "runtimeFps": 9,
+    "frameOrder": [
+      "contact_a",
+      "passing_a",
+      "recovery_a",
+      "contact_b",
+      "passing_b",
+      "recovery_b"
+    ],
+    "runtimeMirroring": false,
+    "physicalLegIdentityAuthority": "human_visual_review"
+  },
+  "build": {
+    "report": "qa/world-walk-gait-v3-build-report.json",
+    "contactSheet": "qa/world-walk-gait-v3-contact.png",
+    "selectedInputs": 48,
+    "sourceWalkFrames": 48,
+    "runtimeWalkFrames": 48,
+    "selectedInputsSha256": "53f84f736895bd468706eeb5c5ecc7a7e4a738bb1983d7da2742a85b0d543aa3",
+    "sourceFramesSha256": "c4de40f82cc68c5b4c8d0bb75f5dd8f8b8fe1ed9545be3f8a48eda08dab8f006",
+    "runtimeFramesSha256": "352d63321b4efa62a21c496d5bdd28d54b26ca5c360b24f0c9fbbc16eb6cdf00",
+    "contactSheetSha256": "ecb9e1eca4dcc35927f8723b7ec36c340ab6ef24266434ba993b1a3fe4ee4624"
+  },
+  "pixelGates": {
+    "sourceEdgeTouches": 0,
+    "runtimeEdgeTouches": 0,
+    "sourceExactDuplicates": 0,
+    "runtimeExactDuplicates": 0,
+    "sourceExactCrossDirectionMirrors": 0,
+    "runtimeExactCrossDirectionMirrors": 0,
+    "sourceMaximumBaselineDriftPx": 0,
+    "runtimeMaximumBaselineDriftPx": 1
+  },
+  "transitionDiagnostics": {
+    "method": "selection-time pose-landmark transition coefficient of variation",
+    "selectedHybridMean": 0.356,
+    "selectedHybridWorst": 0.473,
+    "rejectedPureGeneratedMean": 0.413,
+    "rejectedPureGeneratedWorst": 0.7,
+    "note": "Diagnostic only; it did not assign physical left/right leg identity."
+  },
+  "realGodotDirectionReview": {
+    "status": "passed",
+    "runId": "phase405-ember-gait-v3-final",
+    "videoPath": ".run/evidence/phase405_ember_spark_world_gait/phase405-ember-gait-v3-final/bui_novice_sprout_earth5_wind5/review.mp4",
+    "videoSha256": "ab58fc67def625f746ce3e333219a923ab8d655d70b5466c8cddd97f49660754",
+    "viewport": [
+      1280,
+      720
+    ],
+    "fps": 30,
+    "frameCount": 433,
+    "durationSeconds": 14.433333,
+    "playbackSpeed": 1.0,
+    "decodeStatus": "passed",
+    "godotParityFrames": 56,
+    "godotParitySha256": "aa833971d5cdffee661a00bdff53037e8a13d19cbc655275503e06e5263f9d23",
+    "godotLoadedSourceSetSha256": "18d15d5c03aaa5f00ba2f49a84e79ad20572121abc679ceba80b716ae8764665"
+  },
+  "realMainReview": {
+    "status": "passed",
+    "runId": "phase405-ember-gait-v3-main-final",
+    "videoPath": ".run/evidence/phase405_ember_spark_world_gait/phase405-ember-gait-v3-main-final/firebud-v2-owner-review-1x.mp4",
+    "videoSha256": "6ab986d2b3633abd1164259cf539566b4315b682531cb993cef3dfe31588cfe7",
+    "contactSheetSha256": "0eecf8e7e0e11f5be12c3387f800d92a7629f483ad8c3c01b14a2431db3963d3",
+    "viewport": [
+      1280,
+      720
+    ],
+    "fps": 30,
+    "frameCount": 644,
+    "durationSeconds": 21.466667,
+    "playbackSpeed": 1.0,
+    "decodeStatus": "passed",
+    "realCrossFrameMouseMovement": true,
+    "profileSaveEnabled": false,
+    "networkRequestAttempted": false
+  },
+  "performanceBoundary": {
+    "status": "passed_adjacent_map_hot_path",
+    "reportPath": ".run/evidence/phase405_ember_spark_world_gait/phase405-ember-gait-v3-perf-final/summary.json",
+    "buildIdentitySha256": "5e464f432e57afb8f4cd624ebaef89508d6b9aa9e55ac0eb041d3038c012796c",
+    "runsPassed": 8,
+    "runsExpected": 8,
+    "fps": 60,
+    "candidateProcessTotalMeanMs": {
+      "firebud_village_gate_idle": 0.339,
+      "firebud_village_gate_moving": 0.343,
+      "firebud_training_yard_idle": 0.393,
+      "firebud_training_yard_moving": 0.26
+    },
+    "movingUsesRealCrossFrameMouseEvents": true,
+    "claimBoundary": "This matrix validates the adjacent Firebud movement/render hot path. The real Main review proves Ember Spark integration but is not presented as a character-specific 60 FPS benchmark."
+  },
+  "selfReview": {
+    "status": "passed",
+    "method": "full-length QuickTime playback of the direction review and real Main review",
+    "observations": [
+      "All eight directions show opposed contact halves and an intervening passing/recovery sequence.",
+      "No persistent one-leg drag, foot-only bob, double limb, head ghost, or weapon trail was accepted.",
+      "The slower 9 FPS six-frame loop reads more continuously than the rejected four-frame candidate."
+    ]
+  },
+  "ownerReviewStatus": "owner_review_pending",
+  "errors": []
+}

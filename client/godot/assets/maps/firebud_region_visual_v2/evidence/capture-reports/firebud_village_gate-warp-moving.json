@@ -1,0 +1,105 @@
+{
+	"schemaVersion": 1,
+	"reportType": "beastbound_map_visual_main_review_capture",
+	"scene": "res://scenes/Main.tscn",
+	"mapId": "firebud_village_gate",
+	"mode": "moving",
+	"qaPreviewFlagPresent": true,
+	"qaPreviewMapId": "firebud_village_gate",
+	"showcaseProfileRequested": true,
+	"displayServer": "macOS",
+	"debugBuild": true,
+	"profileIsolation": "default_profile_verified_then_showcase_ephemeral_no_save",
+	"defaultProfileIsolation": true,
+	"authAutoBypass": false,
+	"accountAuthenticated": false,
+	"profileSaveEnabled": false,
+	"serverAccountSession": false,
+	"networkRequestAttempted": false,
+	"networkRequestStatuses": {
+		"auth_http_request": 0,
+		"profile_sync_http_request": 0,
+		"chat_http_request": 0,
+		"mailbox_http_request": 0,
+		"market_http_request": 0,
+		"bank_http_request": 0,
+		"party_http_request": 0,
+		"party_invite_http_request": 0,
+		"family_http_request": 0,
+		"online_position_http_request": 0,
+		"player_action_http_request": 0,
+		"battle_invite_http_request": 0
+	},
+	"networkRequestsDisconnected": true,
+	"showcaseProfileInMemory": true,
+	"showcaseProfilePostInjectionIsDefault": false,
+	"showcaseProfileId": "phase383_firebud_v2_owner_review",
+	"showcasePlayerAppearanceId": "ember_spark_v1",
+	"showcaseActivePetFormId": "bui_novice_sprout_earth5_wind5",
+	"showcaseProfilePersisted": false,
+	"authPanelVisible": false,
+	"qaMenuVisible": false,
+	"qaPanelVisible": false,
+	"numericWorkbenchVisible": false,
+	"debugUiVisible": false,
+	"normalPlayerHud": true,
+	"viewport": [
+		1280,
+		720
+	],
+	"mapArtActive": true,
+	"mapArtQaPreview": true,
+	"mapArtStatus": "owner_review_pending",
+	"bundleId": "firebud_region_visual_v2",
+	"mapStyleId": "firebud_warm_stone_v2",
+	"groundDrawCount": 672,
+	"objectCount": 30,
+	"tileCounts": {
+		"firebud_meadow_dry_b": 124,
+		"firebud_meadow_clover_c": 113,
+		"firebud_meadow_a": 124,
+		"firebud_meadow_b": 127,
+		"firebud_ochre_path_worn_b": 51,
+		"firebud_ochre_path_a": 47,
+		"firebud_warp_stone": 19,
+		"firebud_honey_stone_moss_b": 23,
+		"firebud_honey_stone_a": 22,
+		"firebud_tall_grass_encounter": 22
+	},
+	"startCell": [
+		3,
+		15
+	],
+	"targetCell": [
+		6,
+		12
+	],
+	"endCell": [
+		6,
+		12
+	],
+	"playerCellChanged": true,
+	"input": {
+		"eventClass": "InputEventMouseButton",
+		"delivery": "Input.parse_input_event",
+		"pressProcessFrame": 9,
+		"releaseProcessFrame": 11,
+		"frameSeparated": true,
+		"screenPoint": [
+			524.129028320312,
+			360.0
+		]
+	},
+	"screenshotPath": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-screenshots/firebud_village_gate-warp-moving.png",
+	"screenshotSha256": "2435974614c68132afffe6ec1922375fc21d5f6f166970f21e34e4970c4d7786",
+	"screenshot": {
+		"path": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-screenshots/firebud_village_gate-warp-moving.png",
+		"sha256": "2435974614c68132afffe6ec1922375fc21d5f6f166970f21e34e4970c4d7786",
+		"width": 1280,
+		"height": 720
+	},
+	"errors": [],
+	"result": "PASS",
+	"ok": true,
+	"generatedAtUtc": "2026-08-10T20:45:39Z"
+}

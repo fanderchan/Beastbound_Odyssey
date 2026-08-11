@@ -10,6 +10,11 @@
       "mapId": "firebud_village_gate",
       "bundleManifest": "res://assets/maps/firebud_region_visual_v2/map-visual-bundle.json",
       "bindingPath": "res://assets/maps/firebud_region_visual_v2/bindings/firebud_village_gate.json"
+    },
+    {
+      "mapId": "mistcap_marsh",
+      "bundleManifest": "res://assets/maps/mistcap_marsh_visual_v1/map-visual-bundle.json",
+      "bindingPath": "res://assets/maps/mistcap_marsh_visual_v1/bindings/mistcap_marsh.json"
     }
   ]
 }

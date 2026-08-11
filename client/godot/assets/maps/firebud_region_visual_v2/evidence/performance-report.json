@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound_map_performance_report",
+  "bundleId": "firebud_region_visual_v2",
+  "result": "PASS",
+  "comparisonMode": "legacy_fallback_vs_candidate",
+  "generatedAtUtc": "2026-08-10T20:42:28.946Z",
+  "scene": "res://scenes/Main.tscn",
+  "viewport": [
+    1280,
+    720
+  ],
+  "displayServer": "macOS Metal",
+  "movingInputDelivery": "Input.parse_input_event",
+  "movingInputFrameSeparated": true,
+  "testedMapIds": [
+    "firebud_training_yard",
+    "firebud_village_gate"
+  ],
+  "maps": [
+    {
+      "mapId": "firebud_training_yard",
+      "baseline": {
+        "renderer": "legacy_fallback",
+        "idle": {
+          "samples": 8,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.29,
+            0.465,
+            0.58
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.007,
+            0.06
+          ]
+        },
+        "moving": {
+          "samples": 3,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.22,
+            0.377,
+            0.48
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.197,
+            0.53
+          ],
+          "clicks": 30,
+          "accepted": 30,
+          "resolved": 10,
+          "applied": 10,
+          "avgInputUs": 1,
+          "maxInputUs": 4,
+          "moved": true,
+          "coalesced": true,
+          "settled": true,
+          "finalTargetMatched": true,
+          "battle": false,
+          "encounter": false
+        }
+      },
+      "candidate": {
+        "renderer": "map_visual_candidate",
+        "idle": {
+          "samples": 8,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.26,
+            0.324,
+            0.44
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.009,
+            0.07
+          ]
+        },
+        "moving": {
+          "samples": 2,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.26,
+            0.31,
+            0.36
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.09,
+            0.275,
+            0.46
+          ],
+          "clicks": 30,
+          "accepted": 30,
+          "resolved": 10,
+          "applied": 10,
+          "avgInputUs": 2,
+          "maxInputUs": 19,
+          "moved": true,
+          "coalesced": true,
+          "settled": true,
+          "finalTargetMatched": true,
+          "battle": false,
+          "encounter": false
+        }
+      },
+      "comparison": {
+        "processTotalMeanDeltaMs": {
+          "idle": -0.141,
+          "moving": -0.067
+        },
+        "thresholds": {
+          "candidateIdleProcessMeanMaxMs": 0.5,
+          "candidateMovingProcessMeanMaxMs": 0.6,
+          "idleRegressionMaxMs": 0.1,
+          "movingRegressionMaxMs": 0.35
+        },
+        "gates": {
+          "candidateIdleWithinLimit": "PASS",
+          "candidateMovingWithinLimit": "PASS",
+          "idleRegressionWithinLimit": "PASS",
+          "movingRegressionWithinLimit": "PASS"
+        }
+      }
+    },
+    {
+      "mapId": "firebud_village_gate",
+      "baseline": {
+        "renderer": "legacy_fallback",
+        "idle": {
+          "samples": 8,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.3,
+            0.412,
+            0.53
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.01,
+            0.08
+          ]
+        },
+        "moving": {
+          "samples": 4,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.26,
+            0.378,
+            0.47
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.258,
+            0.88
+          ],
+          "clicks": 30,
+          "accepted": 30,
+          "resolved": 10,
+          "applied": 10,
+          "avgInputUs": 2,
+          "maxInputUs": 6,
+          "moved": true,
+          "coalesced": true,
+          "settled": true,
+          "finalTargetMatched": true,
+          "battle": false,
+          "encounter": false
+        }
+      },
+      "candidate": {
+        "renderer": "map_visual_candidate",
+        "idle": {
+          "samples": 8,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.37,
+            0.441,
+            0.52
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.006,
+            0.05
+          ]
+        },
+        "moving": {
+          "samples": 2,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.25,
+            0.375,
+            0.5
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.11,
+            0.35,
+            0.59
+          ],
+          "clicks": 30,
+          "accepted": 30,
+          "resolved": 10,
+          "applied": 10,
+          "avgInputUs": 2,
+          "maxInputUs": 19,
+          "moved": true,
+          "coalesced": true,
+          "settled": true,
+          "finalTargetMatched": true,
+          "battle": false,
+          "encounter": false
+        }
+      },
+      "comparison": {
+        "processTotalMeanDeltaMs": {
+          "idle": 0.029,
+          "moving": -0.003
+        },
+        "thresholds": {
+          "candidateIdleProcessMeanMaxMs": 0.5,
+          "candidateMovingProcessMeanMaxMs": 0.6,
+          "idleRegressionMaxMs": 0.1,
+          "movingRegressionMaxMs": 0.35
+        },
+        "gates": {
+          "candidateIdleWithinLimit": "PASS",
+          "candidateMovingWithinLimit": "PASS",
+          "idleRegressionWithinLimit": "PASS",
+          "movingRegressionWithinLimit": "PASS"
+        }
+      }
+    }
+  ],
+  "excludedReleaseGate": null,
+  "blockers": [],
+  "runnerIdentity": {
+    "runner": "godot",
+    "runnerVersion": "4.7.stable.official.5b4e0cb0f",
+    "buildIdentity": "git:23855b4636d1351e70f5cdaa1099dbb8fda62c81+beastbound-map-runtime-surface-v2:c2da47cd8c3341067ae0961091d85b63f8daa70db8acab0712014a6dbcdb5f28"
+  },
+  "rawRunnerReceipt": {
+    "path": "evidence/performance-runner-receipt.jsonl",
+    "sha256": "0d1eda1adcf09acaeca37929e0e29516a19660a89610aa13e4c6c53edbe5ae79"
+  },
+  "notes": [
+    "All twelve variants ran through the real Main.tscn non-headless Metal path.",
+    "Moving variants used cross-frame Input.parse_input_event mouse press/release delivery.",
+    "All values were parsed from the verbatim Godot stdout/stderr frozen in the raw JSONL receipt."
+  ]
+}

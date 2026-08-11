@@ -151,6 +151,7 @@ func _run() -> void:
 	_append_portrait_fallback_errors(flattened)
 	_append_player_gate_errors()
 	_append_message_action_errors()
+	await _append_task_entry_bounds_errors()
 
 	var more_button := _named_button("WorldHudMoreButton")
 	_expect(more_button != null, "世界 HUD 缺少更多按钮")
@@ -1042,6 +1043,67 @@ func _append_version_and_text_errors() -> void:
 		)
 
 
+func _append_task_entry_bounds_errors() -> void:
+	var task_body := _named_control("WorldHudTaskBody")
+	var task_scroll := _named_control("WorldHudTaskEntriesScroll")
+	var task_entries := _named_control("WorldHudTaskEntries")
+	_expect(task_body != null, "任务追踪缺少内容边界")
+	_expect(task_scroll != null, "任务追踪缺少滚动边界")
+	_expect(task_entries != null, "任务追踪缺少任务条目容器")
+	if task_body == null or task_scroll == null or task_entries == null:
+		return
+	var long_entries: Array[Dictionary] = [
+		{
+			"questId": "layout_long_main",
+			"categoryId": "main",
+			"categoryLabel": "主线",
+			"title": "这是一条需要安全截断的超长中文任务名称",
+			"objectiveText": "前往火芽训练场尽头与训练师阿土完成一段很长的对话",
+			"active": true,
+		},
+		{
+			"questId": "layout_long_side",
+			"categoryId": "side",
+			"categoryLabel": "支线",
+			"title": "另一条超长中文任务名称",
+			"objectiveText": "收集足够多的素材并返回村口交付",
+			"active": false,
+		},
+	]
+	_view.call("apply_task_entries", long_entries)
+	# The formal party shell embeds this legacy task body in a narrower content
+	# box. Reproduce that resize directly so fixed-width children cannot regress.
+	task_body.size = Vector2(188.0, 307.0)
+	await process_frame
+	await process_frame
+	_expect(task_body.clip_contents, "任务内容面板没有裁剪越界内容")
+	_expect(task_scroll.clip_contents, "任务滚动区没有裁剪越界内容")
+	var scroll_rect := task_scroll.get_global_rect()
+	for child in task_entries.get_children():
+		if not (child is Button):
+			continue
+		var button := child as Button
+		var button_rect := button.get_global_rect()
+		_expect(
+			_rect_contains_rect(scroll_rect, button_rect),
+			"任务卡越过滚动区边界：%s %s / %s"
+				% [button.name, str(button_rect), str(scroll_rect)]
+		)
+		_expect(button.clip_contents, "任务卡没有裁剪子文本：%s" % button.name)
+		for label_value in button.get_children():
+			if not (label_value is Label):
+				continue
+			var label := label_value as Label
+			_expect(label.clip_text, "任务文字没有启用裁剪：%s" % label.name)
+			_expect(
+				label.text_overrun_behavior == TextServer.OVERRUN_TRIM_ELLIPSIS,
+				"任务文字没有省略号保护：%s" % label.name
+			)
+	_view.call("apply_layout", Vector2(VIEWPORT_SIZE), {})
+	await process_frame
+	await process_frame
+
+
 func _append_portrait_errors() -> void:
 	var player_button := _view.call("entry_button", "character") as Button
 	var pet_button := _view.call("entry_button", "pet") as Button
@@ -1552,6 +1614,19 @@ func _rect_within_viewport(rect: Rect2) -> bool:
 		and rect.position.y >= -0.5
 		and end.x <= float(VIEWPORT_SIZE.x) + 0.5
 		and end.y <= float(VIEWPORT_SIZE.y) + 0.5
+	)
+
+
+func _rect_contains_rect(outer: Rect2, inner: Rect2) -> bool:
+	var inner_end := inner.position + inner.size
+	var outer_end := outer.position + outer.size
+	return (
+		inner.size.x > 0.0
+		and inner.size.y > 0.0
+		and inner.position.x >= outer.position.x - 0.5
+		and inner.position.y >= outer.position.y - 0.5
+		and inner_end.x <= outer_end.x + 0.5
+		and inner_end.y <= outer_end.y + 0.5
 	)
 
 

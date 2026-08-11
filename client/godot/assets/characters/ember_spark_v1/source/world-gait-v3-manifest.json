@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "characterId": "ember_spark_v1",
+  "repairId": "ember_spark_world_gait_v3",
+  "createdAt": "2026-08-12",
+  "reason": "The owner rejected the first four-frame repair because it still read as one-legged and discontinuous. V3 uses two human-audited opposite-leg halves and a slower six-frame loop.",
+  "scope": "world walk6 and its metadata/QA only; idle, battle, portrait, showcase, identity, movement speed, pathfinding, and input timing are unchanged",
+  "generator": "OpenAI built-in image generation plus deterministic local normalization",
+  "contract": {
+    "directions": ["south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast"],
+    "frameOrder": ["contact_a", "passing_a", "recovery_a", "contact_b", "passing_b", "recovery_b"],
+    "frameCountPerDirection": 6,
+    "sourceFrameSize": [512, 512],
+    "runtimeFrameSize": [256, 256],
+    "runtimeFps": 9,
+    "runtimeMirroring": false,
+    "semanticBoundary": "Machine pose landmarks measure transition continuity but do not determine physical left/right leg identity. Opposite-leg grouping was selected by human visual review."
+  },
+  "normalization": {
+    "buildTool": "source/tools/build_world_gait_v3.py",
+    "frozenInputs": "source/world/{direction}/gait_v3_inputs/walk-{1..6}-{token}.png",
+    "sourceCanvas": "512x512; shared median alpha height per direction; horizontal center; alpha bottom y=478 exclusive",
+    "runtimeCanvas": "256x256; premultiplied-alpha Lanczos downsample",
+    "backgroundCleanup": "conservative key-magenta removal before normalization"
+  },
+  "selections": {
+    "south": ["g1", "c1", "c3", "g2", "c4", "c2"],
+    "southwest": ["g1", "c2", "c8", "g5", "c4", "c5"],
+    "west": ["g1", "c1", "c3", "g5", "c4", "c2"],
+    "northwest": ["g1", "c1", "c3", "g5", "c6", "c5"],
+    "north": ["g1", "c1", "c2", "g4", "c4", "c3"],
+    "northeast": ["g1", "c4", "c3", "g5", "c8", "c6"],
+    "east": ["g1", "c4", "c3", "g5", "c8", "c5"],
+    "southeast": ["g1", "c3", "c2", "g5", "c6", "c5"]
+  },
+  "selectionLegend": {
+    "gN": "frame N from the direction-specific generated full-cycle sheet",
+    "cN": "frame N from the direction-specific audited passing-pose pool; indices 5-8 are from the complementary sheet when present"
+  },
+  "rejectedMethods": [
+    "world gait v2 four-frame loop: owner rejected as one-legged and discontinuous",
+    "whole generated eight-frame sheets: several directions repeated one half-cycle",
+    "optical-flow interpolation: rejected for double limbs, head ghosts, and weapon trails",
+    "automatic leg-side labels: rejected as semantic authority because side and diagonal views grouped the same physical leg"
+  ],
+  "review": {
+    "buildReport": "qa/world-walk-gait-v3-build-report.json",
+    "finalReport": "qa/world-walk-gait-v3-report.json",
+    "contactSheet": "qa/world-walk-gait-v3-contact.png",
+    "candidateTransitionAnalysis": ".run/gait-v3-prototype/curated-cycle-analysis.json",
+    "transitionDiagnostics": {
+      "meanCoefficientOfVariation": 0.356,
+      "worstCoefficientOfVariation": 0.473,
+      "rejectedPureGeneratedMeanCoefficientOfVariation": 0.413,
+      "rejectedPureGeneratedWorstCoefficientOfVariation": 0.7,
+      "interpretation": "Diagnostic only; human review remained authoritative for physical leg identity."
+    },
+    "realGodotReviewStatus": "passed",
+    "realGodotReview": {
+      "runId": "phase405-ember-gait-v3-final",
+      "videoPath": ".run/evidence/phase405_ember_spark_world_gait/phase405-ember-gait-v3-final/bui_novice_sprout_earth5_wind5/review.mp4",
+      "videoSha256": "ab58fc67def625f746ce3e333219a923ab8d655d70b5466c8cddd97f49660754",
+      "viewport": [
+        1280,
+        720
+      ],
+      "fps": 30,
+      "frameCount": 433,
+      "durationSeconds": 14.433333,
+      "playbackSpeed": 1.0,
+      "decodeStatus": "passed",
+      "godotParityFrames": 56,
+      "godotParitySha256": "aa833971d5cdffee661a00bdff53037e8a13d19cbc655275503e06e5263f9d23",
+      "godotLoadedSourceSetSha256": "18d15d5c03aaa5f00ba2f49a84e79ad20572121abc679ceba80b716ae8764665"
+    },
+    "realMainReviewStatus": "passed",
+    "realMainReview": {
+      "runId": "phase405-ember-gait-v3-main-final",
+      "videoPath": ".run/evidence/phase405_ember_spark_world_gait/phase405-ember-gait-v3-main-final/firebud-v2-owner-review-1x.mp4",
+      "videoSha256": "6ab986d2b3633abd1164259cf539566b4315b682531cb993cef3dfe31588cfe7",
+      "viewport": [
+        1280,
+        720
+      ],
+      "fps": 30,
+      "frameCount": 644,
+      "durationSeconds": 21.466667,
+      "playbackSpeed": 1.0,
+      "decodeStatus": "passed",
+      "realCrossFrameMouseMovement": true
+    },
+    "selfReviewStatus": "passed_real_godot_and_main_review",
+    "ownerReviewStatus": "owner_review_pending"
+  }
+}
