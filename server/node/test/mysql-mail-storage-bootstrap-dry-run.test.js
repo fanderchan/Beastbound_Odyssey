@@ -358,7 +358,7 @@ test("conflict report exposes only allowlisted counts, state and code/path facts
 
 test("forbidden CLI arguments are rejected before env, catalog or store dependencies", async () => {
   const scenarios = [
-    ["--apply", "mail_storage_bootstrap_apply_unavailable"],
+    ["--apply", "mail_storage_bootstrap_maintenance_confirmation_required", "apply"],
     ["--backup-path", "mail_storage_bootstrap_backup_argument_denied"],
     ["--maintenance-confirmed", "mail_storage_bootstrap_maintenance_argument_denied"],
     ["--password=never_print_this", "mail_storage_bootstrap_credential_argument_denied"],
@@ -366,6 +366,7 @@ test("forbidden CLI arguments are rejected before env, catalog or store dependen
     ["--dry-run", "--dry-run", "mail_storage_bootstrap_argument_invalid"],
   ];
   for (const scenario of scenarios) {
+    const expectedMode = scenario.at(-1) === "apply" ? scenario.pop() : "dry-run";
     const expectedCode = scenario.pop();
     const calls = {env: 0, catalog: 0, store: 0, dryRun: 0};
     const report = await runMain(scenario, {
@@ -375,13 +376,29 @@ test("forbidden CLI arguments are rejected before env, catalog or store dependen
       async runDryRun() { calls.dryRun += 1; return {}; },
     });
     assert.equal(report.code, expectedCode);
+    assert.equal(report.mode, expectedMode);
     assert.equal(report.applied, false);
-    assert.equal(report.applySafe, false);
+    if (expectedMode === "apply") {
+      assert.equal(report.featureFlagsEnabled, false);
+    } else {
+      assert.equal(report.applySafe, false);
+    }
     assert.deepEqual(calls, {env: 0, catalog: 0, store: 0, dryRun: 0});
     assert.equal(JSON.stringify(report).includes("never_print_this"), false);
   }
-  assert.deepEqual(parseArgs([]), {dryRun: true});
-  assert.deepEqual(parseArgs(["--dry-run"]), {dryRun: true});
+  assert.deepEqual(parseArgs([]), {mode: "dry-run", maintenanceConfirmed: false});
+  assert.deepEqual(parseArgs(["--dry-run"]), {
+    mode: "dry-run",
+    maintenanceConfirmed: false,
+  });
+  assert.deepEqual(parseArgs(["--apply", "--maintenance-confirmed"]), {
+    mode: "apply",
+    maintenanceConfirmed: true,
+  });
+  assert.deepEqual(parseArgs(["--maintenance-confirmed", "--apply"]), {
+    mode: "apply",
+    maintenanceConfirmed: true,
+  });
 });
 
 test("CLI allowed path uses read-only store options, closes once and redacts runtime failures", async () => {
@@ -436,6 +453,87 @@ test("CLI allowed path uses read-only store options, closes once and redacts run
     createStore() { throw new Error(privateRuntimeError); },
   });
   assert.equal(failed.code, "mail_storage_bootstrap_dry_run_failed");
+  assert.equal(JSON.stringify(failed).includes(privateRuntimeError), false);
+});
+
+test("CLI apply path requires the dedicated maintenance store and preserves its exact report", async () => {
+  const calls = [];
+  const safeReport = Object.freeze({
+    kind: "beastbound_mail_storage_bootstrap_apply",
+    schemaVersion: 1,
+    ok: true,
+    code: "mail_storage_bootstrap_apply_ok",
+    mode: "apply",
+    action: "start",
+    applied: true,
+    recovered: false,
+    outcomeUnknown: false,
+    retryable: false,
+    featureFlagsEnabled: false,
+  });
+  const result = await runMain(["--maintenance-confirmed", "--apply"], {
+    loadEnvFile() { calls.push("env"); },
+    createAttachmentCertifier() { calls.push("catalog"); return certifyAttachment; },
+    createStore(options) {
+      calls.push(["store", options]);
+      return {
+        async applyMailStorageBootstrap(options) {
+          calls.push(["apply", options]);
+          return safeReport;
+        },
+        async close() {
+          calls.push("close");
+          throw new Error("pool close after known COMMIT must not erase report");
+        },
+      };
+    },
+  });
+
+  assert.equal(result, safeReport);
+  assert.deepEqual(calls.slice(0, 3), [
+    "env",
+    "catalog",
+    ["store", {
+      readOnly: false,
+      ensureSchema: false,
+      usePool: true,
+      singleWriterMaintenance: true,
+      mailStorageBootstrapApply: true,
+      transactionTimeoutMs: 60000,
+    }],
+  ]);
+  assert.equal(calls[3][0], "apply");
+  assert.equal(calls[3][1].maintenanceConfirmed, true);
+  assert.equal(calls[3][1].certifyAttachment, certifyAttachment);
+  assert.equal(calls[4], "close");
+});
+
+test("CLI apply failures expose only safe outcome fields and never runtime details", async () => {
+  const privateRuntimeError = "sql_password_and_query_never_print_apply_907";
+  const failed = await runMain(["--apply", "--maintenance-confirmed"], {
+    loadEnvFile() {},
+    createAttachmentCertifier() { return certifyAttachment; },
+    createStore() {
+      return {
+        async applyMailStorageBootstrap() {
+          const error = new Error(privateRuntimeError);
+          error.code = "ECONNRESET_PRIVATE_QUERY";
+          error.outcomeUnknown = true;
+          error.retryable = true;
+          throw error;
+        },
+        async close() {},
+      };
+    },
+  });
+
+  assert.equal(failed.kind, "beastbound_mail_storage_bootstrap_apply");
+  assert.equal(failed.code, "mail_storage_bootstrap_apply_failed");
+  assert.equal(failed.mode, "apply");
+  assert.equal(failed.applied, false);
+  assert.equal(failed.outcomeUnknown, true);
+  assert.equal(failed.retryable, false);
+  assert.equal(failed.featureFlagsEnabled, false);
   assert.equal(JSON.stringify(failed).includes(privateRuntimeError), false);
 });
 

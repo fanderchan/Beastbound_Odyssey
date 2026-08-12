@@ -10,6 +10,7 @@
     "ops": "node scripts/server-ops.js",
     "qa:gm": "node scripts/local-qa-gm-account.js",
     "mail-storage:dry-run": "node scripts/bootstrap-mail-storage.js --dry-run",
+    "mail-storage:apply": "node scripts/bootstrap-mail-storage.js --apply",
     "mysql:smoke": "node scripts/mysql-live-smoke.js",
     "profiles:migrate": "node scripts/migrate-mysql-profiles.js",
     "seed:demo": "node scripts/seed-demo-data.js"

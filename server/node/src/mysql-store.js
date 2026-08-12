@@ -93,6 +93,9 @@ const {
   readMysqlMailStorageBootstrapSnapshot,
 } = require("./mysql-mail-storage-bootstrap-read");
 const {
+  runMysqlMailStorageBootstrapApply,
+} = require("./mysql-mail-storage-bootstrap-apply");
+const {
   createMailStorageBootstrapAttachmentCertifier,
 } = require("./mysql-mail-storage-bootstrap-catalog");
 const {
@@ -143,6 +146,10 @@ const MYSQL_MAIL_INBOX_PAGE_INDEX = Object.freeze({
 function createMysqlAuthStore(options = {}) {
   const config = mysqlConfig(options);
   const readOnly = options.readOnly === true;
+  // Unlike the general single-writer maintenance switch, this capability has
+  // no environment-variable fallback. Only the dedicated bootstrap command
+  // may opt a fresh store instance into the generation transition executor.
+  const mailStorageBootstrapApplyEnabled = options.mailStorageBootstrapApply === true;
   const strictRowIdentity = options.strictRowIdentity === true;
   const ensureSchemaEnabled = options.ensureSchema !== false && !readOnly;
   let schemaReady = false;
@@ -587,6 +594,41 @@ function createMysqlAuthStore(options = {}) {
         database: config.database,
         transactionPolicy: config.transactionPolicy,
         transactionGuardOptions: readOptions.transactionGuardOptions,
+      });
+    },
+    async applyMailStorageBootstrap(applyOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (
+        readOnly
+        || !mailStorageBootstrapApplyEnabled
+        || !config.singleWriterMaintenance
+      ) {
+        const error = new Error("邮箱 bootstrap apply 只允许专用停服维护 store。");
+        error.code = "mail_storage_bootstrap_dedicated_store_required";
+        throw error;
+      }
+      if (!config.usePool) {
+        const error = new Error("邮箱 bootstrap apply 必须使用 MySQL 连接池。");
+        error.code = "mail_storage_bootstrap_pool_required";
+        throw error;
+      }
+      if (schemaReady || lastPersistentData !== null) {
+        const error = new Error("邮箱 bootstrap apply store 已进入普通 authority 生命周期。");
+        error.code = "mail_storage_bootstrap_fresh_store_required";
+        throw error;
+      }
+      const certifyAttachment = typeof applyOptions.certifyAttachment === "function"
+        ? applyOptions.certifyAttachment
+        : createMailStorageBootstrapAttachmentCertifier();
+      return runMysqlMailStorageBootstrapApply(persistentWritePool(), {
+        database: config.database,
+        transactionPolicy: config.transactionPolicy,
+        transactionGuardOptions: applyOptions.transactionGuardOptions,
+        maintenanceConfirmed: applyOptions.maintenanceConfirmed === true,
+        certifyAttachment,
+        now: applyOptions.now,
       });
     },
     async readDurableMutationReceipt(operationIdValue) {

@@ -4,7 +4,7 @@
 
 本阶段完成 `P0.6d-2c-12b-3b-2c`：当邮箱生命周期已经由停服 bootstrap 切换到 `dataGeneration=1/ready` 后，每一笔新邮件和既有邮件更新都必须在原业务事务内同步维护活动计数与永久身份，不能产生“实体邮件已提交、辅助表未提交”的分裂状态。
 
-本阶段不执行也不提供 bootstrap apply，不切换当前数据库代次，不启用活动邮箱 200 上限、归档、奖励仓领取或任何玩家可见新规则。现有数据库仍可保持 generation 0；generation 0 writer 只增加精确 control fence，邮件行为和物理写法保持不变。二进制现在具备维护 generation 1 的能力，但真正切换仍由后续 2d 在旧 Node 全部排空后完成。
+本阶段本身不执行也不提供 bootstrap apply，不切换当前数据库代次，不启用活动邮箱 200 上限、归档、奖励仓领取或任何玩家可见新规则。现有数据库仍可保持 generation 0；generation 0 writer 只增加精确 control fence，邮件行为和物理写法保持不变。二进制在本阶段具备维护 generation 1 的能力；后续 Phase 419 已补齐必须在旧 Node 全部排空后单独执行的 2d 切换工具。
 
 ## 唯一身份投影
 
@@ -48,7 +48,7 @@ legacy/global writer 先取得既有全局 EXCLUSIVE 兼容屏障，因此与所
 
 generation 0 只增加一条共享 control 行锁；generation 1 新信增加一次 counter seed、一次有界 increment 和一次 identity insert，既有邮件更新增加一次 identity 行锁与一次 digest update。control 使用 SHARE，同代次正常玩家事务互相兼容；没有全邮箱扫描、全 identity 扫描或全 counter 扫描。本阶段没有宣称 200 人地图容量，也没有运行真实 MySQL 竞争或 30 分钟容量门槛。
 
-当前安全发布顺序仍是：先部署具备 generation 1 forward maintenance 的二进制，但数据库保持 generation 0；后续 2d 停止并排空全部旧 Node，在单一持锁事务内重新读取、补齐、对账并最后切 ready/data1；切换后只能启动本阶段及以后版本。归档、vault 与 active-limit 继续保持关闭。
+当前安全发布顺序仍是：先部署具备 generation 1 forward maintenance 的二进制，但数据库保持 generation 0；再按 Phase 419 停止并排空全部旧 Node，在单一持锁事务内重新读取、补齐、对账并最后切 ready/data1；切换后只能启动本阶段及以后版本。归档、vault 与 active-limit 继续保持关闭。
 
 ## 验证证据
 

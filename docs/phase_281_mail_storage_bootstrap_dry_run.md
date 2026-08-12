@@ -53,7 +53,7 @@ CLI 连续调用 adapter 两次；每次事务已经结束后才开始下一次�
 npm --prefix server/node run mail-storage:dry-run
 ```
 
-参数在读取 `.local/mysql.env`、加载目录和建立连接之前认证。当前只接受无参数或 `--dry-run`；`--apply`、`--backup-path`、维护确认和未知参数都会提前拒绝。
+参数在读取 `.local/mysql.env`、加载目录和建立连接之前认证。无参数或 `--dry-run` 始终只走本阶段只读路径；正式 apply 入口已在 Phase 419 增加，但只有 `--apply --maintenance-confirmed` 的精确组合能进入独立停服 executor。单独 `--apply`、单独维护确认、`--backup-path`、凭据和未知参数仍会提前拒绝，且绝不会把 dry-run 结果当作写授权。
 
 stdout 只允许固定字段：模式、布尔状态、SHA-256 摘要、邮件/身份/收件人计数、exact/missing 数量、对账状态，以及经过已知 code 集合和已知 planner path 结构双重白名单过滤的 code/path。报告不含 mailId、账号、标题、正文、附件、货币、missing row、冲突 key、SQL、连接配置、密码、stack 或底层错误文本。
 

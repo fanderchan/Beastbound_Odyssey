@@ -84,76 +84,10 @@ async function readMysqlMailStorageBootstrapSnapshot(pool, options = {}) {
   try {
     await trackedQuery(deadline, connection, TRANSACTION_ISOLATION_SQL);
     await trackedQuery(deadline, connection, START_READ_ONLY_SNAPSHOT_SQL);
-
-    const contractRows = await trackedRows(
-      deadline,
-      connection,
-      buildMailStorageContractQuerySql(database),
-      10,
-      "contract",
+    snapshot = await readMysqlMailStorageBootstrapSnapshotFromConnection(
+      deadlineConnection(connection, deadline),
+      {database},
     );
-    const schemaContract = assertMailStorageContractOutput(
-      tabularOutput(contractRows, "contract"),
-    );
-
-    const controlRows = await trackedRows(
-      deadline,
-      connection,
-      buildMailStorageControlQuerySql(),
-      14,
-      "control",
-    );
-    const control = parseMailStorageControlOutput(tabularOutput(controlRows, "control"));
-
-    const sourceRows = (await trackedRows(
-      deadline,
-      connection,
-      SOURCE_SQL,
-      7,
-      "source",
-    )).map((row, index) => mapSourceRow(row, index));
-    const identityRows = (await trackedRows(
-      deadline,
-      connection,
-      IDENTITY_SQL,
-      12,
-      "identity",
-    )).map((row, index) => mapIdentityRow(row, index));
-    const counterRows = (await trackedRows(
-      deadline,
-      connection,
-      COUNTER_SQL,
-      4,
-      "counter",
-    )).map((row, index) => mapCounterRow(row, index));
-    const archiveRows = (await trackedRows(
-      deadline,
-      connection,
-      ARCHIVE_SQL,
-      1,
-      "archive",
-    )).map((row, index) => mapArchiveRow(row, index));
-    const vaultRows = (await trackedRows(
-      deadline,
-      connection,
-      VAULT_SQL,
-      1,
-      "vault",
-    )).map((row, index) => mapVaultRow(row, index));
-
-    snapshot = deepFreeze({
-      schemaContract: {
-        ok: schemaContract.ok,
-        expectedRowCount: schemaContract.expectedRowCount,
-        actualRowCount: schemaContract.actualRowCount,
-      },
-      control,
-      sourceRows,
-      identityRows,
-      counterRows,
-      archiveRows,
-      vaultRows,
-    });
   } catch (error) {
     await rollbackAfterFailure(connection, deadline, error);
     throw error;
@@ -176,13 +110,105 @@ async function readMysqlMailStorageBootstrapSnapshot(pool, options = {}) {
   return snapshot;
 }
 
-async function trackedQuery(deadline, connection, sql) {
-  return deadline.track(connection.query(sql));
+// Shared strict projection for the read-only dry-run and the explicit
+// stopped-maintenance apply transaction. The caller owns transaction start,
+// timeout, commit/rollback and connection lifecycle. Row locking is opt-in and
+// therefore cannot be reached from the dry-run wrapper above.
+async function readMysqlMailStorageBootstrapSnapshotFromConnection(connection, options = {}) {
+  if (!connection || typeof connection.query !== "function") {
+    throw bootstrapReadError(
+      "mysql_mail_storage_bootstrap_connection_invalid",
+      "connection",
+    );
+  }
+  const lockRows = options.lockRows === true;
+  const contractRows = await connectionRows(
+    connection,
+    buildMailStorageContractQuerySql(options.database),
+    10,
+    "contract",
+  );
+  const schemaContract = assertMailStorageContractOutput(
+    tabularOutput(contractRows, "contract"),
+  );
+  const controlRows = await connectionRows(
+    connection,
+    rowReadSql(buildMailStorageControlQuerySql(), lockRows),
+    14,
+    "control",
+  );
+  const control = parseMailStorageControlOutput(tabularOutput(controlRows, "control"));
+  const sourceRows = (await connectionRows(
+    connection,
+    rowReadSql(SOURCE_SQL, lockRows),
+    7,
+    "source",
+  )).map((row, index) => mapSourceRow(row, index));
+  const identityRows = (await connectionRows(
+    connection,
+    rowReadSql(IDENTITY_SQL, lockRows),
+    12,
+    "identity",
+  )).map((row, index) => mapIdentityRow(row, index));
+  const counterRows = (await connectionRows(
+    connection,
+    rowReadSql(COUNTER_SQL, lockRows),
+    4,
+    "counter",
+  )).map((row, index) => mapCounterRow(row, index));
+  const archiveRows = (await connectionRows(
+    connection,
+    rowReadSql(ARCHIVE_SQL, lockRows),
+    1,
+    "archive",
+  )).map((row, index) => mapArchiveRow(row, index));
+  const vaultRows = (await connectionRows(
+    connection,
+    rowReadSql(VAULT_SQL, lockRows),
+    1,
+    "vault",
+  )).map((row, index) => mapVaultRow(row, index));
+  return deepFreeze({
+    schemaContract: {
+      ok: schemaContract.ok,
+      expectedRowCount: schemaContract.expectedRowCount,
+      actualRowCount: schemaContract.actualRowCount,
+    },
+    control,
+    sourceRows,
+    identityRows,
+    counterRows,
+    archiveRows,
+    vaultRows,
+  });
 }
 
-async function trackedRows(deadline, connection, sql, fieldCount, kind) {
-  const result = await deadline.track(connection.query({sql, rowsAsArray: true}));
+function deadlineConnection(connection, deadline) {
+  return Object.freeze({
+    query(...args) {
+      let operation;
+      try {
+        operation = connection.query(...args);
+      } catch (error) {
+        operation = Promise.reject(error);
+      }
+      return deadline.track(operation);
+    },
+  });
+}
+
+function rowReadSql(sqlValue, lockRows) {
+  const sql = String(sqlValue || "").trim().replace(/;$/, "");
+  return lockRows ? `${sql} FOR UPDATE` : sql;
+}
+
+async function connectionRows(connection, sql, fieldCount, kind) {
+  const result = await connection.query({sql, rowsAsArray: true});
   return mysqlArrayRows(result, fieldCount, kind);
+}
+
+async function trackedQuery(deadline, connection, sql) {
+  return deadline.track(connection.query(sql));
 }
 
 function mysqlArrayRows(result, fieldCount, kind) {
@@ -403,4 +429,5 @@ function deepFreeze(value) {
 
 module.exports = {
   readMysqlMailStorageBootstrapSnapshot,
+  readMysqlMailStorageBootstrapSnapshotFromConnection,
 };
