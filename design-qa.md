@@ -1,3 +1,84 @@
+# Design QA：宠物技能页玩家化重制
+
+## Findings
+
+- 原 Phase 374 证据存在一项由项目所有者发现的 P2：中段滚动时，下一张技能卡
+  描边越过木框底边。根因是滚动裁切区使用 16px 底部边距，只对齐木框外沿，
+  而没有避开木框的可见内边界。
+  - Fix：详情底部安全边距调整为 32px，并显式启用 `ScrollContainer` 裁切。
+  - Verification：自动回归实测滚动视口与底部宠物栏间距 34px；修复后
+    `frame-02.png` 覆盖原问题的中段滚动状态，不再有卡片描边残留。
+- 修复后的当前证据没有剩余 P0、P1 或 P2 工程差异；仍等待项目所有者观看新
+  视频完成视觉验收。
+- [P3] 实机技能卡的描边、类型徽章和图标对比度比参考图更强。
+  - Location：右侧技能列表。
+  - Evidence：参考图偏低对比的棕色长卡；实机用紫色被动、橙色主动和精确技能图标强化快速识别。
+  - Impact：不改变布局与操作，1280×720 下更易区分技能类型。
+  - Fix：本轮保留；若后续整套宠物 UI 统一降噪，再同步降低描边亮度，不单独改技能页。
+- [P3] 实机在同一视口内展示三条被动和主动技能，单卡略矮于参考图。
+  - Location：右侧技能列表密度。
+  - Evidence：参考图首屏约两张大卡；实机首屏能看到三条被动和第一条主动，展开后显示完整说明。
+  - Impact：信息密度更高，但名称、来源、类型和图标均清晰，没有截断或误触。
+  - Fix：保持当前密度；它适配项目“被动在前、固定七个主动槽”的真实数据合同。
+
+## Comparison target
+
+- Source visual truth：`/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-a9f37067-c082-4531-bb37-b6f2fc356cab.jpg`
+- Normalized source：`.run/visual-review/pet-skill-page-v1/comparison/source-normalized-1280x720.png`
+- Implementation screenshot：`.run/evidence/phase375_pet_skill_clip_fix/phase373-20260729T195349.615151Z-6b635470/screenshots/frame-02.png`
+- Viewport：`1280×720`
+- Source pixels：原图 `2622×1206`，居中裁切至 `2144×1206` 后等比归一化为 `1280×720`
+- Implementation pixels：`1280×720`，真实 `Main.tscn`、`1×` 内容像素
+- State：宠物技能页、晶甲乌力、三条被动、七个主动槽、第一张主动技能卡
+- Data safety：隔离内存档案；未连接后端或 MySQL，未写正常玩家存档
+
+## Comparison evidence
+
+- 全视口同屏：`.run/visual-review/pet-skill-page-v1/comparison/reference-vs-runtime-final.png`
+- 技能面板聚焦：`.run/visual-review/pet-skill-page-v1/comparison/reference-vs-runtime-panel-final.png`
+- 实机与参考图均保留左侧完整宠物、底部宠物卡带、右侧嵌入式技能卡和纵向页签；实机没有独立程序员弹窗、内部 ID、测试字段或石币常驻调试文本。
+- 实机没有虚构“技能等级”。当前权威技能系统没有升级机制，因此卡片显示真实来源、类型、目标与效果。
+
+## Required fidelity surfaces
+
+- Typography：暖白正文、金色标题、紫色被动和橙色主动层级清楚；技能名、来源和类型均无截断。
+- Layout：技能页嵌入既有宠物大页；左侧主宠与底栏不被遮挡；右侧滚动列表按“被动技能 → 主动技能”排列。
+- Cards：普通卡 `396×90`，展开卡 `396×162`；图标框 `68×68`，正式图标 `56×56`；卡片间距和点击区域一致。
+- Icons：12 个主动、10 个被动均按精确技能 ID 使用原创图标；空技能位使用独立石骨加号，不用字符、emoji、宠物头像或通用占位块。
+- Copy：说明来自 canonical 技能数据；`quick_instinct` 明确显示“效果尚未开放”，没有把表现占位冒充为已生效机制。
+- Controls：普通模式只读；训练师模式沿用同一套卡片视觉，显示“已学”或真实价格，并保留覆盖与清空二次确认。
+
+## Primary interactions tested
+
+- 点击“技能”页签进入嵌入式技能页；
+- 点击技能卡展开／收起详情；
+- 点击底栏切换宠物并刷新被动、七个主动槽和图标；
+- 训练师状态显示候选技能、已学状态和石币价格；
+- 选择技能槽、选择训练技能、弹出覆盖确认并成功学习；
+- 选择“清空技能槽”、弹出“确认清空”并恢复真实空槽；
+- 普通槽位、被动卡和训练候选的点击信号互不串扰；
+- 正常玩家路径不显示训练价格或学习按钮。
+
+## Comparison history
+
+| 轮次 | 发现 | 修复 | 复核证据 |
+| --- | --- | --- | --- |
+| 旧实现 | P1：独立半透明程序员弹窗、纯文字按钮、无技能图标，宠物主舞台和底栏被割裂 | 重做为宠物大页内嵌技能卡；接入原创精确 ID 图标和玩家文案 | 最终全视口同屏 |
+| Pass 1 | P2：“血脉被动”错误缩窄语义；清空技能槽功能遗漏；空槽重复“技能槽3·技能槽3”；清空弹窗标题仍为“确认覆盖” | 改为“被动技能”；补同款清空卡与二次确认；空槽改为“等待学习”；标题改为“确认清空” | 最终视频 `00:42–00:53` |
+| Pass 2 | 工程复核未发现 P0、P1、P2 差异，但未覆盖中段滚动木框边界 | 无修改 | 原 Phase 374 视频 |
+| Owner review | P2：下一张技能卡在中段滚动时越过木框底边 | 滚动区底部安全边距 `16 → 32px`，显式开启裁切，并新增 `>=32px` 自动断言 | Phase 375 `frame-02.png`、`clip=true`、`clearance=34.0` |
+
+## Implementation checklist
+
+- [x] 嵌入式玩家技能页替代旧程序员弹窗。
+- [x] 12 主动 + 10 被动 canonical 展示字段与精确技能图标齐全。
+- [x] 被动在前、固定七个主动槽、真实空槽和展开详情齐全。
+- [x] 普通只读与训练师学习／覆盖／清空流程齐全。
+- [x] 修复后同视口全图、问题中段状态和 `1×` 实机视频已生成。
+- [x] 剩余差异仅为 P3 风格密度取舍。
+
+final result: engineering_passed; owner_review_pending
+
 # Phase 377 Design QA：觉醒风格背包与装备对比
 
 ## Result
@@ -205,160 +286,91 @@ final result: baseline_engineering_media_passed; main_migration_pending; owner_r
 
 ---
 
-# Phase 381 Design QA：世界“角色”入口与角色管理三页
+# Phase 394 Design QA：挂机匹配、真人优先与陪练 NPC 软补位
 
-## Result
-
-- P0：无。
-- P1：无。
-- P2：无。最终 `1280×720` 角色页完整覆盖世界并阻断点击穿透，标题、关闭键、九个
-  装备槽、人物全身图、两张宠物大头照、右侧页签、加点行和骑证卡片均未越界。
-- 四张参考截图与四个同状态实机帧均按等比适配后分别放入同一个比较输入中检查。实现
-  保留参考的全屏木石框架、人物主视觉、右侧纵向分页、属性条、先草稿后确认的加点节奏
-  以及“全部／种族”骑证筛选，同时只使用 Beastbound 原创或项目内正式资产。
-- 工程 Design QA 已通过；项目所有者的主观画面验收仍以本阶段最终 `1×` 视频为准。
-
-## Comparison targets
-
-- 属性页：
-  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/attributes_reference_vs_implementation.jpg`；
-- 加点页：
-  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/stat_points_reference_vs_implementation.jpg`；
-- 骑证全部：
-  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/ride_all_reference_vs_implementation.jpg`；
-- 骑证种族：
-  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/ride_species_reference_vs_implementation.jpg`；
-- 四状态总览：
-  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/all_states_reference_vs_implementation.jpg`。
-
-## Required fidelity surfaces
-
-- Layout：世界右下“角色”真实入口，全屏角色页，左装备／中人物／右资料，以及右侧
-  `属性 / 加点 / 骑证` 三页结构与参考一致；关闭后恢复世界和右下操作栏。
-- Truth：属性页展示项目真实九装备槽，不为匹配参考的六槽外观删槽；骑证页严格只展示
-  当前三种真实可骑形态，不用虚构九卡填满版面。
-- Controls：四维 `+ / -`、清空本次、一次确认、全部／种族／真实族系筛选都由左键
-  工作；加点请求进行中即使关闭再打开也保持禁用，避免旧响应清掉新草稿。
-- Assets：加减、锁定和拥有状态使用项目原创透明位图，不再用文字符号或 emoji 冒充
-  图标；人物、宠物大头照、装备图标与木质皮肤均来自项目批准目录。
-- Safety：不显示虚构称号、家族、气力、怒气、战力、固定百分比或免费洗点；不显示
-  raw code、资源路径、schema、接口名、QA 和 agent 文案。
-
-## Runtime and video evidence
-
-- 最终视频：
-  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/player-character-owner-review-1x.mp4`；
-- 联系表：
-  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/contact-sheet.png`；
-- 验证摘要：
-  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/summary.json`；
-- 视频来自真实 `Main.tscn`，为 `33.933333s / 1018` 帧、H.264/AAC、
-  `1280×720 / 30 FPS / 1.00×`，完整音视频解码通过；连续展示世界入口、属性、九装备槽、
-  加点草稿、减点撤回、清空本次、原子确认、三种真实骑宠、缺证锁定、种族展开、老虎系
-  筛选和关闭返回世界。
-- 录制使用全新隔离 user-data，未启动后端、未连接 MySQL、未写正常玩家存档。
-
-final result: passed
-
----
-
-# Phase 379 Design QA：一步到位的人物创建配置与元素配点
-
-## Result
+## Findings
 
 - P0：无。
-- P1：无。
-- P2：无。最终 `1280×720` 页面没有人物、头像、配点格、名字输入或创建按钮
-  越界；四个形象、十点配完、非法状态拦截、随机名、键盘改名和创建回槽均可由真实
-  左键／键盘连续完成。
-- 参考图与实现图已归一化后放在同一个比较输入中检查。实现保留参考的左侧圆形人物
-  列表、中部完整人物和右侧元素木框结构，同时使用 Beastbound 原创背景、人物与 UI
-  资产，不复制参考角色、像素或商标。
-- 工程 Design QA 已通过；四套人物正式美术仍保持 `owner_review_pending`，等待项目
-  所有者观看本阶段最终 `1×` 视频后确认主观视觉结果。
+- P1：无。服务端独立审计最终确认真人队伍、`8s` 软补位、下一场真人替换、掉线席位、
+  幂等／模糊提交恢复和 NPC 奖励隔离均没有阻断问题；不存在幽灵队列、revision 回退、NPC
+  冒充真人或旧手工陪练继续写档。
+- P2：无。真实 `Main.tscn` 的路线卡、便捷组队、开始二选一、真人等待、陪练 NPC、下一场
+  替换和世界状态均完整落在 `1280×720`；路线／真人／临时 NPC／空位层级可读，主动作、
+  取消、停止与关闭均可左键完成，正常画面无队列 ID、接口、测试或 agent／QA 文案。
 
 ## Comparison target
 
-- 参考图：
-  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-201f4819-096e-4738-80e0-036f6c76109a.jpg`；
-- 同状态实现图：`.run/character_creation/character_creation_final00000009.png`；
-- 同屏比较：`.run/character_creation/design_qa/reference-vs-implementation.png`；
-- 比较状态均为曜石斥候、水元素 10 点、剩余 0 点、名字已填写；实现视口为
-  `1280×720`。
+- 比较目标为项目所有者同轮提供的挂机选区、便捷组队、立即／匹配挂机、真人等待、NPC
+  补位及回到世界状态参考截图；Phase 393 已单独处理同轮的战后奖励图。
+- 比较范围是页面层级、选择顺序、真人优先、补位透明度、下一场替换语义和世界挂机连续性；
+  不要求复制参考游戏的角色、宠物、地图、商标、在线人数、数值或像素。
+
+## Comparison evidence
+
+- 连续视频：
+  `.run/evidence/phase394_hang_matchmaking_owner_review/phase394-final/hang-matchmaking-owner-review-1x.mp4`；
+- 15 帧联系表：
+  `.run/evidence/phase394_hang_matchmaking_owner_review/phase394-final/contact-sheet.png`；
+- 结构化摘要：
+  `.run/evidence/phase394_hang_matchmaking_owner_review/phase394-final/summary.json`；
+- 成片为真实 `Main.tscn`、Metal、`1280×720 / 30 FPS / 1.00×`，共
+  `23.833333s / 715` 帧；MP4 SHA-256：
+  `9074a94aa54458c6aeae20277cf0151412d7d5f312139fd74f6860e6c6955f0c`。
 
 ## Required fidelity surfaces
 
-- Layout：左上返回、左侧四个独立圆形头像、中部全身展示、右侧四行减号／十格／加号、
-  下部名字与创建按钮，视觉层级与参考一致。
-- Material：森林海岸背景、半透明深木面板、暖金描边与木质按钮延续当前宠物／背包界面
-  的统一材质语言。
-- Assets：四个头像和四张全身展示图均为独立正式图片，不从全身像裁头，不使用文字、
-  emoji、手绘 SVG、占位框或参考图裁片。
-- Controls：四形象切换、元素加减、冲突禁配、剩余点提示、随机名字、真实键盘输入、返回
-  与创建均为可操作控件；右键不是必需输入。
-- Safety：玩家界面不显示 `appearanceId`、`playerId`、slot index、schema、raw code、
-  后端状态、QA 或 agent 文案。
+- Layout：顶部标题与关闭、路线／便捷组队页签、左侧六条正式路线、中部规则与席位、底部
+  主动作形成固定阅读顺序；开始二选一作为同页模态层，不让背景误触。
+- Hierarchy：当前路线、可立即挂机状态、真人数、陪练 NPC 数和空位明确分层；队伍卡不会把
+  NPC 画成在线玩家，世界状态条只保留当前挂机／匹配摘要和停止入口。
+- Truth：服务器等待满 `8s` 才软补位；真人加入立即缩减 NPC，已开战不被强切而在下一场
+  替换。取消匹配继续挂机，停止挂机才隐藏状态；队长掉线取消匹配，非队长掉线由 NPC 补席。
+- Controls：路线、页签、队伍、立即挂机、匹配挂机、取消、停止和关闭均可真实跨帧左键完成；
+  非当前地图使用正式跨图寻路，不提供服务端不存在的指定队伍申请按钮。
+- Safety：NPC 不计在线人口、不进入 participant IDs、奖励、捕捉、档案或 receipt；旧手工陪练
+  无入口、无 mutation，新战斗不注入，旧 frozen actor 只读显示且不可再获得 EXP。
+- Continuity：匹配在挂机中进行，关闭面板或取消匹配不会中断已经选择的挂机；登入／重连、
+  满员后 party update 和队员离开都按单调 revision 有界刷新。
 
-## Runtime and video evidence
+## Interaction, regression and performance evidence
 
-- 最终视频：
-  `.run/evidence/phase379_character_creation_owner_review/phase379-character-creation-main-final-v5/character-entry-owner-review-1x.mp4`；
-- 联系表：
-  `.run/evidence/phase379_character_creation_owner_review/phase379-character-creation-main-final-v5/contact-sheet.png`；
-- 验证摘要：
-  `.run/evidence/phase379_character_creation_owner_review/phase379-character-creation-main-final-v5/summary.json`；
-- 真实 `Main.tscn` 依次展示四空槽、打开创建页、四人物切换、剩余 1 点禁止创建、
-  地 6 水 4 合法完成、随机名、键盘改名、捕获一次性创建 payload 和权威返回后的新角色
-  槽，共 12 个连续章节；
-- 视频为 `19.466667s / 584` 帧、H.264/AAC、`1280×720 / 30 FPS / 1.00×`，
-  完整音视频解码通过；录制使用全新隔离 user-data，未连接后端且未写玩家存档。
+- 服务端 Node 语法检查与四个定向套件合计 `142/142 PASS`，独立审计 P0／P1／P2 均无；
+  保存失败、GET prune 交错、单人／合并队员模糊 COMMIT、重启 exact replay、离线席位、NPC
+  战斗注入与奖励隔离均有回归。
+- 客户端 `--auto-hang-matchmaking-check` 为 `2/2 PASS`，choice、matching、dedupe、
+  npc_filled、replacement、full、party update refresh、matching resumed、人物／宠物自动策略、
+  取消继续挂机和停止隐藏全为 `true`。
+- 网络模型 focused check `16/16`；面板 focused check、挂机任务 standalone、Godot 解析和任务
+  模板／任务链／任务 UI `4/4` 均通过；旧手工陪练 UI、flag、按钮和包装函数精确残留为零。
+- fixed idle／movement 均保持 `60 FPS`，`process_total` 分别为 `0.03..0.04ms` 与
+  `0.04..0.05ms`；112 次跨帧点击合并为 33 次寻路并停稳，`0.05..0.07ms`。Metal 实时时钟
+  idle 为 CPU 中位 `4.8% / process 0.285ms`，movement 为 `11.8% / 0.29ms / 60 FPS`。
+- 录像共 9 次真实左键，十章 flow coverage 全为 true；隔离 user-data、无后端／MySQL／服务端
+  写入。录像采样峰值 `42.602ms` 不作为稳态性能结论。
 
-final result: passed
+## Intentional differences and P3 observations
 
----
+- [P3] Beastbound 明示“陪练 NPC”，不把补位角色混入真人在线数。参考流程的高人口观感不能
+  覆盖本项目的数据真实性原则；这项差异保留。
+- [P3] 当前只有统一自动匹配，不提供参考中可能存在的指定队伍申请、聊天招募、跨服或付费
+  加速入口，因为服务端尚无这些权威合同。
+- [P3] 未做真实 MySQL fault injection 或完整 `npm test`；typed async store 已覆盖模糊
+  COMMIT，发布前仍需 MySQL 专用演练。旧 frozen room 的无入口 internal helper／switch 只为
+  只读兼容保留，可另阶段清理。
+- [P3] 本轮工程与媒体 Design QA 通过，但项目所有者尚未观看最终视频；
+  `ownerReviewStatus=pending`，不能冒充 owner visual approval 或 broad P2.2 完成。
 
-# Phase 380 Design QA：随机名按钮边界、名字安全与地属性绿色
+## Comparison history
 
-## Result
+| 轮次 | 发现 | 修复 | 复核证据 |
+| --- | --- | --- | --- |
+| 合同审计 | P1：旧路径让玩家手工增删本地陪练，既不是真人匹配，也会把本地对象混进战斗与奖励 | 退役全部玩家入口和 mutation，改为正式路线的服务端权威真人优先／NPC 软补位；旧档只读兼容 | 旧 UI／flag／wrapper 零残留；profile action 与 frozen room 回归通过 |
+| Server Pass 1 | P0：延迟 join 的整表快照可覆盖 GET prune，复活过期队列并回退 revision | 改为提交后 delta rebase 与单调 revision | delayed durable join／GET prune 交错回归通过 |
+| Server Pass 2 | P1：模糊 COMMIT 重启与合并入队缺少最小 exact receipt；离线成员仍可能占真人席位 | receipt 冻结 party＋target 最小证明；重启重建唯一队列；只按在线真人计席，队长掉线取消 | single＋merged ack-lost、restart、offline seat 回归通过 |
+| Client Pass | P2：需要同时证明二选一、软补位、下一场替换、取消继续和停止隐藏，而不能靠静态截图 | 真实 Main 十章连续录像、9 次跨帧左键与专项状态机断言 | 客户端 2/2、focused checks、23.833333 秒视频 |
+| Final | 未发现剩余 P0、P1、P2；保留三项明确 P3 边界 | 无进一步改动 | Node 142/142、客户端专项全绿、完整媒体解码与独立 PC 性能探针 |
 
-- P0：无。
-- P1：无。
-- P2：无。最终 `1280×720` 创建页中，“换一个”按钮完整位于右侧配置板内，与姓名
-  输入框保持间距且不重叠；地属性文字和六个已点亮格均为绿色。
-- 用户问题截图与同状态实机帧已统一为 `1280×720` 后放在同一个比较输入中检查；对比
-  状态均为焰芽斗士、地 6／水 3、剩余 1 点、名字为空。
-- 玩家可连续左键随机换名；混淆敏感名只显示通用提示并禁用创建，安全随机名可恢复。
-
-## Comparison target
-
-- 用户问题截图：
-  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-16d1ba64-be73-4d8d-adcf-86a79f5741b0.png`；
-- 同状态实现图：
-  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/design-qa/frame-08.png`；
-- 同屏比较：
-  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/design-qa/reference-vs-implementation.png`。
-
-## Required fidelity surfaces
-
-- Boundary：通用次级按钮原有 `150px` 最小宽度不再撑破当前名字行；此处独立使用
-  `94×50`，右侧保留 42px 配置板内边距。
-- Alignment：姓名输入为 `262×50`，与随机按钮间隔 10px，文字基线、按钮高度和输入框
-  高度一致。
-- Color：地属性语义统一为绿色；水、火、风继续使用蓝、红、黄，不修改元素数值规则。
-- Feedback：受限名字显示“这个名字不能使用，请换一个。”；界面不显示命中词、分类、
-  raw code、服务端字段或 QA 文案。
-
-## Runtime and video evidence
-
-- 最终视频：
-  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/character-name-safety-owner-review-1x.mp4`；
-- 联系表：
-  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/contact-sheet.png`；
-- 视频来自真实 `Main.tscn`，为 `22.900s`、`687` 帧、H.264/AAC、
-  `1280×720 / 30 FPS / 1.00×`，完整音视频解码通过；
-- 连续流程覆盖配置板边界、绿色地元素、三次不同安全随机名、混淆名 `Ｇ · M` 拦截、
-  随机名恢复、键盘输入“林岚”和一次性创建 payload；录制使用隔离 user-data，未连接
-  后端且未写玩家存档。
+`ownerReviewStatus=pending`；本结论只代表工程 Design QA 通过，不替代项目所有者观看与审美接受。
 
 final result: passed
 
@@ -521,91 +533,709 @@ final result: passed
 
 ---
 
-# Phase 394 Design QA：挂机匹配、真人优先与陪练 NPC 软补位
+# Phase 391 Design QA：商业服务身份与连续验收片
 
 ## Findings
 
 - P0：无。
-- P1：无。服务端独立审计最终确认真人队伍、`8s` 软补位、下一场真人替换、掉线席位、
-  幂等／模糊提交恢复和 NPC 奖励隔离均没有阻断问题；不存在幽灵队列、revision 回退、NPC
-  冒充真人或旧手工陪练继续写档。
-- P2：无。真实 `Main.tscn` 的路线卡、便捷组队、开始二选一、真人等待、陪练 NPC、下一场
-  替换和世界状态均完整落在 `1280×720`；路线／真人／临时 NPC／空位层级可读，主动作、
-  取消、停止与关闭均可左键完成，正常画面无队列 ID、接口、测试或 agent／QA 文案。
+- P1：无。
+- P2：无。杂货商、装备商和银行管理员的正式头像、姓名、职业与职责在 `1280×720`
+  均清楚可读；身份区没有压住商品页签、银行标题、仓库格或关闭按钮。
+- P3：商店和银行继续复用统一觉醒底板，尚无各自专属场景背景；当前材质统一且不影响
+  阅读，待项目所有者确认视频后再决定是否扩展，不在本阶段虚构新资产。
+
+## Evidence reviewed
+
+- 视频：
+  `.run/evidence/phase391_commerce_identity_owner_review/phase391-commerce-final-v2/commerce-awakened-owner-review-1x.mp4`；
+- 联系表：
+  `.run/evidence/phase391_commerce_identity_owner_review/phase391-commerce-final-v2/contact-sheet.png`；
+- 人工复核代表帧：`frame-02` 杂货身份、`frame-05` 装备商身份、`frame-06` 银行身份、
+  `frame-08` 拖放数量页、`frame-09` 锻造、`frame-11` 内嵌确认。
+- 视频来自真实 `Main.tscn` 与 Metal MovieWriter，为 `22.833333s / 685` 帧、H.264/AAC、
+  `1280×720 / 30 FPS / 1.00×`；完整音视频解码、九章顺序和隔离档案检查通过。
+
+## Required surfaces
+
+- Identity：真实对话实例优先；远程无实例入口不伪造具名 NPC；切换／关闭不残留旧头像。
+- Assets：只复用已批准 NPC 职业人像并经 `NpcArtCatalog` 加载，不直接载入路径，不从用户
+  参考图裁片。
+- Layout：商店三行身份卡、银行三行管理员条均在安全边界内；银行数量页和锻造确认页继续
+  是同屏内嵌层。
+- Truth：不显示 itemId、appearanceId、接口、schema、QA 文案，也不增加未实现商业功能。
+- Controls：出售、关闭、配方选择、开始合成、取消和返回均由真实跨帧左键完成；银行
+  拖放数量页使用正式控件合同且不提交资产写入。
+
+`ownerReviewStatus=pending`，等待项目所有者观看本轮视频。
+
+final result: passed
+
+---
+
+# Phase 390 Design QA：觉醒式商店、银行与装备合成
+
+## Findings
+
+- P0：无。
+- P1：无。
+- P2：无。最终三页均完整落在 `1280×720`，标题、关闭、列表、详情、主动作与持久
+  反馈区没有越界或互相遮挡；装备合成的产物、真实材料、石币、成功率、属性和提交动作
+  在一个视野内完成。
+- P3：商店和银行当前复用统一觉醒底板，尚未加入各自 NPC 的小型身份头像；这不影响
+  购买、出售、修理、拖放、精确实例存取、分页和币额操作，可在所有者确认主布局后再做
+  不改变信息密度的视觉精修。
 
 ## Comparison target
 
-- 比较目标为项目所有者同轮提供的挂机选区、便捷组队、立即／匹配挂机、真人等待、NPC
-  补位及回到世界状态参考截图；Phase 393 已单独处理同轮的战后奖励图。
-- 比较范围是页面层级、选择顺序、真人优先、补位透明度、下一场替换语义和世界挂机连续性；
-  不要求复制参考游戏的角色、宠物、地图、商标、在线人数、数值或像素。
+- source visual truth：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-a9125da2-b792-4708-8bba-654258fd7cc3.jpg`
+  （`2622×1206`，约 `2.174:1`）；
+- implementation screenshot：
+  `.run/evidence/phase390_commerce_awakened_ui/synthesis-final/frame00000059.png`
+  （`1280×720`，Godot 原生视口，density `1×`）；
+- full-view comparison：
+  `.run/evidence/phase390_commerce_awakened_ui/design-qa/synthesis-source-vs-implementation.png`；
+- focused workbench comparison：
+  `.run/evidence/phase390_commerce_awakened_ui/design-qa/synthesis-workbench-source-vs-implementation.png`；
+- confirmation state：
+  `.run/evidence/phase390_commerce_awakened_ui/check/equipment-synthesis-confirm-1280x720.png`；
+- shop implementation：
+  `.run/evidence/phase390_commerce_awakened_ui/shop/frame00000089.png`；
+- bank implementation：
+  `.run/evidence/phase390_commerce_awakened_ui/bank/frame00000109.png`。
 
-## Comparison evidence
-
-- 连续视频：
-  `.run/evidence/phase394_hang_matchmaking_owner_review/phase394-final/hang-matchmaking-owner-review-1x.mp4`；
-- 15 帧联系表：
-  `.run/evidence/phase394_hang_matchmaking_owner_review/phase394-final/contact-sheet.png`；
-- 结构化摘要：
-  `.run/evidence/phase394_hang_matchmaking_owner_review/phase394-final/summary.json`；
-- 成片为真实 `Main.tscn`、Metal、`1280×720 / 30 FPS / 1.00×`，共
-  `23.833333s / 715` 帧；MP4 SHA-256：
-  `9074a94aa54458c6aeae20277cf0151412d7d5f312139fd74f6860e6c6955f0c`。
+源图按宽等比缩放到 `1280×589`，在 `1280×720` 黑底中上下居中；实现保持原生
+`1280×720`，没有把 `2.174:1` 源图拉伸成 `16:9`。比较状态均为选中第一项武器方案、
+材料准备完毕、尚未提交。参考图属于另一套宝石镶嵌语义，实现按 Beastbound 的真实装备
+配方合同重排，因此只比较页面层级、木牌列表、中央工作台、右侧功能导航与动作位置，
+不要求复制其素材、文字或不存在的功能。
 
 ## Required fidelity surfaces
 
-- Layout：顶部标题与关闭、路线／便捷组队页签、左侧六条正式路线、中部规则与席位、底部
-  主动作形成固定阅读顺序；开始二选一作为同页模态层，不让背景误触。
-- Hierarchy：当前路线、可立即挂机状态、真人数、陪练 NPC 数和空位明确分层；队伍卡不会把
-  NPC 画成在线玩家，世界状态条只保留当前挂机／匹配摘要和停止入口。
-- Truth：服务器等待满 `8s` 才软补位；真人加入立即缩减 NPC，已开战不被强切而在下一场
-  替换。取消匹配继续挂机，停止挂机才隐藏状态；队长掉线取消匹配，非队长掉线由 NPC 补席。
-- Controls：路线、页签、队伍、立即挂机、匹配挂机、取消、停止和关闭均可真实跨帧左键完成；
-  非当前地图使用正式跨图寻路，不提供服务端不存在的指定队伍申请按钮。
-- Safety：NPC 不计在线人口、不进入 participant IDs、奖励、捕捉、档案或 receipt；旧手工陪练
-  无入口、无 mutation，新战斗不注入，旧 frozen actor 只读显示且不可再获得 EXP。
-- Continuity：匹配在挂机中进行，关闭面板或取消匹配不会中断已经选择的挂机；登入／重连、
-  满员后 party update 和队员离开都按单调 revision 有界刷新。
+- Fonts and typography：延续项目中文展示字体和正文字体；29px 标题、20–22px 分区标题、
+  12–17px 正文形成清晰层级，没有系统默认字体、乱码、过度描边或截断。
+- Spacing and layout rhythm：统一 72px 顶栏；左侧挂板、中央工作台和右侧功能区形成与参考
+  相同的三段式阅读顺序。商店与银行沿用同一边距和主动作高度。
+- Colors and visual tokens：暗木、玄武岩黑、暖金描边、浅木主按钮、绿色充足状态和红色不足
+  状态均复用现有觉醒 token；没有为三页另造一套颜色系统。
+- Image quality and asset fidelity：背景、关闭、页签、正式物品图标和标题图标均为仓库真实
+  PNG/纹理；没有 emoji、手绘 SVG、文字占位图或从用户参考图裁取运行素材。全部图标保持
+  等比缩放且无拉伸、透明边和压缩块。
+- Copy and content：只显示真实的“装备合成”和“装备强化”；不显示宝石、乐器、宠技、
+  分解、宠装、珊瑚等未实现入口。商店与银行不显示 itemId、instanceId、schema、接口名、
+  QA 或 agent 文案。
+- Interaction and safety：主流程全程可左键操作；合成必须经过内嵌确认页，预览阶段不会
+  发出提交事件，确认后只发一次；银行保留拖放与精确实例语义，商店保留双击快速交易。
 
-## Interaction, regression and performance evidence
+## Comparison history
 
-- 服务端 Node 语法检查与四个定向套件合计 `142/142 PASS`，独立审计 P0／P1／P2 均无；
-  保存失败、GET prune 交错、单人／合并队员模糊 COMMIT、重启 exact replay、离线席位、NPC
-  战斗注入与奖励隔离均有回归。
-- 客户端 `--auto-hang-matchmaking-check` 为 `2/2 PASS`，choice、matching、dedupe、
-  npc_filled、replacement、full、party update refresh、matching resumed、人物／宠物自动策略、
-  取消继续挂机和停止隐藏全为 `true`。
-- 网络模型 focused check `16/16`；面板 focused check、挂机任务 standalone、Godot 解析和任务
-  模板／任务链／任务 UI `4/4` 均通过；旧手工陪练 UI、flag、按钮和包装函数精确残留为零。
-- fixed idle／movement 均保持 `60 FPS`，`process_total` 分别为 `0.03..0.04ms` 与
-  `0.04..0.05ms`；112 次跨帧点击合并为 33 次寻路并停稳，`0.05..0.07ms`。Metal 实时时钟
-  idle 为 CPU 中位 `4.8% / process 0.285ms`，movement 为 `11.8% / 0.29ms / 60 FPS`。
-- 录像共 9 次真实左键，十章 flow coverage 全为 true；隔离 user-data、无后端／MySQL／服务端
-  写入。录像采样峰值 `42.602ms` 不作为稳态性能结论。
+1. 初版实现证据
+   `.run/evidence/phase390_commerce_awakened_ui/synthesis/frame00000089.png` 发现两个 P2：
+   固定显示三个材料槽导致当前单材料配方出现两个无意义的“无需材料”；右侧当前页签因
+   disabled 状态过暗，视觉上反而像未选中。
+2. 修复
+   材料槽改为按真实配方数量动态居中，仅渲染实际材料；当前“装备合成”页签改用可读的
+   选中态并屏蔽鼠标，而不是 disabled 灰态。同时移除作为装饰的文本符号。
+3. 复核
+   最终同屏和工作台聚焦比较确认上述 P2 均已消失；真实单材料合同比照搬三个加号槽更
+   清楚，且保留了参考图的“产物在上、材料在中、属性在下”层级。无新增 P0/P1/P2。
+
+## Implementation checklist
+
+- [x] 三个专用全屏 Panel 接入原 PanelRegistry 身份和正式入口。
+- [x] 复用真实商店、银行、合成与强化合同，不增加商品、配方或经济规则。
+- [x] 装备合成增加预览与内嵌二次确认。
+- [x] 真实左键、提交次数、全视口边界和正式图标专项检查通过。
+- [x] 真实 `Main.tscn` 商店、银行、合成截图完成并人工检查。
+
+final result: passed
+
+---
+
+# Phase 389 Design QA：设置页与自动战斗默认策略
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 设置页完整覆盖世界，左侧木牌导航、人物／宠物动作卡、
+  首回合／一般回合切换、生命恢复、攻击目标和恢复顺序均在主框内，没有裁切或点击穿透。
+- 自动战斗仍从战斗右下角“自动”直接开始，设置页只调整策略；页面明确告诉玩家默认值
+  可以直接使用，并保留随时“取消”接管的战斗合同。
+- 最终工程 Design QA 通过；参考产品的角色、宠物、商标、专属像素和未实现功能没有进入
+  Beastbound 运行时。
+
+## Comparison target
+
+- 参考视觉真相：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-5e5f160c-7118-4a00-9619-d15b19d6a8cc.jpg`；
+- 最终实机：
+  `.run/evidence/phase389_auto_settings_awakened_ui/implementation/final/auto-settings.png`；
+- 交互内嵌页：
+  `.run/evidence/phase389_auto_settings_awakened_ui/interaction/auto-settings-heal-priority-1280x720.png`；
+- 参考原图为 `2622×1206`。为避免裁掉左右导航，按宽度等比缩到 `1280×589`，上下补入
+  暗色留白后得到 `1280×720` 比较帧；实现像素与 CSS 视口均为 `1280×720`，密度 `1×`。
+- 状态：参考为“自动战斗／普通战斗／生命恢复开启”；实现为“自动战斗／一般回合／自动
+  恢复开启”。两者都是默认战斗策略状态，但产品可用功能名称不同。
+
+## Comparison evidence
+
+- 全视口同一比较输入：
+  `.run/evidence/phase389_auto_settings_awakened_ui/comparison/reference-vs-implementation-final.jpg`；
+- 右侧设置主体聚焦比较：
+  `.run/evidence/phase389_auto_settings_awakened_ui/comparison/content-focus-final.jpg`；
+- 聚焦比较是必要的：全视口缩放后，开／关复选框、动作选择、生命阈值和底部目标文字
+  太小，不能可靠判断控件状态与裁切。
+
+## Required fidelity surfaces
+
+- Fonts and typography：标题、木牌页签和分区标题使用项目粗体中文显示字体；说明、等级、
+  阈值和下拉项使用清晰正文体。最终没有乱码、截断、错误字形或溢出，参考的粗体层级
+  被保留，但不复制其字体文件。
+- Spacing and layout rhythm：保留参考的全屏木顶栏、左导航、右主框、顶部模式切换、双出战
+  单位、恢复分区和底部策略区；在 PC `16:9` 中压缩纵向留白，没有隐藏持久关闭按钮。
+- Colors and visual tokens：使用项目既有暗木、暖金描边、羊皮纸选中态、橙色生命阈值与
+  绿色可用状态；正文对比度和选中状态清楚。
+- Image quality and asset fidelity：人物、宠物大头照及攻击、宠物技能、自动战斗图标均来自
+  正式项目目录，缩放后边缘清晰；没有 emoji、字符图标、手绘 SVG、截图裁片或参考产品
+  资产冒充正式素材。
+- Copy and content：只展示现有权威设置：首回合／一般回合人物动作、宠物技能、目标、
+  自动恢复、人物／宠物血线和五级恢复顺序。不伪造百人道场、逆境迷宫、录像大厅或攻略。
+- Controls and affordance：页签、模式、复选框、滑杆、下拉项、恢复顺序、完成和关闭均是
+  正常 Godot 控件；真实跨帧左键检查覆盖回合切换、三页导航、关闭恢复和内嵌页开关。
 
 ## Intentional differences and P3 observations
 
-- [P3] Beastbound 明示“陪练 NPC”，不把补位角色混入真人在线数。参考流程的高人口观感不能
-  覆盖本项目的数据真实性原则；这项差异保留。
-- [P3] 当前只有统一自动匹配，不提供参考中可能存在的指定队伍申请、聊天招募、跨服或付费
-  加速入口，因为服务端尚无这些权威合同。
-- [P3] 未做真实 MySQL fault injection 或完整 `npm test`；typed async store 已覆盖模糊
-  COMMIT，发布前仍需 MySQL 专用演练。旧 frozen room 的无入口 internal helper／switch 只为
-  只读兼容保留，可另阶段清理。
-- [P3] 本轮工程与媒体 Design QA 通过，但项目所有者尚未观看最终视频；
-  `ownerReviewStatus=pending`，不能冒充 owner visual approval 或 broad P2.2 完成。
+- [P3] 参考为约 `2.17:1` 的移动横屏，项目正式目标为 PC `1280×720`；实现保留核心比例
+  与信息层级，但没有把 PC 画面横向压扁成参考宽高比。
+- [P3] 参考左侧还有基础、画面、消息、语音、其他和隐私设置，右侧还有录像大厅／攻略；
+  当前项目没有对应完整功能，因此只呈现自动战斗、在线挂机和自动捕捉三项真实入口。
+- [P3] 参考用纯图标选择动作，实现同时显示正式图标和文字下拉项，以便玩家确认真实技能
+  名称；卡片式人物／宠物并排结构仍与参考一致。
+- [P3] 参考顶部“自动巡逻”属于其产品入口；Beastbound 已有世界挂机按钮和战斗内一键
+  自动，因此改为短提示，避免玩家误以为必须先进入设置。
 
 ## Comparison history
 
 | 轮次 | 发现 | 修复 | 复核证据 |
 | --- | --- | --- | --- |
-| 合同审计 | P1：旧路径让玩家手工增删本地陪练，既不是真人匹配，也会把本地对象混进战斗与奖励 | 退役全部玩家入口和 mutation，改为正式路线的服务端权威真人优先／NPC 软补位；旧档只读兼容 | 旧 UI／flag／wrapper 零残留；profile action 与 frozen room 回归通过 |
-| Server Pass 1 | P0：延迟 join 的整表快照可覆盖 GET prune，复活过期队列并回退 revision | 改为提交后 delta rebase 与单调 revision | delayed durable join／GET prune 交错回归通过 |
-| Server Pass 2 | P1：模糊 COMMIT 重启与合并入队缺少最小 exact receipt；离线成员仍可能占真人席位 | receipt 冻结 party＋target 最小证明；重启重建唯一队列；只按在线真人计席，队长掉线取消 | single＋merged ack-lost、restart、offline seat 回归通过 |
-| Client Pass | P2：需要同时证明二选一、软补位、下一场替换、取消继续和停止隐藏，而不能靠静态截图 | 真实 Main 十章连续录像、9 次跨帧左键与专项状态机断言 | 客户端 2/2、focused checks、23.833333 秒视频 |
-| Final | 未发现剩余 P0、P1、P2；保留三项明确 P3 边界 | 无进一步改动 | Node 142/142、客户端专项全绿、完整媒体解码与独立 PC 性能探针 |
+| Iteration 1 | P2：旧默认预览没有人物形象和出战宠物，双单位卡变成空框 | 预览改用真实见习猎人与正式蓝人龙大头照；运行时仍从当前权威档案取头像 | `implementation/iteration2/auto-settings.png` |
+| Iteration 2 | P2：自动恢复使用现代滑动开关，与参考明确的“开／关”游戏复选框不一致 | 改为互斥的“开／关”复选框并保持同一布尔设置合同 | `comparison/reference-vs-implementation-final.jpg` |
+| Interaction pass | P2：恢复顺序弹层的“完成”按钮在首张交互帧中过窄 | 在应用木质按钮皮肤后固定 `104×42` 最小尺寸，并增加真实左键关闭断言 | `interaction/auto-settings-heal-priority-1280x720.png` |
+| Final | 未发现剩余 P0、P1、P2；四项产品约束差异归为 P3 | 全屏锚点改为无告警布局，画面复核无漂移 | 全视口与主体聚焦的 final 比较输入 |
 
-`ownerReviewStatus=pending`；本结论只代表工程 Design QA 通过，不替代项目所有者观看与审美接受。
+final result: passed
+
+---
+
+# Phase 388 Design QA：觉醒式任务目录与多任务追踪
+
+## Result
+
+- P0：无。
+- P1：无。任务目录、选择、介绍、真实奖励预览、立即前往、权威领取和 HUD 多任务入口
+  均可操作；未来主线不会误标为全部可接。
+- P2：无。最终 `1280×720` 画面没有列表越界、说明裁切、奖励卡溢出、乱码、调试字段
+  或输入穿透；参考图与实机图已组合为单一比较输入检查。
+- 工程与视觉 Design QA 通过。本阶段复用 Beastbound 原创木石背景、按钮和真实物品／
+  货币图标，不复制参考图像素或任务内容。
+
+## Comparison target
+
+- 用户参考图：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-29d82dfa-428d-4a97-945f-513e9e12841f.jpg`；
+- 实机任务页：
+  `.run/evidence/phase388_quest_awakened_ui/implementation/iteration2/quest-page.png`；
+- 实机多任务 HUD：
+  `.run/evidence/phase388_quest_awakened_ui/implementation/iteration2/task-tracker.png`；
+- 最终同屏比较：
+  `.run/evidence/phase388_quest_awakened_ui/comparison/reference-vs-implementation.png`。
+
+## Required fidelity surfaces
+
+- Hierarchy：全屏木质标题栏、左侧滚动任务牌、右侧任务标题／说明／目标、下半奖励预览和
+  底部主操作；世界 HUD 只保留最多四条可扫读追踪项。
+- States：当前、可领取、可接取、已完成和未开放状态均来自权威档案；选中态使用正式木牌
+  纹理，主线／经典／经验／支线使用稳定语义色。
+- Assets：标题、帮助、关闭、任务、物品和货币均使用仓库正式 PNG；界面不使用 emoji、
+  手绘 SVG、参考裁片或占位框。
+- Controls：任务牌选择、HUD 任务卡、帮助、关闭、立即前往、自选奖励和领取奖励均保留
+  左键主流程；战斗中打开任务页时导航／领取保持只读。
+- Safety：不显示 `questId`、raw status、schema、服务端字段、QA 或 agent 文案。
+
+## Validation and performance
+
+- `godot --headless --path client/godot --quit`：通过；
+- `--auto-quest-ui-check`：通过，完整任务教学链、目录选择、四条 HUD 追踪、跨图寻路、
+  奖励装备说明和日志滚动均为 `ok`；
+- `--auto-quest-reward-choice-check` 与 `--auto-task-tracker-route-check`：均通过；
+- `--auto-battle-label-check` 中本任务相关的 `quest=true`、`quest_readonly=true`、
+  `command_after=true/true` 均通过；该复合检查仍因既有 `large_visible=false` 失败，与任务
+  页面无关；
+- idle `--perf-probe`：稳定 `60 FPS`，`process_total=0.10–0.16ms`，
+  `hud_signature=0.02–0.03ms`；
+- 真实跨帧 movement：`status=ok`、`60 FPS`，稳定 `process_total=0.17–0.27ms`。
+
+## Product boundary
+
+- 未伪造参考图中的“任务券快速完成”。当前仓库没有权威任务券物品、消耗经济和服务端
+  完成动作；确定这些产品规则后应作为独立服务端权威功能实现。
+
+final result: passed
+
+---
+
+# Phase 387 Design QA：觉醒式当前地图与原创九区世界地图
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280x720` 当前地图没有回退成程序网格，世界地图不是目录占满的假页；
+  地名、入口、推荐等级、当前区域、楼层与关闭按钮均在容器内，九个区域热区没有重叠。
+- 当前-run 参考图与实现图已按同一尺寸组成单一比较输入检查。实现保留大地图、左侧地点
+  目录、世界／本地切换和点击寻路层级，但使用 Beastbound 原创世界图、真实地图视觉包、
+  真实 `map_regions.json` 与 warp 图，不复制参考地图或图标。
+- 工程 Design QA 通过；原创世界图保持 `owner_review_pending`，等待项目所有者确认主观
+  美术结果。
+
+## Comparison target
+
+- 本地地图参考：
+  `.run/evidence/phase387_map_awakened_ui/reference/02-local-map-overview.jpeg`；
+- 世界地图参考：
+  `.run/evidence/phase387_map_awakened_ui/reference/05-world-map-overview.jpeg`；
+- 当前地图实现：
+  `.run/evidence/phase387_map_awakened_ui/implementation/iteration3/local/frame00000079.png`；
+- 世界地图实现：
+  `.run/evidence/phase387_map_awakened_ui/implementation/iteration4/world/frame00000079.png`；
+- 最终同屏比较：
+  `.run/evidence/phase387_map_awakened_ui/comparison/final-reference-vs-beastbound.png`。
+
+## Required fidelity surfaces
+
+- Hierarchy：全屏地图、固定标题／关闭、左侧目的地、本地／世界切换、区域详情与楼层；
+- Assets：当前地图使用真实 prepared visual，世界图使用原创九区无字 PNG；文字与热区由
+  Godot 叠加，没有参考裁片、手写 SVG、emoji 或程序假地图；
+- Density：37 个真实本地目标全部保留在目录，地图画面只显示玩家、当前目标和六个主要
+  设施，避免图标墙；
+- Controls：真实左键跨帧完成世界页、区域、返回本地和设施寻路，关闭和所有主要 CTA
+  可点，点击不会穿透到世界移动；
+- Safety：不显示 mapId、路由图、资源路径、schema、raw code、QA、agent 或生成提示词。
+
+## Runtime evidence
+
+- 地图专项检查与 Godot parse `2/2` 通过，日志
+  `.run/godot_auto_checks/2026-08-02T08-24-27-035Z.log`；
+- 当前／世界地图打开时 `60 FPS`、`process_total=0.03–0.04ms`；移动与点击压力均
+  `status=ok`；
+- 正常 `Main.tscn` Metal 截图来自真实 `1280x720` 客户端路径；完整参考审计见
+  `.run/evidence/phase387_map_awakened_ui/reference-audit.md`。
+
+final result: passed
+
+---
+
+# Phase 386 Design QA：觉醒风格战斗指令与功能收纳
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。人物、宠物与自动三态都保持在右下安全区内；战斗顶部世界功能和小地图已经
+  隐藏，回合／倒计时居中，左侧 `功能` 默认收起并能展开四列抽屉。圆章、标签、抽屉和
+  策略内嵌页没有越界、裁切或重叠；所有主指令与抽屉入口均为至少 `60×60` 的真实左键目标。
+- 三张参考截图与三张 `Main.tscn` 实机帧分别按 `720px` 高等比归一化，截取同一右下
+  `620×360` 区域后放进同一个比较输入。实现保留参考的右侧纵向动作、底部同基线横排、人物／
+  宠物差异和自动 `宠 / 主 / 取消` 层级，同时只使用 Beastbound 原创图标和战场。
+
+## Comparison targets
+
+- 人物参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-3549ea99-5dbb-451f-be55-a5b3380c2961.jpg`；
+- 自动参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-bed86578-3f09-468d-8484-7867213a2c30.jpg`；
+- 宠物参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-b7461c27-5063-472c-870b-d4f20f83e679.jpg`；
+- 人物实现：
+  `.run/evidence/phase386_battle_command_ui/final_v3_aligned/player/frame00000034.png`；
+- 自动实现：
+  `.run/evidence/phase386_battle_command_ui/final_v3_aligned/auto/frame00000034.png`；
+- 宠物实现：
+  `.run/evidence/phase386_battle_command_ui/final_v3_aligned/pet/frame00000034.png`；
+- 全屏同屏输入：
+  `.run/evidence/phase386_battle_command_ui/design_qa_comparison_v3_aligned.png`，`2568×2176`；
+- 右下聚焦输入：
+  `.run/evidence/phase386_battle_command_ui/design_qa_focused_v3_aligned.png`，`1248×1096`；
+- 三个聚焦单态输入：
+  `.run/evidence/phase386_battle_command_ui/design_qa_focused_v3_aligned_player.png`、
+  `design_qa_focused_v3_aligned_auto.png`、`design_qa_focused_v3_aligned_pet.png`，各 `1248×360`。
+- 战斗 HUD 收起参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-43cc1ff4-69b5-4c17-9747-fa4c9366d672.png`；
+- 战斗 HUD 展开参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-e0787fff-cd83-445f-a066-b3de1d9401c5.jpg`；
+- 战斗 HUD 收起实机：
+  `.run/evidence/phase386_battle_command_ui/final_v4_battle_functions/player/frame00000041.png`；
+- 战斗 HUD 展开实机：
+  `.run/evidence/phase386_battle_command_ui/final_v4_battle_functions/functions/frame00000041.png`；
+- “鉴”字形修复后展开实机：
+  `.run/evidence/phase386_battle_command_ui/glyph_fix/after_runtime/frame00000041.png`；
+- 收起／展开单一比较输入：
+  `.run/evidence/phase386_battle_command_ui/final_v4_battle_functions/design-qa/reference-vs-implementation-v4.png`，
+  `2560×1440`。两张 `2622×1206` 参考按宽度等比缩到 `1280×589`，上下用暗色补到
+  `1280×720`；实机保持原生 `1280×720`，没有非等比拉伸。
+
+## Required fidelity surfaces
+
+- Layout：人物三枚右侧纵向主动作加七枚底部同基线横排；宠物两枚纵向主动作加六枚底部同基线横排；
+  自动态收束为右下三枚按钮，不保留旧矩形菜单或独立悬浮停止按钮。
+- State：人物精确显示 10 个类别，宠物精确显示 8 个类别；自动期间点击 `主` 或 `宠`
+  打开各自的首回合／一般回合内嵌设置，动作锁定时仍能点击 `取消`。
+- Material：深石圆章、双层暖金描边、赭金图标、米白标签及深色描边延续当前觉醒 UI，
+  危险取消态用红铜色区分但不改变按钮位置。
+- Assets：16 个图标均为独立透明 PNG，不使用 emoji、字符、SVG、参考截图裁片或运行时
+  占位框；生成源、提示、清单和替换路径都保存在项目资产目录。
+- Input：透明画布间隙不阻断战场，只有可见按钮和内嵌页消费输入；跨帧鼠标按下／释放
+  已验证，没有用同帧 helper 调用冒充真实交互。
+- Battle HUD hierarchy：世界顶部两排功能与小地图在战斗中不再渲染；左侧只常驻一个
+  `功能`，展开后显示 `4×3` 整齐网格。地图没有代理按钮，旧地图入口同时保持禁用。
+- Drawer states：`图鉴 / 任务 / 内挂 / 设置` 使用亮金可用态并代理既有页面；当前战斗
+  合同不允许的入口保留清楚但收敛的禁用态，避免用假页面换取截图相似度。
+- Safety：尚无权威实现的托管位和援助技只给出不可用提示，不伪造结算；正常 UI 不显示
+  raw code、内部 ID、策略字段、QA 或 agent 文案。
+
+## Comparison history
+
+| 轮次 | 发现 | 修复 | 复核证据 |
+| --- | --- | --- | --- |
+| 初始接线 | P1：旧战斗指令是右上矩形按钮，自动停止另有悬浮入口，人物／宠物状态缺少参考的右侧与底部双层级 | 建立独立 Presenter／View／Skin，复用原有权威按钮并切换三种精确布局 | 三张 `final_v2` 实机图 |
+| Pass 1 | P2：首版实机标签相较参考偏小、偏轻，在复杂战场上辨识度不足 | 主圆章标签改为 `17px`，增加 3px 深色描边和阴影；内嵌菜单保持 `15px` | `design_qa_comparison_v2.png` |
+| Pass 2 | 未发现剩余 P0、P1、P2；原创图标、触控尺寸、间距、自动策略和取消入口均清晰 | 无进一步改动 | 三张聚焦单态比较输入、定向真实输入检查 `status=ok` |
+| Pass 3 所有者反馈 | P1：底部按钮使用大幅高低起伏的圆弧，视觉凌乱，偏离所有者所指的觉醒式整齐排列 | 人物 7 项、宠物 6 项、自动 3 项全部统一为 `y=228` 横排基线；右侧纵列保持不变，并加入 Presenter 自检 | 四张 `final_v3_aligned` 实机图 |
+| Pass 4 | 未发现剩余 P0、P1、P2；全屏和右下聚焦比较都显示标签基线、图标中心及横向节奏整齐 | 无进一步改动 | `design_qa_comparison_v3_aligned.png`、`design_qa_focused_v3_aligned.png` |
+| Pass 5 所有者反馈 | P1：战斗仍显示世界小地图和顶部两排功能，信息层级混乱，地图甚至还能在战斗入口中出现 | 战斗隐藏整个世界顶部面；回合／倒计时改为顶部居中；新增左侧 `功能` 与四列抽屉；地图不创建代理且旧入口禁用 | `final_v4_battle_functions/player`、`functions` 两张实机图 |
+| Pass 6 | P2：首张展开实机里禁用入口的文字过暗，虽然状态正确但扫描成本偏高 | 提高禁用图标和标题不透明度，保留无金圈的禁用层级；复核无碰撞、截断或假可用态 | `reference-vs-implementation-v4.png`、真实点击检查 `status=ok` |
+| Pass 7 所有者反馈 | P1：功能抽屉“图鉴”的“鉴”显示成缺字方框 | Godot 在 macOS 选中的 `PingFang SC` 不含简体“鉴”，且不会按字形继续尝试第二字体；正文中文字体改为完整简体字库优先，并加入实际标签字形断言 | `glyph_fix/after_runtime/frame00000041.png`、定向自动检查 2/2 通过 |
+
+## Intentional P3 differences
+
+- [P3] 只复用参考的战斗 HUD 层级和交互意图；战场、角色、宠物、按钮美术和消息区继续
+  使用 Beastbound 原创实现，不扩大为整张参考截图的一对一复制。
+- [P3] 参考抽屉中的世界功能大多可点；Beastbound 当前战斗安全合同只开放图鉴、任务、
+  内挂与设置，其余入口显示明确禁用态，地图完全排除，避免绕过既有战斗锁定规则。
+- [P3] 自动态增加一行 `主：…  宠：…` 的当前策略摘要，减少玩家误开自动的风险；它不
+  暴露内部字段，并且不改变参考三按钮的主层级。
+- [P3] `援助` 和 `托管` 先保留成熟界面的可发现入口，但在服务端规则落地前不消耗回合，
+  只显示通用不可用提示。
+
+final result: passed
+
+---
+
+# Phase 385 Design QA：觉醒风格家族页
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 的家族大厅、创建家族内嵌页、已加入信息页和庄园页均
+  完整落在画布内；关闭、刷新、创建、加入、退出、四个页签、宣战、参战、入场和
+  道具场入口保持正常 Godot 控件与左键路径。
+- 参考与实现已按同一 `1280×720` 比较画布归一化并放入同一张比较输入。实现保留
+  《石器时代：觉醒》家族页的左侧家徽资料、中央公告／成员舞台、右侧竖页签，以及
+  未加入状态的家族列表和浅色创建页，同时只使用 Beastbound 原创资产和真实家族／
+  庄园字段。
+
+## Comparison target
+
+- 未加入／创建参考：`.run/reference/phase385_family_awakened/family-01.jpg`；
+- 已加入／信息参考：`.run/reference/phase385_family_awakened/family-02.jpg`；
+- 创建页实机：`.run/screenshots/phase385_family_awakened/family-create-1280x720.png`；
+- 信息页实机：`.run/screenshots/phase385_family_awakened/family-info-1280x720.png`；
+- 庄园页实机：`.run/screenshots/phase385_family_awakened/family-manors-1280x720.png`；
+- 视口：实现 `1280×720 CSS px / 1×`；参考原图均为 `600×270`。参考按等比适配
+  到 `1280×576`，再以暗色上下留白补到 `1280×720`；实现保持原生 `1280×720`，
+  未做非等比拉伸。
+
+## Comparison evidence
+
+- 创建状态全视口：
+  `.run/screenshots/phase385_family_awakened/reference-vs-family-create.png`；
+- 已加入信息状态全视口：
+  `.run/screenshots/phase385_family_awakened/reference-vs-family-info.png`；
+- 源图仅有 `600×270`，放大后的按钮、文字和人物细节已接近源信息上限；两张全视口
+  同屏在原始尺寸下仍能辨认主要文字、页签、边界和图标，因此未制作会制造虚假精度的
+  局部放大比较。
+
+## Required fidelity surfaces
+
+- Fonts and typography：标题使用项目觉醒界面的中文展示字体，正文使用中文系统字体；
+  家族名、公告、角色、在线状态和庄园战状态形成明确字重层级，长公告允许换行，按钮
+  文案不再被压缩或截断。
+- Spacing and layout rhythm：左栏、主内容框、右侧竖页签与参考层级一致；卡片间距、暖金
+  边框和底部主按钮在 `1280×720` 下不碰撞。源图 `20:9` 与项目正式 `16:9` 的比例差异
+  通过增加纵向留白吸收，没有把参考图横向压扁。
+- Colors and tokens：暗木、黑褐内嵌面、暖金高亮、绿色在线／占领状态和浅色创建页均来自
+  现有觉醒界面色彩语义；禁用态、选中页签和遮罩层对比清楚。
+- Image quality and asset fidelity：底板、家族图腾、按钮、页签和关闭图标均为项目已有原创
+  位图；没有复制参考截图、使用 emoji、文本图标、手绘 SVG 或代码形状冒充家徽与装饰。
+- Copy and content：只展示服务端已有的族长、成员、声望、公告、庄园归属、休战与庄园战
+  数据；不展示尚未实现的捐献、科技、工资或福利数值，也不暴露内部 `familyId`、接口名、
+  QA 文案或 raw code。
+- States and interactions：未加入、创建弹层、已加入信息、成员、活动、庄园和从庄园管事
+  直达指定庄园均已覆盖。自动检查以跨帧鼠标移动、按下、释放验证创建页、加入、页签和
+  道具场事件；原有庄园管事入口回归通过。
+- Accessibility and viewport：主要按钮高度为 `36–48px`，焦点／选中／禁用状态可辨；
+  本阶段产品目标是 PC `1280×720`，没有把移动端、竖屏或触屏布局冒充已完成。
+
+## Intentional differences and P3 observations
+
+- [P3] 参考已加入页含“福利”页签和捐献／科技入口；当前服务端没有这些权威合同，因此
+  实现只保留 `信息 / 成员 / 活动 / 庄园`，避免用假数值补齐外观。
+- [P3] 参考中央舞台展示玩家实时人物模型；当前家族成员 payload 没有公开外观标识，
+  实现以同一原创家族图腾和真实姓名牌表达族长／族员，避免猜测或错配玩家形象。
+- [P3] 参考顶部重复展示多种货币；实现保留家族同步状态和刷新入口，不在家族域中复制
+  与家族操作无关的全局货币栏。
+
+## Comparison history
+
+| 轮次 | 发现 | 修复 | 复核证据 |
+| --- | --- | --- | --- |
+| Pass 1 | P1：从庄园管事打开时，无家族访客被强制带回大厅，无法看到指定庄园 | 新增只读访客庄园态；保留创建入口并直接聚焦庄园 | `--auto-manor-map-shop-check`：`tab=manors`、`first_steward_layout=true` |
+| Pass 1 | P2：庄园操作按钮的皮肤覆盖了最小宽度，导致“宣战／参战／入场／道具场”文字压缩 | 先应用皮肤再设置 `78×36` 交互尺寸，并隐藏己方庄园无意义的禁用宣战按钮 | `family-manors-1280x720.png` |
+| Pass 1 | P2：左栏曾显示内部字符串形式的家族编号 | 改为玩家语义副标题“并肩冒险 · 共守庄园” | `family-info-1280x720.png` |
+| Final | 未发现剩余 P0、P1、P2；三项差异均由真实数据合同或项目画幅约束产生 | 无进一步改动 | 两张最终参考／实现同屏与三张独立实机帧 |
+
+final result: passed
+
+---
+
+# Phase 384 Design QA：觉醒风格宠物图鉴与获取途径
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 的三栏图鉴、同族形态带、成长／属性页签和获取途径弹层
+  没有越界、裁切、文字碰撞、外部截图裁片、假图标或程序员字段。
+- 两张参考图分别与同状态实机帧归一化后放在同一个比较输入中检查。实现保留种族栏、
+  宠物主舞台、右侧资料与中央内嵌获取页的核心层级，同时使用 Beastbound 原创底板、
+  项目宠物美术和权威运行时数据。
+- 工程 Design QA 已通过；底板的主观美术接受仍保持 `owner_review_pending`，等待项目
+  所有者查看最终实机图。
+
+## Comparison target
+
+- 正常参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-be26f056-fcc1-4415-b2ee-2d5edf314ace.png`；
+- 获取页参考：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-bb5a1c7e-4b8b-4f4c-a504-fa11ec0215a3.png`；
+- 正常实机：
+  `.run/evidence/phase384_pet_codex_awakened_ui/preview-final/pet-codex00000044.png`；
+- 获取页实机：
+  `.run/evidence/phase384_pet_codex_awakened_ui/acquisition-final/pet-codex-acquisition00000049.png`；
+- 视口：实机 `1280×720`；参考原图 `2622×1206`，居中裁切为 `2144×1206` 后归一化到
+  `1280×720`。
+
+## Comparison evidence
+
+- 全视口正常态：
+  `.run/evidence/phase384_pet_codex_awakened_ui/design-qa/normal-reference-vs-implementation.png`；
+- 全视口获取态：
+  `.run/evidence/phase384_pet_codex_awakened_ui/design-qa/acquisition-reference-vs-implementation.png`。
+
+## Required fidelity surfaces
+
+- Typography：标题、页签、四维区间和路线主次层级清楚；“获取途径”标题不再与关闭按钮
+  碰撞，中文文字没有截断或错误字形。
+- Layout：左侧种族栏约占四分之一，中部保留最大宠物视觉，右侧资料约占四分之一；底部
+  形态带和右下主按钮位置延续参考，获取页嵌在图鉴内部且不遮掉右侧资料。
+- Material：原创暗木、暖金雕边、羊皮纸按钮与叶片边角延续近期 Beastbound 玩家界面；
+  没有把参考 UI 贴图直接作为运行时背景。
+- Imagery and icons：宠物主图、种族头像、技能和捕捉网均来自项目正式目录；未遇见形态
+  不显示身份或画像，也不用 emoji、字符锁、手画 SVG 或截图裁片冒充图标。
+- Copy and truth：成长页只显示公开 Lv1 四维；属性页显示真实形态资料；获取页由权威地图
+  遭遇表生成地图、区域、等级和遭遇池占比，没有虚构付费、成就或活动来源。
+- Controls：种族、形态、成长、属性、获取途径、滚动与关闭都是正常 Godot 控件；获取按钮
+  已由跨帧真实左键事件打开，过程中世界移动和寻路计数保持不变。
+- Viewport：本阶段正式目标为 PC `1280×720`；没有把移动端、竖屏或触屏布局冒充已完成。
+
+## Intentional differences and P3 observations
+
+- [P3] 参考图使用较宽的右侧成长表，实机改为四张公开 Lv1 四维卡，目的是匹配 Beastbound
+  “可见 4V、隐藏成长靠训练判断”的既定玩法合同，不公开参考产品式转生前后区间。
+- [P3] 参考弹层只给出单一“捉宠”入口，实机展示可滚动的真实地图路线和遭遇占比；信息
+  更密，但在 1280×720 下标题、路线和关闭入口均保持清晰。
+- [P3] 未遇见形态使用“未遇见”文字而不是参考图锁图标，避免凭未解锁轮廓泄露身份；
+  已遇见形态仍有金色选中框和独立画像。
+
+## Comparison history
+
+| 轮次 | 发现 | 修复 | 复核证据 |
+| --- | --- | --- | --- |
+| 初始接线 | P1：仓库中已有觉醒图鉴草稿，但没有接入主界面；运行时仍显示旧通用两栏图鉴 | 新增 Presenter，接入三栏正式 Panel，并沿用宿主信号与档案入口 | 最终主界面同屏 |
+| Pass 1 | P1：新底板尚未导入；`Button.icon_max_width` 在 Godot 4.7 无效；全屏容器仍沿用旧宽高 | 导入 1280×720 原创底板，改用主题常量，图鉴改为全视口 | 5/5 Godot 回归 |
+| Pass 2 | P2：弹层标题包含宠物名时与关闭按钮拥挤；获取预览直接开页不能证明真实点击 | 标题固定为“获取途径”，预览与自动检查改为跨帧鼠标移动／按下／释放 | 最终获取页同屏、自动检查 `acquisition_open=true` |
+| Final | 未发现剩余 P0、P1、P2；保留三项有玩法依据的 P3 差异 | 无进一步改动 | 两张最终参考／实机比较输入 |
+
+final result: passed
+
+---
+
+# Phase 381 Design QA：世界“角色”入口与角色管理三页
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 角色页完整覆盖世界并阻断点击穿透，标题、关闭键、九个
+  装备槽、人物全身图、两张宠物大头照、右侧页签、加点行和骑证卡片均未越界。
+- 四张参考截图与四个同状态实机帧均按等比适配后分别放入同一个比较输入中检查。实现
+  保留参考的全屏木石框架、人物主视觉、右侧纵向分页、属性条、先草稿后确认的加点节奏
+  以及“全部／种族”骑证筛选，同时只使用 Beastbound 原创或项目内正式资产。
+- 工程 Design QA 已通过；项目所有者的主观画面验收仍以本阶段最终 `1×` 视频为准。
+
+## Comparison targets
+
+- 属性页：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/attributes_reference_vs_implementation.jpg`；
+- 加点页：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/stat_points_reference_vs_implementation.jpg`；
+- 骑证全部：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/ride_all_reference_vs_implementation.jpg`；
+- 骑证种族：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/ride_species_reference_vs_implementation.jpg`；
+- 四状态总览：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/design-qa/all_states_reference_vs_implementation.jpg`。
+
+## Required fidelity surfaces
+
+- Layout：世界右下“角色”真实入口，全屏角色页，左装备／中人物／右资料，以及右侧
+  `属性 / 加点 / 骑证` 三页结构与参考一致；关闭后恢复世界和右下操作栏。
+- Truth：属性页展示项目真实九装备槽，不为匹配参考的六槽外观删槽；骑证页严格只展示
+  当前三种真实可骑形态，不用虚构九卡填满版面。
+- Controls：四维 `+ / -`、清空本次、一次确认、全部／种族／真实族系筛选都由左键
+  工作；加点请求进行中即使关闭再打开也保持禁用，避免旧响应清掉新草稿。
+- Assets：加减、锁定和拥有状态使用项目原创透明位图，不再用文字符号或 emoji 冒充
+  图标；人物、宠物大头照、装备图标与木质皮肤均来自项目批准目录。
+- Safety：不显示虚构称号、家族、气力、怒气、战力、固定百分比或免费洗点；不显示
+  raw code、资源路径、schema、接口名、QA 和 agent 文案。
+
+## Runtime and video evidence
+
+- 最终视频：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/player-character-owner-review-1x.mp4`；
+- 联系表：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/contact-sheet.png`；
+- 验证摘要：
+  `.run/evidence/phase381_player_character_owner_review/phase381-20260801T100106.122089Z-8fd4568f/summary.json`；
+- 视频来自真实 `Main.tscn`，为 `33.933333s / 1018` 帧、H.264/AAC、
+  `1280×720 / 30 FPS / 1.00×`，完整音视频解码通过；连续展示世界入口、属性、九装备槽、
+  加点草稿、减点撤回、清空本次、原子确认、三种真实骑宠、缺证锁定、种族展开、老虎系
+  筛选和关闭返回世界。
+- 录制使用全新隔离 user-data，未启动后端、未连接 MySQL、未写正常玩家存档。
+
+final result: passed
+
+---
+
+# Phase 379 Design QA：一步到位的人物创建配置与元素配点
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 页面没有人物、头像、配点格、名字输入或创建按钮
+  越界；四个形象、十点配完、非法状态拦截、随机名、键盘改名和创建回槽均可由真实
+  左键／键盘连续完成。
+- 参考图与实现图已归一化后放在同一个比较输入中检查。实现保留参考的左侧圆形人物
+  列表、中部完整人物和右侧元素木框结构，同时使用 Beastbound 原创背景、人物与 UI
+  资产，不复制参考角色、像素或商标。
+- 工程 Design QA 已通过；四套人物正式美术仍保持 `owner_review_pending`，等待项目
+  所有者观看本阶段最终 `1×` 视频后确认主观视觉结果。
+
+## Comparison target
+
+- 参考图：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-201f4819-096e-4738-80e0-036f6c76109a.jpg`；
+- 同状态实现图：`.run/character_creation/character_creation_final00000009.png`；
+- 同屏比较：`.run/character_creation/design_qa/reference-vs-implementation.png`；
+- 比较状态均为曜石斥候、水元素 10 点、剩余 0 点、名字已填写；实现视口为
+  `1280×720`。
+
+## Required fidelity surfaces
+
+- Layout：左上返回、左侧四个独立圆形头像、中部全身展示、右侧四行减号／十格／加号、
+  下部名字与创建按钮，视觉层级与参考一致。
+- Material：森林海岸背景、半透明深木面板、暖金描边与木质按钮延续当前宠物／背包界面
+  的统一材质语言。
+- Assets：四个头像和四张全身展示图均为独立正式图片，不从全身像裁头，不使用文字、
+  emoji、手绘 SVG、占位框或参考图裁片。
+- Controls：四形象切换、元素加减、冲突禁配、剩余点提示、随机名字、真实键盘输入、返回
+  与创建均为可操作控件；右键不是必需输入。
+- Safety：玩家界面不显示 `appearanceId`、`playerId`、slot index、schema、raw code、
+  后端状态、QA 或 agent 文案。
+
+## Runtime and video evidence
+
+- 最终视频：
+  `.run/evidence/phase379_character_creation_owner_review/phase379-character-creation-main-final-v5/character-entry-owner-review-1x.mp4`；
+- 联系表：
+  `.run/evidence/phase379_character_creation_owner_review/phase379-character-creation-main-final-v5/contact-sheet.png`；
+- 验证摘要：
+  `.run/evidence/phase379_character_creation_owner_review/phase379-character-creation-main-final-v5/summary.json`；
+- 真实 `Main.tscn` 依次展示四空槽、打开创建页、四人物切换、剩余 1 点禁止创建、
+  地 6 水 4 合法完成、随机名、键盘改名、捕获一次性创建 payload 和权威返回后的新角色
+  槽，共 12 个连续章节；
+- 视频为 `19.466667s / 584` 帧、H.264/AAC、`1280×720 / 30 FPS / 1.00×`，
+  完整音视频解码通过；录制使用全新隔离 user-data，未连接后端且未写玩家存档。
+
+final result: passed
+
+---
+
+# Phase 380 Design QA：随机名按钮边界、名字安全与地属性绿色
+
+## Result
+
+- P0：无。
+- P1：无。
+- P2：无。最终 `1280×720` 创建页中，“换一个”按钮完整位于右侧配置板内，与姓名
+  输入框保持间距且不重叠；地属性文字和六个已点亮格均为绿色。
+- 用户问题截图与同状态实机帧已统一为 `1280×720` 后放在同一个比较输入中检查；对比
+  状态均为焰芽斗士、地 6／水 3、剩余 1 点、名字为空。
+- 玩家可连续左键随机换名；混淆敏感名只显示通用提示并禁用创建，安全随机名可恢复。
+
+## Comparison target
+
+- 用户问题截图：
+  `/var/folders/lt/zy6ls0f1677by0902kpxgjgc0000gn/T/codex-clipboard-16d1ba64-be73-4d8d-adcf-86a79f5741b0.png`；
+- 同状态实现图：
+  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/design-qa/frame-08.png`；
+- 同屏比较：
+  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/design-qa/reference-vs-implementation.png`。
+
+## Required fidelity surfaces
+
+- Boundary：通用次级按钮原有 `150px` 最小宽度不再撑破当前名字行；此处独立使用
+  `94×50`，右侧保留 42px 配置板内边距。
+- Alignment：姓名输入为 `262×50`，与随机按钮间隔 10px，文字基线、按钮高度和输入框
+  高度一致。
+- Color：地属性语义统一为绿色；水、火、风继续使用蓝、红、黄，不修改元素数值规则。
+- Feedback：受限名字显示“这个名字不能使用，请换一个。”；界面不显示命中词、分类、
+  raw code、服务端字段或 QA 文案。
+
+## Runtime and video evidence
+
+- 最终视频：
+  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/character-name-safety-owner-review-1x.mp4`；
+- 联系表：
+  `.run/evidence/phase380_character_name_safety_owner_review/phase380-character-name-safety-final-v1/contact-sheet.png`；
+- 视频来自真实 `Main.tscn`，为 `22.900s`、`687` 帧、H.264/AAC、
+  `1280×720 / 30 FPS / 1.00×`，完整音视频解码通过；
+- 连续流程覆盖配置板边界、绿色地元素、三次不同安全随机名、混淆名 `Ｇ · M` 拦截、
+  随机名恢复、键盘输入“林岚”和一次性创建 payload；录制使用隔离 user-data，未连接
+  后端且未写玩家存档。
 
 final result: passed
 
