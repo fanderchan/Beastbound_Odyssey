@@ -36,8 +36,20 @@ const CHAPTER_MARKER := "PET_FUSION_MAIN_OWNER_REVIEW_CHAPTER"
 const STATE_MARKER := "PET_FUSION_MAIN_OWNER_REVIEW_STATE"
 const END_MARKER := "PET_FUSION_MAIN_OWNER_REVIEW_END"
 const FAILURE_MARKER := "PET_FUSION_MAIN_OWNER_REVIEW_FAILED"
-const QA_LANE := "automation"
-const QA_LANE_FEATURE := "beastbound_qa_automation"
+const QA_LANES := {
+	"automation": {
+		"feature": "beastbound_qa_automation",
+		"customUserDirName": "BeastboundOdysseyQA_Automation",
+	},
+	"client1": {
+		"feature": "beastbound_qa_client1",
+		"customUserDirName": "BeastboundOdysseyQA_Client1",
+	},
+	"client2": {
+		"feature": "beastbound_qa_client2",
+		"customUserDirName": "BeastboundOdysseyQA_Client2",
+	},
+}
 const QA_LANE_ROOT_ENV := "BEASTBOUND_QA_EXPECTED_USER_DATA_ROOT"
 const ROUTE_TARGETS := {
 	"solar": {
@@ -305,12 +317,15 @@ func _append_main_host_errors() -> void:
 		_errors.append("Main 验收没有使用 macOS DisplayServer")
 	if absf(Engine.time_scale - PLAYBACK_SPEED) > 0.0001:
 		_errors.append("Main 验收播放速度不是1.00x")
-	if str(_host.qa_user_data_lane_arg) != QA_LANE:
-		_errors.append("Main 没有绑定 automation QA lane")
+	var qa_lane := str(_host.qa_user_data_lane_arg)
+	var qa_lane_record: Dictionary = QA_LANES.get(qa_lane, {})
+	if qa_lane_record.is_empty():
+		_errors.append("Main 没有绑定正式 QA lane")
 	if int(_host.qa_user_data_lane_arg_count) != 1:
 		_errors.append("Main QA lane 参数数量不精确")
-	if not OS.has_feature(QA_LANE_FEATURE):
-		_errors.append("Main 缺少 automation QA lane feature")
+	var qa_lane_feature := str(qa_lane_record.get("feature", ""))
+	if qa_lane_feature == "" or not OS.has_feature(qa_lane_feature):
+		_errors.append("Main 缺少所选 QA lane feature")
 	var actual_user_root := _normalized_path(
 		ProjectSettings.globalize_path("user://")
 	)
@@ -352,11 +367,18 @@ func _append_production_boundary_errors() -> void:
 	var coordinator_source := _read_text(
 		"res://scripts/ui/panel_flow_coordinator.gd"
 	)
-	if (
-		main_source.find("pet_fusion_panel.gd") >= 0
-		or coordinator_source.find("pet_fusion_panel.gd") >= 0
-	):
-		_errors.append("融合面板不得接入正常玩家入口")
+	if main_source.find("pet_fusion_panel.gd") >= 0:
+		_errors.append("融合面板不得直接接入 Main 宿主")
+	for marker in [
+		'const PetFusionPanel := preload("res://scripts/ui/pet_fusion_panel.gd")',
+		'_pet_fusion_open_button.text = "融合"',
+		'_pet_fusion_panel.quote_requested.connect(_on_pet_fusion_quote_requested)',
+		'_pet_fusion_panel.fusion_requested.connect(_on_pet_fusion_confirm_requested)',
+		'if not PetFusionRecipeCatalogModel.runtime_available(catalog):',
+		'_pet_fusion_panel.configure_closed(catalog, candidate_pets)',
+	]:
+		if coordinator_source.find(marker) < 0:
+			_errors.append("正常玩家融合入口缺少关闭边界接线：%s" % marker)
 
 
 func _mount_overlay() -> void:
@@ -613,6 +635,9 @@ func _report(success: bool) -> Dictionary:
 	var expected_frames := 0
 	for chapter_spec in CHAPTER_SPECS:
 		expected_frames += int(chapter_spec.get("frames", 0))
+	var qa_lane := str(_host.qa_user_data_lane_arg) if _host != null else ""
+	var qa_lane_record: Dictionary = QA_LANES.get(qa_lane, {})
+	var qa_lane_feature := str(qa_lane_record.get("feature", ""))
 	return {
 		"schemaVersion": REPORT_SCHEMA_VERSION,
 		"reportType": REPORT_TYPE,
@@ -660,8 +685,11 @@ func _report(success: bool) -> Dictionary:
 			else true
 		),
 		"backendConnected": not _all_http_requests_disconnected(),
-		"qaLane": str(_host.qa_user_data_lane_arg) if _host != null else "",
-		"qaLaneFeaturePresent": OS.has_feature(QA_LANE_FEATURE),
+		"qaLane": qa_lane,
+		"qaLaneFeature": qa_lane_feature,
+		"qaLaneFeaturePresent": (
+			qa_lane_feature != "" and OS.has_feature(qa_lane_feature)
+		),
 		"actualUserDataRoot": _normalized_path(
 			ProjectSettings.globalize_path("user://")
 		),

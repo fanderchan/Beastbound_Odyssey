@@ -20,8 +20,9 @@ TOOL = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(TOOL)
 
 
-def _godot_report() -> dict:
-    user_root = "/tmp/BeastboundOdysseyQA_Automation"
+def _godot_report(*, qa_lane: str = "automation") -> dict:
+    profile = TOOL._qa_lane_profile(qa_lane)
+    user_root = f"/tmp/{profile['customUserDirName']}"
     chapters = []
     cursor = 0
     for chapter_id, state, route, frame_count in TOOL.EXPECTED_CHAPTERS:
@@ -100,7 +101,8 @@ def _godot_report() -> dict:
         "profileSaveEnabled": False,
         "accountSessionPresent": False,
         "backendConnected": False,
-        "qaLane": "automation",
+        "qaLane": qa_lane,
+        "qaLaneFeature": profile["feature"],
         "qaLaneFeaturePresent": True,
         "actualUserDataRoot": user_root,
         "expectedUserDataRoot": user_root,
@@ -226,6 +228,30 @@ class FusionMainOwnerReviewRecorderTest(unittest.TestCase):
             self.assertIn(TOOL.MAIN_SCENE, command)
         self.assertNotIn("--write-movie", native)
         self.assertEqual(movie.count("--write-movie"), 1)
+
+    def test_client1_lane_is_explicitly_bound_and_restored(self) -> None:
+        profile = TOOL._qa_lane_profile("client1")
+        original_lane = TOOL.MEDIA.QA_LANE
+        with TOOL._selected_media_lane(profile):
+            command = TOOL._build_godot_command(
+                godot="/Applications/Godot.app/Contents/MacOS/Godot",
+                report_path=Path("/tmp/client1.json"),
+                avi_path=None,
+            )
+            self.assertEqual(command.count(profile["argument"]), 1)
+            validated = TOOL._validate_godot_report(
+                _godot_report(qa_lane="client1")
+            )
+            self.assertEqual(validated["qaLane"], "client1")
+            self.assertEqual(
+                validated["qaLaneFeature"],
+                "beastbound_qa_client1",
+            )
+        self.assertEqual(TOOL.MEDIA.QA_LANE, original_lane)
+
+    def test_unknown_lane_is_rejected(self) -> None:
+        with self.assertRaises(TOOL.FusionMainRecordingError):
+            TOOL._qa_lane_profile("scratch")
 
     def test_exact_godot_report_passes(self) -> None:
         validated = TOOL._validate_godot_report(_godot_report())

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Record the closed fusion presentation from the real ``Main.tscn``.
 
-The recorder uses the owner-attested automation QA user-data lane, runs the
+The recorder uses one owner-attested repository QA user-data lane, runs the
 same Main-hosted flow once natively and once through Godot MovieWriter, and
 publishes only after the closed-release verifier, formal portrait contracts,
 Godot reports, video/audio streams, full decode, screenshots, and lane cleanup
@@ -12,6 +12,7 @@ fusion confirmation.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import importlib.util
 import json
@@ -20,7 +21,7 @@ import os
 from pathlib import Path
 import re
 import sys
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterator, Mapping, Sequence
 import uuid
 
 
@@ -87,6 +88,20 @@ KNOWN_MAIN_WARNING = (
     "WARNING: Nodes with non-equal opposite anchors will have their size "
     "overridden after _ready()."
 )
+QA_LANE_PROFILES = {
+    "automation": {
+        "feature": "beastbound_qa_automation",
+        "customUserDirName": "BeastboundOdysseyQA_Automation",
+    },
+    "client1": {
+        "feature": "beastbound_qa_client1",
+        "customUserDirName": "BeastboundOdysseyQA_Client1",
+    },
+    "client2": {
+        "feature": "beastbound_qa_client2",
+        "customUserDirName": "BeastboundOdysseyQA_Client2",
+    },
+}
 class FusionMainRecordingError(RuntimeError):
     """The formal Main-hosted fusion capture contract was not met."""
 
@@ -102,6 +117,43 @@ def _load_module(path: Path, name: str) -> Any:
 
 MEDIA = _load_module(MEDIA_CORE_PATH, "_beastbound_fusion_main_media_core")
 FUSION = _load_module(FUSION_CORE_PATH, "_beastbound_fusion_closed_core")
+
+
+def _qa_lane_profile(value: str) -> dict[str, str]:
+    lane = str(value)
+    configured = QA_LANE_PROFILES.get(lane)
+    repository_configured = MEDIA.LANE_HELPER.LANES.get(lane)
+    if configured is None or repository_configured != configured:
+        raise FusionMainRecordingError(f"未登记的 QA lane：{lane!r}")
+    return {
+        "lane": lane,
+        "feature": configured["feature"],
+        "customUserDirName": configured["customUserDirName"],
+        "argument": f"--beastbound-qa-user-data-lane={lane}",
+    }
+
+
+@contextmanager
+def _selected_media_lane(profile: Mapping[str, str]) -> Iterator[None]:
+    original = {
+        "QA_LANE": MEDIA.QA_LANE,
+        "QA_LANE_FEATURE": MEDIA.QA_LANE_FEATURE,
+        "QA_LANE_CUSTOM_USER_DIR_NAME": MEDIA.QA_LANE_CUSTOM_USER_DIR_NAME,
+        "QA_LANE_ARGUMENT": MEDIA.QA_LANE_ARGUMENT,
+    }
+    selected = {
+        "QA_LANE": profile["lane"],
+        "QA_LANE_FEATURE": profile["feature"],
+        "QA_LANE_CUSTOM_USER_DIR_NAME": profile["customUserDirName"],
+        "QA_LANE_ARGUMENT": profile["argument"],
+    }
+    try:
+        for name, selected_value in selected.items():
+            setattr(MEDIA, name, selected_value)
+        yield
+    finally:
+        for name, original_value in original.items():
+            setattr(MEDIA, name, original_value)
 
 
 def _utc_now() -> datetime:
@@ -177,6 +229,18 @@ def _require_main_hosted_capture_wiring(
         "PetFusionRecipeCatalogModel.runtime_available(_production_catalog)",
         3,
     )
+    require_count(capture_text, "const QA_LANES := {")
+    require_count(
+        capture_text,
+        "var qa_lane_record: Dictionary = QA_LANES.get(qa_lane, {})",
+        2,
+    )
+    for profile in QA_LANE_PROFILES.values():
+        require_count(capture_text, f'\t\t"feature": "{profile["feature"]}",')
+        require_count(
+            capture_text,
+            f'\t\t"customUserDirName": "{profile["customUserDirName"]}",',
+        )
     for fragment in (
         "_host.profile_save_enabled = false",
         "_host.current_account_session = {}",
@@ -187,6 +251,8 @@ def _require_main_hosted_capture_wiring(
         '"ownerReviewStatus": "pending"',
         '"portraitOwnerReviewStatus": "owner_review_pending"',
         "_second_confirmation_total() > 0",
+        'if main_source.find("pet_fusion_panel.gd") >= 0:',
+        '"正常玩家融合入口缺少关闭边界接线：%s" % marker',
     ):
         require_count(capture_text, fragment)
 
@@ -299,7 +365,8 @@ def _validate_godot_report(value: Mapping[str, Any]) -> dict[str, Any]:
         "profileSaveEnabled": False,
         "accountSessionPresent": False,
         "backendConnected": False,
-        "qaLane": "automation",
+        "qaLane": MEDIA.QA_LANE,
+        "qaLaneFeature": MEDIA.QA_LANE_FEATURE,
         "qaLaneFeaturePresent": True,
         "portraitOwnerReviewStatus": "owner_review_pending",
         "ownerReviewStatus": "pending",
@@ -668,6 +735,15 @@ def _preflight(
         raise FusionMainRecordingError("--timeout-seconds 必须大于 0")
     if Path.cwd().resolve() != REPO_ROOT:
         raise FusionMainRecordingError(f"必须从仓库根执行：cd {REPO_ROOT}")
+    lane_profile = _qa_lane_profile(args.qa_lane)
+    if (
+        MEDIA.QA_LANE != lane_profile["lane"]
+        or MEDIA.QA_LANE_FEATURE != lane_profile["feature"]
+        or MEDIA.QA_LANE_CUSTOM_USER_DIR_NAME
+        != lane_profile["customUserDirName"]
+        or MEDIA.QA_LANE_ARGUMENT != lane_profile["argument"]
+    ):
+        raise FusionMainRecordingError("所选 QA lane 没有完整绑定到录制核心")
     _require_main_hosted_capture_wiring()
     executables = {
         "godot": MEDIA._require_executable(args.godot, label="Godot"),
@@ -1087,36 +1163,44 @@ def _write_failure_summary(
 
 
 def _record(args: argparse.Namespace) -> Path:
-    executables, release_before, portraits_before = _preflight(args)
-    run_id = args.run_id or _new_run_id()
-    if SAFE_RUN_ID.fullmatch(run_id) is None:
-        raise FusionMainRecordingError(f"不安全的 runId：{run_id!r}")
-    output_root = MEDIA._resolve_output_root(args.output_root)
-    output_root.mkdir(parents=True, exist_ok=True)
-    run_dir = output_root / run_id
-    run_dir.mkdir(parents=False, exist_ok=False)
-    try:
-        return _record_into(
-            args=args,
-            run_id=run_id,
-            run_dir=run_dir,
-            executables=executables,
-            release_before=release_before,
-            portraits_before=portraits_before,
-        )
-    except BaseException as error:
-        _write_failure_summary(run_dir, run_id=run_id, error=error)
-        raise
+    lane_profile = _qa_lane_profile(args.qa_lane)
+    with _selected_media_lane(lane_profile):
+        executables, release_before, portraits_before = _preflight(args)
+        run_id = args.run_id or _new_run_id()
+        if SAFE_RUN_ID.fullmatch(run_id) is None:
+            raise FusionMainRecordingError(f"不安全的 runId：{run_id!r}")
+        output_root = MEDIA._resolve_output_root(args.output_root)
+        output_root.mkdir(parents=True, exist_ok=True)
+        run_dir = output_root / run_id
+        run_dir.mkdir(parents=False, exist_ok=False)
+        try:
+            return _record_into(
+                args=args,
+                run_id=run_id,
+                run_dir=run_dir,
+                executables=executables,
+                release_before=release_before,
+                portraits_before=portraits_before,
+            )
+        except BaseException as error:
+            _write_failure_summary(run_dir, run_id=run_id, error=error)
+            raise
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "从真实 Main.tscn 与官方 automation QA lane 录制融合关闭态 "
+            "从真实 Main.tscn 与项目正式 QA lane 录制融合关闭态 "
             "1280x720、30fps、1.00x、有声项目所有者验收片。"
         )
     )
     parser.add_argument("--run-id", help="可选的唯一安全 runId。")
+    parser.add_argument(
+        "--qa-lane",
+        choices=tuple(QA_LANE_PROFILES),
+        default="automation",
+        help="正式隔离 QA 通道（默认：automation）。",
+    )
     parser.add_argument(
         "--output-root",
         type=Path,
