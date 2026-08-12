@@ -215,6 +215,30 @@ PORTRAIT_AUXILIARY_REFERENCE_RECORDS = {
     FORM_SPECS[1].form_id: (),
 }
 
+PORTRAIT_DIRECT_AUXILIARY_REFERENCE_RECORDS = {
+    FORM_SPECS[1].form_id: (
+        {
+            "index": 0,
+            "pathLabel": (
+                ".codex/generated_images/"
+                "019fe7c8-2fd7-7972-94a7-98382ddfe591/"
+                "exec-1efe4fb6-7e71-41d2-b353-507de29b3b15.png"
+            ),
+            "role": "codex_generated_iteration_reference",
+            "matchesDeclaredIdentityReference": False,
+            "currentFileSha256": (
+                "cccd0d79697508d81d70c103ea3016b1b557041bb02854b5816bc3c63ce65bd7"
+            ),
+            "currentFileByteLength": 1651279,
+            "currentFileWidth": 1254,
+            "currentFileHeight": 1254,
+            "currentFileFormat": "PNG",
+            "currentFileMode": "RGB",
+            "historicalRequestBytesVerified": False,
+        },
+    ),
+}
+
 EMBERHORN_GENE_IDS = (
     "fusion_gene_emberhorn_red_v1",
     "fusion_gene_emberhorn_ash_v1",
@@ -2409,6 +2433,83 @@ def _validate_asset_reference(
         raise VerificationError(f"{label} SHA does not match current file")
 
 
+def _validate_direct_portrait_references(
+    *,
+    repo_root: Path,
+    spec: FormSpec,
+    referenced_images: list[Any],
+    identity: Mapping[str, Any],
+) -> None:
+    auxiliary_records = PORTRAIT_DIRECT_AUXILIARY_REFERENCE_RECORDS.get(
+        spec.form_id
+    )
+    if auxiliary_records is None:
+        raise VerificationError(
+            f"{spec.form_id} portrait direct identity provenance is not frozen"
+        )
+    identity_path = _repo_path(
+        repo_root,
+        identity["path"],
+        label=f"{spec.form_id} portrait direct identity path",
+    )
+    _require_file(
+        identity_path,
+        label=f"{spec.form_id} portrait direct identity reference",
+    )
+    if (
+        _sha256_file(identity_path) != identity["sha256"]
+        or identity_path.stat().st_size != identity["size"]
+    ):
+        raise VerificationError(
+            f"{spec.form_id} portrait direct identity bytes drift"
+        )
+    direct_reference = {
+        "index": len(auxiliary_records),
+        "pathLabel": f"repository:{identity['path']}",
+        "role": "declared_identity_reference",
+        "matchesDeclaredIdentityReference": True,
+        "currentFileSha256": identity["sha256"],
+        "currentFileByteLength": identity["size"],
+        "currentFileWidth": 512,
+        "currentFileHeight": 512,
+        "currentFileFormat": "PNG",
+        "currentFileMode": "RGBA",
+        "historicalRequestBytesVerified": False,
+    }
+    expected_referenced_images = [*auxiliary_records, direct_reference]
+    reference_key_order = (
+        "index",
+        "pathLabel",
+        "role",
+        "matchesDeclaredIdentityReference",
+        "currentFileSha256",
+        "currentFileByteLength",
+        "currentFileWidth",
+        "currentFileHeight",
+        "currentFileFormat",
+        "currentFileMode",
+        "historicalRequestBytesVerified",
+    )
+    if len(referenced_images) != len(expected_referenced_images):
+        raise VerificationError(
+            f"{spec.form_id} portrait referencedImages provenance drift"
+        )
+    for index, reference in enumerate(referenced_images):
+        if not isinstance(reference, dict):
+            raise VerificationError(
+                f"{spec.form_id} portrait referencedImages[{index}] must be an object"
+            )
+        _require_exact_key_order(
+            reference,
+            reference_key_order,
+            label=f"{spec.form_id} portrait referencedImages[{index}]",
+        )
+    if referenced_images != expected_referenced_images:
+        raise VerificationError(
+            f"{spec.form_id} portrait referencedImages provenance drift"
+        )
+
+
 def _validate_portrait_identity_lineage(
     repo_root: Path,
     spec: FormSpec,
@@ -2594,74 +2695,103 @@ def _validate_portrait_identity_lineage(
         raise VerificationError(
             f"{spec.form_id} portrait identityLineage is missing"
         )
-    lineage_expected = {
-        "contract": "imagegen_request_identity_lineage_v1",
-        "verified": True,
-        "mode": "relocated_direct_declared_identity_reference",
-        "predecessors": [],
-        "formalRelocations": [relocation],
-    }
-    for key, expected in lineage_expected.items():
-        if identity_lineage.get(key) != expected:
-            raise VerificationError(
-                f"{spec.form_id} portrait identityLineage.{key} drift"
-            )
-    formal_relocations = identity_lineage.get("formalRelocations")
-    if (
-        not isinstance(formal_relocations, list)
-        or len(formal_relocations) != 1
-        or not isinstance(formal_relocations[0], dict)
-    ):
-        raise VerificationError(
-            f"{spec.form_id} portrait identityLineage must contain one formal relocation"
-        )
-    _require_exact_key_order(
-        formal_relocations[0],
-        relocation_key_order,
-        label=f"{spec.form_id} portrait identityLineage formal relocation",
-    )
     referenced_images = request_binding.get("referencedImages")
     if not isinstance(referenced_images, list):
         raise VerificationError(
             f"{spec.form_id} portrait referencedImages is missing"
         )
-    primary_reference = {
-        "index": 0,
-        "pathLabel": (
-            "repository:.run/p1_4e_fusion_full_pack/"
-            f"{spec.source_slug}/pet-root/identity/front_3quarter_sw.png"
-        ),
-        "role": "relocated_declared_identity_reference",
-        "matchesDeclaredIdentityReference": False,
-        "currentFileSha256": identity["sha256"],
-        "currentFileByteLength": identity["size"],
-        "currentFileWidth": 512,
-        "currentFileHeight": 512,
-        "currentFileFormat": "PNG",
-        "currentFileMode": "RGBA",
-        "historicalRequestBytesVerified": False,
-        "formalIdentityRelocation": relocation,
-    }
-    expected_referenced_images = [
-        primary_reference,
-        *PORTRAIT_AUXILIARY_REFERENCE_RECORDS[spec.form_id],
-    ]
-    if referenced_images != expected_referenced_images:
-        raise VerificationError(
-            f"{spec.form_id} portrait referencedImages provenance drift"
+    lineage_mode = identity_lineage.get("mode")
+    if lineage_mode == "relocated_direct_declared_identity_reference":
+        lineage_expected = {
+            "contract": "imagegen_request_identity_lineage_v1",
+            "verified": True,
+            "mode": "relocated_direct_declared_identity_reference",
+            "predecessors": [],
+            "formalRelocations": [relocation],
+        }
+        if identity_lineage != lineage_expected:
+            raise VerificationError(
+                f"{spec.form_id} portrait identityLineage.formalRelocations drift"
+            )
+        formal_relocations = identity_lineage.get("formalRelocations")
+        assert isinstance(formal_relocations, list)
+        _require_exact_key_order(
+            formal_relocations[0],
+            relocation_key_order,
+            label=(
+                f"{spec.form_id} portrait identityLineage formal relocation"
+            ),
         )
-    actual_reference_relocation = referenced_images[0].get(
-        "formalIdentityRelocation"
-    )
-    if not isinstance(actual_reference_relocation, dict):
-        raise VerificationError(
-            f"{spec.form_id} portrait primary reference relocation is missing"
+        primary_reference = {
+            "index": 0,
+            "pathLabel": (
+                "repository:.run/p1_4e_fusion_full_pack/"
+                f"{spec.source_slug}/pet-root/identity/front_3quarter_sw.png"
+            ),
+            "role": "relocated_declared_identity_reference",
+            "matchesDeclaredIdentityReference": False,
+            "currentFileSha256": identity["sha256"],
+            "currentFileByteLength": identity["size"],
+            "currentFileWidth": 512,
+            "currentFileHeight": 512,
+            "currentFileFormat": "PNG",
+            "currentFileMode": "RGBA",
+            "historicalRequestBytesVerified": False,
+            "formalIdentityRelocation": relocation,
+        }
+        expected_referenced_images = [
+            primary_reference,
+            *PORTRAIT_AUXILIARY_REFERENCE_RECORDS[spec.form_id],
+        ]
+        if referenced_images != expected_referenced_images:
+            raise VerificationError(
+                f"{spec.form_id} portrait referencedImages provenance drift"
+            )
+        actual_reference_relocation = referenced_images[0].get(
+            "formalIdentityRelocation"
         )
-    _require_exact_key_order(
-        actual_reference_relocation,
-        relocation_key_order,
-        label=f"{spec.form_id} portrait referenced-image formal relocation",
-    )
+        if not isinstance(actual_reference_relocation, dict):
+            raise VerificationError(
+                f"{spec.form_id} portrait primary reference relocation is missing"
+            )
+        _require_exact_key_order(
+            actual_reference_relocation,
+            relocation_key_order,
+            label=(
+                f"{spec.form_id} portrait referenced-image formal relocation"
+            ),
+        )
+    elif lineage_mode == "direct_declared_identity_reference":
+        _require_exact_keys(
+            identity_lineage,
+            {"contract", "verified", "mode", "predecessors"},
+            label=f"{spec.form_id} portrait direct identityLineage",
+        )
+        _require_exact_key_order(
+            identity_lineage,
+            ("contract", "verified", "mode", "predecessors"),
+            label=f"{spec.form_id} portrait direct identityLineage",
+        )
+        expected_lineage = {
+            "contract": "imagegen_request_identity_lineage_v1",
+            "verified": True,
+            "mode": "direct_declared_identity_reference",
+            "predecessors": [],
+        }
+        if identity_lineage != expected_lineage:
+            raise VerificationError(
+                f"{spec.form_id} portrait direct identityLineage drift"
+            )
+        _validate_direct_portrait_references(
+            repo_root=repo_root,
+            spec=spec,
+            referenced_images=referenced_images,
+            identity=identity,
+        )
+    else:
+        raise VerificationError(
+            f"{spec.form_id} portrait identityLineage.mode is unsupported"
+        )
 
 
 def _validate_portrait(

@@ -1742,6 +1742,76 @@ class ClosedFusionReleaseVerifierTest(unittest.TestCase):
         ):
             self._verify()
 
+    def test_portrait_direct_identity_lineage_is_accepted_and_frozen(
+        self,
+    ) -> None:
+        spec = MODULE.FORM_SPECS[1]
+        root = self.root / spec.root_relative
+        identity_path = root / "identity/front_3quarter_sw.png"
+        generation_path = (
+            root / "source/portrait/generation-attestation.json"
+        )
+        metadata_path = root / "portrait/portrait-meta.json"
+        generation = json.loads(generation_path.read_text(encoding="utf-8"))
+        request = generation["generationResultEvidence"][
+            "transcriptEvidence"
+        ]["requestArgumentBinding"]
+        request["identityLineage"] = {
+            "contract": "imagegen_request_identity_lineage_v1",
+            "verified": True,
+            "mode": "direct_declared_identity_reference",
+            "predecessors": [],
+        }
+        auxiliary = [
+            dict(record)
+            for record in MODULE.PORTRAIT_DIRECT_AUXILIARY_REFERENCE_RECORDS[
+                spec.form_id
+            ]
+        ]
+        request["referencedImages"] = [
+            *auxiliary,
+            {
+                "index": len(auxiliary),
+                "pathLabel": (
+                    f"repository:{spec.root_relative.as_posix()}/"
+                    "identity/front_3quarter_sw.png"
+                ),
+                "role": "declared_identity_reference",
+                "matchesDeclaredIdentityReference": True,
+                "currentFileSha256": _sha256(identity_path),
+                "currentFileByteLength": identity_path.stat().st_size,
+                "currentFileWidth": 512,
+                "currentFileHeight": 512,
+                "currentFileFormat": "PNG",
+                "currentFileMode": "RGBA",
+                "historicalRequestBytesVerified": False,
+            },
+        ]
+        _write_json(generation_path, generation)
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        metadata["source"]["generationAttestation"]["sha256"] = _sha256(
+            generation_path
+        )
+        _write_json(metadata_path, metadata)
+        self.assertEqual(self._verify()["status"], "PASS")
+
+        generation = json.loads(generation_path.read_text(encoding="utf-8"))
+        referenced_images = generation["generationResultEvidence"][
+            "transcriptEvidence"
+        ]["requestArgumentBinding"]["referencedImages"]
+        referenced_images[-1]["matchesDeclaredIdentityReference"] = False
+        _write_json(generation_path, generation)
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        metadata["source"]["generationAttestation"]["sha256"] = _sha256(
+            generation_path
+        )
+        _write_json(metadata_path, metadata)
+        with self.assertRaisesRegex(
+            MODULE.VerificationError,
+            "referencedImages provenance drift",
+        ):
+            self._verify()
+
     def test_portrait_lineage_rejects_stale_action_or_manifest_binding(self) -> None:
         spec = MODULE.FORM_SPECS[0]
         root = self.root / spec.root_relative

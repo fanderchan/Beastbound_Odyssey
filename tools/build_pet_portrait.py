@@ -2688,6 +2688,225 @@ def _parse_direct_imagegen_request_record(
     return sha256_bytes(raw), arguments_text, arguments
 
 
+def _parse_nested_exec_imagegen_request_record(
+    raw: bytes,
+) -> tuple[str, str, str, dict[str, Any]]:
+    """Parse the exact bounded JS wrapper emitted by functions.exec.
+
+    The nested tool transport does not create a direct ``function_call``
+    record for ImageGen.  It does, however, preserve the complete exec source
+    immediately before ``image_generation_end``.  Accept only the tiny wrapper
+    used by this pipeline: one ImageGen call, explicit absolute reference
+    paths, one template-literal prompt, and one ``generatedImage`` forward.
+    No general JavaScript is evaluated here.
+    """
+
+    record = _decode_json_record(raw, "nested ImageGen exec request")
+    payload = record.get("payload")
+    if (
+        record.get("type") != "response_item"
+        or not isinstance(payload, dict)
+        or payload.get("type") != "custom_tool_call"
+        or payload.get("name") != "exec"
+        or payload.get("status") != "completed"
+    ):
+        raise PortraitBuildError(
+            "Codex transcript request 未精确绑定 functions.exec"
+        )
+    outer_call_id = payload.get("call_id")
+    if (
+        not isinstance(outer_call_id, str)
+        or CALL_GENERATION_ID_PATTERN.fullmatch(outer_call_id) is None
+    ):
+        raise PortraitBuildError(
+            "nested ImageGen exec outer call_id 非法"
+        )
+    input_text = payload.get("input")
+    if (
+        not isinstance(input_text, str)
+        or not input_text
+        or "\x00" in input_text
+        or len(input_text.encode("utf-8")) > 1024 * 1024
+    ):
+        raise PortraitBuildError(
+            "nested ImageGen exec input 必须是 1 MiB 内的非空文本"
+        )
+    wrapper = re.fullmatch(
+        r"\s*(?://\s*@exec:[^\r\n]*\r?\n)?"
+        r"const\s+(?P<var>[A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*"
+        r"await\s+tools\.image_gen__imagegen\(\s*\{\s*"
+        r"referenced_image_paths\s*:\s*"
+        r"(?P<paths>\[[\s\S]*?\])\s*,\s*"
+        r"prompt\s*:\s*`(?P<prompt>[\s\S]*?)`\s*"
+        r"\}\s*\)\s*;\s*"
+        r"generatedImage\(\s*(?P=var)\s*\)\s*;\s*",
+        input_text,
+    )
+    if wrapper is None:
+        raise PortraitBuildError(
+            "nested ImageGen exec 不是允许的单调用严格 wrapper"
+        )
+    prompt = wrapper.group("prompt")
+    if "${" in prompt:
+        raise PortraitBuildError(
+            "nested ImageGen exec prompt 禁止模板插值"
+        )
+    try:
+        referenced_paths = json.loads(wrapper.group("paths"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise PortraitBuildError(
+            f"nested ImageGen exec reference paths 不是严格 JSON：{exc}"
+        ) from exc
+    if (
+        not isinstance(referenced_paths, list)
+        or not referenced_paths
+        or not all(
+            isinstance(value, str) and value
+            for value in referenced_paths
+        )
+    ):
+        raise PortraitBuildError(
+            "nested ImageGen exec referenced_image_paths 必须是非空字符串数组"
+        )
+    arguments = {
+        "referenced_image_paths": referenced_paths,
+        "prompt": prompt,
+    }
+    arguments_text = json.dumps(
+        arguments,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return (
+        sha256_bytes(raw),
+        outer_call_id,
+        arguments_text,
+        arguments,
+    )
+
+
+def _adjacent_transcript_line_offsets(
+    transcript: Path,
+    event_offset: int,
+) -> tuple[int, int]:
+    """Return the immediately adjacent request/output JSONL offsets."""
+
+    if not isinstance(event_offset, int) or event_offset <= 0:
+        raise PortraitBuildError(
+            "nested ImageGen event offset 没有前置 request record"
+        )
+    with transcript.open("rb") as handle:
+        with mmap.mmap(
+            handle.fileno(),
+            length=0,
+            access=mmap.ACCESS_READ,
+        ) as mapped:
+            if event_offset > len(mapped):
+                raise PortraitBuildError(
+                    "nested ImageGen event offset 超出 transcript"
+                )
+            previous_newline = event_offset - 1
+            if mapped[previous_newline : event_offset] != b"\n":
+                raise PortraitBuildError(
+                    "nested ImageGen event offset 不是 JSONL 行首"
+                )
+            previous_content_end = previous_newline
+            if (
+                previous_content_end > 0
+                and mapped[
+                    previous_content_end - 1 : previous_content_end
+                ]
+                == b"\r"
+            ):
+                previous_content_end -= 1
+            request_offset = (
+                mapped.rfind(b"\n", 0, previous_content_end) + 1
+            )
+            event_newline = mapped.find(b"\n", event_offset)
+            if event_newline < 0 or event_newline + 1 >= len(mapped):
+                raise PortraitBuildError(
+                    "nested ImageGen event 缺少后置 exec output record"
+                )
+            output_offset = event_newline + 1
+    return request_offset, output_offset
+
+
+def _has_adjacent_nested_exec_imagegen_request(
+    transcript: Path,
+    event_offset: int,
+) -> bool:
+    try:
+        request_offset, _ = _adjacent_transcript_line_offsets(
+            transcript,
+            event_offset,
+        )
+        raw = _read_transcript_line_at(transcript, request_offset)
+        record = _decode_json_record(raw, "nested ImageGen exec probe")
+    except PortraitBuildError:
+        return False
+    payload = record.get("payload")
+    return bool(
+        record.get("type") == "response_item"
+        and isinstance(payload, dict)
+        and payload.get("type") == "custom_tool_call"
+        and payload.get("name") == "exec"
+        and isinstance(payload.get("input"), str)
+        and "tools.image_gen__imagegen" in payload["input"]
+    )
+
+
+def _validate_nested_exec_imagegen_output_record(
+    raw: bytes,
+    *,
+    outer_call_id: str,
+    generator_bytes: bytes,
+) -> None:
+    record = _decode_json_record(raw, "nested ImageGen exec output")
+    payload = record.get("payload")
+    if (
+        record.get("type") != "response_item"
+        or not isinstance(payload, dict)
+        or payload.get("type") != "custom_tool_call_output"
+        or payload.get("call_id") != outer_call_id
+    ):
+        raise PortraitBuildError(
+            "nested ImageGen exec output 未绑定同一 outer call_id"
+        )
+    output = payload.get("output")
+    if not isinstance(output, list):
+        raise PortraitBuildError(
+            "nested ImageGen exec output 必须是 content 数组"
+        )
+    image_items = [
+        item
+        for item in output
+        if isinstance(item, dict) and item.get("type") == "input_image"
+    ]
+    if len(image_items) != 1:
+        raise PortraitBuildError(
+            "nested ImageGen exec output 必须恰好转发一张图片"
+        )
+    image_url = image_items[0].get("image_url")
+    prefix = "data:image/png;base64,"
+    if not isinstance(image_url, str) or not image_url.startswith(prefix):
+        raise PortraitBuildError(
+            "nested ImageGen exec output 必须转发 PNG data URL"
+        )
+    try:
+        forwarded = base64.b64decode(
+            image_url[len(prefix) :],
+            validate=True,
+        )
+    except (ValueError, binascii.Error) as exc:
+        raise PortraitBuildError(
+            f"nested ImageGen exec output base64 非法：{exc}"
+        ) from exc
+    if forwarded != generator_bytes:
+        raise PortraitBuildError(
+            "nested ImageGen exec output 与 canonical cache 不是逐字节同一输出"
+        )
+
+
 def _request_compatibility_mode(
     *,
     form_id: str,
@@ -2712,20 +2931,17 @@ def _request_compatibility_mode(
     return required_mode
 
 
-def _validate_direct_imagegen_request_record(
-    raw: bytes,
-    generation_id: str,
+def _validate_imagegen_request_arguments(
     *,
+    arguments_text: str,
+    arguments: dict[str, Any],
     repo_root: Path,
     pet_root: Path,
     form_id: str,
     identity_reference: Path,
     prompt_path: Path,
     selected_entry: dict[str, Any],
-) -> tuple[str, dict[str, Any]]:
-    request_record_hash, arguments_text, arguments = (
-        _parse_direct_imagegen_request_record(raw, generation_id)
-    )
+) -> dict[str, Any]:
     request_prompt = arguments.get("prompt")
     if not isinstance(request_prompt, str):
         raise PortraitBuildError(
@@ -2890,7 +3106,82 @@ def _validate_direct_imagegen_request_record(
             "provenance, or owner approval"
         ),
     }
+    return binding
+
+
+def _validate_direct_imagegen_request_record(
+    raw: bytes,
+    generation_id: str,
+    *,
+    repo_root: Path,
+    pet_root: Path,
+    form_id: str,
+    identity_reference: Path,
+    prompt_path: Path,
+    selected_entry: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    request_record_hash, arguments_text, arguments = (
+        _parse_direct_imagegen_request_record(raw, generation_id)
+    )
+    binding = _validate_imagegen_request_arguments(
+        arguments_text=arguments_text,
+        arguments=arguments,
+        repo_root=repo_root,
+        pet_root=pet_root,
+        form_id=form_id,
+        identity_reference=identity_reference,
+        prompt_path=prompt_path,
+        selected_entry=selected_entry,
+    )
     return request_record_hash, binding
+
+
+def _validate_nested_exec_imagegen_request_chain(
+    *,
+    transcript: Path,
+    event_offset: int,
+    generator_bytes: bytes,
+    repo_root: Path,
+    pet_root: Path,
+    form_id: str,
+    identity_reference: Path,
+    prompt_path: Path,
+    selected_entry: dict[str, Any],
+) -> tuple[int, str, dict[str, Any]]:
+    request_offset, output_offset = _adjacent_transcript_line_offsets(
+        transcript,
+        event_offset,
+    )
+    request_raw = _read_transcript_line_at(
+        transcript,
+        request_offset,
+    )
+    (
+        request_record_hash,
+        outer_call_id,
+        arguments_text,
+        arguments,
+    ) = _parse_nested_exec_imagegen_request_record(request_raw)
+    binding = _validate_imagegen_request_arguments(
+        arguments_text=arguments_text,
+        arguments=arguments,
+        repo_root=repo_root,
+        pet_root=pet_root,
+        form_id=form_id,
+        identity_reference=identity_reference,
+        prompt_path=prompt_path,
+        selected_entry=selected_entry,
+    )
+    output_raw = _read_transcript_line_at(
+        transcript,
+        output_offset,
+    )
+    _validate_nested_exec_imagegen_output_record(
+        output_raw,
+        outer_call_id=outer_call_id,
+        generator_bytes=generator_bytes,
+    )
+    return request_offset, request_record_hash, binding
 
 
 def _unverified_exec_request_binding(
@@ -3033,12 +3324,41 @@ def _validate_codex_imagegen_transcript(
                     "generation attestation 的 ImageGen request record 漂移"
                 )
         else:
-            request_binding = _unverified_exec_request_binding(
-                form_id=form_id,
-                prompt_path=prompt_path,
-                repo_root=repo_root,
-                selected_entry=selected_entry,
-            )
+            if _has_adjacent_nested_exec_imagegen_request(
+                transcript,
+                event_offset,
+            ):
+                (
+                    request_offset,
+                    request_hash,
+                    request_binding,
+                ) = _validate_nested_exec_imagegen_request_chain(
+                    transcript=transcript,
+                    event_offset=event_offset,
+                    generator_bytes=generator_bytes,
+                    repo_root=repo_root,
+                    pet_root=pet_root,
+                    form_id=form_id,
+                    identity_reference=identity_reference,
+                    prompt_path=prompt_path,
+                    selected_entry=selected_entry,
+                )
+                if (
+                    request_offset != expected.get("requestByteOffset")
+                    or request_hash
+                    != expected.get("requestRecordSha256")
+                ):
+                    raise PortraitBuildError(
+                        "generation attestation 的 nested ImageGen exec "
+                        "request record 漂移"
+                    )
+            else:
+                request_binding = _unverified_exec_request_binding(
+                    form_id=form_id,
+                    prompt_path=prompt_path,
+                    repo_root=repo_root,
+                    selected_entry=selected_entry,
+                )
     else:
         matching_event_offsets: set[int] = set()
         matching_request_offsets: set[int] = set()
@@ -3122,12 +3442,32 @@ def _validate_codex_imagegen_transcript(
                 )
             )
         else:
-            request_binding = _unverified_exec_request_binding(
-                form_id=form_id,
-                prompt_path=prompt_path,
-                repo_root=repo_root,
-                selected_entry=selected_entry,
-            )
+            if _has_adjacent_nested_exec_imagegen_request(
+                transcript,
+                event_offset,
+            ):
+                (
+                    request_offset,
+                    request_hash,
+                    request_binding,
+                ) = _validate_nested_exec_imagegen_request_chain(
+                    transcript=transcript,
+                    event_offset=event_offset,
+                    generator_bytes=generator_bytes,
+                    repo_root=repo_root,
+                    pet_root=pet_root,
+                    form_id=form_id,
+                    identity_reference=identity_reference,
+                    prompt_path=prompt_path,
+                    selected_entry=selected_entry,
+                )
+            else:
+                request_binding = _unverified_exec_request_binding(
+                    form_id=form_id,
+                    prompt_path=prompt_path,
+                    repo_root=repo_root,
+                    selected_entry=selected_entry,
+                )
 
     event_binding = _validate_imagegen_end_record(
         raw=event_raw,
@@ -4627,6 +4967,23 @@ def _prompt_declares_dedicated_no_crop(prompt_text: str) -> bool:
                 ):
                     continue
                 if (
+                    verb == "copied"
+                    and header_continuation
+                    and re.match(
+                        r"copied\s+"
+                        r"(?:[a-z0-9_-]+\s+){0,3}"
+                        r"(?:markings?|motifs?|colors?|ornaments?)\b",
+                        remaining,
+                    )
+                    and not re.search(protected_sources, remaining)
+                ):
+                    # A later semicolon item such as ``Avoid: ...; copied
+                    # solar-crown markings`` is an adjectival negative-list
+                    # entry, not an instruction to copy source art.  Keep the
+                    # exception deliberately narrower than ``copied art`` or
+                    # any protected source-to-output wording.
+                    continue
+                if (
                     verb.startswith("reus")
                     and re.search(consumer_reuse, clause)
                     and not re.search(protected_sources, clause)
@@ -5870,10 +6227,19 @@ def _installed_prompt_payload(
             transcript_path,
             request_offset,
         )
-        _, _, arguments = _parse_direct_imagegen_request_record(
-            request_raw,
-            options.generation_id,
-        )
+        if CALL_GENERATION_ID_PATTERN.fullmatch(options.generation_id):
+            _, _, arguments = _parse_direct_imagegen_request_record(
+                request_raw,
+                options.generation_id,
+            )
+        elif EXEC_GENERATION_ID_PATTERN.fullmatch(options.generation_id):
+            _, _, _, arguments = (
+                _parse_nested_exec_imagegen_request_record(request_raw)
+            )
+        else:
+            raise PortraitBuildError(
+                "verified ImageGen request generation id 非法"
+            )
         actual_prompt = arguments.get("prompt")
         if not isinstance(actual_prompt, str):
             raise PortraitBuildError(

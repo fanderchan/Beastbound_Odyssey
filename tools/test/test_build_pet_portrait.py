@@ -1967,6 +1967,11 @@ class PetPortraitBuilderTests(unittest.TestCase):
             "reference. "
             "Avoid: full body, paws, legs, tail; cropped ears or markings."
         )
+        avoid_semicolon_with_copied_markings = (
+            "Dedicated pet portrait. Do not crop full-body art. "
+            "Avoid: body ball; cropped horn; copied solar-crown markings; "
+            "text; watermark."
+        )
         self.assertTrue(
             portrait._prompt_declares_dedicated_no_crop(coordinated)
         )
@@ -1986,6 +1991,11 @@ class PetPortraitBuilderTests(unittest.TestCase):
         self.assertTrue(
             portrait._prompt_declares_dedicated_no_crop(
                 avoid_list_with_source_before_crop
+            )
+        )
+        self.assertTrue(
+            portrait._prompt_declares_dedicated_no_crop(
+                avoid_semicolon_with_copied_markings
             )
         )
 
@@ -2056,6 +2066,10 @@ class PetPortraitBuilderTests(unittest.TestCase):
             (
                 "Dedicated pet portrait. Never crop from full body. "
                 "Paste the identity board into this portrait."
+            ),
+            (
+                "Dedicated pet portrait. Never crop from full body. "
+                "Avoid: text; copied identity board into this portrait."
             ),
         )
         for prompt in cases:
@@ -3342,6 +3356,154 @@ class PetPortraitBuilderTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 portrait.PortraitBuildError,
                 "显式历史兼容声明",
+            ):
+                self._write_generation_attestation(
+                    options,
+                    generation_id=exec_id,
+                )
+
+    def test_nested_exec_imagegen_request_is_byte_bound_and_verified(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            options = self.fixture(Path(temporary))
+            options.generation_attestation.unlink()
+            transcript, records, source = self._transcript_records(options)
+            exec_id = "exec-a034d57b-7b6f-4b5b-b683-4dec96405b73"
+            exec_source = source.with_name(f"{exec_id}.png")
+            source.rename(exec_source)
+
+            result_path = self._generation_result_path(options)
+            result_path.write_text(
+                result_path.read_text(encoding="utf-8").replace(
+                    options.generation_id,
+                    exec_id,
+                ).replace(str(source), str(exec_source)),
+                encoding="utf-8",
+            )
+            selection_path = (
+                options.repo_root / portrait.SELECTED_SOURCES_PATH
+            )
+            selection = json.loads(
+                selection_path.read_text(encoding="utf-8")
+            )
+            selection["entries"][0]["generationId"] = exec_id
+            selection_path.write_text(
+                json.dumps(selection, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            direct = records[1]["payload"]
+            assert isinstance(direct, dict)
+            arguments = json.loads(direct["arguments"])
+            prompt = arguments["prompt"]
+            self.assertNotIn("`", prompt)
+            self.assertNotIn("${", prompt)
+            outer_id = "call_0123456789abcdef01234567"
+            wrapper = (
+                "const r = await tools.image_gen__imagegen({\n"
+                "  referenced_image_paths: "
+                + json.dumps(arguments["referenced_image_paths"])
+                + ",\n"
+                "  prompt: `"
+                + prompt
+                + "`\n"
+                "});\n"
+                "generatedImage(r);"
+            )
+            request = {
+                "type": "response_item",
+                "payload": {
+                    "type": "custom_tool_call",
+                    "name": "exec",
+                    "status": "completed",
+                    "call_id": outer_id,
+                    "input": wrapper,
+                },
+            }
+            event = records[-1]
+            event_payload = event["payload"]
+            assert isinstance(event_payload, dict)
+            event_payload["call_id"] = exec_id
+            event_payload["saved_path"] = str(exec_source)
+            output = {
+                "type": "response_item",
+                "payload": {
+                    "type": "custom_tool_call_output",
+                    "call_id": outer_id,
+                    "output": [
+                        {
+                            "type": "input_image",
+                            "image_url": (
+                                "data:image/png;base64,"
+                                + base64.b64encode(
+                                    exec_source.read_bytes()
+                                ).decode("ascii")
+                            ),
+                        }
+                    ],
+                },
+            }
+            self._write_transcript_records(
+                transcript,
+                [records[0], request, event, output],
+            )
+
+            attestation = self._write_generation_attestation(
+                options,
+                generation_id=exec_id,
+            )
+            evidence = attestation["generationResultEvidence"][
+                "transcriptEvidence"
+            ]
+            binding = evidence["requestArgumentBinding"]
+            self.assertTrue(binding["requestArgumentBindingVerified"])
+            self.assertEqual(binding["referenceMode"], "explicit_paths")
+            self.assertTrue(binding["declaredIdentityReferenceIncluded"])
+            self.assertIsInstance(evidence["requestByteOffset"], int)
+            self.assertRegex(
+                evidence["requestRecordSha256"],
+                r"^[0-9a-f]{64}$",
+            )
+            installed_prompt, prompt_record = (
+                portrait._installed_prompt_payload(
+                    options=portrait.PortraitBuildOptions(
+                        **{
+                            **options.__dict__,
+                            "generation_id": exec_id,
+                        }
+                    ),
+                    attestation=attestation,
+                    selection_documentation=(
+                        options.prompt_path.read_bytes()
+                    ),
+                )
+            )
+            self.assertEqual(installed_prompt, prompt.encode("utf-8"))
+            self.assertEqual(
+                prompt_record["sourceKind"],
+                "actual_imagegen_request",
+            )
+            self.assertTrue(
+                prompt_record["actualRequestPromptVerified"]
+            )
+
+            options.generation_attestation.unlink()
+            output_payload = output["payload"]
+            assert isinstance(output_payload, dict)
+            output_items = output_payload["output"]
+            assert isinstance(output_items, list)
+            output_items[0]["image_url"] = (
+                "data:image/png;base64,"
+                + base64.b64encode(b"tampered").decode("ascii")
+            )
+            self._write_transcript_records(
+                transcript,
+                [records[0], request, event, output],
+            )
+            with self.assertRaisesRegex(
+                portrait.PortraitBuildError,
+                "canonical cache 不是逐字节同一输出",
             ):
                 self._write_generation_attestation(
                     options,

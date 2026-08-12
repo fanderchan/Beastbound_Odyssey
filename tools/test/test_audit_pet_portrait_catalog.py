@@ -1770,6 +1770,66 @@ class PetPortraitCatalogAuditTests(unittest.TestCase):
         )
         self.assertEqual(errors, [])
 
+    def test_formal_fusion_direct_identity_lineage_replays_current_production(
+        self,
+    ) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        form_id = "emberhorn_fusion_moss_rampart_fire4_earth6"
+        pet_root = repo_root / audit.FORMAL_IDENTITY_RELOCATION_ROOTS[
+            form_id
+        ]
+        attestation = json.loads(
+            (pet_root / portrait.ATTESTATION_PATH).read_text(
+                encoding="utf-8"
+            )
+        )
+        metadata = json.loads(
+            (pet_root / portrait.METADATA_PATH).read_text(
+                encoding="utf-8"
+            )
+        )
+        binding = attestation["generationResultEvidence"][
+            "transcriptEvidence"
+        ]["requestArgumentBinding"]
+        errors: list[str] = []
+        audit._check_request_argument_snapshot(
+            value=binding,
+            generation_id=attestation["generationId"],
+            form_id=form_id,
+            repo_root=repo_root,
+            identity_reference=metadata["identityReference"],
+            prompt_record=metadata["prompt"],
+            errors=errors,
+            prefix=form_id,
+        )
+        self.assertEqual(errors, [])
+
+        missing_direct = copy.deepcopy(binding)
+        missing_direct["referencedImages"] = [
+            reference
+            for reference in missing_direct["referencedImages"]
+            if reference.get("matchesDeclaredIdentityReference") is not True
+        ]
+        missing_direct["declaredIdentityReferenceIncluded"] = False
+        missing_direct_errors: list[str] = []
+        audit._check_request_argument_snapshot(
+            value=missing_direct,
+            generation_id=attestation["generationId"],
+            form_id=form_id,
+            repo_root=repo_root,
+            identity_reference=metadata["identityReference"],
+            prompt_record=metadata["prompt"],
+            errors=missing_direct_errors,
+            prefix=form_id,
+        )
+        self.assertTrue(
+            any(
+                "当前正式身份引用或一份 formal relocation" in error
+                for error in missing_direct_errors
+            ),
+            missing_direct_errors,
+        )
+
     def test_formal_fusion_relocation_lineage_rejects_tamper_and_legacy_use(
         self,
     ) -> None:
@@ -1813,7 +1873,7 @@ class PetPortraitCatalogAuditTests(unittest.TestCase):
                     "mode",
                     "direct_declared_identity_reference",
                 ),
-                "formal relocation lineage 内容/role/mode 不一致",
+                "formal direct identity lineage 内容不一致",
             ),
             (
                 "pipeline_hash",

@@ -709,6 +709,10 @@ def _valid_snapshot_path_label(value: Any) -> bool:
                 Path(parts[3]).stem
             )
             is not None
+            or builder.EXEC_GENERATION_ID_PATTERN.fullmatch(
+                Path(parts[3]).stem
+            )
+            is not None
         )
         and Path(parts[3]).suffix.casefold() == ".png"
     )
@@ -2212,6 +2216,11 @@ def _check_identity_lineage_snapshot(
     label: str,
 ) -> None:
     formal_required = form_id in FORMAL_IDENTITY_RELOCATION_ROOTS
+    relocation_mode = bool(
+        isinstance(value, dict)
+        and value.get("mode")
+        == "relocated_direct_declared_identity_reference"
+    )
     lineage = _strict_snapshot_object(
         value,
         expected_keys=(
@@ -2222,7 +2231,7 @@ def _check_identity_lineage_snapshot(
                 "predecessors",
                 "formalRelocations",
             }
-            if formal_required
+            if formal_required and relocation_mode
             else {"contract", "verified", "mode", "predecessors"}
         ),
         label=label,
@@ -2266,15 +2275,29 @@ def _check_identity_lineage_snapshot(
     if lineage.get("verified") is not True:
         errors.append(f"{label}.verified 必须为 true")
     if formal_required:
-        if (
-            mode != "relocated_direct_declared_identity_reference"
-            or declared_identity_included is not True
-            or predecessors
-            or len(formal_relocations) != 1
-            or lineage.get("formalRelocations") != formal_relocations
-        ):
+        if mode == "relocated_direct_declared_identity_reference":
+            if (
+                declared_identity_included is not True
+                or predecessors
+                or len(formal_relocations) != 1
+                or lineage.get("formalRelocations")
+                != formal_relocations
+            ):
+                errors.append(
+                    f"{label} formal relocation lineage 内容/role/mode 不一致"
+                )
+        elif mode == "direct_declared_identity_reference":
+            if (
+                declared_identity_included is not True
+                or predecessors
+                or formal_relocations
+            ):
+                errors.append(
+                    f"{label} formal direct identity lineage 内容不一致"
+                )
+        else:
             errors.append(
-                f"{label} formal relocation lineage 内容/role/mode 不一致"
+                f"{label} formal identity lineage mode 非法"
             )
     elif mode == "direct_declared_identity_reference":
         if declared_identity_included is not True or predecessors:
@@ -2350,15 +2373,26 @@ def _check_request_argument_snapshot(
             "必须诚实标为 false"
         )
 
-    direct = (
-        isinstance(generation_id, str)
-        and builder.CALL_GENERATION_ID_PATTERN.fullmatch(generation_id)
-        is not None
+    verified_request = (
+        binding.get("requestArgumentBindingVerified") is True
     )
-    if direct:
+    valid_generation_id = bool(
+        isinstance(generation_id, str)
+        and (
+            builder.CALL_GENERATION_ID_PATTERN.fullmatch(generation_id)
+            is not None
+            or builder.EXEC_GENERATION_ID_PATTERN.fullmatch(generation_id)
+            is not None
+        )
+    )
+    if verified_request:
+        if not valid_generation_id:
+            errors.append(
+                f"{label} verified request generationId 格式非法"
+            )
         if binding.get("requestArgumentBindingVerified") is not True:
             errors.append(
-                f"{label} direct request import attestation "
+                f"{label} verified request import attestation "
                 "必须记录 verified=true"
             )
         if binding.get("unverifiedReason") is not None:
@@ -2380,7 +2414,7 @@ def _check_request_argument_snapshot(
         )
         if binding.get("documentedPrompt") is not None:
             errors.append(
-                f"{label}.documentedPrompt direct request 必须为 null"
+                f"{label}.documentedPrompt verified request 必须为 null"
             )
         if binding.get("claimLimit") != DIRECT_REQUEST_CLAIM_LIMIT:
             errors.append(f"{label}.claimLimit 错误")
@@ -2391,8 +2425,17 @@ def _check_request_argument_snapshot(
             errors.append(f"{label}.referencedImages 必须是数组")
             references = []
         matched_identity = False
+        direct_identity_reference_count = 0
         formal_relocations: list[dict[str, Any]] = []
         for index, reference in enumerate(references):
+            if (
+                isinstance(reference, dict)
+                and reference.get("matchesDeclaredIdentityReference")
+                is True
+                and reference.get("role")
+                == "declared_identity_reference"
+            ):
+                direct_identity_reference_count += 1
             if (
                 isinstance(reference, dict)
                 and isinstance(
@@ -2444,13 +2487,20 @@ def _check_request_argument_snapshot(
                     f"{label}.declaredIdentityReferenceIncluded "
                     "与引用快照不一致"
                 )
-            if (
-                form_id in FORMAL_IDENTITY_RELOCATION_ROOTS
-                and len(formal_relocations) != 1
-            ):
-                errors.append(
-                    f"{label} 正式融合形态必须且只能有一个 formal relocation"
+            if form_id in FORMAL_IDENTITY_RELOCATION_ROOTS:
+                valid_direct = bool(
+                    direct_identity_reference_count == 1
+                    and not formal_relocations
                 )
+                valid_relocation = bool(
+                    direct_identity_reference_count == 0
+                    and len(formal_relocations) == 1
+                )
+                if not (valid_direct or valid_relocation):
+                    errors.append(
+                        f"{label} 正式融合形态必须精确使用一份当前正式身份"
+                        "引用或一份 formal relocation"
+                    )
             if (
                 form_id not in FORMAL_IDENTITY_RELOCATION_ROOTS
                 and formal_relocations
@@ -2521,6 +2571,14 @@ def _check_request_argument_snapshot(
         )
         return
 
+    if (
+        not isinstance(generation_id, str)
+        or builder.EXEC_GENERATION_ID_PATTERN.fullmatch(generation_id)
+        is None
+    ):
+        errors.append(
+            f"{label} unverified request 只允许历史 exec generationId"
+        )
     errors.append(
         f"{label} exec request snapshot 没有可验证 direct ImageGen "
         "request，任何 form 都不得进入 production candidate"
@@ -2772,11 +2830,30 @@ def _check_generation_attestation_snapshot(
             )
         request_offset = transcript.get("requestByteOffset")
         request_sha = transcript.get("requestRecordSha256")
-        if (
-            isinstance(generation_id, str)
-            and builder.CALL_GENERATION_ID_PATTERN.fullmatch(generation_id)
-            is not None
-        ):
+        request_binding = transcript.get("requestArgumentBinding")
+        request_verified = bool(
+            isinstance(request_binding, dict)
+            and request_binding.get("requestArgumentBindingVerified")
+            is True
+        )
+        if request_verified:
+            generation_id_valid = bool(
+                isinstance(generation_id, str)
+                and (
+                    builder.CALL_GENERATION_ID_PATTERN.fullmatch(
+                        generation_id
+                    )
+                    is not None
+                    or builder.EXEC_GENERATION_ID_PATTERN.fullmatch(
+                        generation_id
+                    )
+                    is not None
+                )
+            )
+            if not generation_id_valid:
+                errors.append(
+                    f"{prefix} verified ImageGen generationId 格式非法"
+                )
             if (
                 not isinstance(request_offset, int)
                 or isinstance(request_offset, bool)
@@ -2784,7 +2861,7 @@ def _check_generation_attestation_snapshot(
                 or not _valid_sha(request_sha)
             ):
                 errors.append(
-                    f"{prefix} direct ImageGen request transcript 绑定非法"
+                    f"{prefix} verified ImageGen request transcript 绑定非法"
                 )
         else:
             if (
@@ -2799,10 +2876,10 @@ def _check_generation_attestation_snapshot(
                 )
             if request_offset is not None or request_sha is not None:
                 errors.append(
-                    f"{prefix} exec ImageGen 不得伪造 direct request 绑定"
+                    f"{prefix} unverified exec ImageGen 不得伪造 request 绑定"
                 )
         _check_request_argument_snapshot(
-            value=transcript.get("requestArgumentBinding"),
+            value=request_binding,
             generation_id=generation_id,
             form_id=form_id,
             repo_root=repo_root,
