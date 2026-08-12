@@ -198,6 +198,23 @@ func run() -> void:
 			"人物十指令没有严格命中Presenter缩放矩形、右/底区域或发生重叠：%s"
 			% str(player_geometry)
 		)
+	var redundant_sync_before := int(
+		player_snapshot.get("layoutApplyCount", -1)
+	)
+	var redundant_auto_cache_before: int = host.battle_auto_ui_cache_rebuild_count
+	host._sync_battle_buttons()
+	host._sync_battle_buttons()
+	var redundant_sync_snapshot: Dictionary = view.snapshot()
+	if (
+		redundant_sync_before < 0
+		or int(redundant_sync_snapshot.get("layoutApplyCount", -2))
+		!= redundant_sync_before
+	):
+		errors.append("相同战斗状态的按钮同步仍重复重排正式指令视图")
+	if int(redundant_sync_snapshot.get("medallionStyleResourceCount", 99)) > 3:
+		errors.append("正式战斗指令徽章样式没有复用有限状态资源")
+	if host.battle_auto_ui_cache_rebuild_count != redundant_auto_cache_before:
+		errors.append("相同战斗状态的按钮同步仍重复归一化自动战斗档案")
 
 	var auto_click: Dictionary = await _real_click(host.battle_auto_button, true)
 	var auto_snapshot: Dictionary = view.snapshot()
@@ -254,10 +271,22 @@ func run() -> void:
 		["咒术", "攻击", "道具", "托管", "逃跑", "援助", "抓捕", "召唤", "防御", "自动"]
 	)
 
+	var player_to_pet_layout_before := int(
+		view.snapshot().get("layoutApplyCount", -1)
+	)
+	var player_to_pet_auto_cache_before: int = host.battle_auto_ui_cache_rebuild_count
 	var player_defend_click: Dictionary = await _real_click(
 		view.visible_button_with_label("防御")
 	)
 	var pet_snapshot: Dictionary = view.snapshot()
+	if (
+		player_to_pet_layout_before < 0
+		or int(pet_snapshot.get("layoutApplyCount", -2))
+		- player_to_pet_layout_before != 1
+	):
+		errors.append("人物切换宠物回合没有保持一次正式指令重排")
+	if host.battle_auto_ui_cache_rebuild_count != player_to_pet_auto_cache_before:
+		errors.append("人物切换宠物回合错误重建了未变化的自动战斗档案")
 	_expect_labels(
 		errors,
 		"宠物回合",
@@ -303,9 +332,22 @@ func run() -> void:
 	)
 	if not pet_attack_route_ok:
 		errors.append("真实点击宠物攻击没有进入既有 pet_enemy_attack 选敌流程")
+	var pet_to_player_layout_before := int(
+		view.snapshot().get("layoutApplyCount", -1)
+	)
+	var pet_to_player_auto_cache_before: int = host.battle_auto_ui_cache_rebuild_count
 	var pet_recall_click: Dictionary = await _real_click(
 		view.synthetic_button("recall")
 	)
+	var pet_recall_snapshot: Dictionary = view.snapshot()
+	if (
+		pet_to_player_layout_before < 0
+		or int(pet_recall_snapshot.get("layoutApplyCount", -2))
+		- pet_to_player_layout_before != 1
+	):
+		errors.append("宠物撤回人物回合没有保持一次正式指令重排")
+	if host.battle_auto_ui_cache_rebuild_count != pet_to_player_auto_cache_before:
+		errors.append("宠物撤回人物回合错误重建了未变化的自动战斗档案")
 	var pet_recall_route_ok: bool = (
 		host.battle_command_owner == "player"
 		and host.battle_pending_pet_skill_id == ""

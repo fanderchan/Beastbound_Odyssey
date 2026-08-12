@@ -84,6 +84,7 @@ FAILURE_MARKERS = (
 )
 ATTACK_INPUT_BEFORE_MARKER = DIAGNOSTIC.ATTACK_INPUT_BEFORE_MARKER
 ATTACK_INPUT_AFTER_MARKER = DIAGNOSTIC.ATTACK_INPUT_AFTER_MARKER
+ARENA_MARKER = DIAGNOSTIC.ARENA_MARKER
 ENVIRONMENT_MARKER = "PHASE403_BATTLE_LAYOUT_PERF_ENVIRONMENT"
 RAW_FRAME_MARKER = "PHASE403_BATTLE_LAYOUT_PERF_RAW_FRAMES"
 SEGMENTS_MARKER = "PHASE403_BATTLE_LAYOUT_PERF_SEGMENTS"
@@ -151,6 +152,8 @@ def _require_formal_active_pet_fixture_contract(
         r'profile\s*=\s*PlayerProgressModel\.normalize_profile\(profile\)',
         r'host\.call\("_start_battle",\s*state\)\s*'
         r'await\s+host\.get_tree\(\)\.process_frame\s*'
+        r'if\s+not\s+_assert_owner_review_arena_visual_contract\(\):\s*'
+        r'return\s+false\s*'
         r'if\s+not\s+_assert_post_start_formation_contract\(\):\s*'
         r'return\s+false',
         r'int\(readiness\.get\("actorCount",\s*0\)\)\s*!=\s*20',
@@ -261,6 +264,10 @@ def _require_attack_input_diagnostic_contract(
 
 
 def _require_perf_wiring() -> None:
+    try:
+        DIAGNOSTIC._require_main_flag_wiring()
+    except DIAGNOSTIC.Phase403BattleLayoutRecordingError as error:
+        raise Phase403BattleLayoutPerfError(str(error)) from error
     try:
         main_source = MAIN_SCRIPT_PATH.read_text(encoding="utf-8")
         capture_source = CAPTURE_SCRIPT_PATH.read_text(encoding="utf-8")
@@ -963,6 +970,7 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
     active_state = ""
     start_lines: list[str] = []
     review_only_lines: list[str] = []
+    arena_lines: list[str] = []
     end_lines: list[str] = []
     attack_before_lines: list[str] = []
     attack_after_lines: list[str] = []
@@ -1012,6 +1020,9 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
             continue
         if line.startswith(REVIEW_ONLY_MARKER + " "):
             review_only_lines.append(line)
+            continue
+        if line.startswith(ARENA_MARKER + " "):
+            arena_lines.append(line)
             continue
         if line.startswith(END_MARKER + " "):
             end_lines.append(line)
@@ -1108,13 +1119,14 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         for lines in (
             start_lines,
             review_only_lines,
+            arena_lines,
             attack_before_lines,
             attack_after_lines,
             end_lines,
         )
     ):
         raise Phase403BattleLayoutPerfError(
-            "Phase403性能日志的真实Main起点、攻击诊断、review-only与终点必须各且仅有一个"
+            "Phase403/412性能日志的真实Main起点、战场、攻击诊断、review-only与终点必须各且仅有一个"
         )
     if (
         len(environment_lines) != 2
@@ -1126,6 +1138,7 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
             "Phase403性能环境、三段逐帧raw、输入分段与阶段外复验必须完整且唯一"
         )
     start_line = start_lines[0]
+    arena_line = arena_lines[0]
     marker_offsets = (
         text.find(STATE_MARKER + " state=idle_end"),
         text.find(ATTACK_INPUT_BEFORE_MARKER + " "),
@@ -1139,6 +1152,7 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
             "Phase403性能攻击诊断必须位于idle结束后、指令窗口前且顺序唯一"
         )
     evidence_offsets = (
+        text.find(ARENA_MARKER + " "),
         text.find(ENVIRONMENT_MARKER + " "),
         text.find(START_MARKER + " "),
         text.find(INVARIANT_MARKER + " stage=pre_windows "),
@@ -1171,6 +1185,10 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         attack_after_lines[0],
     )
     review_only_line = review_only_lines[0]
+    try:
+        arena_visual = DIAGNOSTIC._validate_arena_visual_marker(arena_line)
+    except DIAGNOSTIC.Phase403BattleLayoutRecordingError as error:
+        raise Phase403BattleLayoutPerfError(str(error)) from error
     end_line = end_lines[0]
     expected_events = [
         f"{state}_{boundary}"
@@ -1491,6 +1509,7 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         "reviewOnlyMountWidthOnly": True,
         "reviewOnlyMountSlotCollisionClaimed": False,
         "ordinaryBattleContainsMount": False,
+        "arenaVisual": arena_visual,
     }
 
 

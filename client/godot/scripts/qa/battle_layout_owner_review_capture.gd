@@ -30,6 +30,9 @@ const MountVisualProfileCatalog := preload(
 const MountedCharacterAssetCatalog := preload(
 	"res://scripts/player/mounted_character_asset_catalog.gd"
 )
+const BattleArenaVisualCatalog := preload(
+	"res://scripts/battle/battle_arena_visual_catalog.gd"
+)
 
 const CAPTURE_FLAG := "--phase403-battle-layout-owner-review-capture"
 const PERF_CAPTURE_FLAG := "--phase403-battle-layout-perf"
@@ -40,6 +43,8 @@ const PERF_STATE_SECONDS := 7.2
 const PERF_CLICK_PAUSE_SECONDS := 0.14
 const PERF_TARGET_SWITCH_COUNT := 8
 const PERF_FRAME_SAMPLE_LIMIT := 600
+const PERF_FOREGROUND_TIMEOUT_MSEC := 3000
+const PERF_FOREGROUND_RETRY_MSEC := 250
 const READY_FRAME_LIMIT := 120
 const FORMATION_TEMPLATE := "10v10"
 const LAYOUT_IDENTITY := (
@@ -51,6 +56,7 @@ const PERF_ENVIRONMENT_MARKER := "PHASE403_BATTLE_LAYOUT_PERF_ENVIRONMENT"
 const PERF_RAW_FRAME_MARKER := "PHASE403_BATTLE_LAYOUT_PERF_RAW_FRAMES"
 const PERF_SEGMENTS_MARKER := "PHASE403_BATTLE_LAYOUT_PERF_SEGMENTS"
 const PERF_INVARIANT_MARKER := "PHASE403_BATTLE_LAYOUT_PERF_INVARIANT"
+const ARENA_VISUAL_MARKER := "PHASE412_BATTLE_ARENA_VISUAL"
 
 # Both selected production bundles use the largest formal 256px runtime frame,
 # derived from preserved 512px source frames, accepted by Main's 156px battle
@@ -64,6 +70,10 @@ const FORMAL_PET_FORM_ID := "wuli_evolved_crystal_earth8_water2"
 const FORMAL_PET_INSTANCE_ID := "phase403_formal_battle_pet"
 const FORMAL_PET_META_PATH := (
 	"res://assets/pets/wuli_evolved_crystal_earth8_water2/action-bundle-meta.json"
+)
+const FORMAL_ARENA_ID := BattleArenaVisualCatalog.MOSS_MEADOW_ID
+const FORMAL_ARENA_SHA256 := (
+	"215210ead48013359fe16cf0d4043811d4ef86d160cbedcdc08c1f11c0effa69"
 )
 const MAX_CHARACTER_NAME := "晨星远征守望猎团首席先锋队长苍岚逐月行者踏风归来"
 const MAX_PET_NAME := "晶甲苍穹守望乌力"
@@ -225,6 +235,9 @@ func _run_perf_capture() -> void:
 		return
 	if not _assert_review_only_mount_width_contract():
 		return
+	if not await _wait_for_perf_foreground_focus():
+		_fail_capture("性能窗口没有进入玩家前台焦点态")
+		return
 	if not _print_perf_environment("start"):
 		return
 	print(
@@ -248,7 +261,7 @@ func _run_perf_capture() -> void:
 	if not _begin_perf_frame_sampling("idle"):
 		return
 	print("PHASE403_BATTLE_LAYOUT_PERF_STATE state=idle_begin")
-	await host.get_tree().create_timer(PERF_STATE_SECONDS).timeout
+	await _wait_for_perf_sample_duration()
 	if not _end_perf_frame_sampling("idle"):
 		return
 	print("PHASE403_BATTLE_LAYOUT_PERF_STATE state=idle_end")
@@ -263,7 +276,7 @@ func _run_perf_capture() -> void:
 		"PHASE403_BATTLE_LAYOUT_PERF_STATE "
 		+ "state=command_selection_begin target_mode=player_attack_target"
 	)
-	await host.get_tree().create_timer(PERF_STATE_SECONDS).timeout
+	await _wait_for_perf_sample_duration()
 	if not _end_perf_frame_sampling("command_selection"):
 		return
 	print(
@@ -318,14 +331,7 @@ func _run_perf_capture() -> void:
 			return
 		await _perf_click_pause()
 		completed_switches += 1
-	var target_window_end_usec := (
-		switch_started_usec + int(PERF_STATE_SECONDS * 1000000.0)
-	)
-	var target_window_wait_usec := target_window_end_usec - Time.get_ticks_usec()
-	if target_window_wait_usec > 0:
-		await host.get_tree().create_timer(
-			float(target_window_wait_usec) / 1000000.0
-		).timeout
+	await _wait_for_perf_sample_duration()
 	if not _end_perf_frame_sampling("target_switch"):
 		return
 	if not _print_perf_target_markers(completed_switches):
@@ -485,6 +491,7 @@ func _prepare_real_main_battle() -> bool:
 	state.erase("reviewLab")
 	state.erase("reviewTopInset")
 	state.erase("reviewVisualActorId")
+	state[BattleArenaVisualCatalog.OWNER_REVIEW_ARENA_ID_KEY] = FORMAL_ARENA_ID
 	state["message"] = "双方正式十人阵型展开。"
 	var actors: Array = state.get("actors", [])
 	for index in range(actors.size()):
@@ -523,6 +530,8 @@ func _prepare_real_main_battle() -> bool:
 		return false
 	host.call("_start_battle", state)
 	await host.get_tree().process_frame
+	if not _assert_owner_review_arena_visual_contract():
+		return false
 	if not _assert_post_start_formation_contract():
 		return false
 	var readiness := _battle_readiness_snapshot()
@@ -546,6 +555,61 @@ func _prepare_real_main_battle() -> bool:
 		% JSON.stringify(readiness)
 	)
 	return false
+
+
+func _assert_owner_review_arena_visual_contract() -> bool:
+	var state_value = _host_property("battle_state")
+	if not (state_value is Dictionary):
+		_fail_capture("战场候选缺少真实Main战斗状态")
+		return false
+	var state := state_value as Dictionary
+	if bool(state.get("reviewLab", false)):
+		_fail_capture("战场候选不得借用GM reviewLab门禁")
+		return false
+	var errors := BattleArenaVisualCatalog.validation_errors()
+	if not errors.is_empty():
+		_fail_capture("战场候选目录门禁失败：%s" % "；".join(errors))
+		return false
+	var evidence := BattleArenaVisualCatalog.evidence_for_state(state, true)
+	var path := str(evidence.get("path", ""))
+	var texture := BattleArenaVisualCatalog.texture_for_state(state, true)
+	if (
+		str(evidence.get("id", "")) != FORMAL_ARENA_ID
+		or str(evidence.get("bundleId", ""))
+		!= BattleArenaVisualCatalog.OWNER_REVIEW_BUNDLE_ID
+		or str(evidence.get("ownerReviewStatus", "")) != "pending"
+		or str(evidence.get("sha256", "")) != FORMAL_ARENA_SHA256
+		or bool(evidence.get("runtimeEnabled", true))
+		or bool(evidence.get("releaseApproved", true))
+		or not bool(evidence.get("qaPreviewEnabled", false))
+		or path == ""
+		or not FileAccess.file_exists(path)
+		or FileAccess.get_sha256(path) != FORMAL_ARENA_SHA256
+		or texture == null
+		or texture.get_width() != EXPECTED_VIEWPORT.x
+		or texture.get_height() != EXPECTED_VIEWPORT.y
+	):
+		_fail_capture("战场候选生命周期、像素哈希或1280×720尺寸漂移")
+		return false
+	if (
+		BattleArenaVisualCatalog.texture_for_state(state, false) != null
+		or not BattleArenaVisualCatalog.evidence_for_state(state, false).is_empty()
+	):
+		_fail_capture("战场候选绕过显式审片门禁进入普通玩家路径")
+		return false
+	print(
+		(
+			ARENA_VISUAL_MARKER
+			+ " id=moss_meadow bundle=battle_review_arenas_v1 "
+			+ "source_map=firebud_village_gate "
+			+ "sha256=%s viewport=1280x720 owner_review=pending "
+			+ "runtime_enabled=false release_approved=false qa_preview=true "
+			+ "explicit_capture=true ordinary_player_enabled=false "
+			+ "review_lab=false baked_actors=false"
+		)
+		% FORMAL_ARENA_SHA256
+	)
+	return true
 
 
 func _battle_readiness_snapshot() -> Dictionary:
@@ -655,6 +719,26 @@ func _assert_formal_fixture_assets() -> bool:
 		FORMAL_CHARACTER_APPEARANCE_ID
 	):
 		_fail_capture("最大正式人物形象不能进入战斗运行路径")
+		return false
+	if (
+		CharacterActionAssetCatalog.battle_view_for_side("ally")
+		!= CharacterActionAssetCatalog.VIEW_BACK
+		or CharacterActionAssetCatalog.battle_view_for_side("enemy")
+		!= CharacterActionAssetCatalog.VIEW_FRONT
+		or not CharacterActionAssetCatalog.battle_flip_h_for_side(
+			"ally",
+			FORMAL_CHARACTER_APPEARANCE_ID
+		)
+		or CharacterActionAssetCatalog.battle_flip_h_for_side(
+			"enemy",
+			FORMAL_CHARACTER_APPEARANCE_ID
+		)
+		or CharacterActionAssetCatalog.battle_flip_h_for_side(
+			"unknown",
+			FORMAL_CHARACTER_APPEARANCE_ID
+		)
+	):
+		_fail_capture("正式人物双方没有按NW/SE方向朝向战场中心")
 		return false
 	if (
 		not PetArtCatalog.supports_form(FORMAL_PET_FORM_ID)
@@ -2309,23 +2393,23 @@ func _left_click_point(
 		target_control,
 		"release_process"
 	)
-	await RenderingServer.frame_post_draw
 	if not input_probe.is_empty():
+		await RenderingServer.frame_post_draw
 		input_probe["postDrawBoundaryReached"] = true
-	_capture_attack_input_route_stage(
-		input_probe,
-		target_control,
-		"release_post_draw"
-	)
+		_capture_attack_input_route_stage(
+			input_probe,
+			target_control,
+			"release_post_draw"
+		)
 	await host.get_tree().process_frame
-	await RenderingServer.frame_post_draw
 	if not input_probe.is_empty():
+		await RenderingServer.frame_post_draw
 		input_probe["nextLoopPostDrawBoundaryReached"] = true
-	_capture_attack_input_route_stage(
-		input_probe,
-		target_control,
-		"release_next_loop_post_draw"
-	)
+		_capture_attack_input_route_stage(
+			input_probe,
+			target_control,
+			"release_next_loop_post_draw"
+		)
 	perf_qa_started_usec = Time.get_ticks_usec()
 	_actual_left_clicks += 1
 	if release_frame <= press_frame:
@@ -2535,6 +2619,35 @@ func _perf_environment_snapshot(stage: String) -> Dictionary:
 	}
 
 
+func _wait_for_perf_foreground_focus() -> bool:
+	# macOS activation is asynchronous. Repeat only inside a bounded QA window
+	# and accept performance evidence solely after a fresh frame reports focus.
+	var tree: SceneTree = host.get_tree()
+	var started_msec := Time.get_ticks_msec()
+	var next_request_msec := started_msec
+	var request_count := 0
+	while Time.get_ticks_msec() - started_msec <= PERF_FOREGROUND_TIMEOUT_MSEC:
+		var now_msec := Time.get_ticks_msec()
+		if now_msec >= next_request_msec:
+			DisplayServer.window_move_to_foreground()
+			request_count += 1
+			next_request_msec = now_msec + PERF_FOREGROUND_RETRY_MSEC
+		await tree.process_frame
+		if DisplayServer.window_is_focused():
+			print(
+				"PHASE403_BATTLE_LAYOUT_PERF_FOCUS "
+				+ "focused=true elapsed_msec=%d requests=%d"
+				% [Time.get_ticks_msec() - started_msec, request_count]
+			)
+			return true
+	print(
+		"PHASE403_BATTLE_LAYOUT_PERF_FOCUS "
+		+ "focused=false elapsed_msec=%d requests=%d"
+		% [Time.get_ticks_msec() - started_msec, request_count]
+	)
+	return false
+
+
 func _print_perf_environment(stage: String) -> bool:
 	var snapshot := _perf_environment_snapshot(stage)
 	print("%s %s" % [PERF_ENVIRONMENT_MARKER, JSON.stringify(snapshot)])
@@ -2632,6 +2745,15 @@ func _disconnect_perf_frame_sampler() -> bool:
 	return disconnected
 
 
+func _wait_for_perf_sample_duration() -> void:
+	var target_usec: int = (
+		_perf_sample_started_usec
+		+ int(PERF_STATE_SECONDS * 1000000.0)
+	)
+	while Time.get_ticks_usec() < target_usec:
+		await host.get_tree().process_frame
+
+
 func _end_perf_frame_sampling(state: String) -> bool:
 	var disconnected := _disconnect_perf_frame_sampler()
 	var ended_usec: int = Time.get_ticks_usec()
@@ -2665,7 +2787,7 @@ func _end_perf_frame_sampling(state: String) -> bool:
 		or not _perf_sample_monotonic
 		or _perf_sample_dropped != 0
 		or sample_count < 2
-		or duration_usec < int((PERF_STATE_SECONDS - 0.05) * 1000000.0)
+		or duration_usec < int(PERF_STATE_SECONDS * 1000000.0)
 		or duration_usec > int((PERF_STATE_SECONDS + 1.8) * 1000000.0)
 	):
 		_fail_capture("逐帧性能采样不完整：%s" % JSON.stringify(payload))

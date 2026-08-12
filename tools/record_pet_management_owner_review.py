@@ -112,7 +112,7 @@ MANAGEMENT_RECORDER_CONTRACT_FUNCTION_SHA256 = {
     "_settle_godot_process_group": "ea6ae64c952eaca4ff1979987eb9181b8d2c62e46dab947669142250ebc6f3a4",
     "_top_level_contract_source": "f3504c2c349de83e2265698249ab9e5cc1ee168b69ef3ff0b1c4c4dc727bddae",
     "_validate_lane_source_contract": "2d7c10df96186bd0792f59305528c5f8ff70b80aab9dc2a869d235c81b55906a",
-    "_validate_recorder_source_contract": "b925509e517e823668442b226d2e7d71500d6045990f4c571db96ef902d81e7c",
+    "_validate_recorder_source_contract": "44ddd2c829fd6c99a59ee4acde412b7bacfc42f4aa13de22a5cdf9e1e46fdeb0",
     "_verify_automation_lane": "6f70775261a4c17e6f649f121505424c69be353704768b6dee46cd11f788b69a",
     "_write_lifecycle_authority": "0ac5249d797e93474857fe4c62abb6fdc956f877156068dbb2a93859962177ed",
     "_write_failure_summary": "e08a3a7b40e6b80133c1ca179a92add82c2502662b4107914ade28b072e562c4",
@@ -136,12 +136,13 @@ BATTLE_LAYOUT_RECORDER_CONTRACT_FUNCTION_SHA256 = {
     "_parse_attack_input_json": "c1fde8f2654a3781424b7d529649f5433634845ad0256f325c7702efecda4a20",
     "_parse_fields": "35de7d3e6ea91a7a3074bc79eaf6090071465f6302a1c780a50d8ca80de2fc7e",
     "_parser": "388b9806a735d1928573209901733f45406e82c5b13910baafb2e9f6b4d0f85c",
-    "_phase403_capture_contract": "d5de034d64676554f0fd3b3d81f8125178aa890abe0846c3e8d9aae3f8260c38",
+    "_phase403_capture_contract": "3487387823f025f3cfced449069efee92f00391e8c4dc85093a087aab8a07735",
     "_record": "f26e4e7a5f092a9f59a912fe31186dc593346fb90f43a8d8b2124e52c3af6424",
     "_record_into": "ef64d81c55f601a1494b7ec13f154fe6203f6320b82faed5e73637753b9958d1",
-    "_require_main_flag_wiring": "7f8c2f51f3096f9072c8338773c70eba046e2fc12d89f9c68d8adac117dd6274",
+    "_require_main_flag_wiring": "7a17b45f60b05eac2dc60465ee0edb9540ecdae824d7b38041287bc71f966c44",
     "_strict_json_loads": "a33e05e101212d81700eb07da12dc7f58063c0faed41e4075fe7270099d9369c",
-    "_validate_godot_log": "7396afe5b8130a7cea39eedd36924ec3dfca4565a1980edda154fe5799e9f29c",
+    "_validate_arena_visual_marker": "6f9f06d4612e5abdc1e95c0edbc22e4773ff856638dad51b9841f7df3f29accc",
+    "_validate_godot_log": "4f28c34abe965df7e8b9289682120d80b7d454e0c9c5c3322de5db7f1f92ba92",
     "_write_failure_summary": "9d4894314a1ed3530fcf1af3d0d1afcd6a7ba237882d13c0c2419832683136f1",
     "main": "9178120f6d68b5e9370fb05ca0fca57dd6cc7e0851a02113fcf56dafe7fe0176",
 }
@@ -153,9 +154,9 @@ BATTLE_LAYOUT_PERF_CONTRACT_FUNCTION_SHA256 = {
     "_parse_json_marker": "7c55fd2f4e21d98c60638e08ab7f5edaf5d952ae212e30265386939965d22334",
     "_parse_number": "66ab5d2adad2414b7aad46dfef31cfbc271558e1495859cc91618c7b74e243c1",
     "_parser": "b8fe2acb42ef6c249d78925d69ba16e272bc6ffa894c05f9e647b82ba2c06b7f",
-    "_require_perf_wiring": "a4b99d93e1b2e2b4ff8dfe42c1c6cefeadb264bf5f35b0031679dc005699fa94",
+    "_require_perf_wiring": "39bb047b8fffa9059fcb9a841e4630c7903de33c1fdc975710b8aac008b8a19f",
     "_strict_json_loads": "df3ccc478a7cae28e4e53d26115a060dbd73d15b9704e6ed07707a84f4e862dc",
-    "_validate_godot_log": "8a5ef1261d309286443160934dccf681170ef1a41f97333e17ab0878e8fb5954",
+    "_validate_godot_log": "5826b6754fa1b4c3400381a844929e0e08db5e5625f1d410fcc09bfd7a858565",
     "_write_failure_summary": "9d4894314a1ed3530fcf1af3d0d1afcd6a7ba237882d13c0c2419832683136f1",
     "_write_manifest": "19319ed92ab24c15d29ce555a6966c82807dafe5953a02722206e7f7ab8386a8",
     "main": "f50515d9c20c22b54ba2f25d955daf5c3dce1e3ed9602df4592e92c82f77330f",
@@ -163,8 +164,8 @@ BATTLE_LAYOUT_PERF_CONTRACT_FUNCTION_SHA256 = {
 RECORDER_TOP_LEVEL_CONTRACT_SHA256 = {
     "management recorder": "cc729f91ee89f859f510a1b8bcb145653cee973ced3b1210c71419cc20d4fba5",
     "pet codex recorder": "5e876d5d8bfe225583ee62bbfb911071e91a3927ec1987b7d0fcfa3468ddc58e",
-    "battle layout recorder": "3f23022939346a35cb622ef2c65fd855d87d8e2b75f68be9a98edb1aed1b4702",
-    "battle layout perf": "34f3072289200de88563a6db7c370453a15d29e7fea5e3d9ce39fed4c5d5c600",
+    "battle layout recorder": "8ae2768df333ec963859a432006444d14acab0f81a986aab67fe03eef4d7522c",
+    "battle layout perf": "e0a10520ccaf6df3b8b07167ac87a5ec50b33415a923dac9fc8d85c2bc8204be",
 }
 _LANE_HELPER_MODULE_NAME = "_beastbound_owner_review_lane_helper"
 
@@ -575,7 +576,7 @@ def _validate_recorder_source_contract(
         "_parse_attack_input_json", "_parse_fields",
         "_phase403_capture_contract", "_record", "_record_into",
         "_require_main_flag_wiring", "_strict_json_loads",
-        "_validate_godot_log",
+        "_validate_arena_visual_marker", "_validate_godot_log",
         "_write_failure_summary", "main",
     }
     required_battle_layout_perf = {

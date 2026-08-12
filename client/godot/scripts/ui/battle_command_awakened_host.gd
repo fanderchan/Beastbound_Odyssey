@@ -29,6 +29,7 @@ var _drawer
 var _layout_viewport_size := Vector2(-1.0, -1.0)
 var _layout_battle_active := false
 var _layout_overlay_open := false
+var _auto_payload_revision := -1
 
 
 func _init(host_node: Node) -> void:
@@ -59,20 +60,27 @@ func sync_command_layout(owner: String, visible_ids: Array, ordered_ids: Array) 
 	if _view == null:
 		return false
 	_view.apply_command_state(owner, visible_ids, ordered_ids)
-	_view.custom_minimum_size = Presenter.recommended_size(_host._layout_size())
+	var next_minimum_size := Presenter.recommended_size(_host._layout_size())
+	if not _view.custom_minimum_size.is_equal_approx(next_minimum_size):
+		_view.custom_minimum_size = next_minimum_size
 	return true
 
 
 func sync_auto_state() -> bool:
 	if _view == null:
 		return false
-	_view.configure_auto_strategy(
-		_host._battle_auto_settings(),
-		_host._auto_settings_player_action_options(),
-		_host._auto_settings_pet_slot_options()
-	)
+	var payload: Dictionary = _host._battle_auto_ui_payload()
+	var payload_revision := int(payload.get("revision", -1))
+	if payload_revision != _auto_payload_revision:
+		_view.configure_auto_strategy(
+			payload.get("settings", {}) as Dictionary,
+			payload.get("playerOptions", []) as Array,
+			payload.get("petOptions", []) as Array
+		)
+		_auto_payload_revision = payload_revision
 	_view.set_auto_enabled(_host.battle_auto_attack_enabled)
-	_view.auto_button().button_pressed = _host.battle_auto_attack_enabled
+	if _view.auto_button().button_pressed != _host.battle_auto_attack_enabled:
+		_view.auto_button().button_pressed = _host.battle_auto_attack_enabled
 	return true
 
 
@@ -230,6 +238,7 @@ func _on_auto_strategy_changed(
 		_host.player_profile,
 		settings
 	)
+	_host._mark_progress_ui_caches_dirty()
 	if _host.profile_save_enabled:
 		_host._save_player_profile_now()
 	sync_auto_state()

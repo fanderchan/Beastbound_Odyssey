@@ -1410,6 +1410,10 @@ var battle_auto_attack_enabled: bool = false
 var battle_auto_attack_delay: float = 0.0
 var battle_auto_attack_player_submissions: int = 0
 var battle_auto_attack_pet_submissions: int = 0
+var battle_auto_ui_cache_dirty: bool = true
+var battle_auto_ui_cache: Dictionary = {}
+var battle_auto_ui_cache_revision: int = 0
+var battle_auto_ui_cache_rebuild_count: int = 0
 var action_bar_collapsed: bool = false
 var encounter_rng := RandomNumberGenerator.new()
 var hud_status_text_cache: String = ""
@@ -7567,7 +7571,12 @@ func _set_battle_command_owner(owner: String) -> void:
 		})
 	_sync_battle_command_layout()
 	_sync_battle_buttons()
-	_layout_hud()
+	# The awakened command view owns one fixed viewport-sized layout across
+	# player/pet/submenu owners. Re-running the entire HUD layout for every
+	# command-owner transition invalidates unrelated Controls in the same input
+	# frame. The legacy panel still needs its owner-dependent dimensions.
+	if battle_command_awakened_host == null:
+		_layout_hud()
 
 
 func _on_battle_auto_button_pressed() -> void:
@@ -7706,6 +7715,31 @@ func _submit_battle_auto_pet_action() -> bool:
 
 func _battle_auto_settings() -> Dictionary:
 	return PlayerProgressModel.auto_battle_settings(player_profile)
+
+
+func _battle_auto_ui_payload(force: bool = false) -> Dictionary:
+	if (
+		not force
+		and not battle_auto_ui_cache_dirty
+		and not battle_auto_ui_cache.is_empty()
+	):
+		return battle_auto_ui_cache
+	# These helpers normalize the profile and inspect equipment/pet skill data.
+	# Build them only after a profile mutation, never on every battle click.
+	battle_auto_ui_cache_revision += 1
+	battle_auto_ui_cache_rebuild_count += 1
+	battle_auto_ui_cache = {
+		"revision": battle_auto_ui_cache_revision,
+		"settings": _battle_auto_settings(),
+		"playerOptions": _auto_settings_player_action_options(),
+		"petOptions": _auto_settings_pet_slot_options(),
+	}
+	battle_auto_ui_cache_dirty = false
+	return battle_auto_ui_cache
+
+
+func _invalidate_battle_auto_ui_cache() -> void:
+	battle_auto_ui_cache_dirty = true
 
 
 func _battle_player_has_spirit_id(spirit_id: String) -> bool:
@@ -8753,6 +8787,7 @@ func _mark_progress_ui_caches_dirty() -> void:
 	quest_marker_source_signature_cache = ""
 	quest_marker_signature_cache = ""
 	quest_marker_state_cache.clear()
+	_invalidate_battle_auto_ui_cache()
 
 
 func _flush_profile_save_if_due(delta: float) -> void:
@@ -10289,13 +10324,17 @@ func _refresh_battle_target_seed() -> void:
 
 func _start_battle(next_battle_state: Dictionary) -> void:
 	battle_pet_art_elapsed = 0.0
+	_invalidate_battle_auto_ui_cache()
 	_warm_battle_character_appearance_state(next_battle_state)
 	PetActionAssetCatalog.warm_battle_state(next_battle_state)
 	MountedCharacterAssetCatalog.warm_battle_state(next_battle_state)
 	if bool(next_battle_state.get("reviewLab", false)):
 		MountedBattlePresentationModel.warm_battle_state(next_battle_state)
 		BattleRangedProjectileAssetCatalog.warm_all()
-	BattleArenaVisualCatalog.warm_state(next_battle_state)
+	BattleArenaVisualCatalog.warm_state(
+		next_battle_state,
+		battle_layout_owner_review_capture
+	)
 	_panel_flow()._start_battle(next_battle_state)
 
 
@@ -13549,13 +13588,15 @@ func _update_battle_passive_panel() -> void:
 		return
 	if not battle_active or battle_hover_info_actor_id == "":
 		battle_passive_panel.visible = false
-		battle_passive_label.text = ""
+		if battle_passive_label.text != "":
+			battle_passive_label.text = ""
 		return
 	var actor := BattleModel.actor_by_id(battle_state, battle_hover_info_actor_id)
 	var text := BattlePassiveCatalog.display_text_for_actor(actor)
-	battle_passive_label.text = text
-	battle_passive_panel.visible = false
-	_layout_hud()
+	if battle_passive_label.text != text:
+		battle_passive_label.text = text
+	# Geometry is established by _layout_hud at battle start and on viewport
+	# changes. Hovering another actor must not relayout the whole player HUD.
 	battle_passive_panel.visible = text != ""
 
 
@@ -15675,11 +15716,17 @@ func _online_player_label(player_info: Dictionary) -> String:
 
 func _draw_battle_scene() -> void:
 	var rect := _viewport_world_rect()
-	var arena_texture := BattleArenaVisualCatalog.texture_for_state(battle_state)
+	var arena_texture := BattleArenaVisualCatalog.texture_for_state(
+		battle_state,
+		battle_layout_owner_review_capture
+	)
 	if arena_texture != null:
 		draw_texture_rect(arena_texture, rect, false)
 		var readability_overlay := (
-			BattleArenaVisualCatalog.readability_overlay_for_state(battle_state)
+			BattleArenaVisualCatalog.readability_overlay_for_state(
+				battle_state,
+				battle_layout_owner_review_capture
+			)
 		)
 		if readability_overlay.a > 0.0:
 			draw_rect(rect, readability_overlay, true)
@@ -16043,9 +16090,14 @@ func _draw_formal_battle_character_actor(
 		Vector2(-target_size * 0.5, -target_size * 0.92),
 		Vector2(target_size, target_size)
 	)
-	# Phase379 character battle frames are authored in final board orientation.
-	# No selected appearance is mirrored at runtime.
-	draw_set_transform(pos, rotation_angle, Vector2.ONE)
+	var horizontal_scale := (
+		-1.0
+		if CharacterActionAssetCatalog.battle_flip_h_for_side(side, appearance_id)
+		else 1.0
+	)
+	# The two source views remain independently authored: preserve the enemy
+	# front view toward SE, and flip only the ally back view toward NW.
+	draw_set_transform(pos, rotation_angle, Vector2(horizontal_scale, 1.0))
 	draw_texture_rect(texture, target_rect, false, Color(1.0, 1.0, 1.0, alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	return true

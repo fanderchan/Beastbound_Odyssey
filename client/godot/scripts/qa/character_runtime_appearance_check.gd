@@ -42,7 +42,7 @@ static func run(host: Node) -> Dictionary:
 		)
 		if not CharacterActionAssetCatalog.warm(appearance_id):
 			errors.append("人物世界/战斗动作包无法预热：%s" % appearance_id)
-		_append_no_mirroring_errors(errors, appearance_id)
+		_append_direction_contract_errors(errors, appearance_id)
 		var south_idle := CharacterActionAssetCatalog.world_texture_for_frame(
 			"south",
 			"idle",
@@ -63,7 +63,8 @@ static func run(host: Node) -> Dictionary:
 		"appearanceCount": actual_ids.size(),
 		"worldFramesPerAppearance": 40,
 		"battleFramesPerAppearance": 180,
-		"runtimeMirroring": false,
+		"worldRuntimeMirroring": false,
+		"battlePresentationFlip": {"ally": true, "enemy": false},
 		"legacyFallbackAppearanceId": CharacterActionAssetCatalog.resolve_appearance_id(""),
 		"newAppearanceMountedFallback": "on_foot",
 		"errors": errors,
@@ -137,7 +138,7 @@ static func _append_battle_host_errors(errors: Array[String], host: Node) -> voi
 		errors.append("战斗中见习猎人已发布骑乘组合不再可用")
 
 
-static func _append_no_mirroring_errors(
+static func _append_direction_contract_errors(
 	errors: Array[String],
 	appearance_id: String
 ) -> void:
@@ -172,9 +173,19 @@ static func _append_no_mirroring_errors(
 				errors.append("人物世界方向是另一方向的像素镜像：%s/%s/%s" % [
 					appearance_id, first, second,
 				])
-	for side in ["ally", "enemy"]:
-		if CharacterActionAssetCatalog.battle_flip_h_for_side(side, appearance_id):
-			errors.append("人物战斗视角启用了运行时镜像：%s/%s" % [appearance_id, side])
+	if (
+		CharacterActionAssetCatalog.battle_view_for_side("ally")
+		!= CharacterActionAssetCatalog.VIEW_BACK
+		or CharacterActionAssetCatalog.battle_view_for_side("enemy")
+		!= CharacterActionAssetCatalog.VIEW_FRONT
+	):
+		errors.append("人物战斗前后视角与阵营映射不一致：%s" % appearance_id)
+	if not CharacterActionAssetCatalog.battle_flip_h_for_side("ally", appearance_id):
+		errors.append("人物我方背视角没有朝向战场左上：%s" % appearance_id)
+	if CharacterActionAssetCatalog.battle_flip_h_for_side("enemy", appearance_id):
+		errors.append("人物敌方正视角被错误翻向战场外侧：%s" % appearance_id)
+	if CharacterActionAssetCatalog.battle_flip_h_for_side("unknown", appearance_id):
+		errors.append("人物未知战斗阵营错误启用了展示翻转：%s" % appearance_id)
 	var available_actions := CharacterActionAssetCatalog.battle_actions_for_appearance(
 		appearance_id
 	)

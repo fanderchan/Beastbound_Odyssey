@@ -49,6 +49,9 @@ CAPTURE_SCRIPT_PATH = (
     / "qa"
     / "battle_layout_owner_review_capture.gd"
 )
+ARENA_CATALOG_SCRIPT_PATH = (
+    GODOT_PROJECT / "scripts" / "battle" / "battle_arena_visual_catalog.gd"
+)
 CAPTURE_FLAG = "--phase403-battle-layout-owner-review-capture"
 DEFAULT_OUTPUT_ROOT = Path(
     ".run/evidence/phase403_battle_layout_owner_review"
@@ -92,6 +95,12 @@ END_MARKER = "PHASE403_BATTLE_LAYOUT_OWNER_REVIEW_END"
 FAILURE_MARKER = "PHASE403_BATTLE_LAYOUT_OWNER_REVIEW_FAILED"
 ATTACK_INPUT_BEFORE_MARKER = "PHASE403_BATTLE_LAYOUT_ATTACK_INPUT_BEFORE"
 ATTACK_INPUT_AFTER_MARKER = "PHASE403_BATTLE_LAYOUT_ATTACK_INPUT_AFTER"
+ARENA_MARKER = "PHASE412_BATTLE_ARENA_VISUAL"
+EXPECTED_ARENA_ID = "moss_meadow"
+EXPECTED_ARENA_BUNDLE_ID = "battle_review_arenas_v1"
+EXPECTED_ARENA_SHA256 = (
+    "215210ead48013359fe16cf0d4043811d4ef86d160cbedcdc08c1f11c0effa69"
+)
 
 
 class Phase403BattleLayoutRecordingError(RuntimeError):
@@ -181,6 +190,48 @@ def _require_positive_finite_float(fields: dict[str, str], key: str) -> float:
             f"Phase403日志字段{key}必须为有限正数"
         )
     return value
+
+
+def _validate_arena_visual_marker(line: str) -> dict[str, Any]:
+    fields = _parse_fields(line)
+    expected = {
+        "id": EXPECTED_ARENA_ID,
+        "bundle": EXPECTED_ARENA_BUNDLE_ID,
+        "source_map": "firebud_village_gate",
+        "sha256": EXPECTED_ARENA_SHA256,
+        "viewport": "1280x720",
+        "owner_review": "pending",
+    }
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise Phase403BattleLayoutRecordingError(
+            "Phase412战场候选ID、来源地图、哈希、尺寸或生命周期漂移"
+        )
+    for key in ("qa_preview", "explicit_capture"):
+        _require_bool(fields, key, True)
+    for key in (
+        "runtime_enabled",
+        "release_approved",
+        "ordinary_player_enabled",
+        "review_lab",
+        "baked_actors",
+    ):
+        _require_bool(fields, key, False)
+    return {
+        "id": EXPECTED_ARENA_ID,
+        "bundleId": EXPECTED_ARENA_BUNDLE_ID,
+        "sourceMapId": "firebud_village_gate",
+        "sha256": EXPECTED_ARENA_SHA256,
+        "width": 1280,
+        "height": 720,
+        "ownerReviewStatus": "pending",
+        "runtimeEnabled": False,
+        "releaseApproved": False,
+        "qaPreviewEnabled": True,
+        "explicitCaptureOnly": True,
+        "ordinaryPlayerEnabled": False,
+        "reviewLab": False,
+        "bakedActors": False,
+    }
 
 
 def _build_godot_command(
@@ -280,6 +331,8 @@ def _require_formal_active_pet_fixture_contract(
         r'profile\s*=\s*PlayerProgressModel\.normalize_profile\(profile\)',
         r'host\.call\("_start_battle",\s*state\)\s*'
         r'await\s+host\.get_tree\(\)\.process_frame\s*'
+        r'if\s+not\s+_assert_owner_review_arena_visual_contract\(\):\s*'
+        r'return\s+false\s*'
         r'if\s+not\s+_assert_post_start_formation_contract\(\):\s*'
         r'return\s+false',
         r'int\(readiness\.get\("actorCount",\s*0\)\)\s*!=\s*20',
@@ -457,10 +510,12 @@ def _require_perf_evidence_contract(capture_source: str) -> None:
     helper_names = (
         "_cache_host_property_names",
         "_perf_environment_snapshot",
+        "_wait_for_perf_foreground_focus",
         "_print_perf_environment",
         "_begin_perf_frame_sampling",
         "_capture_perf_process_frame",
         "_disconnect_perf_frame_sampler",
+        "_wait_for_perf_sample_duration",
         "_end_perf_frame_sampling",
         "_reset_perf_segments",
         "_record_perf_qa_sync_wall",
@@ -509,6 +564,10 @@ def _require_perf_evidence_contract(capture_source: str) -> None:
         capture_source,
         "_print_perf_environment",
     )
+    foreground_source = _gdscript_function_source(
+        capture_source,
+        "_wait_for_perf_foreground_focus",
+    )
     begin_source = _gdscript_function_source(
         capture_source,
         "_begin_perf_frame_sampling",
@@ -520,6 +579,10 @@ def _require_perf_evidence_contract(capture_source: str) -> None:
     disconnect_source = _gdscript_function_source(
         capture_source,
         "_disconnect_perf_frame_sampler",
+    )
+    wait_source = _gdscript_function_source(
+        capture_source,
+        "_wait_for_perf_sample_duration",
     )
     end_source = _gdscript_function_source(
         capture_source,
@@ -661,7 +724,14 @@ def _require_perf_evidence_contract(capture_source: str) -> None:
         '"samplerDisconnected": disconnected',
         '"pairs": pair_values',
         'print("%s %s" % [PERF_RAW_FRAME_MARKER, JSON.stringify(payload)])',
+        "duration_usec < int(PERF_STATE_SECONDS * 1000000.0)",
         "duration_usec > int((PERF_STATE_SECONDS + 1.8) * 1000000.0)",
+    )
+    wait_fragments = (
+        "_perf_sample_started_usec",
+        "int(PERF_STATE_SECONDS * 1000000.0)",
+        "while Time.get_ticks_usec() < target_usec:",
+        "await host.get_tree().process_frame",
     )
     segment_fragments = (
         '"realLeftClickCount": completed_switches * 3',
@@ -758,6 +828,9 @@ def _require_perf_evidence_contract(capture_source: str) -> None:
         )
         is not None
         or "tree.process_frame.disconnect(sampler)" not in disconnect_source
+        or any(fragment not in wait_source for fragment in wait_fragments)
+        or run_source.count("await _wait_for_perf_sample_duration()") != 3
+        or "create_timer(PERF_STATE_SECONDS)" in run_source
         or any(fragment not in end_source for fragment in end_fragments)
         or any(fragment not in segment_source for fragment in segment_fragments)
         or "_perf_target_marker_lines.clear()" not in reset_source
@@ -815,22 +888,36 @@ def _require_perf_evidence_contract(capture_source: str) -> None:
         )
         != 1
         or capture_source.count("_record_perf_qa_sync_wall(") < 8
+        or "const PERF_FOREGROUND_TIMEOUT_MSEC := 3000" not in capture_source
+        or "const PERF_FOREGROUND_RETRY_MSEC := 250" not in capture_source
+        or foreground_source.count(
+            "DisplayServer.window_move_to_foreground()"
+        )
+        != 1
+        or foreground_source.count("DisplayServer.window_is_focused()") != 1
+        or foreground_source.count("await tree.process_frame") != 1
+        or "while Time.get_ticks_msec() - started_msec "
+        "<= PERF_FOREGROUND_TIMEOUT_MSEC:" not in foreground_source
+        or "PHASE403_BATTLE_LAYOUT_PERF_FOCUS" not in foreground_source
     ):
         raise Phase403BattleLayoutRecordingError(
-            "Phase403性能证据必须缓存Main属性并被动记录真实逐帧、环境和输入分段"
+            "Phase403性能证据必须缓存Main属性、限时取得前台并被动记录逐帧环境和输入分段"
         )
 
     ordered_run_fragments = (
         "if not _assert_live_layout_contract():",
         "if not _assert_review_only_mount_width_contract():",
+        "if not await _wait_for_perf_foreground_focus():",
         '_print_perf_environment("start")',
         " stage=pre_windows actors=20 slots=20 ally=10 enemy=10 ",
         '_begin_perf_frame_sampling("idle")',
         "state=idle_begin",
+        "await _wait_for_perf_sample_duration()",
         '_end_perf_frame_sampling("idle")',
         "state=idle_end",
         '_begin_perf_frame_sampling("command_selection")',
         "state=command_selection_begin",
+        "await _wait_for_perf_sample_duration()",
         '_end_perf_frame_sampling("command_selection")',
         "state=command_selection_end",
         "_reset_perf_segments()",
@@ -843,6 +930,7 @@ def _require_perf_evidence_contract(capture_source: str) -> None:
         '_record_perf_operation_wall("recall", operation_started_usec)',
         'await _click_player_attack("性能目标切换攻击")',
         '_record_perf_operation_wall("attack", operation_started_usec)',
+        "await _wait_for_perf_sample_duration()",
         '_end_perf_frame_sampling("target_switch")',
         "_print_perf_target_markers(completed_switches)",
         "_print_perf_segments(completed_switches)",
@@ -868,7 +956,8 @@ def _require_perf_evidence_contract(capture_source: str) -> None:
                 f"Phase403 {state}逐帧采样窗口必须各且仅有一次"
             )
     if (
-        run_source.count("_print_perf_environment(") != 2
+        run_source.count("_wait_for_perf_foreground_focus(") != 1
+        or run_source.count("_print_perf_environment(") != 2
         or run_source.count("PERF_INVARIANT_MARKER") != 2
         or run_source.count("hud_collisions=0 ") != 3
         or run_source.count("viewport_violations=0 layout_identity=%s") != 2
@@ -1624,14 +1713,14 @@ def _require_attack_input_diagnostic_contract(
             r"\s*await host\.get_tree\(\)\.process_frame\s*\n"
             r"\s*_capture_attack_input_route_stage\(\s*input_probe,\s*"
             r'target_control,\s*"release_process"\s*\)\s*\n'
-            r"\s*await RenderingServer\.frame_post_draw\s*\n"
             r"\s*if not input_probe\.is_empty\(\):\s*\n"
+            r"\s*await RenderingServer\.frame_post_draw\s*\n"
             r'\s*input_probe\["postDrawBoundaryReached"\]\s*=\s*true\s*\n'
             r"\s*_capture_attack_input_route_stage\(\s*input_probe,\s*"
             r'target_control,\s*"release_post_draw"\s*\)\s*\n'
             r"\s*await host\.get_tree\(\)\.process_frame\s*\n"
-            r"\s*await RenderingServer\.frame_post_draw\s*\n"
             r"\s*if not input_probe\.is_empty\(\):\s*\n"
+            r"\s*await RenderingServer\.frame_post_draw\s*\n"
             r'\s*input_probe\["nextLoopPostDrawBoundaryReached"\]\s*=\s*true\s*\n'
             r"\s*_capture_attack_input_route_stage\(\s*input_probe,\s*"
             r'target_control,\s*"release_next_loop_post_draw"\s*\)',
@@ -1639,6 +1728,8 @@ def _require_attack_input_diagnostic_contract(
             flags=re.MULTILINE,
         )
         is None
+        or left_click_source.count("if not input_probe.is_empty():") != 3
+        or "if input_probe.is_empty():" in left_click_source
         or re.search(
             r"Input\.parse_input_event\(press\)\s*\n"
             r'\s*_record_perf_input_dispatch_wall\("press",\s*'
@@ -1942,6 +2033,9 @@ def _require_main_flag_wiring() -> None:
         command_host_source = COMMAND_HOST_SCRIPT_PATH.read_text(
             encoding="utf-8"
         )
+        arena_catalog_source = ARENA_CATALOG_SCRIPT_PATH.read_text(
+            encoding="utf-8"
+        )
     except OSError as error:
         raise Phase403BattleLayoutRecordingError(
             "无法读取Phase403真实Main录像接线源码"
@@ -1960,6 +2054,9 @@ def _require_main_flag_wiring() -> None:
         CAPTURE_SCRIPT_PATH.name,
         "BattleLayoutOwnerReviewCapture.is_flag",
         "_run_battle_layout_owner_review_capture",
+        "BattleArenaVisualCatalog.warm_state(",
+        "BattleArenaVisualCatalog.texture_for_state(",
+        "battle_layout_owner_review_capture",
     )
     capture_fragments = (
         f'const CAPTURE_FLAG := "{CAPTURE_FLAG}"',
@@ -1975,6 +2072,18 @@ def _require_main_flag_wiring() -> None:
         "runtime_frame=256x256",
         "source_image_frame=512x512",
         "slot_collisions_recomputed=false",
+        'const ARENA_VISUAL_MARKER := "PHASE412_BATTLE_ARENA_VISUAL"',
+        "BattleArenaVisualCatalog.OWNER_REVIEW_ARENA_ID_KEY",
+        "_assert_owner_review_arena_visual_contract",
+        "BattleArenaVisualCatalog.texture_for_state(state, false)",
+        "ordinary_player_enabled=false",
+    )
+    arena_catalog_fragments = (
+        'const OWNER_REVIEW_ARENA_ID_KEY := "battleArenaOwnerReviewId"',
+        "allow_owner_review_preview: bool = false",
+        "if allow_owner_review_preview:",
+        "texture_for_state(owner_review_state, false) != null",
+        "texture_for_state(owner_review_state, true) == null",
     )
     if any(fragment not in main_source for fragment in main_fragments):
         raise Phase403BattleLayoutRecordingError(
@@ -1983,6 +2092,13 @@ def _require_main_flag_wiring() -> None:
     if any(fragment not in capture_source for fragment in capture_fragments):
         raise Phase403BattleLayoutRecordingError(
             "Phase403录像controller缺少正式fixture或跨帧左键合同"
+        )
+    if any(
+        fragment not in arena_catalog_source
+        for fragment in arena_catalog_fragments
+    ):
+        raise Phase403BattleLayoutRecordingError(
+            "Phase412待审战场没有显式审片门禁或普通玩家失败关闭合同"
         )
     if "phase402" in capture_source.lower():
         raise Phase403BattleLayoutRecordingError(
@@ -2796,6 +2912,7 @@ def _validate_godot_log(
     fixture_lines: list[str] = []
     layout_lines: list[str] = []
     review_only_lines: list[str] = []
+    arena_lines: list[str] = []
     end_lines: list[str] = []
     chapter_lines: list[str] = []
     target_lines: list[str] = []
@@ -2811,6 +2928,8 @@ def _validate_godot_log(
             layout_lines.append(line)
         elif line.startswith(REVIEW_ONLY_MARKER + " "):
             review_only_lines.append(line)
+        elif line.startswith(ARENA_MARKER + " "):
+            arena_lines.append(line)
         elif line.startswith(CHAPTER_MARKER + " "):
             chapter_lines.append(line)
         elif line.startswith(TARGET_MARKER + " "):
@@ -2826,18 +2945,20 @@ def _validate_godot_log(
         FIXTURE_MARKER: fixture_lines,
         LAYOUT_MARKER: layout_lines,
         REVIEW_ONLY_MARKER: review_only_lines,
+        ARENA_MARKER: arena_lines,
         ATTACK_INPUT_BEFORE_MARKER: attack_before_lines,
         ATTACK_INPUT_AFTER_MARKER: attack_after_lines,
         END_MARKER: end_lines,
     }
     if any(len(lines) != 1 for lines in singular_markers.values()):
         raise Phase403BattleLayoutRecordingError(
-            "Phase403录像的起点、fixture、布局、攻击诊断、review-only与终点标记必须各且仅有一个"
+            "Phase403/412录像的起点、fixture、布局、战场、攻击诊断、review-only与终点标记必须各且仅有一个"
         )
     start_line = start_lines[0]
     fixture_line = fixture_lines[0]
     layout_line = layout_lines[0]
     review_only_line = review_only_lines[0]
+    arena_line = arena_lines[0]
     attack_before_line = attack_before_lines[0]
     attack_after_line = attack_after_lines[0]
     end_line = end_lines[0]
@@ -2953,6 +3074,8 @@ def _validate_godot_log(
     ):
         _require_bool(review_only, key, False)
 
+    arena_visual = _validate_arena_visual_marker(arena_line)
+
     chapters = tuple(
         _parse_fields(line).get("chapter", "") for line in chapter_lines
     )
@@ -3040,6 +3163,7 @@ def _validate_godot_log(
         "reviewOnlyMountWidthOnly": True,
         "reviewOnlyMountSlotCollisionClaimed": False,
         "ordinaryBattleContainsMount": False,
+        "arenaVisual": arena_visual,
         "attackInput": attack_input,
     }
 
@@ -3067,6 +3191,18 @@ def _phase403_capture_contract() -> dict[str, Any]:
         "reviewOnlyMountWidthOnly": True,
         "reviewOnlyMountSlotCollisionClaimed": False,
         "ordinaryBattleContainsMount": False,
+        "arenaVisual": {
+            "id": EXPECTED_ARENA_ID,
+            "bundleId": EXPECTED_ARENA_BUNDLE_ID,
+            "sourceMapId": "firebud_village_gate",
+            "sha256": EXPECTED_ARENA_SHA256,
+            "ownerReviewStatus": "pending",
+            "runtimeEnabled": False,
+            "releaseApproved": False,
+            "qaPreviewEnabled": True,
+            "explicitCaptureOnly": True,
+            "ordinaryPlayerEnabled": False,
+        },
         "httpRequests": False,
         "serverWrites": 0,
         "audioRequired": True,

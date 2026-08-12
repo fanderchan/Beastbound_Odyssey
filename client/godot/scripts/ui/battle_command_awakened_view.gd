@@ -34,6 +34,11 @@ var _pet_options: Array[Dictionary] = []
 var _settings: Dictionary = {}
 var _battle_active := false
 var _commands_locked := true
+var _applied_layout_signature := ""
+var _layout_apply_count := 0
+var _layout_skip_count := 0
+var _button_medallion_kinds: Dictionary = {}
+var _medallion_styles: Dictionary = {}
 
 var _command_layer: Control
 var _contract_grid: GridContainer
@@ -175,9 +180,15 @@ func apply_command_state(owner: String, visible_ids: Array, ordered_ids: Array) 
 	_owner = owner
 	_visible_ids = visible_ids.duplicate()
 	_ordered_ids = ordered_ids.duplicate()
-	_contract_grid.columns = 1 if owner != "player" else 4
 	if owner != "pet":
 		_pet_skill_menu_open = false
+	var next_signature := _command_layout_signature()
+	if next_signature == _applied_layout_signature:
+		_layout_skip_count += 1
+		return
+	_applied_layout_signature = next_signature
+	_layout_apply_count += 1
+	_contract_grid.columns = 1 if owner != "player" else 4
 	_sync_command_labels()
 	_hide_all_controls()
 	if _auto_enabled:
@@ -201,6 +212,7 @@ func set_auto_enabled(enabled: bool) -> void:
 
 
 func refresh_layout() -> void:
+	_applied_layout_signature = ""
 	apply_command_state(_owner, _visible_ids, _ordered_ids)
 
 
@@ -277,6 +289,9 @@ func snapshot() -> Dictionary:
 		"iconsOk": icons_ok,
 		"activeButtonCount": visible_labels.size(),
 		"panelSize": size,
+		"layoutApplyCount": _layout_apply_count,
+		"layoutSkipCount": _layout_skip_count,
+		"medallionStyleResourceCount": _medallion_styles.size(),
 	}
 
 
@@ -469,10 +484,36 @@ func _set_button_content(button: Button, label_text: String, icon_id: String) ->
 	var parts := _button_parts.get(button, {}) as Dictionary
 	var label := parts.get("label", null) as Label
 	var icon_rect := parts.get("icon", null) as TextureRect
-	if label != null:
+	if label != null and label.text != label_text:
 		label.text = label_text
 	if icon_rect != null:
-		icon_rect.texture = VisualSkin.icon(icon_id)
+		var next_texture := VisualSkin.icon(icon_id)
+		if icon_rect.texture != next_texture:
+			icon_rect.texture = next_texture
+
+
+func _command_layout_signature() -> String:
+	var parts := PackedStringArray([
+		_owner,
+		"auto=%s" % str(_auto_enabled),
+		"pet_skill=%s" % str(_pet_skill_menu_open),
+		"size=%.3f,%.3f" % [size.x, size.y],
+	])
+	parts.append("visible")
+	for command_id in _visible_ids:
+		parts.append(str(command_id))
+	parts.append("ordered")
+	for command_id in _ordered_ids:
+		parts.append(str(command_id))
+	parts.append("labels")
+	var command_ids: Array = _command_buttons.keys()
+	command_ids.sort()
+	for command_id in command_ids:
+		var button := _command_buttons.get(command_id, null) as Button
+		parts.append(
+			"%s=%s" % [str(command_id), button.text if button != null else ""]
+		)
+	return "\u001f".join(parts)
 
 
 func _sync_command_labels() -> void:
@@ -625,7 +666,26 @@ func _apply_button_parts_geometry(button: Button, compact: bool, danger: bool) -
 		label.size = Vector2(button.size.x + 12.0, 22)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.add_theme_font_size_override("font_size", 17)
-	medallion.add_theme_stylebox_override("panel", VisualSkin.medallion_style("danger" if danger else "normal"))
+	_apply_button_medallion_visual(
+		button,
+		"disabled" if button.disabled else "danger" if danger else "normal"
+	)
+
+
+func _apply_button_medallion_visual(button: Button, kind: String) -> void:
+	if button == null or str(_button_medallion_kinds.get(button, "")) == kind:
+		return
+	var parts := _button_parts.get(button, {}) as Dictionary
+	var medallion := parts.get("medallion", null) as Panel
+	if medallion == null:
+		return
+	if not _medallion_styles.has(kind):
+		_medallion_styles[kind] = VisualSkin.medallion_style(kind)
+	medallion.add_theme_stylebox_override(
+		"panel",
+		_medallion_styles[kind] as StyleBoxFlat
+	)
+	_button_medallion_kinds[button] = kind
 
 
 func _sync_disabled_visuals() -> void:
@@ -653,13 +713,15 @@ func _sync_disabled_visuals() -> void:
 		var icon_rect := parts.get("icon", null) as TextureRect
 		var label := parts.get("label", null) as Label
 		var disabled := button.disabled
+		var kind := "disabled" if disabled else "danger" if button == _auto_button and _auto_enabled else "normal"
 		if medallion != null:
-			var kind := "disabled" if disabled else "danger" if button == _auto_button and _auto_enabled else "normal"
-			medallion.add_theme_stylebox_override("panel", VisualSkin.medallion_style(kind))
-		if icon_rect != null:
-			icon_rect.modulate = Color(0.62, 0.60, 0.55, 0.72) if disabled else Color.WHITE
-		if label != null:
-			label.modulate = Color(0.66, 0.64, 0.59, 0.82) if disabled else Color.WHITE
+			_apply_button_medallion_visual(button, kind)
+		var next_icon_modulate := Color(0.62, 0.60, 0.55, 0.72) if disabled else Color.WHITE
+		if icon_rect != null and icon_rect.modulate != next_icon_modulate:
+			icon_rect.modulate = next_icon_modulate
+		var next_label_modulate := Color(0.66, 0.64, 0.59, 0.82) if disabled else Color.WHITE
+		if label != null and label.modulate != next_label_modulate:
+			label.modulate = next_label_modulate
 
 
 func _pet_shortcut_unavailable(shortcut_id: String) -> bool:

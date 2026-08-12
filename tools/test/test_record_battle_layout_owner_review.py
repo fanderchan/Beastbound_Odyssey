@@ -248,6 +248,15 @@ def _godot_log() -> str:
         "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
         "Movie Maker mode enabled, recording movie in 1280x720 @ 30 FPS",
         (
+            "PHASE412_BATTLE_ARENA_VISUAL id=moss_meadow "
+            "bundle=battle_review_arenas_v1 source_map=firebud_village_gate "
+            f"sha256={TOOL.EXPECTED_ARENA_SHA256} viewport=1280x720 "
+            "owner_review=pending runtime_enabled=false "
+            "release_approved=false qa_preview=true explicit_capture=true "
+            "ordinary_player_enabled=false review_lab=false "
+            "baked_actors=false"
+        ),
+        (
             "PHASE403_BATTLE_LAYOUT_REVIEW_ONLY kind=integrated_mount "
             "bundle=mounted_action_novice_hunter_v1_bui_novice_sprout_v1 "
             "character=novice_hunter_v1 form=bui_novice_sprout_earth5_wind5 "
@@ -442,9 +451,8 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
                 1,
             ),
             capture_source.replace(
-                "await host.get_tree().process_frame\n"
-                "\tif not _assert_post_start_formation_contract():",
-                "await host.get_tree().process_frame\n\tif false:",
+                "if not _assert_owner_review_arena_visual_contract():",
+                "if false:",
                 1,
             ),
             capture_source.replace(
@@ -537,7 +545,8 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
             "\t\ttarget_control,\n"
             "\t\t\"release_process\"\n"
             "\t)\n"
-            "\tawait RenderingServer.frame_post_draw"
+            "\tif not input_probe.is_empty():\n"
+            "\t\tawait RenderingServer.frame_post_draw"
         )
         invalid_attack_contracts = (
             (
@@ -1016,28 +1025,11 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
             (
                 capture_source.replace(
                     '\tawait host.get_tree().process_frame\n'
-                    '\tawait RenderingServer.frame_post_draw\n'
                     '\tif not input_probe.is_empty():\n'
+                    '\t\tawait RenderingServer.frame_post_draw\n'
                     '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
-                    '\tawait RenderingServer.frame_post_draw\n'
                     '\tif not input_probe.is_empty():\n'
-                    '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
-                    1,
-                ),
-                command_view_source,
-                command_host_source,
-                main_source,
-            ),
-            (
-                capture_source.replace(
-                    '\tawait host.get_tree().process_frame\n'
-                    '\tawait RenderingServer.frame_post_draw\n'
-                    '\tif not input_probe.is_empty():\n'
-                    '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
-                    '\tawait host.get_tree().process_frame\n'
-                    '\tawait host.get_tree().process_frame\n'
-                    '\tawait RenderingServer.frame_post_draw\n'
-                    '\tif not input_probe.is_empty():\n'
+                    '\t\tawait RenderingServer.frame_post_draw\n'
                     '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
                     1,
                 ),
@@ -1048,12 +1040,13 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
             (
                 capture_source.replace(
                     '\tawait host.get_tree().process_frame\n'
-                    '\tawait RenderingServer.frame_post_draw\n'
                     '\tif not input_probe.is_empty():\n'
+                    '\t\tawait RenderingServer.frame_post_draw\n'
                     '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
-                    '\tawait RenderingServer.frame_post_draw\n'
+                    '\tawait host.get_tree().process_frame\n'
                     '\tawait host.get_tree().process_frame\n'
                     '\tif not input_probe.is_empty():\n'
+                    '\t\tawait RenderingServer.frame_post_draw\n'
                     '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
                     1,
                 ),
@@ -1063,8 +1056,24 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
             ),
             (
                 capture_source.replace(
-                    'target_control,\n\t\t"release_next_loop_post_draw"',
-                    'target_control,\n\t\t"release_post_draw"',
+                    '\tawait host.get_tree().process_frame\n'
+                    '\tif not input_probe.is_empty():\n'
+                    '\t\tawait RenderingServer.frame_post_draw\n'
+                    '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
+                    '\tif not input_probe.is_empty():\n'
+                    '\t\tawait RenderingServer.frame_post_draw\n'
+                    '\tawait host.get_tree().process_frame\n'
+                    '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
+                    1,
+                ),
+                command_view_source,
+                command_host_source,
+                main_source,
+            ),
+            (
+                capture_source.replace(
+                    'target_control,\n\t\t\t"release_next_loop_post_draw"',
+                    'target_control,\n\t\t\t"release_post_draw"',
                     1,
                 ),
                 command_view_source,
@@ -1284,6 +1293,13 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
         self.assertTrue(result["reviewOnlyMountWidthOnly"])
         self.assertFalse(result["reviewOnlyMountSlotCollisionClaimed"])
         self.assertFalse(result["ordinaryBattleContainsMount"])
+        self.assertEqual(result["arenaVisual"]["id"], "moss_meadow")
+        self.assertEqual(
+            result["arenaVisual"]["sha256"],
+            TOOL.EXPECTED_ARENA_SHA256,
+        )
+        self.assertFalse(result["arenaVisual"]["runtimeEnabled"])
+        self.assertFalse(result["arenaVisual"]["ordinaryPlayerEnabled"])
         self.assertEqual(result["attackInput"]["classification"], "ok")
         self.assertEqual(
             result["attackInput"]["postDrawBoundary"],
@@ -1473,6 +1489,17 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
                 "inserted_into_battle_state=false",
                 "inserted_into_battle_state=true",
             ),
+            ("owner_review=pending", "owner_review=approved"),
+            ("runtime_enabled=false", "runtime_enabled=true"),
+            (
+                "ordinary_player_enabled=false",
+                "ordinary_player_enabled=true",
+            ),
+            ("baked_actors=false", "baked_actors=true"),
+            (
+                f"sha256={TOOL.EXPECTED_ARENA_SHA256}",
+                "sha256=" + "0" * 64,
+            ),
         )
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "godot.log"
@@ -1499,6 +1526,7 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
                 TOOL.FIXTURE_MARKER,
                 TOOL.LAYOUT_MARKER,
                 TOOL.REVIEW_ONLY_MARKER,
+                TOOL.ARENA_MARKER,
                 TOOL.END_MARKER,
                 TOOL.ATTACK_INPUT_BEFORE_MARKER,
                 TOOL.ATTACK_INPUT_AFTER_MARKER,
@@ -2113,6 +2141,13 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
         self.assertTrue(contract["reviewOnlyMountWidthOnly"])
         self.assertFalse(contract["reviewOnlyMountSlotCollisionClaimed"])
         self.assertFalse(contract["ordinaryBattleContainsMount"])
+        self.assertEqual(contract["arenaVisual"]["id"], "moss_meadow")
+        self.assertEqual(
+            contract["arenaVisual"]["ownerReviewStatus"],
+            "pending",
+        )
+        self.assertFalse(contract["arenaVisual"]["runtimeEnabled"])
+        self.assertFalse(contract["arenaVisual"]["ordinaryPlayerEnabled"])
         self.assertEqual(
             contract["exactAdjacentTargetSlots"],
             ["enemy.front.4", "enemy.front.5"],

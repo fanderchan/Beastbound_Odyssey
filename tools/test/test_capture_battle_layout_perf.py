@@ -437,6 +437,15 @@ def _perf_log(
         "Godot Engine v4.7.stable.official",
         "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
         (
+            "PHASE412_BATTLE_ARENA_VISUAL id=moss_meadow "
+            "bundle=battle_review_arenas_v1 source_map=firebud_village_gate "
+            f"sha256={TOOL.DIAGNOSTIC.EXPECTED_ARENA_SHA256} "
+            "viewport=1280x720 owner_review=pending "
+            "runtime_enabled=false release_approved=false qa_preview=true "
+            "explicit_capture=true ordinary_player_enabled=false "
+            "review_lab=false baked_actors=false"
+        ),
+        (
             "PHASE403_BATTLE_LAYOUT_REVIEW_ONLY kind=integrated_mount "
             "bundle=mounted_action_novice_hunter_v1_bui_novice_sprout_v1 "
             "character=novice_hunter_v1 form=bui_novice_sprout_earth5_wind5 "
@@ -630,9 +639,8 @@ class CaptureBattleLayoutPerfTest(unittest.TestCase):
                 1,
             ),
             capture_source.replace(
-                "await host.get_tree().process_frame\n"
-                "\tif not _assert_post_start_formation_contract():",
-                "await host.get_tree().process_frame\n\tif false:",
+                "if not _assert_owner_review_arena_visual_contract():",
+                "if false:",
                 1,
             ),
             capture_source.replace(
@@ -902,7 +910,8 @@ class CaptureBattleLayoutPerfTest(unittest.TestCase):
             "\t\ttarget_control,\n"
             "\t\t\"release_process\"\n"
             "\t)\n"
-            "\tawait RenderingServer.frame_post_draw"
+            "\tif not input_probe.is_empty():\n"
+            "\t\tawait RenderingServer.frame_post_draw"
         )
         invalid_attack_contracts = (
             capture_source.replace(
@@ -1166,40 +1175,40 @@ class CaptureBattleLayoutPerfTest(unittest.TestCase):
             ),
             capture_source.replace(
                 '\tawait host.get_tree().process_frame\n'
-                '\tawait RenderingServer.frame_post_draw\n'
                 '\tif not input_probe.is_empty():\n'
+                '\t\tawait RenderingServer.frame_post_draw\n'
                 '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
-                '\tawait RenderingServer.frame_post_draw\n'
                 '\tif not input_probe.is_empty():\n'
-                '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
-                1,
-            ),
-            capture_source.replace(
-                '\tawait host.get_tree().process_frame\n'
-                '\tawait RenderingServer.frame_post_draw\n'
-                '\tif not input_probe.is_empty():\n'
-                '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
-                '\tawait host.get_tree().process_frame\n'
-                '\tawait host.get_tree().process_frame\n'
-                '\tawait RenderingServer.frame_post_draw\n'
-                '\tif not input_probe.is_empty():\n'
+                '\t\tawait RenderingServer.frame_post_draw\n'
                 '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
                 1,
             ),
             capture_source.replace(
                 '\tawait host.get_tree().process_frame\n'
-                '\tawait RenderingServer.frame_post_draw\n'
                 '\tif not input_probe.is_empty():\n'
+                '\t\tawait RenderingServer.frame_post_draw\n'
                 '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
-                '\tawait RenderingServer.frame_post_draw\n'
+                '\tawait host.get_tree().process_frame\n'
                 '\tawait host.get_tree().process_frame\n'
                 '\tif not input_probe.is_empty():\n'
+                '\t\tawait RenderingServer.frame_post_draw\n'
                 '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
                 1,
             ),
             capture_source.replace(
-                'target_control,\n\t\t"release_next_loop_post_draw"',
-                'target_control,\n\t\t"release_post_draw"',
+                '\tawait host.get_tree().process_frame\n'
+                '\tif not input_probe.is_empty():\n'
+                '\t\tawait RenderingServer.frame_post_draw\n'
+                '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
+                '\tif not input_probe.is_empty():\n'
+                '\t\tawait RenderingServer.frame_post_draw\n'
+                '\tawait host.get_tree().process_frame\n'
+                '\t\tinput_probe["nextLoopPostDrawBoundaryReached"] = true',
+                1,
+            ),
+            capture_source.replace(
+                'target_control,\n\t\t\t"release_next_loop_post_draw"',
+                'target_control,\n\t\t\t"release_post_draw"',
                 1,
             ),
             capture_source.replace(
@@ -1413,6 +1422,9 @@ class CaptureBattleLayoutPerfTest(unittest.TestCase):
         self.assertTrue(result["reviewOnlyMountWidthOnly"])
         self.assertFalse(result["reviewOnlyMountSlotCollisionClaimed"])
         self.assertFalse(result["ordinaryBattleContainsMount"])
+        self.assertEqual(result["arenaVisual"]["id"], "moss_meadow")
+        self.assertFalse(result["arenaVisual"]["runtimeEnabled"])
+        self.assertFalse(result["arenaVisual"]["ordinaryPlayerEnabled"])
         _, current_after = _attack_marker_lines()
         _, delivered_after = _attack_marker_lines(same_loop_delivered=True)
         delivered_same_loop_log = _perf_log().replace(
@@ -1591,6 +1603,22 @@ class CaptureBattleLayoutPerfTest(unittest.TestCase):
             _perf_log().replace(
                 "slot_collisions_recomputed=false",
                 "slot_collisions_recomputed=true",
+            ),
+            _perf_log().replace(
+                "owner_review=pending",
+                "owner_review=approved",
+            ),
+            _perf_log().replace(
+                "runtime_enabled=false",
+                "runtime_enabled=true",
+            ),
+            _perf_log().replace(
+                "ordinary_player_enabled=false",
+                "ordinary_player_enabled=true",
+            ),
+            _perf_log().replace(
+                f"sha256={TOOL.DIAGNOSTIC.EXPECTED_ARENA_SHA256}",
+                "sha256=" + "0" * 64,
             ),
             _perf_log().replace(
                 "process_total=0.45ms",
