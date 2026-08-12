@@ -294,6 +294,7 @@ function buildAuthoritativeEncounter({catalog, battleExpCatalog, map, source, se
     zoneId,
     groupId,
     rewardTableId,
+    bossMechanicId: String(zone.bossMechanicId || ""),
     interactionId,
     sourceInteractionId: interactionId,
     sourceInteractionName: String(interaction && interaction.name || ""),
@@ -444,6 +445,14 @@ function normalizeSelectedWildPet(catalog, rawEntry, options) {
       DEFAULT_CAPTURE_DIFFICULTY,
     ),
   };
+  const battleAppearanceFormId = String(entry.battleAppearanceFormId || "").trim();
+  if (battleAppearanceFormId !== "") {
+    result.battleAppearanceFormId = battleAppearanceFormId;
+  }
+  const battleDisplayName = String(entry.battleDisplayName || "").trim();
+  if (battleDisplayName !== "") {
+    result.battleDisplayName = battleDisplayName;
+  }
   const chanceOverride = optionalChance(
     entry.captureChanceOverride ?? entry.captureRateOverride ?? configuredCapture.chanceOverride,
   );
@@ -484,6 +493,9 @@ function validateEncounterSource(source, formsById, label, options = {}) {
   if (source.rewardTableId !== undefined) {
     requiredIdentifier(source.rewardTableId, `rewardTableId in ${label}`);
   }
+  if (source.bossMechanicId !== undefined) {
+    requiredIdentifier(source.bossMechanicId, `bossMechanicId in ${label}`);
+  }
   if (options.requireGeometry && !encounterSourceHasGeometry(source)) {
     throw new Error(`${label} is missing cells or rects`);
   }
@@ -517,6 +529,19 @@ function validateEncounterSource(source, formsById, label, options = {}) {
     const formId = requiredText(entry.formId || entry.templateId, `wild pet formId in ${label}`);
     if (!ownValue(formsById, formId)) {
       throw new Error(`${label} references unknown pet formId ${formId}`);
+    }
+    if (entry.battleAppearanceFormId !== undefined) {
+      const appearanceFormId = requiredIdentifier(entry.battleAppearanceFormId, `battleAppearanceFormId in ${label}`);
+      if (!ownValue(formsById, appearanceFormId)) {
+        throw new Error(`${label} references unknown battle appearance formId ${appearanceFormId}`);
+      }
+      const appearanceCapture = objectOrEmpty(entry.capture);
+      if (entry.catchable !== false && appearanceCapture.catchable !== false) {
+        throw new Error(`${label}/${formId} battle appearance overrides require an explicitly non-catchable entry`);
+      }
+    }
+    if (entry.battleDisplayName !== undefined) {
+      requiredText(entry.battleDisplayName, `battleDisplayName in ${label}`);
     }
     const min = clampInt(entry.levelMin ?? entry.level, 1, MAX_PET_LEVEL, 1);
     const max = clampInt(entry.levelMax ?? entry.level, min, MAX_PET_LEVEL, min);

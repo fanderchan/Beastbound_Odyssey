@@ -28,7 +28,7 @@ function soloPosition(mapId, cellX, cellY) {
 
 test("pet encounter catalog strictly loads the shared map and pet template documents", () => {
   assert.equal(Object.keys(catalog.mapsById).length, 37);
-  assert.equal(Object.keys(catalog.formsById).length, 34);
+  assert.equal(Object.keys(catalog.formsById).length, 36);
   assert.equal(Object.isFrozen(catalog), true);
   assert.equal(Object.isFrozen(catalog.mapsById.firebud_village_gate.zonesById.village_grass), true);
   assert.equal(Object.isFrozen(catalog.mapsById.shadow_oath_cavern_f4.zonesById.shadow_chase_training_floor), true);
@@ -63,6 +63,16 @@ test("pet encounter catalog fails startup for unknown forms, bad ranges, stats a
       name: "unknown form",
       mutate(zone) { zone.wildPetPool[0].formId = "missing_form"; },
       pattern: /unknown pet formId/,
+    },
+    {
+      name: "unknown battle appearance form",
+      mutate(zone) { zone.wildPetPool[0].battleAppearanceFormId = "missing_form"; zone.wildPetPool[0].catchable = false; },
+      pattern: /unknown battle appearance formId/,
+    },
+    {
+      name: "catchable battle appearance override",
+      mutate(zone) { zone.wildPetPool[0].battleAppearanceFormId = "test_form"; },
+      pattern: /battle appearance overrides require an explicitly non-catchable entry/,
     },
     {
       name: "inverted level range",
@@ -267,7 +277,12 @@ test("manual guardian zones require the registered nearby interaction and are no
   assert.equal(resolved.ok, true);
   assert.equal(resolved.encounter.enemyCount, 10);
   assert.equal(resolved.encounter.sourceInteractionId, "earth_vein_guardian_npc");
+  assert.equal(resolved.encounter.bossMechanicId, "guardian_targeted_charge_v1");
   assert.equal(resolved.encounter.selectedWildPets.every((pet) => pet.catchable === false), true);
+  const boss = resolved.encounter.selectedWildPets[2];
+  assert.equal(boss.formId, "bui_normal_thick_earth10");
+  assert.equal(boss.battleAppearanceFormId, "wuli_evolved_crystal_earth8_water2");
+  assert.equal(boss.battleDisplayName, "岩脉守护兽");
 });
 
 test("party encounters require every participant to be stopped on the same nearby map", () => {

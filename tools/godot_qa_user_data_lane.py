@@ -130,11 +130,11 @@ HELPER_CONTRACT_FUNCTION_SHA256 = {
 }
 MAIN_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "_active_qa_user_data_features": "23cdb408058f7ebf5beccded22945a94550383ac5d81205fd493d02f1e240db0",
-    "_apply_preview_window_args": "c305b21bd52ee1d74cab85f4a189a061cdaccd6358f74381f9df8d81b02dcc3e",
+    "_apply_preview_window_args": "24e6a4105a658f6fcd00179b518ad1a64770a9453cdef4814875693940685168",
     "_attest_qa_user_data_lane_or_exit": "dcdf0ddd8c924d31ffe6bed3cf059ff2ac8db3901205e0bf670c684ac27c36a3",
     "_dev_entrypoint_arg": "3f5ec8368066ea72fb45c95ad37292c502c0be9f22d25c7f226ea1d650eb2487",
     "_qa_user_data_root_text": "9a799a68912d57a63d1be1042f2c58597b3d224cdcf16e26cae9997afca49e96",
-    "_ready": "6f93c28bf5e2a18a7d20cf4c3b965391db3933fa8a9df4af09e35824b7b480f4",
+    "_ready": "e542651ad1fbd5e33d00d6e91195302eac8b3ba6eed09387ca5a947852b4aa41",
     "_reject_qa_user_data_lane": "5da773db2c7cf1247d56d0d56f65eb85ce48cd1932c1d49972c57a728691097c",
     "_run_auto_pet_action_asset_check": "562195a21e5c6efcb8c151f337fe4507c28a4bf06a50e9901018a16aba7a9baf",
     "_run_battle_layout_owner_review_capture": "b45f43e99209a276d65fe10a7d0f9ee7a3c3e3ee6258df7dec9a6cae948a14e5",

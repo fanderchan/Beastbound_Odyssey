@@ -69,6 +69,7 @@ static func battle_state_from_room(room: Dictionary, session: Dictionary) -> Dic
 			int(side_counts.get(local_side, 1)),
 			int(local_kind_counts.get(kind, 1))
 		))
+	_apply_boss_intent_to_actors(actors, battle)
 	if not self_found and not actors.is_empty():
 		var fallback_self := actors[0].duplicate(true)
 		fallback_self["id"] = BattleModel.PLAYER_ACTOR_ID
@@ -379,7 +380,8 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 		"serverSide": str(server_actor.get("side", "")),
 		"serverKind": kind,
 		"serverPetId": str(server_actor.get("petId", "")),
-		"formId": str(server_actor.get("formId", "")),
+		"formId": _battle_form_id_from_server(server_actor),
+		"serverFormId": str(server_actor.get("formId", "")),
 		"petId": str(server_actor.get("petId", "")),
 		"serverGuarding": bool(server_actor.get("guarding", false)),
 		"serverDefeated": bool(server_actor.get("defeated", false)),
@@ -520,7 +522,8 @@ static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, se
 		actor["serverKind"] = _server_actor_kind(server_actor)
 		actor["serverPetId"] = str(server_actor.get("petId", actor.get("serverPetId", "")))
 		actor["petId"] = str(server_actor.get("petId", actor.get("petId", "")))
-		actor["formId"] = str(server_actor.get("formId", actor.get("formId", "")))
+		actor["formId"] = _battle_form_id_from_server(server_actor, str(actor.get("formId", "")))
+		actor["serverFormId"] = str(server_actor.get("formId", actor.get("serverFormId", "")))
 		actor["catchable"] = bool(server_actor.get("catchable", actor.get("catchable", false)))
 		actor["captureDifficulty"] = maxi(0, int(server_actor.get("captureDifficulty", actor.get("captureDifficulty", 0))))
 		actor["captured"] = bool(server_actor.get("captured", actor.get("captured", false)))
@@ -575,9 +578,20 @@ static func _local_phase_for_room(battle: Dictionary, session: Dictionary) -> St
 	return "server_waiting" if _account_submitted_all_required_actors(battle, account_id) else "command"
 
 
+static func _battle_form_id_from_server(server_actor: Dictionary, fallback: String = "") -> String:
+	var appearance_form_id := str(server_actor.get("battleAppearanceFormId", "")).strip_edges()
+	if appearance_form_id != "":
+		return appearance_form_id
+	var source_form_id := str(server_actor.get("formId", "")).strip_edges()
+	return source_form_id if source_form_id != "" else fallback
+
+
 static func _message_for_room(room: Dictionary, battle: Dictionary, session: Dictionary) -> String:
 	var mode := str(room.get("mode", "")).strip_edges()
 	var phase := _local_phase_for_room(battle, session)
+	var boss_intent_message := _boss_intent_message(battle)
+	if phase == "command" and boss_intent_message != "":
+		return boss_intent_message
 	if phase == "server_waiting":
 		var waiting_account_id := str(session.get("accountId", "")).strip_edges()
 		if waiting_account_id != "" and _account_has_any_actor(battle, waiting_account_id) and _account_required_actor_ids(battle, waiting_account_id).is_empty():
@@ -589,6 +603,25 @@ static func _message_for_room(room: Dictionary, battle: Dictionary, session: Dic
 			return "请选择宠物指令。"
 		return "队伍战斗已同步，请选择指令。" if mode == "party_pve" else "切磋已恢复，请选择指令。"
 	return "队伍战斗状态已同步。" if mode == "party_pve" else "切磋状态已同步。"
+
+
+static func _boss_intent_message(battle: Dictionary) -> String:
+	var intent := battle.get("bossIntent", {}) as Dictionary if battle.get("bossIntent", {}) is Dictionary else {}
+	if intent.is_empty() or int(intent.get("resolveRound", 0)) != int(battle.get("round", 0)):
+		return ""
+	return str(intent.get("message", "")).strip_edges()
+
+
+static func _apply_boss_intent_to_actors(actors: Array[Dictionary], battle: Dictionary) -> void:
+	var intent := battle.get("bossIntent", {}) as Dictionary if battle.get("bossIntent", {}) is Dictionary else {}
+	var target_server_actor_id := str(intent.get("targetActorId", "")).strip_edges()
+	if target_server_actor_id == "" or int(intent.get("resolveRound", 0)) != int(battle.get("round", 0)):
+		return
+	for actor in actors:
+		if str(actor.get("serverActorId", "")).strip_edges() == target_server_actor_id:
+			actor["bossThreatened"] = true
+			actor["bossThreatMechanicId"] = str(intent.get("mechanicId", ""))
+			return
 
 
 static func _account_required_actor_ids(battle: Dictionary, account_id: String) -> Array[String]:
@@ -870,6 +903,19 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"speed": int(actor.get("quick", actor.get("speed", 0))),
 			"sequence": sequence,
 			"actionId": str(server_event.get("actionId", "defend")),
+			"serverEventId": str(server_event.get("eventId", "")),
+			"serverEventType": event_type,
+			"serverMessage": str(server_event.get("message", "")),
+		}
+	if event_type == "boss_charge_telegraph":
+		return {
+			"type": "defend",
+			"attackerId": actor_id,
+			"targetId": actor_id,
+			"targetSide": str(actor.get("side", "")),
+			"speed": int(actor.get("quick", actor.get("speed", 0))),
+			"sequence": sequence,
+			"actionId": "boss_charge_telegraph",
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
@@ -1404,7 +1450,7 @@ static func _local_server_resolved_damage_event(state: Dictionary, server_event:
 		local_event["serverParticipants"] = server_event.get("participants", [])
 	if event_type == "pet_skill":
 		local_event["skillId"] = skill_id
-		local_event["skillName"] = BattleActionCatalog.label_for(skill_id, "宠物技能")
+		local_event["skillName"] = str(server_event.get("skillName", BattleActionCatalog.label_for(skill_id, "宠物技能")))
 	return _with_server_status_replay_fields(local_event, state, server_event)
 
 

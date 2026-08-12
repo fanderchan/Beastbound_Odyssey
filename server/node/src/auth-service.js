@@ -205,6 +205,7 @@ const {createManualEncounterAccess} = require("./auth/manual-encounter-access");
 const {loadBattlePassiveCatalog} = require("./auth/battle-passive-catalog");
 const {createBattleActorRules} = require("./auth/battle-actor-rules");
 const {createBattleRandomAuthority} = require("./auth/battle-random-authority");
+const {loadBattleBossRules} = require("./auth/battle-boss-rules");
 const {
   resolveCounterTrigger,
   resolveDamageReaction,
@@ -776,6 +777,7 @@ function createAuthService(options = {}) {
     fusionTargetFormIds,
   });
   const battleRandomAuthority = options.battleRandomAuthority || createBattleRandomAuthority();
+  const battleBossRules = options.battleBossRules || loadBattleBossRules();
   const newPetFactory = createNewPetFactory({growthCatalog: petGrowthCatalog});
   const petCaptureCandidateAuthority = options.petCaptureCandidateAuthority || createPetCaptureCandidateAuthority({
     growthCatalog: petGrowthCatalog,
@@ -3799,6 +3801,7 @@ function createAuthService(options = {}) {
       petAutoCaptureFilter,
       randomId,
       battleActorRules,
+      battleBossRules,
       battleRandomAuthority,
       battleVictoryRewardResolver,
     });
@@ -5976,7 +5979,7 @@ function createAuthService(options = {}) {
     battleRoomBattleStateForMutation: (roomValue, nowFn) => battleRoomBattleStateForMutation(
       roomValue,
       nowFn,
-      {battleActorRules},
+      {battleActorRules, battleBossRules},
     ),
     battleRoomConnectionStateForMutation,
     battleRoomEntryCheck,
@@ -5994,7 +5997,7 @@ function createAuthService(options = {}) {
       roomValue,
       result,
       nowFn,
-      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, randomId, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, randomId, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     authorizePartyEncounter,
     consumePartyEncounterAuthorization,
@@ -6002,7 +6005,7 @@ function createAuthService(options = {}) {
     createBattleRoomBattleState: (roomValue, nowFn) => createBattleRoomBattleState(
       roomValue,
       nowFn,
-      {battleActorRules},
+      {battleActorRules, battleBossRules},
     ),
     createPartyForLeader,
     currentDurableOperation: () => activeDurableOperation,
@@ -6099,6 +6102,7 @@ function createAuthService(options = {}) {
     }),
     bankStoneCoinLimit: BANK_STONE_COIN_LIMIT,
     battleActorRules,
+    battleBossRules,
     battlePassiveCatalog,
     battleRandomAuthority,
     manorEntries,
@@ -6175,7 +6179,7 @@ function createAuthService(options = {}) {
       serviceData,
       roomValue,
       accountIds,
-      {now, runtimeActiveSessionIds, applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {now, runtimeActiveSessionIds, applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
     resolveSessionReadOnly: (sessionData, token) => resolveSession(sessionData, token, now, {serverStartedAtMs}),
@@ -6186,7 +6190,7 @@ function createAuthService(options = {}) {
       roomValue,
       battleValue,
       nowFn,
-      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver},
     ),
     resolveSession: (sessionData, token, nowFn, options = {}) => resolveSession(sessionData, token, nowFn, {
       ...options,
@@ -8261,6 +8265,7 @@ function publicBattleRoomBattle(battle, viewerAccountId = "", options = {}) {
     requiredActorIds: Array.isArray(battle.requiredActorIds) ? battle.requiredActorIds.slice() : [],
     submittedActorIds: Array.isArray(battle.submittedActorIds) ? battle.submittedActorIds.slice() : [],
     actors,
+    bossIntent: publicBattleBossIntent(battle.bossIntent),
     ...(options.includeLastEventList === false ? {} : {
       lastEventList: battle.lastEventList && typeof battle.lastEventList === "object"
         ? hydrateBattleReplayEventList(battle.lastEventList, actors)
@@ -8270,6 +8275,24 @@ function publicBattleRoomBattle(battle, viewerAccountId = "", options = {}) {
     profileWriteback: publicBattleProfileWriteback(battle.profileWriteback || null, viewerAccountId),
     commandDeadlineAt: battle.commandDeadlineAt || "",
     updatedAt: battle.updatedAt || "",
+    schemaVersion: 1,
+  };
+}
+
+function publicBattleBossIntent(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return {
+    mechanicId: String(value.mechanicId || ""),
+    bossActorId: String(value.bossActorId || ""),
+    bossName: String(value.bossName || ""),
+    targetActorId: String(value.targetActorId || ""),
+    targetName: String(value.targetName || ""),
+    announcedRound: Math.max(1, Math.trunc(Number(value.announcedRound || 1))),
+    resolveRound: Math.max(1, Math.trunc(Number(value.resolveRound || 1))),
+    actionId: String(value.actionId || ""),
+    message: String(value.message || ""),
     schemaVersion: 1,
   };
 }
@@ -8383,6 +8406,7 @@ function publicBattleActor(actor) {
     level: Number(actor.level || 1),
     petId: String(actor.petId || ""),
     formId: String(actor.formId || ""),
+    battleAppearanceFormId: String(actor.battleAppearanceFormId || ""),
     speciesId: String(actor.speciesId || ""),
     lineId: String(actor.lineId || ""),
     petState: String(actor.petState || ""),
@@ -11571,7 +11595,7 @@ function createBattleRoomBattleState(room, now, options = {}) {
   const actors = options.battleActorRules && typeof options.battleActorRules.materializeActors === "function"
     ? options.battleActorRules.materializeActors(rawActors).actors
     : rawActors;
-  return {
+  const battle = {
     round: 1,
     phase: BATTLE_PHASE_COMMAND,
     turnSeq: 0,
@@ -11588,6 +11612,14 @@ function createBattleRoomBattleState(room, now, options = {}) {
     updatedAt: isoNow(now),
     schemaVersion: 1,
   };
+  if (options.battleBossRules && typeof options.battleBossRules.initialize === "function") {
+    const bossMechanic = options.battleBossRules.initialize(room, actors);
+    if (bossMechanic) {
+      battle.bossMechanic = bossMechanic;
+      battle.bossIntent = null;
+    }
+  }
+  return battle;
 }
 
 function battleRoomBattleStateForMutation(room, now, options = {}) {
@@ -11599,6 +11631,18 @@ function battleRoomBattleStateForMutation(room, now, options = {}) {
     room.battle.actors = options.battleActorRules && typeof options.battleActorRules.materializeActors === "function"
       ? options.battleActorRules.materializeActors(rawActors).actors
       : rawActors;
+  }
+  if (options.battleBossRules && typeof options.battleBossRules.normalizeState === "function") {
+    const bossMechanic = options.battleBossRules.normalizeState(room, room.battle.actors, room.battle.bossMechanic);
+    if (bossMechanic) {
+      room.battle.bossMechanic = bossMechanic;
+      room.battle.bossIntent = typeof options.battleBossRules.normalizeIntent === "function"
+        ? options.battleBossRules.normalizeIntent(room, room.battle.actors, bossMechanic, room.battle.bossIntent)
+        : null;
+    } else {
+      delete room.battle.bossMechanic;
+      room.battle.bossIntent = null;
+    }
   }
   if (!room.battle.commands || typeof room.battle.commands !== "object" || Array.isArray(room.battle.commands)) {
     room.battle.commands = {};
@@ -12074,12 +12118,13 @@ function partyPveEnemyActors(room) {
       actorId: `party_pve_enemy_${row}_${slotNumber}`,
       accountId: "",
       username: "",
-      displayName: `${wildPet.name}${battleSlotNumber}`,
+      displayName: String(wildPet.battleDisplayName || `${wildPet.name}${battleSlotNumber}`),
       side: BATTLE_SIDE_ENEMY,
       kind: BATTLE_ACTOR_KIND_WILD_PET,
       petId: "",
       activeInBattle: true,
       formId: String(wildPet.formId || "wuli_normal_orange_fire10"),
+      battleAppearanceFormId: String(wildPet.battleAppearanceFormId || ""),
       speciesId: String(wildPet.speciesId || wildPet.formId || "wuli_normal_orange_fire10"),
       lineId: String(wildPet.lineId || ""),
       petState: BATTLE_PET_STATE_BATTLE,
@@ -12157,6 +12202,8 @@ function normalizedServerWildPetEntry(value) {
   const activeSkillIds = petActiveSkillIdsForSource({...value, formId});
   return {
     formId,
+    battleAppearanceFormId: String(value && value.battleAppearanceFormId || ""),
+    battleDisplayName: String(value && value.battleDisplayName || ""),
     speciesId: String(value && (value.speciesId || value.templateId || value.formId) || formId),
     lineId: String(value && value.lineId || template.lineId || ""),
     name: String(value && value.name || "野生宠物"),
@@ -12887,7 +12934,10 @@ function battleCommandTargetActor(payload, data, room, battle, actor, actionId) 
 function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
   battle.turnSeq = Number(battle.turnSeq || 0) + 1;
   const round = Number(battle.round || 1);
-  const orderedCommands = battleTurnCommandsForResolution(room, battle, round)
+  if (options.battleBossRules && typeof options.battleBossRules.finishIfBossUnavailable === "function") {
+    options.battleBossRules.finishIfBossUnavailable(battle);
+  }
+  const orderedCommands = battleTurnCommandsForResolution(room, battle, round, options)
     .sort((a, b) => battleCommandSortValue(battle, b) - battleCommandSortValue(battle, a));
   for (const actor of battle.actors) {
     actor.guarding = false;
@@ -12900,13 +12950,39 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
     const command = orderedCommands[commandIndex];
     const actor = battleActorByActorId(battle, command.actorId);
     if (!actor || Number(actor.hp || 0) <= 0 || Boolean(actor.escaped)) {
+      if (String(command.bossMechanicId || "") !== "" && options.battleBossRules) {
+        options.battleBossRules.finishMechanic(battle);
+      }
       commandIndex += 1;
       continue;
     }
     const statusSkipEvent = battleStatusSkipEvent(room, battle, command, actor, round, sequence);
     if (statusSkipEvent) {
+      if (String(command.bossMechanicId || "") !== "" && options.battleBossRules) {
+        statusSkipEvent.bossMechanicId = String(command.bossMechanicId || "");
+        if (Boolean(command.bossChargeStrike)) {
+          statusSkipEvent.bossChargeInterrupted = true;
+          statusSkipEvent.message = options.battleBossRules.interruptionMessage(command, actor);
+        } else {
+          statusSkipEvent.bossMechanicSuppressed = true;
+        }
+        options.battleBossRules.finishMechanic(battle);
+      }
       events.push(statusSkipEvent);
       sequence += 1;
+      commandIndex += 1;
+      continue;
+    }
+    if (String(command.actionKind || "") === "boss_charge_telegraph") {
+      const target = battleActorByActorId(battle, command.targetActorId);
+      const telegraphEvent = options.battleBossRules && typeof options.battleBossRules.telegraphEvent === "function"
+        ? options.battleBossRules.telegraphEvent(room, battle, command, actor, target, round, sequence)
+        : null;
+      if (telegraphEvent) {
+        telegraphEvent.schemaVersion = BATTLE_EVENT_CONTRACT_VERSION;
+        events.push(telegraphEvent);
+        sequence += 1;
+      }
       commandIndex += 1;
       continue;
     }
@@ -12977,8 +13053,29 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
     const attackResult = battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, round, sequence, options);
     commandIndex += Math.max(1, Number(attackResult.consumed || 1));
     for (const event of Array.isArray(attackResult.events) ? attackResult.events : []) {
+      if (Boolean(command.bossChargeStrike) && !Boolean(event.bossChargeEvaded)) {
+        event.bossMechanicId = String(command.bossMechanicId || "");
+        event.bossChargeStrike = true;
+        event.skillName = String(command.skillName || "");
+        const target = battleActorByActorId(battle, event.targetActorId);
+        const actorName = String(actor.displayName || actor.username || "守护兽");
+        const targetName = String(target && (target.displayName || target.username) || "目标");
+        if (Boolean(event.dodged)) {
+          event.message = `${actorName}发动${event.skillName || "锁定冲撞"}，${targetName}闪避了。`;
+        } else {
+          event.message = battleDamageMessage(
+            `${actorName}发动${event.skillName || "锁定冲撞"}，对${targetName}造成 ${Math.max(0, Math.trunc(Number(event.damage || 0)))} 点伤害${battleRideDamageMessageSuffix(event)}。`,
+            target || {},
+            Math.max(0, Math.trunc(Number(event.hpAfter || 0))),
+            Boolean(event.launched),
+          );
+        }
+      }
       events.push(event);
       sequence += 1;
+    }
+    if (Boolean(command.bossChargeStrike) && options.battleBossRules) {
+      options.battleBossRules.finishMechanic(battle);
     }
     if (String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_PARTY_PVE || String(room.mode || BATTLE_MODE_DUEL) === BATTLE_MODE_MANOR_WAR) {
       if (battleResultForResolvedActors(room, battle, now)) {
@@ -12992,6 +13089,9 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
     const poisonEvents = battleRoundEndPoisonEvents(room, battle, round, sequence, now);
     events.push(...poisonEvents);
     sequence += poisonEvents.length;
+  }
+  if (options.battleBossRules && typeof options.battleBossRules.finishIfBossUnavailable === "function") {
+    options.battleBossRules.finishIfBossUnavailable(battle);
   }
   const eventList = {
     schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,
@@ -13111,6 +13211,7 @@ function battleReplayActorSnapshot(actorValue) {
     slotNumber: Number(actor.slotNumber || 0),
     petId: String(actor.petId || ""),
     formId: String(actor.formId || ""),
+    battleAppearanceFormId: String(actor.battleAppearanceFormId || ""),
     petState: String(actor.petState || ""),
     activeInBattle: Boolean(actor.activeInBattle),
     hp: Number(actor.hp || 0),
@@ -13304,10 +13405,16 @@ function battleAttackOrComboEvent(room, battle, orderedCommands, commandIndex, r
   const command = orderedCommands[commandIndex];
   const resolved = battleResolvedAttackForCommand(room, battle, command, round);
   if (!resolved.ok) {
-    if (resolved.missing && String(room.mode || BATTLE_MODE_DUEL) !== BATTLE_MODE_PARTY_PVE) {
+    if (resolved.missing && (String(room.mode || BATTLE_MODE_DUEL) !== BATTLE_MODE_PARTY_PVE || Boolean(command.bossChargeStrike))) {
+      const missingEvent = battleTargetMissingEvent(room, battle, command, resolved.actor || {}, round, sequence);
+      if (Boolean(command.bossChargeStrike) && options.battleBossRules) {
+        missingEvent.bossMechanicId = String(command.bossMechanicId || "");
+        missingEvent.bossChargeEvaded = true;
+        missingEvent.message = options.battleBossRules.evadedMessage(command, resolved.actor || {}, battle.bossIntent);
+      }
       return {
         consumed: 1,
-        events: [battleTargetMissingEvent(room, battle, command, resolved.actor || {}, round, sequence)],
+        events: [missingEvent],
       };
     }
     return {consumed: 1, events: []};
@@ -13573,10 +13680,15 @@ function battleResolvedAttackForCommand(room, battle, command, round) {
     return {ok: false, missing: true, actor};
   }
   let effectiveCommand = command;
-  let target = battleActorByActorId(battle, command.targetActorId) || battlePlayerActorByAccountId(battle, command.targetAccountId);
+  let target = battleActorByActorId(battle, command.targetActorId);
+  if (!target && !Boolean(command && command.disableRetarget)) {
+    target = battlePlayerActorByAccountId(battle, command.targetAccountId);
+  }
   const declaredTargetActorId = String(target && target.actorId || command.targetActorId || "");
   if (!target || Number(target.hp || 0) <= 0) {
-    const fallbackTarget = battleRetargetActorForCommand(room, battle, actor, command, round);
+    const fallbackTarget = Boolean(command && command.disableRetarget)
+      ? null
+      : battleRetargetActorForCommand(room, battle, actor, command, round);
     if (fallbackTarget) {
       target = fallbackTarget;
       effectiveCommand = {
@@ -14029,13 +14141,13 @@ function battleExpCreditsForComboDefeat(room, battle, actors, target, hpBefore, 
   }];
 }
 
-function battleTurnCommandsForResolution(room, battle, round) {
+function battleTurnCommandsForResolution(room, battle, round, options = {}) {
   const submittedCommands = Object.values(battle.commands)
     .filter((command) => command && typeof command === "object");
-  return submittedCommands.concat(partyPveAiCommands(room, battle, round));
+  return submittedCommands.concat(partyPveAiCommands(room, battle, round, options));
 }
 
-function partyPveAiCommands(room, battle, round) {
+function partyPveAiCommands(room, battle, round, options = {}) {
   if (String(room.mode || BATTLE_MODE_DUEL) !== BATTLE_MODE_PARTY_PVE) {
     return [];
   }
@@ -14052,6 +14164,13 @@ function partyPveAiCommands(room, battle, round) {
     }
     const actorSide = String(actor.side || "");
     if (actorSide !== BATTLE_SIDE_ALLY && actorSide !== BATTLE_SIDE_ENEMY) {
+      continue;
+    }
+    const bossCommand = options.battleBossRules && typeof options.battleBossRules.commandForRound === "function"
+      ? options.battleBossRules.commandForRound(room, battle, actor, round)
+      : null;
+    if (bossCommand) {
+      commands.push(bossCommand);
       continue;
     }
     const healTargetResult = trainingPartnerHealTargetForActor(battle, actor);
@@ -14323,6 +14442,9 @@ function battleActorSlotOrder(actor) {
 }
 
 function battleCommandSortValue(battle, command) {
+  if (Boolean(command && command.resolvesLast)) {
+    return Number.NEGATIVE_INFINITY;
+  }
   const actor = battleActorByActorId(battle, command.actorId);
   return actor ? Number(actor.speed || 0) : 0;
 }

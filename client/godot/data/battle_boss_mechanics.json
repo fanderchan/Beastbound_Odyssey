@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "mechanics": [
+    {
+      "id": "guardian_targeted_charge_v1",
+      "label": "守护兽锁定冲撞",
+      "encounterGroupId": "earth_vein_guardian_group",
+      "bossActorSlot": "enemy.front.3",
+      "telegraphRound": 1,
+      "strikeRound": 2,
+      "strikeActionId": "pet_bui_charge",
+      "strikeLabel": "岩晶冲撞",
+      "targetKindPriority": ["pet", "player"],
+      "telegraphText": "{boss}锁定{target}蓄力。下回合可防御、换宠，或令{boss}无法行动来打断。",
+      "commandText": "{boss}锁定{target}：防御、换宠，或令其无法行动来打断。",
+      "evadedText": "{target}已离开战场，{boss}的锁定冲撞落空了。",
+      "interruptedText": "{boss}的锁定冲撞被打断了。"
+    }
+  ]
+}

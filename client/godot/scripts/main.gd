@@ -1055,6 +1055,7 @@ var auto_server_battle_switch_pet_live_check: bool = false
 var auto_server_battle_item_live_check: bool = false
 var auto_server_battle_target_mapping_check: bool = false
 var auto_server_battle_reaction_replay_check: bool = false
+var auto_server_battle_boss_replay_check: bool = false
 var auto_server_battle_status_replay_check: bool = false
 var auto_server_battle_ride_replay_check: bool = false
 var auto_server_battle_stale_room_check: bool = false
@@ -1819,6 +1820,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_server_battle_target_mapping_check")
 	elif auto_server_battle_reaction_replay_check:
 		call_deferred("_run_auto_server_battle_reaction_replay_check")
+	elif auto_server_battle_boss_replay_check:
+		call_deferred("_run_auto_server_battle_boss_replay_check")
 	elif auto_server_battle_status_replay_check:
 		call_deferred("_run_auto_server_battle_status_replay_check")
 	elif auto_server_battle_ride_replay_check:
@@ -2939,6 +2942,8 @@ func _apply_preview_window_args() -> void:
 			auto_server_battle_target_mapping_check = true
 		elif arg == "--auto-server-battle-reaction-replay-check":
 			auto_server_battle_reaction_replay_check = true
+		elif arg == "--auto-server-battle-boss-replay-check":
+			auto_server_battle_boss_replay_check = true
 		elif arg == "--auto-server-battle-status-replay-check":
 			auto_server_battle_status_replay_check = true
 		elif arg == "--auto-server-battle-ride-replay-check":
@@ -6195,6 +6200,10 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 
 func _run_auto_server_battle_reaction_replay_check() -> void:
 	await _auto_checks()._run_auto_server_battle_reaction_replay_check()
+
+
+func _run_auto_server_battle_boss_replay_check() -> void:
+	await _auto_checks()._run_auto_server_battle_boss_replay_check()
 
 
 func _run_auto_server_battle_status_replay_check() -> void:
@@ -15897,6 +15906,8 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		_draw_battle_target_ring(pos, visual_scale)
 	if _battle_target_mode_selects_ally() and str(actor.get("id", "")) == battle_hover_ally_target_id and str(actor.get("side", "")) == BattleModel.SIDE_ALLY and int(actor.get("hp", 0)) > 0:
 		_draw_battle_target_ring(pos, visual_scale, Color(0.50, 1.0, 0.58, 0.96))
+	if bool(actor.get("bossThreatened", false)) and int(actor.get("hp", 0)) > 0:
+		_draw_battle_boss_threat_ring(pos, visual_scale)
 	var body_color := Color(0.20, 0.53, 0.85, alpha)
 	var trim_color := Color(1.0, 0.86, 0.40, alpha)
 	if kind == "pet":
@@ -15965,6 +15976,12 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 			hp_actor = actor.duplicate(true)
 			hp_actor["hp"] = maxi(1, int(actor.get("launchHpBefore", actor.get("maxHp", 1))))
 		_draw_battle_hp_bar(hp_actor, pos + Vector2(0, hp_offset), alpha, visual_scale)
+		if bool(actor.get("bossThreatened", false)) and not launched_active:
+			_draw_battle_boss_threat_badge(
+				pos + Vector2(-68.0, hp_offset - 17.0) * visual_scale,
+				visual_scale,
+				alpha
+			)
 		if _battle_actor_has_active_ride(actor):
 			var ride_hp_actor := {
 				"hp": int(actor.get("ridePetHp", 0)),
@@ -16672,6 +16689,58 @@ func _draw_battle_target_ring(pos: Vector2, visual_scale: float, color: Color = 
 	draw_line(center + Vector2(-chevron_x - 6.0 * visual_scale, 0.0), center + Vector2(-chevron_x, 4.0 * visual_scale), color, maxf(1.5, 2.2 * visual_scale), true)
 	draw_line(center + Vector2(chevron_x, -4.0 * visual_scale), center + Vector2(chevron_x + 6.0 * visual_scale, 0.0), color, maxf(1.5, 2.2 * visual_scale), true)
 	draw_line(center + Vector2(chevron_x + 6.0 * visual_scale, 0.0), center + Vector2(chevron_x, 4.0 * visual_scale), color, maxf(1.5, 2.2 * visual_scale), true)
+
+
+func _draw_battle_boss_threat_ring(pos: Vector2, visual_scale: float) -> void:
+	var center := pos + Vector2(0, 2.0) * visual_scale
+	var radius := Vector2(42.0, 14.0) * visual_scale
+	var outer := _battle_ellipse_points(center, radius, 0.0, 44)
+	var inner := _battle_ellipse_points(center, radius - Vector2(5.0, 2.0) * visual_scale, 0.0, 44)
+	var warning_color := Color(1.0, 0.52, 0.16, 0.96)
+	draw_polyline(outer + PackedVector2Array([outer[0]]), Color(0.22, 0.08, 0.03, 0.78), maxf(3.6, 5.2 * visual_scale), true)
+	draw_polyline(inner + PackedVector2Array([inner[0]]), warning_color, maxf(1.7, 2.4 * visual_scale), true)
+	for tick in [
+		[Vector2(-48.0, 0.0), Vector2(-40.0, 0.0)],
+		[Vector2(48.0, 0.0), Vector2(40.0, 0.0)],
+		[Vector2(0.0, -20.0), Vector2(0.0, -13.0)],
+		[Vector2(0.0, 20.0), Vector2(0.0, 13.0)],
+	]:
+		draw_line(
+			center + (tick[0] as Vector2) * visual_scale,
+			center + (tick[1] as Vector2) * visual_scale,
+			warning_color,
+			maxf(1.8, 2.6 * visual_scale),
+			true
+		)
+
+
+func _draw_battle_boss_threat_badge(center: Vector2, visual_scale: float, alpha: float) -> void:
+	var warning_color := Color(1.0, 0.54, 0.16, 0.98 * alpha)
+	var marker_origin := center
+	var marker := PackedVector2Array([
+		marker_origin + Vector2(0.0, 11.0) * visual_scale,
+		marker_origin + Vector2(-12.0, -10.0) * visual_scale,
+		marker_origin + Vector2(12.0, -10.0) * visual_scale,
+	])
+	draw_colored_polygon(marker, Color(0.18, 0.06, 0.02, 0.82 * alpha))
+	draw_polyline(
+		marker + PackedVector2Array([marker[0]]),
+		warning_color,
+		maxf(1.6, 2.2 * visual_scale),
+		true
+	)
+	draw_line(
+		marker_origin + Vector2(0.0, -5.0) * visual_scale,
+		marker_origin + Vector2(0.0, 2.0) * visual_scale,
+		Color(1.0, 0.88, 0.62, 0.98 * alpha),
+		maxf(1.8, 2.6 * visual_scale),
+		true
+	)
+	draw_circle(
+		marker_origin + Vector2(0.0, 6.0) * visual_scale,
+		maxf(1.4, 2.0 * visual_scale),
+		Color(1.0, 0.88, 0.62, 0.98 * alpha)
+	)
 
 
 func _battle_actor_is_current_launch_target(actor_id: String) -> bool:

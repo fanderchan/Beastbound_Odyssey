@@ -10,6 +10,7 @@ const PlayerProgressModel := preload("res://scripts/progression/player_progress_
 const SUPPORTED_SCENARIOS: Array[String] = [
 	"formation_10v10",
 	"formation_10v10_mixed",
+	"formation_10v10_boss_charge",
 	"counter",
 	"counter_ko",
 	"counter_launch",
@@ -45,7 +46,7 @@ func run() -> void:
 	await _wait(1.0)
 
 	match scenario:
-		"formation_10v10", "formation_10v10_mixed":
+		"formation_10v10", "formation_10v10_mixed", "formation_10v10_boss_charge":
 			await _wait(5.0)
 		"counter":
 			await _play_and_settle(_attack_event(ENEMY_ID, ALLY_ID, BattleModel.SIDE_ALLY, 16, true), 1.25)
@@ -177,6 +178,19 @@ func _formation_state() -> Dictionary:
 			55 + index
 		)
 	state["actors"] = actors
+	if scenario == "formation_10v10_boss_charge":
+		state["reviewLab"] = true
+		state["reviewTopInset"] = 0.0
+		state["reviewArenaId"] = "moss_meadow"
+		state["message"] = "岩脉守护兽锁定小布伊：防御、换宠，或令其无法行动来打断。"
+		for actor in actors:
+			if str(actor.get("slotId", "")) == "enemy.front.3":
+				actor["name"] = "岩脉守护兽"
+				actor["formId"] = "wuli_evolved_crystal_earth8_water2"
+			elif str(actor.get("slotId", "")) == "ally.front.3":
+				actor["name"] = "小布伊"
+				actor["bossThreatened"] = true
+				actor["bossThreatMechanicId"] = "guardian_targeted_charge_v1"
 	return state
 
 
@@ -356,6 +370,8 @@ func _intro_message() -> String:
 			return "双方前排宠物、后排人物的 10V10 阵型展开。"
 		"formation_10v10_mixed":
 			return "双方前排宠物、后排人物的 10V10 阵型展开。"
+		"formation_10v10_boss_charge":
+			return "岩脉守护兽锁定小布伊：防御、换宠，或令其无法行动来打断。"
 		"counter":
 			return "受到近身攻击后，芽耳布伊准备反击。"
 		"counter_ko":

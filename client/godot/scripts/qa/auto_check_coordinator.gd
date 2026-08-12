@@ -19,6 +19,7 @@ const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_
 const ServerBattleReactionReplayCheck := preload("res://scripts/battle/server_battle_reaction_replay_check.gd")
 const ServerBattleStatusReplayCheck := preload("res://scripts/battle/server_battle_status_replay_check.gd")
 const ServerBattleRideReplayCheck := preload("res://scripts/battle/server_battle_ride_replay_check.gd")
+const ServerBattleBossReplayCheck := preload("res://scripts/battle/server_battle_boss_replay_check.gd")
 const ServerSyncCoordinator := preload("res://scripts/net/server_sync_coordinator.gd")
 const OnlinePresenceCacheModel := preload("res://scripts/net/online_presence_cache_model.gd")
 const ServerEventReconnectModel := preload("res://scripts/net/server_event_reconnect_model.gd")
@@ -27098,6 +27099,16 @@ func _run_auto_server_battle_reaction_replay_check() -> void:
 	var report := ServerBattleReactionReplayCheck.run()
 	var ok := bool(report.get("ok", false))
 	print("server battle reaction replay check ready: status=%s checks=%s" % [
+		"ok" if ok else "failed",
+		JSON.stringify(report.get("checks", {})),
+	])
+	host.get_tree().quit(0 if ok else 1)
+
+
+func _run_auto_server_battle_boss_replay_check() -> void:
+	var report := ServerBattleBossReplayCheck.run()
+	var ok := bool(report.get("ok", false))
+	print("server battle boss replay check ready: status=%s checks=%s" % [
 		"ok" if ok else "failed",
 		JSON.stringify(report.get("checks", {})),
 	])
