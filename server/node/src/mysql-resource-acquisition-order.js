@@ -420,7 +420,9 @@ function validMailStorageControlExpectedRow(value) {
       (value.data_generation === 0 && value.lifecycle_state === "uninitialized")
       || (value.data_generation === 1 && value.lifecycle_state === "ready")
     )
-    && value.archive_enabled === 0
+    && (value.data_generation === 1
+      ? [0, 1].includes(value.archive_enabled)
+      : value.archive_enabled === 0)
     && value.vault_claim_enabled === 0
     && value.active_limit_enabled === 0;
 }

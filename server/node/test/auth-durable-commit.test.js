@@ -3281,6 +3281,11 @@ test("shutdown closes websocket sources before waiting for the HTTP close callba
   const calls = [];
   let finishHttpClose = null;
   const server = {
+    mailArchiveMaintenance: {
+      close() {
+        calls.push("archive.close");
+      },
+    },
     close(callback) {
       calls.push("http.close");
       finishHttpClose = callback;
@@ -3303,9 +3308,15 @@ test("shutdown closes websocket sources before waiting for the HTTP close callba
   };
 
   const drain = drainServerForShutdown(server, store);
-  assert.deepEqual(calls, ["http.close", "ws.close", "durable.stop"]);
+  assert.deepEqual(calls, ["archive.close", "http.close", "ws.close", "durable.stop"]);
   assert.equal(typeof finishHttpClose, "function");
   finishHttpClose();
   await drain;
-  assert.deepEqual(calls, ["http.close", "ws.close", "durable.stop", "store.flush"]);
+  assert.deepEqual(calls, [
+    "archive.close",
+    "http.close",
+    "ws.close",
+    "durable.stop",
+    "store.flush",
+  ]);
 });

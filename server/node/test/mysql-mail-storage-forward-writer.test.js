@@ -403,6 +403,11 @@ function fakePoolForPlan(plan, options = {}) {
             if (options.controlMismatch && lock.resource === "mail_storage_control") {
               row.data_generation = Number(row.data_generation) + 1;
             }
+            if (options.archivedIdentity && lock.resource === "mail_identity") {
+              row.location = "archive";
+              row.archived_at = "2026-08-13T00:00:00.000Z";
+              row.revision = Number(row.revision) + 1;
+            }
             return [[row], []];
           }
           const write = writes.find((entry) => (
@@ -516,6 +521,32 @@ test("fake pool stale identity update rolls back before the physical mail update
   const {before, after} = legacyUpdateStates();
   const plan = planFor(after, before);
   const fixture = fakePoolForPlan(plan, {staleIdentityUpdate: true});
+
+  await assert.rejects(
+    runMysqlPoolSavePlan(fixture.pool, plan, {expectedRevision: 0}),
+    (error) => error
+      && error.code === "mysql_resource_revision_conflict"
+      && error.resource === "mail_identity"
+      && error.resourceKey === MAIL_ID
+      && error.noCommitGuaranteed === true
+      && error.rollbackConfirmed === true,
+  );
+  assertRolledBackWithoutCommit(fixture.state);
+  assert.equal(
+    fixture.state.events.includes("write:mail_message:update:mail_forward_writer_1"),
+    false,
+  );
+});
+
+test("an archived permanent identity blocks a stale legacy update before the physical mail write", async () => {
+  const {before, after} = legacyUpdateStates();
+  const plan = planFor(after, before, 1, {
+    mailStorageState: {
+      ...storageState(1),
+      flags: {archive: true, vaultClaim: false, activeLimit: false},
+    },
+  });
+  const fixture = fakePoolForPlan(plan, {archivedIdentity: true});
 
   await assert.rejects(
     runMysqlPoolSavePlan(fixture.pool, plan, {expectedRevision: 0}),

@@ -351,12 +351,18 @@ test("generation-zero and generation-one mail control fences are exact and fail 
     locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared")],
   })), true);
 
+  const archiveEnabled = lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared");
+  archiveEnabled.expectedRow.archive_enabled = 1;
+  assert.equal(assertMysqlResourceAcquisitionOrder(plan({
+    locks: [archiveEnabled],
+  })), true);
+
   for (const tamper of [
     (value) => { value.expectedRow.extra = true; },
     (value) => { value.expectedRow.schema_generation = 2; },
     (value) => { value.expectedRow.data_generation = 0; },
     (value) => { value.expectedRow.lifecycle_state = "building"; },
-    (value) => { value.expectedRow.archive_enabled = 1; },
+    (value) => { value.expectedRow.archive_enabled = 2; },
     (value) => { value.expectedRow.vault_claim_enabled = false; },
     (value) => { value.expectedRow.active_limit_enabled = 1; },
     (value) => { value.params[0] = "other-scope"; },

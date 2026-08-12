@@ -143,17 +143,26 @@ function validateStorageState(value) {
   ) {
     throw invalid("schema_generation_invalid");
   }
-  if (hasEnabledFeatureFlag(value)) {
-    throw invalid("feature_flag_enabled");
+  const flags = storageFeatureFlags(value);
+  // Generation-one ordinary mail writers are archive-aware: the permanent
+  // identity lock below prevents a stale active write from touching an
+  // archived row. Vault delivery and the 200-mail guard remain unsupported and
+  // therefore fail closed until their own transactional writers exist.
+  if (flags.vaultClaim || flags.activeLimit) {
+    throw invalid("unsupported_feature_flag_enabled");
   }
   if (value.dataGeneration === 0 && value.lifecycleState === "uninitialized") {
     if (Object.hasOwn(value, "ready") && value.ready !== false) {
       throw invalid("storage_state_invalid");
     }
+    if (flags.archive) {
+      throw invalid("feature_flag_generation_invalid");
+    }
     return Object.freeze({
       schemaGeneration: MAIL_STORAGE_SCHEMA_GENERATION,
       dataGeneration: 0,
       lifecycleState: "uninitialized",
+      archiveEnabled: false,
     });
   }
   if (value.dataGeneration === 1 && value.lifecycleState === "ready") {
@@ -164,23 +173,44 @@ function validateStorageState(value) {
       schemaGeneration: MAIL_STORAGE_SCHEMA_GENERATION,
       dataGeneration: 1,
       lifecycleState: "ready",
+      archiveEnabled: flags.archive,
     });
   }
   throw invalid("storage_state_invalid");
 }
 
-function hasEnabledFeatureFlag(value) {
-  const directFlags = ["archiveEnabled", "vaultClaimEnabled", "activeLimitEnabled"];
-  if (directFlags.some((field) => Object.hasOwn(value, field) && value[field] !== false)) {
-    return true;
+function storageFeatureFlags(value) {
+  const mappings = [
+    ["archive", "archiveEnabled"],
+    ["vaultClaim", "vaultClaimEnabled"],
+    ["activeLimit", "activeLimitEnabled"],
+  ];
+  const nested = Object.hasOwn(value, "flags") ? value.flags : null;
+  if (nested !== null && !isRecord(nested)) {
+    throw invalid("feature_flags_invalid");
   }
-  if (!Object.hasOwn(value, "flags")) {
-    return false;
+  const result = {};
+  for (const [nestedField, directField] of mappings) {
+    const hasDirect = Object.hasOwn(value, directField);
+    const hasNested = nested !== null && Object.hasOwn(nested, nestedField);
+    const direct = hasDirect ? value[directField] : false;
+    const nestedValue = hasNested ? nested[nestedField] : false;
+    if (
+      (hasDirect && typeof direct !== "boolean")
+      || (hasNested && typeof nestedValue !== "boolean")
+      || (hasDirect && hasNested && direct !== nestedValue)
+    ) {
+      throw invalid("feature_flags_invalid");
+    }
+    result[nestedField] = hasDirect ? direct : (hasNested ? nestedValue : false);
   }
-  return !isRecord(value.flags)
-    || value.flags.archive !== false
-    || value.flags.vaultClaim !== false
-    || value.flags.activeLimit !== false;
+  if (
+    nested !== null
+    && Object.keys(nested).some((field) => !mappings.some(([known]) => known === field))
+  ) {
+    throw invalid("feature_flags_invalid");
+  }
+  return result;
 }
 
 function validateForwardPlan(value, storage) {
@@ -398,7 +428,7 @@ function mailStorageControlLock(storage) {
       schema_generation: storage.schemaGeneration,
       data_generation: storage.dataGeneration,
       lifecycle_state: storage.lifecycleState,
-      archive_enabled: 0,
+      archive_enabled: storage.archiveEnabled ? 1 : 0,
       vault_claim_enabled: 0,
       active_limit_enabled: 0,
     },
@@ -610,7 +640,7 @@ function cliControlFenceAssertion(storage) {
         AND schema_generation = ${storage.schemaGeneration}
         AND data_generation = ${storage.dataGeneration}
         AND lifecycle_state = ${mysqlRawLiteral(storage.lifecycleState)}
-        AND archive_enabled = 0
+        AND archive_enabled = ${storage.archiveEnabled ? 1 : 0}
         AND vault_claim_enabled = 0
         AND active_limit_enabled = 0
     )`;

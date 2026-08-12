@@ -314,7 +314,7 @@ test("legacy raw SQL hex-encodes hostile UTF-8 strings and leaves no parameters"
   assert.equal(rawMail.statement.endsWith(";"), false);
 });
 
-test("control assertion is adjacent and exact for ready generation one with all flags disabled", () => {
+test("control assertion is adjacent and exact for ready generation one with archive aware", () => {
   const state = storageState(1, {
     compatible: true,
     ready: true,
@@ -329,8 +329,17 @@ test("control assertion is adjacent and exact for ready generation one with all 
   assert.match(result.legacyStatements[1], /vault_claim_enabled = 0/);
   assert.match(result.legacyStatements[1], /active_limit_enabled = 0/);
 
-  const enabled = storageState(1, {archiveEnabled: true});
-  rejects("feature_flag_enabled", () => writeSet(enabled, [insertChange()]));
+  const enabled = storageState(1, {
+    compatible: true,
+    ready: true,
+    flags: {archive: true, vaultClaim: false, activeLimit: false},
+  });
+  const archiveAware = writeSet(enabled, [insertChange()]);
+  assert.equal(archiveAware.controlLocks[0].expectedRow.archive_enabled, 1);
+  assert.match(archiveAware.legacyStatements[1], /archive_enabled = 1/);
+
+  const unsupported = storageState(1, {vaultClaimEnabled: true});
+  rejects("unsupported_feature_flag_enabled", () => writeSet(unsupported, [insertChange()]));
 });
 
 test("generation one rejects bare delete before accepting a failed forward plan", () => {

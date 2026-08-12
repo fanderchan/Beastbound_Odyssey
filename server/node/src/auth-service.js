@@ -31,12 +31,14 @@ const {
   mailAuthorityDeltaFrom,
   mailAuthoritySignature,
   readMailAuthorityState,
+  stageMailAuthorityDelete,
   stageMailAuthorityUpsert,
 } = require("./auth/mail-authority-state");
 const {
   canonicalMailInboxPageResult,
   normalizeMailInboxPageOptions,
 } = require("./auth/mail-inbox-pagination");
+const {createMailArchiveService} = require("./auth/mail-archive-service");
 const {
   RUNTIME_ROOT_FIELDS,
   DURABLE_RECEIPT_TTL_MS,
@@ -4227,8 +4229,10 @@ function createAuthService(options = {}) {
       return {handled: false};
     }
     const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
-    const pageRequested = Object.hasOwn(payload, "limit") || Object.hasOwn(payload, "cursor");
-    if (!pageRequested) {
+    const explicitPageRequested = Object.hasOwn(payload, "limit") || Object.hasOwn(payload, "cursor");
+    const archiveEnabled = typeof store.mailArchiveEnabled === "function"
+      && store.mailArchiveEnabled() === true;
+    if (!explicitPageRequested && !archiveEnabled) {
       return {handled: false};
     }
     const current = cachedData || load();
@@ -4238,7 +4242,9 @@ function createAuthService(options = {}) {
     }
     let pageOptions;
     try {
-      pageOptions = normalizeMailInboxPageOptions(payload, {requireExplicitLimit: true});
+      pageOptions = normalizeMailInboxPageOptions(payload, {
+        requireExplicitLimit: explicitPageRequested,
+      });
     } catch (error) {
       return {
         handled: true,
@@ -4252,6 +4258,11 @@ function createAuthService(options = {}) {
       store.mailInboxPageReads !== true
       || typeof store.readMailInboxPage !== "function"
     ) {
+      if (archiveEnabled) {
+        const error = new Error("邮件归档启用后必须通过数据库分页读取收件箱。");
+        error.code = "mail_archive_inbox_page_read_required";
+        throw sharedAssetReadFailure(error);
+      }
       return {handled: false};
     }
     let page;
@@ -5780,6 +5791,105 @@ function createAuthService(options = {}) {
     return durableMutationCoordinator.waitForIdle();
   }
 
+  function archiveSettledMailBatch(archiveOptions = {}) {
+    if (
+      store.mailArchiveBatches !== true
+      || typeof store.archiveSettledMailBatch !== "function"
+    ) {
+      const error = new Error("当前存储不支持邮件归档事务。");
+      error.code = "mail_archive_batch_unsupported";
+      return Promise.reject(error);
+    }
+    return durableMutationCoordinator.run(async () => {
+      const report = await store.archiveSettledMailBatch(archiveOptions);
+      const retiredMailIds = certifiedMailArchiveRetiredIds(report);
+      if (retiredMailIds.length > 0) {
+        try {
+          cachedData = authorityWithoutArchivedMail(cachedData || load(), retiredMailIds);
+          lastPublishedPersistentData = authorityWithoutArchivedMail(
+            lastPublishedPersistentData || persistentDataForStore(cachedData),
+            retiredMailIds,
+          );
+        } catch (cause) {
+          try {
+            const reloaded = reloadPublishedDataFromStore();
+            if (retiredMailIds.some((mailId) => Object.hasOwn(reloaded.mailMessages, mailId))) {
+              throw cause;
+            }
+          } catch (reloadCause) {
+            cachedData = null;
+            lastPublishedPersistentData = null;
+            const error = new Error("邮件归档已提交，但 Node 基线暂时无法重新加载。");
+            error.code = "mail_archive_node_baseline_reload_failed";
+            error.committed = true;
+            error.retryable = false;
+            error.cause = reloadCause;
+            throw error;
+          }
+        }
+      }
+      return report;
+    }, {timeoutMs: 0});
+  }
+
+  function certifiedMailArchiveRetiredIds(report) {
+    const archivedMailIds = report && report.archivedMailIds;
+    const retiredMailIds = report && report.retiredMailIds;
+    const canonicalIds = (value) => Array.isArray(value)
+      && value.length <= 128
+      && value.every((mailId) => (
+        typeof mailId === "string"
+        && /^[a-z0-9_:-]{1,96}$/.test(mailId)
+      ))
+      && new Set(value).size === value.length;
+    if (
+      !report
+      || typeof report !== "object"
+      || Array.isArray(report)
+      || report.kind !== "beastbound_mail_archive_batch"
+      || report.schemaVersion !== 1
+      || typeof report.ok !== "boolean"
+      || !Number.isSafeInteger(report.archivedCount)
+      || report.archivedCount < 0
+      || !canonicalIds(archivedMailIds)
+      || archivedMailIds.length !== report.archivedCount
+      || !canonicalIds(retiredMailIds)
+      || archivedMailIds.some((mailId) => !retiredMailIds.includes(mailId))
+      || typeof report.outcomeUnknown !== "boolean"
+      || typeof report.retryable !== "boolean"
+      || (report.outcomeUnknown && (report.ok || report.retryable))
+    ) {
+      const error = new Error("邮件归档事务结果不符合服务合同。");
+      error.code = "mail_archive_batch_report_invalid";
+      throw error;
+    }
+    return retiredMailIds;
+  }
+
+  function authorityWithoutArchivedMail(dataValue, mailIdsValue) {
+    const data = dataValue && typeof dataValue === "object" ? dataValue : {};
+    let messages = data.mailMessages;
+    let changed = false;
+    for (const mailId of mailIdsValue) {
+      const staged = stageMailAuthorityDelete(messages, String(mailId || ""));
+      if (!staged.ok || !isCanonicalMailAuthorityState(staged.messages)) {
+        const error = new Error("归档提交后无法同步 Node 邮件基线。");
+        error.code = "mail_archive_node_baseline_sync_failed";
+        throw error;
+      }
+      messages = staged.messages;
+      changed = changed || staged.changed === true;
+    }
+    if (!changed) return data;
+    const next = {...data, mailMessages: commitMailAuthorityDelta(messages)};
+    if (!markAuthorityRootTrusted(next)) {
+      const error = new Error("归档提交后 Node 权威根不再可信。");
+      error.code = "mail_archive_node_baseline_sync_failed";
+      throw error;
+    }
+    return next;
+  }
+
   function stopDurableAdmissionsAndDrain() {
     if (durableDrainPromise !== null) {
       return durableDrainPromise;
@@ -6234,6 +6344,19 @@ function createAuthService(options = {}) {
   const petEvolution = createPetEvolutionDomain(domainContext);
   const petFusion = createPetFusionDomain(domainContext);
   const offlineHang = createOfflineHangDomain(domainContext);
+  const mailArchive = createMailArchiveService({
+    store,
+    resolveAccountId(token) {
+      const resolved = resolveServiceSession(load(), token);
+      return resolved.ok
+        ? {ok: true, accountId: resolved.account.accountId}
+        : {ok: false, code: resolved.code, message: resolved.message};
+    },
+    projectMail: publicMail,
+    ok,
+    fail,
+    readFailure: sharedAssetReadFailure,
+  });
 
   const serviceApi = {
     register,
@@ -6311,6 +6434,7 @@ function createAuthService(options = {}) {
     searchPlayers,
     sendMail: mailChat.sendMail,
     listInbox: mailChat.listInbox,
+    listMailArchive: mailArchive.list,
     markMailRead: mailChat.markMailRead,
     claimMailAttachments: mailChat.claimMailAttachments,
     listOnlinePlayers,
@@ -6371,7 +6495,15 @@ function createAuthService(options = {}) {
     // The connection projector already produces public event payloads and its
     // publish-local cache intentionally reuses the prepared wrapper. The
     // generic projector would shallow-copy that wrapper once per recipient.
-    if (name === "snapshot" || name === "eventForConnection" || typeof method !== "function") {
+    if (
+      name === "snapshot"
+      || name === "eventForConnection"
+      // This focused read owns its complete public projection after awaiting
+      // the store. The generic synchronous projector must not spread a Promise
+      // into an empty object.
+      || name === "listMailArchive"
+      || typeof method !== "function"
+    ) {
       continue;
     }
     serviceApi[name] = (...args) => {
@@ -6386,7 +6518,11 @@ function createAuthService(options = {}) {
   // Direct memory-store tests and offline tools keep the existing sync API.
   serviceApi.invokeDurable = invokeDurable;
   serviceApi._httpTryPureRead = tryHttpPureRead;
-  if (store.sharedAssetReads === true || store.mailInboxPageReads === true) {
+  if (
+    store.sharedAssetReads === true
+    || store.mailInboxPageReads === true
+    || store.mailArchivePageReads === true
+  ) {
     serviceApi._httpInvokeSharedAssetRead = invokeSharedAssetRead;
   }
   // Capacity QA runs inside the server worker and needs only a narrow,
@@ -6400,6 +6536,15 @@ function createAuthService(options = {}) {
     lastPublishedPersistentData,
   );
   serviceApi.waitForDurableIdle = waitForDurableIdle;
+  serviceApi.mailArchiveBatches = Boolean(
+    store.mailArchiveBatches === true
+    && typeof store.archiveSettledMailBatch === "function"
+  );
+  serviceApi.mailArchiveEnabled = () => Boolean(
+    typeof store.mailArchiveEnabled === "function"
+    && store.mailArchiveEnabled() === true
+  );
+  serviceApi.archiveSettledMailBatch = archiveSettledMailBatch;
   serviceApi.stopDurableAdmissionsAndDrain = stopDurableAdmissionsAndDrain;
   serviceApi.durableMutationMetrics = durableMutationMetrics;
   return serviceApi;
@@ -6728,6 +6873,36 @@ function createAsyncWriteAuthStore(store, options = {}) {
     writeQueue = readJob.then(() => undefined, () => undefined);
     return readJob;
   }
+  function enqueueMailArchivePageRead(accountId, pageOptions = {}) {
+    if (!store || typeof store.readMailArchivePage !== "function") {
+      const error = new Error("当前存储不支持邮件归档分页读穿。");
+      error.code = "mail_archive_page_read_unsupported";
+      return Promise.reject(error);
+    }
+    const normalizedAccountId = String(accountId || "").trim();
+    const optionSnapshot = clone(pageOptions && typeof pageOptions === "object" ? pageOptions : {});
+    const readJob = writeQueue.then(() => store.readMailArchivePage(
+      normalizedAccountId,
+      optionSnapshot,
+    ));
+    writeQueue = readJob.then(() => undefined, () => undefined);
+    return readJob;
+  }
+  function enqueueMailArchiveBatch(archiveOptions = {}) {
+    if (!store || typeof store.archiveSettledMailBatch !== "function") {
+      const error = new Error("当前存储不支持邮件归档事务。");
+      error.code = "mail_archive_batch_unsupported";
+      return Promise.reject(error);
+    }
+    const optionSnapshot = clone(archiveOptions && typeof archiveOptions === "object"
+      ? archiveOptions
+      : {});
+    const archiveJob = writeQueue.then(() => store.archiveSettledMailBatch(optionSnapshot));
+    // Maintenance failures heal the Node-local FIFO but remain scoped to the
+    // caller. They must never poison the next gameplay durability mutation.
+    writeQueue = archiveJob.then(() => undefined, () => undefined);
+    return archiveJob;
+  }
   function enqueueDurableReceiptRead(operationId) {
     if (!store || typeof store.readDurableMutationReceipt !== "function") {
       const error = new Error("当前存储不支持持久化操作回执读穿。");
@@ -6754,6 +6929,8 @@ function createAsyncWriteAuthStore(store, options = {}) {
     asyncWrites: true,
     durableReceiptReads: Boolean(store && typeof store.readDurableMutationReceipt === "function"),
     mailInboxPageReads: Boolean(store && typeof store.readMailInboxPage === "function"),
+    mailArchivePageReads: Boolean(store && typeof store.readMailArchivePage === "function"),
+    mailArchiveBatches: Boolean(store && typeof store.archiveSettledMailBatch === "function"),
     sharedAssetReads: Boolean(store && typeof store.readSharedAssetView === "function"),
     checkHealth() {
       if (typeof store.checkHealth === "function") {
@@ -6778,6 +6955,19 @@ function createAsyncWriteAuthStore(store, options = {}) {
     },
     readMailInboxPage(accountId, pageOptions = {}) {
       return enqueueMailInboxPageRead(accountId, pageOptions);
+    },
+    readMailArchivePage(accountId, pageOptions = {}) {
+      return enqueueMailArchivePageRead(accountId, pageOptions);
+    },
+    archiveSettledMailBatch(archiveOptions = {}) {
+      return enqueueMailArchiveBatch(archiveOptions);
+    },
+    mailArchiveEnabled() {
+      return Boolean(
+        store
+        && typeof store.mailArchiveEnabled === "function"
+        && store.mailArchiveEnabled() === true
+      );
     },
     readDurableMutationReceipt(operationId) {
       return enqueueDurableReceiptRead(operationId);

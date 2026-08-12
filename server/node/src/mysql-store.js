@@ -104,6 +104,14 @@ const {
 const {
   buildMailStorageForwardWriteSet,
 } = require("./mysql-mail-storage-forward-writes");
+const {
+  normalizeMysqlMailArchivePageRequest,
+  runMysqlMailArchiveBatch,
+  runMysqlMailArchivePageRead,
+} = require("./mysql-mail-archive");
+const {
+  runMysqlMailArchiveFeatureEnable,
+} = require("./mysql-mail-archive-feature-enable");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 // The normal CLI loader and the isolated capacity fixture must share one
@@ -150,6 +158,9 @@ function createMysqlAuthStore(options = {}) {
   // no environment-variable fallback. Only the dedicated bootstrap command
   // may opt a fresh store instance into the generation transition executor.
   const mailStorageBootstrapApplyEnabled = options.mailStorageBootstrapApply === true;
+  // Like bootstrap apply, feature activation is a fresh stopped-maintenance
+  // capability with no environment fallback and no access to authority load.
+  const mailArchiveFeatureEnableEnabled = options.mailArchiveFeatureEnable === true;
   const strictRowIdentity = options.strictRowIdentity === true;
   const ensureSchemaEnabled = options.ensureSchema !== false && !readOnly;
   let schemaReady = false;
@@ -631,6 +642,51 @@ function createMysqlAuthStore(options = {}) {
         now: applyOptions.now,
       });
     },
+    async enableMailArchiveFeature(enableOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (
+        readOnly
+        || !mailArchiveFeatureEnableEnabled
+        || !config.singleWriterMaintenance
+      ) {
+        const error = new Error("邮件归档开关只允许专用停服维护 store。");
+        error.code = "mail_archive_feature_dedicated_store_required";
+        throw error;
+      }
+      if (!config.usePool) {
+        const error = new Error("邮件归档开关必须使用 MySQL 连接池。");
+        error.code = "mail_archive_feature_pool_required";
+        throw error;
+      }
+      if (schemaReady || lastPersistentData !== null) {
+        const error = new Error("邮件归档开关 store 已进入普通 authority 生命周期。");
+        error.code = "mail_archive_feature_fresh_store_required";
+        throw error;
+      }
+      // Confirmation precedes every external connection, including the
+      // independent physical-schema audit. The dedicated command may never
+      // turn a typo into a read or write against a configured database.
+      if (enableOptions.maintenanceConfirmed !== true) {
+        const error = new Error("邮件归档开关需要显式确认停服维护窗口。");
+        error.code = "mail_archive_feature_maintenance_confirmation_required";
+        throw error;
+      }
+      // The control-row transaction below proves the logical transition; this
+      // separate audit proves the five sidecar tables, source table and indexes
+      // still match the binary before the flag can become visible to a restart.
+      ensureMailStorageFoundationSchema(config, config.database, {install: false});
+      if (mailStorageAttachmentCertifier === null) {
+        mailStorageAttachmentCertifier = createMailStorageBootstrapAttachmentCertifier();
+      }
+      return runMysqlMailArchiveFeatureEnable(persistentWritePool(), {
+        transactionPolicy: config.transactionPolicy,
+        transactionGuardOptions: enableOptions.transactionGuardOptions,
+        maintenanceConfirmed: true,
+        certifyAttachment: mailStorageAttachmentCertifier,
+      });
+    },
     async readDurableMutationReceipt(operationIdValue) {
       const operationId = durableReceiptReadOperationId(operationIdValue);
       if (closed) {
@@ -675,6 +731,94 @@ function createMysqlAuthStore(options = {}) {
         request.recipientAccountId,
         {limit: request.limit, cursor: request.cursor},
         {transactionPolicy: config.transactionPolicy},
+      );
+    },
+    async readMailArchivePage(accountId, pageOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (!config.usePool) {
+        const error = new Error("邮件归档分页读取必须使用 MySQL 连接池。");
+        error.code = "mysql_mail_archive_page_pool_required";
+        throw error;
+      }
+      const request = normalizeMysqlMailArchivePageRequest(accountId, pageOptions);
+      ensureSchema();
+      if (!mailStorageStartupState || mailStorageStartupState.flags.archive !== true) {
+        const error = new Error("邮件只读归档能力尚未启用。");
+        error.code = "mail_archive_feature_disabled_or_drifted";
+        throw error;
+      }
+      if (mailStorageAttachmentCertifier === null) {
+        mailStorageAttachmentCertifier = createMailStorageBootstrapAttachmentCertifier();
+      }
+      return runMysqlMailArchivePageRead(
+        persistentWritePool(),
+        request.recipientAccountId,
+        {limit: request.limit, cursor: request.cursor},
+        {
+          transactionPolicy: config.transactionPolicy,
+          certifyAttachment: mailStorageAttachmentCertifier,
+        },
+      );
+    },
+    async archiveSettledMailBatch(archiveOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (readOnly || !config.usePool) {
+        const error = new Error("邮件归档事务必须使用可写 MySQL 连接池。");
+        error.code = "mysql_mail_archive_pool_required";
+        throw error;
+      }
+      ensureSchema();
+      if (lastPersistentData === null) {
+        loadAuthoritySnapshot();
+      }
+      if (!mailStorageStartupState || mailStorageStartupState.flags.archive !== true) {
+        const error = new Error("邮件只读归档能力尚未启用。");
+        error.code = "mail_archive_feature_disabled_or_drifted";
+        throw error;
+      }
+      if (mailStorageAttachmentCertifier === null) {
+        mailStorageAttachmentCertifier = createMailStorageBootstrapAttachmentCertifier();
+      }
+      const report = await runMysqlMailArchiveBatch(persistentWritePool(), {
+        transactionPolicy: config.transactionPolicy,
+        certifyAttachment: mailStorageAttachmentCertifier,
+        limit: archiveOptions.limit,
+        now: archiveOptions.now,
+      });
+      assertMysqlMailArchiveBatchReport(report);
+      if (report.retiredMailIds.length > 0) {
+        let messages = lastPersistentData.mailMessages;
+        let baselineValid = true;
+        for (const mailId of report.retiredMailIds) {
+          const staged = stageMailAuthorityDelete(messages, mailId);
+          if (!staged.ok || !isCanonicalMailAuthorityState(staged.messages)) {
+            lastPersistentData = null;
+            baselineValid = false;
+            break;
+          }
+          messages = staged.messages;
+        }
+        if (baselineValid) {
+          lastPersistentData = {
+            ...lastPersistentData,
+            mailMessages: commitMailAuthorityDelta(messages),
+          };
+        }
+      }
+      return report;
+    },
+    mailArchiveEnabled() {
+      // This is deliberately a snapshot capability, not a live control-row
+      // probe. A running process must restart after the stopped-maintenance
+      // transition so every ordinary writer captures the same flag fence.
+      return Boolean(
+        mailStorageStartupState
+        && mailStorageStartupState.flags
+        && mailStorageStartupState.flags.archive === true
       );
     },
     async readSharedAssetView(request, readOptions = {}) {
@@ -840,6 +984,35 @@ function createMysqlAuthStore(options = {}) {
       return closePromise;
     },
   };
+}
+
+function assertMysqlMailArchiveBatchReport(value) {
+  const validIds = (ids) => Array.isArray(ids)
+    && ids.length <= 128
+    && ids.every((mailId) => typeof mailId === "string" && /^[a-z0-9_:-]{1,96}$/.test(mailId))
+    && new Set(ids).size === ids.length;
+  if (
+    !value
+    || typeof value !== "object"
+    || Array.isArray(value)
+    || value.kind !== "beastbound_mail_archive_batch"
+    || value.schemaVersion !== 1
+    || typeof value.ok !== "boolean"
+    || !Number.isSafeInteger(value.archivedCount)
+    || value.archivedCount < 0
+    || !validIds(value.archivedMailIds)
+    || value.archivedMailIds.length !== value.archivedCount
+    || !validIds(value.retiredMailIds)
+    || value.archivedMailIds.some((mailId) => !value.retiredMailIds.includes(mailId))
+    || typeof value.outcomeUnknown !== "boolean"
+    || typeof value.retryable !== "boolean"
+    || (value.outcomeUnknown && (value.ok || value.retryable))
+  ) {
+    const error = new Error("邮件归档事务结果不符合 store 合同。");
+    error.code = "mail_archive_batch_report_invalid";
+    throw error;
+  }
+  return value;
 }
 
 async function runMysqlDurableReceiptRead(pool, operationIdValue, options = {}) {
@@ -4227,6 +4400,7 @@ function ensureMailStorageFoundationSchema(config, database, options = {}) {
     );
     return validateMailStorageStartupState(
       parseMailStorageControlOutput(controlOutput),
+      {supportedFeatures: ["archive"]},
     );
   } catch (cause) {
     if (cause && /^mysql_mail_storage_/.test(String(cause.code || ""))) {
@@ -7468,6 +7642,8 @@ module.exports = {
   __runMysqlDurableReceiptReadForTest: runMysqlDurableReceiptRead,
   __runMysqlGuardedPoolTransactionForTest: runMysqlGuardedPoolTransaction,
   __runMysqlMailInboxPageReadForTest: runMysqlMailInboxPageRead,
+  __runMysqlMailArchiveBatchForTest: runMysqlMailArchiveBatch,
+  __runMysqlMailArchivePageReadForTest: runMysqlMailArchivePageRead,
   __runMysqlForTest: runMysql,
   __runMysqlPoolSavePlanForTest: runMysqlPoolSavePlan,
   __runMysqlSharedAssetReadForTest: runMysqlSharedAssetRead,

@@ -36,6 +36,7 @@ const {
 const {loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority");
 const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
 const {encodeMailInboxCursor} = require("../src/auth/mail-inbox-pagination");
+const {encodeMailArchiveCursor} = require("../src/auth/mail-archive-pagination");
 const PET_PAID_RESET_FORM_POLICY_COUNT = require(
   "../../../client/godot/data/balance/pet_paid_reset_policy.json",
 ).formPolicies.length;
@@ -216,19 +217,22 @@ test("HTTP inbox pagination uses the specialized store reader without adopting a
     mailId: remoteMail.mailId,
   });
   const pageReads = [];
+  let archiveEnabled = false;
   const underlying = {
     mode: "http-inbox-page-test",
     checkHealth: () => ({ok: true}),
     load: () => structuredClone(snapshot),
+    mailArchiveEnabled: () => archiveEnabled,
     async readMailInboxPage(readAccountId, options) {
       pageReads.push({accountId: readAccountId, options});
       const continuation = options.cursor !== null;
+      const hasMore = !continuation && options.limit === 1;
       return {
         recipientAccountId: accountId,
         mailRows: [continuation ? remoteOlderMail : remoteMail],
         unreadCount: 2,
-        nextCursor: continuation ? null : remoteNextCursor,
-        hasMore: !continuation,
+        nextCursor: hasMore ? remoteNextCursor : null,
+        hasMore,
       };
     },
     async saveAsyncOwned() {
@@ -249,6 +253,12 @@ test("HTTP inbox pagination uses the specialized store reader without adopting a
   assert.deepEqual(legacy.messages.map(({mailId}) => mailId), ["mail_local_stale"]);
   assert.equal(pageReads.length, 0);
 
+  archiveEnabled = true;
+  const archiveSafeLegacy = await fetchJson(`${base}/mail/inbox`, {headers});
+  assert.equal(archiveSafeLegacy.ok, true, JSON.stringify(archiveSafeLegacy));
+  assert.deepEqual(archiveSafeLegacy.messages.map(({mailId}) => mailId), ["mail_remote_page"]);
+  assert.deepEqual(pageReads, [{accountId, options: {limit: 30, cursor: null}}]);
+
   const page = await fetchJson(`${base}/mail/inbox?limit=1`, {headers});
   assert.equal(page.ok, true, JSON.stringify(page));
   assert.deepEqual(page.messages.map(({mailId}) => mailId), ["mail_remote_page"]);
@@ -256,7 +266,7 @@ test("HTTP inbox pagination uses the specialized store reader without adopting a
   assert.equal(page.messages[0].recipientAccountId, undefined);
   assert.equal(page.messages[0].internalOnly, undefined);
   assert.equal(page.nextCursor, remoteNextCursor);
-  assert.deepEqual(pageReads, [{accountId, options: {limit: 1, cursor: null}}]);
+  assert.deepEqual(pageReads[1], {accountId, options: {limit: 1, cursor: null}});
 
   const continuationQuery = new URLSearchParams({limit: "1", cursor: page.nextCursor});
   const continuation = await fetchJson(`${base}/mail/inbox?${continuationQuery}`, {headers});
@@ -264,7 +274,7 @@ test("HTTP inbox pagination uses the specialized store reader without adopting a
   assert.deepEqual(continuation.messages.map(({mailId}) => mailId), ["mail_remote_older_page"]);
   assert.equal(continuation.messages[0].internalOnly, undefined);
   assert.equal(continuation.nextCursor, null);
-  assert.deepEqual(pageReads[1], {
+  assert.deepEqual(pageReads[2], {
     accountId,
     options: {
       limit: 1,
@@ -277,7 +287,7 @@ test("HTTP inbox pagination uses the specialized store reader without adopting a
 
   const unauthenticated = await fetchJson(`${base}/mail/inbox?limit=1`);
   assert.equal(unauthenticated.ok, false);
-  assert.equal(pageReads.length, 2);
+  assert.equal(pageReads.length, 3);
   for (const query of [
     "cursor=abc",
     "limit=0",
@@ -298,7 +308,107 @@ test("HTTP inbox pagination uses the specialized store reader without adopting a
     assert.equal(response.status, 400);
     assert.equal(invalid.code, "mail_inbox_pagination_invalid");
   }
-  assert.equal(pageReads.length, 2);
+  assert.equal(pageReads.length, 3);
+});
+
+test("HTTP archive pagination authenticates, projects immutable public mail, and never writes", async (t) => {
+  const seed = createAuthService({store: createMemoryAuthStore()});
+  const registered = seed.register({
+    username: "httparchivepage",
+    password: "test1234",
+    displayName: "归档玩家",
+  });
+  assert.equal(registered.ok, true);
+  const accountId = registered.account.accountId;
+  const archivedMail = {
+    mailId: "mail_http_archive",
+    mailKind: "system",
+    senderAccountId: "account_internal_sender",
+    senderUsername: "system",
+    senderDisplayName: "系统",
+    recipientAccountId: accountId,
+    recipientUsername: registered.account.username,
+    recipientDisplayName: registered.account.displayName,
+    title: "历史回执",
+    body: "这是只读归档邮件。",
+    items: [],
+    equipmentEnvelopes: [],
+    currency: {},
+    createdAt: "2026/04/30 10:00:00",
+    readAt: "2026-05-01T00:00:00.000Z",
+    settledAt: "2026-05-01T00:00:00.000Z",
+    schemaVersion: 2,
+    internalOnly: "不得暴露",
+  };
+  const archivedAt = "2026-06-01T00:00:00.000Z";
+  const nextCursor = encodeMailArchiveCursor({
+    createdAt: archivedMail.createdAt,
+    mailId: archivedMail.mailId,
+  });
+  const reads = [];
+  const underlying = {
+    mode: "http-archive-page-test",
+    checkHealth: () => ({ok: true}),
+    load: () => structuredClone(seed.snapshot()),
+    async readSharedAssetView() {
+      assert.fail("archive pages must bypass the generic shared-asset reader");
+    },
+    async readMailArchivePage(readAccountId, options) {
+      reads.push({accountId: readAccountId, options});
+      return {
+        recipientAccountId: accountId,
+        archiveRows: [{mail: archivedMail, archivedAt}],
+        nextCursor: options.cursor === null ? nextCursor : null,
+        hasMore: options.cursor === null,
+      };
+    },
+    async saveAsyncOwned() {
+      assert.fail("archive reads must not write");
+    },
+  };
+  const store = createAsyncWriteAuthStore(underlying, {onError: () => {}});
+  const service = createAuthService({store});
+  const server = createHttpServer({service, store});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const headers = {authorization: `Bearer ${registered.session.token}`};
+
+  const page = await fetchJson(`${base}/mail/archive?limit=1`, {headers});
+  assert.equal(page.ok, true, JSON.stringify(page));
+  assert.deepEqual(page.messages.map(({mailId}) => mailId), [archivedMail.mailId]);
+  assert.equal(page.messages[0].archivedAt, archivedAt);
+  assert.equal(page.messages[0].senderAccountId, undefined);
+  assert.equal(page.messages[0].recipientAccountId, undefined);
+  assert.equal(page.messages[0].internalOnly, undefined);
+  assert.equal(page.nextCursor, nextCursor);
+  assert.deepEqual(reads, [{accountId, options: {limit: 1, cursor: null}}]);
+
+  const unauthenticated = await fetchJson(`${base}/mail/archive?limit=1`);
+  assert.equal(unauthenticated.ok, false);
+  assert.equal(reads.length, 1);
+  for (const query of [
+    "",
+    "cursor=abc",
+    "limit=0",
+    "limit=51",
+    "limit=1&limit=2",
+    "limit=1&cursor=x&cursor=y",
+    "limit=1&debug=true",
+  ]) {
+    const response = await fetch(`${base}/mail/archive${query ? `?${query}` : ""}`, {
+      headers: {
+        ...headers,
+        [CLIENT_VERSION_HEADER]: SERVER_VERSION,
+        [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
+      },
+    });
+    const invalid = await response.json();
+    assert.equal(response.status, 400);
+    assert.equal(invalid.code, "mail_archive_pagination_invalid");
+  }
+  assert.equal(reads.length, 1);
 });
 
 test("HTTP server exposes auth and session endpoints", async (t) => {

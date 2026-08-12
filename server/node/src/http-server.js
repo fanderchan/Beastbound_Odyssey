@@ -40,12 +40,16 @@ const {
   createHttpAuthBoundary,
 } = require("./http-auth-boundary");
 const {createHealthMonitor} = require("./health-monitor");
+const {createMailArchiveMaintenance} = require("./mail-archive-maintenance");
 const {
   DURABLE_OPERATION_ID_PATTERN,
 } = require("./auth/durable-mutation-state");
 const {
   normalizeMailInboxPageOptions,
 } = require("./auth/mail-inbox-pagination");
+const {
+  normalizeMailArchivePageOptions,
+} = require("./auth/mail-archive-pagination");
 
 const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_map", "label": "进入GM测试场"},
@@ -160,6 +164,7 @@ const PURE_HTTP_READ_SERVICE_METHODS = new Set([
 const SHARED_ASSET_HTTP_READ_SERVICE_METHODS = new Set([
   "marketListings",
   "listInbox",
+  "listMailArchive",
 ]);
 const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
   "/characters",
@@ -216,7 +221,19 @@ function createHttpServer(options = {}) {
   });
   const qaAdvanceClock = typeof options.qaAdvanceClock === "function" ? options.qaAdvanceClock : null;
   const unsubscribeServiceLogger = installServiceEventLogger(baseService, logger);
+  const mailArchiveMaintenance = options.mailArchiveMaintenance
+    || createMailArchiveMaintenance(baseService, {
+      ...(options.mailArchiveMaintenanceOptions || {}),
+      onError(error) {
+        logStructured(logger, {
+          type: "mail.archive_maintenance_failed",
+          errorCode: String(error && error.code || "mail_archive_maintenance_failed"),
+          outcomeUnknown: Boolean(error && error.outcomeUnknown === true),
+        });
+      },
+    });
   healthMonitor.start();
+  mailArchiveMaintenance.start();
 
   const server = applyHttpServerLimits(http.createServer(dispatchRequest), options.httpServerLimits || {});
   server.on("checkContinue", (req, res) => {
@@ -621,6 +638,16 @@ function createHttpServer(options = {}) {
         }
         return sendResult(res, service.listInbox(bearerToken(req), inboxOptions.options));
       }
+      if (req.method === "GET" && url.pathname === "/mail/archive") {
+        const archiveOptions = mailArchiveOptionsFromSearchParams(url.searchParams);
+        if (!archiveOptions.ok) {
+          return sendResult(res, archiveOptions);
+        }
+        return sendResult(
+          res,
+          service.listMailArchive(bearerToken(req), archiveOptions.options),
+        );
+      }
       if (req.method === "POST" && url.pathname === "/mail/send") {
         return sendResult(res, service.sendMail(bearerToken(req), await readJson(req)));
       }
@@ -750,6 +777,7 @@ function createHttpServer(options = {}) {
   server.on("close", () => {
     unsubscribeServiceLogger();
     healthMonitor.close();
+    void mailArchiveMaintenance.close();
   });
   server.on("upgrade", (req, socket, head) => {
     socket.setTimeout?.(0);
@@ -769,6 +797,7 @@ function createHttpServer(options = {}) {
   server.authService = baseService;
   server.networkAdmission = networkAdmission;
   server.healthMonitor = healthMonitor;
+  server.mailArchiveMaintenance = mailArchiveMaintenance;
   if (options.store) {
     server.authStore = options.store;
   }
@@ -1155,6 +1184,39 @@ function mailInboxOptionsFromSearchParams(searchParams) {
   }
 }
 
+function mailArchiveOptionsFromSearchParams(searchParams) {
+  const allowedFields = new Set(["limit", "cursor"]);
+  const limitValues = searchParams.getAll("limit");
+  const cursorValues = searchParams.getAll("cursor");
+  if (
+    Array.from(searchParams.keys()).some((field) => !allowedFields.has(field))
+    || limitValues.length !== 1
+    || cursorValues.length > 1
+  ) {
+    return {
+      ok: false,
+      code: "mail_archive_pagination_invalid",
+      message: "邮件归档分页参数无效，请刷新后重试。",
+    };
+  }
+  const rawOptions = {limit: limitValues[0]};
+  if (cursorValues.length === 1) {
+    rawOptions.cursor = cursorValues[0];
+  }
+  try {
+    return {
+      ok: true,
+      options: normalizeMailArchivePageOptions(rawOptions, {requireExplicitLimit: true}),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      code: String(error && error.code || "mail_archive_pagination_invalid"),
+      message: String(error && error.message || "邮件归档分页参数无效，请刷新后重试。"),
+    };
+  }
+}
+
 function healthPayload(healthMonitor, eventHub, service = null, networkAdmission = null, httpAuth = null) {
   const storage = healthMonitor.snapshot();
   const eventStreamMetrics = eventHub && typeof eventHub.metrics === "function"
@@ -1388,7 +1450,12 @@ async function drainServerForShutdown(server, store) {
   // server.close() must be called first to stop new TCP admission, but its
   // callback waits for upgraded WebSocket sockets. Invoke eventHub.close()
   // immediately (not from that callback), enqueue disconnect cleanup, then
-  // atomically seal durable admission and wait for all three drains together.
+  // atomically seal durable admission and wait for all four drains together.
+  const archiveMaintenanceDrained = shutdownStep(() => (
+    server.mailArchiveMaintenance && typeof server.mailArchiveMaintenance.close === "function"
+      ? server.mailArchiveMaintenance.close()
+      : undefined
+  ));
   const serverClosed = shutdownStep(() => new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   }));
@@ -1406,7 +1473,12 @@ async function drainServerForShutdown(server, store) {
     }
     return undefined;
   });
-  const drainResults = await Promise.allSettled([serverClosed, eventHubDrained, durableDrained]);
+  const drainResults = await Promise.allSettled([
+    archiveMaintenanceDrained,
+    serverClosed,
+    eventHubDrained,
+    durableDrained,
+  ]);
   let flushError = null;
   try {
     if (store && typeof store.flush === "function") {
