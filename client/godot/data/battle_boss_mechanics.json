@@ -1,8 +1,9 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "mechanics": [
     {
       "id": "guardian_targeted_charge_v1",
+      "kind": "targeted_charge",
       "label": "守护兽锁定冲撞",
       "encounterGroupId": "earth_vein_guardian_group",
       "bossActorSlot": "enemy.front.3",
@@ -15,6 +16,24 @@
       "commandText": "{boss}锁定{target}：防御、换宠，或令其无法行动来打断。",
       "evadedText": "{target}已离开战场，{boss}的锁定冲撞落空了。",
       "interruptedText": "{boss}的锁定冲撞被打断了。"
+    },
+    {
+      "id": "guardian_tide_core_v1",
+      "kind": "tide_core",
+      "label": "守护兽潮核回流",
+      "encounterGroupId": "tide_echo_guardian_group",
+      "bossActorSlot": "enemy.front.3",
+      "triggerHpRatio": 0.6,
+      "resolveAfterRounds": 1,
+      "healMaxHpRatio": 0.18,
+      "ebbDefenseMultiplier": 0.65,
+      "ebbRounds": 1,
+      "intentActionId": "boss_tide_core",
+      "openText": "{boss}把潮核寄宿于{target}。下回合结束前击破它，否则首领回复生命。",
+      "commandText": "潮核寄宿于{target}：本回合集火击破，否则{boss}回复18%生命。",
+      "healText": "{target}仍在，潮核回流，{boss}回复18%生命。",
+      "brokenText": "{target}被击破，{boss}进入退潮，防御降低一回合。",
+      "ebbEndText": "{boss}的潮息恢复，退潮结束。"
     }
   ]
 }

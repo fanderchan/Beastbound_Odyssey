@@ -8292,8 +8292,10 @@ function publicBattleBossIntent(value) {
     announcedRound: Math.max(1, Math.trunc(Number(value.announcedRound || 1))),
     resolveRound: Math.max(1, Math.trunc(Number(value.resolveRound || 1))),
     actionId: String(value.actionId || ""),
+    intentKind: String(value.intentKind || "targeted_charge"),
+    markerStyle: String(value.markerStyle || "charge"),
     message: String(value.message || ""),
-    schemaVersion: 1,
+    schemaVersion: 2,
   };
 }
 
@@ -13092,6 +13094,18 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
   }
   if (options.battleBossRules && typeof options.battleBossRules.finishIfBossUnavailable === "function") {
     options.battleBossRules.finishIfBossUnavailable(battle);
+  }
+  if (
+    !battleResultForResolvedActors(room, battle, now)
+    && options.battleBossRules
+    && typeof options.battleBossRules.resolveRoundEnd === "function"
+  ) {
+    const bossPhaseEvents = options.battleBossRules.resolveRoundEnd(room, battle, round, sequence);
+    for (const event of Array.isArray(bossPhaseEvents) ? bossPhaseEvents : []) {
+      event.schemaVersion = BATTLE_EVENT_CONTRACT_VERSION;
+      events.push(event);
+      sequence += 1;
+    }
   }
   const eventList = {
     schemaVersion: BATTLE_EVENT_CONTRACT_VERSION,

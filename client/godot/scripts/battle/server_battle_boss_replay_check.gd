@@ -66,6 +66,103 @@ static func run() -> Dictionary:
 		not bool(BattleModel.actor_by_id(cleared_state, BattleModel.PLAYER_PET_ID).get("bossThreatened", false))
 		and not str(cleared_state.get("message", "")).contains("锁定")
 	)
+
+	var tide_room := _room_with_tide_intent()
+	var tide_state := ServerBattleRoomModel.battle_state_from_room(tide_room, session)
+	var tide_core_actor := _actor_by_server_id(tide_state, "party_pve_enemy_front_1")
+	var tide_boss_actor := _actor_by_server_id(tide_state, "party_pve_enemy_front_3")
+	checks["tide_boss_appearance_survives_room_restore"] = (
+		str(tide_boss_actor.get("formId", "")) == "driftfox_evolved_moon_gale_wind7_water3"
+		and str(tide_boss_actor.get("serverFormId", "")) == "bui_normal_red_fire10"
+		and str(tide_boss_actor.get("name", "")) == "潮回守护兽"
+	)
+	checks["tide_core_intent_uses_distinct_server_marker"] = (
+		bool(tide_core_actor.get("bossThreatened", false))
+		and str(tide_core_actor.get("bossThreatMechanicId", "")) == "guardian_tide_core_v1"
+		and str(tide_core_actor.get("bossThreatStyle", "")) == "tide_core"
+		and str(tide_state.get("message", "")).contains("本回合集火击破")
+	)
+	var tide_events := ServerBattleRoomModel.battle_events_from_server_event_list(tide_state, {
+		"kind": "battle_event_list",
+		"roomId": "battle_room_tide_client",
+		"round": 2,
+		"turnSeq": 2,
+		"events": [{
+			"eventId": "tide_open",
+			"eventType": "boss_tide_core_open",
+			"round": 2,
+			"sequence": 1,
+			"actorId": "party_pve_enemy_front_3",
+			"actorKind": "wild_pet",
+			"targetActorId": "party_pve_enemy_front_1",
+			"targetKind": "wild_pet",
+			"actionId": "boss_tide_core",
+			"message": "潮回守护兽把潮核寄宿于潮回乌力。",
+		}, {
+			"eventId": "tide_heal",
+			"eventType": "boss_tide_core_heal",
+			"round": 2,
+			"sequence": 2,
+			"actorId": "party_pve_enemy_front_3",
+			"actorKind": "wild_pet",
+			"targetActorId": "party_pve_enemy_front_3",
+			"targetKind": "wild_pet",
+			"actionId": "boss_tide_core",
+			"heal": 288,
+			"healed": 288,
+			"hpBefore": 900,
+			"hpAfter": 1188,
+			"message": "潮核回流，潮回守护兽回复18%生命。",
+		}, {
+			"eventId": "tide_broken",
+			"eventType": "boss_tide_core_broken",
+			"round": 2,
+			"sequence": 3,
+			"actorId": "party_pve_enemy_front_3",
+			"actorKind": "wild_pet",
+			"targetActorId": "party_pve_enemy_front_3",
+			"targetKind": "wild_pet",
+			"actionId": "boss_tide_core",
+			"defenseBefore": 112,
+			"defenseAfter": 72,
+			"message": "潮核破碎，潮回守护兽进入退潮，防御暂时降低。",
+		}, {
+			"eventId": "tide_ebb_end",
+			"eventType": "boss_tide_ebb_end",
+			"round": 3,
+			"sequence": 4,
+			"actorId": "party_pve_enemy_front_3",
+			"actorKind": "wild_pet",
+			"targetActorId": "party_pve_enemy_front_3",
+			"targetKind": "wild_pet",
+			"actionId": "boss_tide_ebb_end",
+			"defenseAfter": 112,
+			"message": "潮势恢复，潮回守护兽的防御恢复。",
+		}],
+	})
+	var applied_tide_open := BattleModel.apply_battle_event(tide_state.duplicate(true), tide_events[0]) if tide_events.size() == 4 else {}
+	var applied_tide_heal := BattleModel.apply_battle_event(tide_state.duplicate(true), tide_events[1]) if tide_events.size() == 4 else {}
+	var applied_tide_broken := BattleModel.apply_battle_event(tide_state.duplicate(true), tide_events[2]) if tide_events.size() == 4 else {}
+	var applied_tide_ebb_end := BattleModel.apply_battle_event(tide_state.duplicate(true), tide_events[3]) if tide_events.size() == 4 else {}
+	checks["tide_core_events_use_semantic_presentations"] = (
+		tide_events.size() == 4
+		and str((tide_events[0] as Dictionary).get("type", "")) == "boss_phase"
+		and str((tide_events[0] as Dictionary).get("presentationState", "")) == "skill"
+		and str((tide_events[0] as Dictionary).get("serverEventType", "")) == "boss_tide_core_open"
+		and str((tide_events[1] as Dictionary).get("type", "")) == "spirit_heal"
+		and int((tide_events[1] as Dictionary).get("heal", 0)) == 288
+		and str((tide_events[1] as Dictionary).get("serverEventType", "")) == "boss_tide_core_heal"
+		and str((tide_events[2] as Dictionary).get("type", "")) == "boss_phase"
+		and str((tide_events[2] as Dictionary).get("presentationState", "")) == "hit"
+		and str((tide_events[2] as Dictionary).get("serverEventType", "")) == "boss_tide_core_broken"
+		and str((tide_events[3] as Dictionary).get("type", "")) == "boss_phase"
+		and str((tide_events[3] as Dictionary).get("presentationState", "")) == "skill"
+		and str((tide_events[3] as Dictionary).get("serverEventType", "")) == "boss_tide_ebb_end"
+		and str(_actor_by_server_id(applied_tide_open, "party_pve_enemy_front_3").get("actionState", "")) == "skill"
+		and str(_actor_by_server_id(applied_tide_heal, "party_pve_enemy_front_3").get("actionState", "")) == "heal"
+		and str(_actor_by_server_id(applied_tide_broken, "party_pve_enemy_front_3").get("actionState", "")) == "hit"
+		and str(_actor_by_server_id(applied_tide_ebb_end, "party_pve_enemy_front_3").get("actionState", "")) == "skill"
+	)
 	return {"ok": checks.values().all(func(value): return bool(value)), "checks": checks}
 
 
@@ -137,6 +234,84 @@ static func _room_with_intent() -> Dictionary:
 				"hp": 1688,
 				"maxHp": 1688,
 				"speed": 96,
+			}],
+		},
+	}
+
+
+static func _room_with_tide_intent() -> Dictionary:
+	return {
+		"roomId": "battle_room_tide_client",
+		"mode": "party_pve",
+		"status": "ready",
+		"seed": "tide-client-seed",
+		"battle": {
+			"round": 2,
+			"phase": "command",
+			"requiredActorIds": ["party_pve_player_1", "party_pve_pet_1_active_pet"],
+			"submittedActorIds": [],
+			"bossIntent": {
+				"mechanicId": "guardian_tide_core_v1",
+				"bossActorId": "party_pve_enemy_front_3",
+				"bossName": "潮回守护兽",
+				"targetActorId": "party_pve_enemy_front_1",
+				"targetName": "潮回乌力",
+				"announcedRound": 1,
+				"resolveRound": 2,
+				"actionId": "boss_tide_core",
+				"intentKind": "tide_core",
+				"markerStyle": "tide_core",
+				"message": "潮核寄宿于潮回乌力：本回合集火击破，否则潮回守护兽回复18%生命。",
+			},
+			"actors": [{
+				"actorId": "party_pve_player_1",
+				"accountId": "account_ally",
+				"username": "boss_hunter",
+				"displayName": "策略猎人",
+				"side": "ally",
+				"kind": "player",
+				"slotId": "ally.back.3",
+				"hp": 500,
+				"maxHp": 500,
+				"speed": 120,
+			}, {
+				"actorId": "party_pve_pet_1_active_pet",
+				"accountId": "account_ally",
+				"username": "boss_hunter",
+				"displayName": "苔团",
+				"side": "ally",
+				"kind": "pet",
+				"slotId": "ally.front.3",
+				"petId": "active_pet",
+				"formId": "bui_normal_red_fire10",
+				"hp": 420,
+				"maxHp": 420,
+				"speed": 110,
+			}, {
+				"actorId": "party_pve_enemy_front_1",
+				"accountId": "",
+				"username": "",
+				"displayName": "潮回乌力",
+				"side": "enemy",
+				"kind": "wild_pet",
+				"slotId": "enemy.front.1",
+				"formId": "wuli_normal_orange_fire10",
+				"hp": 990,
+				"maxHp": 990,
+				"speed": 88,
+			}, {
+				"actorId": "party_pve_enemy_front_3",
+				"accountId": "",
+				"username": "",
+				"displayName": "潮回守护兽",
+				"side": "enemy",
+				"kind": "wild_pet",
+				"slotId": "enemy.front.3",
+				"formId": "bui_normal_red_fire10",
+				"battleAppearanceFormId": "driftfox_evolved_moon_gale_wind7_water3",
+				"hp": 900,
+				"maxHp": 1600,
+				"speed": 110,
 			}],
 		},
 	}

@@ -6,7 +6,10 @@ const path = require("node:path");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
 const DEFAULT_CATALOG_PATH = path.join(REPOSITORY_ROOT, "client/godot/data/battle_boss_mechanics.json");
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
+const MECHANIC_TARGETED_CHARGE = "targeted_charge";
+const MECHANIC_TIDE_CORE = "tide_core";
+const ALLOWED_MECHANIC_KINDS = new Set([MECHANIC_TARGETED_CHARGE, MECHANIC_TIDE_CORE]);
 const ALLOWED_TARGET_KINDS = new Set(["pet", "player"]);
 
 class BattleBossRulesError extends Error {
@@ -29,6 +32,14 @@ function strictText(value) {
 
 function positiveInteger(value) {
   return Number.isInteger(value) && value > 0 ? value : 0;
+}
+
+function ratio(value, {allowOne = true} = {}) {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue) || numberValue <= 0 || (allowOne ? numberValue > 1 : numberValue >= 1)) {
+    return 0;
+  }
+  return numberValue;
 }
 
 function deepFreeze(value) {
@@ -56,7 +67,25 @@ function validateMechanic(raw, index, ids, errors) {
   } else {
     ids.add(id);
   }
-  for (const key of ["label", "encounterGroupId", "bossActorSlot", "strikeActionId", "strikeLabel", "telegraphText", "commandText", "evadedText", "interruptedText"]) {
+  for (const key of ["label", "encounterGroupId", "bossActorSlot"]) {
+    if (strictText(raw[key]) === "") {
+      errors.push(`${fieldPath}.${key} must be non-empty trimmed text`);
+    }
+  }
+  const kind = strictText(raw.kind);
+  if (!ALLOWED_MECHANIC_KINDS.has(kind)) {
+    errors.push(`${fieldPath}.kind must be one of ${Array.from(ALLOWED_MECHANIC_KINDS).join(", ")}`);
+    return;
+  }
+  if (kind === MECHANIC_TIDE_CORE) {
+    validateTideCoreMechanic(raw, fieldPath, errors);
+    return;
+  }
+  validateTargetedChargeMechanic(raw, fieldPath, errors);
+}
+
+function validateTargetedChargeMechanic(raw, fieldPath, errors) {
+  for (const key of ["strikeActionId", "strikeLabel", "telegraphText", "commandText", "evadedText", "interruptedText"]) {
     if (strictText(raw[key]) === "") {
       errors.push(`${fieldPath}.${key} must be non-empty trimmed text`);
     }
@@ -88,6 +117,38 @@ function validateMechanic(raw, index, ids, errors) {
   }
   if (!String(raw.commandText || "").includes("{boss}") || !String(raw.commandText || "").includes("{target}")) {
     errors.push(`${fieldPath}.commandText must name {boss} and {target}`);
+  }
+}
+
+function validateTideCoreMechanic(raw, fieldPath, errors) {
+  for (const key of ["intentActionId", "openText", "commandText", "healText", "brokenText", "ebbEndText"]) {
+    if (strictText(raw[key]) === "") {
+      errors.push(`${fieldPath}.${key} must be non-empty trimmed text`);
+    }
+  }
+  if (ratio(raw.triggerHpRatio, {allowOne: false}) === 0) {
+    errors.push(`${fieldPath}.triggerHpRatio must be greater than 0 and less than 1`);
+  }
+  if (positiveInteger(raw.resolveAfterRounds) === 0) {
+    errors.push(`${fieldPath}.resolveAfterRounds must be a positive integer`);
+  }
+  if (ratio(raw.healMaxHpRatio) === 0) {
+    errors.push(`${fieldPath}.healMaxHpRatio must be greater than 0 and at most 1`);
+  }
+  if (ratio(raw.ebbDefenseMultiplier, {allowOne: false}) === 0) {
+    errors.push(`${fieldPath}.ebbDefenseMultiplier must be greater than 0 and less than 1`);
+  }
+  if (positiveInteger(raw.ebbRounds) === 0) {
+    errors.push(`${fieldPath}.ebbRounds must be a positive integer`);
+  }
+  for (const key of ["openText", "commandText", "healText", "brokenText"]) {
+    const text = String(raw[key] || "");
+    if (!text.includes("{boss}") || !text.includes("{target}")) {
+      errors.push(`${fieldPath}.${key} must name {boss} and {target}`);
+    }
+  }
+  if (!String(raw.ebbEndText || "").includes("{boss}")) {
+    errors.push(`${fieldPath}.ebbEndText must name {boss}`);
   }
 }
 
@@ -133,7 +194,10 @@ function createBattleBossRules({document} = {}) {
     if (!boss || (requireAlive && Number(boss.hp || 0) <= 0) || String(boss.accountId || "") !== "") {
       throw new BattleBossRulesError([`${mechanic.id} boss actor ${mechanic.bossActorSlot} is missing`]);
     }
-    if (!Array.isArray(boss.activeSkillIds) || !boss.activeSkillIds.includes(mechanic.strikeActionId)) {
+    if (
+      mechanic.kind === MECHANIC_TARGETED_CHARGE
+      && (!Array.isArray(boss.activeSkillIds) || !boss.activeSkillIds.includes(mechanic.strikeActionId))
+    ) {
       throw new BattleBossRulesError([`${mechanic.id} boss actor lacks ${mechanic.strikeActionId}`]);
     }
     return boss;
@@ -145,13 +209,29 @@ function createBattleBossRules({document} = {}) {
       return null;
     }
     const boss = bossForMechanic(actors, mechanic, {requireAlive: true});
+    if (mechanic.kind === MECHANIC_TIDE_CORE) {
+      return {
+        mechanicId: mechanic.id,
+        kind: mechanic.kind,
+        bossActorId: String(boss.actorId || ""),
+        phase: "waiting",
+        openedRound: 0,
+        resolveRound: 0,
+        coreActorId: "",
+        baseBossDefense: Math.max(1, Math.trunc(Number(boss.defense || 1))),
+        ebbRestoreRound: 0,
+        completed: false,
+        schemaVersion: 2,
+      };
+    }
     return {
       mechanicId: mechanic.id,
+      kind: mechanic.kind,
       bossActorId: String(boss.actorId || ""),
       telegraphRound: mechanic.telegraphRound,
       strikeRound: mechanic.strikeRound,
       completed: false,
-      schemaVersion: 1,
+      schemaVersion: 2,
     };
   }
 
@@ -162,8 +242,12 @@ function createBattleBossRules({document} = {}) {
     }
     const boss = bossForMechanic(actors, mechanic, {requireAlive: false});
     const bossActorId = String(boss.actorId || "");
+    if (mechanic.kind === MECHANIC_TIDE_CORE) {
+      return normalizeTideCoreState(mechanic, boss, bossActorId, actors, state);
+    }
     return {
       mechanicId: mechanic.id,
+      kind: mechanic.kind,
       bossActorId,
       telegraphRound: mechanic.telegraphRound,
       strikeRound: mechanic.strikeRound,
@@ -173,7 +257,7 @@ function createBattleBossRules({document} = {}) {
         && String(state.bossActorId || "") === bossActorId
         && state.completed
       ),
-      schemaVersion: 1,
+      schemaVersion: 2,
     };
   }
 
@@ -187,7 +271,14 @@ function createBattleBossRules({document} = {}) {
       || !isRecord(intent)
       || String(intent.mechanicId || "") !== mechanic.id
       || String(intent.bossActorId || "") !== String(state.bossActorId || "")
-      || Number(room && room.battle && room.battle.round || 0) !== mechanic.strikeRound
+    ) {
+      return null;
+    }
+    if (mechanic.kind === MECHANIC_TIDE_CORE) {
+      return normalizeTideCoreIntent(room, actors, state, intent, mechanic);
+    }
+    if (
+      Number(room && room.battle && room.battle.round || 0) !== mechanic.strikeRound
       || Number(intent.announcedRound || 0) !== mechanic.telegraphRound
       || Number(intent.resolveRound || 0) !== mechanic.strikeRound
       || String(intent.actionId || "") !== mechanic.strikeActionId
@@ -224,8 +315,10 @@ function createBattleBossRules({document} = {}) {
       announcedRound: mechanic.telegraphRound,
       resolveRound: mechanic.strikeRound,
       actionId: mechanic.strikeActionId,
+      intentKind: MECHANIC_TARGETED_CHARGE,
+      markerStyle: "charge",
       message: formatText(mechanic.commandText, bossName, targetName),
-      schemaVersion: 1,
+      schemaVersion: 2,
     };
   }
 
@@ -236,6 +329,9 @@ function createBattleBossRules({document} = {}) {
     }
     const mechanic = byId.get(String(state.mechanicId || ""));
     if (!mechanic) {
+      return null;
+    }
+    if (mechanic.kind !== MECHANIC_TARGETED_CHARGE) {
       return null;
     }
     if (round === mechanic.telegraphRound) {
@@ -305,8 +401,10 @@ function createBattleBossRules({document} = {}) {
       announcedRound: round,
       resolveRound: mechanic.strikeRound,
       actionId: mechanic.strikeActionId,
+      intentKind: MECHANIC_TARGETED_CHARGE,
+      markerStyle: "charge",
       message: formatText(mechanic.commandText, bossName, targetName),
-      schemaVersion: 1,
+      schemaVersion: 2,
     };
     return {
       eventId: `${room.roomId}:r${round}:e${sequence}`,
@@ -325,8 +423,117 @@ function createBattleBossRules({document} = {}) {
       damage: 0,
       animation: {actor: "skill", targetReaction: "marked", observer: "watch_target"},
       message: formatText(mechanic.telegraphText, bossName, targetName),
-      schemaVersion: 1,
+      schemaVersion: 2,
     };
+  }
+
+  function resolveRoundEnd(room, battle, round, sequence) {
+    const state = isRecord(battle && battle.bossMechanic) ? battle.bossMechanic : null;
+    if (!state || state.completed) {
+      return [];
+    }
+    const mechanic = byId.get(String(state.mechanicId || ""));
+    if (!mechanic || mechanic.kind !== MECHANIC_TIDE_CORE) {
+      return [];
+    }
+    const boss = (Array.isArray(battle && battle.actors) ? battle.actors : []).find((actor) => (
+      actor && String(actor.actorId || "") === String(state.bossActorId || "")
+    ));
+    if (!livingActor(boss)) {
+      finishMechanic(battle);
+      return [];
+    }
+    if (String(state.phase || "") === "ebb") {
+      if (round < Number(state.ebbRestoreRound || 0)) {
+        return [];
+      }
+      boss.defense = Math.max(1, Math.trunc(Number(state.baseBossDefense || boss.defense || 1)));
+      state.phase = "completed";
+      state.completed = true;
+      return [bossPhaseEvent(room, boss, boss, mechanic, round, sequence, {
+        eventType: "boss_tide_ebb_end",
+        actionId: "boss_tide_ebb_end",
+        message: formatText(mechanic.ebbEndText, actorName(boss, "潮回守护兽"), ""),
+        defenseAfter: boss.defense,
+      })];
+    }
+    if (String(state.phase || "") === "open") {
+      if (round < Number(state.resolveRound || 0)) {
+        return [];
+      }
+      const core = (Array.isArray(battle.actors) ? battle.actors : []).find((actor) => (
+        actor && String(actor.actorId || "") === String(state.coreActorId || "")
+      ));
+      const bossName = actorName(boss, "潮回守护兽");
+      const coreName = actorName(core, "潮核");
+      battle.bossIntent = null;
+      if (livingActor(core)) {
+        const hpBefore = Math.max(0, Math.trunc(Number(boss.hp || 0)));
+        const heal = Math.max(1, Math.ceil(Math.max(1, Number(boss.maxHp || 1)) * mechanic.healMaxHpRatio));
+        boss.hp = Math.min(Math.max(1, Math.trunc(Number(boss.maxHp || 1))), hpBefore + heal);
+        const healed = Math.max(0, boss.hp - hpBefore);
+        state.phase = "completed";
+        state.completed = true;
+        return [bossPhaseEvent(room, boss, boss, mechanic, round, sequence, {
+          eventType: "boss_tide_core_heal",
+          actionId: mechanic.intentActionId,
+          message: formatText(mechanic.healText, bossName, coreName),
+          hpBefore,
+          hpAfter: boss.hp,
+          heal: healed,
+          healed,
+        })];
+      }
+      const baseDefense = Math.max(1, Math.trunc(Number(state.baseBossDefense || boss.defense || 1)));
+      boss.defense = Math.max(1, Math.floor(baseDefense * mechanic.ebbDefenseMultiplier));
+      state.phase = "ebb";
+      state.ebbRestoreRound = round + mechanic.ebbRounds;
+      return [bossPhaseEvent(room, boss, boss, mechanic, round, sequence, {
+        eventType: "boss_tide_core_broken",
+        actionId: mechanic.intentActionId,
+        message: formatText(mechanic.brokenText, bossName, coreName),
+        defenseBefore: baseDefense,
+        defenseAfter: boss.defense,
+        ebbRestoreRound: state.ebbRestoreRound,
+      })];
+    }
+    const maxHp = Math.max(1, Math.trunc(Number(boss.maxHp || 1)));
+    if (Number(boss.hp || 0) / maxHp > mechanic.triggerHpRatio) {
+      return [];
+    }
+    const core = chooseTideCoreTarget(room, battle, boss, mechanic, round);
+    if (!core) {
+      finishMechanic(battle);
+      return [];
+    }
+    const bossName = actorName(boss, "潮回守护兽");
+    const coreName = actorName(core, "潮核");
+    state.phase = "open";
+    state.openedRound = round;
+    state.resolveRound = round + mechanic.resolveAfterRounds;
+    state.coreActorId = String(core.actorId || "");
+    battle.bossIntent = {
+      mechanicId: mechanic.id,
+      bossActorId: String(boss.actorId || ""),
+      bossName,
+      targetActorId: String(core.actorId || ""),
+      targetAccountId: "",
+      targetUsername: "",
+      targetName: coreName,
+      announcedRound: round,
+      resolveRound: state.resolveRound,
+      actionId: mechanic.intentActionId,
+      intentKind: MECHANIC_TIDE_CORE,
+      markerStyle: "tide_core",
+      message: formatText(mechanic.commandText, bossName, coreName),
+      schemaVersion: 2,
+    };
+    return [bossPhaseEvent(room, boss, core, mechanic, round, sequence, {
+      eventType: "boss_tide_core_open",
+      actionId: mechanic.intentActionId,
+      message: formatText(mechanic.openText, bossName, coreName),
+      resolveRound: state.resolveRound,
+    })];
   }
 
   function finishMechanic(battle) {
@@ -377,6 +584,7 @@ function createBattleBossRules({document} = {}) {
     normalizeIntent,
     commandForRound,
     telegraphEvent,
+    resolveRoundEnd,
     finishMechanic,
     finishIfBossUnavailable,
     interruptionMessage,
@@ -404,6 +612,156 @@ function chooseTarget(room, battle, actor, mechanic, round) {
     return candidates[index];
   }
   return null;
+}
+
+function normalizeTideCoreState(mechanic, boss, bossActorId, actors, state) {
+  const valid = isRecord(state)
+    && String(state.mechanicId || "") === mechanic.id
+    && String(state.bossActorId || "") === bossActorId
+    && String(state.kind || "") === mechanic.kind
+    && Number(state.schemaVersion || 0) === SCHEMA_VERSION;
+  const phase = valid && ["waiting", "open", "ebb", "completed"].includes(String(state.phase || ""))
+    ? String(state.phase || "")
+    : "waiting";
+  const baseBossDefense = valid
+    ? Math.max(1, Math.trunc(Number(state.baseBossDefense || boss.defense || 1)))
+    : Math.max(1, Math.trunc(Number(boss.defense || 1)));
+  const openedRound = valid ? Math.max(0, Math.trunc(Number(state.openedRound || 0))) : 0;
+  const coreActorId = phase === "open" && openedRound > 0 && (Array.isArray(actors) ? actors : []).some((actor) => (
+    actor
+    && String(actor.actorId || "") === String(state.coreActorId || "")
+    && String(actor.actorId || "") !== bossActorId
+    && String(actor.side || "") === String(boss.side || "enemy")
+    && String(actor.accountId || "") === ""
+  )) ? String(state.coreActorId || "") : "";
+  const completed = Boolean(valid && state.completed) || phase === "completed";
+  const normalizedPhase = completed ? "completed" : (phase === "open" && coreActorId === "" ? "waiting" : phase);
+  const resolveRound = normalizedPhase === "open" || normalizedPhase === "ebb"
+    ? openedRound + mechanic.resolveAfterRounds
+    : 0;
+  const ebbRestoreRound = normalizedPhase === "ebb"
+    ? resolveRound + mechanic.ebbRounds
+    : 0;
+  boss.defense = normalizedPhase === "ebb"
+    ? Math.max(1, Math.floor(baseBossDefense * mechanic.ebbDefenseMultiplier))
+    : baseBossDefense;
+  return {
+    mechanicId: mechanic.id,
+    kind: mechanic.kind,
+    bossActorId,
+    phase: normalizedPhase,
+    openedRound: normalizedPhase === "waiting" ? 0 : openedRound,
+    resolveRound,
+    coreActorId,
+    baseBossDefense,
+    ebbRestoreRound,
+    completed,
+    schemaVersion: 2,
+  };
+}
+
+function normalizeTideCoreIntent(room, actors, state, intent, mechanic) {
+  if (
+    String(state.phase || "") !== "open"
+    || String(state.coreActorId || "") === ""
+    || String(intent.targetActorId || "") !== String(state.coreActorId || "")
+    || Number(intent.announcedRound || 0) !== Number(state.openedRound || 0)
+    || Number(intent.resolveRound || 0) !== Number(state.resolveRound || 0)
+    || Number(room && room.battle && room.battle.round || 0) !== Number(state.resolveRound || 0)
+    || String(intent.actionId || "") !== mechanic.intentActionId
+  ) {
+    return null;
+  }
+  const boss = bossForTideState(actors, state);
+  const target = (Array.isArray(actors) ? actors : []).find((actor) => (
+    actor
+    && String(actor.actorId || "") === String(state.coreActorId || "")
+    && String(actor.side || "") === "enemy"
+    && String(actor.actorId || "") !== String(state.bossActorId || "")
+    && String(actor.accountId || "") === ""
+  ));
+  if (!livingActor(boss) || !livingActor(target)) {
+    return null;
+  }
+  const bossName = actorName(boss, "潮回守护兽");
+  const targetName = actorName(target, "潮核");
+  return {
+    mechanicId: mechanic.id,
+    bossActorId: String(boss.actorId || ""),
+    bossName,
+    targetActorId: String(target.actorId || ""),
+    targetAccountId: "",
+    targetUsername: "",
+    targetName,
+    announcedRound: Number(state.openedRound || 0),
+    resolveRound: Number(state.resolveRound || 0),
+    actionId: mechanic.intentActionId,
+    intentKind: MECHANIC_TIDE_CORE,
+    markerStyle: "tide_core",
+    message: formatText(mechanic.commandText, bossName, targetName),
+    schemaVersion: 2,
+  };
+}
+
+function bossForTideState(actors, state) {
+  return (Array.isArray(actors) ? actors : []).find((actor) => (
+    actor && String(actor.actorId || "") === String(state && state.bossActorId || "")
+  )) || null;
+}
+
+function chooseTideCoreTarget(room, battle, boss, mechanic, round) {
+  const candidates = (Array.isArray(battle && battle.actors) ? battle.actors : []).filter((actor) => (
+    actor
+    && String(actor.side || "") === String(boss && boss.side || "enemy")
+    && String(actor.actorId || "") !== String(boss && boss.actorId || "")
+    && String(actor.accountId || "") === ""
+    && livingActor(actor)
+  )).sort((a, b) => String(a.actorId || "").localeCompare(String(b.actorId || "")));
+  if (candidates.length < 1) {
+    return null;
+  }
+  const seed = [room && (room.seed || room.roomId) || "", mechanic.id, round, boss && boss.actorId || "", "tide_core"].join(":");
+  const index = Number.parseInt(crypto.createHash("sha256").update(seed).digest("hex").slice(0, 8), 16) % candidates.length;
+  return candidates[index];
+}
+
+function livingActor(actor) {
+  return Boolean(
+    actor
+    && Number(actor.hp || 0) > 0
+    && actor.activeInBattle !== false
+    && !Boolean(actor.escaped)
+    && !Boolean(actor.captured)
+  );
+}
+
+function actorName(actor, fallback) {
+  return String(actor && (actor.displayName || actor.username) || fallback);
+}
+
+function bossPhaseEvent(room, boss, target, mechanic, round, sequence, details) {
+  return {
+    eventId: `${room.roomId}:r${round}:e${sequence}`,
+    eventType: String(details.eventType || "boss_phase"),
+    round,
+    sequence,
+    actorAccountId: "",
+    actorUsername: "",
+    actorId: String(boss && boss.actorId || ""),
+    actorKind: String(boss && boss.kind || "wild_pet"),
+    targetActorId: String(target && target.actorId || ""),
+    targetKind: String(target && target.kind || "wild_pet"),
+    actionId: String(details.actionId || ""),
+    skillId: "",
+    bossMechanicId: mechanic.id,
+    intentKind: MECHANIC_TIDE_CORE,
+    markerStyle: "tide_core",
+    damage: 0,
+    animation: {actor: "skill", targetReaction: "marked", observer: "watch_target"},
+    message: String(details.message || ""),
+    ...Object.fromEntries(Object.entries(details).filter(([key]) => !["eventType", "actionId", "message"].includes(key))),
+    schemaVersion: 2,
+  };
 }
 
 function bossCommand(room, actor, round, options) {

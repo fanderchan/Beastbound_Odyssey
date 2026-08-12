@@ -13247,6 +13247,8 @@ func _battle_event_duration(event: Dictionary) -> float:
 			return 0.62
 		"skill_status":
 			return 0.58
+		"boss_phase":
+			return 0.58
 		"spirit_heal":
 			return 0.54
 		"item_heal":
@@ -15907,7 +15909,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	if _battle_target_mode_selects_ally() and str(actor.get("id", "")) == battle_hover_ally_target_id and str(actor.get("side", "")) == BattleModel.SIDE_ALLY and int(actor.get("hp", 0)) > 0:
 		_draw_battle_target_ring(pos, visual_scale, Color(0.50, 1.0, 0.58, 0.96))
 	if bool(actor.get("bossThreatened", false)) and int(actor.get("hp", 0)) > 0:
-		_draw_battle_boss_threat_ring(pos, visual_scale)
+		_draw_battle_boss_threat_ring(pos, visual_scale, str(actor.get("bossThreatStyle", "charge")))
 	var body_color := Color(0.20, 0.53, 0.85, alpha)
 	var trim_color := Color(1.0, 0.86, 0.40, alpha)
 	if kind == "pet":
@@ -15980,7 +15982,8 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 			_draw_battle_boss_threat_badge(
 				pos + Vector2(-68.0, hp_offset - 17.0) * visual_scale,
 				visual_scale,
-				alpha
+				alpha,
+				str(actor.get("bossThreatStyle", "charge"))
 			)
 		if _battle_actor_has_active_ride(actor):
 			var ride_hp_actor := {
@@ -16691,13 +16694,15 @@ func _draw_battle_target_ring(pos: Vector2, visual_scale: float, color: Color = 
 	draw_line(center + Vector2(chevron_x + 6.0 * visual_scale, 0.0), center + Vector2(chevron_x, 4.0 * visual_scale), color, maxf(1.5, 2.2 * visual_scale), true)
 
 
-func _draw_battle_boss_threat_ring(pos: Vector2, visual_scale: float) -> void:
+func _draw_battle_boss_threat_ring(pos: Vector2, visual_scale: float, marker_style: String = "charge") -> void:
 	var center := pos + Vector2(0, 2.0) * visual_scale
 	var radius := Vector2(42.0, 14.0) * visual_scale
 	var outer := _battle_ellipse_points(center, radius, 0.0, 44)
 	var inner := _battle_ellipse_points(center, radius - Vector2(5.0, 2.0) * visual_scale, 0.0, 44)
-	var warning_color := Color(1.0, 0.52, 0.16, 0.96)
-	draw_polyline(outer + PackedVector2Array([outer[0]]), Color(0.22, 0.08, 0.03, 0.78), maxf(3.6, 5.2 * visual_scale), true)
+	var tide_core := marker_style == "tide_core"
+	var warning_color := Color(0.24, 0.90, 1.0, 0.96) if tide_core else Color(1.0, 0.52, 0.16, 0.96)
+	var shadow_color := Color(0.02, 0.16, 0.23, 0.82) if tide_core else Color(0.22, 0.08, 0.03, 0.78)
+	draw_polyline(outer + PackedVector2Array([outer[0]]), shadow_color, maxf(3.6, 5.2 * visual_scale), true)
 	draw_polyline(inner + PackedVector2Array([inner[0]]), warning_color, maxf(1.7, 2.4 * visual_scale), true)
 	for tick in [
 		[Vector2(-48.0, 0.0), Vector2(-40.0, 0.0)],
@@ -16714,9 +16719,15 @@ func _draw_battle_boss_threat_ring(pos: Vector2, visual_scale: float) -> void:
 		)
 
 
-func _draw_battle_boss_threat_badge(center: Vector2, visual_scale: float, alpha: float) -> void:
-	var warning_color := Color(1.0, 0.54, 0.16, 0.98 * alpha)
+func _draw_battle_boss_threat_badge(center: Vector2, visual_scale: float, alpha: float, marker_style: String = "charge") -> void:
+	var tide_core := marker_style == "tide_core"
+	var warning_color := Color(0.24, 0.90, 1.0, 0.98 * alpha) if tide_core else Color(1.0, 0.54, 0.16, 0.98 * alpha)
 	var marker_origin := center
+	if tide_core:
+		draw_circle(marker_origin, 10.0 * visual_scale, Color(0.02, 0.16, 0.23, 0.86 * alpha))
+		draw_arc(marker_origin, 10.0 * visual_scale, 0.0, TAU, 24, warning_color, maxf(1.6, 2.2 * visual_scale), true)
+		draw_circle(marker_origin, 3.2 * visual_scale, Color(0.72, 1.0, 1.0, 0.98 * alpha))
+		return
 	var marker := PackedVector2Array([
 		marker_origin + Vector2(0.0, 11.0) * visual_scale,
 		marker_origin + Vector2(-12.0, -10.0) * visual_scale,

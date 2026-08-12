@@ -283,6 +283,25 @@ test("manual guardian zones require the registered nearby interaction and are no
   assert.equal(boss.formId, "bui_normal_thick_earth10");
   assert.equal(boss.battleAppearanceFormId, "wuli_evolved_crystal_earth8_water2");
   assert.equal(boss.battleDisplayName, "岩脉守护兽");
+
+  const tide = authority.resolve({
+    mapId: "tide_echo_cave_f4",
+    position: {hasCell: true, cellX: 21, cellY: 7},
+    request: {encounterIntent: {
+      zoneId: "tide_echo_guardian_floor",
+      encounterGroupId: "tide_echo_guardian_group",
+      sourceInteractionId: "tide_echo_guardian_npc",
+    }},
+    participants: soloParticipant(),
+    participantPositions: soloPosition("tide_echo_cave_f4", 21, 7),
+    seed: "tide-guardian",
+  });
+  assert.equal(tide.ok, true);
+  assert.equal(tide.encounter.bossMechanicId, "guardian_tide_core_v1");
+  assert.equal(tide.encounter.selectedWildPets[2].formId, "bui_normal_red_fire10");
+  assert.equal(tide.encounter.selectedWildPets[2].battleAppearanceFormId, "driftfox_evolved_moon_gale_wind7_water3");
+  assert.equal(tide.encounter.selectedWildPets[2].battleDisplayName, "潮回守护兽");
+  assert.equal(tide.encounter.selectedWildPets[2].catchable, false);
 });
 
 test("party encounters require every participant to be stopped on the same nearby map", () => {

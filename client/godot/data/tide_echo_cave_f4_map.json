@@ -47,10 +47,11 @@
       "enemyCount": 10,
       "formationTemplate": "10v10",
       "encounterGroupId": "tide_echo_guardian_group",
+      "bossMechanicId": "guardian_tide_core_v1",
       "fixedWildPets": [
         {"formId": "wuli_normal_orange_fire10", "name": "潮回乌力", "level": 98, "battleStats": {"maxHp": 990, "attack": 138, "defense": 84, "agility": 88}},
         {"formId": "wuli_normal_fast_wind10", "name": "潮回乌力", "level": 99, "battleStats": {"maxHp": 960, "attack": 136, "defense": 78, "agility": 122}},
-        {"formId": "bui_normal_red_fire10", "name": "潮回守护兽", "level": 112, "battleStats": {"maxHp": 1600, "attack": 184, "defense": 112, "agility": 110}, "activeSkillIds": ["pet_attack", "pet_defend", "pet_sleep_powder", "pet_confuse_cry"], "petSkillSlots": ["pet_attack", "pet_defend", "", "pet_sleep_powder", "pet_confuse_cry", "", ""]},
+        {"formId": "bui_normal_red_fire10", "battleAppearanceFormId": "driftfox_evolved_moon_gale_wind7_water3", "battleDisplayName": "潮回守护兽", "name": "潮回守护兽", "level": 112, "catchable": false, "battleStats": {"maxHp": 1600, "attack": 184, "defense": 112, "agility": 110}, "activeSkillIds": ["pet_attack", "pet_defend", "pet_sleep_powder", "pet_confuse_cry"], "petSkillSlots": ["pet_attack", "pet_defend", "", "pet_sleep_powder", "pet_confuse_cry", "", ""]},
         {"formId": "wuli_normal_orange_fire10", "name": "潮回乌力", "level": 99, "battleStats": {"maxHp": 1000, "attack": 140, "defense": 82, "agility": 90}},
         {"formId": "wuli_normal_tough_earth10", "name": "潮回乌力", "level": 98, "battleStats": {"maxHp": 1040, "attack": 134, "defense": 104, "agility": 72}},
         {"formId": "wuli_normal_fast_wind10", "name": "潮回乌力", "level": 100, "battleStats": {"maxHp": 970, "attack": 140, "defense": 78, "agility": 126}},

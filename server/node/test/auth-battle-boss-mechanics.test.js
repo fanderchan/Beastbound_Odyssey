@@ -57,6 +57,55 @@ function bossEncounterAuthority({enabled = true, bossHp = 5000} = {}) {
   });
 }
 
+function tideEncounterAuthority({bossHp = 1600} = {}) {
+  const wildPets = [{
+    formId: "wuli_normal_orange_fire10",
+    name: "潮回护卫甲",
+    level: 80,
+    catchable: false,
+    battleStats: {maxHp: 900, attack: 20, defense: 40, agility: 70},
+  }, {
+    formId: "wuli_normal_fast_wind10",
+    name: "潮回护卫乙",
+    level: 80,
+    catchable: false,
+    battleStats: {maxHp: 900, attack: 20, defense: 40, agility: 72},
+  }, {
+    formId: "bui_normal_red_fire10",
+    battleAppearanceFormId: "driftfox_evolved_moon_gale_wind7_water3",
+    battleDisplayName: "潮回守护兽",
+    name: "潮回守护兽",
+    level: 112,
+    catchable: false,
+    battleStats: {maxHp: bossHp, attack: 40, defense: 112, agility: 74},
+    activeSkillIds: ["pet_attack", "pet_defend"],
+    petSkillSlots: ["pet_attack", "pet_defend", "", "", "", "", ""],
+  }];
+  return Object.freeze({
+    resolve() {
+      return {
+        ok: true,
+        encounter: {
+          zoneId: "tide_echo_guardian_floor",
+          groupId: "tide_echo_guardian_group",
+          rewardTableId: "tide_echo_guardian_group",
+          bossMechanicId: "guardian_tide_core_v1",
+          interactionId: "tide_echo_guardian_npc",
+          sourceInteractionId: "tide_echo_guardian_npc",
+          sourceInteractionName: "潮回守护兽",
+          name: "潮回守护层",
+          formationTemplate: "10v10",
+          enemyCount: wildPets.length,
+          selectedWildPet: wildPets[0],
+          selectedWildPets: wildPets,
+          authority: "boss_mechanic_test_authority",
+          schemaVersion: 1,
+        },
+      };
+    },
+  });
+}
+
 function pet(petId, state, extra = {}) {
   return {
     petId,
@@ -105,6 +154,34 @@ function createFixture(suffix, pets = [pet("active_pet", "battle")], options = {
   return {service, player, room: encounter.room};
 }
 
+function createTideFixture(suffix, options = {}) {
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    petEncounterAuthority: tideEncounterAuthority(options),
+  });
+  const player = service.register({
+    username: `tide${suffix}`,
+    password: "test1234",
+    displayName: `潮核猎人${suffix}`,
+  });
+  assert.equal(player.ok, true);
+  const profile = battleProfileWithPets(`潮核猎人${suffix}`, {
+    level: 80,
+    hp: 5000,
+    maxHp: 5000,
+    attack: 800,
+    defense: 300,
+    quick: 500,
+    comboRateOverride: 0,
+  }, [pet("active_pet", "battle", {attack: 800, comboRateOverride: 0})]);
+  assert.equal(service.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+  const encounter = service.startPartyEncounter(player.session.token, {
+    encounterZone: {id: "fixture_zone", encounterGroupId: "fixture_group"},
+  });
+  assert.equal(encounter.ok, true, JSON.stringify(encounter));
+  return {service, player, room: encounter.room};
+}
+
 function actorIds(room, accountId) {
   const actors = room.battle.actors;
   return {
@@ -113,6 +190,32 @@ function actorIds(room, accountId) {
     boss: actors.find((actor) => actor.actorId === "party_pve_enemy_front_3").actorId,
     firstEnemy: actors.find((actor) => actor.side === "enemy").actorId,
   };
+}
+
+function openTideCore(fixture) {
+  const ids = actorIds(fixture.room, fixture.player.account.accountId);
+  const bossAtStart = fixture.room.battle.actors.find((actor) => actor.actorId === ids.boss);
+  assert.equal(bossAtStart.formId, "bui_normal_red_fire10");
+  assert.equal(bossAtStart.battleAppearanceFormId, "driftfox_evolved_moon_gale_wind7_water3");
+  assert.equal(bossAtStart.displayName, "潮回守护兽");
+  const resolved = submitRound(fixture, 1, [{
+    actorId: ids.player,
+    actionId: "attack",
+    targetActorId: ids.boss,
+  }, {
+    actorId: ids.pet,
+    actionId: "pet_defend",
+  }]);
+  const opened = resolved.turn.events.find((event) => event.eventType === "boss_tide_core_open");
+  assert.ok(opened, JSON.stringify(resolved.turn.events, null, 2));
+  assert.equal(resolved.turn.events.at(-1).eventType, "boss_tide_core_open");
+  assert.equal(resolved.room.battle.bossIntent.intentKind, "tide_core");
+  assert.equal(resolved.room.battle.bossIntent.markerStyle, "tide_core");
+  assert.equal(resolved.room.battle.bossIntent.resolveRound, 2);
+  assert.match(resolved.room.battle.bossIntent.message, /本回合集火击破.*18%生命/);
+  assert.equal(Object.hasOwn(resolved.room.battle.bossIntent, "targetAccountId"), false);
+  assert.equal(Object.hasOwn(resolved.room.battle.bossIntent, "targetUsername"), false);
+  return {...ids, core: opened.targetActorId};
 }
 
 function submitRound(fixture, round, commands) {
@@ -282,4 +385,58 @@ test("defeating the boss before its last-resolving strike clears the marked inte
   assert.equal(resolved.turn.events.some((event) => event.bossChargeStrike === true), false);
   assert.equal(resolved.room.status, "ready");
   assert.equal(resolved.room.battle.bossIntent, null);
+});
+
+test("tide core opens only after the server-owned boss crosses 60 percent and heals 18 percent when ignored", () => {
+  const fixture = createTideFixture("heal");
+  const ids = openTideCore(fixture);
+  const bossBefore = fixture.room.battle.actors.find((actor) => actor.actorId === ids.boss);
+  assert.equal(bossBefore.hp < bossBefore.maxHp * 0.6, true);
+  const hpBefore = bossBefore.hp;
+  const resolved = submitRound(fixture, 2, [{
+    actorId: ids.player,
+    actionId: "defend",
+  }, {
+    actorId: ids.pet,
+    actionId: "pet_defend",
+  }]);
+  const healed = resolved.turn.events.find((event) => event.eventType === "boss_tide_core_heal");
+  assert.ok(healed, JSON.stringify(resolved.turn.events, null, 2));
+  const expectedHeal = Math.ceil(bossBefore.maxHp * 0.18);
+  assert.equal(healed.healed, expectedHeal);
+  assert.equal(resolved.room.battle.actors.find((actor) => actor.actorId === ids.boss).hp, hpBefore + expectedHeal);
+  assert.equal(resolved.room.battle.bossIntent, null);
+});
+
+test("breaking tide core lowers boss defense for one full decision round and authority restores it", () => {
+  const fixture = createTideFixture("break");
+  const ids = openTideCore(fixture);
+  const brokenRound = submitRound(fixture, 2, [{
+    actorId: ids.player,
+    actionId: "attack",
+    targetActorId: ids.core,
+  }, {
+    actorId: ids.pet,
+    actionId: "pet_attack",
+    targetActorId: ids.core,
+  }]);
+  const broken = brokenRound.turn.events.find((event) => event.eventType === "boss_tide_core_broken");
+  assert.ok(broken, JSON.stringify(brokenRound.turn.events, null, 2));
+  assert.equal(broken.defenseBefore, 112);
+  assert.equal(broken.defenseAfter, 72);
+  assert.equal(brokenRound.room.battle.actors.find((actor) => actor.actorId === ids.boss).defense, 72);
+  assert.equal(brokenRound.room.battle.bossIntent, null);
+
+  const restoredRound = submitRound(fixture, 3, [{
+    actorId: ids.player,
+    actionId: "defend",
+  }, {
+    actorId: ids.pet,
+    actionId: "pet_defend",
+  }]);
+  const restored = restoredRound.turn.events.find((event) => event.eventType === "boss_tide_ebb_end");
+  assert.ok(restored, JSON.stringify(restoredRound.turn.events, null, 2));
+  assert.equal(restored.defenseAfter, 112);
+  assert.equal(restoredRound.room.battle.actors.find((actor) => actor.actorId === ids.boss).defense, 112);
+  assert.equal(restoredRound.turn.events.some((event) => event.eventType === "boss_tide_core_open"), false);
 });

@@ -621,6 +621,7 @@ static func _apply_boss_intent_to_actors(actors: Array[Dictionary], battle: Dict
 		if str(actor.get("serverActorId", "")).strip_edges() == target_server_actor_id:
 			actor["bossThreatened"] = true
 			actor["bossThreatMechanicId"] = str(intent.get("mechanicId", ""))
+			actor["bossThreatStyle"] = str(intent.get("markerStyle", "charge"))
 			return
 
 
@@ -919,6 +920,50 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
+		}
+	if event_type == "boss_tide_core_open" or event_type == "boss_tide_core_broken" or event_type == "boss_tide_ebb_end":
+		var phase_target_id := _local_actor_id_for_server_actor(
+			state,
+			str(server_event.get("targetActorId", "")),
+			str(server_event.get("targetAccountId", "")),
+			str(server_event.get("targetUsername", "")),
+			str(server_event.get("targetKind", ""))
+		)
+		if phase_target_id == "":
+			phase_target_id = actor_id
+		var phase_target := BattleModel.actor_by_id(state, phase_target_id)
+		return {
+			"type": "boss_phase",
+			"attackerId": actor_id,
+			"targetId": phase_target_id,
+			"targetSide": str(phase_target.get("side", actor.get("side", ""))),
+			"speed": int(actor.get("quick", actor.get("speed", 0))),
+			"sequence": sequence,
+			"actionId": str(server_event.get("actionId", event_type)),
+			"presentationState": "hit" if event_type == "boss_tide_core_broken" else "skill",
+			"serverResolved": true,
+			"serverEventId": str(server_event.get("eventId", "")),
+			"serverEventType": event_type,
+			"serverMessage": str(server_event.get("message", "")),
+		}
+	if event_type == "boss_tide_core_heal":
+		return {
+			"type": "spirit_heal",
+			"attackerId": actor_id,
+			"targetId": actor_id,
+			"targetSide": str(actor.get("side", "")),
+			"heal": maxi(0, int(server_event.get("healed", server_event.get("heal", 0)))),
+			"speed": int(actor.get("quick", actor.get("speed", 0))),
+			"sequence": sequence,
+			"spiritId": "boss_tide_core",
+			"skillName": "潮核回流",
+			"actionId": str(server_event.get("actionId", "boss_tide_core")),
+			"serverEventId": str(server_event.get("eventId", "")),
+			"serverEventType": event_type,
+			"serverMessage": str(server_event.get("message", "")),
+			"serverHpBefore": int(server_event.get("hpBefore", actor.get("hp", 0))),
+			"serverHpAfter": int(server_event.get("hpAfter", actor.get("hp", 0))),
+			"serverHealed": int(server_event.get("healed", 0)),
 		}
 	if event_type == "target_missing":
 		return {

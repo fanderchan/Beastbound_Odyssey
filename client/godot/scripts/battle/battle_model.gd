@@ -1863,6 +1863,8 @@ static func apply_battle_event(state: Dictionary, event: Dictionary) -> Dictiona
 		return _apply_status_tick_event(state, event)
 	if event_type == "status_skip":
 		return _apply_status_skip_event(state, event, str(event.get("statusId", "")))
+	if event_type == "boss_phase":
+		return _apply_boss_phase_event(state, event)
 	var blocking_status_id := _blocking_status_for_event_actor(state, event)
 	if blocking_status_id != "":
 		return _apply_status_skip_event(state, event, blocking_status_id)
@@ -4098,6 +4100,35 @@ static func _apply_defend_event(state: Dictionary, event: Dictionary) -> Diction
 	state["lastTargetId"] = actor_id
 	state["lastParticipants"] = [actor_id]
 	state["message"] = "%s 进入防御姿态。" % str(actor.get("name", "我方"))
+	return _apply_server_message_override(state, event)
+
+
+static func _apply_boss_phase_event(state: Dictionary, event: Dictionary) -> Dictionary:
+	var actor_id := str(event.get("attackerId", ""))
+	var actor := actor_by_id(state, actor_id)
+	if actor.is_empty() or int(actor.get("hp", 0)) <= 0:
+		return state
+	var actors: Array = state.get("actors", [])
+	var actor_index_value := actor_index(state, actor_id)
+	if actor_index_value < 0:
+		return state
+	var presentation_state := str(event.get("presentationState", "skill"))
+	if not ["skill", "hit", "heal", "idle"].has(presentation_state):
+		presentation_state = "skill"
+	actor = actors[actor_index_value] as Dictionary
+	actor["actionState"] = presentation_state
+	actors[actor_index_value] = actor
+	var target_id := str(event.get("targetId", actor_id))
+	if actor_by_id(state, target_id).is_empty():
+		target_id = actor_id
+	state["actors"] = actors
+	state["phase"] = "round_events"
+	state["lastEventApplied"] = true
+	state["lastAttackerId"] = actor_id
+	state["lastTargetId"] = target_id
+	state["lastTargetIds"] = [target_id]
+	state["lastParticipants"] = [actor_id]
+	state["message"] = "%s 的战斗阶段发生变化。" % str(actor.get("name", "首领"))
 	return _apply_server_message_override(state, event)
 
 

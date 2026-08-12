@@ -37,6 +37,44 @@ function actors() {
   }];
 }
 
+function tideActors() {
+  return [{
+    actorId: "party_pve_enemy_front_3",
+    accountId: "",
+    displayName: "潮回守护兽",
+    side: "enemy",
+    kind: "wild_pet",
+    slotId: "enemy.front.3",
+    hp: 1100,
+    maxHp: 1600,
+    defense: 112,
+    activeInBattle: true,
+    activeSkillIds: ["pet_attack", "pet_defend"],
+  }, {
+    actorId: "party_pve_enemy_front_1",
+    accountId: "",
+    displayName: "潮回乌力甲",
+    side: "enemy",
+    kind: "wild_pet",
+    slotId: "enemy.front.1",
+    hp: 990,
+    maxHp: 990,
+    defense: 84,
+    activeInBattle: true,
+  }, {
+    actorId: "party_pve_enemy_front_2",
+    accountId: "",
+    displayName: "潮回乌力乙",
+    side: "enemy",
+    kind: "wild_pet",
+    slotId: "enemy.front.2",
+    hp: 960,
+    maxHp: 960,
+    defense: 78,
+    activeInBattle: true,
+  }];
+}
+
 function room(overrides = {}) {
   return {
     roomId: "battle_room_boss_rules",
@@ -49,14 +87,122 @@ function room(overrides = {}) {
   };
 }
 
+function tideRoom(overrides = {}) {
+  return {
+    roomId: "battle_room_tide_rules",
+    seed: "tide-rules-seed",
+    encounter: {
+      groupId: "tide_echo_guardian_group",
+      bossMechanicId: "guardian_tide_core_v1",
+      ...overrides,
+    },
+  };
+}
+
 test("boss rules load a strict shared catalog and ignore encounters without an explicit mechanic", () => {
   const rules = loadBattleBossRules();
-  assert.deepEqual(rules.mechanicIds, ["guardian_targeted_charge_v1"]);
+  assert.deepEqual(rules.mechanicIds, ["guardian_targeted_charge_v1", "guardian_tide_core_v1"]);
   assert.equal(rules.initialize({roomId: "ordinary", encounter: {groupId: "firebud_grass_01"}}, actors()), null);
   assert.throws(
     () => rules.initialize(room({groupId: "forged_group"}), actors()),
     BattleBossRulesError,
   );
+});
+
+test("tide core opens below 60 percent and heals the boss when its marked minion survives", () => {
+  const rules = loadBattleBossRules();
+  const battleActors = tideActors();
+  const battle = {actors: battleActors, bossMechanic: rules.initialize(tideRoom(), battleActors), bossIntent: null};
+  assert.deepEqual(rules.resolveRoundEnd(tideRoom(), battle, 1, 1), []);
+  battleActors[0].hp = 900;
+  const opened = rules.resolveRoundEnd(tideRoom(), battle, 2, 1);
+  assert.equal(opened[0].eventType, "boss_tide_core_open");
+  assert.equal(battle.bossMechanic.phase, "open");
+  assert.equal(battle.bossIntent.resolveRound, 3);
+  assert.equal(battle.bossIntent.markerStyle, "tide_core");
+  const hpBefore = battleActors[0].hp;
+  const healed = rules.resolveRoundEnd(tideRoom(), battle, 3, 1);
+  assert.equal(healed[0].eventType, "boss_tide_core_heal");
+  assert.equal(healed[0].healed, 288);
+  assert.equal(battleActors[0].hp, hpBefore + 288);
+  assert.equal(battle.bossMechanic.completed, true);
+  assert.equal(battle.bossIntent, null);
+});
+
+test("breaking tide core creates exactly one lower-defense ebb round and then restores authority", () => {
+  const rules = loadBattleBossRules();
+  const battleActors = tideActors();
+  const battle = {actors: battleActors, bossMechanic: rules.initialize(tideRoom(), battleActors), bossIntent: null};
+  battleActors[0].hp = 900;
+  rules.resolveRoundEnd(tideRoom(), battle, 1, 1);
+  const core = battleActors.find((actor) => actor.actorId === battle.bossMechanic.coreActorId);
+  core.hp = 0;
+  const broken = rules.resolveRoundEnd(tideRoom(), battle, 2, 1);
+  assert.equal(broken[0].eventType, "boss_tide_core_broken");
+  assert.equal(battleActors[0].defense, 72);
+  assert.equal(battle.bossMechanic.ebbRestoreRound, 3);
+  const ended = rules.resolveRoundEnd(tideRoom(), battle, 3, 1);
+  assert.equal(ended[0].eventType, "boss_tide_ebb_end");
+  assert.equal(battleActors[0].defense, 112);
+  assert.equal(battle.bossMechanic.completed, true);
+});
+
+test("tide core reconnect normalization rebuilds trusted names and rejects forged targets", () => {
+  const rules = loadBattleBossRules();
+  const battleActors = tideActors();
+  const state = rules.initialize(tideRoom(), battleActors);
+  const battle = {actors: battleActors, bossMechanic: state, bossIntent: null};
+  battleActors[0].hp = 900;
+  rules.resolveRoundEnd(tideRoom(), battle, 1, 1);
+  const forged = {...battle.bossIntent, bossName: "伪首领", targetName: "伪潮核"};
+  const tamperedState = {...battle.bossMechanic, resolveRound: 999, ebbRestoreRound: 999};
+  const normalizedState = rules.normalizeState(tideRoom(), battleActors, tamperedState);
+  assert.equal(normalizedState.resolveRound, normalizedState.openedRound + 1);
+  assert.equal(normalizedState.ebbRestoreRound, 0);
+  const normalizedIntent = rules.normalizeIntent({...tideRoom(), battle: {round: 2}}, battleActors, normalizedState, forged);
+  assert.equal(normalizedIntent.bossName, "潮回守护兽");
+  assert.match(normalizedIntent.targetName, /潮回乌力/);
+  forged.targetActorId = "party_pve_enemy_forged";
+  assert.equal(rules.normalizeIntent({...tideRoom(), battle: {round: 2}}, battleActors, normalizedState, forged), null);
+
+  const bossAsCore = rules.normalizeState(tideRoom(), battleActors, {
+    ...battle.bossMechanic,
+    coreActorId: battleActors[0].actorId,
+  });
+  assert.equal(bossAsCore.phase, "waiting");
+  assert.equal(bossAsCore.coreActorId, "");
+
+  const playerOwnedActors = structuredClone(battleActors);
+  const ownedCore = playerOwnedActors.find((actor) => actor.actorId === battle.bossMechanic.coreActorId);
+  ownedCore.accountId = "forged_account";
+  const playerOwnedState = rules.normalizeState(tideRoom(), playerOwnedActors, battle.bossMechanic);
+  assert.equal(playerOwnedState.phase, "waiting");
+
+  const deadCoreActors = structuredClone(battleActors);
+  deadCoreActors.find((actor) => actor.actorId === battle.bossMechanic.coreActorId).hp = 0;
+  assert.equal(
+    rules.normalizeIntent({...tideRoom(), battle: {round: 2}}, deadCoreActors, normalizedState, battle.bossIntent),
+    null,
+  );
+});
+
+test("tide ebb normalization re-applies the server defense modifier and later restores its base", () => {
+  const rules = loadBattleBossRules();
+  const battleActors = tideActors();
+  battleActors[0].hp = 900;
+  const battle = {actors: battleActors, bossMechanic: rules.initialize(tideRoom(), battleActors), bossIntent: null};
+  rules.resolveRoundEnd(tideRoom(), battle, 1, 1);
+  battleActors.find((actor) => actor.actorId === battle.bossMechanic.coreActorId).hp = 0;
+  rules.resolveRoundEnd(tideRoom(), battle, 2, 1);
+  battleActors[0].defense = 999;
+  const normalized = rules.normalizeState(tideRoom(), battleActors, battle.bossMechanic);
+  assert.equal(normalized.phase, "ebb");
+  assert.equal(battleActors[0].defense, 72);
+  normalized.completed = true;
+  normalized.phase = "completed";
+  battleActors[0].defense = 1;
+  rules.normalizeState(tideRoom(), battleActors, normalized);
+  assert.equal(battleActors[0].defense, 112);
 });
 
 test("targeted charge selects a living pet, persists a public-safe intent and strikes exactly next round", () => {
@@ -161,9 +307,10 @@ test("intent normalization re-derives names and ownership while rejecting dead b
 
 test("boss rules reject invalid timing, target kinds and missing boss skills", () => {
   const document = JSON.parse(JSON.stringify({
-    schemaVersion: 1,
+    schemaVersion: 2,
     mechanics: [{
       id: "bad",
+      kind: "targeted_charge",
       label: "坏规则",
       encounterGroupId: "bad_group",
       bossActorSlot: "enemy.front.3",
