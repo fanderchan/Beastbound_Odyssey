@@ -41,6 +41,7 @@ const {
 const {
   createAsyncWriteAuthStore,
   createAuthService,
+  createMemoryAuthStore,
 } = require(path.join(ROOT, "server/node/src/auth-service"));
 
 const ACTORS = Object.freeze({
@@ -112,7 +113,9 @@ const LEGACY_MAIL_COLLISION_RETRY_ID = "mail_real_legacy_collision_retry";
 const LEGACY_MAIL_COLLISION_OPERATION_ID = "real_legacy_mail_collision_send";
 const DUPLICATE_ENVELOPE_ID = "eqx_real_mail_duplicate_0001";
 const MARKET_CREATE_ACTION_ID = "POST /market/list";
+const MAIL_CLAIM_ACTION_ID = "POST /mail/claim";
 const MAIL_SEND_ACTION_ID = "POST /mail/send";
+const COMPLEX_EQUIPMENT_GATE_NOW_MS = Date.parse("2026-08-14T00:00:00.000Z");
 const MYSQL_MEMORY_BYTES = 128 * 1024 * 1024;
 const RECEIPT_SEED_BATCH_SIZE = 500;
 const WAIT_TIMEOUT_MS = 10000;
@@ -164,6 +167,39 @@ function commitGate(label) {
         released.resolve();
       }
     },
+  });
+}
+
+function serviceMutationCommitGate(label) {
+  const businessGate = commitGate(label);
+  let commitCount = 0;
+  let businessWriteSeen = false;
+  let currentCommitIsBusiness = false;
+  return Object.freeze({
+    label,
+    entered: businessGate.entered,
+    async beforeQuery(queryArgs) {
+      const first = queryArgs[0];
+      const sql = String(typeof first === "string" ? first : first && first.sql || "").trim();
+      if (/^(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b/i.test(sql)) {
+        businessWriteSeen = true;
+      }
+    },
+    async beforeCommit() {
+      commitCount += 1;
+      currentCommitIsBusiness = businessWriteSeen;
+      if (currentCommitIsBusiness) {
+        await businessGate.beforeCommit();
+      }
+    },
+    async afterCommit() {
+      if (currentCommitIsBusiness) {
+        businessWriteSeen = false;
+        currentCommitIsBusiness = false;
+      }
+    },
+    release: businessGate.release,
+    commitCount: () => commitCount,
   });
 }
 
@@ -352,7 +388,18 @@ function gatedPool(basePool, gate) {
           if (property === "commit" && gate && typeof gate.beforeCommit === "function") {
             return async () => {
               await gate.beforeCommit();
-              return target.commit();
+              const result = await target.commit();
+              if (typeof gate.afterCommit === "function") {
+                await gate.afterCommit();
+              }
+              return result;
+            };
+          }
+          if (property === "commit" && gate && typeof gate.afterCommit === "function") {
+            return async () => {
+              const result = await target.commit();
+              await gate.afterCommit();
+              return result;
             };
           }
           if (property === "query" && gate
@@ -1542,6 +1589,26 @@ async function waitForLockWait(admin, label) {
   await waitUntil(async () => await lockWaitCount(admin) > 0, WAIT_TIMEOUT_MS, label);
 }
 
+async function waitForLockWaitWhilePending(admin, promise, label) {
+  return Promise.race([
+    waitForLockWait(admin, label),
+    Promise.resolve(promise).then(
+      (value) => {
+        const error = new Error(
+          `${label}前请求已提前结束：ok=${String(value && value.ok)} code=${String(value && value.code || "")}`,
+        );
+        error.earlyResult = value;
+        throw error;
+      },
+      (cause) => {
+        const error = new Error(`${label}前请求已提前失败。`);
+        error.cause = cause;
+        throw error;
+      },
+    ),
+  ]);
+}
+
 async function globalRevision(admin) {
   const [rows] = await adminQuery(
     admin,
@@ -1941,6 +2008,778 @@ async function closeStores(stores, options = {}) {
   if (rejected) {
     throw rejected.reason;
   }
+}
+
+function gateOperation(label, actionId) {
+  return Object.freeze({
+    operationId: `op_c13_${label}_0001`,
+    requestHash: crypto.createHash("sha256").update(`phase425:${label}`).digest("hex"),
+    actionId,
+  });
+}
+
+function sequenceRandomId(values, fallbackPrefix) {
+  const queue = [...values];
+  let serial = 0;
+  return () => {
+    if (queue.length > 0) {
+      return String(queue.shift());
+    }
+    serial += 1;
+    return `${fallbackPrefix}_${String(serial).padStart(4, "0")}`;
+  };
+}
+
+function registerSelectedGateCharacter(service, username, displayName) {
+  const registered = service.register({
+    username,
+    password: "test1234",
+    displayName,
+  });
+  assert.equal(registered.ok, true, JSON.stringify(registered));
+  const created = service.createCharacter(registered.session.token, {
+    appearanceId: "novice_hunter_v1",
+    slotIndex: 0,
+    displayName,
+    elements: {earth: 6, water: 4, fire: 0, wind: 0},
+  });
+  assert.equal(created.ok, true, JSON.stringify(created));
+  const selected = service.selectCharacter(registered.session.token, {slotIndex: 0});
+  assert.equal(selected.ok, true, JSON.stringify(selected));
+  return Object.freeze({
+    account: registered.account,
+    session: selected.session,
+    profileBinding: selected.profileBinding,
+  });
+}
+
+function gateEquipmentInstance(instanceId, source) {
+  return {
+    schemaVersion: 1,
+    instanceId,
+    itemId: "weapon_wooden_club",
+    location: "backpack",
+    slotId: "",
+    durability: 20,
+    enhancement: {itemId: "weapon_wooden_club", level: 1, history: []},
+    wearCounters: {itemId: "weapon_wooden_club", attackCount: 2, hitCount: 0},
+    expPillCharge: {},
+    source,
+  };
+}
+
+function installGateEquipment(service, actor, equipmentIds, ordinaryItemCount = 0) {
+  const current = service.getProfile(actor.session.token);
+  assert.equal(current.ok, true, JSON.stringify(current));
+  const slots = Array.from({length: 15}, () => ({}));
+  const instances = {};
+  for (const [index, instanceId] of equipmentIds.entries()) {
+    slots[index] = {itemId: "weapon_wooden_club", count: 1};
+    instances[instanceId] = gateEquipmentInstance(instanceId, "phase425_real_mysql_gate");
+  }
+  if (ordinaryItemCount > 0) {
+    slots[equipmentIds.length] = {itemId: "item_meat_small", count: ordinaryItemCount};
+  }
+  current.profile.backpackSlots = slots;
+  current.profile.captureTools = {};
+  current.profile.equipmentInstances = instances;
+  current.profile.equipmentSlotInstanceIds = {};
+  current.profile.equipmentSlotsVersion = 5;
+  current.profile.nextEquipmentInstanceSerial = equipmentIds.length + 1;
+  const saved = service.saveProfile(actor.session.token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile: current.profile,
+  });
+  assert.equal(saved.ok, true, JSON.stringify(saved));
+}
+
+function createComplexEquipmentFixture(label) {
+  const memoryStore = createMemoryAuthStore();
+  const service = createAuthService({
+    store: memoryStore,
+    allowFullProfileSave: true,
+    now: () => COMPLEX_EQUIPMENT_GATE_NOW_MS,
+  });
+  const owner = registerSelectedGateCharacter(service, `c13${label}o`, `装备收口${label}主`);
+  const source = registerSelectedGateCharacter(service, `c13${label}s`, `装备收口${label}源`);
+  const recipient = registerSelectedGateCharacter(service, `c13${label}r`, `装备收口${label}收`);
+  const marketInstanceId = `equip_c13_${label}_market`;
+  const forwardInstanceId = `equip_c13_${label}_forward`;
+  const sourceInstanceId = `equip_c13_${label}_claim_source`;
+  installGateEquipment(service, owner, [marketInstanceId, forwardInstanceId]);
+  installGateEquipment(service, source, [sourceInstanceId], 2);
+  const incoming = service.sendMail(source.session.token, {
+    recipientUsername: owner.account.username,
+    title: "复杂装备真实领取",
+    body: "该信封用于验证条件领取与 legacy 装备写的真实交错。",
+    items: [{
+      itemId: "weapon_wooden_club",
+      count: 1,
+      instanceId: sourceInstanceId,
+      sourceSlotIndex: 0,
+    }],
+  });
+  assert.equal(incoming.ok, true, JSON.stringify(incoming));
+  const snapshot = service.snapshot();
+  const mail = snapshot.mailMessages[incoming.mail.mailId];
+  assert.ok(mail && Array.isArray(mail.equipmentEnvelopes));
+  assert.equal(mail.equipmentEnvelopes.length, 1);
+  return Object.freeze({
+    snapshot,
+    owner,
+    source,
+    recipient,
+    marketInstanceId,
+    forwardInstanceId,
+    claimMailId: incoming.mail.mailId,
+    claimEnvelopeId: mail.equipmentEnvelopes[0].envelopeId,
+    initialEquipmentAssetCount: equipmentAssetCount(snapshot),
+  });
+}
+
+function authorityProfileForAccount(snapshot, accountId) {
+  const binding = snapshot.profileBindings && snapshot.profileBindings[accountId];
+  assert.ok(binding, `缺少账号档案绑定：${accountId}`);
+  const document = snapshot.profiles && snapshot.profiles[binding.playerId];
+  assert.ok(document && document.profile, `缺少角色档案：${binding.playerId}`);
+  return document;
+}
+
+function equipmentAssetCount(snapshot) {
+  let count = 0;
+  for (const document of Object.values(snapshot.profiles || {})) {
+    const profile = document && document.profile;
+    count += Object.values(profile && profile.equipmentInstances || {}).filter((instance) => (
+      instance && instance.itemId === "weapon_wooden_club"
+    )).length;
+    const bankSlots = profile && profile.bank && Array.isArray(profile.bank.equipmentSlots)
+      ? profile.bank.equipmentSlots
+      : [];
+    count += bankSlots.filter((entry) => entry && entry.itemId === "weapon_wooden_club").length;
+  }
+  for (const mail of Object.values(snapshot.mailMessages || {})) {
+    count += (Array.isArray(mail && mail.equipmentEnvelopes) ? mail.equipmentEnvelopes : [])
+      .filter((envelope) => envelope && envelope.itemId === "weapon_wooden_club").length;
+  }
+  for (const listing of Object.values(snapshot.marketListings || {})) {
+    if (listing && listing.equipmentEnvelope && listing.equipmentEnvelope.itemId === "weapon_wooden_club") {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function failureChainSome(error, predicate) {
+  let current = error;
+  const seen = new Set();
+  for (let depth = 0; current && depth < 10 && !seen.has(current); depth += 1) {
+    seen.add(current);
+    if (predicate(current)) {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
+}
+
+function failureChainSummary(error) {
+  const summary = [];
+  let current = error;
+  const seen = new Set();
+  for (let depth = 0; current && depth < 10 && !seen.has(current); depth += 1) {
+    seen.add(current);
+    summary.push({
+      code: String(current.code || ""),
+      mysqlCode: String(current.mysqlCode || ""),
+      resource: String(current.resource || ""),
+      resourceKey: String(current.resourceKey || ""),
+      outcomeUnknown: current.outcomeUnknown,
+      rollbackConfirmed: current.rollbackConfirmed,
+    });
+    current = current.cause;
+  }
+  return summary;
+}
+
+function knownResourceConflictInChain(error) {
+  return failureChainSome(error, (current) => (
+    current.code === "mysql_store_revision_conflict"
+    || current.code === "mysql_resource_revision_conflict"
+  ));
+}
+
+function knownDuplicateRollbackInChain(error) {
+  return failureChainSome(error, (current) => (
+    current.code === "mysql_transaction_rolled_back"
+    && current.mysqlCode === "ER_DUP_ENTRY"
+    && current.outcomeUnknown === false
+    && current.rollbackConfirmed === true
+  ));
+}
+
+function knownStrictIdentityRollbackInChain(error, resource, resourceKey) {
+  return failureChainSome(error, (current) => (
+    current.code === "mysql_resource_revision_conflict"
+    && current.resource === resource
+    && current.resourceKey === resourceKey
+    && current.outcomeUnknown === false
+    && current.rollbackConfirmed === true
+  )) || knownDuplicateRollbackInChain(error);
+}
+
+async function seedComplexEquipmentDatabase(runtime, database, fixture) {
+  const bootstrap = createMysqlAuthStore(storeOptions(runtime, database));
+  try {
+    bootstrap.load();
+    await settleWithin(
+      bootstrap.saveAsync(fixture.snapshot),
+      WAIT_TIMEOUT_MS,
+      "复杂装备真实 MySQL 初始档案写入",
+    );
+  } finally {
+    await settleWithin(bootstrap.close(), WAIT_TIMEOUT_MS, "复杂装备 bootstrap store 关闭");
+  }
+}
+
+function openComplexEquipmentNode(runtime, database, options = {}) {
+  const rawStore = createMysqlAuthStore(options.loaderDatabase
+    ? crossDatabaseStoreOptions(runtime, options.loaderDatabase, database)
+    : storeOptions(runtime, database, options.gate || null));
+  let saveCalls = 0;
+  let receiptReadCalls = 0;
+  const adapter = new Proxy(rawStore, {
+    get(target, property) {
+      if (["saveAsync", "saveAsyncOwned"].includes(property)) {
+        return async (...args) => {
+          saveCalls += 1;
+          if (typeof options.beforeSave === "function") {
+            await options.beforeSave({saveCalls, args, rawStore: target});
+          }
+          return target[property](...args);
+        };
+      }
+      if (property === "readDurableMutationReceipt") {
+        return async (operationId) => {
+          receiptReadCalls += 1;
+          if (typeof options.readDurableMutationReceipt === "function") {
+            return options.readDurableMutationReceipt({
+              operationId,
+              receiptReadCalls,
+              rawStore: target,
+            });
+          }
+          return target.readDurableMutationReceipt(operationId);
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  const store = createAsyncWriteAuthStore(adapter, {onError() {}});
+  const service = createAuthService({
+    store,
+    now: () => COMPLEX_EQUIPMENT_GATE_NOW_MS,
+    randomId: options.randomId || sequenceRandomId([], "c13_runtime"),
+  });
+  // Eagerly establish the Node-local authority baseline before any competing
+  // transaction acquires locks. A lazy first load would run schema/read CLI
+  // setup during the race and measure bootstrap behavior instead of gameplay.
+  service.snapshot();
+  return Object.freeze({
+    service,
+    store,
+    saveCalls: () => saveCalls,
+    receiptReadCalls: () => receiptReadCalls,
+  });
+}
+
+async function loadComplexEquipmentSnapshot(runtime, database) {
+  const verifier = createMysqlAuthStore(storeOptions(runtime, database));
+  try {
+    return verifier.load();
+  } finally {
+    await settleWithin(verifier.close(), WAIT_TIMEOUT_MS, "复杂装备 verifier store 关闭");
+  }
+}
+
+function equipmentClaimInvocation(fixture, label) {
+  return Object.freeze({
+    method: "claimMailAttachments",
+    args: [fixture.owner.session.token, fixture.claimMailId],
+    operation: gateOperation(`${label}_claim`, MAIL_CLAIM_ACTION_ID),
+  });
+}
+
+function equipmentLegacyInvocation(fixture, label, kind) {
+  if (kind === "listing") {
+    return Object.freeze({
+      method: "createMarketListing",
+      args: [fixture.owner.session.token, {
+        itemId: "weapon_wooden_club",
+        count: 1,
+        instanceId: fixture.marketInstanceId,
+        sourceSlotIndex: 0,
+        unitPrice: 31,
+        currency: "stoneCoins",
+      }],
+      operation: gateOperation(`${label}_listing`, MARKET_CREATE_ACTION_ID),
+    });
+  }
+  assert.equal(kind, "forward");
+  return Object.freeze({
+    method: "sendMail",
+    args: [fixture.owner.session.token, {
+      recipientUsername: fixture.recipient.account.username,
+      title: "复杂装备真实转寄",
+      body: "同一操作只能移出一次精确装备实例。",
+      items: [{
+        itemId: "weapon_wooden_club",
+        count: 1,
+        instanceId: fixture.forwardInstanceId,
+        sourceSlotIndex: 1,
+      }],
+    }],
+    operation: gateOperation(`${label}_forward`, MAIL_SEND_ACTION_ID),
+  });
+}
+
+async function invokeDurableSpec(node, spec) {
+  return node.service.invokeDurable(spec.method, spec.args, spec.operation);
+}
+
+function assertComplexEquipmentFinal(snapshot, fixture, legacyKind, legacyResult) {
+  const ownerDocument = authorityProfileForAccount(snapshot, fixture.owner.account.accountId);
+  const ownerInstances = ownerDocument.profile.equipmentInstances || {};
+  const exportedInstanceId = legacyKind === "listing"
+    ? fixture.marketInstanceId
+    : fixture.forwardInstanceId;
+  assert.equal(Object.hasOwn(ownerInstances, exportedInstanceId), false);
+  assert.equal(Object.values(ownerInstances).some((instance) => (
+    instance
+    && instance.transferProvenance
+    && instance.transferProvenance.originEnvelopeId === fixture.claimEnvelopeId
+  )), true, "领取装备没有以原信封 provenance 物化到收件档案");
+  const claimedMail = snapshot.mailMessages[fixture.claimMailId];
+  assert.ok(claimedMail);
+  assert.deepEqual(claimedMail.equipmentEnvelopes || [], []);
+  assert.equal(typeof claimedMail.settledAt, "string");
+  assert.equal(Object.hasOwn(snapshot.consumedEquipmentEnvelopes || {}, fixture.claimEnvelopeId), true);
+  if (legacyKind === "listing") {
+    const listingId = String(legacyResult.listing && legacyResult.listing.listingId || "");
+    assert.ok(listingId !== "" && snapshot.marketListings[listingId]);
+    assert.equal(snapshot.marketListings[listingId].equipmentEnvelope.itemId, "weapon_wooden_club");
+  } else {
+    const mailId = String(legacyResult.mail && legacyResult.mail.mailId || "");
+    assert.ok(mailId !== "" && snapshot.mailMessages[mailId]);
+    assert.equal(snapshot.mailMessages[mailId].equipmentEnvelopes.length, 1);
+  }
+  assert.equal(equipmentAssetCount(snapshot), fixture.initialEquipmentAssetCount);
+}
+
+async function runClaimLegacyInterleave(runtime, options) {
+  const fixture = createComplexEquipmentFixture(options.label);
+  const database = `beastbound_p0_6d2c13_${options.label}_${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+  await seedComplexEquipmentDatabase(runtime, database, fixture);
+  const admin = mysql.createPool({...runtime.connectionOptions, database, connectionLimit: 2});
+  const stores = [];
+  const gate = serviceMutationCommitGate(`${options.label}_${options.first}_first`);
+  let firstPromise = null;
+  let secondPromise = null;
+  try {
+    const deadlocksBefore = await deadlockCount(admin);
+    const firstNode = openComplexEquipmentNode(runtime, database, {
+      gate,
+      randomId: sequenceRandomId([], `${options.label}_first`),
+    });
+    const secondNode = openComplexEquipmentNode(runtime, database, {
+      randomId: sequenceRandomId([], `${options.label}_second`),
+    });
+    stores.push(firstNode.store, secondNode.store);
+    const claim = equipmentClaimInvocation(fixture, options.label);
+    const legacy = equipmentLegacyInvocation(fixture, options.label, options.legacyKind);
+    const firstSpec = options.first === "claim" ? claim : legacy;
+    const secondSpec = options.first === "claim" ? legacy : claim;
+    firstPromise = invokeDurableSpec(firstNode, firstSpec);
+    void firstPromise.catch(() => {});
+    await settleWithin(gate.entered, WAIT_TIMEOUT_MS, `${options.label} 首笔 COMMIT gate`);
+    secondPromise = invokeDurableSpec(secondNode, secondSpec);
+    void secondPromise.catch(() => {});
+    await waitForLockWaitWhilePending(
+      admin,
+      secondPromise,
+      `${options.label} 第二笔等待 global compatibility barrier`,
+    );
+    gate.release();
+    const results = await settleWithin(
+      Promise.allSettled([firstPromise, secondPromise]),
+      WAIT_TIMEOUT_MS,
+      `${options.label} 双向真实交错结算`,
+    );
+    firstPromise = null;
+    secondPromise = null;
+    assert.equal(results[0].status, "fulfilled", JSON.stringify(results[0]));
+    assert.equal(results[1].status, "rejected", JSON.stringify(results[1]));
+    assert.equal(results[1].reason.code, "storage_write_failed");
+    assert.equal(knownResourceConflictInChain(results[1].reason), true);
+    const retryResult = await settleWithin(
+      invokeDurableSpec(secondNode, secondSpec),
+      WAIT_TIMEOUT_MS,
+      `${options.label} 原 operation reload 后重试`,
+    );
+    assert.equal(retryResult.ok, true, JSON.stringify(retryResult));
+    const claimResult = options.first === "claim" ? results[0].value : retryResult;
+    const legacyResult = options.first === "claim" ? retryResult : results[0].value;
+    assert.equal(claimResult.ok, true, JSON.stringify(claimResult));
+    assert.equal(legacyResult.ok, true, JSON.stringify(legacyResult));
+    const snapshot = await loadComplexEquipmentSnapshot(runtime, database);
+    assertComplexEquipmentFinal(snapshot, fixture, options.legacyKind, legacyResult);
+    assert.equal(Object.hasOwn(snapshot.mutationReceipts, claim.operation.operationId), true);
+    assert.equal(Object.hasOwn(snapshot.mutationReceipts, legacy.operation.operationId), true);
+    assert.equal(await globalRevision(admin), 2);
+    await waitUntil(async () => (
+      await activeTransactionCount(admin) === 0 && await lockWaitCount(admin) === 0
+    ), WAIT_TIMEOUT_MS, `${options.label} 事务清理`);
+    const deadlocksAfter = await deadlockCount(admin);
+    assert.equal(deadlocksAfter, deadlocksBefore);
+    return Object.freeze({
+      label: options.label,
+      first: options.first,
+      legacyKind: options.legacyKind,
+      loserKnownConflict: true,
+      sameOperationRetry: true,
+      equipmentConserved: true,
+      deadlockDelta: deadlocksAfter - deadlocksBefore,
+    });
+  } finally {
+    gate.release();
+    if (firstPromise || secondPromise) {
+      await Promise.allSettled([firstPromise, secondPromise].filter(Boolean));
+    }
+    await closeStores(stores, {bestEffort: true});
+    await settleWithin(admin.end(), WAIT_TIMEOUT_MS, `${options.label} admin pool 关闭`);
+  }
+}
+
+async function runDuplicateLegacyIdentityRace(runtime, kind) {
+  assert.ok(["listing", "mail"].includes(kind));
+  const label = kind === "listing" ? "dupl" : "dupm";
+  const fixture = createComplexEquipmentFixture(label);
+  const database = `beastbound_p0_6d2c13_${label}_${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+  await seedComplexEquipmentDatabase(runtime, database, fixture);
+  const admin = mysql.createPool({...runtime.connectionOptions, database, connectionLimit: 2});
+  const stores = [];
+  const gate = serviceMutationCommitGate(`${label}_conditional_winner`);
+  let winnerPromise = null;
+  let loserPromise = null;
+  try {
+    const deadlocksBefore = await deadlockCount(admin);
+    const sharedIdentity = kind === "listing" ? "c13_shared_listing_identity" : "c13_shared_mail_identity";
+    let loserLoaderDatabase = "";
+    if (kind === "listing") {
+      const projectedStore = createMemoryAuthStore(fixture.snapshot);
+      const projectedService = createAuthService({
+        store: projectedStore,
+        allowFullProfileSave: true,
+        now: () => COMPLEX_EQUIPMENT_GATE_NOW_MS,
+        randomId: sequenceRandomId([sharedIdentity], "dupl_projected"),
+      });
+      const projectedWinner = projectedService.createMarketListing(
+        fixture.source.session.token,
+        {
+          itemId: "item_meat_small",
+          count: 1,
+          unitPrice: 12,
+          currency: "stoneCoins",
+        },
+      );
+      assert.equal(projectedWinner.ok, true, JSON.stringify(projectedWinner));
+      const projected = projectedService.snapshot();
+      const loaderSnapshot = structuredClone(fixture.snapshot);
+      const sourceAccountId = fixture.source.account.accountId;
+      const sourcePlayerId = fixture.source.profileBinding.playerId;
+      loaderSnapshot.profileBindings[sourceAccountId] = projected.profileBindings[sourceAccountId];
+      loaderSnapshot.profiles[sourcePlayerId] = projected.profiles[sourcePlayerId];
+      loaderSnapshot.accountCharacterSlots[sourceAccountId] =
+        projected.accountCharacterSlots[sourceAccountId];
+      loserLoaderDatabase = `beastbound_p0_6d2c13_dupl_loader_${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+      await seedComplexEquipmentDatabase(runtime, loserLoaderDatabase, {snapshot: loaderSnapshot});
+    }
+    const winnerNode = openComplexEquipmentNode(runtime, database, {
+      gate,
+      randomId: sequenceRandomId([sharedIdentity], `${label}_winner`),
+    });
+    const loserNode = openComplexEquipmentNode(runtime, database, {
+      ...(loserLoaderDatabase === "" ? {} : {loaderDatabase: loserLoaderDatabase}),
+      randomId: sequenceRandomId(
+        kind === "listing"
+          ? [sharedIdentity, "c13_failed_listing_envelope"]
+          : [sharedIdentity, "c13_failed_mail_envelope"],
+        `${label}_loser`,
+      ),
+    });
+    stores.push(winnerNode.store, loserNode.store);
+    const winnerSpec = kind === "listing"
+      ? Object.freeze({
+        method: "createMarketListing",
+        args: [fixture.source.session.token, {
+          itemId: "item_meat_small",
+          count: 1,
+          unitPrice: 12,
+          currency: "stoneCoins",
+        }],
+        operation: gateOperation(`${label}_ordinary_listing`, MARKET_CREATE_ACTION_ID),
+      })
+      : Object.freeze({
+        method: "sendMail",
+        args: [fixture.source.session.token, {
+          recipientUsername: fixture.recipient.account.username,
+          title: "条件文本邮件占位",
+          body: "先占用装备转寄将尝试使用的物理邮件身份。",
+        }],
+        operation: gateOperation(`${label}_text_mail`, MAIL_SEND_ACTION_ID),
+      });
+    const loserSpec = equipmentLegacyInvocation(
+      fixture,
+      `${label}_equipment`,
+      kind === "listing" ? "listing" : "forward",
+    );
+    const databaseBefore = await loadComplexEquipmentSnapshot(runtime, database);
+    const ownerBefore = structuredClone(
+      authorityProfileForAccount(databaseBefore, fixture.owner.account.accountId),
+    );
+    winnerPromise = invokeDurableSpec(winnerNode, winnerSpec);
+    void winnerPromise.catch(() => {});
+    await settleWithin(gate.entered, WAIT_TIMEOUT_MS, `${label} 条件 winner COMMIT gate`);
+    loserPromise = invokeDurableSpec(loserNode, loserSpec);
+    void loserPromise.catch(() => {});
+    await waitForLockWait(admin, `${label} legacy writer 等待 global barrier`);
+    gate.release();
+    const results = await settleWithin(
+      Promise.allSettled([winnerPromise, loserPromise]),
+      WAIT_TIMEOUT_MS,
+      `${label} duplicate identity 结算`,
+    );
+    winnerPromise = null;
+    loserPromise = null;
+    assert.equal(results[0].status, "fulfilled", JSON.stringify(results[0]));
+    assert.equal(results[1].status, "rejected", JSON.stringify(results[1]));
+    assert.equal(results[1].reason.code, "storage_write_failed");
+    const winnerId = kind === "listing" ? `market_${sharedIdentity}` : `mail_${sharedIdentity}`;
+    assert.equal(
+      knownStrictIdentityRollbackInChain(
+        results[1].reason,
+        kind === "listing" ? "market_listing" : "mail_message",
+        winnerId,
+      ),
+      true,
+      JSON.stringify(failureChainSummary(results[1].reason)),
+    );
+    const rolledBack = await loadComplexEquipmentSnapshot(runtime, database);
+    assert.deepEqual(
+      authorityProfileForAccount(rolledBack, fixture.owner.account.accountId),
+      ownerBefore,
+    );
+    assert.equal(Object.hasOwn(rolledBack.mutationReceipts, loserSpec.operation.operationId), false);
+    assert.equal(Object.hasOwn(rolledBack.mutationReceipts, winnerSpec.operation.operationId), true);
+    assert.equal(equipmentAssetCount(rolledBack), fixture.initialEquipmentAssetCount);
+    assert.equal(await globalRevision(admin), 1);
+    if (kind === "listing") {
+      assert.equal(rolledBack.marketListings[winnerId].itemId, "item_meat_small");
+    } else {
+      assert.equal(rolledBack.mailMessages[winnerId].title, "条件文本邮件占位");
+    }
+    const retryNode = openComplexEquipmentNode(runtime, database, {
+      randomId: sequenceRandomId(
+        kind === "listing"
+          ? ["c13_retry_listing", "c13_retry_listing_envelope"]
+          : ["c13_retry_mail", "c13_retry_mail_envelope"],
+        `${label}_retry`,
+      ),
+    });
+    stores.push(retryNode.store);
+    const retry = await settleWithin(
+      invokeDurableSpec(retryNode, loserSpec),
+      WAIT_TIMEOUT_MS,
+      `${label} duplicate rollback 后原 operation 重试`,
+    );
+    assert.equal(retry.ok, true, JSON.stringify(retry));
+    const finalSnapshot = await loadComplexEquipmentSnapshot(runtime, database);
+    assert.equal(Object.hasOwn(finalSnapshot.mutationReceipts, loserSpec.operation.operationId), true);
+    assert.equal(Object.hasOwn(finalSnapshot.mutationReceipts, winnerSpec.operation.operationId), true);
+    assert.equal(equipmentAssetCount(finalSnapshot), fixture.initialEquipmentAssetCount);
+    assert.equal(await globalRevision(admin), 2);
+    if (kind === "listing") {
+      assert.ok(finalSnapshot.marketListings[retry.listing.listingId]);
+      assert.notEqual(retry.listing.listingId, winnerId);
+    } else {
+      assert.ok(finalSnapshot.mailMessages[retry.mail.mailId]);
+      assert.notEqual(retry.mail.mailId, winnerId);
+    }
+    await waitUntil(async () => (
+      await activeTransactionCount(admin) === 0 && await lockWaitCount(admin) === 0
+    ), WAIT_TIMEOUT_MS, `${label} 事务清理`);
+    const deadlocksAfter = await deadlockCount(admin);
+    assert.equal(deadlocksAfter, deadlocksBefore);
+    return Object.freeze({
+      kind,
+      conditionalWinnerIdentity: winnerId,
+      duplicateRolledBackAllAssets: true,
+      sameOperationRetry: true,
+      equipmentConserved: true,
+      deadlockDelta: deadlocksAfter - deadlocksBefore,
+    });
+  } finally {
+    gate.release();
+    if (winnerPromise || loserPromise) {
+      await Promise.allSettled([winnerPromise, loserPromise].filter(Boolean));
+    }
+    await closeStores(stores, {bestEffort: true});
+    await settleWithin(admin.end(), WAIT_TIMEOUT_MS, `${label} admin pool 关闭`);
+  }
+}
+
+async function runEquipmentForwardAmbiguousReplay(runtime) {
+  const label = "ambf";
+  const fixture = createComplexEquipmentFixture(label);
+  const database = `beastbound_p0_6d2c13_${label}_${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+  await seedComplexEquipmentDatabase(runtime, database, fixture);
+  const admin = mysql.createPool({...runtime.connectionOptions, database, connectionLimit: 2});
+  const stores = [];
+  let ambiguityInjected = false;
+  let ambiguityBusinessWriteSeen = false;
+  let ambiguityCurrentCommitIsBusiness = false;
+  const ambiguityGate = Object.freeze({
+    async beforeQuery(queryArgs) {
+      const first = queryArgs[0];
+      const sql = String(typeof first === "string" ? first : first && first.sql || "").trim();
+      if (/^(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b/i.test(sql)) {
+        ambiguityBusinessWriteSeen = true;
+      }
+    },
+    async beforeCommit() {
+      ambiguityCurrentCommitIsBusiness = ambiguityBusinessWriteSeen;
+    },
+    async afterCommit() {
+      if (!ambiguityCurrentCommitIsBusiness) {
+        return;
+      }
+      ambiguityBusinessWriteSeen = false;
+      ambiguityCurrentCommitIsBusiness = false;
+      if (ambiguityInjected) {
+        return;
+      }
+      ambiguityInjected = true;
+      const error = new Error("phase425 simulated connection loss after COMMIT");
+      error.code = "ECONNRESET";
+      throw error;
+    },
+  });
+  try {
+    const deadlocksBefore = await deadlockCount(admin);
+    // Load the replay Node first so it starts from a genuinely stale authority
+    // root when the writer's COMMIT later succeeds without an acknowledgement.
+    const replayNode = openComplexEquipmentNode(runtime, database, {
+      randomId: sequenceRandomId([], "ambf_replay"),
+    });
+    const writerNode = openComplexEquipmentNode(runtime, database, {
+      gate: ambiguityGate,
+      randomId: sequenceRandomId(["ambf_mail", "ambf_envelope"], "ambf_writer"),
+      async readDurableMutationReceipt() {
+        throw new Error("phase425 exact receipt channel temporarily unavailable");
+      },
+    });
+    stores.push(replayNode.store, writerNode.store);
+    const spec = equipmentLegacyInvocation(fixture, label, "forward");
+    let writerError = null;
+    try {
+      await invokeDurableSpec(writerNode, spec);
+    } catch (error) {
+      writerError = error;
+    }
+    assert.ok(writerError);
+    assert.equal(writerError.code, "storage_outcome_unknown");
+    assert.equal(writerError.outcomeUnknown, true);
+    assert.equal(ambiguityInjected, true);
+    assert.equal(writerNode.receiptReadCalls(), 1);
+    const committed = await loadComplexEquipmentSnapshot(runtime, database);
+    assert.equal(Object.hasOwn(committed.mutationReceipts, spec.operation.operationId), true);
+    assert.equal(Object.hasOwn(
+      authorityProfileForAccount(committed, fixture.owner.account.accountId).profile.equipmentInstances,
+      fixture.forwardInstanceId,
+    ), false);
+    assert.equal(await globalRevision(admin), 2);
+    const wrongHash = await invokeDurableSpec(replayNode, {
+      ...spec,
+      operation: {...spec.operation, requestHash: "f".repeat(64)},
+    });
+    assert.equal(wrongHash.ok, false, JSON.stringify(wrongHash));
+    assert.equal(wrongHash.code, "idempotency_key_conflict");
+    assert.equal(replayNode.saveCalls(), 0);
+    const replay = await settleWithin(
+      invokeDurableSpec(replayNode, spec),
+      WAIT_TIMEOUT_MS,
+      "装备转寄跨 Node 原 operation 精确重放",
+    );
+    assert.equal(replay.ok, true, JSON.stringify(replay));
+    assert.equal(replay.durableCommit.replayed, true);
+    assert.equal(replayNode.saveCalls(), 0);
+    const finalSnapshot = await loadComplexEquipmentSnapshot(runtime, database);
+    assert.equal(equipmentAssetCount(finalSnapshot), fixture.initialEquipmentAssetCount);
+    assert.equal(Object.keys(finalSnapshot.mutationReceipts).filter((operationId) => (
+      operationId === spec.operation.operationId
+    )).length, 1);
+    assert.ok(finalSnapshot.mailMessages[replay.mail.mailId]);
+    assert.equal(finalSnapshot.mailMessages[replay.mail.mailId].equipmentEnvelopes.length, 1);
+    await waitUntil(async () => (
+      await activeTransactionCount(admin) === 0 && await lockWaitCount(admin) === 0
+    ), WAIT_TIMEOUT_MS, "装备转寄模糊 COMMIT 事务清理");
+    const deadlocksAfter = await deadlockCount(admin);
+    assert.equal(deadlocksAfter, deadlocksBefore);
+    return Object.freeze({
+      writerReturnedOutcomeUnknown: true,
+      exactReceiptReadFailureObserved: true,
+      wrongHashRejected: true,
+      replayNodeUsedOriginalOperation: true,
+      replayNodeSaveCalls: replayNode.saveCalls(),
+      equipmentConserved: true,
+      deadlockDelta: deadlocksAfter - deadlocksBefore,
+    });
+  } finally {
+    await closeStores(stores, {bestEffort: true});
+    await settleWithin(admin.end(), WAIT_TIMEOUT_MS, "装备转寄模糊 COMMIT admin pool 关闭");
+  }
+}
+
+async function runComplexEquipmentLegacyMysqlGate(runtime) {
+  const interleavings = [];
+  for (const options of [
+    {label: "clcf", legacyKind: "listing", first: "claim"},
+    {label: "cllf", legacyKind: "listing", first: "legacy"},
+    {label: "cfcf", legacyKind: "forward", first: "claim"},
+    {label: "cffl", legacyKind: "forward", first: "legacy"},
+  ]) {
+    interleavings.push(await runClaimLegacyInterleave(runtime, options));
+  }
+  const duplicateListing = await runDuplicateLegacyIdentityRace(runtime, "listing");
+  const duplicateMail = await runDuplicateLegacyIdentityRace(runtime, "mail");
+  const ambiguousReplay = await runEquipmentForwardAmbiguousReplay(runtime);
+  return {
+    complexEquipmentRealMysql: true,
+    complexEquipmentScenarioDatabases: 7,
+    complexEquipmentAuxiliaryLoaderDatabases: 1,
+    complexEquipmentBidirectionalInterleavings: interleavings,
+    complexEquipmentDuplicateListing: duplicateListing,
+    complexEquipmentDuplicateMailContainer: duplicateMail,
+    complexEquipmentAmbiguousReplay: ambiguousReplay,
+    complexEquipmentDeadlockDelta: [
+      ...interleavings,
+      duplicateListing,
+      duplicateMail,
+      ambiguousReplay,
+    ].reduce((total, entry) => total + Number(entry.deadlockDelta || 0), 0),
+    complexEquipmentActiveTransactions: 0,
+    complexEquipmentActiveLockWaits: 0,
+  };
 }
 
 async function runRealMysqlGate(runtime) {
@@ -3801,6 +4640,11 @@ async function runMarketCreateMysqlGate(runtime) {
     stores.push(loaderBootstrap);
     loaderBootstrap.load();
     const loaderAuthority = cloneAuthorityRoot(mixedConditionalLoaded);
+    // This loader models a stale Node that only knows the future profile row.
+    // Copying the target database's receipt set into an empty loader would be
+    // an artificial multi-receipt bootstrap write, which online transactions
+    // deliberately reject because receipt capacity may advance only by one.
+    loaderAuthority.mutationReceipts = {};
     const conditionalActor = actorForKey("b");
     loaderAuthority.profileBindings[conditionalActor.accountId] =
       mixedConditionalMutation.after.profileBindings[conditionalActor.accountId];
@@ -4662,18 +5506,38 @@ async function main() {
   let report = null;
   try {
     runtime = await startIsolatedMysql();
-    const receiptRetentionOnly = process.argv.slice(2).includes("--receipt-retention-only");
-    if (receiptRetentionOnly) {
+    const args = new Set(process.argv.slice(2));
+    const exclusiveModes = [
+      "--base-only",
+      "--complex-equipment-only",
+      "--market-create-only",
+      "--mail-send-only",
+      "--receipt-retention-only",
+    ].filter((flag) => args.has(flag));
+    if (exclusiveModes.length > 1) {
+      throw new Error("一次只能选择一个隔离 MySQL 子门槛。");
+    }
+    if (args.has("--base-only")) {
+      report = await runRealMysqlGate(runtime);
+    } else if (args.has("--complex-equipment-only")) {
+      report = await runComplexEquipmentLegacyMysqlGate(runtime);
+    } else if (args.has("--market-create-only")) {
+      report = await runMarketCreateMysqlGate(runtime);
+    } else if (args.has("--mail-send-only")) {
+      report = await runMailSendMysqlGate(runtime);
+    } else if (args.has("--receipt-retention-only")) {
       report = await runReceiptRetentionMysqlGate(runtime);
     } else {
       const baseReport = await runRealMysqlGate(runtime);
       const marketCreateReport = await runMarketCreateMysqlGate(runtime);
       const mailSendReport = await runMailSendMysqlGate(runtime);
+      const complexEquipmentReport = await runComplexEquipmentLegacyMysqlGate(runtime);
       const receiptRetentionReport = await runReceiptRetentionMysqlGate(runtime);
       report = {
         ...baseReport,
         ...marketCreateReport,
         ...mailSendReport,
+        ...complexEquipmentReport,
         ...receiptRetentionReport,
       };
     }
@@ -4688,6 +5552,15 @@ async function main() {
 }
 
 main().catch((error) => {
+  if (process.env.BEASTBOUND_GATE_DEBUG === "1") {
+    let current = error;
+    const seen = new Set();
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      process.stderr.write(`${String(current && current.stack || current)}\n`);
+      current = current.cause;
+    }
+  }
   const safe = {
     qualified: false,
     code: String(error && error.code || "p0_6d_real_mysql_gate_failed"),
