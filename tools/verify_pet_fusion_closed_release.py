@@ -222,14 +222,14 @@ PORTRAIT_DIRECT_AUXILIARY_REFERENCE_RECORDS = {
             "pathLabel": (
                 ".codex/generated_images/"
                 "019fe7c8-2fd7-7972-94a7-98382ddfe591/"
-                "exec-1efe4fb6-7e71-41d2-b353-507de29b3b15.png"
+                "exec-798259de-fac7-47f7-b6b4-f1690f5e72e4.png"
             ),
             "role": "codex_generated_iteration_reference",
             "matchesDeclaredIdentityReference": False,
             "currentFileSha256": (
-                "cccd0d79697508d81d70c103ea3016b1b557041bb02854b5816bc3c63ce65bd7"
+                "f76ff58596fc5d51fe35a2e16b3c8eecdd91a910641b4ab1ee362cac779b4a1e"
             ),
-            "currentFileByteLength": 1651279,
+            "currentFileByteLength": 2003667,
             "currentFileWidth": 1254,
             "currentFileHeight": 1254,
             "currentFileFormat": "PNG",

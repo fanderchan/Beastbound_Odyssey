@@ -6,23 +6,23 @@
 - semantic independence verified by automation: `false`
 - full-body crop allowed: `false`
 - generator: Codex built-in imagegen
-- generation result id: `call_PPRtkgA2KYdVM7pMNVrrzNH3`
+- generation result id: `exec-2f8ba0a5-4a22-469e-9460-4738159db22b`
 - generation attestation: `client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/generation-attestation.json`
 - approved identity reference: `client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/identity/front_3quarter_sw.png`
 - identity reference SHA-256: `a556b4b3990849105b24ab2ce15d8678d7ff9d0f13bb7e6d04fc54a63f31684b`
 - exact ImageGen request prompt: `client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/prompts/portrait-v1.txt`
 - prompt source kind: `actual_imagegen_request`
-- prompt SHA-256: `8d15c4dd975db7e7b48871bb0521552c024510989884ca47266cd0482d1bec53`
-- selected prompt documentation: `.run/pet-portrait-samples/emberhorn_fusion_moss_rampart_fire4_earth6/prompt.txt`
-- selected prompt documentation SHA-256: `3be8374e0daf0b9614daf98677295901ea6bb714470ede7b80bed2d1a7fee146`
+- prompt SHA-256: `9caa71fb0182becefa6ab030993eb746b74b2f813934ea6e046ac901dfd8edee`
+- selected prompt documentation: `.run/fusion-portrait-revision-20260812/moss-rampart/input/prompt-v8.txt`
+- selected prompt documentation SHA-256: `fe174c421e607d8b2af49bb550a7118d1b8fdc53e0a2b44fa063c6d58a6e83c5`
 - processing: same-operation chroma alpha matte plus exact-mask-bounded edge cleanup; no global color pass
 - edge contract: `1`
-- edge cleanup changed pixels: `2385`
+- edge cleanup changed pixels: `2486`
 - edge cleanup alpha changed pixels: `0`
-- exact original ImageGen PNG SHA-256: `aff4ada2def78f008c61246054399f6efecd34694175e3a9c3c9e1b5582b8dbf`
-- raw lossless source SHA-256: `3c4e1d883ec0205335f8443d1d55bcac71cbd57e7222b2e8d196d4ab885d0ca1`
-- transparent 1024 master SHA-256: `7a6e08f23722aa8b1f65320f354d35d5ca67df8f971b30f5c5b73f0a34ba5083`
-- shared 512 runtime SHA-256: `45f1d3c4f4581667aaf803807af9d5cc137a44b8e9a06a7285f90c5e9256eb4d`
+- exact original ImageGen PNG SHA-256: `077927295f6bd366fc1681416c860218aab2f67e0dec248f38d18f70c72b517f`
+- raw lossless source SHA-256: `fe8211cd11e08a2a1d83d31437d0ee9d7110fa8569e182789f6a4a6819f7a293`
+- transparent 1024 master SHA-256: `97fabf485c6d153ca78bb13f2918ed26ff9bdba455e7188daa376665657b6480`
+- shared 512 runtime SHA-256: `1c8f0a7840255675e612f7cb29cfdbfb07d84bbe6ca9f9ba206da175e38ce237`
 - provenance status: project-directed generated candidate; automated checks do not prove copyright provenance
 - replacement path: rerun `tools/build_pet_portrait.py` from a newly generated dedicated headshot source
 - owner review required: `true`
