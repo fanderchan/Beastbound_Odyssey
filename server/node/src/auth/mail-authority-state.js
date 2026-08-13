@@ -4,6 +4,7 @@ const crypto = require("node:crypto");
 const {isDeepStrictEqual} = require("node:util");
 
 const MAIL_STATE_BY_VIEW = new WeakMap();
+const MAIL_INCREMENTAL_CURSOR_STATE = new WeakMap();
 const MAX_MAIL_ID_LENGTH = 96;
 const MAIL_AUTHORITY_CHECKPOINT_HISTORY_MAX = 2048;
 const MAIL_AUTHORITY_CHECKPOINT_DEAD_KEY_MAX = 1024;
@@ -138,6 +139,7 @@ function readMailAuthorityState(value) {
 function createMailLineage(baseline, options = {}) {
   const lineage = {
     baseline,
+    changesByRevision: [Object.freeze([])],
     checkpointCount: Math.max(0, Math.trunc(Number(options.checkpointCount || 0))),
     checkpointLastScannedMailIds: Math.max(
       0,
@@ -257,7 +259,13 @@ function readMailAuthorityRecipientRows(value, recipientAccountIdValue) {
 }
 
 function createMailView(lineage, baseRevision, changes) {
-  const state = {baseRevision, changes, lineage, signature: null};
+  const state = {
+    baseRevision,
+    changes,
+    lineage,
+    signature: null,
+    versionToken: Object.freeze({}),
+  };
   const target = {};
   const view = new Proxy(target, {
     defineProperty() {
@@ -517,6 +525,7 @@ function commitMailAuthorityDelta(value) {
   }
   const revision = state.lineage.revision + 1;
   let count = state.lineage.countByRevision[state.lineage.revision] || 0;
+  const committedChanges = [];
   for (const [mailId, change] of state.changes.entries()) {
     if (!change.before && change.after) {
       count += 1;
@@ -528,6 +537,7 @@ function commitMailAuthorityDelta(value) {
     state.lineage.histories.set(mailId, history);
     state.lineage.historyEntryCount += 1;
     state.lineage.ids.add(mailId);
+    committedChanges.push(Object.freeze({mailId, after: change.after}));
     addRecipientMailId(
       state.lineage.recipientMailIds,
       change.before && change.before.recipientAccountId,
@@ -540,10 +550,12 @@ function commitMailAuthorityDelta(value) {
     );
   }
   state.lineage.countByRevision.push(count);
+  state.lineage.changesByRevision.push(Object.freeze(committedChanges));
   state.lineage.revision = revision;
   state.baseRevision = revision;
   state.changes = new Map();
   state.signature = null;
+  state.versionToken = Object.freeze({});
   checkpointMailLineageIfNeeded(state);
   return value;
 }
@@ -573,6 +585,69 @@ function checkpointMailLineageIfNeeded(state) {
   });
   state.baseRevision = 0;
   state.signature = null;
+  state.versionToken = Object.freeze({});
+}
+
+// Equipment ownership and other derived indexes may consume this opaque
+// journal without enumerating the mailbox Proxy. The cursor exposes no
+// lineage internals and becomes non-incremental after a deterministic mailbox
+// checkpoint, at which point the consumer must rebuild from the current view.
+function mailAuthorityIncrementalJournal(value, cursorValue = null) {
+  if (!isCanonicalMailAuthorityState(value)) {
+    return {
+      ok: false,
+      incremental: false,
+      reason: "not_canonical",
+      changes: Object.freeze([]),
+    };
+  }
+  const state = MAIL_STATE_BY_VIEW.get(value);
+  const cursorState = cursorValue && typeof cursorValue === "object"
+    ? MAIL_INCREMENTAL_CURSOR_STATE.get(cursorValue)
+    : null;
+  const changes = [];
+  let incremental = false;
+  let reason = "cursor_missing";
+  if (
+    cursorState
+    && cursorState.lineage === state.lineage
+    && cursorState.revision <= state.baseRevision
+  ) {
+    incremental = true;
+    reason = "";
+    for (let revision = cursorState.revision + 1; revision <= state.baseRevision; revision += 1) {
+      const revisionChanges = state.lineage.changesByRevision[revision];
+      if (!Array.isArray(revisionChanges)) {
+        incremental = false;
+        reason = "revision_history_missing";
+        changes.length = 0;
+        break;
+      }
+      changes.push(...revisionChanges);
+    }
+  } else if (cursorState && cursorState.lineage !== state.lineage) {
+    reason = "lineage_mismatch";
+  } else if (cursorState) {
+    reason = "cursor_ahead";
+  }
+  if (incremental) {
+    for (const [mailId, change] of state.changes.entries()) {
+      changes.push(Object.freeze({mailId, after: change.after}));
+    }
+  }
+  const cursor = Object.freeze({});
+  MAIL_INCREMENTAL_CURSOR_STATE.set(cursor, {
+    lineage: state.lineage,
+    revision: state.baseRevision,
+  });
+  return {
+    ok: true,
+    incremental,
+    reason,
+    cursor,
+    viewToken: state.versionToken,
+    changes: Object.freeze(changes),
+  };
 }
 
 function rebaseMailAuthorityState(value) {
@@ -698,6 +773,7 @@ module.exports = {
   mailAuthorityDelta,
   mailAuthorityDeltaFrom,
   mailAuthorityDiagnostics,
+  mailAuthorityIncrementalJournal,
   mailAuthoritySignature,
   mailAuthorityStateCanDescendFrom,
   mailAuthorityStatesShareLineage,

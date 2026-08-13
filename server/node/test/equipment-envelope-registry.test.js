@@ -4,12 +4,34 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  EQUIPMENT_OWNERSHIP_INDEX_CHECKPOINT_DEPTH,
   OWNER_KIND_BANK,
   OWNER_KIND_CONSUMED,
   OWNER_KIND_MAIL,
   OWNER_KIND_MARKET,
   createEquipmentEnvelopeOwnershipRegistry,
+  equipmentEnvelopeOwnershipRegistryDiagnostics,
+  inheritEquipmentEnvelopeOwnershipRegistry,
 } = require("../src/auth/equipment-envelope-registry");
+const {
+  cloneAuthorityRoot,
+  freezeAuthorityRootCowRecordValues,
+  markAuthorityRootTrusted,
+  setAuthorityRootRecord,
+} = require("../src/auth/authority-root-clone");
+const {
+  canonicalDurableMutationReceipts,
+} = require("../src/auth/durable-mutation-state");
+const {
+  commitConsumedEquipmentEnvelopeLedger,
+  ensureConsumedEquipmentEnvelopeIds,
+  readConsumedEquipmentEnvelopeLedger,
+} = require("../src/auth/equipment-envelope-consumed-ledger");
+const {
+  commitMailAuthorityDelta,
+  readMailAuthorityState,
+  stageMailAuthorityUpsert,
+} = require("../src/auth/mail-authority-state");
 
 function envelope(envelopeId) {
   return {envelopeId};
@@ -194,4 +216,212 @@ test("registry ignores malformed buckets and blank identities rather than invent
   });
   assert.deepEqual(registry.ownerships, []);
   assert.equal(registry.isAvailable(""), false);
+});
+
+test("trusted roots update only touched profile, mail and market records", () => {
+  const source = rootState();
+  source.mailMessages.mail_alpha.recipientAccountId = "account_alpha";
+  const mailRead = readMailAuthorityState(source.mailMessages);
+  const ledgerRead = readConsumedEquipmentEnvelopeLedger(source.consumedEquipmentEnvelopes);
+  assert.equal(mailRead.ok, true);
+  assert.equal(ledgerRead.ok, true);
+  const root = {
+    ...source,
+    profiles: freezeAuthorityRootCowRecordValues(source.profiles),
+    marketListings: freezeAuthorityRootCowRecordValues(source.marketListings),
+    mailMessages: mailRead.messages,
+    consumedEquipmentEnvelopes: ledgerRead.ledger,
+    mutationReceipts: canonicalDurableMutationReceipts({}),
+  };
+  assert.equal(markAuthorityRootTrusted(root), true);
+  const initial = createEquipmentEnvelopeOwnershipRegistry(root);
+  assert.equal(initial.conflicts.length, 0);
+  const baseline = equipmentEnvelopeOwnershipRegistryDiagnostics();
+
+  const candidate = cloneAuthorityRoot(root);
+  const profileDocument = structuredClone(candidate.profiles.player_alpha);
+  profileDocument.profile.bank.slots[0].equipmentEnvelopes = [
+    envelope("eqx_bank_registry_incremental_0002"),
+  ];
+  setAuthorityRootRecord(candidate, "profiles", "player_alpha", profileDocument);
+
+  const stagedMail = stageMailAuthorityUpsert(candidate.mailMessages, {
+    ...candidate.mailMessages.mail_alpha,
+    equipmentEnvelopes: [envelope("eqx_mail_registry_incremental_0002")],
+  });
+  assert.equal(stagedMail.ok, true);
+  candidate.mailMessages = stagedMail.messages;
+
+  setAuthorityRootRecord(candidate, "marketListings", "market_alpha", {
+    ...candidate.marketListings.market_alpha,
+    equipmentEnvelope: envelope("eqx_market_registry_incremental_0002"),
+  });
+  const consumed = ensureConsumedEquipmentEnvelopeIds(
+    candidate.consumedEquipmentEnvelopes,
+    "eqx_unrelated_registry_incremental_0001",
+  );
+  assert.equal(consumed.ok, true);
+  candidate.consumedEquipmentEnvelopes = consumed.ledger;
+
+  const updated = createEquipmentEnvelopeOwnershipRegistry(candidate);
+  assert.equal(updated.conflicts.length, 0);
+  assert.equal(updated.ownershipsFor("eqx_bank_registry_0001").length, 0);
+  assert.equal(updated.ownershipsFor("eqx_mail_registry_0001").length, 0);
+  assert.equal(updated.ownershipsFor("eqx_market_registry_0001").length, 0);
+  assert.equal(updated.requireUnique("eqx_bank_registry_incremental_0002", {
+    kind: OWNER_KIND_BANK,
+    id: "player_alpha",
+  }).ok, true);
+  assert.equal(updated.requireUnique("eqx_mail_registry_incremental_0002", {
+    kind: OWNER_KIND_MAIL,
+    id: "mail_alpha",
+  }).ok, true);
+  assert.equal(updated.requireUnique("eqx_market_registry_incremental_0002", {
+    kind: OWNER_KIND_MARKET,
+    id: "market_alpha",
+  }).ok, true);
+
+  candidate.mailMessages = commitMailAuthorityDelta(candidate.mailMessages);
+  const committedLedger = commitConsumedEquipmentEnvelopeLedger(candidate.consumedEquipmentEnvelopes);
+  assert.equal(committedLedger.ok, true);
+  candidate.consumedEquipmentEnvelopes = committedLedger.ledger;
+  assert.equal(createEquipmentEnvelopeOwnershipRegistry(candidate).conflicts.length, 0);
+
+  const after = equipmentEnvelopeOwnershipRegistryDiagnostics();
+  assert.equal(after.profileContainerScans - baseline.profileContainerScans, 0);
+  assert.equal(after.marketContainerScans - baseline.marketContainerScans, 0);
+  assert.equal(after.mailContainerScans - baseline.mailContainerScans, 0);
+  assert.equal(after.profileRecordUpdates - baseline.profileRecordUpdates, 1);
+  assert.equal(after.marketRecordUpdates - baseline.marketRecordUpdates, 1);
+  assert.equal(after.mailRecordUpdates - baseline.mailRecordUpdates, 2);
+  assert.equal(after.consumedTargetedRefreshes - baseline.consumedTargetedRefreshes, 1);
+  assert.equal(after.consumedFallbackRefreshes - baseline.consumedFallbackRefreshes, 0);
+  assert.equal(after.rootIncrementalAggregations > baseline.rootIncrementalAggregations, true);
+});
+
+test("a consumed-only append refreshes the exact active envelope without rescanning custody", () => {
+  const source = rootState();
+  source.mailMessages.mail_alpha.recipientAccountId = "account_alpha";
+  const mailRead = readMailAuthorityState(source.mailMessages);
+  const ledgerRead = readConsumedEquipmentEnvelopeLedger(source.consumedEquipmentEnvelopes);
+  assert.equal(mailRead.ok, true);
+  assert.equal(ledgerRead.ok, true);
+  const root = {
+    ...source,
+    profiles: freezeAuthorityRootCowRecordValues(source.profiles),
+    marketListings: freezeAuthorityRootCowRecordValues(source.marketListings),
+    mailMessages: mailRead.messages,
+    consumedEquipmentEnvelopes: ledgerRead.ledger,
+    mutationReceipts: canonicalDurableMutationReceipts({}),
+  };
+  assert.equal(markAuthorityRootTrusted(root), true);
+  assert.equal(createEquipmentEnvelopeOwnershipRegistry(root).conflicts.length, 0);
+  const baseline = equipmentEnvelopeOwnershipRegistryDiagnostics();
+
+  const candidate = cloneAuthorityRoot(root);
+  const consumed = ensureConsumedEquipmentEnvelopeIds(
+    candidate.consumedEquipmentEnvelopes,
+    "eqx_mail_registry_0001",
+  );
+  assert.equal(consumed.ok, true);
+  candidate.consumedEquipmentEnvelopes = consumed.ledger;
+  const registry = createEquipmentEnvelopeOwnershipRegistry(candidate);
+  assert.equal(registry.duplicates.length, 1);
+  assert.equal(registry.duplicates[0].envelopeId, "eqx_mail_registry_0001");
+  assert.equal(registry.requireUnique("eqx_mail_registry_0001", {
+    kind: OWNER_KIND_MAIL,
+    id: "mail_alpha",
+  }).code, "equipment_transfer_envelope_duplicate");
+
+  const after = equipmentEnvelopeOwnershipRegistryDiagnostics();
+  assert.equal(after.profileContainerScans - baseline.profileContainerScans, 0);
+  assert.equal(after.marketContainerScans - baseline.marketContainerScans, 0);
+  assert.equal(after.mailContainerScans - baseline.mailContainerScans, 0);
+  assert.equal(after.consumedTargetedRefreshes - baseline.consumedTargetedRefreshes, 1);
+  assert.equal(after.consumedFallbackRefreshes - baseline.consumedFallbackRefreshes, 0);
+});
+
+test("record-index checkpoints rebuild only derived slices after the bounded overlay depth", () => {
+  const source = rootState();
+  source.mailMessages.mail_alpha.recipientAccountId = "account_alpha";
+  const mailRead = readMailAuthorityState(source.mailMessages);
+  const ledgerRead = readConsumedEquipmentEnvelopeLedger(source.consumedEquipmentEnvelopes);
+  assert.equal(mailRead.ok, true);
+  assert.equal(ledgerRead.ok, true);
+  let current = {
+    ...source,
+    profiles: freezeAuthorityRootCowRecordValues(source.profiles),
+    marketListings: freezeAuthorityRootCowRecordValues(source.marketListings),
+    mailMessages: mailRead.messages,
+    consumedEquipmentEnvelopes: ledgerRead.ledger,
+    mutationReceipts: canonicalDurableMutationReceipts({}),
+  };
+  assert.equal(markAuthorityRootTrusted(current), true);
+  assert.equal(createEquipmentEnvelopeOwnershipRegistry(current).conflicts.length, 0);
+  const baseline = equipmentEnvelopeOwnershipRegistryDiagnostics();
+  let latestEnvelopeId = "";
+
+  for (let revision = 1; revision <= EQUIPMENT_OWNERSHIP_INDEX_CHECKPOINT_DEPTH + 1; revision += 1) {
+    const candidate = cloneAuthorityRoot(current);
+    const profileDocument = structuredClone(candidate.profiles.player_alpha);
+    latestEnvelopeId = `eqx_profile_checkpoint_${String(revision).padStart(8, "0")}`;
+    profileDocument.profile.bank.slots[0].equipmentEnvelopes = [envelope(latestEnvelopeId)];
+    setAuthorityRootRecord(candidate, "profiles", "player_alpha", profileDocument);
+    const registry = createEquipmentEnvelopeOwnershipRegistry(candidate);
+    assert.equal(registry.requireUnique(latestEnvelopeId, {
+      kind: OWNER_KIND_BANK,
+      id: "player_alpha",
+    }).ok, true);
+    freezeAuthorityRootCowRecordValues(candidate.profiles);
+    freezeAuthorityRootCowRecordValues(candidate.marketListings);
+    assert.equal(markAuthorityRootTrusted(candidate), true);
+    current = candidate;
+  }
+
+  const after = equipmentEnvelopeOwnershipRegistryDiagnostics();
+  assert.equal(after.profileContainerScans - baseline.profileContainerScans, 0);
+  assert.equal(after.marketContainerScans - baseline.marketContainerScans, 0);
+  assert.equal(after.mailContainerScans - baseline.mailContainerScans, 0);
+  assert.equal(after.profileIndexCheckpoints - baseline.profileIndexCheckpoints, 1);
+  assert.equal(after.rootFullAggregations - baseline.rootFullAggregations, 1);
+  assert.equal(current.profiles.player_alpha.profile.bank.slots[0].equipmentEnvelopes[0].envelopeId, latestEnvelopeId);
+});
+
+test("root-only churn reuses the unchanged aggregate without growing an overlay chain", () => {
+  const source = rootState();
+  source.mailMessages.mail_alpha.recipientAccountId = "account_alpha";
+  const mailRead = readMailAuthorityState(source.mailMessages);
+  const ledgerRead = readConsumedEquipmentEnvelopeLedger(source.consumedEquipmentEnvelopes);
+  assert.equal(mailRead.ok, true);
+  assert.equal(ledgerRead.ok, true);
+  let current = {
+    ...source,
+    profiles: freezeAuthorityRootCowRecordValues(source.profiles),
+    marketListings: freezeAuthorityRootCowRecordValues(source.marketListings),
+    mailMessages: mailRead.messages,
+    consumedEquipmentEnvelopes: ledgerRead.ledger,
+    mutationReceipts: canonicalDurableMutationReceipts({}),
+  };
+  assert.equal(markAuthorityRootTrusted(current), true);
+  assert.equal(createEquipmentEnvelopeOwnershipRegistry(current).conflicts.length, 0);
+  const baseline = equipmentEnvelopeOwnershipRegistryDiagnostics();
+
+  for (let revision = 1; revision <= EQUIPMENT_OWNERSHIP_INDEX_CHECKPOINT_DEPTH + 1; revision += 1) {
+    const candidate = {...current, runtimeRegistryGeneration: revision};
+    assert.equal(inheritEquipmentEnvelopeOwnershipRegistry(current, candidate), true);
+    assert.equal(markAuthorityRootTrusted(candidate), true);
+    assert.equal(createEquipmentEnvelopeOwnershipRegistry(candidate).conflicts.length, 0);
+    current = candidate;
+  }
+
+  const after = equipmentEnvelopeOwnershipRegistryDiagnostics();
+  assert.equal(after.profileContainerScans - baseline.profileContainerScans, 0);
+  assert.equal(after.marketContainerScans - baseline.marketContainerScans, 0);
+  assert.equal(after.mailContainerScans - baseline.mailContainerScans, 0);
+  assert.equal(after.aggregateCheckpoints - baseline.aggregateCheckpoints, 0);
+  assert.equal(after.rootFullAggregations - baseline.rootFullAggregations, 0);
+  assert.equal(
+    after.rootIncrementalAggregations - baseline.rootIncrementalAggregations,
+    EQUIPMENT_OWNERSHIP_INDEX_CHECKPOINT_DEPTH + 1,
+  );
 });

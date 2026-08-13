@@ -686,21 +686,38 @@ test("planner fails closed for broader writes, wrong scope, mail drift, or ledge
   }
 });
 
+function activateTestCharacter(service, registered, displayName) {
+  assert.equal(registered.ok, true);
+  const created = service.createCharacter(registered.session.token, {
+    appearanceId: "novice_hunter_v1",
+    slotIndex: 0,
+    displayName,
+    elements: {earth: 6, water: 4, fire: 0, wind: 0},
+  });
+  assert.equal(created.ok, true);
+  const selected = service.selectCharacter(registered.session.token, {slotIndex: 0});
+  assert.equal(selected.ok, true);
+  return {
+    ...registered,
+    session: selected.session,
+    profileBinding: selected.profileBinding,
+    profileSummary: selected.profileSummary,
+  };
+}
+
 function seedOrdinaryMailClaimScenario(suffix) {
   const base = createMemoryAuthStore();
   const service = createAuthService({store: base, allowFullProfileSave: true});
-  const recipient = service.register({
+  const recipient = activateTestCharacter(service, service.register({
     username: `mailclaim${suffix}`,
     password: "test1234",
     displayName: "条件领取猎人",
-  });
-  const unrelated = service.register({
+  }), "条件领取角色");
+  const unrelated = activateTestCharacter(service, service.register({
     username: `mailother${suffix}`,
     password: "test1234",
     displayName: "无关档案猎人",
-  });
-  assert.equal(recipient.ok, true);
-  assert.equal(unrelated.ok, true);
+  }), "无关档案角色");
   const seed = base.load();
   const mailId = `mail_claim_${suffix}`;
   seed.mailMessages[mailId] = {
@@ -720,18 +737,16 @@ function seedOrdinaryMailClaimScenario(suffix) {
 function seedEquipmentMailClaimScenario(suffix) {
   const base = createMemoryAuthStore();
   const service = createAuthService({store: base, allowFullProfileSave: true});
-  const sender = service.register({
+  const sender = activateTestCharacter(service, service.register({
     username: `eqmailsender${suffix}`,
     password: "test1234",
     displayName: "装备寄件猎人",
-  });
-  const recipient = service.register({
+  }), "装备寄件角色");
+  const recipient = activateTestCharacter(service, service.register({
     username: `eqmailrecipient${suffix}`,
     password: "test1234",
     displayName: "装备收件猎人",
-  });
-  assert.equal(sender.ok, true);
-  assert.equal(recipient.ok, true);
+  }), "装备收件角色");
 
   const current = service.getProfile(sender.session.token);
   assert.equal(current.ok, true);

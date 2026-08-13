@@ -21,6 +21,7 @@ const {
   isCertifiedAuthorityRootJsonValue,
   isTrustedAuthorityRoot,
   markAuthorityRootTrusted,
+  setAuthorityRootRecord,
 } = require("./auth/authority-root-clone");
 const {
   materializeAuthorityRootLargeCollections,
@@ -261,6 +262,7 @@ const {
 const {publicEquipmentTransferSummary} = require("./auth/equipment-transfer-envelope");
 const {
   createEquipmentEnvelopeOwnershipRegistry,
+  inheritEquipmentEnvelopeOwnershipRegistry,
 } = require("./auth/equipment-envelope-registry");
 const {
   backfillConsumedEquipmentEnvelopeLedger,
@@ -2201,14 +2203,14 @@ function createAuthService(options = {}) {
       );
     }
     synchronizeProfileEquipmentStats(storedProfile);
-    candidateData.profiles[binding.playerId] = {
+    storeAuthorityRootRecord(candidateData, "profiles", binding.playerId, {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,
       profile: storedProfile,
       updatedAt: binding.updatedAt,
       schemaVersion: 1,
-    };
+    });
     const candidateEnvelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(candidateData);
     if (candidateEnvelopeRegistry.conflicts.length > 0) {
       return equipmentEnvelopeRegistryMutationFailure(candidateEnvelopeRegistry.conflicts[0]);
@@ -6279,6 +6281,7 @@ function createAuthService(options = {}) {
     }
     if (!changed) return data;
     const next = {...data, mailMessages: commitMailAuthorityDelta(messages)};
+    inheritEquipmentEnvelopeOwnershipRegistry(data, next);
     if (!markAuthorityRootTrusted(next)) {
       const error = new Error("通知提交后 Node 权威根不再可信。");
       error.code = "reward_vault_delivery_node_baseline_sync_failed";
@@ -6337,6 +6340,7 @@ function createAuthService(options = {}) {
     }
     if (!changed) return data;
     const next = {...data, mailMessages: commitMailAuthorityDelta(messages)};
+    inheritEquipmentEnvelopeOwnershipRegistry(data, next);
     if (!markAuthorityRootTrusted(next)) {
       const error = new Error("归档提交后 Node 权威根不再可信。");
       error.code = "mail_archive_node_baseline_sync_failed";
@@ -7965,7 +7969,7 @@ function normalizeData(raw, options = {}) {
       ? normalizedMailMessages.messages
       : objectOrEmpty(data.mailMessages),
     tradeOffers: objectOrEmpty(data.tradeOffers),
-    marketListings: objectOrEmpty(data.marketListings),
+    marketListings: freezeAuthorityRootCowRecordValues(objectOrEmpty(data.marketListings)),
     mutationReceipts: normalizeDurableMutationReceipts(data.mutationReceipts),
     consumedEquipmentEnvelopes: Object.hasOwn(data, "consumedEquipmentEnvelopes")
       ? (data.consumedEquipmentEnvelopes === undefined
@@ -8005,6 +8009,7 @@ function normalizeData(raw, options = {}) {
   if (ledger.ok) {
     normalized.consumedEquipmentEnvelopes = ledger.ledger;
   }
+  inheritEquipmentEnvelopeOwnershipRegistry(data, normalized);
   markAuthorityRootTrusted(normalized);
   return normalized;
 }
@@ -8072,6 +8077,7 @@ function normalizeRuntimeOnlyCandidate(before, raw, options = {}) {
     ),
     serviceEvents,
   };
+  inheritEquipmentEnvelopeOwnershipRegistry(before, candidate);
   const trusted = markAuthorityRootTrusted(candidate);
   phaseFinishedAt = process.hrtime.bigint();
   checkpoint("runtime_candidate_trust", phaseStartedAt, phaseFinishedAt);
@@ -8113,6 +8119,7 @@ function publishedRollbackBaseline(durableBaseline, candidate) {
       normalizeEventSeq(latestRetainedServiceEvent && latestRetainedServiceEvent.eventSeq),
     ),
   };
+  inheritEquipmentEnvelopeOwnershipRegistry(baseline, hybrid);
   if (markAuthorityRootTrusted(hybrid)) {
     return hybrid;
   }
@@ -8198,6 +8205,7 @@ function persistentDataForStore(data) {
   // The shallow persistent view is a new root, so explicitly restore its
   // internal trust before cloning. cloneAuthorityRoot still certifies every
   // immutable bucket independently and deep-clones any mutable value.
+  inheritEquipmentEnvelopeOwnershipRegistry(data, persistent);
   markAuthorityRootTrusted(persistent);
   return cloneAuthorityRoot(persistent);
 }
@@ -8232,12 +8240,7 @@ function createSessionForAccount(data, account, now, randomBytes, selection = nu
 }
 
 function storeAuthorityRootRecord(data, bucket, recordId, value) {
-  const normalizedRecordId = String(recordId || "");
-  if (normalizedRecordId === "") {
-    return null;
-  }
-  authorityRootRecordForMutation(data, bucket)[normalizedRecordId] = value;
-  return value;
+  return setAuthorityRootRecord(data, bucket, recordId, value);
 }
 
 function storePlayerPosition(data, accountId, position, timing = null) {

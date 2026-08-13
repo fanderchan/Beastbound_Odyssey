@@ -12,6 +12,11 @@ const {
   isCanonicalMailAuthorityState,
   mailAuthorityStateCanDescendFrom,
 } = require("./mail-authority-state");
+const {
+  inheritEquipmentEnvelopeOwnershipRecordIndex,
+  inheritEquipmentEnvelopeOwnershipRegistry,
+  noteEquipmentEnvelopeOwnershipRecordMutation,
+} = require("./equipment-envelope-registry");
 
 const CONSUMED_EQUIPMENT_ENVELOPES_KEY = "consumedEquipmentEnvelopes";
 const MUTATION_RECEIPTS_KEY = "mutationReceipts";
@@ -27,6 +32,7 @@ const IMMUTABLE_JOURNAL_ARRAY_KEYS = Object.freeze([
 const IMMUTABLE_RECORD_VALUE_KEYS = Object.freeze([
   "battleRooms",
   "battleRoomRecoveries",
+  "marketListings",
   "playerPositions",
   "profiles",
 ]);
@@ -149,10 +155,14 @@ function cloneAuthorityRoot(value) {
   }
   for (const key of [...sharedRecordMaps, ...sharedIdentityRecordMaps, ...sharedPrimitiveMaps]) {
     cloned[key] = {...value[key]};
+    if (["profiles", "marketListings"].includes(key)) {
+      inheritEquipmentEnvelopeOwnershipRecordIndex(value[key], cloned[key], key);
+    }
   }
   if (trustedRoot && shareLedger && shareReceipts) {
     markAuthorityRootTrusted(cloned);
   }
+  inheritEquipmentEnvelopeOwnershipRegistry(value, cloned);
   return cloned;
 }
 
@@ -324,12 +334,40 @@ function authorityRootRecordForMutation(data, key) {
   if (Object.isFrozen(current) || CERTIFIED_COW_RECORD_CONTAINERS.has(current)) {
     const mutable = {...current};
     data[key] = mutable;
+    if (["profiles", "marketListings"].includes(key)) {
+      inheritEquipmentEnvelopeOwnershipRecordIndex(current, mutable, key);
+    }
     return mutable;
   }
   if (!isRecord(data[key])) {
     data[key] = current;
   }
   return current;
+}
+
+function setAuthorityRootRecord(data, key, recordIdValue, value) {
+  const recordId = String(recordIdValue || "");
+  if (recordId === "") {
+    return null;
+  }
+  const records = authorityRootRecordForMutation(data, key);
+  records[recordId] = value;
+  noteEquipmentEnvelopeOwnershipRecordMutation(records, key, recordId, value);
+  return value;
+}
+
+function deleteAuthorityRootRecord(data, key, recordIdValue) {
+  const recordId = String(recordIdValue || "");
+  if (recordId === "") {
+    return false;
+  }
+  const records = authorityRootRecordForMutation(data, key);
+  if (!Object.hasOwn(records, recordId)) {
+    return false;
+  }
+  delete records[recordId];
+  noteEquipmentEnvelopeOwnershipRecordMutation(records, key, recordId, undefined);
+  return true;
 }
 
 // Account, session and profile-binding documents are security identities, not
@@ -831,6 +869,7 @@ module.exports = {
   certifyOwnedAuthorityRootJsonValue,
   certifyOwnedAuthorityRootTransientJsonValue,
   cloneAuthorityRoot,
+  deleteAuthorityRootRecord,
   authorityRootTrustCompromised,
   authorityRootJournalForMutation,
   authorityRootRecordForMutation,
@@ -843,4 +882,5 @@ module.exports = {
   isCertifiedAuthorityRootJsonValue,
   isTrustedAuthorityRoot,
   markAuthorityRootTrusted,
+  setAuthorityRootRecord,
 };

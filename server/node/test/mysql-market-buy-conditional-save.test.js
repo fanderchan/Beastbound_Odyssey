@@ -293,6 +293,25 @@ function operationKeys(plan, field) {
     .map((operation) => String(operation && operation.key || ""));
 }
 
+function activateTestCharacter(service, registered, displayName) {
+  assert.equal(registered.ok, true);
+  const created = service.createCharacter(registered.session.token, {
+    appearanceId: "novice_hunter_v1",
+    slotIndex: 0,
+    displayName,
+    elements: {earth: 6, water: 4, fire: 0, wind: 0},
+  });
+  assert.equal(created.ok, true);
+  const selected = service.selectCharacter(registered.session.token, {slotIndex: 0});
+  assert.equal(selected.ok, true);
+  return {
+    ...registered,
+    session: selected.session,
+    profileBinding: selected.profileBinding,
+    profileSummary: selected.profileSummary,
+  };
+}
+
 function seedBackpack(service, token, slots) {
   const current = service.getProfile(token);
   assert.equal(current.ok, true);
@@ -306,18 +325,16 @@ function seedBackpack(service, token, slots) {
 function seedOrdinaryMarketBuyScenario(suffix) {
   const base = createMemoryAuthStore();
   const service = createAuthService({store: base, allowFullProfileSave: true});
-  const seller = service.register({
+  const seller = activateTestCharacter(service, service.register({
     username: `mktbuyseller${suffix}`,
     password: "test1234",
     displayName: "条件成交卖家",
-  });
-  const buyer = service.register({
+  }), "条件成交卖家角色");
+  const buyer = activateTestCharacter(service, service.register({
     username: `mktbuybuyer${suffix}`,
     password: "test1234",
     displayName: "条件成交买家",
-  });
-  assert.equal(seller.ok, true);
-  assert.equal(buyer.ok, true);
+  }), "条件成交买家角色");
   seedBackpack(service, seller.session.token, [{itemId: "item_meat_small", count: 2}]);
   const created = service.createMarketListing(seller.session.token, {
     itemId: "item_meat_small",

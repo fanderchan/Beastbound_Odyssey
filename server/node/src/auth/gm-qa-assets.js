@@ -17,6 +17,9 @@ const {
 const {
   createEquipmentEnvelopeOwnershipRegistry,
 } = require("./equipment-envelope-registry");
+const {
+  setAuthorityRootRecord,
+} = require("./authority-root-clone");
 
 const GM_PREPARE_QA_ASSETS_COMMAND_ID = "gm_prepare_qa_assets";
 const QA_ASSETS_MANIFEST_ID = "qa_assets_v1";
@@ -496,10 +499,10 @@ function createGmQaAssetsDomain(ctx) {
     }
 
     const candidateData = cloneAuthorityRoot(data);
-    candidateData.profiles[playerId] = {
+    setAuthorityRootRecord(candidateData, "profiles", playerId, {
       ...clone(existing.profileDoc),
       profile: clone(profile),
-    };
+    });
     const finalMarkers = inspectQaAssetMarkers(candidateData, accountId, playerId, manifest.equipmentSamples);
     const finalRegistry = createEquipmentEnvelopeOwnershipRegistry(candidateData);
     if (

@@ -1,6 +1,6 @@
 "use strict";
 
-const {authorityRootRecordForMutation} = require("./authority-root-clone");
+const {setAuthorityRootRecord} = require("./authority-root-clone");
 const {AUTO_CAPTURE_SETTINGS_ACTION_ID} = require("./auto-capture-settings");
 
 function createProfileActionsDomain(ctx) {
@@ -450,15 +450,15 @@ function createProfileActionsDomain(ctx) {
     const updatedAt = isoNow(now);
     const nextRevision = Number(binding.profileRevision || 0) + 1;
     binding = {...binding, profileRevision: nextRevision, updatedAt};
-    authorityRootRecordForMutation(data, "profileBindings")[resolved.account.accountId] = binding;
-    authorityRootRecordForMutation(data, "profiles")[binding.playerId] = {
+    setAuthorityRootRecord(data, "profileBindings", resolved.account.accountId, binding);
+    setAuthorityRootRecord(data, "profiles", binding.playerId, {
       playerId: binding.playerId,
       accountId: resolved.account.accountId,
       profileRevision: nextRevision,
       profile,
       updatedAt,
       schemaVersion: 1,
-    };
+    });
     const returnEntry = applyPlayerRebirthReturn(data, resolved.account, now);
     save(data);
     return ok({

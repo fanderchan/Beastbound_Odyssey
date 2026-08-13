@@ -141,15 +141,33 @@ function operationResources(plan, field) {
     .map((operation) => String(operation && operation.resource || ""));
 }
 
+function activateTestCharacter(service, registered, displayName) {
+  assert.equal(registered.ok, true);
+  const created = service.createCharacter(registered.session.token, {
+    appearanceId: "novice_hunter_v1",
+    slotIndex: 0,
+    displayName,
+    elements: {earth: 6, water: 4, fire: 0, wind: 0},
+  });
+  assert.equal(created.ok, true);
+  const selected = service.selectCharacter(registered.session.token, {slotIndex: 0});
+  assert.equal(selected.ok, true);
+  return {
+    ...registered,
+    session: selected.session,
+    profileBinding: selected.profileBinding,
+    profileSummary: selected.profileSummary,
+  };
+}
+
 function seedOrdinaryMarketCancelScenario(username) {
   const base = createMemoryAuthStore();
   const service = createAuthService({store: base, allowFullProfileSave: true});
-  const registered = service.register({
+  const registered = activateTestCharacter(service, service.register({
     username,
     password: "test1234",
     displayName: "撤单条件猎人",
-  });
-  assert.equal(registered.ok, true);
+  }), "撤单条件角色");
   const current = service.getProfile(registered.session.token);
   current.profile.backpackSlots = [{itemId: "item_meat_small", count: 2}];
   assert.equal(service.saveProfile(registered.session.token, {
@@ -334,12 +352,16 @@ test("real durable ordinary cancel signs the exact market consistency scope", as
 test("ambiguous ordinary cancel recovers only from exact receipt, profile, and listing absence", async () => {
   const {base, registered, created} = seedOrdinaryMarketCancelScenario("mktcancelrecover");
   const unrelatedSeed = createAuthService({store: base});
-  const unrelated = unrelatedSeed.register({
+  const unrelatedRegistration = unrelatedSeed.register({
     username: "mktrecoverother",
     password: "test1234",
     displayName: "无关提交猎人",
   });
-  assert.equal(unrelated.ok, true);
+  const unrelated = activateTestCharacter(
+    unrelatedSeed,
+    unrelatedRegistration,
+    "无关提交猎人",
+  );
   const unrelatedRecordPoint = {
     mapId: "firebud_training_yard",
     spawnName: "market_recovery_other",

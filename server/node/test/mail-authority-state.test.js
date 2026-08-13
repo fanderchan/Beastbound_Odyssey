@@ -8,6 +8,7 @@ const {
   isCanonicalMailAuthorityState,
   mailAuthorityDeltaFrom,
   mailAuthorityDiagnostics,
+  mailAuthorityIncrementalJournal,
   mailAuthoritySignature,
   mailAuthorityStateCanDescendFrom,
   materializeMailAuthorityState,
@@ -74,6 +75,33 @@ test("mail authority commit advances only the candidate view", () => {
   commitMailAuthorityDelta(deleted.messages);
   assert.equal(Object.hasOwn(updated, "mail_a"), true);
   assert.equal(Object.hasOwn(deleted.messages, "mail_a"), false);
+});
+
+test("mail authority exposes an opaque touched-row cursor for derived indexes", () => {
+  const baseline = readMailAuthorityState({mail_a: mail("mail_a")}).messages;
+  const first = mailAuthorityIncrementalJournal(baseline);
+  assert.equal(first.ok, true);
+  assert.equal(first.incremental, false);
+  assert.equal(first.reason, "cursor_missing");
+  assert.deepEqual(first.changes, []);
+
+  const staged = stageMailAuthorityUpsert(baseline, {
+    ...mail("mail_a"),
+    equipmentEnvelopes: [{envelopeId: "eqx_mail_cursor_0001"}],
+  }).messages;
+  const pending = mailAuthorityIncrementalJournal(staged, first.cursor);
+  assert.equal(pending.ok, true);
+  assert.equal(pending.incremental, true);
+  assert.equal(pending.changes.length, 1);
+  assert.equal(pending.changes[0].mailId, "mail_a");
+  assert.equal(pending.changes[0].after.equipmentEnvelopes[0].envelopeId, "eqx_mail_cursor_0001");
+
+  commitMailAuthorityDelta(staged);
+  const committed = mailAuthorityIncrementalJournal(staged, pending.cursor);
+  assert.equal(committed.ok, true);
+  assert.equal(committed.incremental, true);
+  assert.equal(committed.changes.length, 1);
+  assert.equal(committed.changes[0].mailId, "mail_a");
 });
 
 test("mail authority freezes documents and cancels a staged revert", () => {
@@ -154,6 +182,7 @@ test("mail authority materializes an ordinary isolated object", () => {
 
 test("mail authority checkpoints bounded history while old views keep their snapshot", () => {
   const ancient = readMailAuthorityState({mail_a: mail("mail_a")}).messages;
+  const ancientCursor = mailAuthorityIncrementalJournal(ancient).cursor;
   let current = ancient;
   assert.deepEqual(Object.keys(current), ["mail_a"]);
   for (let revision = 1; revision <= MAIL_AUTHORITY_CHECKPOINT_HISTORY_MAX + 1; revision += 1) {
@@ -173,6 +202,10 @@ test("mail authority checkpoints bounded history while old views keep their snap
   assert.equal(diagnostics.trackedMailIds, 1);
   assert.equal(ancient.mail_a.title, "mail_a");
   assert.equal(current.mail_a.title, `版本${MAIL_AUTHORITY_CHECKPOINT_HISTORY_MAX + 1}`);
+  const afterCheckpoint = mailAuthorityIncrementalJournal(current, ancientCursor);
+  assert.equal(afterCheckpoint.ok, true);
+  assert.equal(afterCheckpoint.incremental, false);
+  assert.equal(afterCheckpoint.reason, "lineage_mismatch");
 });
 
 test("mail authority checkpoint releases deleted mail bodies from the current lineage", () => {

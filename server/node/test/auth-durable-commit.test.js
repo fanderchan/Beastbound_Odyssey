@@ -1326,18 +1326,37 @@ test("party HTTP read with stale presence falls back to durable maintenance", as
 
 test("websocket handshake durably repairs a malformed profile before accepting the player", async (t) => {
   const base = createMemoryAuthStore();
-  const seedService = createAuthService({store: base});
-  const registered = seedService.register({
+  const seedService = createAuthService({
+    store: base,
+    autoCreateInitialCharacterForTests: false,
+  });
+  const registration = seedService.register({
     username: "durablewsrepair",
     password: "test1234",
     displayName: "握手补档",
   });
+  assert.equal(registration.ok, true);
+  const created = seedService.createCharacter(registration.session.token, {
+    appearanceId: "novice_hunter_v1",
+    slotIndex: 0,
+    displayName: "握手补档角色",
+    elements: {earth: 6, water: 4, fire: 0, wind: 0},
+  });
+  assert.equal(created.ok, true);
+  const selected = seedService.selectCharacter(registration.session.token, {slotIndex: 0});
+  assert.equal(selected.ok, true);
+  const registered = {
+    ...registration,
+    session: selected.session,
+    profileBinding: selected.profileBinding,
+  };
   const damaged = base.load();
   damaged.profiles[registered.profileBinding.playerId].profile = [];
   base.save(damaged);
 
   let saveCount = 0;
   const service = createAuthService({
+    autoCreateInitialCharacterForTests: false,
     store: createAsyncWriteAuthStore({
       mode: "memory",
       load: () => base.load(),

@@ -31,6 +31,10 @@ const {
   createEquipmentEnvelopeOwnershipRegistry,
 } = require("./equipment-envelope-registry");
 const {
+  deleteAuthorityRootRecord,
+  setAuthorityRootRecord,
+} = require("./authority-root-clone");
+const {
   ensureConsumedEquipmentEnvelopeIds,
 } = require("./equipment-envelope-consumed-ledger");
 const {
@@ -569,7 +573,7 @@ function createEconomyDomain(ctx) {
       return fail(nextMarketBook.code, nextMarketBook.message, profilePayload(prepared, prepared.profile));
     }
     prepared.data.consumedEquipmentEnvelopes = nextConsumedLedger;
-    prepared.data.marketListings = nextListings;
+    setAuthorityRootRecord(prepared.data, "marketListings", listingId, listing);
     const questMessages = recordAndClaimQuest(profile, {
       type: "market_list",
       itemId,
@@ -599,7 +603,7 @@ function createEconomyDomain(ctx) {
         }
         saleMail = saleMailResult.mail;
       }
-      delete prepared.data.marketListings[listingId];
+      deleteAuthorityRootRecord(prepared.data, "marketListings", listingId);
     }
     const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, profile, now);
     save(prepared.data);
@@ -780,7 +784,7 @@ function createEconomyDomain(ctx) {
       }
       saleMail = saleMailResult.mail;
     }
-    delete data.marketListings[listingId];
+    deleteAuthorityRootRecord(data, "marketListings", listingId);
     save(data);
     return ok({
       account: publicAccount(resolved.account),
@@ -888,7 +892,7 @@ function createEconomyDomain(ctx) {
     profile.captureTools = captureToolBagFromProfile(profile);
     data.consumedEquipmentEnvelopes = nextConsumedLedger;
     const persisted = persistProfileForAccount(data, resolved.account, prepared.binding, profile, now);
-    delete data.marketListings[listingId];
+    deleteAuthorityRootRecord(data, "marketListings", listingId);
     save(data);
     return ok({
       account: publicAccount(resolved.account),

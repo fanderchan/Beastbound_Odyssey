@@ -1,7 +1,11 @@
 "use strict";
 
 const {isDeepStrictEqual} = require("node:util");
-const {cloneAuthorityRoot} = require("./authority-root-clone");
+const {
+  cloneAuthorityRoot,
+  deleteAuthorityRootRecord,
+  setAuthorityRootRecord,
+} = require("./authority-root-clone");
 const {
   collectMaterializedEquipmentEnvelopeTraces,
   ensureConsumedEquipmentEnvelopeIds,
@@ -555,15 +559,13 @@ function sharedAssetReadReferencedEnvelopeIds(value = {}) {
 }
 
 function applyEntityReplacement(root, fieldName, replacement) {
-  const values = {...objectOrEmpty(root[fieldName])};
   for (const key of replacement.keys) {
     if (Object.hasOwn(replacement.values, key)) {
-      values[key] = replacement.values[key];
+      setAuthorityRootRecord(root, fieldName, key, replacement.values[key]);
     } else {
-      delete values[key];
+      deleteAuthorityRootRecord(root, fieldName, key);
     }
   }
-  root[fieldName] = values;
 }
 
 function applyAccountReplacement(root, replacement) {

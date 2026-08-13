@@ -46,6 +46,34 @@ const {
   stageMailAuthorityUpsert,
 } = require("../src/auth/mail-authority-state");
 
+async function registerSelectedCharacterDurably(service, credentials, actionPrefix) {
+  const registered = await service.invokeDurable("register", [credentials], {
+    actionId: `${actionPrefix}_register`,
+  });
+  assert.equal(registered.ok, true);
+  const created = await service.invokeDurable("createCharacter", [registered.session.token, {
+    appearanceId: "novice_hunter_v1",
+    slotIndex: 0,
+    displayName: `${credentials.displayName || credentials.username}角色`,
+    elements: {earth: 6, water: 4, fire: 0, wind: 0},
+  }], {
+    operationId: `${actionPrefix}_create_0001`,
+    requestHash: "c".repeat(64),
+    actionId: `${actionPrefix}_create`,
+  });
+  assert.equal(created.ok, true);
+  const selected = await service.invokeDurable("selectCharacter", [registered.session.token, {
+    slotIndex: 0,
+  }], {actionId: `${actionPrefix}_select`});
+  assert.equal(selected.ok, true);
+  return {
+    ...registered,
+    session: selected.session,
+    profileBinding: selected.profileBinding,
+    profileSummary: selected.profileSummary,
+  };
+}
+
 test("authority root clones share only a validated immutable consumed ledger", () => {
   const canonical = readConsumedEquipmentEnvelopeLedger({
     eqx_clone_capacity_0001: {
@@ -591,14 +619,15 @@ test("persistent store snapshots restore trust and reuse frozen profile document
     },
   };
   const service = createAuthService({store});
-  const created = await service.invokeDurable("register", [{
+  const created = await registerSelectedCharacterDurably(service, {
     username: "profiletrustqa",
     password: "test1234",
-  }], {actionId: "profile_trust_snapshot_check"});
+    displayName: "档案可信",
+  }, "profile_trust_snapshot_check");
   assert.equal(created.ok, true);
-  assert.equal(saves.length, 1);
+  assert.equal(saves.length, 3);
 
-  const saved = saves[0];
+  const saved = saves.at(-1);
   const playerId = Object.keys(saved.profiles)[0];
   const username = Object.keys(saved.accounts)[0];
   const sessionId = Object.keys(saved.sessions)[0];
@@ -644,10 +673,11 @@ test("identity writers replace frozen records without mutating older committed r
     randomId: () => "identitycow",
     randomBytes: (size) => Buffer.alloc(size, randomByte++),
   });
-  const registered = await service.invokeDurable("register", [{
+  const registered = await registerSelectedCharacterDurably(service, {
     username: "identitycow",
     password: "test1234",
-  }], {actionId: "identity_cow_register"});
+    displayName: "身份写入",
+  }, "identity_cow");
   assert.equal(registered.ok, true);
   const registrationRoot = saves.at(-1);
   const accountId = registered.account.accountId;
