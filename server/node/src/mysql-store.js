@@ -67,6 +67,7 @@ const {
   MUTATION_RECEIPT_CAPACITY_GUARD_KEY,
   MUTATION_RECEIPT_CAPACITY_UPDATE_SQL,
   MUTATION_RECEIPT_DELETE_SQL,
+  REWARD_VAULT_LOCK_SQL,
   assertMysqlMutationReceiptWriteContract,
   assertMysqlResourceAcquisitionOrder,
   buildMysqlResourceAcquisitionPlan,
@@ -105,6 +106,22 @@ const {
   buildMailStorageForwardWriteSet,
 } = require("./mysql-mail-storage-forward-writes");
 const {
+  buildRewardVaultIssueWriteSet,
+} = require("./mysql-reward-vault-writes");
+const {
+  buildRewardVaultClaimWriteSet,
+} = require("./mysql-reward-vault-claim");
+const {
+  certifyMysqlRewardVaultRow,
+  normalizeMysqlRewardVaultEntryRequest,
+  normalizeMysqlRewardVaultPageRequest,
+  runMysqlRewardVaultEntryRead,
+  runMysqlRewardVaultPageRead,
+} = require("./mysql-reward-vault");
+const {
+  runMysqlRewardVaultDeliveryBatch,
+} = require("./mysql-reward-vault-delivery");
+const {
   normalizeMysqlMailArchivePageRequest,
   runMysqlMailArchiveBatch,
   runMysqlMailArchivePageRead,
@@ -112,6 +129,9 @@ const {
 const {
   runMysqlMailArchiveFeatureEnable,
 } = require("./mysql-mail-archive-feature-enable");
+const {
+  runMysqlRewardVaultFeatureEnable,
+} = require("./mysql-reward-vault-feature-enable");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 // The normal CLI loader and the isolated capacity fixture must share one
@@ -161,6 +181,7 @@ function createMysqlAuthStore(options = {}) {
   // Like bootstrap apply, feature activation is a fresh stopped-maintenance
   // capability with no environment fallback and no access to authority load.
   const mailArchiveFeatureEnableEnabled = options.mailArchiveFeatureEnable === true;
+  const rewardVaultFeatureEnableEnabled = options.rewardVaultFeatureEnable === true;
   const strictRowIdentity = options.strictRowIdentity === true;
   const ensureSchemaEnabled = options.ensureSchema !== false && !readOnly;
   let schemaReady = false;
@@ -687,6 +708,45 @@ function createMysqlAuthStore(options = {}) {
         certifyAttachment: mailStorageAttachmentCertifier,
       });
     },
+    async enableRewardVaultFeature(enableOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (
+        readOnly
+        || !rewardVaultFeatureEnableEnabled
+        || !config.singleWriterMaintenance
+      ) {
+        const error = new Error("奖励仓开关只允许专用停服维护 store。");
+        error.code = "reward_vault_feature_dedicated_store_required";
+        throw error;
+      }
+      if (!config.usePool) {
+        const error = new Error("奖励仓开关必须使用 MySQL 连接池。");
+        error.code = "reward_vault_feature_pool_required";
+        throw error;
+      }
+      if (schemaReady || lastPersistentData !== null) {
+        const error = new Error("奖励仓开关 store 已进入普通 authority 生命周期。");
+        error.code = "reward_vault_feature_fresh_store_required";
+        throw error;
+      }
+      if (enableOptions.maintenanceConfirmed !== true) {
+        const error = new Error("奖励仓开关需要显式确认停服维护窗口。");
+        error.code = "reward_vault_feature_maintenance_confirmation_required";
+        throw error;
+      }
+      ensureMailStorageFoundationSchema(config, config.database, {install: false});
+      if (mailStorageAttachmentCertifier === null) {
+        mailStorageAttachmentCertifier = createMailStorageBootstrapAttachmentCertifier();
+      }
+      return runMysqlRewardVaultFeatureEnable(persistentWritePool(), {
+        transactionPolicy: config.transactionPolicy,
+        transactionGuardOptions: enableOptions.transactionGuardOptions,
+        maintenanceConfirmed: true,
+        certifyAttachment: mailStorageAttachmentCertifier,
+      });
+    },
     async readDurableMutationReceipt(operationIdValue) {
       const operationId = durableReceiptReadOperationId(operationIdValue);
       if (closed) {
@@ -762,6 +822,56 @@ function createMysqlAuthStore(options = {}) {
         },
       );
     },
+    async readRewardVaultPage(accountId, pageOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (!config.usePool) {
+        const error = new Error("奖励仓分页读取必须使用 MySQL 连接池。");
+        error.code = "mysql_reward_vault_page_pool_required";
+        throw error;
+      }
+      const request = normalizeMysqlRewardVaultPageRequest(accountId, pageOptions);
+      ensureSchema();
+      assertRewardVaultStartupEnabled(mailStorageStartupState);
+      if (mailStorageAttachmentCertifier === null) {
+        mailStorageAttachmentCertifier = createMailStorageBootstrapAttachmentCertifier();
+      }
+      return runMysqlRewardVaultPageRead(
+        persistentWritePool(),
+        request.recipientAccountId,
+        {limit: request.limit, cursor: request.cursor},
+        {
+          transactionPolicy: config.transactionPolicy,
+          certifyAttachment: mailStorageAttachmentCertifier,
+        },
+      );
+    },
+    async readRewardVaultEntry(accountId, rewardId) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (!config.usePool) {
+        const error = new Error("奖励仓精确读取必须使用 MySQL 连接池。");
+        error.code = "mysql_reward_vault_entry_pool_required";
+        throw error;
+      }
+      const request = normalizeMysqlRewardVaultEntryRequest(accountId, rewardId);
+      ensureSchema();
+      assertRewardVaultStartupEnabled(mailStorageStartupState);
+      if (mailStorageAttachmentCertifier === null) {
+        mailStorageAttachmentCertifier = createMailStorageBootstrapAttachmentCertifier();
+      }
+      return runMysqlRewardVaultEntryRead(
+        persistentWritePool(),
+        request.recipientAccountId,
+        request.rewardId,
+        {
+          transactionPolicy: config.transactionPolicy,
+          certifyAttachment: mailStorageAttachmentCertifier,
+        },
+      );
+    },
     async archiveSettledMailBatch(archiveOptions = {}) {
       if (closed) {
         throw new Error("MySQL 持久连接池已关闭。");
@@ -811,6 +921,49 @@ function createMysqlAuthStore(options = {}) {
       }
       return report;
     },
+    async deliverRewardVaultNotificationsBatch(deliveryOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (readOnly || !config.usePool) {
+        const error = new Error("奖励仓通知投递必须使用可写 MySQL 连接池。");
+        error.code = "reward_vault_delivery_pool_required";
+        throw error;
+      }
+      ensureSchema();
+      if (lastPersistentData === null) loadAuthoritySnapshot();
+      assertRewardVaultStartupEnabled(mailStorageStartupState);
+      if (mailStorageAttachmentCertifier === null) {
+        mailStorageAttachmentCertifier = createMailStorageBootstrapAttachmentCertifier();
+      }
+      const report = await runMysqlRewardVaultDeliveryBatch(persistentWritePool(), {
+        transactionPolicy: config.transactionPolicy,
+        certifyAttachment: mailStorageAttachmentCertifier,
+        limit: deliveryOptions.limit,
+        now: deliveryOptions.now,
+      });
+      assertMysqlRewardVaultDeliveryReport(report);
+      if (report.deliveredMails.length > 0) {
+        let messages = lastPersistentData.mailMessages;
+        for (const mail of report.deliveredMails) {
+          const staged = stageMailAuthorityUpsert(messages, mail);
+          if (!staged.ok || staged.changed !== true || !isCanonicalMailAuthorityState(staged.messages)) {
+            lastPersistentData = null;
+            const error = new Error("奖励仓通知已提交，但 MySQL store 基线同步失败。");
+            error.code = "reward_vault_delivery_store_baseline_sync_failed";
+            error.committed = true;
+            error.retryable = false;
+            throw error;
+          }
+          messages = staged.messages;
+        }
+        lastPersistentData = {
+          ...lastPersistentData,
+          mailMessages: commitMailAuthorityDelta(messages),
+        };
+      }
+      return report;
+    },
     mailArchiveEnabled() {
       // This is deliberately a snapshot capability, not a live control-row
       // probe. A running process must restart after the stopped-maintenance
@@ -819,6 +972,14 @@ function createMysqlAuthStore(options = {}) {
         mailStorageStartupState
         && mailStorageStartupState.flags
         && mailStorageStartupState.flags.archive === true
+      );
+    },
+    rewardVaultEnabled() {
+      return Boolean(
+        mailStorageStartupState
+        && mailStorageStartupState.flags
+        && mailStorageStartupState.flags.vaultClaim === true
+        && mailStorageStartupState.flags.activeLimit === false
       );
     },
     async readSharedAssetView(request, readOptions = {}) {
@@ -900,6 +1061,8 @@ function createMysqlAuthStore(options = {}) {
       const plan = buildMysqlSavePlanFromPersistentData(data, lastPersistentData, {
         forceServerState: !serverStateReady,
         consistencyScope: saveOptions.consistencyScope,
+        rewardVaultIssues: saveOptions.rewardVaultIssues,
+        rewardVaultClaim: saveOptions.rewardVaultClaim,
         ...mailStoragePlanningOptions(),
       });
       if (plan.kind !== "noop") {
@@ -917,6 +1080,7 @@ function createMysqlAuthStore(options = {}) {
           expectedRevision: lastPersistentRevision,
           revisionCasEnabled: true,
           transactionPolicy: config.transactionPolicy,
+          certifyAttachment: mailStorageAttachmentCertifier,
         });
         if (committed.globalRevisionAdvanced === true) {
           lastPersistentRevision = committed.revision;
@@ -946,6 +1110,8 @@ function createMysqlAuthStore(options = {}) {
       const plan = buildMysqlSavePlanFromPersistentData(data, lastPersistentData, {
         forceServerState: !serverStateReady,
         consistencyScope: saveOptions.consistencyScope,
+        rewardVaultIssues: saveOptions.rewardVaultIssues,
+        rewardVaultClaim: saveOptions.rewardVaultClaim,
         ...mailStoragePlanningOptions(),
       });
       if (plan.kind !== "noop") {
@@ -963,6 +1129,7 @@ function createMysqlAuthStore(options = {}) {
           expectedRevision: lastPersistentRevision,
           revisionCasEnabled: true,
           transactionPolicy: config.transactionPolicy,
+          certifyAttachment: mailStorageAttachmentCertifier,
         });
         if (committed.globalRevisionAdvanced === true) {
           lastPersistentRevision = committed.revision;
@@ -1013,6 +1180,21 @@ function assertMysqlMailArchiveBatchReport(value) {
     throw error;
   }
   return value;
+}
+
+function assertRewardVaultStartupEnabled(state) {
+  if (
+    !state
+    || state.dataGeneration !== 1
+    || state.lifecycleState !== "ready"
+    || !state.flags
+    || state.flags.vaultClaim !== true
+    || state.flags.activeLimit !== false
+  ) {
+    const error = new Error("奖励仓能力尚未启用或启动围栏已经漂移。");
+    error.code = "reward_vault_feature_disabled_or_drifted";
+    throw error;
+  }
 }
 
 async function runMysqlDurableReceiptRead(pool, operationIdValue, options = {}) {
@@ -1390,6 +1572,7 @@ function normalizeMysqlSharedAssetReadRequest(value) {
       "mail_mark_read",
       "mail_send",
       "equipment_ownership",
+      "profile_read",
     ].includes(scope)
     || !mysqlSharedAssetIdentity(accountId, 80)
     || (listingId !== "" && !mysqlSharedAssetIdentity(listingId, 96))
@@ -1408,6 +1591,7 @@ function normalizeMysqlSharedAssetReadRequest(value) {
     || (["mail_read", "mail_mutation"].includes(scope)
       && !includeProfileMailPartitions)
     || (scope === "equipment_ownership" && !includeProfileMailPartitions)
+    || (scope === "profile_read" && includeProfileMailPartitions)
     || (scope === "mail_mark_read" && includeProfileMailPartitions)
     || (scope !== "mail_send" && (
       recipientUsername !== ""
@@ -2012,10 +2196,17 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
     requireCertifiedReceiptDeletes: true,
   });
   let statements = mysqlSaveStatementsFromGroups(groups);
-  if (statements.length === 0) {
+  let mailForwardWriteSet = buildMailStorageForwardWriteSetFromGroups(groups, options);
+  const rewardVaultIssueWriteSet = buildRewardVaultIssueWriteSetFromOptions(options);
+  const rewardVaultClaimWriteSet = buildRewardVaultClaimWriteSetFromOptions(options);
+  if (rewardVaultIssueWriteSet !== null && rewardVaultClaimWriteSet !== null) {
+    const error = new Error("同一事务不能同时发放和领取奖励仓资产。");
+    error.code = "mysql_reward_vault_write_mode_conflict";
+    throw error;
+  }
+  if (statements.length === 0 && rewardVaultIssueWriteSet === null) {
     return {kind: "noop"};
   }
-  let mailForwardWriteSet = buildMailStorageForwardWriteSetFromGroups(groups, options);
   statements = mysqlSaveStatementsFromGroups(groups, {
     mailForwardWriteSet,
     mailMode: "pool",
@@ -2026,6 +2217,8 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
     groups,
     options.consistencyScope,
     mailForwardWriteSet,
+    rewardVaultIssueWriteSet,
+    rewardVaultClaimWriteSet,
   );
   if (conditionalPlan !== null) {
     return conditionalPlan;
@@ -2040,7 +2233,7 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
       requireCertifiedReceiptDeletes: true,
     });
     statements = mysqlSaveStatementsFromGroups(groups);
-    if (statements.length === 0) {
+    if (statements.length === 0 && rewardVaultIssueWriteSet === null) {
       return {kind: "noop"};
     }
     mailForwardWriteSet = buildMailStorageForwardWriteSetFromGroups(groups, options);
@@ -2052,11 +2245,17 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
   const legacyMarketCreateCapacity = legacyMarketCreateCapacityProtection(previous, data);
   const legacyReceiptWrites = groups.mutationReceiptWrites;
   const legacyReceiptCapacityWrite = legacyMutationReceiptCapacityWrite(legacyReceiptWrites);
+  const legacyRewardVaultStatements = rewardVaultIssueWriteSet === null
+    ? []
+    : rewardVaultIssueWriteSet.writes.map(rewardVaultRawStatement);
+  const statementsWithRewardVault = legacyRewardVaultStatements.length === 0
+    ? statements
+    : insertStatementsBeforeMutationReceipts(statements, legacyRewardVaultStatements);
   return {
     kind: "legacy_global_cas",
     globalRevisionFence: true,
     resourceLocks: [
-      ...(mailForwardWriteSet === null ? [] : mailForwardWriteSet.controlLocks),
+      ...mergedMailStorageControlLocks(mailForwardWriteSet, rewardVaultIssueWriteSet),
       ...(groups.serverState.length > 0 && options.forceServerState !== true
         ? [serverStateResourceLock(persistentServerStateDocument(previous))]
         : []),
@@ -2076,8 +2275,78 @@ function buildMysqlSavePlanFromPersistentData(data, previous, options = {}) {
       ? {}
       : {receiptWrites: legacyReceiptWrites}),
     ...(mailForwardWriteSet === null ? {} : {mailForwardWriteSet}),
-    statements: ["START TRANSACTION", ...statements, "COMMIT"],
+    ...(rewardVaultIssueWriteSet === null ? {} : {rewardVaultIssueWriteSet}),
+    statements: ["START TRANSACTION", ...statementsWithRewardVault, "COMMIT"],
   };
+}
+
+function buildRewardVaultIssueWriteSetFromOptions(options = {}) {
+  const entries = options.rewardVaultIssues;
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return null;
+  }
+  let certifyAttachment;
+  if (typeof options.mailStorageCertifyAttachment === "function") {
+    certifyAttachment = options.mailStorageCertifyAttachment;
+  } else if (typeof options.mailStorageCertifierFactory === "function") {
+    certifyAttachment = options.mailStorageCertifierFactory();
+  }
+  return buildRewardVaultIssueWriteSet({
+    storageState: options.mailStorageState,
+    entries,
+    certifyAttachment,
+  });
+}
+
+function buildRewardVaultClaimWriteSetFromOptions(options = {}) {
+  const claim = options.rewardVaultClaim;
+  if (!claim || typeof claim !== "object" || Array.isArray(claim)) {
+    return null;
+  }
+  let certifyAttachment;
+  if (typeof options.mailStorageCertifyAttachment === "function") {
+    certifyAttachment = options.mailStorageCertifyAttachment;
+  } else if (typeof options.mailStorageCertifierFactory === "function") {
+    certifyAttachment = options.mailStorageCertifierFactory();
+  }
+  return buildRewardVaultClaimWriteSet({
+    storageState: options.mailStorageState,
+    beforeEntry: claim.beforeEntry,
+    nextEntry: claim.nextEntry,
+    claimedAt: claim.claimedAt,
+    certifyAttachment,
+  });
+}
+
+function mergedMailStorageControlLocks(mailWriteSet, rewardWriteSet) {
+  const values = [mailWriteSet, rewardWriteSet]
+    .filter(Boolean)
+    .flatMap((writeSet) => writeSet.controlLocks || []);
+  if (values.length <= 1) return values;
+  const first = values[0];
+  if (values.some((value) => !isDeepStrictEqual(value, first))) {
+    const error = new Error("MySQL 邮箱与奖励仓控制围栏不一致。");
+    error.code = "mysql_reward_vault_control_fence_mismatch";
+    throw error;
+  }
+  return [first];
+}
+
+function rewardVaultRawStatement(write) {
+  return `INSERT INTO reward_vault_entries
+    (reward_id, source_key, source_kind, source_digest, recipient_account_id,
+      status, created_at, updated_at, delivered_at, claimed_at, delivered_mail_id,
+      data_generation, revision, document_json)
+    VALUES (${sqlString(write.params[0])}, ${sqlString(write.params[1])}, ${sqlString(write.params[2])},
+      ${sqlString(write.params[3])}, ${sqlString(write.params[4])}, 'available',
+      ${sqlString(write.params[5])}, ${sqlString(write.params[6])}, NULL, NULL, NULL, 1, 0,
+      CAST(${sqlString(write.params[7])} AS JSON))`;
+}
+
+function insertStatementsBeforeMutationReceipts(statements, inserted) {
+  const firstReceipt = statements.findIndex(isLegacyMutationReceiptRawStatement);
+  const index = firstReceipt < 0 ? statements.length : firstReceipt;
+  return [...statements.slice(0, index), ...inserted, ...statements.slice(index)];
 }
 
 function buildConditionalMysqlSavePlan(
@@ -2086,7 +2355,29 @@ function buildConditionalMysqlSavePlan(
   groups,
   consistencyScope,
   mailForwardWriteSet = null,
+  rewardVaultIssueWriteSet = null,
+  rewardVaultClaimWriteSet = null,
 ) {
+  const vaultOnlyPlan = buildRewardVaultIssueOnlySavePlan(
+    data,
+    previous,
+    groups,
+    rewardVaultIssueWriteSet,
+  );
+  if (vaultOnlyPlan !== null) return vaultOnlyPlan;
+  const claimPlan = buildConditionalRewardVaultClaimSavePlan(
+    data,
+    previous,
+    groups,
+    consistencyScope,
+    rewardVaultClaimWriteSet,
+  );
+  if (claimPlan !== null) return claimPlan;
+  if (rewardVaultClaimWriteSet !== null) {
+    const error = new Error("MySQL 奖励仓领取无法建立完整条件事务。");
+    error.code = "mysql_reward_vault_claim_plan_invalid";
+    throw error;
+  }
   for (const build of [
     buildConditionalProfileSavePlan,
     buildConditionalMarketCreateSavePlan,
@@ -2096,12 +2387,198 @@ function buildConditionalMysqlSavePlan(
     buildConditionalMailReadSavePlan,
     buildConditionalMailClaimSavePlan,
   ]) {
-    const plan = build(data, previous, groups, consistencyScope, mailForwardWriteSet);
+    const basePlan = build(data, previous, groups, consistencyScope, mailForwardWriteSet);
+    const plan = appendRewardVaultIssueToConditionalPlan(basePlan, rewardVaultIssueWriteSet);
     if (plan !== null) {
       return plan;
     }
   }
   return null;
+}
+
+function buildRewardVaultIssueOnlySavePlan(data, previous, groups, writeSet) {
+  if (
+    writeSet === null
+    || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)
+    || Object.values(groups).some((statements) => statements.length > 0)
+  ) {
+    return null;
+  }
+  return buildMysqlResourceAcquisitionPlan({
+    kind: "reward_vault_issue_only_v1",
+    globalRevisionFence: false,
+    globalCompatibilityBarrier: "shared",
+    rewardVaultIssueWriteSet: writeSet,
+    locks: [...writeSet.controlLocks],
+    writes: [...writeSet.writes],
+  });
+}
+
+function buildConditionalRewardVaultClaimSavePlan(
+  data,
+  previous,
+  groups,
+  consistencyScopeValue,
+  rewardVaultClaimWriteSet,
+) {
+  const consistencyScope = rowLocalRewardVaultClaimConsistencyScope(consistencyScopeValue);
+  if (
+    consistencyScope === null
+    || rewardVaultClaimWriteSet === null
+    || Number(data.schemaVersion || 0) !== Number(previous.schemaVersion || 0)
+  ) {
+    return null;
+  }
+  const allowedGroups = new Set(["profileBindings", "profiles", "mutationReceipts"]);
+  for (const [groupName, statements] of Object.entries(groups)) {
+    if (!allowedGroups.has(groupName) && statements.length > 0) return null;
+  }
+  if (groups.profileBindings.length !== 1 || groups.profiles.length !== 1) return null;
+
+  const profileChange = certifiedSingleProfileRevisionChange(previous, data);
+  if (profileChange === null) return null;
+  const {
+    accountId,
+    playerId,
+    expectedRevision,
+    beforeBinding,
+    nextBinding,
+    beforeProfile,
+    nextProfile,
+  } = profileChange;
+  const beforeEntry = rewardVaultClaimWriteSet.beforeEntry;
+  const nextEntry = rewardVaultClaimWriteSet.nextEntry;
+  if (
+    consistencyScope.accountId !== accountId
+    || consistencyScope.playerId !== playerId
+    || consistencyScope.rewardId !== beforeEntry.rewardId
+    || beforeEntry.recipientAccountId !== accountId
+    || nextEntry.rewardId !== beforeEntry.rewardId
+    || nextEntry.recipientAccountId !== accountId
+    || nextEntry.status !== "claimed"
+  ) {
+    return null;
+  }
+
+  const receiptWriteSet = conditionalMutationReceiptWriteSet(
+    previous.mutationReceipts,
+    data.mutationReceipts,
+    groups.mutationReceipts,
+  );
+  if (receiptWriteSet === null) return null;
+  const receipt = receiptWriteSet.receipt;
+  const response = objectOrEmpty(receipt && receipt.response);
+  const responseReward = objectOrEmpty(response.reward);
+  if (
+    receipt === null
+    || String(receipt.operationId || "") !== consistencyScope.operationId
+    || String(receipt.requestHash || "") !== consistencyScope.requestHash
+    || String(receipt.actionId || "") !== consistencyScope.actionId
+    || String(receipt.accountId || "") !== accountId
+    || response.ok !== true
+    || String(responseReward.rewardId || "") !== beforeEntry.rewardId
+    || String(responseReward.status || "") !== "claimed"
+    || responseReward.claimable !== false
+  ) {
+    return null;
+  }
+
+  return buildMysqlResourceAcquisitionPlan({
+    kind: "reward_vault_claim_conditional_v1",
+    globalRevisionFence: false,
+    globalCompatibilityBarrier: "shared",
+    accountId,
+    playerId,
+    rewardId: beforeEntry.rewardId,
+    operationId: consistencyScope.operationId,
+    expectedProfileRevision: expectedRevision,
+    nextProfileRevision: expectedRevision + 1,
+    rewardVaultClaimWriteSet,
+    locks: [
+      ...rewardVaultClaimWriteSet.controlLocks,
+      profileBindingResourceLock(beforeBinding),
+      profileResourceLock(beforeProfile),
+      ...rewardVaultClaimWriteSet.locks,
+    ],
+    writes: [
+      conditionalProfileBindingUpdate(nextBinding, expectedRevision),
+      conditionalProfileUpdate(nextProfile, expectedRevision),
+      ...rewardVaultClaimWriteSet.writes,
+      ...receiptWriteSet.writes,
+    ],
+  });
+}
+
+function appendRewardVaultIssueToConditionalPlan(plan, writeSet) {
+  if (plan === null || writeSet === null) return plan;
+  if (String(plan.rewardId || "") !== "") {
+    const entries = Array.isArray(writeSet.entries) ? writeSet.entries : [];
+    const entry = entries.length === 1 ? entries[0] : null;
+    if (
+      !entry
+      || String(entry.rewardId || "") !== String(plan.rewardId || "")
+      || String(entry.recipientAccountId || "") !== String(plan.sellerAccountId || "")
+      || String(entry.sourceKind || "") !== "market_sale"
+      || String(entry.status || "") !== "available"
+    ) {
+      const error = new Error("MySQL 市场成交奖励仓写集与条件事务不一致。");
+      error.code = "mysql_reward_vault_market_issue_mismatch";
+      throw error;
+    }
+  }
+  if (plan.locks.some((lock) => (
+    lock && [
+      "mail_identity",
+      "mail_message",
+      "consumed_equipment_envelope",
+      "market_tax",
+      "mutation_receipt_capacity",
+      "mutation_receipt",
+    ].includes(lock.resource)
+  ))) {
+    // A vault insert first-acquires resource rank 6. Once a narrower plan has
+    // locked a later resource it cannot safely grow backwards, so let the
+    // caller rediscover the complete delta under the legacy global fence.
+    return null;
+  }
+  const receiptIndex = plan.writes.findIndex((write) => (
+    write && ["mutation_receipt_capacity", "mutation_receipt"].includes(write.resource)
+  ));
+  if (receiptIndex < 0) {
+    const error = new Error("MySQL 奖励仓条件事务缺少 durable receipt 尾部。");
+    error.code = "mysql_reward_vault_receipt_tail_missing";
+    throw error;
+  }
+  const firstLaterResourceIndex = plan.writes.findIndex((write) => (
+    write && [
+      "mail_identity",
+      "mail_message",
+      "consumed_equipment_envelope",
+      "market_tax",
+      "mutation_receipt_capacity",
+      "mutation_receipt",
+    ].includes(write.resource)
+  ));
+  const insertionIndex = firstLaterResourceIndex < 0
+    ? receiptIndex
+    : firstLaterResourceIndex;
+  const locks = [
+    ...plan.locks.filter((lock) => lock.resource !== "mail_storage_control"),
+    ...mergedMailStorageControlLocks(
+      {controlLocks: plan.locks.filter((lock) => lock.resource === "mail_storage_control")},
+      writeSet,
+    ),
+  ];
+  return buildMysqlResourceAcquisitionPlan({
+    ...plan,
+    locks,
+    rewardVaultIssueWriteSet: writeSet,
+    writes: [
+      ...plan.writes.slice(0, insertionIndex),
+      ...writeSet.writes,
+      ...plan.writes.slice(insertionIndex),
+    ],
+  });
 }
 
 function conditionalMailForwardLocks(writeSet) {
@@ -2519,10 +2996,13 @@ function buildConditionalMarketBuySavePlan(
       return null;
     }
   }
+  const vaultSettlement = String(consistencyScope.rewardId || "") !== "";
+  const zeroAssetVaultSettlement = consistencyScope.zeroAssetVaultSettlement === true;
+  const noSaleMail = vaultSettlement || zeroAssetVaultSettlement;
   if (
     groups.profileBindings.length !== 1
     || groups.profiles.length !== 1
-    || groups.mailMessages.length !== 1
+    || groups.mailMessages.length !== (noSaleMail ? 0 : 1)
     || groups.marketListings.length !== 1
   ) {
     return null;
@@ -2534,13 +3014,13 @@ function buildConditionalMarketBuySavePlan(
     data.marketListings,
     marketListingEntityKey,
   );
-  const mailInsert = singleMailAuthorityEntityChange(
+  const mailInsert = noSaleMail ? null : singleMailAuthorityEntityChange(
     previous.mailMessages,
     data.mailMessages,
     groups.mailAuthorityChanges,
     "insert",
   );
-  if (profileRevisionChange === null || listingDelete === null || mailInsert === null) {
+  if (profileRevisionChange === null || listingDelete === null || (!noSaleMail && mailInsert === null)) {
     return null;
   }
   const {
@@ -2554,8 +3034,8 @@ function buildConditionalMarketBuySavePlan(
   } = profileRevisionChange;
   const listing = listingDelete.previous;
   const listingId = listingDelete.key;
-  const saleMail = mailInsert.next;
-  const saleMailId = mailInsert.key;
+  const saleMail = mailInsert === null ? null : mailInsert.next;
+  const saleMailId = mailInsert === null ? "" : mailInsert.key;
   const sellerAccountId = String(listing.sellerAccountId || "");
   const sellerBinding = previous.profileBindings && previous.profileBindings[sellerAccountId];
   const sellerPlayerId = String(sellerBinding && sellerBinding.playerId || "");
@@ -2607,7 +3087,8 @@ function buildConditionalMarketBuySavePlan(
     || consistencyScope.taxAmount !== taxChange.taxAmount
     || groups.serverState.length !== (taxChange.taxAmount > 0 ? 1 : 0)
     || !marketBuyServerStateChangesOnlyTax(previous, data, taxChange)
-    || !certifiedOrdinaryMarketSaleMail(saleMail, listing, taxChange.taxAmount, sellerAccountId)
+    || (!noSaleMail
+      && !certifiedOrdinaryMarketSaleMail(saleMail, listing, taxChange.taxAmount, sellerAccountId))
   ) {
     return null;
   }
@@ -2643,9 +3124,13 @@ function buildConditionalMarketBuySavePlan(
     conditionalProfileBindingUpdate(nextBinding, expectedRevision),
     conditionalProfileUpdate(nextProfile, expectedRevision),
     conditionalMarketListingDelete(listing),
-    ...conditionalMailForwardWrites(mailForwardWriteSet),
-    conditionalMailMessageInsert(saleMail),
   ];
+  if (!noSaleMail) {
+    writes.push(
+      ...conditionalMailForwardWrites(mailForwardWriteSet),
+      conditionalMailMessageInsert(saleMail),
+    );
+  }
   if (taxChange.taxAmount > 0) {
     writes.push(conditionalMarketTaxIncrement(taxChange.currency, taxChange.taxAmount));
   }
@@ -2660,6 +3145,8 @@ function buildConditionalMarketBuySavePlan(
     sellerPlayerId,
     listingId,
     saleMailId,
+    ...(vaultSettlement ? {rewardId: consistencyScope.rewardId} : {}),
+    ...(zeroAssetVaultSettlement ? {zeroAssetVaultSettlement: true} : {}),
     operationId: consistencyScope.operationId,
     currency: taxChange.currency,
     taxAmount: taxChange.taxAmount,
@@ -3141,6 +3628,52 @@ function rowLocalProfileConsistencyScope(value) {
   return {kind, accountId, playerId, operationId, requestHash, actionId};
 }
 
+function rowLocalRewardVaultClaimConsistencyScope(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const fields = new Set([
+    "kind",
+    "accountId",
+    "playerId",
+    "rewardId",
+    "operationId",
+    "requestHash",
+    "actionId",
+  ]);
+  if (
+    Object.keys(value).length !== fields.size
+    || Object.keys(value).some((field) => !fields.has(field))
+    || value.kind !== "row_local_reward_vault_claim_v1"
+    || typeof value.accountId !== "string"
+    || value.accountId === ""
+    || value.accountId !== value.accountId.trim()
+    || typeof value.playerId !== "string"
+    || value.playerId === ""
+    || value.playerId !== value.playerId.trim()
+    || typeof value.rewardId !== "string"
+    || !/^reward_[a-f0-9]{64}$/.test(value.rewardId)
+    || typeof value.operationId !== "string"
+    || value.operationId === ""
+    || value.operationId !== value.operationId.trim()
+    || typeof value.requestHash !== "string"
+    || value.requestHash === ""
+    || value.requestHash !== value.requestHash.trim()
+    || typeof value.actionId !== "string"
+    || value.actionId === ""
+    || value.actionId !== value.actionId.trim()
+  ) {
+    return null;
+  }
+  return {
+    kind: value.kind,
+    accountId: value.accountId,
+    playerId: value.playerId,
+    rewardId: value.rewardId,
+    operationId: value.operationId,
+    requestHash: value.requestHash,
+    actionId: value.actionId,
+  };
+}
+
 function rowLocalMarketCreateConsistencyScope(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -3252,6 +3785,9 @@ function rowLocalMarketBuyConsistencyScope(value) {
   const sellerPlayerId = String(value.sellerPlayerId || "");
   const listingId = String(value.listingId || "");
   const saleMailId = String(value.saleMailId || "");
+  const rewardId = String(value.rewardId || "");
+  const vaultSettlement = /^reward_[a-f0-9]{64}$/.test(rewardId);
+  const zeroAssetVaultSettlement = value.zeroAssetVaultSettlement === true;
   const currency = String(value.currency || "");
   const taxAmount = Number(value.taxAmount);
   const operationId = String(value.operationId || "");
@@ -3264,7 +3800,9 @@ function rowLocalMarketBuyConsistencyScope(value) {
     || sellerAccountId === ""
     || sellerPlayerId === ""
     || listingId === ""
-    || saleMailId === ""
+    || (!vaultSettlement && !zeroAssetVaultSettlement && saleMailId === "")
+    || ((vaultSettlement || zeroAssetVaultSettlement) && saleMailId !== "")
+    || (vaultSettlement && zeroAssetVaultSettlement)
     || !["stoneCoins", "diamonds"].includes(currency)
     || !Number.isSafeInteger(taxAmount)
     || taxAmount < 0
@@ -3282,6 +3820,8 @@ function rowLocalMarketBuyConsistencyScope(value) {
     sellerPlayerId,
     listingId,
     saleMailId,
+    ...(vaultSettlement ? {rewardId} : {}),
+    ...(zeroAssetVaultSettlement ? {zeroAssetVaultSettlement: true} : {}),
     currency,
     taxAmount,
     operationId,
@@ -4400,7 +4940,7 @@ function ensureMailStorageFoundationSchema(config, database, options = {}) {
     );
     return validateMailStorageStartupState(
       parseMailStorageControlOutput(controlOutput),
-      {supportedFeatures: ["archive"]},
+      {supportedFeatures: ["archive", "vaultClaim"]},
     );
   } catch (cause) {
     if (cause && /^mysql_mail_storage_/.test(String(cause.code || ""))) {
@@ -5151,8 +5691,18 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     "mail_send_conditional_v1",
     "mail_read_conditional_v1",
     "mail_claim_conditional_v1",
+    "reward_vault_issue_only_v1",
+    "reward_vault_claim_conditional_v1",
   ].includes(plan.kind)) {
     return committed;
+  }
+  if (plan.kind === "reward_vault_issue_only_v1") {
+    if (!previous || !isDeepStrictEqual(previous, committed)) {
+      const error = new Error("MySQL vault-only 条件提交不应改变 authority 根基线。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    return previous;
   }
   if (plan.kind === "mail_send_conditional_v1") {
     const mode = String(plan.mode || "");
@@ -5288,6 +5838,22 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     return merged;
   }
 
+  if (plan.kind === "reward_vault_claim_conditional_v1") {
+    const operationId = String(plan.operationId || "");
+    const receipt = committed.mutationReceipts && committed.mutationReceipts[operationId];
+    if (
+      operationId === ""
+      || !receipt
+      || String(receipt.operationId || "") !== operationId
+      || String(receipt.accountId || "") !== accountId
+    ) {
+      const error = new Error("MySQL reward vault claim 条件提交缺少已证明的回执结果。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    return merged;
+  }
+
   if (plan.kind === "market_create_conditional_v1") {
     const listingId = String(plan.listingId || "");
     const operationId = String(plan.operationId || "");
@@ -5373,12 +5939,15 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
 
   const saleMailId = String(plan.saleMailId || "");
   const saleMail = committed.mailMessages && committed.mailMessages[saleMailId];
+  const vaultSettlement = /^reward_[a-f0-9]{64}$/.test(String(plan.rewardId || ""));
+  const zeroAssetVaultSettlement = plan.zeroAssetVaultSettlement === true;
+  const noSaleMail = vaultSettlement || zeroAssetVaultSettlement;
   const currency = String(plan.currency || "");
   const taxAmount = Number(plan.taxAmount);
   const previousMarketConfig = canonicalOrdinaryMarketConfig(previous.marketConfig);
   if (
-    saleMailId === ""
-    || !saleMail
+    (!noSaleMail && (saleMailId === "" || !saleMail))
+    || (noSaleMail && (saleMailId !== "" || saleMail))
     || !["stoneCoins", "diamonds"].includes(currency)
     || !Number.isSafeInteger(taxAmount)
     || taxAmount < 0
@@ -5391,10 +5960,12 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
   }
   return {
     ...marketMerged,
-    mailMessages: mergeCommittedMailAuthorityChange(
-      previous.mailMessages,
-      {mailId: saleMailId, disposition: "insert", mail: saleMail},
-    ),
+    mailMessages: noSaleMail
+      ? previous.mailMessages
+      : mergeCommittedMailAuthorityChange(
+        previous.mailMessages,
+        {mailId: saleMailId, disposition: "insert", mail: saleMail},
+      ),
     marketConfig: {
       ...previous.marketConfig,
       taxCollected: {
@@ -6383,6 +6954,7 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
     const receiptWrites = assertLegacyMutationReceiptWrites(plan);
     const receiptCapacityWrite = assertLegacyMutationReceiptCapacityWrite(plan, receiptWrites);
     const mailForwardWriteSet = assertLegacyMailForwardWriteSet(plan);
+    const rewardVaultIssueWriteSet = assertLegacyRewardVaultIssueWriteSet(plan);
     return runMysqlPoolSaveStatements(pool, plan.statements, {
       ...options,
       resourceLocks: plan.resourceLocks,
@@ -6390,6 +6962,7 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
       receiptCapacityWrite,
       receiptWrites,
       mailForwardWriteSet,
+      rewardVaultIssueWriteSet,
     });
   }
   if (
@@ -6401,6 +6974,8 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
       "mail_send_conditional_v1",
       "mail_read_conditional_v1",
       "mail_claim_conditional_v1",
+      "reward_vault_issue_only_v1",
+      "reward_vault_claim_conditional_v1",
     ].includes(plan.kind)
     || plan.globalRevisionFence !== false
     || plan.globalCompatibilityBarrier !== "shared"
@@ -6408,31 +6983,218 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
     throw new Error("未知或缺少兼容屏障的 MySQL 存档计划。");
   }
   assertMysqlResourceAcquisitionOrder(plan);
-  return runMysqlPoolSaveTransaction(pool, {
+  const transactionOptions = {
     ...options,
     revisionCasEnabled: false,
     globalRevisionBarrier: "shared_expected",
-  }, async (connection) => {
-    await assertMysqlResourceLocks(connection, plan.locks);
-    if (plan.kind === "market_create_conditional_v1") {
-      await assertMysqlMarketCreateCapacity(connection, plan.capacityCheck);
-    }
-    for (const write of plan.writes) {
-      let result;
-      try {
-        result = await connection.query(write.sql, write.params);
-      } catch (error) {
-        if (["market_listing", "mail_identity", "mail_message", "consumed_equipment_envelope", "mutation_receipt"].includes(write.resource)
-          && error && error.code === "ER_DUP_ENTRY") {
+  };
+  try {
+    return await runMysqlPoolSaveTransaction(pool, transactionOptions, async (connection) => {
+      await assertMysqlResourceLocks(connection, plan.locks);
+      if (plan.kind === "market_create_conditional_v1") {
+        await assertMysqlMarketCreateCapacity(connection, plan.capacityCheck);
+      }
+      for (const write of plan.writes) {
+        let result;
+        try {
+          result = await connection.query(write.sql, write.params);
+        } catch (error) {
+          if (["market_listing", "reward_vault", "mail_identity", "mail_message", "consumed_equipment_envelope", "mutation_receipt"].includes(write.resource)
+            && error && error.code === "ER_DUP_ENTRY") {
+            throw mysqlResourceRevisionConflict(write.resource, write.key);
+          }
+          throw error;
+        }
+        if (!mysqlResourceWriteAffectedRowsAccepted(write, mysqlAffectedRows(result))) {
           throw mysqlResourceRevisionConflict(write.resource, write.key);
         }
-        throw error;
       }
-      if (!mysqlResourceWriteAffectedRowsAccepted(write, mysqlAffectedRows(result))) {
-        throw mysqlResourceRevisionConflict(write.resource, write.key);
-      }
+    });
+  } catch (error) {
+    if (
+      plan.kind !== "reward_vault_issue_only_v1"
+      || !error
+      || error.code !== MYSQL_COMMIT_OUTCOME_AMBIGUOUS
+    ) {
+      throw error;
     }
-  });
+    return recoverMysqlRewardVaultIssueOnlyCommit(pool, plan, transactionOptions, error);
+  }
+}
+
+async function recoverMysqlRewardVaultIssueOnlyCommit(pool, plan, options, originalError) {
+  const writeSet = plan && plan.rewardVaultIssueWriteSet;
+  if (
+    !writeSet
+    || !Array.isArray(writeSet.entries)
+    || writeSet.entries.length === 0
+    || typeof options.certifyAttachment !== "function"
+  ) {
+    throw mysqlRewardVaultIssueOutcomeUnknown(
+      originalError,
+      new Error("奖励仓提交恢复缺少规范写集或附件认证器。"),
+    );
+  }
+  let observation;
+  try {
+    observation = await runMysqlGuardedPoolTransaction(pool, options, async (connection) => {
+      // These locks wait for the ambiguous transaction to resolve. A retry is
+      // safe only when every deterministic identity is absent; recovered
+      // success requires every physical row to match the staged entry exactly.
+      await assertMysqlResourceLocks(connection, writeSet.controlLocks);
+      let presentCount = 0;
+      let exactCount = 0;
+      for (const expectedEntry of writeSet.entries) {
+        const rows = mysqlQueryRows(await connection.query(
+          REWARD_VAULT_LOCK_SQL,
+          [expectedEntry.rewardId],
+        ));
+        if (rows.length === 0) continue;
+        presentCount += 1;
+        if (rows.length !== 1) continue;
+        let actualEntry;
+        try {
+          actualEntry = certifyMysqlRewardVaultRow(
+            rows[0],
+            expectedEntry.recipientAccountId,
+            expectedEntry.rewardId,
+            {certifyAttachment: options.certifyAttachment},
+          );
+        } catch {
+          continue;
+        }
+        if (isDeepStrictEqual(actualEntry, expectedEntry)) exactCount += 1;
+      }
+      if (exactCount === writeSet.entries.length) return "committed";
+      if (presentCount === 0) return "not_committed";
+      return "unknown";
+    });
+  } catch (recoveryError) {
+    throw mysqlRewardVaultIssueOutcomeUnknown(originalError, recoveryError);
+  }
+  if (observation === "committed") {
+    return {
+      revision: Number(options.expectedRevision),
+      globalRevisionAdvanced: false,
+      rewardVaultIssueRecovered: true,
+    };
+  }
+  if (observation === "not_committed") {
+    const error = new Error("MySQL 奖励仓写入未提交，可以安全重试。");
+    error.code = "mysql_reward_vault_issue_not_committed";
+    error.transactionPhase = "rolled_back";
+    error.commitDispatched = true;
+    error.outcomeUnknown = false;
+    error.noCommitGuaranteed = true;
+    error.rollbackConfirmed = false;
+    error.retryable = true;
+    error.cause = originalError;
+    throw error;
+  }
+  throw mysqlRewardVaultIssueOutcomeUnknown(originalError);
+}
+
+function mysqlRewardVaultIssueOutcomeUnknown(originalError, recoveryError = null) {
+  const error = new Error("MySQL 奖励仓写入结果无法由精确物理行确认。");
+  error.code = "mysql_reward_vault_issue_outcome_unknown";
+  error.transactionPhase = "commit_unknown";
+  error.commitDispatched = true;
+  error.outcomeUnknown = true;
+  error.noCommitGuaranteed = false;
+  error.retryable = false;
+  error.cause = originalError;
+  if (recoveryError !== null) error.recoveryCause = recoveryError;
+  return error;
+}
+
+function assertLegacyRewardVaultIssueWriteSet(plan) {
+  const writeSet = plan && plan.rewardVaultIssueWriteSet;
+  const statements = Array.isArray(plan && plan.statements) ? plan.statements : [];
+  const raw = statements.filter((statement) => (
+    /^INSERT INTO reward_vault_entries\b/i.test(String(statement || "").trim())
+  ));
+  if (writeSet === undefined) {
+    if (raw.length > 0) {
+      const error = new Error("MySQL legacy 奖励仓写入缺少 typed metadata。");
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    return null;
+  }
+  if (
+    !writeSet
+    || !Array.isArray(writeSet.controlLocks)
+    || writeSet.controlLocks.length !== 1
+    || !Array.isArray(writeSet.entries)
+    || !Array.isArray(writeSet.writes)
+    || writeSet.writes.length === 0
+    || writeSet.writes.length !== raw.length
+    || writeSet.writes.some((write, index) => (
+      write.resource !== "reward_vault"
+      || write.kind !== "insert"
+      || !mysqlResourceWriteAffectedRowsAccepted(write, 1)
+      || rewardVaultRawStatement(write).trim() !== String(raw[index]).trim()
+    ))
+  ) {
+    const error = new Error("MySQL legacy 奖励仓写入计划与 SQL 不一致。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  const controlLocks = (Array.isArray(plan.resourceLocks) ? plan.resourceLocks : [])
+    .filter((lock) => lock && lock.resource === "mail_storage_control");
+  if (
+    controlLocks.length !== 1
+    || !isDeepStrictEqual(controlLocks[0], writeSet.controlLocks[0])
+  ) {
+    const error = new Error("MySQL legacy 奖励仓缺少精确 feature control 围栏。");
+    error.code = "mysql_resource_precondition_invalid";
+    throw error;
+  }
+  return writeSet;
+}
+
+function assertMysqlRewardVaultDeliveryReport(report) {
+  const rewardIds = report && report.deliveredRewardIds;
+  const mailIds = report && report.deliveredMailIds;
+  const mails = report && report.deliveredMails;
+  if (
+    !report
+    || typeof report !== "object"
+    || Array.isArray(report)
+    || report.kind !== "beastbound_reward_vault_delivery_batch"
+    || report.schemaVersion !== 1
+    || typeof report.ok !== "boolean"
+    || !Number.isSafeInteger(report.deliveredCount)
+    || report.deliveredCount < 0
+    || !Array.isArray(rewardIds)
+    || !Array.isArray(mailIds)
+    || !Array.isArray(mails)
+    || rewardIds.length !== report.deliveredCount
+    || mailIds.length !== report.deliveredCount
+    || mails.length !== report.deliveredCount
+    || rewardIds.length > 64
+    || rewardIds.some((rewardId) => !/^reward_[a-f0-9]{64}$/.test(String(rewardId || "")))
+    || mailIds.some((mailId) => !/^mail_reward_[a-f0-9]{64}$/.test(String(mailId || "")))
+    || new Set(rewardIds).size !== rewardIds.length
+    || new Set(mailIds).size !== mailIds.length
+    || mails.some((mail, index) => (
+      !mail
+      || typeof mail !== "object"
+      || Array.isArray(mail)
+      || String(mail.mailId || "") !== mailIds[index]
+      || String(mail.rewardVaultId || "") !== rewardIds[index]
+      || String(mail.mailKind || "") !== "reward_vault_notice"
+    ))
+    || !Number.isSafeInteger(report.skippedRecipientCount)
+    || report.skippedRecipientCount < 0
+    || typeof report.outcomeUnknown !== "boolean"
+    || typeof report.retryable !== "boolean"
+  ) {
+    const error = new Error("奖励仓通知投递结果不符合 store 合同。");
+    error.code = "reward_vault_delivery_report_invalid";
+    throw error;
+  }
+  return report;
 }
 
 function assertLegacyMarketCreateCapacityPlan(plan) {
@@ -6671,6 +7433,7 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
     : statements.slice();
   const receiptWrites = Array.isArray(options.receiptWrites) ? options.receiptWrites : [];
   const mailForwardWriteSet = options.mailForwardWriteSet || null;
+  const rewardVaultIssueWriteSet = options.rewardVaultIssueWriteSet || null;
   return runMysqlPoolSaveTransaction(pool, options, async (connection) => {
     await assertMysqlResourceLocks(connection, options.resourceLocks);
     if (options.capacityCheck) {
@@ -6695,6 +7458,9 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
         deferredReceiptStatements.push(statement);
         continue;
       }
+      if (/^INSERT INTO reward_vault_entries\b/i.test(String(statement || "").trim())) {
+        continue;
+      }
       if (
         mailForwardWriteSet !== null
         && mailEntries.length > 0
@@ -6709,7 +7475,15 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
       throw mysqlLegacyMailForwardPlanInvalid();
     }
     if (mailForwardWriteSet !== null) {
-      await executeMysqlLegacyMailForwardWrites(connection, mailForwardWriteSet);
+      await executeMysqlLegacyMailForwardCounterWrites(connection, mailForwardWriteSet);
+    }
+    if (rewardVaultIssueWriteSet !== null) {
+      for (const write of rewardVaultIssueWriteSet.writes) {
+        await executeMysqlCertifiedResourceWrite(connection, write);
+      }
+    }
+    if (mailForwardWriteSet !== null) {
+      await executeMysqlLegacyMailForwardBodyWrites(connection, mailForwardWriteSet);
     }
     if (options.receiptCapacityWrite) {
       const write = options.receiptCapacityWrite;
@@ -6739,7 +7513,7 @@ async function runMysqlPoolSaveStatements(pool, statements, options = {}) {
   });
 }
 
-async function executeMysqlLegacyMailForwardWrites(connection, writeSet) {
+function mysqlLegacyMailForwardWritesByResource(writeSet) {
   const counterWrites = writeSet.sidecarWrites.filter((write) => (
     write.resource === "mail_active_counter"
   ));
@@ -6749,9 +7523,18 @@ async function executeMysqlLegacyMailForwardWrites(connection, writeSet) {
   if (counterWrites.length + identityWrites.length !== writeSet.sidecarWrites.length) {
     throw mysqlLegacyMailForwardPlanInvalid();
   }
+  return {counterWrites, identityWrites};
+}
+
+async function executeMysqlLegacyMailForwardCounterWrites(connection, writeSet) {
+  const {counterWrites} = mysqlLegacyMailForwardWritesByResource(writeSet);
   for (const write of counterWrites) {
     await executeMysqlCertifiedResourceWrite(connection, write);
   }
+}
+
+async function executeMysqlLegacyMailForwardBodyWrites(connection, writeSet) {
+  const {identityWrites} = mysqlLegacyMailForwardWritesByResource(writeSet);
   await assertMysqlResourceLocks(connection, writeSet.identityLocks);
   for (const write of identityWrites) {
     await executeMysqlCertifiedResourceWrite(connection, write);
@@ -6777,7 +7560,7 @@ async function executeMysqlCertifiedResourceWrite(connection, write) {
   try {
     result = await connection.query(write.sql, write.params);
   } catch (error) {
-    if (["market_listing", "mail_identity", "mail_message", "consumed_equipment_envelope", "mutation_receipt"].includes(write.resource)
+    if (["market_listing", "reward_vault", "mail_identity", "mail_message", "consumed_equipment_envelope", "mutation_receipt"].includes(write.resource)
       && write.kind === "insert"
       && error && error.code === "ER_DUP_ENTRY") {
       throw mysqlResourceRevisionConflict(write.resource, write.key);

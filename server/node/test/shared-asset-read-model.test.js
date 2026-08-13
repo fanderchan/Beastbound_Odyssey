@@ -62,6 +62,54 @@ function replacement(keys, values) {
   return {keys, values};
 }
 
+test("profile read replaces exactly one actor profile and forbids unrelated asset domains", () => {
+  const request = {
+    schemaVersion: 1,
+    scope: "profile_read",
+    accountId: "acc_a",
+    includeProfileMailPartitions: false,
+  };
+  const view = {
+    schemaVersion: 1,
+    scope: "profile_read",
+    accountId: "acc_a",
+    includeProfileMailPartitions: false,
+    accounts: replacement(["acc_a"], {
+      acc_a: {accountId: "acc_a", username: "alpha"},
+    }),
+    profileBindings: replacement(["acc_a"], {
+      acc_a: {accountId: "acc_a", playerId: "player_a", profileRevision: 2},
+    }),
+    profiles: replacement(["player_a"], {
+      player_a: {playerId: "player_a", accountId: "acc_a", profileRevision: 2, profile: {stoneCoins: 200}},
+    }),
+    marketListings: null,
+    marketConfig: null,
+    mailRows: null,
+    mailPartitions: [],
+    consumedEquipmentEnvelopeIds: [],
+  };
+  assert.equal(assertSharedAssetReadViewMatchesRequest(view, request), true);
+  const result = applySharedAssetReadView(baseline(), view);
+  assert.equal(result.profiles.player_a.profile.stoneCoins, 200);
+  assert.equal(result.profiles.player_b.profileRevision, 1);
+  assert.deepEqual(result.mailMessages, baseline().mailMessages);
+  assert.throws(
+    () => applySharedAssetReadView(baseline(), {...view, marketListings: {}}),
+    (error) => error && error.code === "shared_asset_read_view_invalid"
+      && error.reason === "market_scope",
+  );
+  assert.throws(
+    () => applySharedAssetReadView(baseline(), {
+      ...view,
+      profileBindings: replacement([], {}),
+      profiles: replacement([], {}),
+    }),
+    (error) => error && error.code === "shared_asset_read_view_invalid"
+      && error.reason === "profile_read_scope",
+  );
+});
+
 test("market view atomically replaces the complete market book and exact actor resources", () => {
   const source = baseline();
   const result = applySharedAssetReadView(source, {

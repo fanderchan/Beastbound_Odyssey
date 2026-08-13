@@ -26,6 +26,7 @@ const {
   materializeAuthorityRootLargeCollections,
 } = require("./auth/authority-root-materialization");
 const {
+  canonicalMailDocument,
   commitMailAuthorityDelta,
   isCanonicalMailAuthorityState,
   mailAuthorityDeltaFrom,
@@ -39,6 +40,14 @@ const {
   normalizeMailInboxPageOptions,
 } = require("./auth/mail-inbox-pagination");
 const {createMailArchiveService} = require("./auth/mail-archive-service");
+const {createRewardVaultService} = require("./auth/reward-vault-service");
+const {
+  createRewardVaultEntry,
+  projectRewardVaultEntry,
+} = require("./auth/reward-vault-state");
+const {
+  buildRowLocalRewardVaultClaimConsistencyScope,
+} = require("./auth/reward-vault-claim-consistency");
 const {
   RUNTIME_ROOT_FIELDS,
   DURABLE_RECEIPT_TTL_MS,
@@ -347,6 +356,7 @@ const DURABLE_RECEIPT_PRECHECK_METHODS = new Set([
   "claimPetRecovery",
   "gmPetCaptureRecovery",
   "claimMailAttachments",
+  "claimRewardVault",
   "markMailRead",
 ]);
 const ACCOUNT_SCOPED_DURABLE_RECEIPT_METHODS = new Set([
@@ -368,6 +378,7 @@ const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "sendMail",
   "markMailRead",
   "claimMailAttachments",
+  "claimRewardVault",
   "paidResetPet",
   "evolvePet",
   "fusePets",
@@ -1012,6 +1023,95 @@ function createAuthService(options = {}) {
     commitAuthorityRootLargeCollections(persistent);
     lastPublishedPersistentData = persistentDataForStore(cachedData);
     scheduleBattleMaintenance(cachedData);
+  }
+
+  function rewardVaultAttachmentCertifier(mail) {
+    return readMailAttachmentState(mail, battleEquipmentCatalog, {
+      itemById: bagItemById,
+      isEquipmentItemId: isEquipmentAssetItemId,
+      equipmentTransferOptions: {
+        ...equipmentWearRulesFromDocument(playerGrowthDocument()),
+        expToNextLevel: battleExpToNextLevel,
+        maxPlayerLevel: MAX_PLAYER_LEVEL,
+      },
+    });
+  }
+
+  function currentRewardVaultClaimEntry() {
+    if (!activeDurableMutation) return null;
+    return activeDurableMutation.rewardVaultClaimEntry === null
+      ? null
+      : clone(activeDurableMutation.rewardVaultClaimEntry);
+  }
+
+  function stageRewardVaultClaim(claimValue) {
+    if (
+      !activeDurableMutation
+      || activeDurableMutation.rewardVaultClaim !== null
+      || !claimValue
+      || typeof claimValue !== "object"
+      || Array.isArray(claimValue)
+    ) {
+      const error = new Error("奖励仓领取缺少唯一 durable 事务边界。");
+      error.code = "reward_vault_claim_context_invalid";
+      throw error;
+    }
+    const expected = activeDurableMutation.rewardVaultClaimEntry;
+    if (
+      !expected
+      || !isDeepStrictEqual(expected, claimValue.beforeEntry)
+      || String(claimValue.nextEntry && claimValue.nextEntry.rewardId || "")
+        !== String(expected.rewardId || "")
+    ) {
+      const error = new Error("奖励仓领取前镜像与事务读取不一致。");
+      error.code = "reward_vault_claim_entry_drifted";
+      throw error;
+    }
+    activeDurableMutation.rewardVaultClaim = clone(claimValue);
+  }
+
+  function rewardVaultFeatureEnabled() {
+    return Boolean(
+      typeof store.rewardVaultEnabled === "function"
+      && store.rewardVaultEnabled() === true
+    );
+  }
+
+  function deterministicRewardSourceKey(...parts) {
+    const digest = crypto.createHash("sha256")
+      .update(parts.map((part) => String(part ?? "")).join("\u0000"), "utf8")
+      .digest("hex");
+    return `source_${digest}`;
+  }
+
+  function stageRewardVaultIssue(issueValue) {
+    if (!rewardVaultFeatureEnabled()) {
+      const error = new Error("奖励仓尚未启用，本次奖励发放已安全取消。");
+      error.code = "reward_vault_feature_disabled";
+      throw error;
+    }
+    if (!activeDurableMutation || activeDurableMutation.rewardVaultClaim !== null) {
+      const error = new Error("奖励仓发放缺少唯一 durable 事务边界。");
+      error.code = "reward_vault_issue_context_invalid";
+      throw error;
+    }
+    const entry = createRewardVaultEntry(issueValue, {
+      certifyAttachment: rewardVaultAttachmentCertifier,
+    });
+    if (
+      activeDurableMutation.rewardVaultIssues.length >= 16
+      || activeDurableMutation.rewardVaultIssues.some((current) => (
+        String(current && current.rewardId || "") === entry.rewardId
+      ))
+    ) {
+      const error = new Error("同一事务的奖励仓发放身份重复或超过安全上限。");
+      error.code = "reward_vault_issue_batch_invalid";
+      throw error;
+    }
+    activeDurableMutation.rewardVaultIssues.push(clone(entry));
+    return projectRewardVaultEntry(entry, {
+      certifyAttachment: rewardVaultAttachmentCertifier,
+    });
   }
 
   function maintainRuntimeBattleRecoveries(data, options = {}) {
@@ -3806,6 +3906,9 @@ function createAuthService(options = {}) {
       battleBossRules,
       battleRandomAuthority,
       battleVictoryRewardResolver,
+      issueRewardVault: stageRewardVaultIssue,
+      rewardVaultEnabled: rewardVaultFeatureEnabled,
+      rewardVaultSourceKey: deterministicRewardSourceKey,
     });
     if (timeoutEvents.length > 0) {
       save(data);
@@ -4499,7 +4602,14 @@ function createAuthService(options = {}) {
     };
   }
 
-  function durableRowLocalMarketBuyConsistencyScope(methodName, args, before, candidate, receipt) {
+  function durableRowLocalMarketBuyConsistencyScope(
+    methodName,
+    args,
+    before,
+    candidate,
+    receipt,
+    rewardVaultIssues = [],
+  ) {
     if (methodName !== "buyMarketListing" || !receipt || typeof receipt !== "object") {
       return null;
     }
@@ -4521,8 +4631,11 @@ function createAuthService(options = {}) {
     const sellerProfile = objectOrEmpty(before && before.profiles && before.profiles[sellerPlayerId]);
     const response = objectOrEmpty(receipt.response);
     const saleMailResponse = objectOrEmpty(response.saleMail);
+    const saleRewardResponse = objectOrEmpty(response.saleReward);
     const saleReceipt = objectOrEmpty(response.receipt);
     const saleMailId = String(saleMailResponse.mailId || "");
+    const rewardId = String(saleRewardResponse.rewardId || "");
+    const vaultSettlement = /^reward_[a-f0-9]{64}$/.test(rewardId);
     const saleMail = objectOrEmpty(candidate && candidate.mailMessages && candidate.mailMessages[saleMailId]);
     const mailDelta = mailAuthorityDeltaFrom(
       before && before.mailMessages,
@@ -4542,7 +4655,15 @@ function createAuthService(options = {}) {
       "schemaVersion",
     ].sort();
     const taxAmount = Number(saleReceipt.tax);
+    const sellerReceives = Number(saleReceipt.sellerReceives);
+    const zeroAssetVaultSettlement = rewardVaultFeatureEnabled()
+      && sellerReceives === 0
+      && rewardId === "";
     const currency = String(listing.currency || "");
+    const rewardIssue = vaultSettlement && Array.isArray(rewardVaultIssues)
+      ? rewardVaultIssues.find((entry) => String(entry && entry.rewardId || "") === rewardId)
+      : null;
+    const expectedRewardCurrency = sellerReceives > 0 ? {[currency]: sellerReceives} : {};
     if (
       accountId === ""
       || playerId === ""
@@ -4550,9 +4671,10 @@ function createAuthService(options = {}) {
       || sellerAccountId === ""
       || sellerAccountId === accountId
       || sellerPlayerId === ""
-      || saleMailId === ""
       || !Number.isSafeInteger(taxAmount)
       || taxAmount < 0
+      || !Number.isSafeInteger(sellerReceives)
+      || sellerReceives < 0
       || !["stoneCoins", "diamonds"].includes(currency)
       || String(beforeBinding.accountId || "") !== accountId
       || String(beforeProfile.accountId || "") !== accountId
@@ -4571,16 +4693,44 @@ function createAuthService(options = {}) {
       || !isDeepStrictEqual(Object.keys(listing).sort(), ordinaryListingFields)
       || Boolean(candidate && candidate.marketListings
         && Object.hasOwn(candidate.marketListings, listingId))
-      || Boolean(before && before.mailMessages && Object.hasOwn(before.mailMessages, saleMailId))
-      || exactSaleMailChange === null
-      || exactSaleMailChange.mailId !== saleMailId
-      || exactSaleMailChange.disposition !== "insert"
-      || exactSaleMailChange.before !== null
-      || exactSaleMailChange.after !== saleMail
-      || String(saleMail.mailId || "") !== saleMailId
-      || String(saleMail.recipientAccountId || "") !== sellerAccountId
       || String(saleReceipt.listingId || "") !== listingId
       || String(saleReceipt.currency || "") !== currency
+      || (vaultSettlement ? (
+        saleMailId !== ""
+        || mailDelta.ok !== true
+        || mailDelta.changes.length !== 0
+        || !rewardIssue
+        || String(rewardIssue.recipientAccountId || "") !== sellerAccountId
+        || String(rewardIssue.sourceKind || "") !== "market_sale"
+        || String(rewardIssue.sourceKey || "")
+          !== deterministicRewardSourceKey("market_sale", listingId)
+        || String(rewardIssue.status || "") !== "available"
+        || !rewardIssue.document
+        || !isDeepStrictEqual(rewardIssue.document.items, [])
+        || !isDeepStrictEqual(rewardIssue.document.currency, expectedRewardCurrency)
+        || !isDeepStrictEqual(saleRewardResponse, projectRewardVaultEntry(rewardIssue, {
+          certifyAttachment: rewardVaultAttachmentCertifier,
+        }))
+        || rewardVaultIssues.length !== 1
+      ) : zeroAssetVaultSettlement ? (
+        saleMailId !== ""
+        || mailDelta.ok !== true
+        || mailDelta.changes.length !== 0
+        || rewardVaultIssues.length !== 0
+        || !isDeepStrictEqual(saleRewardResponse, {})
+      ) : (
+        saleMailId === ""
+        || rewardId !== ""
+        || rewardVaultIssues.length !== 0
+        || Boolean(before && before.mailMessages && Object.hasOwn(before.mailMessages, saleMailId))
+        || exactSaleMailChange === null
+        || exactSaleMailChange.mailId !== saleMailId
+        || exactSaleMailChange.disposition !== "insert"
+        || exactSaleMailChange.before !== null
+        || exactSaleMailChange.after !== saleMail
+        || String(saleMail.mailId || "") !== saleMailId
+        || String(saleMail.recipientAccountId || "") !== sellerAccountId
+      ))
     ) {
       return null;
     }
@@ -4592,6 +4742,8 @@ function createAuthService(options = {}) {
       sellerPlayerId,
       listingId,
       saleMailId,
+      ...(vaultSettlement ? {rewardId} : {}),
+      ...(zeroAssetVaultSettlement ? {zeroAssetVaultSettlement: true} : {}),
       currency,
       taxAmount,
       operationId: String(receipt.operationId || ""),
@@ -4654,14 +4806,64 @@ function createAuthService(options = {}) {
     });
   }
 
-  function durableMutationConsistencyScope(methodName, args, before, candidate, receipt) {
+  function durableRowLocalRewardVaultClaimConsistencyScope(
+    methodName,
+    args,
+    before,
+    candidate,
+    receipt,
+    claim,
+  ) {
+    const session = sessionByToken(before, durableMutationToken(args));
+    const accountId = String(session && session.accountId || "");
+    const binding = objectOrEmpty(before && before.profileBindings && before.profileBindings[accountId]);
+    return buildRowLocalRewardVaultClaimConsistencyScope({
+      methodName,
+      before,
+      candidate,
+      receipt,
+      claim,
+      accountId,
+      playerId: String(binding.playerId || ""),
+      rewardId: String(Array.isArray(args) ? args[1] : "").trim(),
+      certifyAttachment: rewardVaultAttachmentCertifier,
+      projectProfile(profile) {
+        return projectPublicServiceResult(ok({profile})).profile;
+      },
+    });
+  }
+
+  function durableMutationConsistencyScope(
+    methodName,
+    args,
+    before,
+    candidate,
+    receipt,
+    rewardVaultClaim = null,
+    rewardVaultIssues = [],
+  ) {
     return durableRowLocalProfileConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMarketCreateConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMarketCancelConsistencyScope(methodName, args, before, candidate, receipt)
-      || durableRowLocalMarketBuyConsistencyScope(methodName, args, before, candidate, receipt)
+      || durableRowLocalMarketBuyConsistencyScope(
+        methodName,
+        args,
+        before,
+        candidate,
+        receipt,
+        rewardVaultIssues,
+      )
       || durableRowLocalMailSendConsistencyScope(methodName, args, before, candidate, receipt)
       || durableRowLocalMailClaimConsistencyScope(methodName, args, before, candidate, receipt)
-      || durableRowLocalMailReadConsistencyScope(methodName, args, before, candidate, receipt);
+      || durableRowLocalMailReadConsistencyScope(methodName, args, before, candidate, receipt)
+      || durableRowLocalRewardVaultClaimConsistencyScope(
+        methodName,
+        args,
+        before,
+        candidate,
+        receipt,
+        rewardVaultClaim,
+      );
   }
 
   function sharedAssetReadRequest(methodName, args, dataValue) {
@@ -4757,6 +4959,15 @@ function createAuthService(options = {}) {
         includeProfileMailPartitions: true,
       };
     }
+    if (method === "claimRewardVault") {
+      const rewardId = String(Array.isArray(args) ? args[1] : "").trim();
+      return /^reward_[a-f0-9]{64}$/.test(rewardId) ? {
+        schemaVersion: 1,
+        scope: "profile_read",
+        accountId,
+        includeProfileMailPartitions: false,
+      } : null;
+    }
     if (["bankDeposit", "bankWithdraw"].includes(method)) {
       const payload = objectOrEmpty(Array.isArray(args) ? args[1] : null);
       const rawItems = payload.items || payload.itemAmounts || [];
@@ -4827,6 +5038,37 @@ function createAuthService(options = {}) {
       }
     }
     throw sharedAssetReadFailure(new Error("shared asset read retry exhausted"));
+  }
+
+  async function loadRewardVaultClaimEntry(methodName, args) {
+    if (String(methodName || "") !== "claimRewardVault") {
+      return undefined;
+    }
+    const rewardId = String(Array.isArray(args) ? args[1] : "").trim();
+    if (!/^reward_[a-f0-9]{64}$/.test(rewardId)) {
+      return undefined;
+    }
+    const data = load();
+    const resolved = resolveServiceSession(data, durableMutationToken(args));
+    if (!resolved.ok) {
+      return undefined;
+    }
+    if (
+      typeof store.rewardVaultEnabled !== "function"
+      || store.rewardVaultEnabled() !== true
+      || store.rewardVaultEntryReads !== true
+      || typeof store.readRewardVaultEntry !== "function"
+    ) {
+      return undefined;
+    }
+    try {
+      return await store.readRewardVaultEntry(resolved.account.accountId, rewardId);
+    } catch (cause) {
+      if (String(cause && cause.code || "") === "reward_vault_feature_disabled_or_drifted") {
+        return undefined;
+      }
+      throw sharedAssetReadFailure(cause);
+    }
   }
 
   function sharedAssetReadFailure(cause) {
@@ -5216,6 +5458,40 @@ function createAuthService(options = {}) {
         );
       }
     }
+    const rewardVaultClaimEntry = await loadRewardVaultClaimEntry(methodName, args);
+    if (
+      methodName === "claimRewardVault"
+      && receiptOperationId !== ""
+      && store.durableReceiptReads === true
+    ) {
+      const decision = await exactDurableReceiptDecision(
+        published,
+        args,
+        receiptOperationId,
+        requestHash,
+        actionId,
+        {methodName},
+      );
+      if (decision.handled) {
+        return decision.result;
+      }
+      // The exact receipt read may have refreshed the authority root after a
+      // concurrent unrelated COMMIT. Build the candidate from that newer root;
+      // the separately certified reward pre-image remains guarded by its own
+      // exact row lock and CAS in the eventual transaction.
+      published = load();
+      existingReceipt = activeDurableReceipt(published, receiptOperationId, now());
+      if (existingReceipt) {
+        return durableReceiptReplayDecision(
+          published,
+          args,
+          existingReceipt,
+          requestHash,
+          actionId,
+          methodName,
+        );
+      }
+    }
     // Persistent mutations are serialized and comparison completes before the
     // first await, so published is a safe read-only persistent baseline here.
     // Delay the runtime baseline until a real store write is confirmed below:
@@ -5229,6 +5505,11 @@ function createAuthService(options = {}) {
       events: [],
       runtimeEffects: [],
       saveRequested: false,
+      rewardVaultClaimEntry: rewardVaultClaimEntry === undefined
+        ? null
+        : clone(rewardVaultClaimEntry),
+      rewardVaultClaim: null,
+      rewardVaultIssues: [],
     };
     const cloneFinishedAt = process.hrtime.bigint();
     activeDurableMutation = transaction;
@@ -5253,6 +5534,13 @@ function createAuthService(options = {}) {
       activeDurableOperation = null;
     }
     const methodFinishedAt = process.hrtime.bigint();
+    const hasStagedRewardVaultMutation = transaction.rewardVaultClaim !== null
+      || transaction.rewardVaultIssues.length > 0;
+    if (hasStagedRewardVaultMutation && (!result || result.ok !== true)) {
+      const error = new Error("失败的业务结果不得携带奖励仓写入。");
+      error.code = "reward_vault_failed_mutation_staged";
+      throw error;
+    }
 
     if (
       receiptOperationId !== ""
@@ -5283,7 +5571,11 @@ function createAuthService(options = {}) {
     };
     const rawCompareStartedAt = methodFinishedAt;
     let rawPersistentUnchanged = false;
-    if (isTrustedAuthorityRoot(before) && isTrustedAuthorityRoot(transaction.data)) {
+    if (
+      !hasStagedRewardVaultMutation
+      && isTrustedAuthorityRoot(before)
+      && isTrustedAuthorityRoot(transaction.data)
+    ) {
       try {
         rawPersistentUnchanged = !durableBusinessChanged(before, transaction.data, comparisonOptions);
       } catch {
@@ -5330,7 +5622,8 @@ function createAuthService(options = {}) {
     const normalizeStartedAt = runtimeNormalizeFinishedAt || rawCompareFinishedAt;
     let candidate = normalizeData(transaction.data, {owned: true});
     const normalizeFinishedAt = process.hrtime.bigint();
-    const businessPersistentChanged = durableBusinessChanged(before, candidate, comparisonOptions);
+    const businessPersistentChanged = hasStagedRewardVaultMutation
+      || durableBusinessChanged(before, candidate, comparisonOptions);
     const compareFinishedAt = process.hrtime.bigint();
     let candidatePersistent = null;
     let response = result;
@@ -5412,6 +5705,8 @@ function createAuthService(options = {}) {
       before,
       candidatePersistent,
       stagedReceipt,
+      transaction.rewardVaultClaim,
+      transaction.rewardVaultIssues,
     );
     const durableOperation = receiptOperationId === "" ? null : {
       operationId: receiptOperationId,
@@ -5421,6 +5716,12 @@ function createAuthService(options = {}) {
     const saveOptions = {
       ...(consistencyScope === null ? {} : {consistencyScope}),
       ...(durableOperation === null ? {} : {durableOperation}),
+      ...(transaction.rewardVaultClaim === null
+        ? {}
+        : {rewardVaultClaim: clone(transaction.rewardVaultClaim)}),
+      ...(transaction.rewardVaultIssues.length === 0
+        ? {}
+        : {rewardVaultIssues: clone(transaction.rewardVaultIssues)}),
     };
     let durableSaveResult = null;
     try {
@@ -5832,6 +6133,131 @@ function createAuthService(options = {}) {
     }, {timeoutMs: 0});
   }
 
+  function deliverRewardVaultNotificationsBatch(deliveryOptions = {}) {
+    if (
+      store.rewardVaultNotificationBatches !== true
+      || typeof store.deliverRewardVaultNotificationsBatch !== "function"
+    ) {
+      const error = new Error("当前存储不支持奖励仓通知投递事务。");
+      error.code = "reward_vault_delivery_batch_unsupported";
+      return Promise.reject(error);
+    }
+    return durableMutationCoordinator.run(async () => {
+      const report = await store.deliverRewardVaultNotificationsBatch(deliveryOptions);
+      const deliveredMails = certifiedRewardVaultDeliveredMails(report);
+      if (deliveredMails.length > 0) {
+        try {
+          cachedData = authorityWithDeliveredRewardMails(cachedData || load(), deliveredMails);
+          lastPublishedPersistentData = authorityWithDeliveredRewardMails(
+            lastPublishedPersistentData || persistentDataForStore(cachedData),
+            deliveredMails,
+          );
+        } catch (cause) {
+          try {
+            const reloaded = reloadPublishedDataFromStore();
+            if (deliveredMails.some((mail) => !isDeepStrictEqual(
+              reloaded.mailMessages && reloaded.mailMessages[mail.mailId],
+              mail,
+            ))) {
+              throw cause;
+            }
+          } catch (reloadCause) {
+            cachedData = null;
+            lastPublishedPersistentData = null;
+            const error = new Error("奖励仓通知已提交，但 Node 基线暂时无法重新加载。");
+            error.code = "reward_vault_delivery_node_baseline_reload_failed";
+            error.committed = true;
+            error.retryable = false;
+            error.cause = reloadCause;
+            throw error;
+          }
+        }
+      }
+      const {deliveredMails: _privateDeliveredMails, ...publicReport} = report;
+      return publicReport;
+    }, {timeoutMs: 0});
+  }
+
+  function certifiedRewardVaultDeliveredMails(report) {
+    const rewardIds = report && report.deliveredRewardIds;
+    const mailIds = report && report.deliveredMailIds;
+    const mails = report && report.deliveredMails;
+    if (
+      !report
+      || typeof report !== "object"
+      || Array.isArray(report)
+      || report.kind !== "beastbound_reward_vault_delivery_batch"
+      || report.schemaVersion !== 1
+      || typeof report.ok !== "boolean"
+      || !Number.isSafeInteger(report.deliveredCount)
+      || report.deliveredCount < 0
+      || !Array.isArray(rewardIds)
+      || !Array.isArray(mailIds)
+      || !Array.isArray(mails)
+      || rewardIds.length !== report.deliveredCount
+      || mailIds.length !== report.deliveredCount
+      || mails.length !== report.deliveredCount
+      || rewardIds.length > 64
+      || rewardIds.some((rewardId) => !/^reward_[a-f0-9]{64}$/.test(String(rewardId || "")))
+      || mailIds.some((mailId) => !/^mail_reward_[a-f0-9]{64}$/.test(String(mailId || "")))
+      || new Set(rewardIds).size !== rewardIds.length
+      || new Set(mailIds).size !== mailIds.length
+      || !Number.isSafeInteger(report.skippedRecipientCount)
+      || report.skippedRecipientCount < 0
+      || typeof report.outcomeUnknown !== "boolean"
+      || typeof report.retryable !== "boolean"
+      || (report.outcomeUnknown && (report.ok || report.retryable))
+    ) {
+      const error = new Error("奖励仓通知投递事务结果不符合服务合同。");
+      error.code = "reward_vault_delivery_batch_report_invalid";
+      throw error;
+    }
+    return mails.map((mail, index) => {
+      const canonical = canonicalMailDocument(mail, mailIds[index]);
+      if (
+        !canonical.ok
+        || canonical.mail.mailKind !== "reward_vault_notice"
+        || canonical.mail.rewardVaultId !== rewardIds[index]
+      ) {
+        const error = new Error("奖励仓通知正文与奖励身份不一致。");
+        error.code = "reward_vault_delivery_batch_report_invalid";
+        throw error;
+      }
+      const attachment = rewardVaultAttachmentCertifier(canonical.mail);
+      const lifecycle = readMailLifecycleState(canonical.mail, attachment);
+      if (!attachment.ok || !lifecycle.ok || lifecycle.hasAssets || !lifecycle.settled) {
+        const error = new Error("奖励仓通知不是已结算空附件邮件。");
+        error.code = "reward_vault_delivery_batch_report_invalid";
+        throw error;
+      }
+      return canonical.mail;
+    });
+  }
+
+  function authorityWithDeliveredRewardMails(dataValue, mails) {
+    const data = dataValue && typeof dataValue === "object" ? dataValue : {};
+    let messages = data.mailMessages;
+    let changed = false;
+    for (const mail of mails) {
+      const staged = stageMailAuthorityUpsert(messages, mail);
+      if (!staged.ok || staged.changed !== true || !isCanonicalMailAuthorityState(staged.messages)) {
+        const error = new Error("通知提交后无法同步 Node 邮件基线。");
+        error.code = "reward_vault_delivery_node_baseline_sync_failed";
+        throw error;
+      }
+      messages = staged.messages;
+      changed = true;
+    }
+    if (!changed) return data;
+    const next = {...data, mailMessages: commitMailAuthorityDelta(messages)};
+    if (!markAuthorityRootTrusted(next)) {
+      const error = new Error("通知提交后 Node 权威根不再可信。");
+      error.code = "reward_vault_delivery_node_baseline_sync_failed";
+      throw error;
+    }
+    return next;
+  }
+
   function certifiedMailArchiveRetiredIds(report) {
     const archivedMailIds = report && report.archivedMailIds;
     const retiredMailIds = report && report.retiredMailIds;
@@ -6107,7 +6533,7 @@ function createAuthService(options = {}) {
       roomValue,
       result,
       nowFn,
-      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, randomId, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, randomId, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver, issueRewardVault: stageRewardVaultIssue, rewardVaultEnabled: rewardVaultFeatureEnabled, rewardVaultSourceKey: deterministicRewardSourceKey},
     ),
     authorizePartyEncounter,
     consumePartyEncounterAuthorization,
@@ -6278,6 +6704,9 @@ function createAuthService(options = {}) {
     questRewardChoices,
     randomBytes,
     randomId,
+    issueRewardVault: stageRewardVaultIssue,
+    rewardVaultEnabled: rewardVaultFeatureEnabled,
+    rewardVaultSourceKey: deterministicRewardSourceKey,
     readMailAttachmentState,
     recordGmCommandAudit,
     recordProfilePetCodexForm,
@@ -6289,7 +6718,7 @@ function createAuthService(options = {}) {
       serviceData,
       roomValue,
       accountIds,
-      {now, runtimeActiveSessionIds, applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {now, runtimeActiveSessionIds, applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver, issueRewardVault: stageRewardVaultIssue, rewardVaultEnabled: rewardVaultFeatureEnabled, rewardVaultSourceKey: deterministicRewardSourceKey},
     ),
     refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
     resolveSessionReadOnly: (sessionData, token) => resolveSession(sessionData, token, now, {serverStartedAtMs}),
@@ -6300,7 +6729,7 @@ function createAuthService(options = {}) {
       roomValue,
       battleValue,
       nowFn,
-      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver},
+      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver, issueRewardVault: stageRewardVaultIssue, rewardVaultEnabled: rewardVaultFeatureEnabled, rewardVaultSourceKey: deterministicRewardSourceKey},
     ),
     resolveSession: (sessionData, token, nowFn, options = {}) => resolveSession(sessionData, token, nowFn, {
       ...options,
@@ -6356,6 +6785,31 @@ function createAuthService(options = {}) {
     ok,
     fail,
     readFailure: sharedAssetReadFailure,
+  });
+  const rewardVault = createRewardVaultService({
+    addRewardItemsToBackpack,
+    activeQuestAutoClaim,
+    captureToolBagFromProfile,
+    certifyAttachment: rewardVaultAttachmentCertifier,
+    clone,
+    claimActiveQuestToProfile,
+    currentClaimEntry: currentRewardVaultClaimEntry,
+    fail,
+    isoNow,
+    load,
+    now,
+    ok,
+    persistProfileForAccount,
+    profileBackpackSlots,
+    profileCurrencyAmount,
+    profileStoneCoinLimit: PROFILE_STONE_COIN_LIMIT,
+    rawBackpackAssetConflict,
+    recordQuestEventToProfile,
+    resolveSession: (data, token) => resolveServiceSession(data, token),
+    save,
+    setProfileCurrencyAmount,
+    stageClaim: stageRewardVaultClaim,
+    store,
   });
 
   const serviceApi = {
@@ -6435,6 +6889,8 @@ function createAuthService(options = {}) {
     sendMail: mailChat.sendMail,
     listInbox: mailChat.listInbox,
     listMailArchive: mailArchive.list,
+    listRewardVault: rewardVault.list,
+    claimRewardVault: rewardVault.claim,
     markMailRead: mailChat.markMailRead,
     claimMailAttachments: mailChat.claimMailAttachments,
     listOnlinePlayers,
@@ -6502,6 +6958,7 @@ function createAuthService(options = {}) {
       // the store. The generic synchronous projector must not spread a Promise
       // into an empty object.
       || name === "listMailArchive"
+      || name === "listRewardVault"
       || typeof method !== "function"
     ) {
       continue;
@@ -6522,6 +6979,7 @@ function createAuthService(options = {}) {
     store.sharedAssetReads === true
     || store.mailInboxPageReads === true
     || store.mailArchivePageReads === true
+    || store.rewardVaultPageReads === true
   ) {
     serviceApi._httpInvokeSharedAssetRead = invokeSharedAssetRead;
   }
@@ -6540,11 +6998,17 @@ function createAuthService(options = {}) {
     store.mailArchiveBatches === true
     && typeof store.archiveSettledMailBatch === "function"
   );
+  serviceApi.rewardVaultNotificationBatches = Boolean(
+    store.rewardVaultNotificationBatches === true
+    && typeof store.deliverRewardVaultNotificationsBatch === "function"
+  );
   serviceApi.mailArchiveEnabled = () => Boolean(
     typeof store.mailArchiveEnabled === "function"
     && store.mailArchiveEnabled() === true
   );
+  serviceApi.rewardVaultEnabled = rewardVault.enabled;
   serviceApi.archiveSettledMailBatch = archiveSettledMailBatch;
+  serviceApi.deliverRewardVaultNotificationsBatch = deliverRewardVaultNotificationsBatch;
   serviceApi.stopDurableAdmissionsAndDrain = stopDurableAdmissionsAndDrain;
   serviceApi.durableMutationMetrics = durableMutationMetrics;
   return serviceApi;
@@ -6888,6 +7352,36 @@ function createAsyncWriteAuthStore(store, options = {}) {
     writeQueue = readJob.then(() => undefined, () => undefined);
     return readJob;
   }
+  function enqueueRewardVaultPageRead(accountId, pageOptions = {}) {
+    if (!store || typeof store.readRewardVaultPage !== "function") {
+      const error = new Error("当前存储不支持奖励仓分页读穿。");
+      error.code = "reward_vault_page_read_unsupported";
+      return Promise.reject(error);
+    }
+    const normalizedAccountId = String(accountId || "").trim();
+    const optionSnapshot = clone(pageOptions && typeof pageOptions === "object" ? pageOptions : {});
+    const readJob = writeQueue.then(() => store.readRewardVaultPage(
+      normalizedAccountId,
+      optionSnapshot,
+    ));
+    writeQueue = readJob.then(() => undefined, () => undefined);
+    return readJob;
+  }
+  function enqueueRewardVaultEntryRead(accountId, rewardId) {
+    if (!store || typeof store.readRewardVaultEntry !== "function") {
+      const error = new Error("当前存储不支持奖励仓精确读穿。");
+      error.code = "reward_vault_entry_read_unsupported";
+      return Promise.reject(error);
+    }
+    const normalizedAccountId = String(accountId || "").trim();
+    const normalizedRewardId = String(rewardId || "").trim();
+    const readJob = writeQueue.then(() => store.readRewardVaultEntry(
+      normalizedAccountId,
+      normalizedRewardId,
+    ));
+    writeQueue = readJob.then(() => undefined, () => undefined);
+    return readJob;
+  }
   function enqueueMailArchiveBatch(archiveOptions = {}) {
     if (!store || typeof store.archiveSettledMailBatch !== "function") {
       const error = new Error("当前存储不支持邮件归档事务。");
@@ -6902,6 +7396,21 @@ function createAsyncWriteAuthStore(store, options = {}) {
     // caller. They must never poison the next gameplay durability mutation.
     writeQueue = archiveJob.then(() => undefined, () => undefined);
     return archiveJob;
+  }
+  function enqueueRewardVaultNotificationBatch(deliveryOptions = {}) {
+    if (!store || typeof store.deliverRewardVaultNotificationsBatch !== "function") {
+      const error = new Error("当前存储不支持奖励仓通知投递事务。");
+      error.code = "reward_vault_delivery_batch_unsupported";
+      return Promise.reject(error);
+    }
+    const optionSnapshot = clone(deliveryOptions && typeof deliveryOptions === "object"
+      ? deliveryOptions
+      : {});
+    const deliveryJob = writeQueue.then(() => (
+      store.deliverRewardVaultNotificationsBatch(optionSnapshot)
+    ));
+    writeQueue = deliveryJob.then(() => undefined, () => undefined);
+    return deliveryJob;
   }
   function enqueueDurableReceiptRead(operationId) {
     if (!store || typeof store.readDurableMutationReceipt !== "function") {
@@ -6930,7 +7439,12 @@ function createAsyncWriteAuthStore(store, options = {}) {
     durableReceiptReads: Boolean(store && typeof store.readDurableMutationReceipt === "function"),
     mailInboxPageReads: Boolean(store && typeof store.readMailInboxPage === "function"),
     mailArchivePageReads: Boolean(store && typeof store.readMailArchivePage === "function"),
+    rewardVaultPageReads: Boolean(store && typeof store.readRewardVaultPage === "function"),
+    rewardVaultEntryReads: Boolean(store && typeof store.readRewardVaultEntry === "function"),
     mailArchiveBatches: Boolean(store && typeof store.archiveSettledMailBatch === "function"),
+    rewardVaultNotificationBatches: Boolean(
+      store && typeof store.deliverRewardVaultNotificationsBatch === "function"
+    ),
     sharedAssetReads: Boolean(store && typeof store.readSharedAssetView === "function"),
     checkHealth() {
       if (typeof store.checkHealth === "function") {
@@ -6959,14 +7473,30 @@ function createAsyncWriteAuthStore(store, options = {}) {
     readMailArchivePage(accountId, pageOptions = {}) {
       return enqueueMailArchivePageRead(accountId, pageOptions);
     },
+    readRewardVaultPage(accountId, pageOptions = {}) {
+      return enqueueRewardVaultPageRead(accountId, pageOptions);
+    },
+    readRewardVaultEntry(accountId, rewardId) {
+      return enqueueRewardVaultEntryRead(accountId, rewardId);
+    },
     archiveSettledMailBatch(archiveOptions = {}) {
       return enqueueMailArchiveBatch(archiveOptions);
+    },
+    deliverRewardVaultNotificationsBatch(deliveryOptions = {}) {
+      return enqueueRewardVaultNotificationBatch(deliveryOptions);
     },
     mailArchiveEnabled() {
       return Boolean(
         store
         && typeof store.mailArchiveEnabled === "function"
         && store.mailArchiveEnabled() === true
+      );
+    },
+    rewardVaultEnabled() {
+      return Boolean(
+        store
+        && typeof store.rewardVaultEnabled === "function"
+        && store.rewardVaultEnabled() === true
       );
     },
     readDurableMutationReceipt(operationId) {
@@ -7272,6 +7802,10 @@ function rowLocalMarketBuyRecoveryMatches(reloaded, expected, scope) {
   const sellerPlayerId = String(scope.sellerPlayerId || "");
   const listingId = String(scope.listingId || "");
   const saleMailId = String(scope.saleMailId || "");
+  const rewardId = String(scope.rewardId || "");
+  const vaultSettlement = /^reward_[a-f0-9]{64}$/.test(rewardId);
+  const zeroAssetVaultSettlement = scope.zeroAssetVaultSettlement === true;
+  const noSaleMail = vaultSettlement || zeroAssetVaultSettlement;
   const operationId = String(scope.operationId || "");
   const requestHash = String(scope.requestHash || "");
   const actionId = String(scope.actionId || "");
@@ -7281,7 +7815,9 @@ function rowLocalMarketBuyRecoveryMatches(reloaded, expected, scope) {
     || sellerAccountId === ""
     || sellerPlayerId === ""
     || listingId === ""
-    || saleMailId === ""
+    || (!noSaleMail && saleMailId === "")
+    || (noSaleMail && saleMailId !== "")
+    || (vaultSettlement && zeroAssetVaultSettlement)
     || operationId === ""
     || requestHash === ""
     || actionId === ""
@@ -7303,11 +7839,10 @@ function rowLocalMarketBuyRecoveryMatches(reloaded, expected, scope) {
     || !expectedProfile
     || !reloadedReceipt
     || !expectedReceipt
-    || !reloadedSaleMail
-    || !expectedSaleMail
+    || (!noSaleMail && (!reloadedSaleMail || !expectedSaleMail))
     || Boolean(reloaded.marketListings && Object.hasOwn(reloaded.marketListings, listingId))
     || Boolean(expected.marketListings && Object.hasOwn(expected.marketListings, listingId))
-    || String(reloadedSaleMail.recipientAccountId || "") !== sellerAccountId
+    || (!noSaleMail && String(reloadedSaleMail.recipientAccountId || "") !== sellerAccountId)
     || String(reloadedReceipt.operationId || "") !== operationId
     || String(reloadedReceipt.requestHash || "") !== requestHash
     || String(reloadedReceipt.actionId || "") !== actionId
@@ -7317,7 +7852,7 @@ function rowLocalMarketBuyRecoveryMatches(reloaded, expected, scope) {
   }
   return isDeepStrictEqual(reloadedBinding, expectedBinding)
     && isDeepStrictEqual(reloadedProfile, expectedProfile)
-    && isDeepStrictEqual(reloadedSaleMail, expectedSaleMail)
+    && (noSaleMail || isDeepStrictEqual(reloadedSaleMail, expectedSaleMail))
     && isDeepStrictEqual(reloadedReceipt, expectedReceipt);
 }
 
@@ -15779,6 +16314,9 @@ function applyBattleRoomProfileWriteback(data, room, battle, result, now, option
         now,
         randomId: options.randomId,
         battleVictoryRewardResolver: options.battleVictoryRewardResolver,
+        issueRewardVault: options.issueRewardVault,
+        rewardVaultEnabled: options.rewardVaultEnabled,
+        rewardVaultSourceKey: options.rewardVaultSourceKey,
       });
       if (!rewardWriteback.ok) {
         const skippedReason = String(rewardWriteback.code || "battle_reward_equipment_state_conflict");
@@ -17213,15 +17751,30 @@ function applyBattleVictoryRewardsToProfile(profile, room, battle, result, optio
   if (!reward || (reward.stoneCoins <= 0 && reward.items.length <= 0)) {
     return {ok: true, changed: false, publicRewards: null};
   }
+  const qualification = (
+    String(reward.rewardRole || "") === "qualification_battle"
+    && reward.repeatable === false
+  );
+  const vaultEnabled = typeof options.rewardVaultEnabled === "function"
+    && options.rewardVaultEnabled() === true;
+  const qualificationVault = vaultEnabled && qualification;
+  const directItems = qualificationVault
+    ? reward.items.filter((item) => Boolean(
+      firstEquipmentTransferEntry(battleEquipmentCatalog, [item]),
+    ))
+    : reward.items;
+  const qualificationVaultItems = qualificationVault
+    ? reward.items.filter((item) => !firstEquipmentTransferEntry(battleEquipmentCatalog, [item]))
+    : [];
   const staged = clone(profile);
   let changed = false;
   const previousCoins = profileStoneCoins(staged);
-  if (reward.stoneCoins > 0) {
+  if (reward.stoneCoins > 0 && !qualificationVault) {
     setProfileCurrencyAmount(staged, SHOP_CURRENCY_STONE_COINS, previousCoins + reward.stoneCoins);
     changed = true;
   }
   const beforeSlots = normalizeBackpackSlots(profileBackpackSlots(staged));
-  const itemResult = addRewardItemsToBackpack(beforeSlots, reward.items);
+  const itemResult = addRewardItemsToBackpack(beforeSlots, directItems);
   if (itemResult.changed) {
     staged.backpackSlots = itemResult.slots;
     const instanceGrant = grantFreshBackpackEquipmentInstances(
@@ -17245,9 +17798,24 @@ function applyBattleVictoryRewardsToProfile(profile, room, battle, result, optio
   }
   const qualificationClaim = markQualificationBattleClaim(staged, reward);
   changed = changed || qualificationClaim.changed;
-  const mailedItems = qualificationClaim.qualification
+  const mailedItems = qualificationClaim.qualification && !vaultEnabled
     ? createQualificationRewardMail(options, reward, itemResult.lostItems)
     : {items: [], mail: null};
+  const vaultItems = qualificationVault
+    ? mergeItemAmounts(qualificationVaultItems)
+    : mergeItemAmounts(itemResult.lostItems);
+  let vaultReward = null;
+  if (
+    vaultEnabled
+    && (vaultItems.length > 0 || (qualificationVault && reward.stoneCoins > 0))
+  ) {
+    vaultReward = createBattleRewardVaultIssue(options, reward, {
+      items: vaultItems,
+      stoneCoins: qualificationVault ? reward.stoneCoins : 0,
+      qualification,
+      claimCycle: qualificationClaim.claimCycle,
+    });
+  }
   const publicRewards = {
     tableId: reward.tableId,
     rewardRole: reward.rewardRole,
@@ -17257,13 +17825,55 @@ function applyBattleVictoryRewardsToProfile(profile, room, battle, result, optio
     stoneCoins: reward.stoneCoins,
     addedItems: itemResult.addedItems,
     mailedItems: mailedItems.items,
-    lostItems: mailedItems.items.length > 0 ? [] : itemResult.lostItems,
+    vaultedItems: vaultItems,
+    vaultedStoneCoins: qualificationVault ? reward.stoneCoins : 0,
+    lostItems: mailedItems.items.length > 0 || vaultReward ? [] : itemResult.lostItems,
     qualificationClaimCycle: qualificationClaim.claimCycle,
     rewardMail: mailedItems.mail ? publicMail(mailedItems.mail) : null,
+    vaultReward,
     schemaVersion: 1,
   };
   replaceObjectContents(profile, staged);
   return {ok: true, changed, publicRewards};
+}
+
+function createBattleRewardVaultIssue(options, reward, assets) {
+  if (
+    typeof options.issueRewardVault !== "function"
+    || typeof options.rewardVaultSourceKey !== "function"
+  ) {
+    throw new Error("reward vault battle dependencies are unavailable");
+  }
+  const data = options && options.data;
+  const accountId = String(options && options.accountId || "").trim();
+  const account = data && accountById(data, accountId);
+  if (!account) {
+    const error = new Error("battle reward recipient is unavailable");
+    error.code = "battle_reward_recipient_missing";
+    throw error;
+  }
+  const qualification = assets.qualification === true;
+  const sourceKind = qualification ? "qualification_reward" : "battle_overflow";
+  const roomId = String(options && options.roomId || "");
+  const tableId = String(reward && reward.tableId || "");
+  const sourceKey = qualification
+    ? options.rewardVaultSourceKey(sourceKind, roomId, tableId, accountId, assets.claimCycle)
+    : options.rewardVaultSourceKey(sourceKind, roomId, tableId, accountId);
+  const nowFn = typeof options.now === "function" ? options.now : () => Date.now();
+  return options.issueRewardVault({
+    sourceKind,
+    sourceKey,
+    recipientAccountId: account.accountId,
+    recipientUsername: account.username,
+    recipientDisplayName: account.displayName,
+    title: qualification ? "试炼资格奖励" : "战斗溢出奖励",
+    body: qualification
+      ? "试炼奖励中的非装备资产已安全存入奖励仓，装备仍按背包实例规则结算。"
+      : "背包空间不足，未能放入背包的普通战斗奖励已安全存入奖励仓。",
+    items: mergeItemAmounts(assets.items),
+    currency: assets.stoneCoins > 0 ? {stoneCoins: assets.stoneCoins} : {},
+    createdAt: isoNow(nowFn),
+  });
 }
 
 function markQualificationBattleClaim(profile, reward) {

@@ -29,6 +29,7 @@ const MAIL_V1_FIELDS = new Set([
 const MAIL_V2_FIELDS = new Set([
   ...MAIL_V1_FIELDS,
   "equipmentEnvelopes",
+  "rewardVaultId",
 ]);
 MAIL_V2_FIELDS.delete("currencies");
 

@@ -84,6 +84,7 @@ function createEconomyDomain(ctx) {
     isoNow,
     itemAmountText,
     isEquipmentItemId,
+    issueRewardVault,
     load,
     normalizeBackpackSlots,
     normalizeMailItems,
@@ -107,11 +108,14 @@ function createEconomyDomain(ctx) {
     recordQuestEventToProfile,
     resolveSession,
     save,
+    rewardVaultEnabled,
+    rewardVaultSourceKey,
     setProfileCurrencyAmount,
     shopCurrencyLabel,
   } = ctx;
 
   const equipmentItemPredicate = typeof isEquipmentItemId === "function" ? isEquipmentItemId : null;
+  const vaultEnabled = () => typeof rewardVaultEnabled === "function" && rewardVaultEnabled() === true;
 
   function bankDeposit(token, payload = {}) {
     const prepared = prepareSingleProfileMutation(token);
@@ -539,7 +543,8 @@ function createEconomyDomain(ctx) {
       };
     }
     const tutorialSale = !isEquipment && tutorialSaleIsEligible(currentProfileQuestId(profile), listing);
-    const tutorialSaleMailIdentity = tutorialSale
+    const tutorialSaleUsesVault = tutorialSale && vaultEnabled();
+    const tutorialSaleMailIdentity = tutorialSale && !tutorialSaleUsesVault
       ? nextEconomyMailId(
         prepared.data,
         "mail_tutorial_market_",
@@ -574,21 +579,26 @@ function createEconomyDomain(ctx) {
       schemaVersion: 1,
     });
     let saleMail = null;
+    let saleReward = null;
     if (tutorialSale && questMessages.length > 0) {
-      const saleMailResult = createTutorialMarketSaleMail(
-        prepared.data,
-        prepared.account,
-        listing,
-        tutorialSaleMailIdentity.mailId,
-      );
-      if (!saleMailResult.ok) {
-        return fail(
-          saleMailResult.code,
-          saleMailResult.message,
-          profilePayload(prepared, prepared.profile),
+      if (tutorialSaleUsesVault) {
+        saleReward = createTutorialMarketSaleReward(prepared.account, listing);
+      } else {
+        const saleMailResult = createTutorialMarketSaleMail(
+          prepared.data,
+          prepared.account,
+          listing,
+          tutorialSaleMailIdentity.mailId,
         );
+        if (!saleMailResult.ok) {
+          return fail(
+            saleMailResult.code,
+            saleMailResult.message,
+            profilePayload(prepared, prepared.profile),
+          );
+        }
+        saleMail = saleMailResult.mail;
       }
-      saleMail = saleMailResult.mail;
       delete prepared.data.marketListings[listingId];
     }
     const persisted = persistProfileForAccount(prepared.data, prepared.account, prepared.binding, profile, now);
@@ -600,9 +610,12 @@ function createEconomyDomain(ctx) {
       profile: clone(profile),
       listing: publicMarketListing(listing, prepared.data),
       saleMail: saleMail && publicMail ? publicMail(saleMail) : (saleMail ? clone(saleMail) : null),
+      saleReward,
       questMessages,
       ...marketStatePayload(prepared.data, prepared.account),
-      message: saleMail ? `教学买家已买下${itemAmountText(items)}，请到邮箱领取货款。` : `已上架${itemAmountText(items)}。`,
+      message: saleReward
+        ? `教学买家已买下${itemAmountText(items)}，货款已安全存入奖励仓。`
+        : (saleMail ? `教学买家已买下${itemAmountText(items)}，请到邮箱领取货款。` : `已上架${itemAmountText(items)}。`),
     });
   }
 
@@ -654,12 +667,15 @@ function createEconomyDomain(ctx) {
     if (!seller) {
       return fail("market_seller_missing", "卖家账号档案异常，挂单会原样保留，请联系GM处理。");
     }
-    const saleMailIdentity = nextEconomyMailId(
-      data,
-      "mail_market_",
-      "market_sale_mail_id_unavailable",
-      "成交邮件编号暂时不可用，本次购买已取消，请重试。",
-    );
+    const marketSaleUsesVault = vaultEnabled();
+    const saleMailIdentity = marketSaleUsesVault
+      ? {ok: true, mailId: ""}
+      : nextEconomyMailId(
+        data,
+        "mail_market_",
+        "market_sale_mail_id_unavailable",
+        "成交邮件编号暂时不可用，本次购买已取消，请重试。",
+      );
     if (!saleMailIdentity.ok) {
       return fail(saleMailIdentity.code, saleMailIdentity.message, {
         listing: publicMarketListing(listing, data),
@@ -743,21 +759,27 @@ function createEconomyDomain(ctx) {
     data.consumedEquipmentEnvelopes = nextConsumedLedger;
     data.marketConfig = config;
     const buyerPersisted = persistProfileForAccount(data, resolved.account, buyerPrepared.binding, buyerProfile, now);
-    const saleMailResult = createMarketSaleMail(
-      data,
-      seller,
-      listing,
-      tax,
-      sellerReceives,
-      saleMailIdentity.mailId,
-    );
-    if (!saleMailResult.ok) {
-      return fail(saleMailResult.code, saleMailResult.message, {
-        listing: publicMarketListing(listing, data),
-        ...marketStatePayload(data, resolved.account),
-      });
+    let saleMail = null;
+    let saleReward = null;
+    if (marketSaleUsesVault && sellerReceives > 0) {
+      saleReward = createMarketSaleReward(seller, listing, tax, sellerReceives);
+    } else if (!marketSaleUsesVault) {
+      const saleMailResult = createMarketSaleMail(
+        data,
+        seller,
+        listing,
+        tax,
+        sellerReceives,
+        saleMailIdentity.mailId,
+      );
+      if (!saleMailResult.ok) {
+        return fail(saleMailResult.code, saleMailResult.message, {
+          listing: publicMarketListing(listing, data),
+          ...marketStatePayload(data, resolved.account),
+        });
+      }
+      saleMail = saleMailResult.mail;
     }
-    const saleMail = saleMailResult.mail;
     delete data.marketListings[listingId];
     save(data);
     return ok({
@@ -769,7 +791,8 @@ function createEconomyDomain(ctx) {
       otherProfileBinding: sellerPrepared.binding,
       listing: publicMarketListing(listing, data),
       receipt: publicMarketReceipt("buy", listing, tax, sellerReceives, data),
-      saleMail: publicMail ? publicMail(saleMail) : clone(saleMail),
+      saleMail: saleMail ? (publicMail ? publicMail(saleMail) : clone(saleMail)) : null,
+      saleReward,
       questMessages,
       ...marketStatePayload(data, resolved.account),
       message: `已购买${itemAmountText([{itemId: listing.itemId, count: listing.count}])}。`,
@@ -3085,6 +3108,33 @@ function createEconomyDomain(ctx) {
     return {ok: true, mail: staged.mail};
   }
 
+  function createMarketSaleReward(seller, listing, tax, sellerReceives) {
+    if (typeof issueRewardVault !== "function" || typeof rewardVaultSourceKey !== "function") {
+      throw new Error("reward vault market sale dependencies are unavailable");
+    }
+    const currencyLabel = shopCurrencyLabel(listing.currency);
+    const itemText = itemAmountText([{itemId: listing.itemId, count: listing.count}]);
+    const totalPrice = marketListingTotalPrice(listing);
+    return issueRewardVault({
+      sourceKind: "market_sale",
+      sourceKey: rewardVaultSourceKey("market_sale", listing.listingId),
+      recipientAccountId: seller.accountId,
+      recipientUsername: seller.username,
+      recipientDisplayName: seller.displayName,
+      title: "拍卖行成交收益",
+      body: [
+        `${itemText} 已售出。`,
+        `成交金额：${totalPrice}${currencyLabel}`,
+        `交易税：${tax}${currencyLabel}`,
+        `实收：${sellerReceives}${currencyLabel}`,
+        "收益已安全存入奖励仓，可在空间充足时领取。",
+      ].join("\n"),
+      items: [],
+      currency: marketCurrencyAttachment(listing.currency, sellerReceives),
+      createdAt: isoNow(now),
+    });
+  }
+
   function createTutorialMarketSaleMail(data, seller, listing, mailId) {
     const sellerReceives = marketListingTotalPrice(listing);
     const mail = {
@@ -3114,6 +3164,29 @@ function createEconomyDomain(ctx) {
     }
     data.mailMessages = staged.messages;
     return {ok: true, mail: staged.mail};
+  }
+
+  function createTutorialMarketSaleReward(seller, listing) {
+    if (typeof issueRewardVault !== "function" || typeof rewardVaultSourceKey !== "function") {
+      throw new Error("reward vault tutorial sale dependencies are unavailable");
+    }
+    const sellerReceives = marketListingTotalPrice(listing);
+    return issueRewardVault({
+      sourceKind: "tutorial_market_sale",
+      sourceKey: rewardVaultSourceKey("tutorial_market_sale", listing.listingId),
+      recipientAccountId: seller.accountId,
+      recipientUsername: seller.username,
+      recipientDisplayName: seller.displayName,
+      title: "教学交易成交收益",
+      body: [
+        `${itemAmountText([{itemId: listing.itemId, count: listing.count}])} 已被教学买家买下。`,
+        `成交金额：${sellerReceives}${shopCurrencyLabel(listing.currency)}`,
+        "货款已安全存入奖励仓。以后真实玩家成交后的收益也会先进入奖励仓。",
+      ].join("\n"),
+      items: [],
+      currency: marketCurrencyAttachment(listing.currency, sellerReceives),
+      createdAt: isoNow(now),
+    });
   }
 
   function marketCurrencyAttachment(currency, amount) {

@@ -1,5 +1,7 @@
 "use strict";
 
+const crypto = require("node:crypto");
+
 const {
   MARKET_MAX_LISTINGS,
   MARKET_MAX_LISTINGS_PER_SELLER,
@@ -7,6 +9,10 @@ const {
 const {
   DURABLE_RECEIPT_MAX_COUNT,
 } = require("./auth/durable-mutation-state");
+const {
+  REWARD_VAULT_SOURCE_KINDS,
+  rewardVaultIdForSource,
+} = require("./auth/reward-vault-state");
 
 const MYSQL_RESOURCE_ACQUISITION_ORDER_INVALID = "mysql_resource_acquisition_order_invalid";
 const MARKET_CREATE_CAPACITY_GUARD_KEY = "market_create_capacity";
@@ -51,7 +57,23 @@ const MAIL_IDENTITY_UPDATE_SQL = `UPDATE mail_identity_registry
   WHERE mail_id = ? AND sender_account_id = ? AND recipient_account_id = ?
     AND location = 'active' AND created_at = ? AND settled_at <=> ?
     AND archived_at IS NULL AND identity_digest = ? AND document_digest = ?
-    AND reward_id IS NULL AND data_generation = 1
+    AND reward_id <=> ? AND data_generation = 1
+    AND revision < 18446744073709551615`;
+const REWARD_VAULT_INSERT_SQL = `INSERT INTO reward_vault_entries
+  (reward_id, source_key, source_kind, source_digest, recipient_account_id,
+    status, created_at, updated_at, delivered_at, claimed_at, delivered_mail_id,
+    data_generation, revision, document_json)
+  VALUES (?, ?, ?, ?, ?, 'available', ?, ?, NULL, NULL, NULL, 1, 0, CAST(? AS JSON))`;
+const REWARD_VAULT_LOCK_SQL = `SELECT reward_id, source_key, source_kind, source_digest,
+  recipient_account_id, status, created_at, updated_at, delivered_at, claimed_at,
+  delivered_mail_id, data_generation, revision, document_json
+  FROM reward_vault_entries WHERE reward_id = ? FOR UPDATE`;
+const REWARD_VAULT_CLAIM_SQL = `UPDATE reward_vault_entries
+  SET status = 'claimed', updated_at = ?, claimed_at = ?, revision = revision + 1
+  WHERE reward_id = ? AND source_key = ? AND source_kind = ? AND source_digest = ?
+    AND recipient_account_id = ? AND status = ? AND created_at = ? AND updated_at = ?
+    AND delivered_at <=> ? AND claimed_at IS NULL AND delivered_mail_id <=> ?
+    AND data_generation = 1 AND revision = ? AND document_json = CAST(? AS JSON)
     AND revision < 18446744073709551615`;
 
 const MAIL_STORAGE_CONTROL_EXPECTED_FIELDS = Object.freeze([
@@ -76,6 +98,22 @@ const MAIL_IDENTITY_EXPECTED_FIELDS = Object.freeze([
   "reward_id",
   "data_generation",
 ]);
+const REWARD_VAULT_EXPECTED_FIELDS = Object.freeze([
+  "reward_id",
+  "source_key",
+  "source_kind",
+  "source_digest",
+  "recipient_account_id",
+  "status",
+  "created_at",
+  "updated_at",
+  "delivered_at",
+  "claimed_at",
+  "delivered_mail_id",
+  "data_generation",
+  "revision",
+  "document_json",
+]);
 const STORAGE_IDENTIFIER_PATTERN = /^[a-z0-9_:-]+$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const MAIL_ACTIVE_COUNT_MAX = 4294967295;
@@ -89,6 +127,8 @@ const CONDITIONAL_PLAN_KINDS = new Set([
   "mail_send_conditional_v1",
   "mail_read_conditional_v1",
   "mail_claim_conditional_v1",
+  "reward_vault_issue_only_v1",
+  "reward_vault_claim_conditional_v1",
 ]);
 
 const RESOURCE_RANK = new Map([
@@ -98,12 +138,13 @@ const RESOURCE_RANK = new Map([
   ["market_capacity", 3],
   ["market_listing", 4],
   ["mail_active_counter", 5],
-  ["mail_identity", 6],
-  ["mail_message", 7],
-  ["consumed_equipment_envelope", 8],
-  ["market_tax", 9],
-  ["mutation_receipt_capacity", 10],
-  ["mutation_receipt", 11],
+  ["reward_vault", 6],
+  ["mail_identity", 7],
+  ["mail_message", 8],
+  ["consumed_equipment_envelope", 9],
+  ["market_tax", 10],
+  ["mutation_receipt_capacity", 11],
+  ["mutation_receipt", 12],
 ]);
 
 const EXPLICIT_LOCK_RESOURCES = new Set([
@@ -112,6 +153,7 @@ const EXPLICIT_LOCK_RESOURCES = new Set([
   "profile",
   "market_capacity",
   "market_listing",
+  "reward_vault",
   "mail_identity",
   "mail_message",
 ]);
@@ -121,6 +163,7 @@ const WRITE_KINDS_BY_RESOURCE = new Map([
   ["profile", new Set(["write"])],
   ["market_listing", new Set(["insert", "delete"])],
   ["mail_active_counter", new Set(["seed", "increment"])],
+  ["reward_vault", new Set(["insert", "claim"])],
   ["mail_identity", new Set(["insert", "update"])],
   ["mail_message", new Set(["insert", "update", "delete"])],
   ["consumed_equipment_envelope", new Set(["insert"])],
@@ -190,6 +233,12 @@ function lockContract(resource, lockMode) {
       sql: `SELECT listing_id, seller_account_id, item_id, currency, unit_price,
         item_count, created_at, document_json
         FROM market_listings WHERE listing_id = ? FOR UPDATE`,
+    };
+  }
+  if (resource === "reward_vault") {
+    return {
+      identityField: "reward_id",
+      sql: REWARD_VAULT_LOCK_SQL,
     };
   }
   if (resource === "mail_identity") {
@@ -265,6 +314,22 @@ function writeContract(resource, kind, key) {
       sql: MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
     };
   }
+  if (resource === "reward_vault" && kind === "insert") {
+    return {
+      keyParamIndex: 0,
+      paramsLength: 8,
+      rewardVaultInsertParams: true,
+      sql: REWARD_VAULT_INSERT_SQL,
+    };
+  }
+  if (resource === "reward_vault" && kind === "claim") {
+    return {
+      keyParamIndex: 2,
+      paramsLength: 14,
+      rewardVaultClaimParams: true,
+      sql: REWARD_VAULT_CLAIM_SQL,
+    };
+  }
   if (resource === "mail_identity" && kind === "insert") {
     return {
       keyParamIndex: 0,
@@ -276,7 +341,7 @@ function writeContract(resource, kind, key) {
   if (resource === "mail_identity" && kind === "update") {
     return {
       keyParamIndex: 2,
-      paramsLength: 9,
+      paramsLength: 10,
       identityUpdateParams: true,
       sql: MAIL_IDENTITY_UPDATE_SQL,
     };
@@ -423,8 +488,195 @@ function validMailStorageControlExpectedRow(value) {
     && (value.data_generation === 1
       ? [0, 1].includes(value.archive_enabled)
       : value.archive_enabled === 0)
-    && value.vault_claim_enabled === 0
+    && (value.data_generation === 1
+      ? [0, 1].includes(value.vault_claim_enabled)
+      : value.vault_claim_enabled === 0)
     && value.active_limit_enabled === 0;
+}
+
+function validRewardVaultInsertParams(params) {
+  const [
+    rewardId,
+    sourceKey,
+    sourceKind,
+    sourceDigest,
+    recipientAccountId,
+    createdAt,
+    updatedAt,
+    documentJson,
+  ] = params;
+  if (
+    !canonicalStorageIdentifier(rewardId, 160)
+    || !/^reward_[a-f0-9]{64}$/.test(rewardId)
+    || typeof sourceKey !== "string"
+    || sourceKey === ""
+    || sourceKey.length > 191
+    || !/^[A-Za-z0-9._:-]+$/.test(sourceKey)
+    || !REWARD_VAULT_SOURCE_KINDS.includes(sourceKind)
+    || !SHA256_PATTERN.test(sourceDigest)
+    || !canonicalStorageIdentifier(recipientAccountId, 80)
+    || !canonicalIsoTimestamp(createdAt)
+    || updatedAt !== createdAt
+    || typeof documentJson !== "string"
+  ) {
+    return false;
+  }
+  let document;
+  try {
+    document = JSON.parse(documentJson);
+  } catch {
+    return false;
+  }
+  const fields = [
+    "schemaVersion",
+    "rewardId",
+    "sourceKind",
+    "sourceKey",
+    "recipientAccountId",
+    "recipientUsername",
+    "recipientDisplayName",
+    "title",
+    "body",
+    "items",
+    "currency",
+    "createdAt",
+  ];
+  let expectedRewardId;
+  try {
+    expectedRewardId = rewardVaultIdForSource(recipientAccountId, sourceKind, sourceKey);
+  } catch {
+    return false;
+  }
+  return hasExactFields(document, fields)
+    && document.schemaVersion === 1
+    && document.rewardId === rewardId
+    && expectedRewardId === rewardId
+    && document.sourceKind === sourceKind
+    && document.sourceKey === sourceKey
+    && document.recipientAccountId === recipientAccountId
+    && document.createdAt === createdAt
+    && Array.isArray(document.items)
+    && isRecord(document.currency)
+    && crypto.createHash("sha256").update(JSON.stringify(document), "utf8").digest("hex")
+      === sourceDigest;
+}
+
+function validRewardVaultExpectedRow(value, key) {
+  if (!hasExactFields(value, REWARD_VAULT_EXPECTED_FIELDS)) return false;
+  const document = value.document_json;
+  const expectedRewardId = (() => {
+    try {
+      return rewardVaultIdForSource(
+        value.recipient_account_id,
+        value.source_kind,
+        value.source_key,
+      );
+    } catch {
+      return "";
+    }
+  })();
+  const delivered = value.delivered_at !== null || value.delivered_mail_id !== null;
+  return value.reward_id === key
+    && /^reward_[a-f0-9]{64}$/.test(value.reward_id)
+    && value.reward_id === expectedRewardId
+    && typeof value.source_key === "string"
+    && value.source_key !== ""
+    && value.source_key.length <= 191
+    && /^[A-Za-z0-9._:-]+$/.test(value.source_key)
+    && REWARD_VAULT_SOURCE_KINDS.includes(value.source_kind)
+    && SHA256_PATTERN.test(value.source_digest)
+    && canonicalStorageIdentifier(value.recipient_account_id, 80)
+    && ["available", "mail_delivered"].includes(value.status)
+    && canonicalIsoTimestamp(value.created_at)
+    && canonicalIsoTimestamp(value.updated_at)
+    && Date.parse(value.updated_at) >= Date.parse(value.created_at)
+    && nullableCanonicalIsoTimestamp(value.delivered_at)
+    && value.claimed_at === null
+    && (value.delivered_mail_id === null
+      || canonicalStorageIdentifier(value.delivered_mail_id, 96))
+    && (value.delivered_at === null) === (value.delivered_mail_id === null)
+    && (
+      (value.status === "available" && !delivered && value.revision === 0)
+      || (value.status === "mail_delivered" && delivered && value.revision >= 1)
+    )
+    && value.data_generation === 1
+    && Number.isSafeInteger(value.revision)
+    && value.revision >= 0
+    && isRecord(document)
+    && document.rewardId === value.reward_id
+    && document.sourceKey === value.source_key
+    && document.sourceKind === value.source_kind
+    && document.recipientAccountId === value.recipient_account_id
+    && document.createdAt === value.created_at
+    && crypto.createHash("sha256").update(JSON.stringify(document), "utf8").digest("hex")
+      === value.source_digest;
+}
+
+function validRewardVaultClaimParams(params) {
+  const [
+    updatedAt,
+    claimedAt,
+    rewardId,
+    sourceKey,
+    sourceKind,
+    sourceDigest,
+    recipientAccountId,
+    status,
+    createdAt,
+    previousUpdatedAt,
+    deliveredAt,
+    deliveredMailId,
+    revision,
+    documentJson,
+  ] = params;
+  if (
+    updatedAt !== claimedAt
+    || !canonicalIsoTimestamp(claimedAt)
+    || !/^reward_[a-f0-9]{64}$/.test(rewardId)
+    || typeof sourceKey !== "string"
+    || sourceKey === ""
+    || sourceKey.length > 191
+    || !/^[A-Za-z0-9._:-]+$/.test(sourceKey)
+    || !REWARD_VAULT_SOURCE_KINDS.includes(sourceKind)
+    || !SHA256_PATTERN.test(sourceDigest)
+    || !canonicalStorageIdentifier(recipientAccountId, 80)
+    || !["available", "mail_delivered"].includes(status)
+    || !canonicalIsoTimestamp(createdAt)
+    || !canonicalIsoTimestamp(previousUpdatedAt)
+    || Date.parse(claimedAt) < Date.parse(previousUpdatedAt)
+    || Date.parse(previousUpdatedAt) < Date.parse(createdAt)
+    || !nullableCanonicalIsoTimestamp(deliveredAt)
+    || (deliveredMailId !== null && !canonicalStorageIdentifier(deliveredMailId, 96))
+    || (deliveredAt === null) !== (deliveredMailId === null)
+    || !Number.isSafeInteger(revision)
+    || revision < 0
+    || (status === "available" && (deliveredAt !== null || revision !== 0))
+    || (status === "mail_delivered" && (deliveredAt === null || revision < 1))
+    || typeof documentJson !== "string"
+  ) {
+    return false;
+  }
+  let document;
+  try {
+    document = JSON.parse(documentJson);
+  } catch {
+    return false;
+  }
+  let expectedRewardId;
+  try {
+    expectedRewardId = rewardVaultIdForSource(recipientAccountId, sourceKind, sourceKey);
+  } catch {
+    return false;
+  }
+  return expectedRewardId === rewardId
+    && isRecord(document)
+    && document.rewardId === rewardId
+    && document.sourceKey === sourceKey
+    && document.sourceKind === sourceKind
+    && document.recipientAccountId === recipientAccountId
+    && document.createdAt === createdAt
+    && crypto.createHash("sha256").update(JSON.stringify(document), "utf8").digest("hex")
+      === sourceDigest;
 }
 
 function validMailIdentityExpectedRow(value, key) {
@@ -439,7 +691,7 @@ function validMailIdentityExpectedRow(value, key) {
     && value.archived_at === null
     && SHA256_PATTERN.test(value.identity_digest)
     && SHA256_PATTERN.test(value.document_digest)
-    && value.reward_id === null
+    && (value.reward_id === null || /^reward_[a-f0-9]{64}$/.test(value.reward_id))
     && value.data_generation === 1;
 }
 
@@ -473,6 +725,7 @@ function validMailIdentityUpdateParams(params) {
     previousSettledAt,
     identityDigest,
     previousDocumentDigest,
+    rewardId,
   ] = params;
   return nullableCanonicalIsoTimestamp(nextSettledAt)
     && SHA256_PATTERN.test(nextDocumentDigest)
@@ -484,6 +737,7 @@ function validMailIdentityUpdateParams(params) {
     && (previousSettledAt === null || nextSettledAt === previousSettledAt)
     && SHA256_PATTERN.test(identityDigest)
     && SHA256_PATTERN.test(previousDocumentDigest)
+    && (rewardId === null || /^reward_[a-f0-9]{64}$/.test(rewardId))
     && nextDocumentDigest !== previousDocumentDigest;
 }
 
@@ -586,7 +840,7 @@ function validateLock(lock) {
     throw invalid("lock_mode_invalid", resource, key);
   }
   if (
-    ["market_capacity", "market_listing", "mail_identity", "mail_message"].includes(resource)
+    ["market_capacity", "market_listing", "reward_vault", "mail_identity", "mail_message"].includes(resource)
     && lock.lockMode !== "exclusive"
   ) {
     throw invalid("lock_mode_invalid", resource, key);
@@ -642,6 +896,12 @@ function validateLock(lock) {
     )
   ) {
     throw invalid("mail_storage_control_guard_invalid", resource, key);
+  }
+  if (
+    resource === "reward_vault"
+    && !validRewardVaultExpectedRow(lock.expectedRow, key)
+  ) {
+    throw invalid("reward_vault_expected_row_invalid", resource, key);
   }
   if (
     resource === "mail_identity"
@@ -719,6 +979,12 @@ function validateWrite(write) {
     throw invalid("write_params_invalid", write.resource, key);
   }
   if (contract.identityUpdateParams && !validMailIdentityUpdateParams(write.params)) {
+    throw invalid("write_params_invalid", write.resource, key);
+  }
+  if (contract.rewardVaultInsertParams && !validRewardVaultInsertParams(write.params)) {
+    throw invalid("write_params_invalid", write.resource, key);
+  }
+  if (contract.rewardVaultClaimParams && !validRewardVaultClaimParams(write.params)) {
     throw invalid("write_params_invalid", write.resource, key);
   }
   const receiptTimes = contract.receiptParams
@@ -860,6 +1126,19 @@ function assertMysqlMutationReceiptWriteContract(write) {
 }
 
 function validateMutationReceiptPlan(plan, writes) {
+  if (plan.kind === "reward_vault_issue_only_v1") {
+    if (
+      Object.hasOwn(plan, "operationId")
+      || writes.length < 1
+      || writes.length > 16
+      || writes.some((write) => (
+        write.resource !== "reward_vault" || write.kind !== "insert"
+      ))
+    ) {
+      throw invalid("reward_vault_issue_only_plan_invalid", "reward_vault");
+    }
+    return;
+  }
   const receiptWrites = writes.filter((write) => write.resource === "mutation_receipt");
   const receiptInserts = receiptWrites.filter((write) => write.kind === "insert");
   const receiptDeletes = receiptWrites.filter((write) => write.kind === "delete");
@@ -924,6 +1203,7 @@ function acquisitionForWrite(write) {
 
 function requiresExclusivePrelock(write) {
   return PRELOCKED_WRITES.has(write.resource)
+    || (write.resource === "reward_vault" && write.kind === "claim")
     || (write.resource === "market_listing" && write.kind === "delete")
     || (write.resource === "mail_identity" && write.kind === "update")
     || (write.resource === "mail_message" && write.kind !== "insert");
@@ -949,6 +1229,7 @@ function allowsSameKeyWriteReuse(previousWrite, write) {
 function requiresMailStorageControlFence(writes) {
   return writes.some((write) => (
     write.resource === "mail_active_counter"
+    || write.resource === "reward_vault"
     || write.resource === "mail_identity"
   ));
 }
@@ -1041,6 +1322,19 @@ function certify(plan) {
         MAIL_STORAGE_CONTROL_SCOPE_KEY,
       );
     }
+    if (
+      validatedWrites.some((write) => write.resource === "reward_vault")
+      && Number(plan.locks.find((lock) => (
+        lock.resource === "mail_storage_control"
+        && lock.key === MAIL_STORAGE_CONTROL_SCOPE_KEY
+      ))?.expectedRow?.vault_claim_enabled) !== 1
+    ) {
+      throw invalid(
+        "reward_vault_feature_fence_required",
+        "mail_storage_control",
+        MAIL_STORAGE_CONTROL_SCOPE_KEY,
+      );
+    }
   }
 
   validateMutationReceiptPlan(plan, validatedWrites);
@@ -1078,6 +1372,9 @@ module.exports = {
   MAIL_IDENTITY_LOCK_SQL,
   MAIL_IDENTITY_UPDATE_SQL,
   MAIL_STORAGE_CONTROL_LOCK_SQL,
+  REWARD_VAULT_CLAIM_SQL,
+  REWARD_VAULT_INSERT_SQL,
+  REWARD_VAULT_LOCK_SQL,
   MARKET_CREATE_CAPACITY_CHECK_SQL,
   MARKET_CREATE_CAPACITY_GUARD_KEY,
   MARKET_CREATE_CAPACITY_LOCK_SQL,

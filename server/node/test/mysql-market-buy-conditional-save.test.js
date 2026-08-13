@@ -22,6 +22,7 @@ const {
 const {
   __buildMysqlSavePlanFromPersistentDataForTest,
 } = require("../src/mysql-store");
+const {createRewardVaultEntry} = require("../src/auth/reward-vault-state");
 const {
   mysqlResourceAcquisitionTrace,
 } = require("../src/mysql-resource-acquisition-order");
@@ -259,6 +260,27 @@ function buildPlan(after, before, scope = buyScope()) {
   return __buildMysqlSavePlanFromPersistentDataForTest(after, before, {
     consistencyScope: scope,
   });
+}
+
+function certifyRewardAttachment(mail) {
+  return {
+    ok: true,
+    items: structuredClone(mail.items || []),
+    ordinaryItems: structuredClone(mail.items || []),
+    equipmentItems: [],
+    equipmentEnvelopes: [],
+    currency: structuredClone(mail.currency || {}),
+  };
+}
+
+function rewardStorageState() {
+  return {
+    controlFence: true,
+    schemaGeneration: 1,
+    dataGeneration: 1,
+    lifecycleState: "ready",
+    flags: {archive: false, vaultClaim: true, activeLimit: false},
+  };
 }
 
 function operationResources(plan, field) {
@@ -608,6 +630,62 @@ test("zero-tax ordinary purchase omits the server-state write but keeps strict a
   assert.equal(plan.writes.some((write) => write.resource === "market_tax"), false);
   assert.equal(plan.writes.some((write) => /\bserver_state\b/i.test(write.sql)), false);
   assert.equal(plan.writes.some((write) => /ON DUPLICATE KEY/i.test(write.sql)), false);
+});
+
+test("vault-first ordinary buy keeps payout in the same conditional receipt transaction", () => {
+  const before = baselineAuthority();
+  const after = buyCandidate(before);
+  after.mailMessages = readMailAuthorityState({}).messages;
+  const reward = createRewardVaultEntry({
+    sourceKind: "market_sale",
+    sourceKey: `source_${"1".repeat(64)}`,
+    recipientAccountId: SELLER_ACCOUNT_ID,
+    recipientUsername: "conditional_seller",
+    recipientDisplayName: "条件卖家",
+    title: "拍卖行成交收益",
+    body: "收益已安全存入奖励仓。",
+    items: [],
+    currency: {stoneCoins: 39},
+    createdAt: UPDATED_AT_2,
+  }, {certifyAttachment: certifyRewardAttachment});
+  const scope = buyScope({saleMailId: "", rewardId: reward.rewardId});
+  const plan = __buildMysqlSavePlanFromPersistentDataForTest(after, before, {
+    consistencyScope: scope,
+    rewardVaultIssues: [reward],
+    mailStorageState: rewardStorageState(),
+    mailStorageCertifyAttachment: certifyRewardAttachment,
+  });
+
+  assert.equal(plan.kind, "market_buy_conditional_v1");
+  assert.equal(plan.saleMailId, "");
+  assert.equal(plan.rewardId, reward.rewardId);
+  assert.equal(plan.writes.some((write) => write.resource === "mail_message"), false);
+  assert.deepEqual(
+    plan.writes.filter((write) => write.resource === "reward_vault").map(({key}) => key),
+    [reward.rewardId],
+  );
+  assert.equal(
+    plan.writes.findIndex((write) => write.resource === "reward_vault")
+      < plan.writes.findIndex((write) => write.resource === "mutation_receipt"),
+    true,
+  );
+});
+
+test("vault-enabled zero-proceeds buy commits without inventing an empty reward or mail", () => {
+  const before = baselineAuthority();
+  before.marketListings[LISTING_ID] = ordinaryListing({count: 1, unitPrice: 1});
+  const after = buyCandidate(before, {taxAmount: 1});
+  after.mailMessages = readMailAuthorityState({}).messages;
+  const scope = buyScope({
+    saleMailId: "",
+    zeroAssetVaultSettlement: true,
+  });
+  const plan = buildPlan(after, before, scope);
+
+  assert.equal(plan.kind, "market_buy_conditional_v1");
+  assert.equal(plan.zeroAssetVaultSettlement, true);
+  assert.equal(plan.writes.some((write) => write.resource === "mail_message"), false);
+  assert.equal(plan.writes.some((write) => write.resource === "reward_vault"), false);
 });
 
 test("real durable ordinary buy signs the exact cross-account consistency scope", async () => {

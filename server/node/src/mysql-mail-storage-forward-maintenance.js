@@ -29,6 +29,7 @@ function projectActiveMailIdentityRow(options = {}) {
   const revision = options && Object.hasOwn(options, "revision")
     ? options.revision
     : 0;
+  const rewardId = rewardIdFromMailIdentityProjection(mail, options);
   const authority = canonicalMailDocument(mail, mail && mail.mailId);
   if (
     !authority.ok
@@ -72,10 +73,34 @@ function projectActiveMailIdentityRow(options = {}) {
       mailId: canonical.mailId,
       document: canonical,
     }),
-    rewardId: null,
+    rewardId,
     dataGeneration,
     revision,
   });
+}
+
+function rewardIdFromMailIdentityProjection(mail, options) {
+  const explicit = options && Object.hasOwn(options, "rewardId")
+    ? options.rewardId
+    : undefined;
+  const documentValue = mail && Object.hasOwn(mail, "rewardVaultId")
+    ? mail.rewardVaultId
+    : undefined;
+  if (explicit !== undefined && documentValue !== undefined && explicit !== documentValue) {
+    throw codedTypeError(
+      "mail_storage_forward_reward_identity_drift",
+      "邮件奖励仓关联与权威正文不一致。",
+    );
+  }
+  const candidate = explicit !== undefined ? explicit : documentValue;
+  if (candidate === undefined || candidate === null) return null;
+  if (typeof candidate !== "string" || !/^reward_[a-f0-9]{64}$/.test(candidate)) {
+    throw codedTypeError(
+      "mail_storage_forward_reward_identity_invalid",
+      "邮件奖励仓关联无效。",
+    );
+  }
+  return candidate;
 }
 
 // Pure generation fence and row-local projection boundary. It performs no
@@ -211,6 +236,14 @@ function buildMailStorageForwardMaintenancePlan(options = {}) {
       dataGeneration: MAIL_STORAGE_FORWARD_DATA_GENERATION,
       revision: 0,
     });
+    if (previousIdentity.rewardId !== nextIdentity.rewardId) {
+      errors.push(planError(
+        "mail_storage_forward_reward_identity_drift",
+        `${change.path}.after.rewardVaultId`,
+        change.mailId,
+      ));
+      continue;
+    }
     identityUpdates.push({
       mailId: nextIdentity.mailId,
       senderAccountId: nextIdentity.senderAccountId,
@@ -221,6 +254,7 @@ function buildMailStorageForwardMaintenancePlan(options = {}) {
       nextDocumentDigest: nextIdentity.documentDigest,
       previousSettledAt,
       nextSettledAt,
+      rewardId: nextIdentity.rewardId,
       dataGeneration: MAIL_STORAGE_FORWARD_DATA_GENERATION,
     });
   }

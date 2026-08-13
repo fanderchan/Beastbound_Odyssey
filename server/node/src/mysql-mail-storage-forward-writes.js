@@ -144,11 +144,13 @@ function validateStorageState(value) {
     throw invalid("schema_generation_invalid");
   }
   const flags = storageFeatureFlags(value);
-  // Generation-one ordinary mail writers are archive-aware: the permanent
+  // Generation-one ordinary mail writers are archive/vault-aware: the permanent
   // identity lock below prevents a stale active write from touching an
-  // archived row. Vault delivery and the 200-mail guard remain unsupported and
-  // therefore fail closed until their own transactional writers exist.
-  if (flags.vaultClaim || flags.activeLimit) {
+  // archived row. Reward-vault issuance/claim uses its own typed resources,
+  // while ordinary mail continues to preserve the captured vault flag. The
+  // global 200-mail guard remains unsupported until its own transactional
+  // writer is enabled.
+  if (flags.activeLimit) {
     throw invalid("unsupported_feature_flag_enabled");
   }
   if (value.dataGeneration === 0 && value.lifecycleState === "uninitialized") {
@@ -163,6 +165,7 @@ function validateStorageState(value) {
       dataGeneration: 0,
       lifecycleState: "uninitialized",
       archiveEnabled: false,
+      vaultClaimEnabled: false,
     });
   }
   if (value.dataGeneration === 1 && value.lifecycleState === "ready") {
@@ -174,6 +177,7 @@ function validateStorageState(value) {
       dataGeneration: 1,
       lifecycleState: "ready",
       archiveEnabled: flags.archive,
+      vaultClaimEnabled: flags.vaultClaim,
     });
   }
   throw invalid("storage_state_invalid");
@@ -360,6 +364,7 @@ function validatePlanFacts(plan, changes) {
       nextDocumentDigest: nextIdentity.documentDigest,
       previousSettledAt: supplied.previousSettledAt,
       nextSettledAt: supplied.nextSettledAt,
+      rewardId: nextIdentity.rewardId,
       dataGeneration: MAIL_STORAGE_DATA_GENERATION,
     };
     if (!isDeepStrictEqual(supplied, expected)) {
@@ -429,7 +434,7 @@ function mailStorageControlLock(storage) {
       data_generation: storage.dataGeneration,
       lifecycle_state: storage.lifecycleState,
       archive_enabled: storage.archiveEnabled ? 1 : 0,
-      vault_claim_enabled: 0,
+      vault_claim_enabled: storage.vaultClaimEnabled ? 1 : 0,
       active_limit_enabled: 0,
     },
   };
@@ -453,7 +458,7 @@ function mailIdentityLock(update) {
       archived_at: null,
       identity_digest: update.identityDigest,
       document_digest: update.previousDocumentDigest,
-      reward_id: null,
+      reward_id: update.rewardId,
       data_generation: update.dataGeneration,
     },
   };
@@ -486,6 +491,11 @@ function mailActiveCounterIncrement(increment) {
 }
 
 function mailIdentityInsert(identity) {
+  if (identity.rewardId !== null) {
+    // Reward-linked notifications are issued only by the dedicated delivery
+    // transaction, which also advances the vault row in the same COMMIT.
+    throw invalid("reward_identity_requires_delivery_transaction", identity.mailId);
+  }
   return {
     kind: "insert",
     resource: "mail_identity",
@@ -520,6 +530,7 @@ function mailIdentityUpdate(update) {
       update.previousSettledAt,
       update.identityDigest,
       update.previousDocumentDigest,
+      update.rewardId,
     ],
     expectedAffectedRows: 1,
   };
@@ -641,7 +652,7 @@ function cliControlFenceAssertion(storage) {
         AND data_generation = ${storage.dataGeneration}
         AND lifecycle_state = ${mysqlRawLiteral(storage.lifecycleState)}
         AND archive_enabled = ${storage.archiveEnabled ? 1 : 0}
-        AND vault_claim_enabled = 0
+        AND vault_claim_enabled = ${storage.vaultClaimEnabled ? 1 : 0}
         AND active_limit_enabled = 0
     )`;
 }

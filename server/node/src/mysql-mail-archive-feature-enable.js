@@ -6,6 +6,7 @@ const {
   buildMailStorageBootstrapPlan,
   verifyMailStorageBootstrapPlan,
 } = require("./mysql-mail-storage-bootstrap-plan");
+const {certifyStoredMailArchiveRow} = require("./mysql-mail-archive");
 const {
   MYSQL_COMMIT_OUTCOME_AMBIGUOUS,
   MYSQL_TRANSACTION_ROLLED_BACK,
@@ -101,7 +102,7 @@ async function runMysqlMailArchiveFeatureEnable(pool, options = {}) {
   }
 }
 
-function certifyPreEnableSnapshot(snapshot, control, certifyAttachment) {
+function certifyPreEnableSnapshot(snapshot, control, certifyAttachment, options = {}) {
   const sourceRows = Array.isArray(snapshot && snapshot.sourceRows) ? snapshot.sourceRows : null;
   const identityRows = Array.isArray(snapshot && snapshot.identityRows) ? snapshot.identityRows : null;
   const counterRows = Array.isArray(snapshot && snapshot.counterRows) ? snapshot.counterRows : null;
@@ -110,7 +111,8 @@ function certifyPreEnableSnapshot(snapshot, control, certifyAttachment) {
   if (!sourceRows || !identityRows || !counterRows || !archiveRows || !vaultRows) {
     throw featureError("mail_archive_feature_snapshot_invalid");
   }
-  if (archiveRows.length !== 0 || vaultRows.length !== 0) {
+  const allowArchiveHistory = options.allowArchiveHistory === true;
+  if ((!allowArchiveHistory && archiveRows.length !== 0) || vaultRows.length !== 0) {
     throw featureError("mail_archive_feature_pre_enable_sidecars_not_empty");
   }
   const plan = buildMailStorageBootstrapPlan({sourceRows, certifyAttachment});
@@ -118,14 +120,22 @@ function certifyPreEnableSnapshot(snapshot, control, certifyAttachment) {
   if (plan.ok !== true || verification.ok !== true) {
     throw featureError("mail_archive_feature_source_certification_failed");
   }
+  const archiveIds = new Set(archiveRows.map((row) => String(row && row.mail_id || "")));
+  const activeIds = new Set(plan.sourceRows.map((row) => row.mailId));
+  const allIds = new Set([...activeIds, ...archiveIds]);
+  const allRecipients = new Set([
+    ...plan.sourceRows.map((row) => row.recipientAccountId),
+    ...archiveRows.map((row) => String(row && row.recipient_account_id || "")),
+  ]);
+  const historicalMailCount = plan.counts.active + archiveRows.length;
   if (
-    Number(control.bootstrap_source_count) > plan.counts.source
-    || Number(control.bootstrap_identity_count) > plan.counts.identity
-    || Number(control.bootstrap_active_count) > plan.counts.active
-    || Number(control.bootstrap_recipient_count) > plan.counts.recipient
+    Number(control.bootstrap_source_count) > historicalMailCount
+    || Number(control.bootstrap_identity_count) > historicalMailCount
+    || Number(control.bootstrap_active_count) > historicalMailCount
+    || Number(control.bootstrap_recipient_count) > allRecipients.size
     || (Number(control.bootstrap_source_count) === 0
       ? String(control.bootstrap_cursor_mail_id || "") !== ""
-      : !plan.sourceRows.some((row) => row.mailId === control.bootstrap_cursor_mail_id))
+      : !allIds.has(String(control.bootstrap_cursor_mail_id || "")))
   ) {
     throw featureError("mail_archive_feature_bootstrap_history_drift");
   }
@@ -136,7 +146,7 @@ function certifyPreEnableSnapshot(snapshot, control, certifyAttachment) {
     (row) => String(row && row.mail_id || ""),
     "mail_archive_feature_identity_rows_invalid",
   );
-  if (observedIdentityByMailId.size !== expectedIdentityByMailId.size) {
+  if (observedIdentityByMailId.size !== expectedIdentityByMailId.size + archiveRows.length) {
     throw featureError("mail_archive_feature_identity_rows_invalid");
   }
   for (const [mailId, expected] of expectedIdentityByMailId) {
@@ -148,6 +158,27 @@ function certifyPreEnableSnapshot(snapshot, control, certifyAttachment) {
       throw featureError("mail_archive_feature_identity_rows_invalid");
     }
   }
+  if (allowArchiveHistory) {
+    const archiveByMailId = strictRows(
+      archiveRows,
+      (row) => String(row && row.mail_id || ""),
+      "mail_archive_feature_archive_rows_invalid",
+    );
+    for (const [mailId, archiveRow] of archiveByMailId) {
+      if (expectedIdentityByMailId.has(mailId) || !observedIdentityByMailId.has(mailId)) {
+        throw featureError("mail_archive_feature_archive_rows_invalid");
+      }
+      try {
+        certifyStoredMailArchiveRow(
+          observedIdentityByMailId.get(mailId),
+          archiveRow,
+          certifyAttachment,
+        );
+      } catch {
+        throw featureError("mail_archive_feature_archive_rows_invalid");
+      }
+    }
+  }
 
   const expectedCounterByRecipient = new Map(
     plan.counterRows.map((row) => [row.recipientAccountId, row]),
@@ -157,10 +188,18 @@ function certifyPreEnableSnapshot(snapshot, control, certifyAttachment) {
     (row) => String(row && row.recipient_account_id || ""),
     "mail_archive_feature_counter_rows_invalid",
   );
-  if (observedCounterByRecipient.size !== expectedCounterByRecipient.size) {
+  const expectedCounterRecipients = allowArchiveHistory
+    ? allRecipients
+    : new Set(expectedCounterByRecipient.keys());
+  if (observedCounterByRecipient.size !== expectedCounterRecipients.size) {
     throw featureError("mail_archive_feature_counter_rows_invalid");
   }
-  for (const [recipientAccountId, expected] of expectedCounterByRecipient) {
+  for (const recipientAccountId of expectedCounterRecipients) {
+    const expected = expectedCounterByRecipient.get(recipientAccountId) || {
+      recipientAccountId,
+      activeCount: 0,
+      dataGeneration: 1,
+    };
     const observed = activationCounter(observedCounterByRecipient.get(recipientAccountId));
     if (!observed || !isDeepStrictEqual(observed, {
       ...expected,
@@ -485,5 +524,6 @@ function objectOrEmpty(value) {
 module.exports = {
   MAIL_ARCHIVE_FEATURE_ENABLE_KIND,
   MAIL_ARCHIVE_FEATURE_ENABLE_SCHEMA_VERSION,
+  certifyMailArchiveFeatureSnapshot: certifyPreEnableSnapshot,
   runMysqlMailArchiveFeatureEnable,
 };

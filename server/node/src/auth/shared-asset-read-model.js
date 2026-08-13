@@ -87,6 +87,7 @@ function certifiedSharedAssetReadView(value) {
     "mail_mark_read",
     "mail_send",
     "equipment_ownership",
+    "profile_read",
   ].includes(scope) || accountId === ""
     || typeof value.includeProfileMailPartitions !== "boolean") {
     throw sharedAssetReadViewError("scope");
@@ -188,6 +189,19 @@ function certifiedSharedAssetReadView(value) {
       accounts,
       profileBindings,
       profiles,
+    });
+  }
+  if (scope === "profile_read") {
+    assertCertifiedProfileReadAuthority({
+      accountId,
+      accounts,
+      profileBindings,
+      profiles,
+      marketListings,
+      marketConfig,
+      mailRows,
+      mailPartitions,
+      includeProfileMailPartitions,
     });
   }
   const expectedMailPartitionIds = !includeProfileMailPartitions
@@ -384,6 +398,29 @@ function assertCertifiedMailSendAuthority(value) {
     || String(profile.accountId || "") !== value.accountId
   ) {
     throw sharedAssetReadViewError("mail_send_profile_missing");
+  }
+}
+
+function assertCertifiedProfileReadAuthority(value) {
+  const binding = value.profileBindings.values[value.accountId];
+  const playerId = String(binding && binding.playerId || "");
+  const profile = value.profiles.values[playerId];
+  if (
+    value.includeProfileMailPartitions
+    || !isDeepStrictEqual(value.accounts.keys, [value.accountId])
+    || !value.accounts.values[value.accountId]
+    || !isDeepStrictEqual(value.profileBindings.keys, [value.accountId])
+    || !binding
+    || playerId === ""
+    || !isDeepStrictEqual(value.profiles.keys, [playerId])
+    || !profile
+    || String(profile.accountId || "") !== value.accountId
+    || value.marketListings !== null
+    || value.marketConfig !== null
+    || value.mailRows !== null
+    || value.mailPartitions.length !== 0
+  ) {
+    throw sharedAssetReadViewError("profile_read_scope");
   }
 }
 

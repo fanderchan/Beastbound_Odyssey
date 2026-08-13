@@ -71,7 +71,7 @@ const IDENTITY_ARCHIVE_SQL = `UPDATE mail_identity_registry
   WHERE mail_id = ? AND sender_account_id = ? AND recipient_account_id = ?
     AND location = 'active' AND created_at = ? AND settled_at = ?
     AND archived_at IS NULL AND identity_digest = ? AND document_digest = ?
-    AND reward_id IS NULL AND data_generation = 1 AND revision = ?
+    AND reward_id <=> ? AND data_generation = 1 AND revision = ?
     AND revision < 18446744073709551615`;
 const ACTIVE_MAIL_DELETE_SQL = `DELETE FROM mail_messages
   WHERE mail_id = ? AND sender_account_id = ? AND recipient_account_id = ?
@@ -357,6 +357,7 @@ async function runMysqlMailArchiveBatch(pool, options = {}) {
           fact.settledAt,
           fact.identity.identityDigest,
           fact.identity.documentDigest,
+          fact.identity.rewardId,
           fact.identity.revision,
         ], "mail_archive_identity_update_conflict");
         await exactWrite(connection, ACTIVE_MAIL_DELETE_SQL, [
@@ -552,17 +553,17 @@ function certifyArchiveFact({identity, mailRow, cutoffAt, archivedAt, certifyAtt
   ) {
     throw archiveError("mail_archive_mail_not_eligible");
   }
+  const canonicalIdentity = identityFromRow(identity);
   const projected = projectActiveMailIdentityRow({
     mail,
     settledAt,
+    rewardId: canonicalIdentity.rewardId,
     dataGeneration: MAIL_STORAGE_DATA_GENERATION,
     revision: 0,
   });
-  const canonicalIdentity = identityFromRow(identity);
   if (
     canonicalIdentity.location !== "active"
     || canonicalIdentity.archivedAt !== null
-    || canonicalIdentity.rewardId !== null
     || canonicalIdentity.dataGeneration !== MAIL_STORAGE_DATA_GENERATION
     || !isDeepStrictEqual(
       {...projected, revision: canonicalIdentity.revision},
@@ -614,6 +615,7 @@ function certifyArchivedPageIdentity(row, entry) {
   const projected = projectActiveMailIdentityRow({
     mail: entry.mail,
     settledAt: entry.mail.settledAt,
+    rewardId: identity.rewardId,
     dataGeneration: MAIL_STORAGE_DATA_GENERATION,
     revision: identity.revision,
   });
@@ -625,6 +627,22 @@ function certifyArchivedPageIdentity(row, entry) {
   if (identity.revision < 1 || !isDeepStrictEqual(identity, expected)) {
     throw archiveError("mysql_mail_archive_page_identity_drift");
   }
+}
+
+function certifyStoredMailArchiveRow(identityRow, archiveRow, certifyAttachment) {
+  const identity = identityFromRow(identityRow);
+  const entry = archivePageEntryFromRow(
+    archiveRow,
+    identity.recipientAccountId,
+    certifyAttachment,
+  );
+  certifyArchivedPageIdentity(identityRow, entry);
+  return deepFreeze({
+    mailId: entry.mail.mailId,
+    recipientAccountId: entry.mail.recipientAccountId,
+    archivedAt: entry.archivedAt,
+    rewardId: identity.rewardId,
+  });
 }
 
 function mailDocumentFromActiveRow(row, expectedMailId) {
@@ -688,6 +706,7 @@ function identityFromRow(row) {
     || canonicalMailLifecycleIsoTimestamp(identity.settledAt) === ""
     || !/^[a-f0-9]{64}$/.test(identity.identityDigest)
     || !/^[a-f0-9]{64}$/.test(identity.documentDigest)
+    || (identity.rewardId !== null && !/^reward_[a-f0-9]{64}$/.test(identity.rewardId))
     || !Number.isSafeInteger(identity.dataGeneration)
     || !Number.isSafeInteger(identity.revision)
     || identity.revision < 0
@@ -702,7 +721,7 @@ function settledArchivedIdentity(identity) {
     && identity.archivedAt !== null
     && canonicalMailLifecycleIsoTimestamp(identity.archivedAt) !== ""
     && Date.parse(identity.archivedAt) >= Date.parse(identity.settledAt)
-    && identity.rewardId === null
+    && (identity.rewardId === null || /^reward_[a-f0-9]{64}$/.test(identity.rewardId))
     && identity.dataGeneration === MAIL_STORAGE_DATA_GENERATION
     && identity.revision >= 1;
 }
@@ -844,7 +863,7 @@ function assertArchiveControl(row, options = {}) {
     || Number(row && row.data_generation) !== 1
     || String(row && row.lifecycle_state || "") !== "ready"
     || Number(row && row.archive_enabled) !== enabled
-    || Number(row && row.vault_claim_enabled) !== 0
+    || ![0, 1].includes(Number(row && row.vault_claim_enabled))
     || Number(row && row.active_limit_enabled) !== 0
   ) {
     throw archiveError(enabled ? "mail_archive_feature_disabled_or_drifted" : "mail_archive_control_drifted");
@@ -1196,6 +1215,7 @@ module.exports = {
   MAIL_ARCHIVE_BATCH_MAX,
   canonicalMailArchiveCutoff,
   certifyMailArchiveEligibility,
+  certifyStoredMailArchiveRow,
   classifyMailArchiveRecoveryForTest,
   normalizeMysqlMailArchivePageRequest,
   runMysqlMailArchiveBatch,

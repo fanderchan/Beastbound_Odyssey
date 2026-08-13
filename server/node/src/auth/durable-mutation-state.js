@@ -56,6 +56,7 @@ const DURABLE_RECEIPT_FAILURE_RECONCILE_METHODS = new Set([
   "createMarketListing",
   "sendMail",
   "acceptTrade",
+  "claimRewardVault",
 ]);
 const DURABLE_RECEIPT_PRUNE_BATCH = 256;
 const DURABLE_RECEIPT_CHECKPOINT_HISTORY_MAX = 2048;

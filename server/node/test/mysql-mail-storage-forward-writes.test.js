@@ -198,6 +198,7 @@ test("generation one update locks old identity and emits full old physical-row C
     ["mail_identity", "update"],
   ]);
   assert.equal(result.sidecarWrites[0].sql, MAIL_IDENTITY_UPDATE_SQL);
+  assert.equal(result.sidecarWrites[0].params[9], null);
   assert.equal(result.mailWrites.length, 1);
   assert.equal(result.mailWrites[0].sql, LEGACY_MAIL_UPDATE_SQL);
   assert.equal(result.mailWrites[0].params.length, 13);
@@ -214,6 +215,48 @@ test("generation one update locks old identity and emits full old physical-row C
     const index = result.legacyStatements.indexOf(entry.statement);
     assert.equal(result.legacyStatements[index + 1], CLI_EXACT_UPDATE_ASSERTION_SQL);
   }
+});
+
+test("reward notification updates preserve their permanent reward link", () => {
+  const state = storageState(1, {
+    compatible: true,
+    ready: true,
+    flags: {archive: true, vaultClaim: true, activeLimit: false},
+  });
+  const rewardVaultId = `reward_${"a".repeat(64)}`;
+  const before = mail({
+    mailId: "mail_reward_notice_1",
+    mailKind: "reward_vault_notice",
+    rewardVaultId,
+  });
+  const after = {...before, readAt: READ_AT};
+  const result = writeSet(state, [updateChange(before, after)]);
+
+  assert.equal(result.identityLocks[0].expectedRow.reward_id, rewardVaultId);
+  assert.equal(result.sidecarWrites[0].params[9], rewardVaultId);
+  assert.equal(mysqlResourceWriteAffectedRowsAccepted(result.sidecarWrites[0], 1), true);
+
+  const drifted = {...after, rewardVaultId: `reward_${"b".repeat(64)}`};
+  const invalidPlan = forwardPlan(state, [updateChange(before, drifted)]);
+  assert.equal(invalidPlan.ok, false);
+  assert.equal(invalidPlan.errors[0].code, "mail_storage_forward_reward_identity_drift");
+});
+
+test("ordinary forward inserts cannot create reward links outside delivery", () => {
+  const state = storageState(1, {
+    compatible: true,
+    ready: true,
+    flags: {archive: true, vaultClaim: true, activeLimit: false},
+  });
+  const notice = mail({
+    mailId: "mail_reward_notice_2",
+    mailKind: "reward_vault_notice",
+    rewardVaultId: `reward_${"c".repeat(64)}`,
+  });
+  rejects(
+    "reward_identity_requires_delivery_transaction",
+    () => writeSet(state, [insertChange(notice)]),
+  );
 });
 
 test("legacy non-ISO creation identity remains exactly CAS-updatable after bootstrap", () => {
@@ -314,7 +357,7 @@ test("legacy raw SQL hex-encodes hostile UTF-8 strings and leaves no parameters"
   assert.equal(rawMail.statement.endsWith(";"), false);
 });
 
-test("control assertion is adjacent and exact for ready generation one with archive aware", () => {
+test("control assertion is adjacent and exact for ready generation one with archive and vault aware", () => {
   const state = storageState(1, {
     compatible: true,
     ready: true,
@@ -338,7 +381,16 @@ test("control assertion is adjacent and exact for ready generation one with arch
   assert.equal(archiveAware.controlLocks[0].expectedRow.archive_enabled, 1);
   assert.match(archiveAware.legacyStatements[1], /archive_enabled = 1/);
 
-  const unsupported = storageState(1, {vaultClaimEnabled: true});
+  const vaultEnabled = storageState(1, {
+    compatible: true,
+    ready: true,
+    flags: {archive: true, vaultClaim: true, activeLimit: false},
+  });
+  const vaultAware = writeSet(vaultEnabled, [insertChange()]);
+  assert.equal(vaultAware.controlLocks[0].expectedRow.vault_claim_enabled, 1);
+  assert.match(vaultAware.legacyStatements[1], /vault_claim_enabled = 1/);
+
+  const unsupported = storageState(1, {activeLimitEnabled: true});
   rejects("unsupported_feature_flag_enabled", () => writeSet(unsupported, [insertChange()]));
 });
 

@@ -151,6 +151,7 @@ function write(resource, key, kind) {
       null,
       MAIL_IDENTITY_DIGEST,
       MAIL_PREVIOUS_DOCUMENT_DIGEST,
+      null,
     ];
   } else if (resource === "mail_message" && kind === "insert") {
     sql = `INSERT INTO mail_messages
@@ -637,7 +638,7 @@ test("mail sidecar SQL and parameters are fixed to generation one and bounded CA
   WHERE mail_id = ? AND sender_account_id = ? AND recipient_account_id = ?
     AND location = 'active' AND created_at = ? AND settled_at <=> ?
     AND archived_at IS NULL AND identity_digest = ? AND document_digest = ?
-    AND reward_id IS NULL AND data_generation = 1
+    AND reward_id <=> ? AND data_generation = 1
     AND revision < 18446744073709551615`);
 
   for (const tamper of [
@@ -675,7 +676,7 @@ test("mail sidecar SQL and parameters are fixed to generation one and bounded CA
   }
 
   for (const tamper of [
-    (value) => { value.sql = value.sql.replace("reward_id IS NULL", "reward_id IS NOT NULL"); },
+    (value) => { value.sql = value.sql.replace("reward_id <=> ?", "reward_id IS NULL"); },
     (value) => { value.sql = value.sql.replace("data_generation = 1", "data_generation = 2"); },
     (value) => { value.params[3] = "Other-Sender"; },
     (value) => { value.params[0] = "not-a-date"; },
@@ -684,6 +685,7 @@ test("mail sidecar SQL and parameters are fixed to generation one and bounded CA
       value.params[0] = null;
     },
     (value) => { value.params[1] = value.params[8]; },
+    (value) => { value.params[9] = "reward_invalid"; },
   ]) {
     const value = write("mail_identity", "mail-1", "update");
     tamper(value);

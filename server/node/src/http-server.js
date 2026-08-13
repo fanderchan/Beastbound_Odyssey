@@ -42,6 +42,9 @@ const {
 const {createHealthMonitor} = require("./health-monitor");
 const {createMailArchiveMaintenance} = require("./mail-archive-maintenance");
 const {
+  createRewardVaultDeliveryMaintenance,
+} = require("./reward-vault-delivery-maintenance");
+const {
   DURABLE_OPERATION_ID_PATTERN,
 } = require("./auth/durable-mutation-state");
 const {
@@ -50,6 +53,9 @@ const {
 const {
   normalizeMailArchivePageOptions,
 } = require("./auth/mail-archive-pagination");
+const {
+  normalizeRewardVaultPageOptions,
+} = require("./auth/reward-vault-pagination");
 
 const DEFAULT_COMMAND_CATALOG = [
   {"id": "gm_map", "label": "进入GM测试场"},
@@ -129,6 +135,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "sendMail",
   "markMailRead",
   "claimMailAttachments",
+  "claimRewardVault",
   "sendChatMessage",
   "createFamily",
   "joinFamily",
@@ -165,6 +172,7 @@ const SHARED_ASSET_HTTP_READ_SERVICE_METHODS = new Set([
   "marketListings",
   "listInbox",
   "listMailArchive",
+  "listRewardVault",
 ]);
 const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
   "/characters",
@@ -183,6 +191,7 @@ const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
   "/pets/fusion",
 ]);
 const IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN = /^\/mail\/[^/]+\/(?:read|claim)$/;
+const IDEMPOTENCY_REQUIRED_REWARD_VAULT_HTTP_PATH_PATTERN = /^\/rewards\/vault\/[^/]+\/claim$/;
 const IDEMPOTENCY_REQUIRED_PET_RECOVERY_HTTP_PATH_PATTERN = /^\/pets\/recovery\/[^/]+\/claim$/;
 const IDEMPOTENCY_REQUIRED_BATTLE_COMMAND_HTTP_PATH_PATTERN = /^\/battle\/rooms\/[^/]+\/commands$/;
 
@@ -232,8 +241,20 @@ function createHttpServer(options = {}) {
         });
       },
     });
+  const rewardVaultDeliveryMaintenance = options.rewardVaultDeliveryMaintenance
+    || createRewardVaultDeliveryMaintenance(baseService, {
+      ...(options.rewardVaultDeliveryMaintenanceOptions || {}),
+      onError(error) {
+        logStructured(logger, {
+          type: "reward_vault.delivery_maintenance_failed",
+          errorCode: String(error && error.code || "reward_vault_delivery_maintenance_failed"),
+          outcomeUnknown: Boolean(error && error.outcomeUnknown === true),
+        });
+      },
+    });
   healthMonitor.start();
   mailArchiveMaintenance.start();
+  rewardVaultDeliveryMaintenance.start();
 
   const server = applyHttpServerLimits(http.createServer(dispatchRequest), options.httpServerLimits || {});
   server.on("checkContinue", (req, res) => {
@@ -651,6 +672,25 @@ function createHttpServer(options = {}) {
       if (req.method === "POST" && url.pathname === "/mail/send") {
         return sendResult(res, service.sendMail(bearerToken(req), await readJson(req)));
       }
+      if (req.method === "GET" && url.pathname === "/rewards/vault") {
+        const rewardOptions = rewardVaultOptionsFromSearchParams(url.searchParams);
+        if (!rewardOptions.ok) {
+          return sendResult(res, rewardOptions);
+        }
+        return sendResult(
+          res,
+          service.listRewardVault(bearerToken(req), rewardOptions.options),
+        );
+      }
+      if (
+        req.method === "POST"
+        && IDEMPOTENCY_REQUIRED_REWARD_VAULT_HTTP_PATH_PATTERN.test(url.pathname)
+      ) {
+        const rewardId = decodeURIComponent(
+          url.pathname.slice("/rewards/vault/".length, -"/claim".length),
+        );
+        return sendResult(res, service.claimRewardVault(bearerToken(req), rewardId));
+      }
       if (
         req.method === "POST"
         && IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN.test(url.pathname)
@@ -798,6 +838,7 @@ function createHttpServer(options = {}) {
   server.networkAdmission = networkAdmission;
   server.healthMonitor = healthMonitor;
   server.mailArchiveMaintenance = mailArchiveMaintenance;
+  server.rewardVaultDeliveryMaintenance = rewardVaultDeliveryMaintenance;
   if (options.store) {
     server.authStore = options.store;
   }
@@ -1079,6 +1120,7 @@ function diagnosticHttpRoute(pathValue, statusCode) {
   for (const [pattern, replacement] of [
     [/^\/gm\/commands\/[^/]+$/, "/gm/commands/:command"],
     [/^\/mail\/[^/]+\/(read|claim)$/, "/mail/:id/$1"],
+    [/^\/rewards\/vault\/[^/]+\/claim$/, "/rewards/vault/:id/claim"],
     [/^\/pets\/recovery\/[^/]+\/claim$/, "/pets/recovery/:id/claim"],
     [/^\/battle\/invites\/[^/]+\/(accept|decline|cancel)$/, "/battle/invites/:id/$1"],
     [/^\/battle\/rooms\/[^/]+\/(commands|leave)$/, "/battle/rooms/:id/$1"],
@@ -1140,17 +1182,50 @@ function requiredAssetMutationIdempotencyKeyFailure(req, pathNameValue) {
   }
   const pathName = String(pathNameValue || "");
   const mailMutation = IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN.test(pathName);
+  const rewardVaultMutation = IDEMPOTENCY_REQUIRED_REWARD_VAULT_HTTP_PATH_PATTERN.test(pathName);
   const petRecoveryMutation = IDEMPOTENCY_REQUIRED_PET_RECOVERY_HTTP_PATH_PATTERN.test(pathName);
   const battleCommandMutation = IDEMPOTENCY_REQUIRED_BATTLE_COMMAND_HTTP_PATH_PATTERN.test(pathName);
   if (
     !IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS.has(pathName)
     && !mailMutation
+    && !rewardVaultMutation
     && !petRecoveryMutation
     && !battleCommandMutation
   ) {
     return null;
   }
   return requiredIdempotencyKeyFailure(req);
+}
+
+function rewardVaultOptionsFromSearchParams(searchParams) {
+  const allowedFields = new Set(["limit", "cursor"]);
+  const limitValues = searchParams.getAll("limit");
+  const cursorValues = searchParams.getAll("cursor");
+  if (
+    Array.from(searchParams.keys()).some((field) => !allowedFields.has(field))
+    || limitValues.length !== 1
+    || cursorValues.length > 1
+  ) {
+    return {
+      ok: false,
+      code: "reward_vault_pagination_invalid",
+      message: "奖励仓分页参数无效，请刷新后重试。",
+    };
+  }
+  const rawOptions = {limit: limitValues[0]};
+  if (cursorValues.length === 1) rawOptions.cursor = cursorValues[0];
+  try {
+    return {
+      ok: true,
+      options: normalizeRewardVaultPageOptions(rawOptions, {requireExplicitLimit: true}),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      code: String(error && error.code || "reward_vault_pagination_invalid"),
+      message: String(error && error.message || "奖励仓分页参数无效，请刷新后重试。"),
+    };
+  }
 }
 
 function mailInboxOptionsFromSearchParams(searchParams) {
@@ -1456,6 +1531,12 @@ async function drainServerForShutdown(server, store) {
       ? server.mailArchiveMaintenance.close()
       : undefined
   ));
+  const rewardDeliveryMaintenanceDrained = shutdownStep(() => (
+    server.rewardVaultDeliveryMaintenance
+      && typeof server.rewardVaultDeliveryMaintenance.close === "function"
+      ? server.rewardVaultDeliveryMaintenance.close()
+      : undefined
+  ));
   const serverClosed = shutdownStep(() => new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   }));
@@ -1475,6 +1556,7 @@ async function drainServerForShutdown(server, store) {
   });
   const drainResults = await Promise.allSettled([
     archiveMaintenanceDrained,
+    rewardDeliveryMaintenanceDrained,
     serverClosed,
     eventHubDrained,
     durableDrained,
