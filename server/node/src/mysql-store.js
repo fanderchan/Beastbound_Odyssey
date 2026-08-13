@@ -36,6 +36,10 @@ const {
   normalizeMailInboxPageOptions,
 } = require("./auth/mail-inbox-pagination");
 const {
+  MAIL_ACTIVE_CAPACITY,
+  canonicalMailCenterSummary,
+} = require("./auth/mail-center-summary");
+const {
   commitConsumedEquipmentEnvelopeLedger,
   consumedEquipmentEnvelopeLedgerDeltaFrom,
   readConsumedEquipmentEnvelopeLedgerIndex,
@@ -61,6 +65,8 @@ const {
   stageMailAuthorityUpsert,
 } = require("./auth/mail-authority-state");
 const {
+  MAIL_ACTIVE_LIMIT_CAPACITY,
+  MAIL_STORAGE_CONTROL_LOCK_SQL,
   MARKET_CREATE_CAPACITY_CHECK_SQL,
   MARKET_CREATE_CAPACITY_GUARD_KEY,
   MARKET_CREATE_CAPACITY_LOCK_SQL,
@@ -132,6 +138,9 @@ const {
 const {
   runMysqlRewardVaultFeatureEnable,
 } = require("./mysql-reward-vault-feature-enable");
+const {
+  runMysqlMailActiveLimitFeatureEnable,
+} = require("./mysql-mail-active-limit-feature-enable");
 
 const DEFAULT_DATABASE = "beastbound_odyssey";
 // The normal CLI loader and the isolated capacity fixture must share one
@@ -155,6 +164,7 @@ const MYSQL_MARKET_FULL = "market_full";
 const MYSQL_STORE_REVISION_CONFLICT = "mysql_store_revision_conflict";
 const MYSQL_STORE_REVISION_MISSING = "mysql_store_revision_missing";
 const MYSQL_RESOURCE_REVISION_CONFLICT = "mysql_resource_revision_conflict";
+const MYSQL_MAIL_ACTIVE_LIMIT_REACHED = "mysql_mail_active_limit_reached";
 const MYSQL_MAIL_STORAGE_RUNTIME_STATE_CHANGED = "mysql_mail_storage_runtime_state_changed";
 const MYSQL_SHARED_ASSET_FULL_RELOAD_REQUIRED = "mysql_shared_asset_full_reload_required";
 const ACCOUNT_CHARACTER_SLOT_COUNT = 4;
@@ -182,6 +192,7 @@ function createMysqlAuthStore(options = {}) {
   // capability with no environment fallback and no access to authority load.
   const mailArchiveFeatureEnableEnabled = options.mailArchiveFeatureEnable === true;
   const rewardVaultFeatureEnableEnabled = options.rewardVaultFeatureEnable === true;
+  const mailActiveLimitFeatureEnableEnabled = options.mailActiveLimitFeatureEnable === true;
   const strictRowIdentity = options.strictRowIdentity === true;
   const ensureSchemaEnabled = options.ensureSchema !== false && !readOnly;
   let schemaReady = false;
@@ -747,6 +758,45 @@ function createMysqlAuthStore(options = {}) {
         certifyAttachment: mailStorageAttachmentCertifier,
       });
     },
+    async enableMailActiveLimitFeature(enableOptions = {}) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (
+        readOnly
+        || !mailActiveLimitFeatureEnableEnabled
+        || !config.singleWriterMaintenance
+      ) {
+        const error = new Error("活动邮箱容量开关只允许专用停服维护 store。");
+        error.code = "mail_active_limit_feature_dedicated_store_required";
+        throw error;
+      }
+      if (!config.usePool) {
+        const error = new Error("活动邮箱容量开关必须使用 MySQL 连接池。");
+        error.code = "mail_active_limit_feature_pool_required";
+        throw error;
+      }
+      if (schemaReady || lastPersistentData !== null) {
+        const error = new Error("活动邮箱容量开关 store 已进入普通 authority 生命周期。");
+        error.code = "mail_active_limit_feature_fresh_store_required";
+        throw error;
+      }
+      if (enableOptions.maintenanceConfirmed !== true) {
+        const error = new Error("活动邮箱容量开关需要显式确认停服维护窗口。");
+        error.code = "mail_active_limit_feature_maintenance_confirmation_required";
+        throw error;
+      }
+      ensureMailStorageFoundationSchema(config, config.database, {install: false});
+      if (mailStorageAttachmentCertifier === null) {
+        mailStorageAttachmentCertifier = createMailStorageBootstrapAttachmentCertifier();
+      }
+      return runMysqlMailActiveLimitFeatureEnable(persistentWritePool(), {
+        transactionPolicy: config.transactionPolicy,
+        transactionGuardOptions: enableOptions.transactionGuardOptions,
+        maintenanceConfirmed: true,
+        certifyAttachment: mailStorageAttachmentCertifier,
+      });
+    },
     async readDurableMutationReceipt(operationIdValue) {
       const operationId = durableReceiptReadOperationId(operationIdValue);
       if (closed) {
@@ -790,7 +840,10 @@ function createMysqlAuthStore(options = {}) {
         persistentWritePool(),
         request.recipientAccountId,
         {limit: request.limit, cursor: request.cursor},
-        {transactionPolicy: config.transactionPolicy},
+        {
+          transactionPolicy: config.transactionPolicy,
+          mailStorageState: mailStorageStartupState,
+        },
       );
     },
     async readMailArchivePage(accountId, pageOptions = {}) {
@@ -979,7 +1032,14 @@ function createMysqlAuthStore(options = {}) {
         mailStorageStartupState
         && mailStorageStartupState.flags
         && mailStorageStartupState.flags.vaultClaim === true
-        && mailStorageStartupState.flags.activeLimit === false
+      );
+    },
+    mailActiveLimitEnabled() {
+      return Boolean(
+        mailStorageStartupState
+        && mailStorageStartupState.flags
+        && mailStorageStartupState.flags.vaultClaim === true
+        && mailStorageStartupState.flags.activeLimit === true
       );
     },
     async readSharedAssetView(request, readOptions = {}) {
@@ -1189,7 +1249,6 @@ function assertRewardVaultStartupEnabled(state) {
     || state.lifecycleState !== "ready"
     || !state.flags
     || state.flags.vaultClaim !== true
-    || state.flags.activeLimit !== false
   ) {
     const error = new Error("奖励仓能力尚未启用或启动围栏已经漂移。");
     error.code = "reward_vault_feature_disabled_or_drifted";
@@ -1303,7 +1362,15 @@ function normalizeMysqlMailInboxPageRequest(accountIdValue, optionsValue) {
 
 async function runMysqlMailInboxPageRead(pool, accountIdValue, optionsValue, transactionOptions = {}) {
   const request = normalizeMysqlMailInboxPageRequest(accountIdValue, optionsValue);
+  const featureState = mysqlMailCenterFeatureState(transactionOptions.mailStorageState);
   return runMysqlGuardedPoolTransaction(pool, transactionOptions, async (connection) => {
+    if (featureState.dataGeneration !== null) {
+      const controlRows = mysqlQueryRows(await connection.query(
+        MAIL_STORAGE_CONTROL_LOCK_SQL,
+        ["mail_lifecycle"],
+      ));
+      assertMysqlMailCenterControl(controlRows, featureState);
+    }
     const cursorSql = request.cursor === null
       ? ""
       : " AND (created_at < ? OR (created_at = ? AND mail_id < ?))";
@@ -1329,17 +1396,85 @@ async function runMysqlMailInboxPageRead(pool, accountIdValue, optionsValue, tra
       throw mysqlMailInboxPageIntegrityError("page_row_limit", request.recipientAccountId);
     }
 
-    const unreadRows = mysqlQueryRows(await connection.query(
-      `SELECT COUNT(*) AS unread_count
+    const countRows = mysqlQueryRows(await connection.query(
+      `SELECT COUNT(*) AS active_count,
+        COALESCE(SUM(read_at IS NULL), 0) AS unread_count
         FROM mail_messages
-        WHERE recipient_account_id = ? AND read_at IS NULL`,
+        WHERE recipient_account_id = ?`,
       [request.recipientAccountId],
     ));
-    const unreadCount = unreadRows.length === 1
-      ? Number(unreadRows[0] && unreadRows[0].unread_count)
+    const activeCount = countRows.length === 1
+      ? Number(countRows[0] && countRows[0].active_count)
       : Number.NaN;
-    if (!Number.isSafeInteger(unreadCount) || unreadCount < 0) {
+    const unreadCount = countRows.length === 1
+      ? Number(countRows[0] && countRows[0].unread_count)
+      : Number.NaN;
+    if (
+      !Number.isSafeInteger(activeCount)
+      || activeCount < 0
+      || !Number.isSafeInteger(unreadCount)
+      || unreadCount < 0
+      || unreadCount > activeCount
+    ) {
       throw mysqlMailInboxPageIntegrityError("unread_count", request.recipientAccountId);
+    }
+
+    let counterCount = 0;
+    if (featureState.dataGeneration === 1) {
+      const counterRows = mysqlQueryRows(await connection.query(
+        `SELECT active_count, data_generation
+          FROM mail_active_counters
+          WHERE recipient_account_id = ?`,
+        [request.recipientAccountId],
+      ));
+      if (counterRows.length > 1) {
+        throw mysqlMailInboxPageIntegrityError("counter_row_count", request.recipientAccountId);
+      }
+      counterCount = counterRows.length === 0
+        ? 0
+        : Number(counterRows[0] && counterRows[0].active_count);
+      if (
+        !Number.isSafeInteger(counterCount)
+        || counterCount < 0
+        || counterCount !== activeCount
+        || (counterRows.length === 1 && Number(counterRows[0].data_generation) !== 1)
+      ) {
+        throw mysqlMailInboxPageIntegrityError("counter_drift", request.recipientAccountId);
+      }
+    } else {
+      counterCount = activeCount;
+    }
+
+    let availableRewardCount = 0;
+    if (featureState.rewardVaultEnabled) {
+      const rewardRows = mysqlQueryRows(await connection.query(
+        `SELECT COUNT(*) AS available_reward_count
+          FROM reward_vault_entries
+          WHERE recipient_account_id = ? AND status IN ('available', 'mail_delivered')`,
+        [request.recipientAccountId],
+      ));
+      availableRewardCount = rewardRows.length === 1
+        ? Number(rewardRows[0] && rewardRows[0].available_reward_count)
+        : Number.NaN;
+      if (!Number.isSafeInteger(availableRewardCount) || availableRewardCount < 0) {
+        throw mysqlMailInboxPageIntegrityError("reward_count", request.recipientAccountId);
+      }
+    }
+
+    let archiveCount = 0;
+    if (featureState.archiveEnabled) {
+      const archiveRows = mysqlQueryRows(await connection.query(
+        `SELECT COUNT(*) AS archive_count
+          FROM mail_archive_messages
+          WHERE recipient_account_id = ?`,
+        [request.recipientAccountId],
+      ));
+      archiveCount = archiveRows.length === 1
+        ? Number(archiveRows[0] && archiveRows[0].archive_count)
+        : Number.NaN;
+      if (!Number.isSafeInteger(archiveCount) || archiveCount < 0) {
+        throw mysqlMailInboxPageIntegrityError("archive_count", request.recipientAccountId);
+      }
     }
 
     const seenMailIds = new Set();
@@ -1360,7 +1495,7 @@ async function runMysqlMailInboxPageRead(pool, accountIdValue, optionsValue, tra
         mailId: String(lastRow && lastRow.mailId || ""),
       })
       : null;
-    return canonicalMailInboxPageResult({
+    const page = canonicalMailInboxPageResult({
       recipientAccountId: request.recipientAccountId,
       mailRows,
       unreadCount,
@@ -1375,11 +1510,69 @@ async function runMysqlMailInboxPageRead(pool, accountIdValue, optionsValue, tra
       // valid database page for values whose case/accent order differs.
       trustStoreOrder: true,
     });
+    const summary = canonicalMailCenterSummary({
+      schemaVersion: 1,
+      activeCount: counterCount,
+      activeCapacity: MAIL_ACTIVE_CAPACITY,
+      unreadCount,
+      availableRewardCount,
+      archiveCount,
+      archiveEnabled: featureState.archiveEnabled,
+      rewardVaultEnabled: featureState.rewardVaultEnabled,
+      activeLimitEnabled: featureState.activeLimitEnabled,
+    });
+    return Object.freeze({...page, summary});
   }, {
     beforeBegin: (connection) => connection.query(
       "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
     ),
   });
+}
+
+function mysqlMailCenterFeatureState(value) {
+  if (value === null || value === undefined) {
+    return Object.freeze({
+      dataGeneration: null,
+      archiveEnabled: false,
+      rewardVaultEnabled: false,
+      activeLimitEnabled: false,
+    });
+  }
+  const flags = value && value.flags;
+  const dataGeneration = Number(value && value.dataGeneration);
+  if (
+    ![0, 1].includes(dataGeneration)
+    || !flags
+    || typeof flags.archive !== "boolean"
+    || typeof flags.vaultClaim !== "boolean"
+    || typeof flags.activeLimit !== "boolean"
+    || (flags.activeLimit && !flags.vaultClaim)
+    || (dataGeneration === 0 && (flags.archive || flags.vaultClaim || flags.activeLimit))
+  ) {
+    throw mysqlMailInboxPageIntegrityError("feature_state", "mail_lifecycle");
+  }
+  return Object.freeze({
+    dataGeneration,
+    archiveEnabled: flags.archive,
+    rewardVaultEnabled: flags.vaultClaim,
+    activeLimitEnabled: flags.activeLimit,
+  });
+}
+
+function assertMysqlMailCenterControl(rows, state) {
+  const row = rows.length === 1 ? rows[0] : null;
+  if (
+    !row
+    || String(row.scope_key || "") !== "mail_lifecycle"
+    || Number(row.schema_generation) !== 1
+    || Number(row.data_generation) !== state.dataGeneration
+    || String(row.lifecycle_state || "") !== (state.dataGeneration === 1 ? "ready" : "uninitialized")
+    || Number(row.archive_enabled) !== (state.archiveEnabled ? 1 : 0)
+    || Number(row.vault_claim_enabled) !== (state.rewardVaultEnabled ? 1 : 0)
+    || Number(row.active_limit_enabled) !== (state.activeLimitEnabled ? 1 : 0)
+  ) {
+    throw mysqlMailInboxPageIntegrityError("control_drift", "mail_lifecycle");
+  }
 }
 
 function mysqlMailInboxPageIntegrityError(reason, key) {
@@ -4940,7 +5133,7 @@ function ensureMailStorageFoundationSchema(config, database, options = {}) {
     );
     return validateMailStorageStartupState(
       parseMailStorageControlOutput(controlOutput),
-      {supportedFeatures: ["archive", "vaultClaim"]},
+      {supportedFeatures: ["archive", "vaultClaim", "activeLimit"]},
     );
   } catch (cause) {
     if (cause && /^mysql_mail_storage_/.test(String(cause.code || ""))) {
@@ -7005,8 +7198,9 @@ async function runMysqlPoolSavePlan(pool, plan, options = {}) {
           }
           throw error;
         }
-        if (!mysqlResourceWriteAffectedRowsAccepted(write, mysqlAffectedRows(result))) {
-          throw mysqlResourceRevisionConflict(write.resource, write.key);
+        const affectedRows = mysqlAffectedRows(result);
+        if (!mysqlResourceWriteAffectedRowsAccepted(write, affectedRows)) {
+          await throwMysqlCertifiedWriteMismatch(connection, write, affectedRows);
         }
       }
     });
@@ -7567,9 +7761,48 @@ async function executeMysqlCertifiedResourceWrite(connection, write) {
     }
     throw error;
   }
-  if (!mysqlResourceWriteAffectedRowsAccepted(write, mysqlAffectedRows(result))) {
-    throw mysqlResourceRevisionConflict(write.resource, write.key);
+  const affectedRows = mysqlAffectedRows(result);
+  if (!mysqlResourceWriteAffectedRowsAccepted(write, affectedRows)) {
+    await throwMysqlCertifiedWriteMismatch(connection, write, affectedRows);
   }
+}
+
+async function throwMysqlCertifiedWriteMismatch(connection, write, affectedRows) {
+  if (
+    write
+    && write.resource === "mail_active_counter"
+    && write.kind === "limited_increment"
+    && affectedRows === 0
+    && Array.isArray(write.params)
+    && Number.isSafeInteger(Number(write.params[0]))
+    && Number(write.params[0]) > 0
+  ) {
+    const recipientAccountId = String(write.params[1] || "");
+    const incrementBy = Number(write.params[0]);
+    const rows = mysqlQueryRows(await connection.query(
+      `SELECT active_count, data_generation
+        FROM mail_active_counters
+        WHERE recipient_account_id = ? FOR UPDATE`,
+      [recipientAccountId],
+    ));
+    const activeCount = rows.length === 1 ? Number(rows[0] && rows[0].active_count) : Number.NaN;
+    if (
+      rows.length === 1
+      && Number(rows[0] && rows[0].data_generation) === 1
+      && Number.isSafeInteger(activeCount)
+      && activeCount >= 0
+      && activeCount + incrementBy > MAIL_ACTIVE_LIMIT_CAPACITY
+    ) {
+      const error = new Error("收件人的活动邮箱已满，本次邮件未发送。");
+      error.code = MYSQL_MAIL_ACTIVE_LIMIT_REACHED;
+      error.resource = "mail_active_counter";
+      error.resourceKey = recipientAccountId;
+      error.activeCount = activeCount;
+      error.capacity = MAIL_ACTIVE_LIMIT_CAPACITY;
+      throw error;
+    }
+  }
+  throw mysqlResourceRevisionConflict(write && write.resource, write && write.key);
 }
 
 async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites) {

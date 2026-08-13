@@ -224,15 +224,21 @@ test("feature enable certifies a non-empty source, identity, and counter snapsho
 });
 
 test("already-enabled control is a read-only no-op and inconsistent controls fail closed", async () => {
-  const enabled = poolFixture(control({archive_enabled: 1}));
-  const report = await runMysqlMailArchiveFeatureEnable(enabled.pool, {
-    maintenanceConfirmed: true,
-    certifyAttachment,
-  });
-  assert.equal(report.code, "mail_archive_feature_already_enabled");
-  assert.equal(report.enabled, false);
-  assert.equal(enabled.state.committed, 0);
-  assert.equal(enabled.state.rolledBack, 1);
+	for (const flags of [
+		{archive_enabled: 1},
+		{archive_enabled: 1, vault_claim_enabled: 1},
+		{archive_enabled: 1, vault_claim_enabled: 1, active_limit_enabled: 1},
+	]) {
+		const enabled = poolFixture(control(flags));
+		const report = await runMysqlMailArchiveFeatureEnable(enabled.pool, {
+			maintenanceConfirmed: true,
+			certifyAttachment,
+		});
+		assert.equal(report.code, "mail_archive_feature_already_enabled");
+		assert.equal(report.enabled, false);
+		assert.equal(enabled.state.committed, 0);
+		assert.equal(enabled.state.rolledBack, 1);
+	}
 
   const invalid = poolFixture(control({bootstrap_identity_count: 3}));
   await assert.rejects(

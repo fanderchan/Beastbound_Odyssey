@@ -421,7 +421,7 @@ function assertControl(row) {
     || String(row && row.lifecycle_state || "") !== "ready"
     || ![0, 1].includes(Number(row && row.archive_enabled))
     || Number(row && row.vault_claim_enabled) !== 1
-    || Number(row && row.active_limit_enabled) !== 0) {
+    || ![0, 1].includes(Number(row && row.active_limit_enabled))) {
     throw deliveryError("reward_vault_delivery_feature_disabled_or_drifted");
   }
 }

@@ -502,7 +502,7 @@ test("online and stopped-maintenance writers audit the inert foundation before a
   });
 });
 
-test("writable store rejects bad contracts, interrupted bootstrap, future generation and unsupported flags", () => {
+test("writable store rejects bad contracts, interrupted bootstrap, future generation and invalid feature dependencies", () => {
   withFakeMysqlSchema(({fakeMysqlPath}) => {
     const cases = [
       {
@@ -539,10 +539,10 @@ test("writable store rejects bad contracts, interrupted bootstrap, future genera
       {
         prepare() {
           process.env.FAKE_MAIL_STORAGE_CONTROL = controlOutput({
-            vaultClaimEnabled: true,
+            activeLimitEnabled: true,
           });
         },
-        code: "mysql_mail_storage_feature_unsupported",
+        code: "mysql_mail_storage_feature_dependency_invalid",
       },
     ];
     for (const fixture of cases) {

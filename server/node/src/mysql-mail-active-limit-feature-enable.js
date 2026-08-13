@@ -1,8 +1,14 @@
 "use strict";
 
 const {
+  MAIL_ACTIVE_LIMIT_CAPACITY,
+} = require("./mysql-resource-acquisition-order");
+const {
   certifyMailArchiveFeatureSnapshot,
 } = require("./mysql-mail-archive-feature-enable");
+const {
+  certifyMysqlRewardVaultRow,
+} = require("./mysql-reward-vault");
 const {
   MYSQL_COMMIT_OUTCOME_AMBIGUOUS,
   MYSQL_TRANSACTION_ROLLED_BACK,
@@ -13,8 +19,8 @@ const {
   normalizeMysqlTransactionPolicy,
 } = require("./mysql-transaction-guard");
 
-const REWARD_VAULT_FEATURE_ENABLE_KIND = "beastbound_reward_vault_feature_enable";
-const REWARD_VAULT_FEATURE_ENABLE_SCHEMA_VERSION = 1;
+const MAIL_ACTIVE_LIMIT_FEATURE_ENABLE_KIND = "beastbound_mail_active_limit_feature_enable";
+const MAIL_ACTIVE_LIMIT_FEATURE_ENABLE_SCHEMA_VERSION = 1;
 const TRANSACTION_ISOLATION_SQL = "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ";
 const CONTROL_READ_SQL = `SELECT scope_key, schema_generation, data_generation,
   lifecycle_state, archive_enabled, vault_claim_enabled, active_limit_enabled,
@@ -23,10 +29,10 @@ const CONTROL_READ_SQL = `SELECT scope_key, schema_generation, data_generation,
   bootstrap_active_count, COALESCE(source_digest, '') AS source_digest,
   COALESCE(reconciled_at, '') AS reconciled_at
   FROM mail_storage_control WHERE scope_key = 'mail_lifecycle' FOR UPDATE`;
-const CONTROL_ENABLE_SQL = `UPDATE mail_storage_control SET vault_claim_enabled = 1
+const CONTROL_ENABLE_SQL = `UPDATE mail_storage_control SET active_limit_enabled = 1
   WHERE scope_key = 'mail_lifecycle'
     AND schema_generation = 1 AND data_generation = 1 AND lifecycle_state = 'ready'
-    AND archive_enabled = ? AND vault_claim_enabled = 0 AND active_limit_enabled = 0
+    AND archive_enabled = ? AND vault_claim_enabled = 1 AND active_limit_enabled = 0
     AND bootstrap_source_count = bootstrap_identity_count
     AND bootstrap_identity_count = bootstrap_active_count
     AND bootstrap_recipient_count <= bootstrap_active_count
@@ -44,15 +50,17 @@ const COUNTER_LOCK_SQL = `SELECT recipient_account_id, active_count,
 const ARCHIVE_LOCK_SQL = `SELECT mail_id, sender_account_id, recipient_account_id,
   title, created_at, read_at, settled_at, archived_at, archive_generation, document_json
   FROM mail_archive_messages ORDER BY mail_id FOR UPDATE`;
-const VAULT_LOCK_SQL = `SELECT reward_id
+const VAULT_LOCK_SQL = `SELECT reward_id, source_key, source_kind, source_digest,
+  recipient_account_id, status, created_at, updated_at, delivered_at, claimed_at,
+  delivered_mail_id, data_generation, revision, document_json
   FROM reward_vault_entries ORDER BY reward_id FOR UPDATE`;
 
-async function runMysqlRewardVaultFeatureEnable(pool, options = {}) {
+async function runMysqlMailActiveLimitFeatureEnable(pool, options = {}) {
   if (options.maintenanceConfirmed !== true) {
-    throw featureError("reward_vault_feature_maintenance_confirmation_required");
+    throw featureError("mail_active_limit_feature_maintenance_confirmation_required");
   }
   if (typeof options.certifyAttachment !== "function") {
-    throw featureError("reward_vault_feature_attachment_certifier_missing");
+    throw featureError("mail_active_limit_feature_attachment_certifier_missing");
   }
   const policy = normalizeMysqlTransactionPolicy({
     ...objectOrEmpty(options.transactionPolicy),
@@ -65,16 +73,11 @@ async function runMysqlRewardVaultFeatureEnable(pool, options = {}) {
       const before = exactControl(await queryRows(connection, CONTROL_READ_SQL));
       const state = classifyControl(before);
       if (state === "enabled") {
-        return {commit: false, value: report("reward_vault_feature_already_enabled", true, false)};
+        return {commit: false, value: report("mail_active_limit_feature_already_enabled", true, false)};
       }
       if (state !== "disabled_ready") {
-        throw featureError("reward_vault_feature_control_not_ready");
+        throw featureError("mail_active_limit_feature_control_not_ready");
       }
-      // Lock the complete mail lifecycle in the stopped-maintenance snapshot
-      // order used by bootstrap/archive activation: source -> identity ->
-      // counter -> archive -> vault. No online writer may exist in this window.
-      // Historical archive rows are valid input here; they must be certified,
-      // not deleted or treated as a reason to postpone vault activation.
       const snapshot = {
         sourceRows: await queryRows(connection, SOURCE_LOCK_SQL),
         identityRows: await queryRows(connection, IDENTITY_LOCK_SQL),
@@ -87,10 +90,19 @@ async function runMysqlRewardVaultFeatureEnable(pool, options = {}) {
           snapshot,
           before,
           options.certifyAttachment,
-          {allowArchiveHistory: true},
+          {
+            allowArchiveHistory: true,
+            allowVaultHistory: true,
+            certifyVaultRows: (vaultRows, identityRows) => certifyVaultHistory(
+              vaultRows,
+              identityRows,
+              options.certifyAttachment,
+            ),
+          },
         );
+        assertRecipientCountsWithinLimit(snapshot.counterRows);
       } catch (cause) {
-        const error = featureError("reward_vault_feature_snapshot_certification_failed");
+        const error = featureError("mail_active_limit_feature_snapshot_certification_failed");
         error.cause = cause;
         throw error;
       }
@@ -99,17 +111,86 @@ async function runMysqlRewardVaultFeatureEnable(pool, options = {}) {
         connection,
         CONTROL_ENABLE_SQL,
         [Number(before.archive_enabled)],
-        "reward_vault_feature_enable_conflict",
+        "mail_active_limit_feature_enable_conflict",
       );
       const after = exactControl(await queryRows(connection, CONTROL_READ_SQL));
       if (!isExactEnabledTransition(before, after)) {
-        throw featureError("reward_vault_feature_readback_invalid");
+        throw featureError("mail_active_limit_feature_readback_invalid");
       }
-      return {commit: true, value: report("reward_vault_feature_enable_ok", true, false)};
+      return {commit: true, value: report("mail_active_limit_feature_enable_ok", true, false)};
     });
   } catch (error) {
-    if (!expected || String(error && error.code || "") !== MYSQL_COMMIT_OUTCOME_AMBIGUOUS) throw error;
+    if (!expected || String(error && error.code || "") !== MYSQL_COMMIT_OUTCOME_AMBIGUOUS) {
+      throw error;
+    }
     return recoverFeatureEnable(pool, {policy, guardOptions}, expected);
+  }
+}
+
+function certifyVaultHistory(rows, identityRows, certifyAttachment) {
+  const identityByMailId = new Map();
+  for (const row of identityRows) {
+    const mailId = String(row && row.mail_id || "");
+    if (mailId === "" || identityByMailId.has(mailId)) {
+      throw featureError("mail_active_limit_feature_identity_rows_invalid");
+    }
+    identityByMailId.set(mailId, row);
+  }
+  const rewardById = new Map();
+  const sourceIdentities = new Set();
+  for (const row of rows) {
+    const rewardId = String(row && row.reward_id || "");
+    const recipientAccountId = String(row && row.recipient_account_id || "");
+    let entry;
+    try {
+      entry = certifyMysqlRewardVaultRow(row, recipientAccountId, rewardId, {
+        certifyAttachment,
+      });
+    } catch (cause) {
+      const error = featureError("mail_active_limit_feature_vault_rows_invalid");
+      error.cause = cause;
+      throw error;
+    }
+    const sourceIdentity = JSON.stringify([
+      entry.recipientAccountId,
+      entry.sourceKind,
+      entry.sourceKey,
+    ]);
+    if (rewardById.has(entry.rewardId) || sourceIdentities.has(sourceIdentity)) {
+      throw featureError("mail_active_limit_feature_vault_rows_invalid");
+    }
+    rewardById.set(entry.rewardId, entry);
+    sourceIdentities.add(sourceIdentity);
+    if (entry.deliveredMailId !== null) {
+      const identity = identityByMailId.get(entry.deliveredMailId);
+      if (
+        !identity
+        || String(identity.reward_id || "") !== entry.rewardId
+        || String(identity.recipient_account_id || "") !== entry.recipientAccountId
+        || !["active", "archive"].includes(String(identity.location || ""))
+      ) {
+        throw featureError("mail_active_limit_feature_vault_mail_link_invalid");
+      }
+    }
+  }
+  for (const identity of identityRows) {
+    const rewardId = identity && identity.reward_id === null
+      ? null
+      : String(identity && identity.reward_id || "");
+    if (rewardId === null) continue;
+    const reward = rewardById.get(rewardId);
+    if (!reward || reward.deliveredMailId !== String(identity.mail_id || "")) {
+      throw featureError("mail_active_limit_feature_vault_mail_link_invalid");
+    }
+  }
+}
+
+function assertRecipientCountsWithinLimit(rows) {
+  for (const row of rows) {
+    const activeCount = Number(row && row.active_count);
+    if (!Number.isSafeInteger(activeCount) || activeCount < 0 || activeCount > MAIL_ACTIVE_LIMIT_CAPACITY) {
+      throw featureError("mail_active_limit_feature_recipient_over_capacity");
+    }
   }
 }
 
@@ -120,16 +201,16 @@ async function recoverFeatureEnable(pool, options, before) {
       value: exactControl(await queryRows(connection, CONTROL_READ_SQL)),
     }));
     if (isExactEnabledTransition(before, current)) {
-      return report("reward_vault_feature_enable_commit_recovered", true, true);
+      return report("mail_active_limit_feature_enable_commit_recovered", true, true);
     }
     if (sameControl(before, current)) {
-      return report("reward_vault_feature_enable_not_committed", false, true, {
+      return report("mail_active_limit_feature_enable_not_committed", false, true, {
         ok: false,
         retryable: true,
       });
     }
   } catch {}
-  return report("reward_vault_feature_enable_outcome_unknown", false, false, {
+  return report("mail_active_limit_feature_enable_outcome_unknown", false, false, {
     ok: false,
     outcomeUnknown: true,
   });
@@ -137,11 +218,7 @@ async function recoverFeatureEnable(pool, options, before) {
 
 function classifyControl(row) {
   if (!baseReadyControl(row)) return "invalid";
-  if (Number(row.vault_claim_enabled) === 0) {
-    return Number(row.active_limit_enabled) === 0 ? "disabled_ready" : "invalid";
-  }
-  if (Number(row.vault_claim_enabled) === 1) return "enabled";
-  return "invalid";
+  return Number(row.active_limit_enabled) === 1 ? "enabled" : "disabled_ready";
 }
 
 function baseReadyControl(row) {
@@ -150,7 +227,7 @@ function baseReadyControl(row) {
     && Number(row.data_generation) === 1
     && String(row.lifecycle_state || "") === "ready"
     && [0, 1].includes(Number(row.archive_enabled))
-    && [0, 1].includes(Number(row.vault_claim_enabled))
+    && Number(row.vault_claim_enabled) === 1
     && [0, 1].includes(Number(row.active_limit_enabled))
     && nonNegativeInteger(row.bootstrap_source_count) !== null
     && Number(row.bootstrap_source_count) === Number(row.bootstrap_identity_count)
@@ -162,14 +239,12 @@ function baseReadyControl(row) {
 
 function isExactEnabledTransition(before, after) {
   return baseReadyControl(before)
-    && Number(before.vault_claim_enabled) === 0
     && Number(before.active_limit_enabled) === 0
     && baseReadyControl(after)
-    && Number(after.vault_claim_enabled) === 1
-    && Number(after.active_limit_enabled) === 0
+    && Number(after.active_limit_enabled) === 1
     && Object.keys(before).length === Object.keys(after).length
     && Object.keys(before).every((field) => (
-      field === "vault_claim_enabled"
+      field === "active_limit_enabled"
       || field === "updated_at"
       || scalarEquals(before[field], after[field])
     ));
@@ -203,7 +278,7 @@ async function runTransaction(pool, options, execute) {
     started = true;
     const outcome = await execute(deadlineConnection(connection, deadline));
     if (!outcome || typeof outcome.commit !== "boolean" || !Object.hasOwn(outcome, "value")) {
-      throw featureError("reward_vault_feature_transaction_result_invalid");
+      throw featureError("mail_active_limit_feature_transaction_result_invalid");
     }
     if (!outcome.commit) {
       await deadline.track(operation(connection, "rollback"), {classifyFailure: false});
@@ -270,13 +345,13 @@ function operation(connection, method, args = []) {
 async function queryRows(connection, sql) {
   const result = await connection.query(sql);
   const rows = Array.isArray(result) && Array.isArray(result[0]) ? result[0] : result;
-  if (!Array.isArray(rows)) throw featureError("reward_vault_feature_query_result_invalid");
+  if (!Array.isArray(rows)) throw featureError("mail_active_limit_feature_query_result_invalid");
   return rows;
 }
 
 function exactControl(rows) {
   if (rows.length !== 1 || !rows[0] || typeof rows[0] !== "object") {
-    throw featureError("reward_vault_feature_control_row_invalid");
+    throw featureError("mail_active_limit_feature_control_row_invalid");
   }
   return structuredClone(rows[0]);
 }
@@ -289,11 +364,12 @@ async function exactWrite(connection, sql, params, code) {
 
 function report(code, enabled, recovered, overrides = {}) {
   return Object.freeze({
-    kind: REWARD_VAULT_FEATURE_ENABLE_KIND,
-    schemaVersion: REWARD_VAULT_FEATURE_ENABLE_SCHEMA_VERSION,
+    kind: MAIL_ACTIVE_LIMIT_FEATURE_ENABLE_KIND,
+    schemaVersion: MAIL_ACTIVE_LIMIT_FEATURE_ENABLE_SCHEMA_VERSION,
     ok: overrides.ok !== false,
     code,
     enabled: enabled === true,
+    capacity: MAIL_ACTIVE_LIMIT_CAPACITY,
     recovered: recovered === true,
     outcomeUnknown: overrides.outcomeUnknown === true,
     retryable: overrides.retryable === true,
@@ -313,7 +389,7 @@ function nonNegativeInteger(value) {
 
 function deterministicFeatureError(error) {
   const code = String(error && error.code || "");
-  return code.startsWith("reward_vault_feature_") || code === MYSQL_TRANSACTION_ROLLED_BACK;
+  return code.startsWith("mail_active_limit_feature_") || code === MYSQL_TRANSACTION_ROLLED_BACK;
 }
 
 function decorateNoCommit(error, rollbackCompleted) {
@@ -333,8 +409,8 @@ function safeRelease(connection, primaryError = null) {
 }
 
 function featureError(code) {
-  const error = new Error("MySQL 奖励仓开关未满足安全合同。");
-  error.code = String(code || "reward_vault_feature_enable_failed");
+  const error = new Error("MySQL 活动邮箱容量开关未满足安全合同。");
+  error.code = String(code || "mail_active_limit_feature_enable_failed");
   return error;
 }
 
@@ -343,7 +419,8 @@ function objectOrEmpty(value) {
 }
 
 module.exports = {
-  REWARD_VAULT_FEATURE_ENABLE_KIND,
-  REWARD_VAULT_FEATURE_ENABLE_SCHEMA_VERSION,
-  runMysqlRewardVaultFeatureEnable,
+  __assertRecipientCountsWithinLimitForTest: assertRecipientCountsWithinLimit,
+  MAIL_ACTIVE_LIMIT_FEATURE_ENABLE_KIND,
+  MAIL_ACTIVE_LIMIT_FEATURE_ENABLE_SCHEMA_VERSION,
+  runMysqlMailActiveLimitFeatureEnable,
 };

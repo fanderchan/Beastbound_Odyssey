@@ -39,6 +39,9 @@ const {
   canonicalMailInboxPageResult,
   normalizeMailInboxPageOptions,
 } = require("./auth/mail-inbox-pagination");
+const {
+  canonicalMailCenterSummary,
+} = require("./auth/mail-center-summary");
 const {createMailArchiveService} = require("./auth/mail-archive-service");
 const {createRewardVaultService} = require("./auth/reward-vault-service");
 const {
@@ -4369,9 +4372,17 @@ function createAuthService(options = {}) {
       return {handled: false};
     }
     let page;
+    let summary;
     try {
+      const storedPage = await store.readMailInboxPage(resolved.account.accountId, pageOptions);
       page = canonicalMailInboxPageResult(
-        await store.readMailInboxPage(resolved.account.accountId, pageOptions),
+        {
+          recipientAccountId: storedPage.recipientAccountId,
+          mailRows: storedPage.mailRows,
+          unreadCount: storedPage.unreadCount,
+          nextCursor: storedPage.nextCursor,
+          hasMore: storedPage.hasMore,
+        },
         resolved.account.accountId,
         pageOptions,
         // The store adapter owns one database ORDER BY/WHERE collation
@@ -4379,6 +4390,12 @@ function createAuthService(options = {}) {
         // duplicate, count and last-row cursor without guessing that collation.
         {trustStoreOrder: true},
       );
+      summary = canonicalMailCenterSummary(storedPage.summary);
+      if (summary.unreadCount !== page.unreadCount || summary.activeCount < page.mailRows.length) {
+        const error = new Error("邮件分页与邮件中心摘要不一致。");
+        error.code = "mail_center_summary_drifted";
+        throw error;
+      }
     } catch (cause) {
       throw sharedAssetReadFailure(cause);
     }
@@ -4389,6 +4406,7 @@ function createAuthService(options = {}) {
         unreadCount: page.unreadCount,
         nextCursor: page.nextCursor,
         hasMore: page.hasMore,
+        summary,
       })),
     };
   }
@@ -5733,6 +5751,8 @@ function createAuthService(options = {}) {
       const marketCreateCapacityFailureCode = methodName === "createMarketListing"
         ? mysqlKnownMarketCreateCapacityFailureCode(cause)
         : "";
+      const mailActiveLimitFailure = methodName === "sendMail"
+        && mysqlKnownMailActiveLimitFailure(cause);
       if (
         receiptOperationId !== ""
         && store.durableReceiptReads === true
@@ -5797,6 +5817,15 @@ function createAuthService(options = {}) {
           marketCreateCapacityFailureCode === "market_listing_limit"
             ? "你的挂单太多，请先卖出或取消一些。"
             : "交易所挂单已满，请稍后再试。",
+        );
+      }
+      if (mailActiveLimitFailure) {
+        if (typeof store.clearSaveError === "function") {
+          store.clearSaveError();
+        }
+        return fail(
+          "mail_recipient_full",
+          "对方的活动邮箱已满，本次邮件未发送，附件也没有扣除。",
         );
       }
       const outcomeUnknown = isMysqlCommitOutcomeAmbiguous(cause);
@@ -7598,6 +7627,15 @@ function mysqlKnownMarketCreateCapacityFailureCode(error) {
     return false;
   });
   return failureCode;
+}
+
+function mysqlKnownMailActiveLimitFailure(error) {
+  if (!isMysqlKnownNoCommitFailure(error)) {
+    return false;
+  }
+  return mysqlFailureChainSome(error, (current) => (
+    String(current && current.code || "") === "mysql_mail_active_limit_reached"
+  ));
 }
 
 function isMysqlCommitOutcomeAmbiguous(error) {

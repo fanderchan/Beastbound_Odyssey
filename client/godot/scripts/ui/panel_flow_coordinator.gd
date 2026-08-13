@@ -90,6 +90,7 @@ const GmPetEvolutionQaClientModel := preload("res://scripts/progression/gm_pet_e
 const GmPetCaptureRecoveryClientModel := preload("res://scripts/progression/gm_pet_capture_recovery_client_model.gd")
 const GmToolRuntimeModel := preload("res://scripts/progression/gm_tool_runtime_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
+const MailCenterModel := preload("res://scripts/progression/mail_center_model.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const OfflineHangClientModel := preload("res://scripts/progression/offline_hang_client_model.gd")
 const MapRegionCatalog := preload("res://scripts/world/map_region_catalog.gd")
@@ -2192,6 +2193,24 @@ var mailbox_page_state:
 	set(value):
 		host.mailbox_page_state = value
 
+var mailbox_reward_page_state:
+	get:
+		return host.mailbox_reward_page_state
+	set(value):
+		host.mailbox_reward_page_state = value
+
+var mailbox_archive_page_state:
+	get:
+		return host.mailbox_archive_page_state
+	set(value):
+		host.mailbox_archive_page_state = value
+
+var mailbox_summary:
+	get:
+		return host.mailbox_summary
+	set(value):
+		host.mailbox_summary = value
+
 var mailbox_request_pending:
 	get:
 		return host.mailbox_request_pending
@@ -2210,11 +2229,29 @@ var mailbox_inbox_tab_button:
 	set(value):
 		host.mailbox_inbox_tab_button = value
 
+var mailbox_rewards_tab_button:
+	get:
+		return host.mailbox_rewards_tab_button
+	set(value):
+		host.mailbox_rewards_tab_button = value
+
+var mailbox_archive_tab_button:
+	get:
+		return host.mailbox_archive_tab_button
+	set(value):
+		host.mailbox_archive_tab_button = value
+
 var mailbox_compose_tab_button:
 	get:
 		return host.mailbox_compose_tab_button
 	set(value):
 		host.mailbox_compose_tab_button = value
+
+var mailbox_capacity_label:
+	get:
+		return host.mailbox_capacity_label
+	set(value):
+		host.mailbox_capacity_label = value
 
 var mailbox_inbox_container:
 	get:
@@ -7525,10 +7562,16 @@ func _build_hud() -> void:
 	mailbox_title_label.add_theme_font_size_override("font_size", 21)
 	mailbox_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mailbox_header.add_child(mailbox_title_label)
+	mailbox_capacity_label = Label.new()
+	mailbox_capacity_label.text = "邮件 0"
+	mailbox_capacity_label.add_theme_font_size_override("font_size", 14)
+	mailbox_capacity_label.add_theme_color_override("font_color", Color(0.78, 0.74, 0.62, 1.0))
+	mailbox_capacity_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mailbox_header.add_child(mailbox_capacity_label)
 	mailbox_refresh_button = Button.new()
 	mailbox_refresh_button.text = "刷新"
 	mailbox_refresh_button.custom_minimum_size = Vector2(80, 44)
-	mailbox_refresh_button.pressed.connect(_request_server_mailbox_inbox)
+	mailbox_refresh_button.pressed.connect(_request_server_mailbox_active_section)
 	mailbox_header.add_child(mailbox_refresh_button)
 	mailbox_close_button = Button.new()
 	mailbox_close_button.text = "关闭"
@@ -7539,9 +7582,13 @@ func _build_hud() -> void:
 	var mailbox_tabs = HBoxContainer.new()
 	mailbox_tabs.add_theme_constant_override("separation", 8)
 	mailbox_column.add_child(mailbox_tabs)
-	mailbox_inbox_tab_button = _mailbox_tab_button("收信", "inbox")
+	mailbox_inbox_tab_button = _mailbox_tab_button("收件箱", "inbox")
+	mailbox_rewards_tab_button = _mailbox_tab_button("奖励", "rewards")
+	mailbox_archive_tab_button = _mailbox_tab_button("归档", "archive")
 	mailbox_compose_tab_button = _mailbox_tab_button("写信", "compose")
 	mailbox_tabs.add_child(mailbox_inbox_tab_button)
+	mailbox_tabs.add_child(mailbox_rewards_tab_button)
+	mailbox_tabs.add_child(mailbox_archive_tab_button)
 	mailbox_tabs.add_child(mailbox_compose_tab_button)
 
 	mailbox_inbox_container = HBoxContainer.new()
@@ -9117,9 +9164,12 @@ func _rotate_server_session_requests(next_token: String) -> void:
 	party_invite_pending_kind = ""
 	chat_messages.clear()
 	mailbox_page_state = MailboxPageModel.reset_for_account()
-	if mailbox_selected_source == "server":
-		mailbox_selected_mail_id = ""
-		mailbox_selected_source = "server"
+	mailbox_reward_page_state = MailCenterModel.empty_page()
+	mailbox_archive_page_state = MailCenterModel.empty_page()
+	mailbox_summary = MailCenterModel.empty_summary()
+	mailbox_selected_mail_id = ""
+	mailbox_selected_source = "server"
+	mailbox_active_tab = MailCenterModel.SECTION_INBOX
 	party_current_state.clear()
 	party_online_players.clear()
 	party_invite_deferred_ids.clear()
@@ -9255,20 +9305,34 @@ func _server_session_request_guard_self_check() -> Dictionary:
 	var saved_token := server_session_token
 	var saved_serial := server_session_request_serial
 	var saved_tickets := server_session_request_tickets.duplicate(true)
+	var saved_session: Dictionary = current_account_session.duplicate(true)
+	current_account_session = saved_session.duplicate(true)
+	current_account_session["serverSessionToken"] = "token_a"
 	server_session_generation = 7
 	server_session_token = "token_a"
 	server_session_request_serial = 40
-	var ticket_a := {"id": 41, "generation": 7, "token": "token_a"}
+	server_session_request_tickets.clear()
+	var ticket_a := _begin_server_session_request("mail")
+	var first_current := _server_session_request_is_current("mail", ticket_a)
+	current_account_session["serverSessionToken"] = "token_b"
 	server_session_generation = 8
 	server_session_token = "token_b"
-	var ticket_b := {"id": 42, "generation": 8, "token": "token_b"}
-	var stale_rejected := int(ticket_a.get("generation", -1)) != server_session_generation or str(ticket_a.get("token", "")) != server_session_token
-	var current_accepted := int(ticket_b.get("id", 0)) == 42 and int(ticket_b.get("generation", -1)) == server_session_generation and str(ticket_b.get("token", "")) == server_session_token
+	var stale_rejected_after_rotation := not _server_session_request_is_current("mail", ticket_a)
+	var ticket_b := _begin_server_session_request("mail")
+	var current_accepted := _server_session_request_is_current("mail", ticket_b)
+	var late_first_rejected := not _server_session_request_is_current("mail", ticket_a)
 	server_session_generation = saved_generation
 	server_session_token = saved_token
 	server_session_request_serial = saved_serial
 	server_session_request_tickets = saved_tickets
-	return {"ok": stale_rejected and current_accepted, "staleRejected": stale_rejected, "currentAccepted": current_accepted}
+	current_account_session = saved_session
+	return {
+		"ok": first_current and stale_rejected_after_rotation and current_accepted and late_first_rejected,
+		"firstCurrent": first_current,
+		"staleRejectedAfterRotation": stale_rejected_after_rotation,
+		"currentAccepted": current_accepted,
+		"lateFirstRejected": late_first_rejected,
+	}
 
 func _server_battle_should_poll_waiting_state() -> bool:
 	return host._server_battle().should_poll_waiting_state()
@@ -22267,26 +22331,40 @@ func _close_mailbox_panel(update_layout: bool = true) -> void:
 	_hide_control(mailbox_panel, update_layout)
 
 func _set_mailbox_tab(tab_id: String) -> void:
-	var normalized := tab_id.strip_edges()
-	if normalized != "compose":
-		normalized = "inbox"
+	var normalized := MailCenterModel.normalized_section(tab_id)
+	if normalized == mailbox_active_tab:
+		return
 	mailbox_active_tab = normalized
-	_refresh_mailbox_tab_state()
-	_refresh_mailbox_request_controls()
+	mailbox_selected_mail_id = ""
+	mailbox_selected_source = "server"
+	_refresh_mailbox_panel()
+	if _is_server_account_session() and normalized != MailCenterModel.SECTION_COMPOSE:
+		_request_server_mailbox_active_section()
 	host._layout_hud()
 
 func _refresh_mailbox_tab_state() -> void:
-	if mailbox_active_tab != "compose":
-		mailbox_active_tab = "inbox"
-	var inbox_visible: bool = mailbox_active_tab == "inbox"
+	mailbox_active_tab = MailCenterModel.normalized_section(mailbox_active_tab)
+	var list_visible: bool = mailbox_active_tab != MailCenterModel.SECTION_COMPOSE
 	if mailbox_inbox_tab_button != null:
-		mailbox_inbox_tab_button.button_pressed = inbox_visible
+		mailbox_inbox_tab_button.button_pressed = mailbox_active_tab == MailCenterModel.SECTION_INBOX
+		mailbox_inbox_tab_button.text = MailCenterModel.tab_text(MailCenterModel.SECTION_INBOX, mailbox_summary)
+	if mailbox_rewards_tab_button != null:
+		mailbox_rewards_tab_button.button_pressed = mailbox_active_tab == MailCenterModel.SECTION_REWARDS
+		mailbox_rewards_tab_button.text = MailCenterModel.tab_text(MailCenterModel.SECTION_REWARDS, mailbox_summary)
+		mailbox_rewards_tab_button.disabled = not MailCenterModel.section_available(MailCenterModel.SECTION_REWARDS, mailbox_summary)
+	if mailbox_archive_tab_button != null:
+		mailbox_archive_tab_button.button_pressed = mailbox_active_tab == MailCenterModel.SECTION_ARCHIVE
+		mailbox_archive_tab_button.text = MailCenterModel.tab_text(MailCenterModel.SECTION_ARCHIVE, mailbox_summary)
+		mailbox_archive_tab_button.disabled = not MailCenterModel.section_available(MailCenterModel.SECTION_ARCHIVE, mailbox_summary)
 	if mailbox_compose_tab_button != null:
-		mailbox_compose_tab_button.button_pressed = not inbox_visible
+		mailbox_compose_tab_button.button_pressed = mailbox_active_tab == MailCenterModel.SECTION_COMPOSE
+		mailbox_compose_tab_button.text = MailCenterModel.tab_text(MailCenterModel.SECTION_COMPOSE, mailbox_summary)
 	if mailbox_inbox_container != null:
-		mailbox_inbox_container.visible = inbox_visible
+		mailbox_inbox_container.visible = list_visible
 	if mailbox_compose_container != null:
-		mailbox_compose_container.visible = not inbox_visible
+		mailbox_compose_container.visible = not list_visible
+	if mailbox_capacity_label != null:
+		mailbox_capacity_label.text = MailCenterModel.capacity_text(mailbox_summary)
 
 func _refresh_mailbox_panel() -> void:
 	if mailbox_panel == null or mailbox_list_container == null or mailbox_detail_label == null or mailbox_claim_button == null:
@@ -22308,7 +22386,7 @@ func _refresh_mailbox_panel() -> void:
 	mailbox_message_buttons.clear()
 	if messages.is_empty():
 		var empty_label = Label.new()
-		empty_label.text = "没有邮件。" if not mailbox_request_pending else "正在读取..."
+		empty_label.text = _mailbox_empty_text()
 		empty_label.add_theme_font_size_override("font_size", 16)
 		mailbox_list_container.add_child(empty_label)
 	else:
@@ -22331,15 +22409,31 @@ func _refresh_mailbox_panel() -> void:
 			mailbox_message_buttons[key] = button
 	var selected = _mailbox_entry_by_key(mailbox_selected_mail_id)
 	if selected.is_empty():
-		mailbox_detail_label.text = "没有邮件。"
+		mailbox_detail_label.text = _mailbox_empty_text()
 		mailbox_claim_button.disabled = true
 		mailbox_claim_button.text = "领取附件"
-		mailbox_claim_button.visible = true
+		mailbox_claim_button.visible = mailbox_active_tab != MailCenterModel.SECTION_ARCHIVE
 		mailbox_claim_button.tooltip_text = ""
 		_refresh_mailbox_request_controls()
 		return
 	var selected_source = str(selected.get("source", "server"))
 	var selected_message = selected.get("message", {}) as Dictionary if selected.get("message", {}) is Dictionary else {}
+	if selected_source == "reward":
+		mailbox_detail_label.text = _reward_vault_detail_text(selected_message)
+		var claimable := bool(selected_message.get("claimable", false))
+		mailbox_claim_button.visible = true
+		mailbox_claim_button.disabled = mailbox_request_pending or not claimable
+		mailbox_claim_button.text = "领取奖励" if claimable else "已领取"
+		mailbox_claim_button.tooltip_text = "奖励会直接放入背包；空间不足时仍会安全保存在这里。" if claimable else "这份奖励已经领取。"
+		_refresh_mailbox_request_controls()
+		return
+	if selected_source == "archive":
+		mailbox_detail_label.text = _archive_mail_detail_text(selected_message)
+		mailbox_claim_button.visible = false
+		mailbox_claim_button.disabled = true
+		mailbox_claim_button.tooltip_text = ""
+		_refresh_mailbox_request_controls()
+		return
 	if selected_source == "server":
 		mailbox_detail_label.text = _server_mailbox_detail_text(selected_message)
 		var server_has_attachments := _mailbox_has_attachments(selected_message)
@@ -22380,6 +22474,13 @@ func _select_mailbox_message(mail_id: String, source: String = "local") -> void:
 func _on_mailbox_claim_pressed() -> void:
 	if mailbox_selected_mail_id == "":
 		return
+	if mailbox_selected_source == "reward":
+		var reward_id = _mailbox_key_id(mailbox_selected_mail_id, "reward:")
+		if reward_id != "":
+			_request_server_reward_vault_claim(reward_id)
+		return
+	if mailbox_selected_source == "archive":
+		return
 	if mailbox_selected_source == "server":
 		var server_mail_id = _mailbox_key_id(mailbox_selected_mail_id, "server:")
 		if server_mail_id != "":
@@ -22400,11 +22501,31 @@ func _on_mailbox_claim_pressed() -> void:
 func _refresh_mailbox_menu_button() -> void:
 	if mailbox_menu_button == null:
 		return
-	var count = PlayerProgressModel.mailbox_unclaimed_count(player_profile) + _server_mailbox_unread_count()
+	var summary_unread := int(MailCenterModel.normalized_summary(mailbox_summary).get("unreadCount", 0))
+	var reward_count := int(MailCenterModel.normalized_summary(mailbox_summary).get("availableRewardCount", 0))
+	var count = (
+		PlayerProgressModel.mailbox_unclaimed_count(player_profile)
+		+ maxi(summary_unread, _server_mailbox_unread_count())
+		+ reward_count
+	)
 	mailbox_menu_button.text = "邮箱" if count <= 0 else "邮箱%d" % count
 
 func _mailbox_combined_entries() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
+	if mailbox_active_tab == MailCenterModel.SECTION_REWARDS:
+		for reward in MailCenterModel.entries(mailbox_reward_page_state):
+			var reward_id = str(reward.get("rewardId", "")).strip_edges()
+			if reward_id != "":
+				result.append({"key": "reward:%s" % reward_id, "source": "reward", "message": reward})
+		return result
+	if mailbox_active_tab == MailCenterModel.SECTION_ARCHIVE:
+		for message in MailCenterModel.entries(mailbox_archive_page_state):
+			var archive_mail_id = str(message.get("mailId", "")).strip_edges()
+			if archive_mail_id != "":
+				result.append({"key": "archive:%s" % archive_mail_id, "source": "archive", "message": message})
+		return result
+	if mailbox_active_tab == MailCenterModel.SECTION_COMPOSE:
+		return result
 	for message in MailboxPageModel.messages(mailbox_page_state):
 		var mail_id = str(message.get("mailId", "")).strip_edges()
 		if mail_id == "":
@@ -22440,7 +22561,66 @@ func _mailbox_entry_button_text(entry: Dictionary) -> String:
 		var title = str(message.get("title", "玩家邮件"))
 		var sender = str(message.get("senderDisplayName", message.get("senderUsername", "玩家")))
 		return "%s\n%s  %s%s" % [title, sender, status, settlement]
+	if source == "reward":
+		var reward_status := "可领取" if bool(message.get("claimable", false)) else "已领取"
+		return "%s\n系统奖励  %s" % [str(message.get("title", "奖励")), reward_status]
+	if source == "archive":
+		var archived_sender = str(message.get("senderDisplayName", message.get("senderUsername", "系统")))
+		return "%s\n%s  已归档" % [str(message.get("title", "历史邮件")), archived_sender]
 	return PlayerProgressModel.mailbox_message_button_text(message)
+
+func _mailbox_empty_text() -> String:
+	if mailbox_request_pending:
+		return "正在读取..."
+	match mailbox_active_tab:
+		MailCenterModel.SECTION_REWARDS:
+			return "没有待领取奖励。" if MailCenterModel.section_available(mailbox_active_tab, mailbox_summary) else "奖励暂未开放。"
+		MailCenterModel.SECTION_ARCHIVE:
+			return "还没有归档邮件。" if MailCenterModel.section_available(mailbox_active_tab, mailbox_summary) else "邮件归档暂未开放。"
+		_:
+			return "没有邮件。"
+
+func _reward_vault_detail_text(reward: Dictionary) -> String:
+	var source_labels := {
+		"market_sale": "市场成交",
+		"tutorial_market_sale": "新手市场任务",
+		"battle_overflow": "战斗背包溢出",
+		"qualification_reward": "资质奖励",
+	}
+	var lines: Array[String] = [
+		str(reward.get("title", "奖励")),
+		"状态：%s" % ("可领取" if bool(reward.get("claimable", false)) else "已领取"),
+		"来源：%s" % str(source_labels.get(str(reward.get("sourceKind", "")), "系统奖励")),
+	]
+	var created_at := str(reward.get("createdAt", "")).strip_edges()
+	if created_at != "":
+		lines.append("时间：%s" % _mailbox_time_text(created_at))
+	var body := str(reward.get("body", "")).strip_edges()
+	if body != "":
+		lines.append("")
+		lines.append(body)
+	lines.append("")
+	lines.append("奖励：%s" % _mailbox_attachment_text(reward))
+	return "\n".join(lines)
+
+func _archive_mail_detail_text(message: Dictionary) -> String:
+	var lines: Array[String] = [str(message.get("title", "历史邮件"))]
+	var sender := str(message.get("senderDisplayName", message.get("senderUsername", "系统"))).strip_edges()
+	lines.append("来自：%s" % (sender if sender != "" else "系统"))
+	var created_at := str(message.get("createdAt", "")).strip_edges()
+	if created_at != "":
+		lines.append("时间：%s" % _mailbox_time_text(created_at))
+	lines.append("状态：已归档")
+	var archived_at := str(message.get("archivedAt", "")).strip_edges()
+	if archived_at != "":
+		lines.append("归档：%s" % _mailbox_time_text(archived_at))
+	var body := str(message.get("body", "")).strip_edges()
+	if body != "":
+		lines.append("")
+		lines.append(body)
+	lines.append("")
+	lines.append("附件：已结算")
+	return "\n".join(lines)
 
 func _server_mailbox_detail_text(message: Dictionary) -> String:
 	var lines: Array[String] = []
@@ -22451,12 +22631,12 @@ func _server_mailbox_detail_text(message: Dictionary) -> String:
 	lines.append("来自：%s" % sender)
 	var created_at = str(message.get("createdAt", "")).strip_edges()
 	if created_at != "":
-		lines.append("时间：%s" % created_at)
+		lines.append("时间：%s" % _mailbox_time_text(created_at))
 	var settled := MailboxPageModel.is_settled(message)
 	lines.append("状态：%s" % ("未读" if MailboxPageModel.is_unread(message) else "已读"))
 	if settled:
 		lines.append("附件状态：已结算（无待领取附件）")
-		lines.append("结算：%s" % str(message.get("settledAt", "")))
+		lines.append("结算：%s" % _mailbox_time_text(str(message.get("settledAt", ""))))
 	var body = str(message.get("body", "")).strip_edges()
 	if body != "":
 		lines.append("")
@@ -22478,6 +22658,12 @@ func _server_mailbox_detail_text(message: Dictionary) -> String:
 					lines.append("  %s" % str((detail_lines as Array)[index]))
 	return "\n".join(lines)
 
+func _mailbox_time_text(value: String) -> String:
+	var normalized := value.strip_edges()
+	if normalized.length() >= 16 and normalized.substr(10, 1) == "T":
+		return "%s %s" % [normalized.substr(0, 10), normalized.substr(11, 5)]
+	return normalized
+
 func _server_mailbox_message_by_key(key: String) -> Dictionary:
 	var mail_id = _mailbox_key_id(key, "server:")
 	for message in MailboxPageModel.messages(mailbox_page_state):
@@ -22492,23 +22678,47 @@ func _mailbox_key_id(key: String, prefix: String) -> String:
 	return key.substr(prefix.length()) if key.begins_with(prefix) else key
 
 func _refresh_mailbox_request_controls() -> void:
+	var server_ready := _is_server_account_session()
+	var section_available := MailCenterModel.section_available(mailbox_active_tab, mailbox_summary)
+	var page_has_more := false
+	match mailbox_active_tab:
+		MailCenterModel.SECTION_INBOX:
+			page_has_more = MailboxPageModel.has_more(mailbox_page_state)
+		MailCenterModel.SECTION_REWARDS:
+			page_has_more = MailCenterModel.has_more(mailbox_reward_page_state)
+		MailCenterModel.SECTION_ARCHIVE:
+			page_has_more = MailCenterModel.has_more(mailbox_archive_page_state)
 	if mailbox_refresh_button != null:
-		mailbox_refresh_button.disabled = mailbox_request_pending or not _is_server_account_session()
+		mailbox_refresh_button.disabled = (
+			mailbox_request_pending
+			or not server_ready
+			or mailbox_active_tab == MailCenterModel.SECTION_COMPOSE
+			or not section_available
+		)
 	if mailbox_load_more_button != null:
-		mailbox_load_more_button.visible = _is_server_account_session() and MailboxPageModel.has_more(mailbox_page_state)
+		mailbox_load_more_button.visible = server_ready and section_available and page_has_more
 		mailbox_load_more_button.disabled = mailbox_request_pending
-		mailbox_load_more_button.text = "正在加载..." if mailbox_request_pending and mailbox_pending_kind == "inbox_more" else "加载更多邮件"
+		mailbox_load_more_button.text = "正在加载..." if mailbox_request_pending and mailbox_pending_kind.ends_with("_more") else "加载更多"
 	if mailbox_send_button != null:
-		mailbox_send_button.disabled = mailbox_request_pending or not _is_server_account_session() or mailbox_active_tab != "compose"
-	var inputs_editable: bool = not mailbox_request_pending and _is_server_account_session() and mailbox_active_tab == "compose"
+		mailbox_send_button.disabled = mailbox_request_pending or not server_ready or mailbox_active_tab != MailCenterModel.SECTION_COMPOSE
+	var inputs_editable: bool = not mailbox_request_pending and server_ready and mailbox_active_tab == MailCenterModel.SECTION_COMPOSE
 	if mailbox_recipient_input != null:
 		mailbox_recipient_input.editable = inputs_editable
 	if mailbox_title_input != null:
 		mailbox_title_input.editable = inputs_editable
 	if mailbox_body_input != null:
 		mailbox_body_input.editable = inputs_editable
-	if mailbox_status_label != null and not _is_server_account_session():
+	if mailbox_status_label != null and not server_ready:
 		mailbox_status_label.text = "需要服务器账号登录。"
+
+func _request_server_mailbox_active_section() -> void:
+	match mailbox_active_tab:
+		MailCenterModel.SECTION_INBOX:
+			_request_server_mailbox_inbox()
+		MailCenterModel.SECTION_REWARDS:
+			_request_server_reward_vault()
+		MailCenterModel.SECTION_ARCHIVE:
+			_request_server_mail_archive()
 
 func _request_server_mailbox_inbox() -> void:
 	if not _is_server_account_session():
@@ -22524,16 +22734,40 @@ func _request_server_mailbox_inbox() -> void:
 	))
 
 func _request_server_mailbox_more() -> void:
-	if not _is_server_account_session() or not MailboxPageModel.has_more(mailbox_page_state):
+	if not _is_server_account_session():
 		return
-	var cursor := MailboxPageModel.next_cursor(mailbox_page_state)
-	if cursor == "":
+	match mailbox_active_tab:
+		MailCenterModel.SECTION_INBOX:
+			var inbox_cursor := MailboxPageModel.next_cursor(mailbox_page_state)
+			if MailboxPageModel.has_more(mailbox_page_state) and inbox_cursor != "":
+				_start_mailbox_request("inbox_more", ServerAuthClientModel.mail_inbox_request(
+					_server_profile_base_url(), _server_profile_token(), inbox_cursor, MailboxPageModel.DEFAULT_PAGE_LIMIT
+				))
+		MailCenterModel.SECTION_REWARDS:
+			var reward_cursor := MailCenterModel.next_cursor(mailbox_reward_page_state)
+			if MailCenterModel.has_more(mailbox_reward_page_state) and reward_cursor != "":
+				_start_mailbox_request("rewards_more", ServerAuthClientModel.reward_vault_request(
+					_server_profile_base_url(), _server_profile_token(), reward_cursor, MailboxPageModel.DEFAULT_PAGE_LIMIT
+				))
+		MailCenterModel.SECTION_ARCHIVE:
+			var archive_cursor := MailCenterModel.next_cursor(mailbox_archive_page_state)
+			if MailCenterModel.has_more(mailbox_archive_page_state) and archive_cursor != "":
+				_start_mailbox_request("archive_more", ServerAuthClientModel.mail_archive_request(
+					_server_profile_base_url(), _server_profile_token(), archive_cursor, MailboxPageModel.DEFAULT_PAGE_LIMIT
+				))
+
+func _request_server_reward_vault() -> void:
+	if not _is_server_account_session() or not MailCenterModel.section_available(MailCenterModel.SECTION_REWARDS, mailbox_summary):
 		return
-	_start_mailbox_request("inbox_more", ServerAuthClientModel.mail_inbox_request(
-		_server_profile_base_url(),
-		_server_profile_token(),
-		cursor,
-		MailboxPageModel.DEFAULT_PAGE_LIMIT
+	_start_mailbox_request("rewards", ServerAuthClientModel.reward_vault_request(
+		_server_profile_base_url(), _server_profile_token(), "", MailboxPageModel.DEFAULT_PAGE_LIMIT
+	))
+
+func _request_server_mail_archive() -> void:
+	if not _is_server_account_session() or not MailCenterModel.section_available(MailCenterModel.SECTION_ARCHIVE, mailbox_summary):
+		return
+	_start_mailbox_request("archive", ServerAuthClientModel.mail_archive_request(
+		_server_profile_base_url(), _server_profile_token(), "", MailboxPageModel.DEFAULT_PAGE_LIMIT
 	))
 
 func _request_server_mailbox_read(mail_id: String) -> void:
@@ -22545,6 +22779,13 @@ func _request_server_mailbox_claim(mail_id: String) -> void:
 	if mail_id.strip_edges() == "" or not _is_server_account_session():
 		return
 	_start_mailbox_request("claim", ServerAuthClientModel.mail_claim_request(_server_profile_base_url(), _server_profile_token(), mail_id))
+
+func _request_server_reward_vault_claim(reward_id: String) -> void:
+	if reward_id.strip_edges() == "" or not _is_server_account_session():
+		return
+	_start_mailbox_request("reward_claim", ServerAuthClientModel.reward_vault_claim_request(
+		_server_profile_base_url(), _server_profile_token(), reward_id
+	))
 
 func _on_mailbox_send_pressed() -> void:
 	if not _is_server_account_session():
@@ -22578,7 +22819,10 @@ func _start_mailbox_request(kind: String, spec: Dictionary) -> void:
 	var ticket := _begin_server_session_request("mail")
 	_refresh_mailbox_request_controls()
 	if mailbox_status_label != null:
-		mailbox_status_label.text = "正在发送..." if kind == "send" else "正在读取..."
+		mailbox_status_label.text = (
+			"正在发送..." if kind == "send"
+			else ("正在领取..." if kind in ["claim", "reward_claim"] else "正在读取...")
+		)
 	_issue_mailbox_http_attempt(ticket)
 
 func _issue_mailbox_http_attempt(ticket: Dictionary) -> void:
@@ -22652,6 +22896,10 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 	if result != HTTPRequest.RESULT_SUCCESS:
 		if kind == "inbox" or kind == "inbox_more":
 			mailbox_page_state = MailboxPageModel.preserve_after_failure(mailbox_page_state)
+		elif kind == "rewards" or kind == "rewards_more":
+			mailbox_reward_page_state = MailCenterModel.preserve_after_failure(mailbox_reward_page_state, "rewardId")
+		elif kind == "archive" or kind == "archive_more":
+			mailbox_archive_page_state = MailCenterModel.preserve_after_failure(mailbox_archive_page_state, "mailId")
 		if mailbox_status_label != null:
 			mailbox_status_label.text = "邮箱服务器连接失败。"
 		_refresh_mailbox_request_controls()
@@ -22661,6 +22909,8 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 		var parsed_inbox = ServerAuthClientModel.parse_mail_inbox_response(response_code, body)
 		if bool(parsed_inbox.get("ok", false)):
 			mailbox_page_state = MailboxPageModel.append_page(mailbox_page_state, parsed_inbox) if kind == "inbox_more" else MailboxPageModel.replace_page(mailbox_page_state, parsed_inbox)
+			if bool(parsed_inbox.get("summaryProvided", false)):
+				mailbox_summary = MailCenterModel.normalized_summary(parsed_inbox.get("summary", {}))
 			if mailbox_status_label != null:
 				mailbox_status_label.text = "已加载更多邮件。" if kind == "inbox_more" else "邮箱已刷新。"
 		elif _handle_session_invalid_response(parsed_inbox):
@@ -22669,6 +22919,38 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 			mailbox_page_state = MailboxPageModel.preserve_after_failure(mailbox_page_state)
 			if mailbox_status_label != null:
 				mailbox_status_label.text = _server_player_message(parsed_inbox, "邮箱读取失败。")
+	elif kind == "rewards" or kind == "rewards_more":
+		var parsed_rewards = ServerAuthClientModel.parse_reward_vault_response(response_code, body)
+		if bool(parsed_rewards.get("ok", false)):
+			mailbox_reward_page_state = (
+				MailCenterModel.append_page(mailbox_reward_page_state, parsed_rewards, "rewards", "rewardId")
+				if kind == "rewards_more"
+				else MailCenterModel.replace_page(mailbox_reward_page_state, parsed_rewards, "rewards", "rewardId")
+			)
+			if mailbox_status_label != null:
+				mailbox_status_label.text = "已加载更多奖励。" if kind == "rewards_more" else "奖励已刷新。"
+		elif _handle_session_invalid_response(parsed_rewards):
+			return
+		else:
+			mailbox_reward_page_state = MailCenterModel.preserve_after_failure(mailbox_reward_page_state, "rewardId")
+			if mailbox_status_label != null:
+				mailbox_status_label.text = _server_player_message(parsed_rewards, "奖励读取失败。")
+	elif kind == "archive" or kind == "archive_more":
+		var parsed_archive = ServerAuthClientModel.parse_mail_archive_response(response_code, body)
+		if bool(parsed_archive.get("ok", false)):
+			mailbox_archive_page_state = (
+				MailCenterModel.append_page(mailbox_archive_page_state, parsed_archive, "messages", "mailId")
+				if kind == "archive_more"
+				else MailCenterModel.replace_page(mailbox_archive_page_state, parsed_archive, "messages", "mailId")
+			)
+			if mailbox_status_label != null:
+				mailbox_status_label.text = "已加载更多归档。" if kind == "archive_more" else "归档已刷新。"
+		elif _handle_session_invalid_response(parsed_archive):
+			return
+		else:
+			mailbox_archive_page_state = MailCenterModel.preserve_after_failure(mailbox_archive_page_state, "mailId")
+			if mailbox_status_label != null:
+				mailbox_status_label.text = _server_player_message(parsed_archive, "归档读取失败。")
 	elif kind == "send":
 		var parsed_send = ServerAuthClientModel.parse_mail_send_response(response_code, body)
 		if bool(parsed_send.get("ok", false)):
@@ -22690,7 +22972,10 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 		var parsed_read = ServerAuthClientModel.parse_mail_read_response(response_code, body)
 		if bool(parsed_read.get("ok", false)):
 			var read_mail = parsed_read.get("mail", {}) as Dictionary if parsed_read.get("mail", {}) is Dictionary else {}
+			var previous_read_mail := _server_mailbox_message_by_key("server:%s" % str(read_mail.get("mailId", "")))
+			var became_read := not previous_read_mail.is_empty() and MailboxPageModel.is_unread(previous_read_mail)
 			mailbox_page_state = MailboxPageModel.apply_read_mail(mailbox_page_state, read_mail)
+			mailbox_summary = MailCenterModel.summary_after_read(mailbox_summary, became_read)
 		elif _handle_session_invalid_response(parsed_read):
 			return
 		elif mailbox_status_label != null:
@@ -22718,6 +23003,27 @@ func _on_mailbox_http_request_completed(result: int, response_code: int, _header
 			return
 		elif mailbox_status_label != null:
 			mailbox_status_label.text = _server_player_message(parsed_claim, "邮件附件领取失败。")
+	elif kind == "reward_claim":
+		var parsed_reward_claim = ServerAuthClientModel.parse_reward_vault_claim_response(response_code, body)
+		if bool(parsed_reward_claim.get("ok", false)):
+			_apply_server_profile_payload(parsed_reward_claim)
+			var reward := parsed_reward_claim.get("reward", {}) as Dictionary if parsed_reward_claim.get("reward", {}) is Dictionary else {}
+			var previous_reward := _mailbox_entry_by_key(mailbox_selected_mail_id)
+			var previous_reward_message := previous_reward.get("message", {}) as Dictionary if previous_reward.get("message", {}) is Dictionary else {}
+			var was_claimable := bool(previous_reward_message.get("claimable", false))
+			mailbox_reward_page_state = MailCenterModel.apply_reward_claim(mailbox_reward_page_state, reward)
+			mailbox_summary = MailCenterModel.summary_after_reward_claim(mailbox_summary, was_claimable)
+			if mailbox_status_label != null:
+				mailbox_status_label.text = str(parsed_reward_claim.get("message", "奖励已领取。"))
+			var reward_messages := _string_array_values(parsed_reward_claim.get("questMessages", []))
+			_set_world_log_message("\n".join([str(parsed_reward_claim.get("message", "奖励已领取。"))] + reward_messages))
+			if backpack_panel != null and backpack_panel.visible:
+				_refresh_backpack_panel()
+			host._update_hud_text(true)
+		elif _handle_session_invalid_response(parsed_reward_claim):
+			return
+		elif mailbox_status_label != null:
+			mailbox_status_label.text = _server_player_message(parsed_reward_claim, "奖励领取失败。")
 	_refresh_mailbox_panel()
 	_refresh_mailbox_menu_button()
 	_refresh_mailbox_request_controls()

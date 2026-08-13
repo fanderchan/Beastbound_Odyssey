@@ -233,6 +233,17 @@ test("HTTP inbox pagination uses the specialized store reader without adopting a
         unreadCount: 2,
         nextCursor: hasMore ? remoteNextCursor : null,
         hasMore,
+        summary: {
+          schemaVersion: 1,
+          activeCount: 2,
+          activeCapacity: 200,
+          unreadCount: 2,
+          availableRewardCount: 0,
+          archiveCount: 0,
+          archiveEnabled,
+          rewardVaultEnabled: false,
+          activeLimitEnabled: false,
+        },
       };
     },
     async saveAsyncOwned() {
@@ -266,6 +277,9 @@ test("HTTP inbox pagination uses the specialized store reader without adopting a
   assert.equal(page.messages[0].recipientAccountId, undefined);
   assert.equal(page.messages[0].internalOnly, undefined);
   assert.equal(page.nextCursor, remoteNextCursor);
+  assert.equal(page.summary.activeCapacity, 200);
+  assert.equal(page.summary.unreadCount, 2);
+  assert.equal(page.summary.archiveEnabled, true);
   assert.deepEqual(pageReads[1], {accountId, options: {limit: 1, cursor: null}});
 
   const continuationQuery = new URLSearchParams({limit: "1", cursor: page.nextCursor});

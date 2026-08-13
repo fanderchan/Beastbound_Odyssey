@@ -13,6 +13,7 @@
     "mail-storage:apply": "node scripts/bootstrap-mail-storage.js --apply",
     "mail-archive:enable": "node scripts/enable-mail-archive.js --enable",
     "reward-vault:enable": "node scripts/enable-reward-vault.js --enable",
+    "mail-active-limit:enable": "node scripts/enable-mail-active-limit.js --enable",
     "mysql:smoke": "node scripts/mysql-live-smoke.js",
     "profiles:migrate": "node scripts/migrate-mysql-profiles.js",
     "seed:demo": "node scripts/seed-demo-data.js"

@@ -65,6 +65,7 @@ const MapRoutePlanner := preload("res://scripts/world/map_route_planner.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
+const MailCenterModel := preload("res://scripts/progression/mail_center_model.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
@@ -12219,6 +12220,70 @@ func _run_auto_mailbox_check() -> void:
 	host.profile_save_enabled = false
 	var pagination_model_check := MailboxPageModel.self_check()
 	var pagination_model_ok := bool(pagination_model_check.get("ok", false))
+	var mail_center_model_check := MailCenterModel.self_check()
+	var mail_center_model_ok := bool(mail_center_model_check.get("ok", false))
+	var center_cursor := "center+/=cursor"
+	var archive_spec := ServerAuthClientModel.mail_archive_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL, "mail-center-token", center_cursor
+	)
+	var rewards_spec := ServerAuthClientModel.reward_vault_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL, "mail-center-token", center_cursor
+	)
+	var reward_id := "reward_%s" % "a".repeat(64)
+	var reward_claim_spec := ServerAuthClientModel.reward_vault_claim_request(
+		ServerAuthClientModel.DEFAULT_BASE_URL, "mail-center-token", reward_id
+	)
+	var parsed_center_inbox := ServerAuthClientModel.parse_mail_inbox_response(200, JSON.stringify({
+		"ok": true,
+		"messages": [],
+		"unreadCount": 7,
+		"nextCursor": "",
+		"hasMore": false,
+		"summary": {
+			"schemaVersion": 1,
+			"activeCount": 199,
+			"activeCapacity": 200,
+			"unreadCount": 7,
+			"availableRewardCount": 2,
+			"archiveCount": 4,
+			"archiveEnabled": true,
+			"rewardVaultEnabled": true,
+			"activeLimitEnabled": true,
+		},
+	}).to_utf8_buffer())
+	var parsed_archive := ServerAuthClientModel.parse_mail_archive_response(200, JSON.stringify({
+		"ok": true,
+		"messages": [{"mailId": "mail_archive_contract"}],
+		"nextCursor": center_cursor,
+		"hasMore": true,
+	}).to_utf8_buffer())
+	var parsed_rewards := ServerAuthClientModel.parse_reward_vault_response(200, JSON.stringify({
+		"ok": true,
+		"rewards": [{"rewardId": reward_id, "claimable": true}],
+		"nextCursor": center_cursor,
+		"hasMore": true,
+	}).to_utf8_buffer())
+	var parsed_reward_claim := ServerAuthClientModel.parse_reward_vault_claim_response(200, JSON.stringify({
+		"ok": true,
+		"reward": {"rewardId": reward_id, "claimable": false, "status": "claimed"},
+		"profile": {"schemaVersion": 1},
+		"questMessages": [],
+	}).to_utf8_buffer())
+	var mail_center_contract_ok: bool = (
+		str(archive_spec.get("url", "")) == "%s/mail/archive?limit=30&cursor=%s" % [ServerAuthClientModel.DEFAULT_BASE_URL, center_cursor.uri_encode()]
+		and str(rewards_spec.get("url", "")) == "%s/rewards/vault?limit=30&cursor=%s" % [ServerAuthClientModel.DEFAULT_BASE_URL, center_cursor.uri_encode()]
+		and str(reward_claim_spec.get("url", "")).ends_with("/rewards/vault/%s/claim" % reward_id)
+		and bool(parsed_center_inbox.get("ok", false))
+		and bool(parsed_center_inbox.get("summaryProvided", false))
+		and int((parsed_center_inbox.get("summary", {}) as Dictionary).get("activeCount", -1)) == 199
+		and bool(parsed_archive.get("ok", false))
+		and (parsed_archive.get("messages", []) as Array).size() == 1
+		and str(parsed_archive.get("nextCursor", "")) == center_cursor
+		and bool(parsed_rewards.get("ok", false))
+		and (parsed_rewards.get("rewards", []) as Array).size() == 1
+		and bool(parsed_reward_claim.get("ok", false))
+		and not bool((parsed_reward_claim.get("reward", {}) as Dictionary).get("claimable", true))
+	)
 	var filler_ids = [
 		"item_meat_small",
 		"item_heal_all_5",
@@ -12291,6 +12356,10 @@ func _run_auto_mailbox_check() -> void:
 		and host.mailbox_inbox_tab_button.button_pressed
 		and host.mailbox_compose_tab_button != null
 		and not host.mailbox_compose_tab_button.button_pressed
+		and host.mailbox_rewards_tab_button != null
+		and not host.mailbox_rewards_tab_button.button_pressed
+		and host.mailbox_archive_tab_button != null
+		and not host.mailbox_archive_tab_button.button_pressed
 		and host.mailbox_inbox_container != null
 		and host.mailbox_inbox_container.visible
 		and host.mailbox_compose_container != null
@@ -12324,6 +12393,74 @@ func _run_auto_mailbox_check() -> void:
 		and host.mailbox_recipient_input.is_visible_in_tree()
 		and host.mailbox_body_input != null
 		and host.mailbox_body_input.is_visible_in_tree()
+	)
+	host._set_mailbox_tab("inbox")
+	await host.get_tree().process_frame
+	host.mailbox_summary = MailCenterModel.normalized_summary({
+		"schemaVersion": 1,
+		"activeCount": 200,
+		"activeCapacity": 200,
+		"unreadCount": 4,
+		"availableRewardCount": 2,
+		"archiveCount": 1,
+		"archiveEnabled": true,
+		"rewardVaultEnabled": true,
+		"activeLimitEnabled": true,
+	})
+	host.mailbox_reward_page_state = MailCenterModel.replace_page(MailCenterModel.empty_page(), {
+		"rewards": [{
+			"rewardId": "reward_%s" % "a".repeat(64),
+			"sourceKind": "market_sale",
+			"status": "available",
+			"title": "市场成交奖励",
+			"body": "售出物品所得。",
+			"items": [{"itemId": BattleModel.ITEM_MEAT_SMALL, "count": 1}],
+			"currency": {"stoneCoins": 39},
+			"createdAt": "2099-01-01T00:00:00.000Z",
+			"claimable": true,
+		}],
+		"nextCursor": "reward-cursor",
+		"hasMore": true,
+	}, "rewards", "rewardId")
+	host.mailbox_archive_page_state = MailCenterModel.replace_page(MailCenterModel.empty_page(), {
+		"messages": [{
+			"mailId": "mail_archive_check",
+			"senderDisplayName": "系统",
+			"title": "已结算邮件",
+			"body": "历史留存。",
+			"createdAt": "2099-01-01T00:00:00.000Z",
+			"archivedAt": "2099-01-02T00:00:00.000Z",
+		}],
+		"nextCursor": "",
+		"hasMore": false,
+	}, "messages", "mailId")
+	host._refresh_mailbox_panel()
+	var capacity_badge_ok: bool = (
+		host.mailbox_capacity_label != null
+		and host.mailbox_capacity_label.text == "容量 200/200"
+		and host.mailbox_inbox_tab_button.text == "收件箱 4"
+		and host.mailbox_rewards_tab_button.text == "奖励 2"
+	)
+	host._set_mailbox_tab("rewards")
+	await host.get_tree().process_frame
+	var rewards_tab_ok: bool = (
+		host.mailbox_active_tab == "rewards"
+		and host.mailbox_rewards_tab_button.button_pressed
+		and host.mailbox_message_buttons.size() == 1
+		and host.mailbox_claim_button.visible
+		and not host.mailbox_claim_button.disabled
+		and host.mailbox_claim_button.text == "领取奖励"
+		and host.mailbox_detail_label.text.find("市场成交奖励") >= 0
+		and host.mailbox_detail_label.text.find("39石币") >= 0
+	)
+	host._set_mailbox_tab("archive")
+	await host.get_tree().process_frame
+	var archive_tab_ok: bool = (
+		host.mailbox_active_tab == "archive"
+		and host.mailbox_archive_tab_button.button_pressed
+		and host.mailbox_message_buttons.size() == 1
+		and not host.mailbox_claim_button.visible
+		and host.mailbox_detail_label.text.find("已归档") >= 0
 	)
 	host._set_mailbox_tab("inbox")
 	await host.get_tree().process_frame
@@ -12369,9 +12506,9 @@ func _run_auto_mailbox_check() -> void:
 			and host.mailbox_load_more_button != null
 			and host.mailbox_load_more_button.visible
 			and not host.mailbox_load_more_button.disabled
-			and host.mailbox_load_more_button.text == "加载更多邮件"
+			and host.mailbox_load_more_button.text == "加载更多"
 			and host.mailbox_menu_button != null
-			and host.mailbox_menu_button.text == "邮箱5"
+			and host.mailbox_menu_button.text == "邮箱7"
 				and host.mailbox_detail_label != null
 				and host.mailbox_detail_label.text.find("附件") >= 0
 				and host.mailbox_detail_label.text.find("39石币") >= 0
@@ -12454,22 +12591,37 @@ func _run_auto_mailbox_check() -> void:
 		var settled_screenshot_error: int = settled_screenshot_image.save_png(settled_screenshot_path) if settled_screenshot_image != null else ERR_UNAVAILABLE
 		settled_screenshot_ok = settled_screenshot_image != null and settled_screenshot_error == OK
 		print("mailbox settled receipt screenshot: status=%s path=%s" % ["ok" if settled_screenshot_ok else "failed", settled_screenshot_path])
+	var late_response_guard_ok := bool(
+		host._panel_flow()._server_session_request_guard_self_check().get("ok", false)
+	)
+	if host.perf_probe_enabled:
+		for _mailbox_perf_frame in range(90):
+			await host.get_tree().process_frame
 	host._panel_flow()._rotate_server_session_requests("mailbox-account-reset-check")
-	var account_reset_ok := (
+	var account_reset_ok: bool = (
 		MailboxPageModel.messages(host.mailbox_page_state).is_empty()
 		and not MailboxPageModel.has_more(host.mailbox_page_state)
 		and MailboxPageModel.unread_count(host.mailbox_page_state) == 0
+		and MailCenterModel.entries(host.mailbox_reward_page_state).is_empty()
+		and MailCenterModel.entries(host.mailbox_archive_page_state).is_empty()
+		and host.mailbox_summary == MailCenterModel.empty_summary()
+		and host.mailbox_active_tab == "inbox"
 	)
 	host._close_mailbox_panel()
-	var status = "ok" if pagination_model_ok and mailbox_ok and claim_full_ok and claim_ok and ui_ok and compose_tab_ok and server_ui_ok and mailbox_screenshot_ok and claim_id_only_ok and duplicate_mail_guard_ok and malformed_mail_guard_ok and legacy_equipment_mail_guard_ok and drifted_equipment_mail_guard_ok and settled_receipt_ui_ok and settled_screenshot_ok and account_reset_ok else "failed"
-	print("mailbox check ready: status=%s page_model=%s mail=%s claim_full=%s claim=%s ui=%s compose_tab=%s server_ui=%s screenshot=%s claim_id_only=%s duplicate_guard=%s malformed_guard=%s legacy_guard=%s drift_guard=%s settled_receipt=%s settled_screenshot=%s account_reset=%s messages=%d errors=%s" % [
+	var status = "ok" if pagination_model_ok and mail_center_model_ok and mail_center_contract_ok and mailbox_ok and claim_full_ok and claim_ok and ui_ok and compose_tab_ok and capacity_badge_ok and rewards_tab_ok and archive_tab_ok and server_ui_ok and mailbox_screenshot_ok and claim_id_only_ok and duplicate_mail_guard_ok and malformed_mail_guard_ok and legacy_equipment_mail_guard_ok and drifted_equipment_mail_guard_ok and settled_receipt_ui_ok and settled_screenshot_ok and late_response_guard_ok and account_reset_ok else "failed"
+	print("mailbox check ready: status=%s page_model=%s center_model=%s center_contract=%s mail=%s claim_full=%s claim=%s ui=%s compose_tab=%s capacity=%s rewards_tab=%s archive_tab=%s server_ui=%s screenshot=%s claim_id_only=%s duplicate_guard=%s malformed_guard=%s legacy_guard=%s drift_guard=%s settled_receipt=%s settled_screenshot=%s late_response_guard=%s account_reset=%s messages=%d errors=%s center_errors=%s" % [
 		status,
 		str(pagination_model_ok),
+		str(mail_center_model_ok),
+		str(mail_center_contract_ok),
 		str(mailbox_ok),
 		str(claim_full_ok),
 		str(claim_ok),
 		str(ui_ok),
 		str(compose_tab_ok),
+		str(capacity_badge_ok),
+		str(rewards_tab_ok),
+		str(archive_tab_ok),
 		str(server_ui_ok),
 		str(mailbox_screenshot_ok),
 		str(claim_id_only_ok),
@@ -12479,9 +12631,11 @@ func _run_auto_mailbox_check() -> void:
 		str(drifted_equipment_mail_guard_ok),
 		str(settled_receipt_ui_ok),
 		str(settled_screenshot_ok),
+		str(late_response_guard_ok),
 		str(account_reset_ok),
 		PlayerProgressModel.mailbox_unclaimed_count(full_profile),
 		str(pagination_model_check.get("errors", [])),
+		str(mail_center_model_check.get("errors", [])),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 

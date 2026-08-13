@@ -5,6 +5,7 @@ const test = require("node:test");
 
 const {
   MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
+  MAIL_ACTIVE_COUNTER_LIMITED_INCREMENT_SQL,
   MAIL_ACTIVE_COUNTER_SEED_SQL,
   MAIL_IDENTITY_INSERT_SQL,
   MAIL_IDENTITY_LOCK_SQL,
@@ -127,6 +128,9 @@ function write(resource, key, kind) {
     params = [key];
   } else if (resource === "mail_active_counter" && kind === "increment") {
     sql = MAIL_ACTIVE_COUNTER_INCREMENT_SQL;
+    params = [1, key, 1];
+  } else if (resource === "mail_active_counter" && kind === "limited_increment") {
+    sql = MAIL_ACTIVE_COUNTER_LIMITED_INCREMENT_SQL;
     params = [1, key, 1];
   } else if (resource === "mail_identity" && kind === "insert") {
     sql = MAIL_IDENTITY_INSERT_SQL;
@@ -628,6 +632,11 @@ test("mail sidecar SQL and parameters are fixed to generation one and bounded CA
   WHERE recipient_account_id = ? AND data_generation = 1
     AND active_count <= 4294967295 - ?
     AND revision < 18446744073709551615`);
+  assert.equal(MAIL_ACTIVE_COUNTER_LIMITED_INCREMENT_SQL, `UPDATE mail_active_counters
+  SET active_count = active_count + ?, revision = revision + 1
+  WHERE recipient_account_id = ? AND data_generation = 1
+    AND active_count <= 200 - ?
+    AND revision < 18446744073709551615`);
   assert.equal(MAIL_IDENTITY_INSERT_SQL, `INSERT INTO mail_identity_registry
   (mail_id, sender_account_id, recipient_account_id, location, created_at,
     settled_at, archived_at, identity_digest, document_digest, reward_id,
@@ -710,6 +719,16 @@ test("counter seed-to-increment is the only additional same-key write reuse", ()
     ["mutation_receipt_capacity", MUTATION_RECEIPT_CAPACITY_GUARD_KEY, "update"],
     ["mutation_receipt", "operation-1", "insert"],
   ]);
+
+  const limited = plan({
+    kind: "mail_send_conditional_v1",
+    locks: [lock("mail_storage_control", MAIL_STORAGE_CONTROL_KEY, "shared")],
+    writes: withDurableReceipt([
+      write("mail_active_counter", "recipient-1", "seed"),
+      write("mail_active_counter", "recipient-1", "limited_increment"),
+    ]),
+  });
+  assert.equal(assertMysqlResourceAcquisitionOrder(limited), true);
 
   for (const writes of [
     [

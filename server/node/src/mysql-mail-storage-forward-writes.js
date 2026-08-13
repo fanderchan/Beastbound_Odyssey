@@ -4,6 +4,7 @@ const {isDeepStrictEqual} = require("node:util");
 
 const {
   MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
+  MAIL_ACTIVE_COUNTER_LIMITED_INCREMENT_SQL,
   MAIL_ACTIVE_COUNTER_SEED_SQL,
   MAIL_IDENTITY_INSERT_SQL,
   MAIL_IDENTITY_LOCK_SQL,
@@ -76,7 +77,7 @@ function buildMailStorageForwardWriteSet(options = {}) {
   const sidecarWrites = [
     ...facts.counterIncrements.flatMap((increment) => [
       mailActiveCounterSeed(increment),
-      mailActiveCounterIncrement(increment),
+      mailActiveCounterIncrement(increment, storage),
     ]),
     ...identityWrites,
   ];
@@ -144,20 +145,15 @@ function validateStorageState(value) {
     throw invalid("schema_generation_invalid");
   }
   const flags = storageFeatureFlags(value);
-  // Generation-one ordinary mail writers are archive/vault-aware: the permanent
-  // identity lock below prevents a stale active write from touching an
-  // archived row. Reward-vault issuance/claim uses its own typed resources,
-  // while ordinary mail continues to preserve the captured vault flag. The
-  // global 200-mail guard remains unsupported until its own transactional
-  // writer is enabled.
-  if (flags.activeLimit) {
-    throw invalid("unsupported_feature_flag_enabled");
-  }
+  // Generation-one ordinary mail writers preserve the startup feature fence.
+  // Once the active limit is enabled, every insert uses a recipient-local
+  // bounded counter update before any identity, mail, profile, or receipt
+  // write. A full recipient therefore aborts the complete business mutation.
   if (value.dataGeneration === 0 && value.lifecycleState === "uninitialized") {
     if (Object.hasOwn(value, "ready") && value.ready !== false) {
       throw invalid("storage_state_invalid");
     }
-    if (flags.archive) {
+    if (flags.archive || flags.vaultClaim || flags.activeLimit) {
       throw invalid("feature_flag_generation_invalid");
     }
     return Object.freeze({
@@ -166,6 +162,7 @@ function validateStorageState(value) {
       lifecycleState: "uninitialized",
       archiveEnabled: false,
       vaultClaimEnabled: false,
+      activeLimitEnabled: false,
     });
   }
   if (value.dataGeneration === 1 && value.lifecycleState === "ready") {
@@ -178,6 +175,7 @@ function validateStorageState(value) {
       lifecycleState: "ready",
       archiveEnabled: flags.archive,
       vaultClaimEnabled: flags.vaultClaim,
+      activeLimitEnabled: flags.activeLimit,
     });
   }
   throw invalid("storage_state_invalid");
@@ -435,7 +433,7 @@ function mailStorageControlLock(storage) {
       lifecycle_state: storage.lifecycleState,
       archive_enabled: storage.archiveEnabled ? 1 : 0,
       vault_claim_enabled: storage.vaultClaimEnabled ? 1 : 0,
-      active_limit_enabled: 0,
+      active_limit_enabled: storage.activeLimitEnabled ? 1 : 0,
     },
   };
 }
@@ -475,12 +473,15 @@ function mailActiveCounterSeed(increment) {
   };
 }
 
-function mailActiveCounterIncrement(increment) {
+function mailActiveCounterIncrement(increment, storage) {
+  const limited = storage.activeLimitEnabled === true;
   return {
-    kind: "increment",
+    kind: limited ? "limited_increment" : "increment",
     resource: "mail_active_counter",
     key: increment.recipientAccountId,
-    sql: MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
+    sql: limited
+      ? MAIL_ACTIVE_COUNTER_LIMITED_INCREMENT_SQL
+      : MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
     params: [
       increment.incrementBy,
       increment.recipientAccountId,
@@ -653,7 +654,7 @@ function cliControlFenceAssertion(storage) {
         AND lifecycle_state = ${mysqlRawLiteral(storage.lifecycleState)}
         AND archive_enabled = ${storage.archiveEnabled ? 1 : 0}
         AND vault_claim_enabled = ${storage.vaultClaimEnabled ? 1 : 0}
-        AND active_limit_enabled = 0
+        AND active_limit_enabled = ${storage.activeLimitEnabled ? 1 : 0}
     )`;
 }
 
@@ -661,7 +662,7 @@ function writeNeedsExactUpdateAssertion(write) {
   if (write.resource === "mail_message" && write.kind === "update") {
     return write.expectedAffectedRows === 1;
   }
-  return ["update", "increment"].includes(write.kind)
+  return ["update", "increment", "limited_increment"].includes(write.kind)
     && mysqlResourceWriteAffectedRowsAccepted(write, 1) === true
     && mysqlResourceWriteAffectedRowsAccepted(write, 0) === false;
 }

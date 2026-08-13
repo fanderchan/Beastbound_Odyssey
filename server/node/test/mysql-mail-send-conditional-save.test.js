@@ -271,7 +271,7 @@ function resources(values) {
   return values.map((value) => value.resource);
 }
 
-function generationOneMailStoragePlanningOptions() {
+function generationOneMailStoragePlanningOptions(activeLimitEnabled = false) {
   return {
     mailStorageState: {
       controlFence: true,
@@ -280,7 +280,11 @@ function generationOneMailStoragePlanningOptions() {
       schemaGeneration: 1,
       dataGeneration: 1,
       lifecycleState: "ready",
-      flags: {archive: false, vaultClaim: false, activeLimit: false},
+      flags: {
+        archive: false,
+        vaultClaim: activeLimitEnabled,
+        activeLimit: activeLimitEnabled,
+      },
     },
     mailStorageCertifyAttachment(mail) {
       return {
@@ -785,6 +789,7 @@ test("ambiguous text and ordinary sends recover only their exact committed resou
 });
 
 function conditionalPool(options = {}) {
+  const sharedCounter = options.sharedCounter || null;
   const transaction = {
     queries: [],
     begun: false,
@@ -815,8 +820,8 @@ function conditionalPool(options = {}) {
                 data_generation: 1,
                 lifecycle_state: "ready",
                 archive_enabled: 0,
-                vault_claim_enabled: 0,
-                active_limit_enabled: 0,
+                vault_claim_enabled: options.activeLimit ? 1 : 0,
+                active_limit_enabled: options.activeLimit ? 1 : 0,
               }], []];
             }
             if (/FROM profile_bindings[\s\S]+FOR UPDATE/i.test(sql)) {
@@ -829,10 +834,32 @@ function conditionalPool(options = {}) {
               return [{affectedRows: 1}, []];
             }
             if (/^INSERT INTO mail_active_counters\b/i.test(sql.trim())) {
-              return [{affectedRows: 1}, []];
+              if (sharedCounter) {
+                return [{affectedRows: 0}, []];
+              }
+              return [{affectedRows: options.mailboxFull ? 0 : 1}, []];
             }
             if (/^UPDATE mail_active_counters\b/i.test(sql.trim())) {
+              if (sharedCounter && /active_count <= 200 - \?/i.test(sql)) {
+                const incrementBy = Number(params[0]);
+                if (sharedCounter.activeCount + incrementBy > 200) {
+                  return [{affectedRows: 0}, []];
+                }
+                sharedCounter.activeCount += incrementBy;
+                return [{affectedRows: 1}, []];
+              }
+              if (options.mailboxFull && /active_count <= 200 - \?/i.test(sql)) {
+                return [{affectedRows: 0}, []];
+              }
               return [{affectedRows: 1}, []];
+            }
+            if (/^SELECT active_count, data_generation[\s\S]+FROM mail_active_counters[\s\S]+FOR UPDATE/i.test(sql.trim())) {
+              return [[{
+                active_count: String(sharedCounter
+                  ? sharedCounter.activeCount
+                  : options.activeCount ?? 200),
+                data_generation: 1,
+              }], []];
             }
             if (/^INSERT INTO mail_identity_registry\b/i.test(sql.trim())) {
               return [{affectedRows: 1}, []];
@@ -930,6 +957,117 @@ test("generation one conditional executor commits sidecars, mail, and receipt in
       "receipt_insert",
     ],
   );
+});
+
+test("two Node executors share the atomic mailbox limit: 199 reaches 200 and 201 rolls back", async () => {
+  const before = baselineState();
+  const activeOptions = generationOneMailStoragePlanningOptions(true);
+  const built = plan(
+    candidateState(before, MAIL_SEND_MODE_ORDINARY_ITEMS),
+    before,
+    MAIL_SEND_MODE_ORDINARY_ITEMS,
+    scope(MAIL_SEND_MODE_ORDINARY_ITEMS),
+    activeOptions,
+  );
+  assert.equal(
+    built.writes.some(({resource, kind}) => (
+      resource === "mail_active_counter" && kind === "limited_increment"
+    )),
+    true,
+  );
+
+  const sharedCounter = {activeCount: 199};
+  const firstNode = conditionalPool({activeLimit: true, sharedCounter});
+  const admitted = await runMysqlPoolSavePlan(
+    firstNode.pool,
+    built,
+    {expectedRevision: 0},
+  );
+  assert.deepEqual(admitted, {revision: 0, globalRevisionAdvanced: false});
+  assert.equal(firstNode.transaction.committed, true);
+  assert.equal(sharedCounter.activeCount, 200);
+
+  const secondNode = conditionalPool({activeLimit: true, sharedCounter});
+  await assert.rejects(
+    runMysqlPoolSavePlan(secondNode.pool, built, {expectedRevision: 0}),
+    (error) => error
+      && error.noCommitGuaranteed === true
+      && error.rollbackConfirmed === true
+      && error.cause
+      && error.cause.code === "mysql_mail_active_limit_reached"
+      && error.cause.activeCount === 200
+      && error.cause.capacity === 200,
+  );
+  assert.equal(secondNode.transaction.committed, false);
+  assert.equal(secondNode.transaction.rolledBack, true);
+  assert.equal(sharedCounter.activeCount, 200);
+  assert.equal(
+    secondNode.transaction.queries.some(({sql}) => /^INSERT INTO mail_messages\b/i.test(sql.trim())),
+    false,
+  );
+  assert.equal(
+    secondNode.transaction.queries.some(({sql}) => /^INSERT INTO mutation_receipts\b/i.test(sql.trim())),
+    false,
+  );
+});
+
+test("known full-recipient rollback becomes a product failure and keeps the sender attachment", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const sender = seed.register({
+    username: "mail_full_sender",
+    password: "test1234",
+    displayName: "满箱寄件人",
+  });
+  const recipient = seed.register({
+    username: "mail_full_recipient",
+    password: "test1234",
+    displayName: "满箱收件人",
+  });
+  const current = seed.getProfile(sender.session.token);
+  current.profile.backpackSlots[0] = {itemId: "item_meat_small", count: 2};
+  assert.equal(seed.saveProfile(sender.session.token, {
+    expectedRevision: current.profileSummary.profileRevision,
+    profile: current.profile,
+  }).ok, true);
+
+  const store = createAsyncWriteAuthStore({
+    mode: "mysql",
+    load: () => base.load(),
+    async saveAsync() {
+      const error = new Error("recipient full");
+      error.code = "mysql_mail_active_limit_reached";
+      error.noCommitGuaranteed = true;
+      error.outcomeUnknown = false;
+      error.transactionPhase = "rolled_back";
+      throw error;
+    },
+  }, {onError() {}});
+  const service = createAuthService({store});
+  const result = await service.invokeDurable(
+    "sendMail",
+    [sender.session.token, {
+      recipientUsername: recipient.account.username,
+      title: "容量边界",
+      body: "这封邮件不得提交。",
+      items: [{itemId: "item_meat_small", count: 1}],
+    }],
+    {
+      operationId: "op_mail_full_recipient_0001",
+      requestHash: "7".repeat(64),
+      actionId: ACTION_ID,
+    },
+  );
+  assert.deepEqual(result, {
+    ok: false,
+    code: "mail_recipient_full",
+    message: "对方的活动邮箱已满，本次邮件未发送，附件也没有扣除。",
+  });
+  const snapshot = service.snapshot();
+  const profile = snapshot.profiles[sender.profileSummary.playerId].profile;
+  assert.deepEqual(profile.backpackSlots[0], {itemId: "item_meat_small", count: 2});
+  assert.equal(Object.keys(snapshot.mailMessages).length, 0);
+  assert.equal(Object.keys(snapshot.mutationReceipts).length, 0);
 });
 
 for (const duplicate of ["duplicateMail", "duplicateReceipt"]) {

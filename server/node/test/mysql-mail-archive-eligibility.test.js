@@ -128,13 +128,13 @@ test("pending assets, under-age settlement, and legacy empty mail never qualify"
   }
 });
 
-test("identity digest, document digest, location, and revision are exact fences", () => {
+test("identity digest, document digest, location, and generation are exact fences", () => {
   for (const overrides of [
     {location: "archive"},
     {document_digest: "f".repeat(64)},
     {identity_digest: "e".repeat(64)},
     {archived_at: ARCHIVED_AT},
-    {reward_id: "reward_1"},
+    {data_generation: 2},
   ]) {
     const input = rows(mail(), overrides);
     assert.throws(

@@ -864,7 +864,7 @@ function assertArchiveControl(row, options = {}) {
     || String(row && row.lifecycle_state || "") !== "ready"
     || Number(row && row.archive_enabled) !== enabled
     || ![0, 1].includes(Number(row && row.vault_claim_enabled))
-    || Number(row && row.active_limit_enabled) !== 0
+    || ![0, 1].includes(Number(row && row.active_limit_enabled))
   ) {
     throw archiveError(enabled ? "mail_archive_feature_disabled_or_drifted" : "mail_archive_control_drifted");
   }

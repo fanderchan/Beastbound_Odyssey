@@ -73,6 +73,7 @@ const WorldPresentationProfile := preload("res://scripts/world/world_presentatio
 const WorldDepthLayer := preload("res://scripts/world/world_depth_layer.gd")
 const WorldOverlayLayer := preload("res://scripts/world/world_overlay_layer.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
+const MailCenterModel := preload("res://scripts/progression/mail_center_model.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
 const NumericBattleSimulatorModel := preload("res://scripts/progression/numeric_battle_simulator_model.gd")
@@ -673,10 +674,16 @@ var mailbox_message_buttons: Dictionary = {}
 var mailbox_selected_mail_id: String = ""
 var mailbox_selected_source: String = "server"
 var mailbox_page_state: Dictionary = MailboxPageModel.empty_state()
+var mailbox_reward_page_state: Dictionary = MailCenterModel.empty_page()
+var mailbox_archive_page_state: Dictionary = MailCenterModel.empty_page()
+var mailbox_summary: Dictionary = MailCenterModel.empty_summary()
 var mailbox_request_pending: bool = false
 var mailbox_pending_kind: String = ""
 var mailbox_inbox_tab_button: Button
+var mailbox_rewards_tab_button: Button
+var mailbox_archive_tab_button: Button
 var mailbox_compose_tab_button: Button
+var mailbox_capacity_label: Label
 var mailbox_inbox_container: Control
 var mailbox_compose_container: Control
 var mailbox_active_tab: String = "inbox"

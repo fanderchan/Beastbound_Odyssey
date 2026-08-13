@@ -3,6 +3,7 @@ extends RefCounted
 const AccountAuthModel := preload("res://scripts/progression/account_auth_model.gd")
 const BalanceCatalogModel := preload("res://scripts/progression/balance_catalog_model.gd")
 const GmQaAccessPolicyModel := preload("res://scripts/progression/gm_qa_access_policy_model.gd")
+const MailCenterModel := preload("res://scripts/progression/mail_center_model.gd")
 const PetFusionClientModel := preload("res://scripts/progression/pet_fusion_client_model.gd")
 
 const DEFAULT_BASE_URL := "http://127.0.0.1:8787"
@@ -94,6 +95,10 @@ const ERROR_CODE_MESSAGES := {
 	"invalid_username": "账号格式不正确。",
 	"idempotency_key_conflict": "操作状态已变化，请刷新后重新操作。",
 	"idempotency_key_invalid": "操作标识失效，请重新操作。",
+	"mail_recipient_full": "对方的活动邮箱已满，本次邮件没有发送，附件也没有扣除。",
+	"mail_archive_unavailable": "邮件归档暂未开放。",
+	"reward_vault_unavailable": "奖励暂未开放。",
+	"reward_vault_backpack_full": "背包空间不足，奖励仍安全保存在这里。",
 	"battle_profile_mutation_locked": "战斗中暂不能整理资产或宠物，请在战斗结束后重试。",
 	"battle_capture_capacity_full": "宠物栏和兽栏都满了，请先清理位置再捕捉。",
 	"battle_capture_candidate_invalid": "这只野生宠物暂时无法捕捉，请重新遇敌。",
@@ -1437,6 +1442,32 @@ static func mail_inbox_request(base_url: String, session_token: String, cursor: 
 	}
 
 
+static func mail_archive_request(base_url: String, session_token: String, cursor: String = "", limit: int = MAIL_INBOX_PAGE_LIMIT) -> Dictionary:
+	var safe_limit := clampi(limit, 1, MAIL_INBOX_PAGE_LIMIT)
+	var url := "%s/mail/archive?limit=%d" % [normalized_base_url(base_url), safe_limit]
+	if cursor != "":
+		url += "&cursor=%s" % cursor.uri_encode()
+	return {
+		"url": url,
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
+static func reward_vault_request(base_url: String, session_token: String, cursor: String = "", limit: int = MAIL_INBOX_PAGE_LIMIT) -> Dictionary:
+	var safe_limit := clampi(limit, 1, MAIL_INBOX_PAGE_LIMIT)
+	var url := "%s/rewards/vault?limit=%d" % [normalized_base_url(base_url), safe_limit]
+	if cursor != "":
+		url += "&cursor=%s" % cursor.uri_encode()
+	return {
+		"url": url,
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+	}
+
+
 static func mail_send_request(base_url: String, session_token: String, recipient_username: String, title: String, body: String) -> Dictionary:
 	return _durable_mutation_request({
 		"url": "%s/mail/send" % normalized_base_url(base_url),
@@ -1462,6 +1493,15 @@ static func mail_read_request(base_url: String, session_token: String, mail_id: 
 static func mail_claim_request(base_url: String, session_token: String, mail_id: String) -> Dictionary:
 	return _durable_mutation_request({
 		"url": "%s/mail/%s/claim" % [normalized_base_url(base_url), mail_id.uri_encode()],
+		"headers": _auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": "",
+	})
+
+
+static func reward_vault_claim_request(base_url: String, session_token: String, reward_id: String) -> Dictionary:
+	return _durable_mutation_request({
+		"url": "%s/rewards/vault/%s/claim" % [normalized_base_url(base_url), reward_id.uri_encode()],
 		"headers": _auth_headers(session_token),
 		"method": HTTPClient.METHOD_POST,
 		"body": "",
@@ -1853,6 +1893,45 @@ static func parse_mail_inbox_response(response_code: int, body: PackedByteArray)
 	parsed["unreadCountProvided"] = unread_count_provided
 	parsed["nextCursor"] = next_cursor if has_more else ""
 	parsed["hasMore"] = has_more
+	var summary_provided := response.has("summary")
+	var raw_summary = response.get("summary", {})
+	if summary_provided and not MailCenterModel.summary_is_valid(raw_summary):
+		return {
+			"ok": false,
+			"message": player_message_for_code("bad_json", "邮件中心摘要格式不正确。"),
+			"code": "bad_json",
+			"response": response,
+		}
+	parsed["summaryProvided"] = summary_provided
+	parsed["summary"] = MailCenterModel.normalized_summary(raw_summary)
+	return parsed
+
+
+static func parse_mail_archive_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "邮件归档读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["messages"] = _dictionary_array(response.get("messages", []))
+	var raw_next_cursor = response.get("nextCursor", "")
+	var next_cursor: String = raw_next_cursor if raw_next_cursor is String else ""
+	var has_more := bool(response.get("hasMore", false)) and next_cursor != ""
+	parsed["nextCursor"] = next_cursor if has_more else ""
+	parsed["hasMore"] = has_more
+	return parsed
+
+
+static func parse_reward_vault_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "奖励读取失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["rewards"] = _dictionary_array(response.get("rewards", []))
+	var raw_next_cursor = response.get("nextCursor", "")
+	var next_cursor: String = raw_next_cursor if raw_next_cursor is String else ""
+	var has_more := bool(response.get("hasMore", false)) and next_cursor != ""
+	parsed["nextCursor"] = next_cursor if has_more else ""
+	parsed["hasMore"] = has_more
 	return parsed
 
 
@@ -1883,6 +1962,17 @@ static func parse_mail_claim_response(response_code: int, body: PackedByteArray)
 	parsed["mail"] = response.get("mail", null)
 	parsed["claim"] = response.get("claim", {}) if response.get("claim", {}) is Dictionary else {}
 	parsed["battleRoom"] = response.get("battleRoom", null)
+	parsed["questMessages"] = _string_array(response.get("questMessages", []))
+	return parsed
+
+
+static func parse_reward_vault_claim_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "奖励领取失败。")
+	var response := parsed.get("response", {}) as Dictionary if parsed.get("response", {}) is Dictionary else {}
+	parsed["profile"] = response.get("profile", null)
+	parsed["profileBinding"] = response.get("profileBinding", {}) if response.get("profileBinding", {}) is Dictionary else {}
+	parsed["profileSummary"] = response.get("profileSummary", {}) if response.get("profileSummary", {}) is Dictionary else {}
+	parsed["reward"] = response.get("reward", {}) if response.get("reward", {}) is Dictionary else {}
 	parsed["questMessages"] = _string_array(response.get("questMessages", []))
 	return parsed
 

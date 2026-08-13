@@ -112,8 +112,18 @@ function certifyPreEnableSnapshot(snapshot, control, certifyAttachment, options 
     throw featureError("mail_archive_feature_snapshot_invalid");
   }
   const allowArchiveHistory = options.allowArchiveHistory === true;
-  if ((!allowArchiveHistory && archiveRows.length !== 0) || vaultRows.length !== 0) {
+  const allowVaultHistory = options.allowVaultHistory === true;
+  if (
+    (!allowArchiveHistory && archiveRows.length !== 0)
+    || (!allowVaultHistory && vaultRows.length !== 0)
+  ) {
     throw featureError("mail_archive_feature_pre_enable_sidecars_not_empty");
+  }
+  if (allowVaultHistory) {
+    if (typeof options.certifyVaultRows !== "function") {
+      throw featureError("mail_archive_feature_vault_certifier_missing");
+    }
+    options.certifyVaultRows(vaultRows, identityRows);
   }
   const plan = buildMailStorageBootstrapPlan({sourceRows, certifyAttachment});
   const verification = verifyMailStorageBootstrapPlan(plan, {certifyAttachment});
@@ -307,9 +317,13 @@ async function recoverFeatureEnable(pool, options, before) {
 }
 
 function classifyControl(row) {
-  if (!baseReadyControl(row)) return "invalid";
-  if (Number(row.archive_enabled) === 0) return "disabled_ready";
-  if (Number(row.archive_enabled) === 1) return "enabled";
+	if (!baseReadyControl(row)) return "invalid";
+	if (Number(row.archive_enabled) === 0) {
+		return Number(row.vault_claim_enabled) === 0 && Number(row.active_limit_enabled) === 0
+			? "disabled_ready"
+			: "invalid";
+	}
+	if (Number(row.archive_enabled) === 1) return "enabled";
   return "invalid";
 }
 
@@ -319,8 +333,9 @@ function baseReadyControl(row) {
     && Number(row.data_generation) === 1
     && String(row.lifecycle_state || "") === "ready"
     && [0, 1].includes(Number(row.archive_enabled))
-    && Number(row.vault_claim_enabled) === 0
-    && Number(row.active_limit_enabled) === 0
+		&& [0, 1].includes(Number(row.vault_claim_enabled))
+		&& [0, 1].includes(Number(row.active_limit_enabled))
+		&& (Number(row.active_limit_enabled) !== 1 || Number(row.vault_claim_enabled) === 1)
     && nonNegativeInteger(row.bootstrap_source_count) !== null
     && Number(row.bootstrap_source_count) === Number(row.bootstrap_identity_count)
     && Number(row.bootstrap_identity_count) === Number(row.bootstrap_active_count)
@@ -330,10 +345,14 @@ function baseReadyControl(row) {
 }
 
 function isExactEnabledTransition(before, after) {
-  return baseReadyControl(before)
-    && Number(before.archive_enabled) === 0
-    && baseReadyControl(after)
-    && Number(after.archive_enabled) === 1
+	return baseReadyControl(before)
+		&& Number(before.archive_enabled) === 0
+		&& Number(before.vault_claim_enabled) === 0
+		&& Number(before.active_limit_enabled) === 0
+		&& baseReadyControl(after)
+		&& Number(after.archive_enabled) === 1
+		&& Number(after.vault_claim_enabled) === 0
+		&& Number(after.active_limit_enabled) === 0
     && Object.keys(before).length === Object.keys(after).length
     && Object.keys(before).every((field) => (
       field === "archive_enabled"

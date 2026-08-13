@@ -179,7 +179,7 @@ function assertVaultControl(row) {
     || String(row && row.lifecycle_state || "") !== "ready"
     || ![0, 1].includes(Number(row && row.archive_enabled))
     || Number(row && row.vault_claim_enabled) !== 1
-    || Number(row && row.active_limit_enabled) !== 0
+    || ![0, 1].includes(Number(row && row.active_limit_enabled))
   ) {
     throw rewardVaultStoreError("reward_vault_feature_disabled_or_drifted");
   }

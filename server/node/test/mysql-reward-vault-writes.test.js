@@ -218,11 +218,10 @@ test("multiple rewards sort by deterministic identity and reject duplicate sourc
   );
 });
 
-test("disabled, active-limit, generation drift, malformed batches and tampering fail closed", () => {
+test("disabled, generation drift, malformed batches and tampering fail closed while active limit stays compatible", () => {
   const valid = entry();
   for (const state of [
     storageState({flags: {archive: false, vaultClaim: false, activeLimit: false}}),
-    storageState({flags: {archive: false, vaultClaim: true, activeLimit: true}}),
     storageState({dataGeneration: 0, lifecycleState: "uninitialized"}),
   ]) {
     assert.throws(
@@ -234,6 +233,12 @@ test("disabled, active-limit, generation drift, malformed batches and tampering 
       (error) => error && error.code === "mysql_reward_vault_issue_invalid",
     );
   }
+  const activeLimited = buildRewardVaultIssueWriteSet({
+    storageState: storageState({flags: {archive: true, vaultClaim: true, activeLimit: true}}),
+    entries: [valid],
+    certifyAttachment,
+  });
+  assert.equal(activeLimited.controlLocks[0].expectedRow.active_limit_enabled, 1);
   assert.equal(buildRewardVaultIssueWriteSet({
     storageState: storageState(),
     entries: [],

@@ -5,6 +5,7 @@ const test = require("node:test");
 
 const {
   MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
+  MAIL_ACTIVE_COUNTER_LIMITED_INCREMENT_SQL,
   MAIL_ACTIVE_COUNTER_SEED_SQL,
   MAIL_IDENTITY_INSERT_SQL,
   MAIL_IDENTITY_LOCK_SQL,
@@ -390,8 +391,17 @@ test("control assertion is adjacent and exact for ready generation one with arch
   assert.equal(vaultAware.controlLocks[0].expectedRow.vault_claim_enabled, 1);
   assert.match(vaultAware.legacyStatements[1], /vault_claim_enabled = 1/);
 
-  const unsupported = storageState(1, {activeLimitEnabled: true});
-  rejects("unsupported_feature_flag_enabled", () => writeSet(unsupported, [insertChange()]));
+  const activeLimited = storageState(1, {
+    compatible: true,
+    ready: true,
+    flags: {archive: true, vaultClaim: true, activeLimit: true},
+  });
+  const limited = writeSet(activeLimited, [insertChange()]);
+  assert.equal(limited.controlLocks[0].expectedRow.active_limit_enabled, 1);
+  assert.equal(limited.sidecarWrites[1].kind, "limited_increment");
+  assert.equal(limited.sidecarWrites[1].sql, MAIL_ACTIVE_COUNTER_LIMITED_INCREMENT_SQL);
+  assert.deepEqual(limited.sidecarWrites[1].params, [1, "account_recipient", 1]);
+  assert.match(limited.legacyStatements[1], /active_limit_enabled = 1/);
 });
 
 test("generation one rejects bare delete before accepting a failed forward plan", () => {

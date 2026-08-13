@@ -31,6 +31,7 @@ const MUTATION_RECEIPT_DELETE_SQL = `DELETE FROM mutation_receipts
     AND account_id <=> ? AND committed_at = ? AND expires_at = ?
     AND document_json = CAST(? AS JSON)`;
 const MAIL_STORAGE_CONTROL_SCOPE_KEY = "mail_lifecycle";
+const MAIL_ACTIVE_LIMIT_CAPACITY = 200;
 const MAIL_STORAGE_CONTROL_LOCK_SQL = `SELECT scope_key, schema_generation, data_generation,
   lifecycle_state, archive_enabled, vault_claim_enabled, active_limit_enabled
   FROM mail_storage_control WHERE scope_key = ? FOR SHARE`;
@@ -42,6 +43,11 @@ const MAIL_ACTIVE_COUNTER_INCREMENT_SQL = `UPDATE mail_active_counters
   SET active_count = active_count + ?, revision = revision + 1
   WHERE recipient_account_id = ? AND data_generation = 1
     AND active_count <= 4294967295 - ?
+    AND revision < 18446744073709551615`;
+const MAIL_ACTIVE_COUNTER_LIMITED_INCREMENT_SQL = `UPDATE mail_active_counters
+  SET active_count = active_count + ?, revision = revision + 1
+  WHERE recipient_account_id = ? AND data_generation = 1
+    AND active_count <= ${MAIL_ACTIVE_LIMIT_CAPACITY} - ?
     AND revision < 18446744073709551615`;
 const MAIL_IDENTITY_LOCK_SQL = `SELECT mail_id, sender_account_id, recipient_account_id,
   location, created_at, settled_at, archived_at, identity_digest, document_digest,
@@ -162,7 +168,7 @@ const WRITE_KINDS_BY_RESOURCE = new Map([
   ["profile_binding", new Set(["write"])],
   ["profile", new Set(["write"])],
   ["market_listing", new Set(["insert", "delete"])],
-  ["mail_active_counter", new Set(["seed", "increment"])],
+  ["mail_active_counter", new Set(["seed", "increment", "limited_increment"])],
   ["reward_vault", new Set(["insert", "claim"])],
   ["mail_identity", new Set(["insert", "update"])],
   ["mail_message", new Set(["insert", "update", "delete"])],
@@ -312,6 +318,15 @@ function writeContract(resource, kind, key) {
       stableParamPairs: [[0, 2]],
       counterIncrementParams: true,
       sql: MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
+    };
+  }
+  if (resource === "mail_active_counter" && kind === "limited_increment") {
+    return {
+      keyParamIndex: 1,
+      paramsLength: 3,
+      stableParamPairs: [[0, 2]],
+      counterIncrementParams: true,
+      sql: MAIL_ACTIVE_COUNTER_LIMITED_INCREMENT_SQL,
     };
   }
   if (resource === "reward_vault" && kind === "insert") {
@@ -491,7 +506,10 @@ function validMailStorageControlExpectedRow(value) {
     && (value.data_generation === 1
       ? [0, 1].includes(value.vault_claim_enabled)
       : value.vault_claim_enabled === 0)
-    && value.active_limit_enabled === 0;
+    && (value.data_generation === 1
+      ? [0, 1].includes(value.active_limit_enabled)
+      : value.active_limit_enabled === 0)
+    && (value.active_limit_enabled !== 1 || value.vault_claim_enabled === 1);
 }
 
 function validRewardVaultInsertParams(params) {
@@ -1222,7 +1240,7 @@ function allowsSameKeyWriteReuse(previousWrite, write) {
     previousWrite.resource === "mail_active_counter"
     && previousWrite.kind === "seed"
     && write.resource === "mail_active_counter"
-    && write.kind === "increment"
+    && ["increment", "limited_increment"].includes(write.kind)
   );
 }
 
@@ -1366,7 +1384,9 @@ function mysqlResourceAcquisitionTrace(plan) {
 }
 
 module.exports = {
+  MAIL_ACTIVE_LIMIT_CAPACITY,
   MAIL_ACTIVE_COUNTER_INCREMENT_SQL,
+  MAIL_ACTIVE_COUNTER_LIMITED_INCREMENT_SQL,
   MAIL_ACTIVE_COUNTER_SEED_SQL,
   MAIL_IDENTITY_INSERT_SQL,
   MAIL_IDENTITY_LOCK_SQL,

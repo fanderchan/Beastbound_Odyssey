@@ -32,7 +32,6 @@ function buildRewardVaultIssueWriteSet(options = {}) {
     state.dataGeneration !== 1
     || state.lifecycleState !== "ready"
     || state.flags.vaultClaim !== true
-    || state.flags.activeLimit !== false
   ) {
     throw rewardVaultWriteError("feature_disabled_or_drifted");
   }
@@ -75,7 +74,7 @@ function buildRewardVaultIssueWriteSet(options = {}) {
       lifecycle_state: "ready",
       archive_enabled: state.flags.archive ? 1 : 0,
       vault_claim_enabled: 1,
-      active_limit_enabled: 0,
+      active_limit_enabled: state.flags.activeLimit ? 1 : 0,
     },
   });
   const writes = canonicalEntries.map((entry) => deepFreeze({

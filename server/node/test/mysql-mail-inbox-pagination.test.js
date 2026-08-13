@@ -51,7 +51,7 @@ function row(document) {
   };
 }
 
-function recordingPool(pageRowsByCall, unreadCount = 4) {
+function recordingPool(pageRowsByCall, unreadCount = 4, activeCount = unreadCount) {
   const state = {
     acquisitions: 0,
     pageCall: 0,
@@ -79,8 +79,11 @@ function recordingPool(pageRowsByCall, unreadCount = 4) {
         state.pageCall += 1;
         return [rows, []];
       }
-      if (/^SELECT COUNT\(\*\) AS unread_count/i.test(sql)) {
-        return [[{unread_count: String(unreadCount)}], []];
+      if (/^SELECT COUNT\(\*\) AS active_count/i.test(sql)) {
+        return [[{
+          active_count: String(activeCount),
+          unread_count: String(unreadCount),
+        }], []];
       }
       throw new Error(`unexpected inbox page SQL: ${sql}`);
     },
@@ -98,6 +101,60 @@ function recordingPool(pageRowsByCall, unreadCount = 4) {
       },
       async end() {},
     },
+  };
+}
+
+function mailCenterRecordingPool(options = {}) {
+  const state = {queries: [], committed: 0, rolledBack: 0};
+  const connection = {
+    async beginTransaction() {},
+    async query(statement, params = []) {
+      const rawSql = String(statement && statement.sql || statement).trim();
+      const sql = rawSql.replace(/\s+/g, " ");
+      if (rawSql === MYSQL_SESSION_POLICY_SQL) return [{affectedRows: 0}, []];
+      state.queries.push({sql, params: structuredClone(params)});
+      if (/^SET TRANSACTION ISOLATION LEVEL REPEATABLE READ$/i.test(sql)) {
+        return [{affectedRows: 0}, []];
+      }
+      if (/FROM mail_storage_control[\s\S]+FOR SHARE$/i.test(sql)) {
+        return [[{
+          scope_key: "mail_lifecycle",
+          schema_generation: 1,
+          data_generation: 1,
+          lifecycle_state: "ready",
+          archive_enabled: 1,
+          vault_claim_enabled: 1,
+          active_limit_enabled: 1,
+        }], []];
+      }
+      if (/^SELECT mail_id, sender_account_id/i.test(sql)) {
+        return [[row(mail("mail_center_page", CREATED_AT))], []];
+      }
+      if (/^SELECT COUNT\(\*\) AS active_count/i.test(sql)) {
+        return [[{active_count: "199", unread_count: "7"}], []];
+      }
+      if (/^SELECT active_count, data_generation[\s\S]+FROM mail_active_counters/i.test(sql)) {
+        return [[{
+          active_count: String(options.counterCount ?? 199),
+          data_generation: 1,
+        }], []];
+      }
+      if (/^SELECT COUNT\(\*\) AS available_reward_count/i.test(sql)) {
+        return [[{available_reward_count: "2"}], []];
+      }
+      if (/^SELECT COUNT\(\*\) AS archive_count/i.test(sql)) {
+        return [[{archive_count: "18"}], []];
+      }
+      throw new Error(`unexpected mail center SQL: ${sql}`);
+    },
+    async commit() { state.committed += 1; },
+    async rollback() { state.rolledBack += 1; },
+    release() {},
+    destroy() {},
+  };
+  return {
+    state,
+    pool: {async getConnection() { return connection; }},
   };
 }
 
@@ -119,6 +176,11 @@ test("first and next inbox pages use recipient-only keyset SQL, limit+1, tie-bre
   });
   assert.deepEqual(first.mailRows.map(({mailId}) => mailId), ["mail_page_z", "mail_page_y"]);
   assert.equal(first.unreadCount, 4);
+  assert.equal(first.summary.activeCount, 4);
+  assert.equal(first.summary.activeCapacity, 200);
+  assert.equal(first.summary.unreadCount, 4);
+  assert.equal(first.summary.availableRewardCount, 0);
+  assert.equal(first.summary.archiveCount, 0);
   assert.equal(first.hasMore, true);
   assert.deepEqual(decodeMailInboxCursor(first.nextCursor), {
     createdAt: CREATED_AT,
@@ -154,7 +216,8 @@ test("first and next inbox pages use recipient-only keyset SQL, limit+1, tie-bre
     3,
   ]);
   assert.ok(countQueries.every(({sql, params}) => (
-    /WHERE recipient_account_id = \? AND read_at IS NULL/i.test(sql)
+    /SUM\(read_at IS NULL\)/i.test(sql)
+    && /WHERE recipient_account_id = \?/i.test(sql)
     && params.length === 1
     && params[0] === ACCOUNT_ID
   )));
@@ -204,6 +267,44 @@ test("MySQL collation owns mixed-case opaque key ordering across the page cursor
   ]);
 });
 
+test("enabled mail center returns one cross-checked capacity, badge, reward and archive summary", async () => {
+  const storageState = {
+    dataGeneration: 1,
+    flags: {archive: true, vaultClaim: true, activeLimit: true},
+  };
+  const fake = mailCenterRecordingPool();
+  const page = await runMysqlMailInboxPageRead(fake.pool, ACCOUNT_ID, {
+    limit: 2,
+    cursor: null,
+  }, {mailStorageState: storageState});
+  assert.deepEqual(page.summary, {
+    schemaVersion: 1,
+    activeCount: 199,
+    activeCapacity: 200,
+    unreadCount: 7,
+    availableRewardCount: 2,
+    archiveCount: 18,
+    archiveEnabled: true,
+    rewardVaultEnabled: true,
+    activeLimitEnabled: true,
+  });
+  assert.equal(fake.state.committed, 1);
+  assert.equal(fake.state.rolledBack, 0);
+
+  const drifted = mailCenterRecordingPool({counterCount: 198});
+  await assert.rejects(
+    runMysqlMailInboxPageRead(drifted.pool, ACCOUNT_ID, {
+      limit: 2,
+      cursor: null,
+    }, {mailStorageState: storageState}),
+    (error) => error
+      && error.code === "mysql_mail_inbox_page_integrity_invalid"
+      && error.reason === "counter_drift",
+  );
+  assert.equal(drifted.state.committed, 0);
+  assert.equal(drifted.state.rolledBack, 1);
+});
+
 test("invalid cursor fails before connection acquisition and partial pages expose no adopt contract", async () => {
   const fake = recordingPool([[]], 0);
   await assert.rejects(
@@ -220,6 +321,7 @@ test("invalid cursor fails before connection acquisition and partial pages expos
     "mailRows",
     "nextCursor",
     "recipientAccountId",
+    "summary",
     "unreadCount",
   ]);
   assert.equal(Object.hasOwn(page, "mailPartitions"), false);
