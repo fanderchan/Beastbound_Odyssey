@@ -36,6 +36,9 @@ const {
   stageDurableMutationReceipt,
 } = require("../server/node/src/auth/durable-mutation-state");
 const {createMysqlAuthStore} = require("../server/node/src/mysql-store");
+const {
+  wrapFakeMysqlWithMailStorageAudit,
+} = require("../server/node/test-support/mysql-mail-storage-fixture");
 
 const worker = process.argv[2] === "--worker" ? process.argv[3] : "";
 if (worker !== "") {
@@ -152,11 +155,11 @@ function ledgerWorker(count) {
 async function tombstoneServiceWorker(tombstoneCount) {
   const seedStore = createMemoryAuthStore();
   const seedService = createAuthService({store: seedStore, allowFullProfileSave: true});
-  const registered = seedService.register({
+  const registered = activateCapacityCharacter(seedService, seedService.register({
     username: `tomb${tombstoneCount}`,
     password: "test1234",
     displayName: `墓碑${tombstoneCount}`,
-  });
+  }), "墓碑容量角色");
   const token = registered.session.token;
   seedBackpackEquipment(seedService, token);
   const firstDeposit = seedService.bankDeposit(token, {
@@ -275,11 +278,11 @@ async function serviceWorker(receiptCount) {
     allowFullProfileSave: true,
     now: () => authoritativeNowMs,
   });
-  const registered = seedService.register({
+  const registered = activateCapacityCharacter(seedService, seedService.register({
     username: `gate${receiptCount}`,
     password: "test1234",
     displayName: `容量${receiptCount}`,
-  });
+  }), "回执容量角色");
   const raw = seedStore.load();
   for (let index = 1; index < 200; index += 1) {
     const playerId = `player_gate_${String(index).padStart(3, "0")}`;
@@ -469,7 +472,7 @@ async function mysqlWorker() {
   };
   try {
     const store = createMysqlAuthStore({
-      mysqlPath: fakeMysqlPath,
+      mysqlPath: wrapFakeMysqlWithMailStorageAudit(fakeMysqlPath),
       host: "127.0.0.1",
       port: 3306,
       user: "capacity",
@@ -641,6 +644,25 @@ function seedBackpackEquipment(service, token) {
     profile,
   });
   assert.equal(saved.ok, true, JSON.stringify(saved));
+}
+
+function activateCapacityCharacter(service, registration, displayName) {
+  assert.equal(registration.ok, true);
+  const created = service.createCharacter(registration.session.token, {
+    appearanceId: "novice_hunter_v1",
+    slotIndex: 0,
+    displayName,
+    elements: {earth: 6, water: 4, fire: 0, wind: 0},
+  });
+  assert.equal(created.ok, true, JSON.stringify(created));
+  const selected = service.selectCharacter(registration.session.token, {slotIndex: 0});
+  assert.equal(selected.ok, true, JSON.stringify(selected));
+  return {
+    ...registration,
+    session: selected.session,
+    profileBinding: selected.profileBinding,
+    profileSummary: selected.profileSummary,
+  };
 }
 
 function receiptRecord(operationId, committedAtMs, accountId) {

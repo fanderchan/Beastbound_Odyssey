@@ -5,7 +5,17 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const {isDeepStrictEqual} = require("node:util");
-const {cloneAuthorityRoot} = require("./auth/authority-root-clone");
+const {
+  cloneAuthorityRoot,
+  freezeAuthorityRootCowRecordValues,
+  freezeAuthorityRootIdentityRecordValues,
+} = require("./auth/authority-root-clone");
+const {
+  adoptAuthorityRecordClone,
+  authorityRecordCollectionMetrics,
+  authorityRecordDeltaFrom,
+  noteAuthorityRecordPlannerFullDiff,
+} = require("./auth/authority-record-state");
 const {
   applySharedAssetReadView,
   compareCanonicalIds,
@@ -580,8 +590,10 @@ function createMysqlAuthStore(options = {}) {
     // loaded object returned to the service is normalized separately, so a
     // request COMMIT cannot advance the store baseline before the exact
     // post-COMMIT merge runs.
-    lastPersistentData = canonicalizeMysqlMailAuthorityBaseline(
-      mysqlPersistentData(loaded, {bridgeLegacyCharacterSlots: false}),
+    lastPersistentData = certifyMysqlPersistentAuthorityRecords(
+      canonicalizeMysqlMailAuthorityBaseline(
+        mysqlPersistentData(loaded, {bridgeLegacyCharacterSlots: false}),
+      ),
     );
     if (
       Object.hasOwn(loaded, "accountCharacterSlots")
@@ -2196,15 +2208,15 @@ function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}
   if (options.forceServerState === true || entityChanged(previousState, nextState)) {
     groups.serverState.push(upsertStateStatement(nextState));
   }
-  appendObjectEntityDiff(groups.accounts, "accounts", "account_id", previous.accounts, data.accounts, accountEntityKey, insertAccountStatement);
-  appendObjectEntityDiff(groups.sessions, "sessions", "session_id", previous.sessions, data.sessions, sessionEntityKey, insertSessionStatement);
-  appendObjectEntityDiff(groups.profileBindings, "profile_bindings", "account_id", previous.profileBindings, data.profileBindings, profileBindingEntityKey, insertProfileBindingStatement);
+  appendObjectEntityDiff(groups.accounts, "accounts", "account_id", previous.accounts, data.accounts, accountEntityKey, insertAccountStatement, {authorityBucket: "accounts"});
+  appendObjectEntityDiff(groups.sessions, "sessions", "session_id", previous.sessions, data.sessions, sessionEntityKey, insertSessionStatement, {authorityBucket: "sessions"});
+  appendObjectEntityDiff(groups.profileBindings, "profile_bindings", "account_id", previous.profileBindings, data.profileBindings, profileBindingEntityKey, insertProfileBindingStatement, {authorityBucket: "profileBindings"});
   appendAccountCharacterSlotDiff(
     groups.accountCharacterSlots,
     previous.accountCharacterSlots,
     data.accountCharacterSlots,
   );
-  appendObjectEntityDiff(groups.profiles, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement);
+  appendObjectEntityDiff(groups.profiles, "profiles", "player_id", previous.profiles, data.profiles, profileEntityKey, insertProfileStatement, {authorityBucket: "profiles"});
   appendMutationReceiptDeltaOrDiff(
     groups.mutationReceipts,
     previous.mutationReceipts,
@@ -2223,7 +2235,7 @@ function buildSaveStatementGroupsFromPersistentData(data, previous, options = {}
       typedChanges: groups.mailAuthorityChanges,
     },
   );
-  appendObjectEntityDiff(groups.marketListings, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement, {strictInsertNew: true});
+  appendObjectEntityDiff(groups.marketListings, "market_listings", "listing_id", previous.marketListings, data.marketListings, marketListingEntityKey, insertMarketListingStatement, {authorityBucket: "marketListings", strictInsertNew: true});
   appendConsumedEquipmentEnvelopeDeltaOrDiff(
     groups.consumedEquipmentEnvelopes,
     previous.consumedEquipmentEnvelopes,
@@ -2814,6 +2826,7 @@ function legacyMarketCreateCapacityProtection(previous, data) {
     previous.marketListings,
     data.marketListings,
     marketListingEntityKey,
+    "marketListings",
   );
   if (listingAddition === null) {
     return null;
@@ -2863,9 +2876,20 @@ function buildConditionalMarketCreateSavePlan(data, previous, groups, consistenc
     previous.marketListings,
     data.marketListings,
     marketListingEntityKey,
+    "marketListings",
   );
-  const previousListings = canonicalObjectEntityMap(previous.marketListings, marketListingEntityKey);
-  if (profileRevisionChange === null || listingAddition === null || previousListings === null) {
+  const previousListingMetrics = authorityRecordCollectionMetrics(
+    previous.marketListings,
+    "marketListings",
+  );
+  const previousListings = previousListingMetrics === null
+    ? canonicalObjectEntityMap(previous.marketListings, marketListingEntityKey)
+    : null;
+  if (
+    profileRevisionChange === null
+    || listingAddition === null
+    || (previousListingMetrics === null && previousListings === null)
+  ) {
     return null;
   }
   const {
@@ -2889,11 +2913,17 @@ function buildConditionalMarketCreateSavePlan(data, previous, groups, consistenc
     "createdAt",
     "schemaVersion",
   ]);
-  const observedTotalListingCount = previousListings.size;
-  let observedSellerListingCount = 0;
-  for (const previousListing of previousListings.values()) {
-    if (String(previousListing && previousListing.sellerAccountId || "") === accountId) {
-      observedSellerListingCount += 1;
+  const observedTotalListingCount = previousListingMetrics === null
+    ? previousListings.size
+    : previousListingMetrics.recordCount;
+  let observedSellerListingCount = previousListingMetrics === null
+    ? 0
+    : previousListingMetrics.sellerAccountCount(accountId);
+  if (previousListingMetrics === null) {
+    for (const previousListing of previousListings.values()) {
+      if (String(previousListing && previousListing.sellerAccountId || "") === accountId) {
+        observedSellerListingCount += 1;
+      }
     }
   }
   if (
@@ -3082,6 +3112,7 @@ function buildConditionalMarketCancelSavePlan(data, previous, groups, consistenc
     previous.marketListings,
     data.marketListings,
     marketListingEntityKey,
+    "marketListings",
   );
   if (profileRevisionChange === null || listingDelete === null) {
     return null;
@@ -3206,6 +3237,7 @@ function buildConditionalMarketBuySavePlan(
     previous.marketListings,
     data.marketListings,
     marketListingEntityKey,
+    "marketListings",
   );
   const mailInsert = noSaleMail ? null : singleMailAuthorityEntityChange(
     previous.mailMessages,
@@ -4067,11 +4099,13 @@ function certifiedSingleProfileRevisionChange(previous, data) {
     previous.profileBindings,
     data.profileBindings,
     profileBindingEntityKey,
+    "profileBindings",
   );
   const profileChange = singleExistingObjectEntityChange(
     previous.profiles,
     data.profiles,
     profileEntityKey,
+    "profiles",
   );
   if (bindingChange === null || profileChange === null) {
     return null;
@@ -4337,7 +4371,50 @@ function mailMessageResourceLock(mail) {
   };
 }
 
-function singleExistingObjectEntityChange(previousValue, nextValue, keyFn) {
+function certifiedAuthorityRecordEntityChanges(previousValue, nextValue, keyFn, authorityBucket) {
+  const bucket = String(authorityBucket || "");
+  if (bucket === "") {
+    return null;
+  }
+  const delta = authorityRecordDeltaFrom(previousValue, nextValue, bucket);
+  if (!delta.ok) {
+    noteAuthorityRecordPlannerFullDiff(bucket, delta.reason);
+    return null;
+  }
+  const changes = [];
+  for (const change of delta.changes) {
+    const beforeKey = change.before === null ? "" : entityKey(keyFn, change.before);
+    const afterKey = change.after === null ? "" : entityKey(keyFn, change.after);
+    if (
+      String(change.recordId || "") === ""
+      || (change.before !== null && beforeKey === "")
+      || (change.after !== null && afterKey === "")
+    ) {
+      return null;
+    }
+    changes.push({...change, afterKey, beforeKey});
+  }
+  return changes;
+}
+
+function singleExistingObjectEntityChange(previousValue, nextValue, keyFn, authorityBucket = "") {
+  const certifiedChanges = certifiedAuthorityRecordEntityChanges(
+    previousValue,
+    nextValue,
+    keyFn,
+    authorityBucket,
+  );
+  if (certifiedChanges !== null) {
+    if (
+      certifiedChanges.length !== 1
+      || certifiedChanges[0].disposition !== "update"
+      || certifiedChanges[0].beforeKey !== certifiedChanges[0].afterKey
+    ) {
+      return null;
+    }
+    const change = certifiedChanges[0];
+    return {key: change.beforeKey, previous: change.before, next: change.after};
+  }
   const previous = canonicalObjectEntityMap(previousValue, keyFn);
   const next = canonicalObjectEntityMap(nextValue, keyFn);
   if (previous === null || next === null || previous.size !== next.size) {
@@ -4360,7 +4437,23 @@ function singleExistingObjectEntityChange(previousValue, nextValue, keyFn) {
   return change;
 }
 
-function singleExistingObjectEntityDeletion(previousValue, nextValue, keyFn) {
+function singleExistingObjectEntityDeletion(previousValue, nextValue, keyFn, authorityBucket = "") {
+  const certifiedChanges = certifiedAuthorityRecordEntityChanges(
+    previousValue,
+    nextValue,
+    keyFn,
+    authorityBucket,
+  );
+  if (certifiedChanges !== null) {
+    if (
+      certifiedChanges.length !== 1
+      || certifiedChanges[0].disposition !== "delete"
+    ) {
+      return null;
+    }
+    const change = certifiedChanges[0];
+    return {key: change.beforeKey, previous: change.before};
+  }
   const previous = canonicalObjectEntityMap(previousValue, keyFn);
   const next = canonicalObjectEntityMap(nextValue, keyFn);
   if (previous === null || next === null || previous.size !== next.size + 1) {
@@ -4382,7 +4475,23 @@ function singleExistingObjectEntityDeletion(previousValue, nextValue, keyFn) {
   return deletion;
 }
 
-function singleNewObjectEntityAddition(previousValue, nextValue, keyFn) {
+function singleNewObjectEntityAddition(previousValue, nextValue, keyFn, authorityBucket = "") {
+  const certifiedChanges = certifiedAuthorityRecordEntityChanges(
+    previousValue,
+    nextValue,
+    keyFn,
+    authorityBucket,
+  );
+  if (certifiedChanges !== null) {
+    if (
+      certifiedChanges.length !== 1
+      || certifiedChanges[0].disposition !== "insert"
+    ) {
+      return null;
+    }
+    const change = certifiedChanges[0];
+    return {key: change.afterKey, next: change.after};
+  }
   const previous = canonicalObjectEntityMap(previousValue, keyFn);
   const next = canonicalObjectEntityMap(nextValue, keyFn);
   if (previous === null || next === null || next.size !== previous.size + 1) {
@@ -5830,12 +5939,23 @@ function mysqlPersistentData(nextData, options = {}) {
   const characterSlotsSource = hasExplicitCharacterSlots
     ? data.accountCharacterSlots
     : options.fallbackAccountCharacterSlots;
-  data.accountCharacterSlots = options.bridgeLegacyCharacterSlots === false
+  const canonicalCharacterSlots = options.bridgeLegacyCharacterSlots === false
     ? canonicalAccountCharacterSlots(characterSlotsSource)
     : accountCharacterSlotsWithLegacyBindingBridge(
       characterSlotsSource,
       data.profileBindings,
     );
+  const trackedCharacterSlots = isDeepStrictEqual(canonicalCharacterSlots, characterSlotsSource)
+    ? adoptAuthorityRecordClone(
+      characterSlotsSource,
+      canonicalCharacterSlots,
+      "accountCharacterSlots",
+    )
+    : canonicalCharacterSlots;
+  data.accountCharacterSlots = freezeAuthorityRootCowRecordValues(
+    trackedCharacterSlots,
+    "accountCharacterSlots",
+  );
   data.playerPositions = {};
   data.partyInvites = {};
   data.battleInvites = {};
@@ -5849,6 +5969,37 @@ function mysqlPersistentData(nextData, options = {}) {
       return !type.startsWith("battle.");
     });
   }
+  return data;
+}
+
+function certifyMysqlPersistentAuthorityRecords(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return data;
+  }
+  data.accounts = freezeAuthorityRootIdentityRecordValues(
+    "accounts",
+    objectOrEmpty(data.accounts),
+  );
+  data.sessions = freezeAuthorityRootIdentityRecordValues(
+    "sessions",
+    objectOrEmpty(data.sessions),
+  );
+  data.profileBindings = freezeAuthorityRootIdentityRecordValues(
+    "profileBindings",
+    objectOrEmpty(data.profileBindings),
+  );
+  data.accountCharacterSlots = freezeAuthorityRootCowRecordValues(
+    objectOrEmpty(data.accountCharacterSlots),
+    "accountCharacterSlots",
+  );
+  data.profiles = freezeAuthorityRootCowRecordValues(
+    objectOrEmpty(data.profiles),
+    "profiles",
+  );
+  data.marketListings = freezeAuthorityRootCowRecordValues(
+    objectOrEmpty(data.marketListings),
+    "marketListings",
+  );
   return data;
 }
 
@@ -5872,7 +6023,30 @@ function committedMysqlPersistentData(nextData, options = {}) {
   if (isCanonicalMailAuthorityState(data.mailMessages)) {
     data.mailMessages = commitMailAuthorityDelta(data.mailMessages);
   }
-  return data;
+  return certifyMysqlPersistentAuthorityRecords(data);
+}
+
+function mergeCommittedAuthorityRecordChanges(previous, committed, bucket, changes) {
+  const previousRecords = objectOrEmpty(previous && previous[bucket]);
+  const committedRecords = objectOrEmpty(committed && committed[bucket]);
+  const merged = {...previousRecords};
+  for (const change of Array.isArray(changes) ? changes : []) {
+    const recordId = String(change && change.recordId || "");
+    if (recordId === "") {
+      const error = new Error(`MySQL ${bucket} 条件基线合并缺少记录身份。`);
+      error.code = "mysql_resource_precondition_invalid";
+      throw error;
+    }
+    if (change.delete === true) {
+      delete merged[recordId];
+    } else {
+      merged[recordId] = change.value;
+    }
+  }
+  const tracked = adoptAuthorityRecordClone(committedRecords, merged, bucket);
+  return ["accounts", "sessions", "profileBindings"].includes(bucket)
+    ? freezeAuthorityRootIdentityRecordValues(bucket, tracked)
+    : freezeAuthorityRootCowRecordValues(tracked, bucket);
 }
 
 function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
@@ -5950,14 +6124,18 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     }
     return {
       ...merged,
-      profileBindings: {
-        ...(previous.profileBindings || {}),
-        [accountId]: binding,
-      },
-      profiles: {
-        ...(previous.profiles || {}),
-        [playerId]: profile,
-      },
+      profileBindings: mergeCommittedAuthorityRecordChanges(
+        previous,
+        committed,
+        "profileBindings",
+        [{recordId: accountId, value: binding}],
+      ),
+      profiles: mergeCommittedAuthorityRecordChanges(
+        previous,
+        committed,
+        "profiles",
+        [{recordId: playerId, value: profile}],
+      ),
     };
   }
   if (plan.kind === "mail_read_conditional_v1") {
@@ -6017,14 +6195,18 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
   // relabelling the request candidate as a fresh database-wide snapshot.
   const merged = {
     ...previous,
-    profileBindings: {
-      ...(previous.profileBindings || {}),
-      [accountId]: binding,
-    },
-    profiles: {
-      ...(previous.profiles || {}),
-      [playerId]: profile,
-    },
+    profileBindings: mergeCommittedAuthorityRecordChanges(
+      previous,
+      committed,
+      "profileBindings",
+      [{recordId: accountId, value: binding}],
+    ),
+    profiles: mergeCommittedAuthorityRecordChanges(
+      previous,
+      committed,
+      "profiles",
+      [{recordId: playerId, value: profile}],
+    ),
     mutationReceipts: committed.mutationReceipts,
   };
   if (plan.kind === "profile_conditional_v2") {
@@ -6066,10 +6248,12 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     }
     return {
       ...merged,
-      marketListings: {
-        ...(previous.marketListings || {}),
-        [listingId]: listing,
-      },
+      marketListings: mergeCommittedAuthorityRecordChanges(
+        previous,
+        committed,
+        "marketListings",
+        [{recordId: listingId, value: listing}],
+      ),
     };
   }
 
@@ -6120,8 +6304,12 @@ function mergeMysqlSaveBaselineAfterCommit(previous, committed, plan) {
     error.code = "mysql_resource_precondition_invalid";
     throw error;
   }
-  const marketListings = {...(previous.marketListings || {})};
-  delete marketListings[listingId];
+  const marketListings = mergeCommittedAuthorityRecordChanges(
+    previous,
+    committed,
+    "marketListings",
+    [{recordId: listingId, delete: true}],
+  );
   const marketMerged = {
     ...merged,
     marketListings,
@@ -6299,8 +6487,51 @@ function accountCharacterSlotEntityMap(value) {
 }
 
 function appendAccountCharacterSlotDiff(statements, previousValue, nextValue) {
-  const previous = accountCharacterSlotEntityMap(previousValue);
-  const next = accountCharacterSlotEntityMap(nextValue);
+  const delta = authorityRecordDeltaFrom(
+    previousValue,
+    nextValue,
+    "accountCharacterSlots",
+  );
+  if (delta.ok) {
+    const previous = {};
+    const next = {};
+    for (const change of delta.changes) {
+      const accountId = String(change.recordId || "");
+      if (accountId === "") {
+        const error = new Error("MySQL accountCharacterSlots touched-set 缺少账号身份。");
+        error.code = "mysql_resource_precondition_invalid";
+        throw error;
+      }
+      if (change.before !== null) {
+        Object.assign(previous, accountCharacterSlotRosterEntityMap(accountId, change.before));
+      }
+      if (change.after !== null) {
+        Object.assign(next, accountCharacterSlotRosterEntityMap(accountId, change.after));
+      }
+    }
+    appendAccountCharacterSlotEntityMapDiff(statements, previous, next);
+    return;
+  }
+  noteAuthorityRecordPlannerFullDiff("accountCharacterSlots", delta.reason);
+  appendAccountCharacterSlotEntityMapDiff(
+    statements,
+    accountCharacterSlotEntityMap(previousValue),
+    accountCharacterSlotEntityMap(nextValue),
+  );
+}
+
+function accountCharacterSlotRosterEntityMap(accountId, roster) {
+  const rosters = canonicalAccountCharacterSlots({[accountId]: roster});
+  const result = {};
+  for (const slot of rosters[accountId]) {
+    if (slot !== null) {
+      result[accountCharacterSlotEntityKey(slot)] = slot;
+    }
+  }
+  return result;
+}
+
+function appendAccountCharacterSlotEntityMapDiff(statements, previous, next) {
   const deletes = [];
   const updates = [];
   const inserts = [];
@@ -6330,6 +6561,50 @@ function appendAccountCharacterSlotDiff(statements, previousValue, nextValue) {
 }
 
 function appendObjectEntityDiff(statements, tableName, primaryColumn, previousObject, nextObject, keyFn, insertFn, options = {}) {
+  const authorityBucket = String(options.authorityBucket || "");
+  if (authorityBucket !== "") {
+    const delta = authorityRecordDeltaFrom(previousObject, nextObject, authorityBucket);
+    if (delta.ok) {
+      const previousTouched = {};
+      const nextTouched = {};
+      for (const change of delta.changes) {
+        const recordId = String(change.recordId || "");
+        const beforeKey = change.before === null ? "" : entityKey(keyFn, change.before);
+        const afterKey = change.after === null ? "" : entityKey(keyFn, change.after);
+        if (
+          recordId === ""
+          || (change.before !== null && beforeKey === "")
+          || (change.after !== null && afterKey === "")
+        ) {
+          const error = new Error(`MySQL ${authorityBucket} touched-set 身份不一致。`);
+          error.code = "mysql_resource_precondition_invalid";
+          throw error;
+        }
+        if (!["delete", "insert", "update"].includes(change.disposition)) {
+          const error = new Error(`MySQL ${authorityBucket} touched-set 变化类型非法。`);
+          error.code = "mysql_resource_precondition_invalid";
+          throw error;
+        }
+        if (change.before !== null) {
+          previousTouched[beforeKey] = change.before;
+        }
+        if (change.after !== null) {
+          nextTouched[afterKey] = change.after;
+        }
+      }
+      appendEntityDiff(
+        statements,
+        tableName,
+        primaryColumn,
+        previousTouched,
+        nextTouched,
+        insertFn,
+        options,
+      );
+      return;
+    }
+    noteAuthorityRecordPlannerFullDiff(authorityBucket, delta.reason);
+  }
   appendEntityDiff(
     statements,
     tableName,

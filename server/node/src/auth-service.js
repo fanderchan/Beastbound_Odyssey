@@ -940,7 +940,7 @@ function createAuthService(options = {}) {
         if (Object.prototype.hasOwnProperty.call(player, "elements")) {
           continue;
         }
-        stagedData.profiles[playerId] = {
+        storeAuthorityRootRecord(stagedData, "profiles", playerId, {
           ...profileDoc,
           profile: {
             ...profile,
@@ -949,7 +949,7 @@ function createAuthService(options = {}) {
               elements: clone(initialCharacterElementsForTests),
             },
           },
-        };
+        });
       }
     }
     pruneLoadedSessionHistory(stagedData, now);
@@ -2182,7 +2182,7 @@ function createAuthService(options = {}) {
       profileRevision: nextRevision,
       updatedAt: isoNow(now),
     };
-    candidateData.profileBindings[resolved.account.accountId] = binding;
+    storeAuthorityRootRecord(candidateData, "profileBindings", resolved.account.accountId, binding);
     const storedProfile = clone(profile);
     if (
       initialCharacterElementsForTests
@@ -7959,9 +7959,12 @@ function normalizeData(raw, options = {}) {
     schemaVersion: 1,
     accounts: freezeAuthorityRootIdentityRecordValues("accounts", objectOrEmpty(data.accounts)),
     sessions: freezeAuthorityRootIdentityRecordValues("sessions", objectOrEmpty(data.sessions)),
-    accountCharacterSlots: objectOrEmpty(data.accountCharacterSlots),
+    accountCharacterSlots: freezeAuthorityRootCowRecordValues(
+      objectOrEmpty(data.accountCharacterSlots),
+      "accountCharacterSlots",
+    ),
     profileBindings: freezeAuthorityRootIdentityRecordValues("profileBindings", objectOrEmpty(data.profileBindings)),
-    profiles: freezeAuthorityRootCowRecordValues(objectOrEmpty(data.profiles)),
+    profiles: freezeAuthorityRootCowRecordValues(objectOrEmpty(data.profiles), "profiles"),
     // Healthy mail roots become immutable touched-row views. Malformed legacy
     // rows remain inspectable so existing quarantine paths can fail the owning
     // operation closed without silently dropping player attachments.
@@ -7969,7 +7972,7 @@ function normalizeData(raw, options = {}) {
       ? normalizedMailMessages.messages
       : objectOrEmpty(data.mailMessages),
     tradeOffers: objectOrEmpty(data.tradeOffers),
-    marketListings: freezeAuthorityRootCowRecordValues(objectOrEmpty(data.marketListings)),
+    marketListings: freezeAuthorityRootCowRecordValues(objectOrEmpty(data.marketListings), "marketListings"),
     mutationReceipts: normalizeDurableMutationReceipts(data.mutationReceipts),
     consumedEquipmentEnvelopes: Object.hasOwn(data, "consumedEquipmentEnvelopes")
       ? (data.consumedEquipmentEnvelopes === undefined

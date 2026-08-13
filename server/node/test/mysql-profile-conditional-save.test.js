@@ -6,7 +6,11 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
-const {cloneAuthorityRoot} = require("../src/auth/authority-root-clone");
+const {
+  cloneAuthorityRoot,
+  freezeAuthorityRootCowRecordValues,
+  freezeAuthorityRootIdentityRecordValues,
+} = require("../src/auth/authority-root-clone");
 const {createAuthService} = require("../src/auth-service");
 const {
   canonicalDurableMutationReceipts,
@@ -18,6 +22,9 @@ const {
   mailAuthorityDiagnostics,
   readMailAuthorityState,
 } = require("../src/auth/mail-authority-state");
+const {
+  readConsumedEquipmentEnvelopeLedgerIndex,
+} = require("../src/auth/equipment-envelope-consumed-ledger");
 const mysqlStoreModule = require("../src/mysql-store");
 const {
   wrapFakeMysqlWithMailStorageAudit,
@@ -257,6 +264,167 @@ test("profile planner does not enumerate an untouched canonical mailbox", () => 
   );
 });
 
+test("certified planner consumes touched records without enumerating bounded authority containers", () => {
+  const before = profileState();
+  before.accountCharacterSlots = {
+    [ACCOUNT_ID]: capacityCharacterRoster(ACCOUNT_ID, PLAYER_ID),
+  };
+  for (let index = 1; index < 200; index += 1) {
+    const suffix = String(index).padStart(3, "0");
+    const accountId = `acc_capacity_${suffix}`;
+    const playerId = `player_capacity_${suffix}`;
+    before.accounts[`capacity_${suffix}`] = {
+      accountId,
+      username: `capacity_${suffix}`,
+      displayName: `容量账号${suffix}`,
+      role: "player",
+      createdAt: UPDATED_AT_1,
+      updatedAt: UPDATED_AT_1,
+    };
+    before.sessions[`session_capacity_${suffix}`] = {
+      sessionId: `session_capacity_${suffix}`,
+      accountId,
+      tokenHash: String(index).padStart(64, "0"),
+      expiresAt: "2040-01-01T00:00:00.000Z",
+      revokedAt: null,
+    };
+    before.profileBindings[accountId] = {
+      accountId,
+      playerId,
+      profileRevision: 1,
+      updatedAt: UPDATED_AT_1,
+    };
+    before.accountCharacterSlots[accountId] = capacityCharacterRoster(accountId, playerId);
+    before.profiles[playerId] = profileState({
+      accountId,
+      playerId,
+      displayName: `容量猎人${suffix}`,
+    }).profiles[playerId];
+  }
+  for (let index = 0; index < 120; index += 1) {
+    const listingId = `listing_capacity_${String(index).padStart(3, "0")}`;
+    before.marketListings[listingId] = {
+      listingId,
+      sellerAccountId: `acc_market_${index}`,
+      itemId: "item_pet_food_small",
+      count: 1,
+      unitPrice: 10,
+      currency: "stoneCoins",
+      createdAt: UPDATED_AT_1,
+      schemaVersion: 1,
+    };
+  }
+  const mailbox = {};
+  for (let index = 0; index < 200; index += 1) {
+    const mailId = `mail_capacity_${String(index).padStart(3, "0")}`;
+    mailbox[mailId] = {
+      mailId,
+      senderAccountId: "system_capacity",
+      recipientAccountId: `acc_capacity_${index % 20}`,
+      title: "容量邮件",
+      body: "组合门槛未触碰邮件。",
+      items: [],
+      createdAt: UPDATED_AT_1,
+      readAt: null,
+      schemaVersion: 1,
+    };
+  }
+  const canonicalMail = readMailAuthorityState(mailbox);
+  assert.equal(canonicalMail.ok, true);
+  before.mailMessages = canonicalMail.messages;
+  before.accounts = freezeAuthorityRootIdentityRecordValues("accounts", before.accounts);
+  before.sessions = freezeAuthorityRootIdentityRecordValues("sessions", before.sessions);
+  before.profileBindings = freezeAuthorityRootIdentityRecordValues(
+    "profileBindings",
+    before.profileBindings,
+  );
+  before.accountCharacterSlots = freezeAuthorityRootCowRecordValues(
+    before.accountCharacterSlots,
+    "accountCharacterSlots",
+  );
+  before.profiles = freezeAuthorityRootCowRecordValues(before.profiles, "profiles");
+  before.marketListings = freezeAuthorityRootCowRecordValues(
+    before.marketListings,
+    "marketListings",
+  );
+  before.mutationReceipts = canonicalDurableMutationReceipts(before.mutationReceipts);
+  const consumed = readConsumedEquipmentEnvelopeLedgerIndex(before.consumedEquipmentEnvelopes);
+  assert.equal(consumed.ok, true);
+  before.consumedEquipmentEnvelopes = consumed.ledger;
+
+  const after = eligibleProfileState(before);
+  const guarded = new Set([
+    before.accounts,
+    before.sessions,
+    before.profileBindings,
+    before.accountCharacterSlots,
+    before.profiles,
+    before.marketListings,
+    before.mailMessages,
+    before.mutationReceipts,
+    before.consumedEquipmentEnvelopes,
+    after.accounts,
+    after.sessions,
+    after.profileBindings,
+    after.accountCharacterSlots,
+    after.profiles,
+    after.marketListings,
+    after.mailMessages,
+    after.mutationReceipts,
+    after.consumedEquipmentEnvelopes,
+  ]);
+  let enumerations = 0;
+  const originalKeys = Object.keys;
+  const originalValues = Object.values;
+  const originalEntries = Object.entries;
+  const originalOwnKeys = Reflect.ownKeys;
+  Object.keys = function countedKeys(value) {
+    if (guarded.has(value)) enumerations += 1;
+    return originalKeys(value);
+  };
+  Object.values = function countedValues(value) {
+    if (guarded.has(value)) enumerations += 1;
+    return originalValues(value);
+  };
+  Object.entries = function countedEntries(value) {
+    if (guarded.has(value)) enumerations += 1;
+    return originalEntries(value);
+  };
+  Reflect.ownKeys = function countedOwnKeys(value) {
+    if (guarded.has(value)) enumerations += 1;
+    return originalOwnKeys(value);
+  };
+  let plan;
+  try {
+    plan = buildPlan(after, before, rowLocalProfileScope());
+  } finally {
+    Object.keys = originalKeys;
+    Object.values = originalValues;
+    Object.entries = originalEntries;
+    Reflect.ownKeys = originalOwnKeys;
+  }
+
+  assert.equal(plan.kind, "profile_conditional_v2");
+  assert.equal(enumerations, 0);
+});
+
+function capacityCharacterRoster(accountId, playerId) {
+  return [
+    {
+      schemaVersion: 1,
+      accountId,
+      slotIndex: 0,
+      playerId,
+      createdAt: UPDATED_AT_1,
+      updatedAt: UPDATED_AT_1,
+      lastSelectedAt: UPDATED_AT_1,
+    },
+    null,
+    null,
+    null,
+  ];
+}
+
 test("planner falls back when row-local scope is missing or does not match the receipt", async (t) => {
   const cases = [
     {name: "scope is missing", scope: null},
@@ -330,12 +498,27 @@ test("real record_point_save produces the strict profile plus receipt conditiona
       },
     },
   });
-  const registered = service.register({
+  const registration = service.register({
     username: "conditionalrecord",
     password: "test1234",
     displayName: "条件记录点猎人",
   });
-  assert.equal(registered.ok, true);
+  assert.equal(registration.ok, true);
+  const created = service.createCharacter(registration.session.token, {
+    appearanceId: "novice_hunter_v1",
+    slotIndex: 0,
+    displayName: "条件记录点角色",
+    elements: {earth: 6, water: 4, fire: 0, wind: 0},
+  });
+  assert.equal(created.ok, true);
+  const selected = service.selectCharacter(registration.session.token, {slotIndex: 0});
+  assert.equal(selected.ok, true);
+  const registered = {
+    ...registration,
+    session: selected.session,
+    profileBinding: selected.profileBinding,
+    profileSummary: selected.profileSummary,
+  };
   const operationId = "op_record_point_conditional_0001";
   const saved = await service.invokeDurable("profileAction", [registered.session.token, {
     action: "record_point_save",

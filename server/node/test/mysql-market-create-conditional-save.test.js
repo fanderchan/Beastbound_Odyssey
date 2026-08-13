@@ -3,7 +3,11 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
-const {cloneAuthorityRoot} = require("../src/auth/authority-root-clone");
+const {
+  cloneAuthorityRoot,
+  freezeAuthorityRootCowRecordValues,
+  freezeAuthorityRootIdentityRecordValues,
+} = require("../src/auth/authority-root-clone");
 const {
   canonicalDurableMutationReceipts,
   stageDurableMutationReceipt,
@@ -213,6 +217,71 @@ test("planner certifies one exact ordinary listing with actor profile, capacity 
       ["mutation_receipt", "insert"],
     ],
   );
+});
+
+test("market capacity certification uses cached counts and exact touched rows", () => {
+  const listings = [];
+  for (let index = 0; index < 119; index += 1) {
+    listings.push(ordinaryListing(
+      `listing_capacity_${String(index).padStart(3, "0")}`,
+      `acc_capacity_${index}`,
+    ));
+  }
+  const before = baselineState({listings});
+  before.profileBindings = freezeAuthorityRootIdentityRecordValues(
+    "profileBindings",
+    before.profileBindings,
+  );
+  before.profiles = freezeAuthorityRootCowRecordValues(before.profiles, "profiles");
+  before.marketListings = freezeAuthorityRootCowRecordValues(
+    before.marketListings,
+    "marketListings",
+  );
+  const after = candidateState(before);
+  const scope = createScope(before);
+  const guarded = new Set([
+    before.profileBindings,
+    before.profiles,
+    before.marketListings,
+    after.profileBindings,
+    after.profiles,
+    after.marketListings,
+  ]);
+  let enumerations = 0;
+  const originalKeys = Object.keys;
+  const originalValues = Object.values;
+  const originalEntries = Object.entries;
+  const originalOwnKeys = Reflect.ownKeys;
+  Object.keys = function countedKeys(value) {
+    if (guarded.has(value)) enumerations += 1;
+    return originalKeys(value);
+  };
+  Object.values = function countedValues(value) {
+    if (guarded.has(value)) enumerations += 1;
+    return originalValues(value);
+  };
+  Object.entries = function countedEntries(value) {
+    if (guarded.has(value)) enumerations += 1;
+    return originalEntries(value);
+  };
+  Reflect.ownKeys = function countedOwnKeys(value) {
+    if (guarded.has(value)) enumerations += 1;
+    return originalOwnKeys(value);
+  };
+  let plan;
+  try {
+    plan = buildPlan(after, before, scope);
+  } finally {
+    Object.keys = originalKeys;
+    Object.values = originalValues;
+    Object.entries = originalEntries;
+    Reflect.ownKeys = originalOwnKeys;
+  }
+
+  assert.equal(plan.kind, "market_create_conditional_v1");
+  assert.equal(plan.observedTotalListingCount, 119);
+  assert.equal(plan.observedSellerListingCount, 0);
+  assert.equal(enumerations, 0);
 });
 
 test("planner keeps market create conditional when one expired same-operation receipt is replaced", () => {

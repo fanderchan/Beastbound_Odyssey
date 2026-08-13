@@ -17,6 +17,19 @@ const {
   inheritEquipmentEnvelopeOwnershipRegistry,
   noteEquipmentEnvelopeOwnershipRecordMutation,
 } = require("./equipment-envelope-registry");
+const {
+  TRACKED_AUTHORITY_RECORD_BUCKETS,
+  adoptAuthorityRecordClone,
+  authorityRecordCollectionMetrics,
+  authorityRecordDeltaFrom,
+  authorityRecordStateDiagnostics,
+  certifyAuthorityRecordContainer,
+  cloneAuthorityRecordContainer,
+  isTrackedAuthorityRecordBucket,
+  isTrackedAuthorityRecordContainer,
+  materializeAuthorityRecordContainer,
+  noteAuthorityRecordPlannerFullDiff,
+} = require("./authority-record-state");
 
 const CONSUMED_EQUIPMENT_ENVELOPES_KEY = "consumedEquipmentEnvelopes";
 const MUTATION_RECEIPTS_KEY = "mutationReceipts";
@@ -30,6 +43,7 @@ const IMMUTABLE_JOURNAL_ARRAY_KEYS = Object.freeze([
   "serviceEvents",
 ]);
 const IMMUTABLE_RECORD_VALUE_KEYS = Object.freeze([
+  "accountCharacterSlots",
   "battleRooms",
   "battleRoomRecoveries",
   "marketListings",
@@ -77,6 +91,19 @@ function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function cloneJsonAuthorityRoot(value) {
+  const cloned = cloneJson(value);
+  if (!isRecord(value) || !isRecord(cloned)) {
+    return cloned;
+  }
+  for (const key of TRACKED_AUTHORITY_RECORD_BUCKETS) {
+    if (isRecord(value[key]) && isRecord(cloned[key])) {
+      cloned[key] = adoptAuthorityRecordClone(value[key], cloned[key], key);
+    }
+  }
+  return cloned;
+}
+
 // The large authority ledgers and mailbox expose immutable MVCC views. Normalized
 // bounded journals freeze both entries and containers; writers obtain a
 // request-private container through authorityRootJournalForMutation(). Sharing
@@ -120,7 +147,7 @@ function cloneAuthorityRoot(value) {
     && sharedIdentityRecordMaps.length === 0
     && sharedPrimitiveMaps.length === 0
   ) {
-    return cloneJson(value);
+    return cloneJsonAuthorityRoot(value);
   }
   const withoutSharedLedgers = {...value};
   if (shareLedger) {
@@ -140,7 +167,7 @@ function cloneAuthorityRoot(value) {
   ]) {
     delete withoutSharedLedgers[key];
   }
-  const cloned = cloneJson(withoutSharedLedgers);
+  const cloned = cloneJsonAuthorityRoot(withoutSharedLedgers);
   if (shareLedger) {
     cloned[CONSUMED_EQUIPMENT_ENVELOPES_KEY] = ledger;
   }
@@ -154,7 +181,9 @@ function cloneAuthorityRoot(value) {
     cloned[key] = value[key];
   }
   for (const key of [...sharedRecordMaps, ...sharedIdentityRecordMaps, ...sharedPrimitiveMaps]) {
-    cloned[key] = {...value[key]};
+    cloned[key] = isTrackedAuthorityRecordBucket(key)
+      ? cloneAuthorityRecordContainer(value[key], key)
+      : {...value[key]};
     if (["profiles", "marketListings"].includes(key)) {
       inheritEquipmentEnvelopeOwnershipRecordIndex(value[key], cloned[key], key);
     }
@@ -211,12 +240,33 @@ function freezeAuthorityRootRecordValues(value) {
   return records;
 }
 
-function freezeAuthorityRootCowRecordValues(value) {
-  const records = isRecord(value) ? value : {};
+function freezeAuthorityRootCowRecordValues(value, bucketValue = "") {
+  const records = isRecord(value)
+    ? materializeAuthorityRecordContainer(value, bucketValue)
+    : {};
+  if (records !== value && ["profiles", "marketListings"].includes(bucketValue)) {
+    inheritEquipmentEnvelopeOwnershipRecordIndex(value, records, bucketValue);
+  }
   let certifiable = true;
-  for (const entry of Object.values(records)) {
+  let authorityCertifiable = isTrackedAuthorityRecordBucket(bucketValue);
+  let recordCount = 0;
+  const sellerAccountCounts = new Map();
+  for (const [recordKey, entry] of Object.entries(records)) {
+    recordCount += 1;
     if (!deepFreezeJsonValue(entry)) {
       certifiable = false;
+    }
+    if (!authorityCowRecordMatchesBucket(bucketValue, recordKey, entry)) {
+      authorityCertifiable = false;
+    }
+    if (bucketValue === "marketListings") {
+      const sellerAccountId = String(entry && entry.sellerAccountId || "");
+      if (sellerAccountId !== "") {
+        sellerAccountCounts.set(
+          sellerAccountId,
+          Number(sellerAccountCounts.get(sellerAccountId) || 0) + 1,
+        );
+      }
     }
   }
   Object.freeze(records);
@@ -225,8 +275,41 @@ function freezeAuthorityRootCowRecordValues(value) {
       AUTHORITY_CERTIFICATION_COUNTERS.cowRecordContainers += 1;
     }
     CERTIFIED_COW_RECORD_CONTAINERS.add(records);
+    if (authorityCertifiable) {
+      certifyAuthorityRecordContainer(records, bucketValue, {
+        recordCount,
+        sellerAccountCounts,
+      });
+    }
   }
   return records;
+}
+
+function authorityCowRecordMatchesBucket(bucketValue, recordKeyValue, entry) {
+  const bucket = String(bucketValue || "");
+  const recordKey = String(recordKeyValue || "");
+  if (bucket === "profiles") {
+    return isRecord(entry) && recordKey !== "" && String(entry.playerId || "") === recordKey;
+  }
+  if (bucket === "marketListings") {
+    return isRecord(entry) && recordKey !== "" && String(entry.listingId || "") === recordKey;
+  }
+  if (bucket === "accountCharacterSlots") {
+    return recordKey !== ""
+      && Array.isArray(entry)
+      && entry.length === 4
+      && entry.every((slot, slotIndex) => (
+        slot === null
+        || (
+          isRecord(slot)
+          && slot.schemaVersion === 1
+          && String(slot.accountId || "") === recordKey
+          && Number(slot.slotIndex) === slotIndex
+          && String(slot.playerId || "") !== ""
+        )
+      ));
+  }
+  return false;
 }
 
 // Player positions are flat, server-built JSON records replaced at movement
@@ -331,6 +414,17 @@ function authorityRootRecordForMutation(data, key) {
     return {};
   }
   const current = isRecord(data[key]) ? data[key] : {};
+  if (isTrackedAuthorityRecordBucket(key)) {
+    if (isTrackedAuthorityRecordContainer(current, key) && !Object.isFrozen(current)) {
+      return current;
+    }
+    const mutable = cloneAuthorityRecordContainer(current, key);
+    data[key] = mutable;
+    if (["profiles", "marketListings"].includes(key)) {
+      inheritEquipmentEnvelopeOwnershipRecordIndex(current, mutable, key);
+    }
+    return mutable;
+  }
   if (Object.isFrozen(current) || CERTIFIED_COW_RECORD_CONTAINERS.has(current)) {
     const mutable = {...current};
     data[key] = mutable;
@@ -376,14 +470,18 @@ function deleteAuthorityRootRecord(data, key, recordIdValue) {
 // separate marker prevents a caller from making an arbitrary object shareable
 // merely by passing it through freezeAuthorityRootRecordValues().
 function freezeAuthorityRootIdentityRecordValues(bucketKey, value) {
-  const records = isRecord(value) ? value : {};
+  const records = isRecord(value)
+    ? materializeAuthorityRecordContainer(value, bucketKey)
+    : {};
   const certifiedValues = SCHEMA_CERTIFIED_IDENTITY_VALUES[bucketKey];
   const certifiedContainers = SCHEMA_CERTIFIED_IDENTITY_CONTAINERS[bucketKey];
   if (!certifiedValues || !certifiedContainers) {
     return records;
   }
   let certifiable = true;
+  let recordCount = 0;
   for (const [recordKey, entry] of Object.entries(records)) {
+    recordCount += 1;
     const deeplyFrozen = deepFreezeJsonValue(entry);
     if (deeplyFrozen && identityRecordMatchesBucket(bucketKey, recordKey, entry)) {
       certifiedValues.add(entry);
@@ -394,6 +492,7 @@ function freezeAuthorityRootIdentityRecordValues(bucketKey, value) {
   Object.freeze(records);
   if (certifiable) {
     certifiedContainers.add(records);
+    certifyAuthorityRecordContainer(records, bucketKey, {recordCount});
   }
   return records;
 }
@@ -866,6 +965,9 @@ function authorityRootCloneDiagnostics(value) {
 module.exports = {
   authorityRootCertificationRetentionDiagnostics,
   authorityRootCloneDiagnostics,
+  authorityRecordCollectionMetrics,
+  authorityRecordDeltaFrom,
+  authorityRecordStateDiagnostics,
   certifyOwnedAuthorityRootJsonValue,
   certifyOwnedAuthorityRootTransientJsonValue,
   cloneAuthorityRoot,
@@ -882,5 +984,7 @@ module.exports = {
   isCertifiedAuthorityRootJsonValue,
   isTrustedAuthorityRoot,
   markAuthorityRootTrusted,
+  materializeAuthorityRecordContainer,
+  noteAuthorityRecordPlannerFullDiff,
   setAuthorityRootRecord,
 };

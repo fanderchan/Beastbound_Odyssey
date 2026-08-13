@@ -116,15 +116,38 @@ function cultivationRecord(instanceId, stage) {
 
 function seedPaidResetAccount(service, options = {}) {
   const username = String(options.username || "paidresetfixture");
-  const registered = service.register({
+  const registration = service.register({
     username,
     password: "test1234",
     displayName: String(options.displayName || "重置事务猎人"),
   });
-  if (!registered.ok) {
-    throw new Error(`paid reset fixture registration failed: ${registered.code}`);
+  if (!registration.ok) {
+    throw new Error(`paid reset fixture registration failed: ${registration.code}`);
   }
-  const loaded = service.getProfile(registered.session.token);
+  let registered = registration;
+  let loaded = service.getProfile(registration.session.token);
+  if (!loaded.ok && loaded.code === "character_selection_required") {
+    const created = service.createCharacter(registration.session.token, {
+      appearanceId: "novice_hunter_v1",
+      slotIndex: 0,
+      displayName: String(options.characterDisplayName || "重置事务角色"),
+      elements: {earth: 6, water: 4, fire: 0, wind: 0},
+    });
+    if (!created.ok) {
+      throw new Error(`paid reset fixture character creation failed: ${created.code}`);
+    }
+    const selected = service.selectCharacter(registration.session.token, {slotIndex: 0});
+    if (!selected.ok) {
+      throw new Error(`paid reset fixture character selection failed: ${selected.code}`);
+    }
+    registered = {
+      ...registration,
+      session: selected.session,
+      profileBinding: selected.profileBinding,
+      profileSummary: selected.profileSummary,
+    };
+    loaded = service.getProfile(selected.session.token);
+  }
   if (!loaded.ok) {
     throw new Error(`paid reset fixture profile load failed: ${loaded.code}`);
   }

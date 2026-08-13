@@ -1,6 +1,12 @@
 "use strict";
 
-const {cloneAuthorityRoot} = require("./authority-root-clone");
+const {
+  cloneAuthorityRoot,
+  materializeAuthorityRecordContainer,
+} = require("./authority-root-clone");
+const {
+  TRACKED_AUTHORITY_RECORD_BUCKETS,
+} = require("./authority-record-state");
 const {
   materializeConsumedEquipmentEnvelopeLedger,
 } = require("./equipment-envelope-consumed-ledger");
@@ -18,6 +24,11 @@ function materializeAuthorityRootLargeCollections(data) {
   // Spreading drops the internal trusted-root marker before replacing the two
   // canonical fields with their ordinary serialized form.
   const root = {...cloneAuthorityRoot(data || {})};
+  for (const bucket of TRACKED_AUTHORITY_RECORD_BUCKETS) {
+    if (Object.hasOwn(root, bucket)) {
+      root[bucket] = cloneJson(materializeAuthorityRecordContainer(root[bucket], bucket));
+    }
+  }
   const ledger = materializeConsumedEquipmentEnvelopeLedger(root.consumedEquipmentEnvelopes);
   // A malformed consumed ledger remains inspectable by quarantine/recovery
   // tooling; domain registries still reject it before any asset mutation.
