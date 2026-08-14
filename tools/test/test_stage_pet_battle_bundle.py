@@ -204,6 +204,19 @@ class StagePetBattleBundleTest(unittest.TestCase):
                     action,
                     combined=action in {"hurt", "defend"},
                 )
+            view_prompt_root = root / "prompts" / "attack"
+            view_prompt_root.mkdir(parents=True)
+            view_prompts = {}
+            for view in STAGER.FORMAL_VIEWS:
+                prompt = (
+                    "Create the exact independently authored "
+                    f"{view} attack view while preserving the formal identity."
+                )
+                view_prompts[view] = prompt
+                (view_prompt_root / f"{view}.txt").write_text(
+                    prompt,
+                    encoding="utf-8",
+                )
             staging = root / "staging"
             summary = STAGER.stage_bundle(
                 argparse.Namespace(
@@ -259,6 +272,16 @@ class StagePetBattleBundleTest(unittest.TestCase):
                 self.assertEqual(
                     source_meta["preprocessing"]["tool"],
                     "repack_chroma_sprite_grid.py",
+                )
+                self.assertEqual(
+                    (
+                        staging
+                        / "views"
+                        / view
+                        / "attack"
+                        / "prompt-used.txt"
+                    ).read_text(encoding="utf-8"),
+                    view_prompts[view],
                 )
 
             validated = INSTALLER.validate_bundle(

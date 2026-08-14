@@ -283,6 +283,26 @@ def _derive_source_chain(
     return original, pipeline_input, repack_meta
 
 
+def _select_prompt(
+    prompts_root: Path,
+    action: str,
+    view: str,
+) -> Path:
+    """Prefer an exact per-view prompt while preserving legacy shared prompts."""
+
+    candidates = (
+        prompts_root / action / f"{view}.txt",
+        prompts_root / f"{action}.txt",
+    )
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        prompt = _require_inside(candidate, prompts_root, f"{view}/{action} prompt")
+        _require_file(prompt, f"{view}/{action} exact prompt")
+        return prompt
+    raise StagingError(f"missing {view}/{action} exact prompt")
+
+
 def _stage_action(
     staging: Path,
     *,
@@ -304,10 +324,9 @@ def _stage_action(
         raw_root,
         action,
     )
-    prompt_path = prompts_root / f"{action}.txt"
-    _require_file(prompt_path, f"{action} exact prompt")
+    prompt_path = _select_prompt(prompts_root, action, view)
     if len(prompt_path.read_text(encoding="utf-8").strip()) < 40:
-        raise StagingError(f"{action} prompt is too short")
+        raise StagingError(f"{view}/{action} prompt is too short")
 
     action_root = staging / "views" / view / action
     source_dir = action_root / "source-frames"
