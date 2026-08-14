@@ -1,0 +1,21 @@
+# 芽耳布伊整体骑乘背面三分之四技能源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`5792f9cc5ef5c905cc9c8e50919ddd0502cdc3b5835852fc58815f741ff5c5ec`。
+- 参考：最终正面技能源表锁定节奏；本轮背面行走源表锁定后侧身份与结构。
+
+## 完整提示词
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 is the final front-view nature-skill sheet and locks the exact eight-frame timing, fixed-size ear rotation, adult rider hand gesture, identity, palette and painterly finish. Image 2 locks the matching back-three-quarter northeast camera, rear costume, saddle, leaf mantle, paws and spiral-tail construction. Generate an independently authored rear-view sheet; do not paste or mirror.
+Primary request: create the matching eight-frame mounted nature-skill casting cycle for the exact same integrated adult novice hunter and golden Sprout-ear Bui, back three-quarter northeast source view only. It must remain distinct from the paw-swipe basic attack; engine particles/effects will be layered later.
+Action timing: exactly eight frames synchronized with Image 1: 1 alert idle, 2 four paws plant/body lowers, 3 fixed-size ears rotate upward and forehead sprout aims, 4 rider raises one open hand, 5 strongest planted casting silhouette, 6 controlled release recoil, 7 hand and ears settle, 8 return toward idle. Ears rotate but never grow or change species. No whole-subject translation.
+Identity/integration: preserve the exact adult rider, back strap, fur collar, boots, leaf mantle, saddle geometry, mount body volume, fixed-size sprout ears, forehead sprout, white chest, spiral tail and integrated rider-saddle-mount contact.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, crisp readable silhouette, exactly matching the references.
+Composition/framing: exact 4-column by 2-row grid, eight equal cells, one full uncropped subject centered per cell, consistent scale and baseline, generous safe margin.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF.
+Constraints: no baked particles/glow/projectile, text, labels, border, checkerboard, ground, cast shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, ear growth, weapon, dismount, paw-swipe pose or repeated frame.
+```

@@ -1,0 +1,21 @@
+# 芽耳布伊整体骑乘正面三分之四行走源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`67efbf5110af079d1551872922970eda9152cf0acd0bb2f3725060a1d80a151b`。
+- 参考图：`client/godot/assets/mounted/novice_hunter_v1/bui_novice_sprout_earth5_wind5/qa/battle-v2/walk/contact-sheet.png`，仅用于身份、比例、色彩、鞍座接触和视角参考。
+
+## 完整提示词
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 is the exact identity, proportions, palette, rendering style, saddle contact, and front-three-quarter walk reference; use it as a reference, not as a canvas to edit.
+Primary request: create a brand-new eight-frame natural mounted walk-cycle source sheet for the exact same integrated whole-frame character: the adult novice hunter riding the golden Sprout-ear Bui. Front three-quarter southwest source view only, matching the front-walk row in Image 1.
+Subject identity lock: adult novice hunter with tousled brown hair, small leaf hair ornament, warm primitive hunter clothing, fur collar, cross-body strap and leather boots; the rider's pelvis rests physically on the saddle and both legs straddle the mount. Mount has golden fluffy fur, very large sprout-like ears, a tiny green forehead sprout, white muzzle and chest, brown spiral tail and leaf accents. Rider, saddle and mount are one continuous painted subject, never separate layers.
+Animation mechanics: exactly eight sequential gait phases in reading order. Use a believable quadruped diagonal walk: contact, down, passing, up, opposite contact, down, passing, up. Front and hind paws must visibly alternate across the cycle; no single-leg hop, no repeated pose, no whole-subject sliding. The rider's hips follow the saddle with restrained vertical motion while head, hands and torso remain stable. Preserve body volume and camera angle in every frame.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, crisp readable silhouette, matching Image 1.
+Composition/framing: exact 4-column by 2-row grid, eight equal cells, one full uncropped subject centered in every cell, consistent scale and baseline, generous safe margin.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF in every cell and gutter.
+Constraints: no text, no labels, no numbers, no border, no checkerboard, no ground, no cast shadow, no particles, no UI, no watermark, no extra character, no identity drift, no costume drift, no facing drift, no mirror, no cropped ears/paws/tail. All eight poses must be distinct and form a seamless loop.
+```

@@ -1,0 +1,18 @@
+# 芽耳布伊整体骑乘背面三分之四击飞源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`2cd8dffbbdade469b82e47baddcdc07f13973d674f86f42c55229408672d5b6d`。
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 is the final front-view knockaway cycle and locks the exact eight-frame impact, airborne curl, landing and settled non-standing progression, integrated rider/mount mechanics, identity, palette and painterly finish. Image 2 locks the matching back-three-quarter northeast identity, rear costume, saddle, leaf mantle, paws and spiral tail. Image 3 is mechanics-only reference for rear knockaway staging; ignore its creature appearance, fire effects, dust and framing. Generate an independently authored rear-view sheet; do not paste or mirror.
+Primary request: create the matching eight-frame mounted knockaway cycle for the exact same integrated adult novice hunter and golden Sprout-ear Bui, back three-quarter northeast source view only. A high-force hit throws the complete rider-and-mount unit away; engine movement handles battlefield displacement, so each sprite stays centered. They do not stand again in this action.
+Action timing: eight frames synchronized with Image 1: 1 alert neutral, 2 violent impact compression with ears flattened and rider braced, 3 all paws leave ground while unit tilts backward, 4 compact airborne curl with rider clamped to saddle, 5 strongest airborne knocked-back silhouette, 6 low landing impact with limbs tucked and torso rotated, 7 heavy collapsed slide pose, 8 fully settled knocked-out side/crouched pose ready for down. No reset to idle.
+Identity/integration: rider pelvis and legs remain locked to saddle, hands keep reins, torso follows mount rotation; preserve exact adult rider rear hair, back strap, fur collar, boots, leaf mantle, saddle, golden rounded mount, sprout ears, forehead sprout, white chest and spiral tail. Pair remains one complete silhouette.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, dramatic readable impact silhouette without slapstick.
+Composition/framing: exact 4-column by 2-row grid, eight equal cells, one full uncropped centered subject per cell, consistent apparent scale, generous safe margin around airborne/horizontal poses.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF.
+Constraints: no baked particles, impact burst, dust, speed lines, text, labels, border, checkerboard, ground, shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, whole-subject cell translation, recovery to standing, attack, rider separation, dismount, detached equipment, repeated frame or gore.
+```

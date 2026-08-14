@@ -1,0 +1,19 @@
+# 芽耳布伊整体骑乘正面三分之四倒地源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`4f009a8145dcf337d194783a7a18e39e3b6292f505da358cf6cf8ddfbe1c736f`。
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 locks the exact rebuilt adult novice hunter and golden Sprout-ear Bui identity, palette, rendering, scale, saddle contact, front-three-quarter southwest camera and the final settled knocked-out pose family. Image 2 locks the connected destabilized posture. Generate a new sheet; do not paste or mirror.
+Primary request: create an eight-frame mounted down/collapse cycle for the exact same integrated rider and mount, front three-quarter southwest source view only. This is an in-place loss of strength, not a knockaway: the mount buckles and settles to the ground while the rider stays attached and slumps protectively over it.
+Action timing: exactly eight frames: 1 weakened standing neutral, 2 knees and forelegs soften, ears droop and rider hunches, 3 chest lowers as forelegs fold, 4 hindquarters sink and rider grips saddle, 5 body rolls gently onto one side without displacement, 6 rider folds over mount while reins remain held, 7 final settling motion, 8 completely still coherent down pose with closed eyes, ready to be reused byte-for-byte as revive frame 1. Never rise within this action.
+Rider mechanics: pelvis/legs remain connected to saddle, torso slumps over mount, hands stay near reins; no dismount, flying rider, separation, or anatomy collision. The final silhouette must remain recognizable as the same rider and mount.
+Identity lock: preserve exact adult rider hair, leaf ornament, fur collar, strap, boots; mount golden fur, rounded body, sprout ears, forehead sprout, white muzzle/chest, spiral tail, leaf mantle and saddle.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, quiet weighty defeat rather than slapstick or gore.
+Composition/framing: exact 4-column by 2-row grid, eight equal cells, one full uncropped centered subject per cell, consistent apparent scale, stable ground region, generous safe margin for horizontal final poses.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF.
+Constraints: no particles, impact burst, dust, stars, text, labels, border, checkerboard, ground, shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, whole-subject translation, airborne launch, attack, recovery, rider separation, dismount, detached equipment, repeated frame or gore.
+```

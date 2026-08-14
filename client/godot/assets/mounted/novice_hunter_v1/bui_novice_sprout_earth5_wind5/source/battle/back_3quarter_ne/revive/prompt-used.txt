@@ -1,0 +1,12 @@
+# 芽耳布伊整体骑乘背面三分之四起身源表
+
+- 原始创作方式：Codex 内置 `image_gen` 生成同视角完整 `down` 八帧。
+- 正式语义派生：将八个完整创作姿势按 `down-8..down-1` 确定性倒序映射为 `revive-1..revive-8`，不重画、不镜像、不插值。
+- 原始无损 PNG SHA-256：`d77c910411d1b6253acf77235e95936bc0e63d6d70d221ff70d58710b367398b`。
+- 连续性合同：`down-8` 与 `revive-1` 的 512px 源帧及 256px 运行帧必须分别保持精确 RGBA 一致。
+
+```text
+PROMPT ARCHIVE - normalized from the approved built-in image-generation call.
+
+Create a production high-definition 2.5D hand-painted animation sheet for the exact adult novice hunter and golden Sprout-ear Bui redrawn as one integrated whole-frame mounted subject. Formal view: back three-quarter facing upper-right/northeast, independently authored and never mirrored. Preserve natural saddle contact, adult rider scale, rear costume, leaf mantle, paws, spiral tail, identity, anatomy, palette, silhouette, lighting and complete uncropped subject. Action contract: a continuous physical recovery made by deterministically reversing the eight complete independently authored down poses, so down-8 and revive-1 are exact RGBA matches and every revive frame contributes to a monotonic rise. Use exactly eight chronological phases mapped from down-8 through down-1. Solid exact #FF00FF chroma background; no text, labels, borders, extra characters, detached shadows, duplicated limbs, baked status halo, particles, interpolation or programmatic redrawing. Owner review remains pending and runtime remains disabled.
+```

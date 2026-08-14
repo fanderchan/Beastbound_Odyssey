@@ -1,0 +1,19 @@
+# 芽耳布伊整体骑乘正面三分之四踉跄源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`6b81c5ad8f1de438aec2185cba46eaf90a444f29c36edb7601cc8ab38747534c`。
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 locks the exact rebuilt adult novice hunter and golden Sprout-ear Bui identity, palette, rendering, scale, saddle contact, front-three-quarter southwest camera and connected hurt response. Image 2 locks the grounded weight-shift mechanics. Generate a new sheet; do not paste or mirror.
+Primary request: create an eight-frame mounted stagger cycle for the exact same integrated rider and mount, front three-quarter southwest source view only. It represents a stronger destabilizing hit than hurt: the mount loses footing for two beats and the rider struggles to stay centered, but neither falls, separates nor gets launched.
+Action timing: exactly eight frames: 1 alert neutral, 2 impact recoil with ears flattened and chest pulled back, 3 front paws scramble unevenly while rider pitches sideways, 4 deepest off-balance silhouette with one forepaw searching for ground and hindquarters lagging, 5 corrective step under the body, 6 secondary wobble in the opposite direction, 7 rider reseats and paws stabilize, 8 strained near-neutral. The subject stays centered in every cell; engine movement handles displacement.
+Rider mechanics: pelvis remains in saddle, knees clamp, both hands control reins, torso counterbalances the mount; rider and mount move as one physically connected unit.
+Identity lock: preserve exact adult rider hair, leaf ornament, fur collar, strap, boots; mount golden fur, sprout ears, forehead sprout, white muzzle/chest, spiral tail, leaf mantle and saddle.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, clear unstable silhouette without slapstick.
+Composition/framing: exact 4-column by 2-row grid, eight equal cells, one full uncropped subject centered per cell, consistent scale/baseline region, generous safe margin.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF.
+Constraints: no particles, impact flash, stars, text, labels, border, checkerboard, ground, shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, whole-subject translation, attack, full fall, airborne launch, prone pose, dismount, rider separation, one-leg hop or repeated frame.
+```

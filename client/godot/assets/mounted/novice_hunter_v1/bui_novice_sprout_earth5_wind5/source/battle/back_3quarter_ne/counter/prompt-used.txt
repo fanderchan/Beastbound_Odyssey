@@ -1,0 +1,18 @@
+# 芽耳布伊整体骑乘背面三分之四反击源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`a323a3a0574450bf7b45254e7d1ef6caad4fbef816d4b4bad6683b3e5ee28da3`。
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 is the final front-view counterattack cycle and locks the exact eight-frame brace-to-opposite-forepaw timing, integrated rider/mount mechanics, identity, palette and painterly finish. Images 2 and 3 lock the matching back-three-quarter northeast camera, rear costume, basic paw mechanics, saddle, guard posture, leaf mantle, paws and spiral tail. Generate an independently authored rear-view sheet; do not paste or mirror.
+Primary request: create the matching eight-frame mounted counterattack cycle for the exact same integrated adult novice hunter and golden Sprout-ear Bui, back three-quarter northeast source view only. It must read as a compact defensive reaction that immediately becomes one decisive opposite-forepaw swipe, faster than the basic attack.
+Action timing: eight frames synchronized with Image 1: 1 guarded neutral, 2 absorb/brace compressed with rider low, 3 instant coil and shoulder load, 4 explosive opposite forepaw swipe begins, 5 strongest counter-strike silhouette with paw extended and shoulder/head following, 6 recoil catches weight on other forepaw, 7 regain balance, 8 near guarded neutral. Fast 3-5 beat, controlled recovery.
+Identity/integration: rider pelvis remains seated, knees grip saddle, torso first shields then snaps with the mount; preserve exact adult rider rear hair, back strap, fur collar, boots, leaf mantle, saddle, golden mount body, sprout ears, forehead sprout, white chest and spiral tail. No independent rider punch and no weapon.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, crisp readable silhouette.
+Composition/framing: exact 4-column by 2-row grid, eight equal cells, one full uncropped subject centered per cell, consistent scale/baseline, generous safe margin.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF.
+Constraints: no particles, slash streak, text, labels, border, checkerboard, ground, shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, whole-subject translation, charge run, headbutt, fall, dismount, one-leg hop or repeated frame.
+```

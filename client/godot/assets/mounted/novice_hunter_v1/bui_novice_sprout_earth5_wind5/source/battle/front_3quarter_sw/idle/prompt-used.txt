@@ -1,0 +1,21 @@
+# 芽耳布伊整体骑乘正面三分之四待机源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`773ebe550de9a1199102764f446931a6f9185253136127e46ba9892f9cfed97b`。
+- 参考：本轮正面行走源表用于锁定身份和画风；旧双视角动作表仅用于动作轮廓参考。
+
+## 完整提示词
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 locks the exact newly rebuilt adult novice hunter, golden Sprout-ear Bui, palette, painterly finish, scale, saddle contact and front-three-quarter southwest camera. Image 2 shows the established action silhouettes for this same integrated mounted character. Generate a new sheet; do not edit, paste, or mirror the references.
+Primary request: create a six-frame seamless mounted idle/breathing cycle for the exact same integrated whole-frame rider and mount, front three-quarter southwest source view only.
+Animation mechanics: exactly six sequential frames in reading order. The mount remains planted on all four paws, with restrained chest breathing, a tiny weight shift, subtle ear and spiral-tail secondary motion, and a very small saddle rise/fall. The adult rider stays balanced and alert; hips remain seated, hands steady on reins, shoulders breathe subtly, face and body proportions do not change. No walking, no foot sliding, no bobbing jump, no repeated identical frame. Frame 6 must flow naturally back into frame 1.
+Subject identity lock: exact same adult novice hunter and golden Sprout-ear Bui as Image 1, including hair, leaf ornament, fur collar, cross-body strap, boots, huge sprout ears, forehead sprout, white muzzle/chest, brown spiral tail, leaf accents, and integrated rider-saddle-mount contact.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, crisp silhouette, exactly matching Image 1.
+Composition/framing: exact 3-column by 2-row grid, six equal cells, one full uncropped subject centered in every cell, consistent scale and foot baseline, generous safe margin.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF in every cell and gutter.
+Constraints: no text, labels, numbers, border, checkerboard, ground, cast shadow, particles, UI, watermark, extra subject, identity drift, costume drift, camera drift, facing drift, mirror, crop, foot movement, or single-leg pose.
+```

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "generator": "OpenAI built-in image generation",
+  "originalGeneratedSha256": "3e7be61a3a5870f0f05dbf6573bce5cd1b2a31f2005121f26f448924055f7df0",
+  "originalGeneratedDecodedRgbaSha256": "11f8ccfa20165bd23900ec495abe184bc254e4c20980c60dcdf63d82c66b5b7f",
+  "rawArchive": "raw-sheet-lossless.png",
+  "rawArchiveSha256": "3e7be61a3a5870f0f05dbf6573bce5cd1b2a31f2005121f26f448924055f7df0",
+  "rawDecodedRgbaSha256": "11f8ccfa20165bd23900ec495abe184bc254e4c20980c60dcdf63d82c66b5b7f",
+  "prompt": "prompt-used.txt",
+  "promptSha256": "c2d2697723eb53d979a431c8bc2a7ef52dfb2c6e8b817d17c2e802fd68981aeb",
+  "pipelineMetadata": "pipeline-meta.json",
+  "pipelineSha256": "0288fd824d1d35b8415fd0dbf04138e26461eede3597cfe9994f2851071c889b",
+  "qc": "qa.json",
+  "qcSha256": "3a713d10b58ddc440f80be4fb5b27984c65c41409d59baf0fc093a9eef07151f",
+  "preprocessing": {
+    "schemaVersion": 1,
+    "tool": "repack_chroma_sprite_grid.py",
+    "inputSha256": "3e7be61a3a5870f0f05dbf6573bce5cd1b2a31f2005121f26f448924055f7df0",
+    "inputDecodedRgbaSha256": "11f8ccfa20165bd23900ec495abe184bc254e4c20980c60dcdf63d82c66b5b7f",
+    "outputArchive": "pipeline-input-lossless.png",
+    "outputArchiveSha256": "d7a9011bbb6450c696af40001240fa5b15aeec9179e34b8161571499525a4685",
+    "outputDecodedRgbaSha256": "d69d982d74f7ef0c0469892572f4d7b5b20cb9abf7433950bc106329ff8e1798",
+    "metadata": "repack-meta.json",
+    "metadataSha256": "fa4f660120e84ac85fb4343251bb9f023276cc64482f8acc8613b662a9657988"
+  }
+}

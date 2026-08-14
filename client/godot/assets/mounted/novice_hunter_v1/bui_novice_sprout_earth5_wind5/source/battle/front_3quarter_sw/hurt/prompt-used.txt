@@ -1,0 +1,18 @@
+# 芽耳布伊整体骑乘正面三分之四受击源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`8c05b1f1441f884df81fbab552088c277c5efd5d76e8c6f52d462998a763af3b`。
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 locks the exact rebuilt adult novice hunter and golden Sprout-ear Bui identity, palette, rendering, scale, saddle contact and front-three-quarter southwest camera. Image 2 shows the established action family. Generate a new sheet; do not paste or mirror.
+Primary request: create a six-frame mounted hurt/recoil cycle for the exact same integrated rider and mount, front three-quarter southwest source view only. Both rider and mount must absorb one incoming hit as a connected mass, without falling or becoming a down pose.
+Action timing: exactly six frames in reading order: 1 alert neutral, 2 first impact flinch, 3 strongest backward/downward recoil with ears pinned and rider shoulders pulled back, 4 brief compressed hold, 5 regain footing and saddle balance, 6 return near idle. Paws may brace but must not walk or slide across the cell.
+Identity/integration: adult rider pelvis remains on saddle, legs straddle, hands keep contact with reins; no rider detachment. Preserve exact hair, leaf ornament, fur collar, strap, boots, mount face/body, huge sprout ears, forehead sprout, white muzzle/chest, spiral tail, leaf accents and saddle.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, readable impact silhouette, matching Image 1.
+Composition/framing: exact 3-column by 2-row grid, six equal cells, one full uncropped subject centered per cell, consistent scale/baseline, generous safe margin.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF.
+Constraints: no blood, wound, particles, flash, text, labels, border, checkerboard, ground, shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, fall/down pose, dismount, foot sliding or repeated frame.
+```

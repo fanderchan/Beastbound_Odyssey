@@ -1,0 +1,18 @@
+# 芽耳布伊整体骑乘背面三分之四防御源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`7efaf81d280a29d38bb65feb570a61e2c9fcade1fbba3218bc14769a7094f47c`。
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 is the final front-view defend cycle and locks the exact six-frame deliberate brace timing, connected rider/mount mechanics, identity, palette and painterly finish. Image 2 locks the matching back-three-quarter northeast camera, rear costume, saddle, leaf mantle, paws and spiral tail. Generate an independently authored rear-view sheet; do not paste or mirror.
+Primary request: create the matching six-frame mounted defend/brace cycle for the exact same integrated adult novice hunter and golden Sprout-ear Bui, back three-quarter northeast source view only. It must read as a stable defensive triangle, not a hurt flinch.
+Action timing: six frames synchronized with Image 1: 1 alert neutral, 2 lower center of gravity, 3 forepaws widen/plant and ears angle back, 4 strongest guard hold with rider low over saddle/reins, 5 controlled release, 6 return near idle. All paws grounded without sliding.
+Identity/integration: rider stays seated, knees/reins tighten, one forearm shields chest without a physical shield. Preserve exact adult rider, back strap, fur collar, boots, leaf mantle, saddle, mount body, ears, forehead sprout, white chest and spiral tail.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, crisp guard silhouette.
+Composition/framing: exact 3-column by 2-row grid, six equal cells, one full uncropped subject centered per cell, consistent scale/baseline, generous safe margin.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF.
+Constraints: no shield object, armor change, particles, text, labels, border, checkerboard, ground, shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, attack lunge, hurt flinch, dismount, foot sliding or repeated frame.
+```

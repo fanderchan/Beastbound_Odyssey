@@ -1,12 +1,170 @@
 {
-  "schemaVersion": 1,
-  "bundleId": "mounted_action_novice_hunter_v1_bui_novice_sprout_v1",
+  "schemaVersion": 2,
+  "bundleId": "mounted_action_novice_hunter_v1_bui_novice_sprout_v2",
   "characterId": "novice_hunter_v1",
   "mountFormId": "bui_novice_sprout_earth5_wind5",
   "displayName": "见习猎人骑乘芽耳布伊",
-  "identityLock": "identity/identity-lock.md",
-  "runtimeFrameSize": [256, 256],
+  "artStatus": "in_production",
+  "productionScope": "formal_battle_two_view_owner_review_pending",
+  "runtimeEnabled": false,
+  "runtimeFrameSize": [
+    256,
+    256
+  ],
+  "views": [
+    "front_3quarter_sw",
+    "back_3quarter_ne"
+  ],
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "identity": {
+    "status": "self_review_passed_owner_pending",
+    "identityLock": "identity/identity-lock.md",
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeMirroring": false
+  },
+  "actions": {
+    "idle": {
+      "frameCount": 6,
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "walk": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": true,
+      "status": "owner_review_pending"
+    },
+    "attack": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "skill": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "hurt": {
+      "frameCount": 6,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "defend": {
+      "frameCount": 6,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "dodge": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "counter": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "stagger": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "knockaway": {
+      "frameCount": 8,
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "down": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    },
+    "revive": {
+      "frameCount": 8,
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
+    }
+  },
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "mounted",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "ae0951e4f12eacef50e521746b8d36a3ae32c5da6471212936b47a98c48d1547",
+    "archiveMode": "full",
+    "sourceFramesTracked": true,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json"
+  },
   "worldVisual": {
+    "status": "self_review_passed_owner_pending",
     "strategy": "ai_generated_integrated_independent_8",
     "directions": [
       "south",
@@ -19,8 +177,18 @@
       "southeast"
     ],
     "actions": {
-      "idle": {"frameCount": 1, "fps": 4, "loop": true},
-      "walk": {"frameCount": 4, "fps": 10, "loop": true}
+      "idle": {
+        "frameCount": 1,
+        "fps": 4,
+        "loop": true,
+        "status": "owner_review_pending"
+      },
+      "walk": {
+        "frameCount": 4,
+        "fps": 10,
+        "loop": true,
+        "status": "owner_review_pending"
+      }
     },
     "totalFrameCount": 40,
     "runtimeMirroring": false,
@@ -34,19 +202,56 @@
     "createdForRepository": true,
     "ownershipRecord": "source-and-ownership.md",
     "generationContract": "prompts/generation-contract.md",
-    "replacementPath": "Regenerate each complete rider-and-mount direction as one image, then rerun whole-subject normalization and visual/runtime gates."
+    "processingSummary": "qa/battle/qc-summary.json",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "installManifest": "source/battle/install-manifest.json",
+    "bundleDigest": "ae0951e4f12eacef50e521746b8d36a3ae32c5da6471212936b47a98c48d1547",
+    "archiveMode": "full",
+    "sourceFrameCount": 180,
+    "runtimeFrameCount": 180,
+    "archivedActionRecordCount": 24,
+    "uniqueGeneratedSheetCount": 22,
+    "consolidatedArchiveStatus": "full_source_archive_installed",
+    "sourceClosureStatus": "passed_full_source_archive",
+    "sourceClosureEvidence": "docs/phase_427_sprout_mounted_full_source_closure.md"
   },
   "postProcessing": {
-    "allowed": ["background_removal", "whole_subject_crop", "whole_subject_scale", "baseline_alignment"],
-    "forbidden": ["separate_rider_mount_pixel_composition", "runtime_seat_anchor_composition", "runtime_horizontal_mirroring"]
+    "allowed": [
+      "background_removal",
+      "whole_subject_crop",
+      "whole_subject_scale",
+      "baseline_alignment"
+    ],
+    "forbidden": [
+      "separate_rider_mount_pixel_composition",
+      "runtime_seat_anchor_composition",
+      "runtime_horizontal_mirroring"
+    ]
   },
-  "quality": {
-    "selfReviewStatus": "passed_integrated_8_direction_32_frame_walk_grid",
-    "ownerReviewStatus": "pending",
-    "runtimeReviewStatus": "passed_1280x720_metal_direction_review_and_battle_check"
+  "evidence": {
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "finalFacingInContactSheet": "qa/battle/contact-sheet.png",
+    "contactSheetSha256": "761d61365a1164f235f72eff4ee44362454750611f4c1e4ad25cb698377b49c3",
+    "actionQaRoot": "qa/battle",
+    "reviewVideo": ".run/evidence/phase427_sprout_mounted_full_source_owner_review/Beastbound_Phase427_Sprout_Mounted_Full_Source_1x.mp4",
+    "reviewVideoSha256": "3eedcb462dc2b474ae25004d168a90b926e36555e48ebf6585c6afcb875c2d4f",
+    "reviewVideoSpeedScale": 1.0,
+    "reviewVideoFrameRate": 60,
+    "reviewVideoDurationSeconds": 39.533333,
+    "actionContactSheet": ".run/evidence/phase427_sprout_mounted_full_source_owner_review/action-contact-sheet.png",
+    "actionContactSheetSha256": "40bf22a1f2b525138d691a4766d8b24842d237eb84923f7ddabf34cd34718330",
+    "semanticReview": {
+      "status": "passed_full_source_real_main_owner_pending",
+      "reviewer": "codex_self_review_not_project_owner",
+      "scene": "res://scenes/Main.tscn",
+      "checkedFrames": 180,
+      "directorStepCount": 19,
+      "reviewStepCount": 14,
+      "ownerReview": "pending",
+      "runtimeEnabled": false,
+      "sourceClosure": "passed_full_source_archive"
+    }
   },
-  "knownScope": {
-    "included": ["world_idle", "world_walk", "battle_mounted_idle_walk_presentation"],
-    "deferred": ["mounted_attack_unique", "mounted_hurt_unique", "mounted_down_unique", "other_character_mount_pairs"]
-  }
+  "ownerReviewStatus": "pending",
+  "notes": "Identity and the complete two-view battle matrix are installed for isolated owner review. World art is not declared complete by this battle installer, and this metadata does not grant runtime or release approval."
 }

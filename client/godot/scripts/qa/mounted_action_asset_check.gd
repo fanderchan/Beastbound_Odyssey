@@ -3,7 +3,6 @@ extends RefCounted
 const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
-const PetArtCatalog := preload("res://scripts/pet/pet_art_catalog.gd")
 const DEFAULT_FORM_ID := "bui_novice_sprout_earth5_wind5"
 
 
@@ -11,15 +10,20 @@ static func run(requested_form_id: String, require_battle: bool = true) -> Dicti
 	var form_id := requested_form_id.strip_edges()
 	var effective_require_battle := require_battle
 	if form_id == "":
-		# Auto-check discovery invokes the flag without parameters. Keep that
-		# compatibility gate on the released Bui world canary; explicit form checks
-		# enforce the complete mounted battle contract unless world-only is asked.
+		# Auto-check discovery now validates the full formal Bui battle bundle.
+		# Callers that intentionally need only the released world canary must pass
+		# the explicit world-only flag instead of silently weakening this gate.
 		form_id = DEFAULT_FORM_ID
-		effective_require_battle = false
 	var character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
 	var errors: Array[String] = []
 	var preview_enabled_here := false
-	if not MountedCharacterAssetCatalog.supports_combination(character_id, form_id):
+	if (
+		not MountedCharacterAssetCatalog.supports_combination(character_id, form_id)
+		or (
+			effective_require_battle
+			and not MountedCharacterAssetCatalog.supports_battle_combination(character_id, form_id)
+		)
+	):
 		preview_enabled_here = MountedCharacterAssetCatalog.enable_qa_preview_combination(character_id, form_id)
 	if not MountedCharacterAssetCatalog.supports_combination(character_id, form_id):
 		errors.append("骑宠整图组合没有获得运行或 QA 访问权限：%s/%s" % [character_id, form_id])
@@ -102,9 +106,8 @@ static func _finish(
 	MountVisualProfileCatalog.disable_qa_preview_form(form_id)
 	if preview_enabled_here:
 		MountedCharacterAssetCatalog.disable_qa_preview_combination(character_id, form_id)
-		var record := PetArtCatalog.form_record(form_id)
-		if not bool(record.get("runtimeEnabled", false)) and MountedCharacterAssetCatalog.supports_combination(character_id, form_id):
-			errors.append("QA 结束后 owner pending 骑宠仍可进入普通运行路径：%s" % form_id)
+		if MountedCharacterAssetCatalog.supports_battle_combination(character_id, form_id):
+			errors.append("QA 结束后 owner pending 骑宠战斗包仍可进入普通运行路径：%s" % form_id)
 	return _result(
 		form_id,
 		character_id,

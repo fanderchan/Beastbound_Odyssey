@@ -1,0 +1,18 @@
+# 芽耳布伊整体骑乘背面三分之四受击源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`bf8da32011c726560b83513a7147259820ec0e58bacdc2fc61808061aa20f0d0`。
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 is the final front-view hurt cycle and locks the exact six-frame impact timing, connected rider/mount recoil, identity, palette and painterly finish. Image 2 locks the matching back-three-quarter northeast camera, rear costume, saddle, paws and spiral-tail construction. Generate an independently authored rear-view sheet; do not paste or mirror.
+Primary request: create the matching six-frame mounted hurt/recoil cycle for the exact same integrated adult novice hunter and golden Sprout-ear Bui, back three-quarter northeast source view only. Both absorb one incoming hit together without falling.
+Action timing: six frames synchronized with Image 1: 1 alert neutral, 2 first flinch, 3 strongest backward/downward recoil with ears pinned and rider shoulders pulled back, 4 compressed hold, 5 regain footing/saddle balance, 6 return near idle. Paws brace but do not walk or slide.
+Identity/integration: rider pelvis stays on saddle, legs straddle, hands retain reins; preserve exact adult rider, back strap, fur collar, boots, leaf mantle, saddle, mount body, sprout ears, forehead sprout, white chest and spiral tail.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, readable impact silhouette, matching references.
+Composition/framing: exact 3-column by 2-row grid, six equal cells, one full uncropped subject centered per cell, consistent scale/baseline, generous safe margin.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF.
+Constraints: no blood, wound, particles, flash, text, labels, border, checkerboard, ground, shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, fall/down pose, dismount, foot sliding or repeated frame.
+```

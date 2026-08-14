@@ -1,0 +1,41 @@
+# 芽耳布伊整体骑乘正面三分之四技能源表
+
+- 生成方式：Codex 内置 `image_gen`，一次新生成加两次定向耳型修正。
+- 生成时间：2026-08-15。
+- 最终原始 PNG SHA-256：`374ca6b42c34f7d04f63e36dcafe8407f2ff1ff05244f7a7e455f7fe5993f248`。
+- 取舍：首稿和一次修订稿因中段耳朵物理尺寸增长、身份漂移而退回；最终稿只允许固定尺寸的耳朵旋转形成技能轮廓。
+
+## 初始生成提示词
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 locks the exact rebuilt adult novice hunter and golden Sprout-ear Bui identity, palette, rendering, scale, saddle contact and front-three-quarter southwest camera. Image 2 shows the established mounted action family. Generate a new sheet; do not paste or mirror the references.
+Primary request: create an eight-frame mounted nature-skill casting cycle for the exact same integrated rider and mount, front three-quarter southwest source view only. The silhouette must read differently from the front-paw basic attack, with a planted magical charge and release pose; engine effects will be layered later.
+Action timing: exactly eight frames in reading order: 1 alert idle, 2 all four paws plant and body lowers, 3 huge sprout ears lift and forehead sprout aims forward, 4 rider raises one open hand while the other controls reins, 5 strongest casting silhouette with chest/ears/leaf accents opening forward and body firmly braced, 6 controlled release recoil, 7 ears and rider hand settle, 8 return toward idle. No cell translation.
+Subject identity and integration: same adult novice hunter and golden fluffy Sprout-ear Bui as Image 1; rider pelvis stays on saddle, legs straddle naturally, rider/saddle/mount remain one painted subject. Preserve hair, leaf ornament, fur collar, cross-body strap, boots, huge ears, forehead sprout, white muzzle/chest, spiral tail and leaf mantle.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, crisp readable combat silhouette, matching Image 1.
+Composition/framing: exact 4-column by 2-row grid, eight equal cells, one full uncropped subject centered per cell, consistent scale and baseline, generous safe margin.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF in every cell and gutter.
+Constraints: no baked particles, glow, projectile, text, labels, border, checkerboard, ground, cast shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, weapon, dismount, paw-swipe attack pose, single-leg hop or repeated frame.
+```
+
+## 定向修正 1
+
+```text
+Use case: precise-object-edit
+Asset type: production 2D game sprite animation source sheet
+Input images: Image 1 is the edit target.
+Primary request: change only the mount's two large ears in frames 3, 4, 5, 6 and 7 so they retain exactly the same physical length, width, fluffy construction and identity as the ears in frames 1 and 8. The ears may rotate upward/forward and tense during casting, but must never grow, stretch, become rabbit-like, or change species.
+Constraints: preserve the exact 4x2 grid, all eight frame positions, magenta background, adult rider identity, rider hand gesture, mount face/body, saddle, proportions, action timing, palette, painterly rendering, scale and baseline. Change only ear size/shape consistency in the middle frames; no new effects, objects, text, borders, shadows or watermark.
+```
+
+## 定向修正 2
+
+```text
+Use case: precise-object-edit
+Asset type: production 2D game sprite animation source sheet
+Input images: Image 1 is the edit target.
+Primary request: in frames 3 through 7, make each of the mount's two ears the same fixed physical size as the ears in frame 1, within about five percent in length and width. Preserve the existing ear angle progression, but remove all size growth. In particular, frames 4, 5 and 6 must not have elongated rabbit-like ears.
+Constraints: change only ear length/width consistency. Preserve the exact 4x2 grid, all poses and frame positions, solid magenta background, adult rider face/body/hand gesture, mount face/body/paws/tail, saddle, action timing, palette, painterly finish, scale and baseline. No new effects, objects, text, border, shadow or watermark.
+```

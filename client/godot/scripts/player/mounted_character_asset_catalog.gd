@@ -36,6 +36,7 @@ const REGISTERED_COMBINATIONS := {
 
 static var _texture_cache: Dictionary = {}
 static var _metadata_cache: Dictionary = {}
+static var _registered_battle_root_cache: Dictionary = {}
 static var _warmed_combinations: Dictionary = {}
 static var _battle_warmed_combinations: Dictionary = {}
 static var _qa_preview_combinations: Dictionary = {}
@@ -53,6 +54,7 @@ static func enable_qa_preview_combination(character_id: String, form_id: String)
 		return false
 	var key := _combination_key(normalized_character, normalized_form)
 	_qa_preview_combinations[key] = true
+	_registered_battle_root_cache.erase(key)
 	_warmed_combinations.erase(key)
 	_battle_warmed_combinations.erase(key)
 	return true
@@ -61,6 +63,7 @@ static func enable_qa_preview_combination(character_id: String, form_id: String)
 static func disable_qa_preview_combination(character_id: String, form_id: String) -> void:
 	var key := _combination_key(character_id, form_id)
 	_qa_preview_combinations.erase(key)
+	_registered_battle_root_cache.erase(key)
 	_warmed_combinations.erase(key)
 	_battle_warmed_combinations.erase(key)
 
@@ -87,7 +90,27 @@ static func bundle_for_combination(character_id: String, form_id: String) -> Dic
 	var key := _combination_key(normalized_character, normalized_form)
 	var registered = REGISTERED_COMBINATIONS.get(key, {})
 	if registered is Dictionary and not (registered as Dictionary).is_empty():
-		return (registered as Dictionary).duplicate(true)
+		var registered_bundle := (registered as Dictionary).duplicate(true)
+		# The released Bui world canary intentionally remains available while its
+		# newly painted battle matrix is owner-pending. Expose that battle root only
+		# after the same runtime/QA authorization used by dynamic combinations; the
+		# ordinary player path therefore cannot discover owner-pending frames. Cache
+		# the resolved root because this function is used by draw-time frame lookup;
+		# QA authorization transitions invalidate the cache above.
+		if not _registered_battle_root_cache.has(key):
+			var resolved_battle_root := str(registered_bundle.get("battleRoot", ""))
+			if resolved_battle_root == "":
+				var registered_metadata := _bundle_metadata(normalized_character, normalized_form)
+				if (
+					not registered_metadata.is_empty()
+					and _dynamic_access_allowed(normalized_character, normalized_form, registered_metadata)
+				):
+					var registered_root := _mounted_root(normalized_form)
+					if registered_root != "":
+						resolved_battle_root = "%s/views" % registered_root
+			_registered_battle_root_cache[key] = resolved_battle_root
+		registered_bundle["battleRoot"] = str(_registered_battle_root_cache.get(key, ""))
+		return registered_bundle
 	var metadata := _bundle_metadata(normalized_character, normalized_form)
 	if metadata.is_empty() or not _dynamic_access_allowed(normalized_character, normalized_form, metadata):
 		return {}

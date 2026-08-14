@@ -1,0 +1,18 @@
+# 芽耳布伊整体骑乘正面三分之四闪避源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`407dfda0d1a6b52c27fbac1f813382520575c958f21920f0d78089f6eedf15ba`。
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Image 1 locks the exact rebuilt adult novice hunter and golden Sprout-ear Bui identity, palette, rendering, scale, saddle contact and front-three-quarter southwest camera. Image 2 shows the established mounted action family. Generate a new sheet; do not paste or mirror.
+Primary request: create an eight-frame mounted dodge/weight-shift cycle for the exact same integrated rider and mount, front three-quarter southwest source view only. The engine moves the actor in world space; the sprite must show only a quick grounded lateral lean and recovery, not translate across cells.
+Action timing: exactly eight frames: 1 alert neutral, 2 ears notice threat, 3 body compresses and outside paws load, 4 rider and mount lean sharply together, 5 maximum dodge silhouette with torso low and paws tucked/angled, 6 counterbalance, 7 regain saddle and footing, 8 near idle. Fast middle beat, controlled recovery.
+Identity/integration: rider pelvis remains seated, knees grip saddle, torso counter-leans with mount; preserve exact adult rider, hair, leaf ornament, fur collar, strap, boots, golden mount, sprout ears, forehead sprout, white muzzle/chest, spiral tail, leaf mantle and saddle.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, crisp agile silhouette.
+Composition/framing: exact 4-column by 2-row grid, eight equal cells, one full uncropped subject centered per cell, consistent scale/baseline, generous safe margin.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF.
+Constraints: no whole-subject cell translation, dust, speed lines, particles, text, labels, border, checkerboard, ground, shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, attack, fall, dismount, one-leg hop or repeated frame.
+```

@@ -1,0 +1,19 @@
+# 芽耳布伊整体骑乘正面三分之四击飞源表
+
+- 生成方式：Codex 内置 `image_gen`。
+- 生成时间：2026-08-15。
+- 原始 PNG SHA-256：`1236b22ba0fcd195cb0b6ffc1e992270c599cc9a35fe856316bc73dbf55471f2`。
+
+```text
+Use case: stylized-concept
+Asset type: production 2D game sprite animation source sheet for Beastbound Odyssey
+Input images: Images 1 and 2 lock the exact rebuilt adult novice hunter and golden Sprout-ear Bui identity, palette, rendering, scale, saddle contact and front-three-quarter southwest camera. Image 3 is mechanics-only reference for the established knockaway sequence from impact through airborne displacement to a non-standing end pose; ignore its creature appearance, colors, fire effects, dust and framing. Generate a new original sheet; do not paste or mirror.
+Primary request: create an eight-frame mounted knockaway cycle for the exact same integrated rider and mount, front three-quarter southwest source view only. A high-force hit throws the complete rider-and-mount unit away; the engine moves the actor along the battlefield, so each sprite remains centered. They never stand back up inside this action.
+Action timing: exactly eight frames: 1 alert neutral, 2 violent impact compression with ears flattened and rider braced, 3 all four paws leave the ground as the connected unit tilts backward, 4 compact airborne curl with rider clamped to saddle, 5 strongest airborne knocked-back silhouette, 6 low landing impact with limbs tucked and torso rotated, 7 heavy collapsed slide pose, 8 fully settled knocked-out side/crouched pose ready to hand off to down. Preserve believable progression, no reset to idle.
+Rider mechanics: pelvis and legs remain locked to saddle, hands retain reins, torso follows the mount’s rotation; no separation, flying rider, dismount or broken anatomy. The pair reads as one complete silhouette at every frame.
+Identity lock: preserve exact adult rider hair, leaf ornament, fur collar, strap, boots; mount golden fur, rounded body, sprout ears, forehead sprout, white muzzle/chest, spiral tail, leaf mantle and saddle.
+Style/medium: polished original high-definition 2.5D isometric RPG sprite illustration, hand-painted texture, dramatic readable impact silhouette without slapstick.
+Composition/framing: exact 4-column by 2-row grid, eight equal cells, one full uncropped centered subject per cell, consistent apparent scale, generous safe margin around airborne and horizontal poses.
+Scene/backdrop: perfectly flat solid chroma magenta #FF00FF.
+Constraints: no baked particles, impact burst, dust, speed lines, text, labels, border, checkerboard, ground, shadow, UI, watermark, extra subject, identity/costume drift, camera/facing drift, mirror, crop, whole-subject cell translation, recovery to standing, attack, rider separation, dismount, detached equipment, repeated frame or gore.
+```
