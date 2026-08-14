@@ -224,13 +224,21 @@ test("repository inspector verifies terminal evolution policies and the stage-on
   assert.equal(result.serverAuthority.paidResetStageOneOnlyWired, true);
   assert.equal(result.serverAuthority.normalSecondRebirthSourceQualityWired, true);
   assert.equal(result.serverAuthority.evolutionSourceBonusTargetRerollWired, true);
+  assert.equal(result.serverAuthority.petFusionRuntimeWired, true);
+  assert.equal(result.serverAuthority.petFusionReleaseGateWired, true);
+  assert.equal(result.serverAuthority.petFusionProductionEnabled, false);
   assert.equal(result.terminalPowerContract.fusion.materialNumericInfluence, "none");
   assert.equal(
     result.terminalPowerContract.fusion.materialEligibility,
     "ordinary_authority_v1_exactly_one_rebirth_pre_terminal",
   );
   assert.equal(result.terminalPowerContract.fusion.skillInheritance, "contract_allowlist_only");
+  assert.equal(result.terminalPowerContract.fusion.runtimeWired, true);
+  assert.equal(result.terminalPowerContract.fusion.releaseGateWired, true);
+  assert.equal(result.terminalPowerContract.fusion.productionEnabled, false);
+  assert.equal(result.terminalPowerContract.fusion.runtimeStatus, "implemented_production_disabled");
   assert.equal(result.counts.evolutionTargetForms, 2);
+  assert.equal(result.counts.fusionTargetForms, 2);
   assert.equal(
     result.counts.paidResetTerminalFormPolicies,
     4,
@@ -251,4 +259,18 @@ test("inspector labels evolution as terminal instead of showing a price", () => 
   assert.equal(checked.status, 0, checked.stderr);
   assert.match(checked.stdout, /付费重置: 进化终局，不可付费重置/);
   assert.doesNotMatch(checked.stdout, /付费重置: tier=/);
+});
+
+test("inspector labels fusion separately and reports implemented but closed runtime", () => {
+  const checked = spawnSync(
+    process.execPath,
+    [inspectorPath, "--form", "emberhorn_fusion_solar_crown_fire7_wind3"],
+    {cwd: repoRoot, encoding: "utf8"},
+  );
+  assert.equal(checked.status, 0, checked.stderr);
+  assert.match(checked.stdout, /付费重置: 融合终局，不可付费重置/);
+  assert.doesNotMatch(checked.stdout, /付费重置: 进化终局/);
+  assert.match(checked.stdout, /融合三宠\/数值无关\/技能白名单权威实现=true/);
+  assert.match(checked.stdout, /发布证明门=true, 生产开放=false/);
+  assert.doesNotMatch(checked.stdout, /运行时待融合功能实现/);
 });
