@@ -76,6 +76,14 @@ The real local engine gate starts an ephemeral loopback Valkey process, runs the
 node tools/run_valkey_event_bridge_live_gate.mjs
 ```
 
+The independent-process live-event gate starts two game Node processes on different HTTP/WebSocket ports and proves cross-node presence, world chat, and stale-session replacement. It also verifies that a source-local `eventSeq` below the receiver's reconnect cursor cannot suppress a valid remote live event:
+
+```sh
+node tools/run_valkey_two_node_event_gate.mjs
+```
+
+Remote replayable events are intentionally projected as live-only frames on the receiving Node: the relay envelope remains deduplicated, while the source Node's private `eventSeq/eventId` is not reused as the receiving Node's cursor. This prevents silent live loss but does not provide reconnect hydration. Do not treat this gate as account ownership transfer, party/battle authority recovery, or offline-event replay proof.
+
 This gate still does not replace the remaining independent-process failover, account ownership transfer, presence revision continuity, battle/party/chat recovery, and 200-connection long soak required by `P0.6d-3b`.
 
 ## Local MySQL Live Server

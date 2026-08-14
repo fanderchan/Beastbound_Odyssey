@@ -219,7 +219,14 @@ function createEventHub(service, options = {}) {
     maxDedupEntries: options.maxClusterDedupEntries,
     publishTimeoutMs: options.clusterPublishTimeoutMs,
     onRemoteEvent(event) {
-      publish(event);
+      // `eventSeq` is allocated by the source AuthService and is therefore
+      // only ordered inside that Node.  Reusing it on this Node can collide
+      // with the local reconnect cursor and silently drop an otherwise valid
+      // live cluster event.  Until the later cluster hydration/rebase slice
+      // owns a receiver-local replay cursor, remote events are deliberately
+      // live-only and must not masquerade as entries in this Node's replay
+      // window.
+      publish(clusterRemoteLiveEvent(event));
     },
     onError: options.onClusterEventError,
   });
@@ -2661,6 +2668,16 @@ function plainDataRecord(value) {
   }
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
+}
+
+function clusterRemoteLiveEvent(event) {
+  if (!plainDataRecord(event) || normalizeEventSeq(event.eventSeq) <= 0) {
+    return event;
+  }
+  const liveEvent = {...event};
+  delete liveEvent.eventId;
+  delete liveEvent.eventSeq;
+  return liveEvent;
 }
 
 function isCoalesciblePositionEvent(event) {

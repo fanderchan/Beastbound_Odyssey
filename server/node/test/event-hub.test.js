@@ -1033,6 +1033,9 @@ test("two event hubs relay targeted, presence, and session replacement events ex
       token_b: aoi("map_a", 10, 10),
     },
     projectEvent: projectV10PositionForFake,
+    // A remote Node's source-local eventSeq must not be compared with this
+    // receiver-local reconnect cursor.
+    latestEventSeq: 100,
   });
   const hubA = createTestEventHub(serviceA, {
     clusterRequired: true,
@@ -1055,12 +1058,15 @@ test("two event hubs relay targeted, presence, and session replacement events ex
 
   serviceA.emit({
     type: "party.update",
+    eventId: "server_event_31",
     eventSeq: 31,
     targetAccountIds: ["acc_b"],
     party: {partyId: "party_cross_node"},
   });
   await nextImmediate();
   assert.deepEqual(jsonMessages(socketB).map((event) => event.type), ["party.update"]);
+  assert.equal(Object.hasOwn(jsonMessages(socketB)[0], "eventSeq"), false);
+  assert.equal(Object.hasOwn(jsonMessages(socketB)[0], "eventId"), false);
   bridge.redeliver(bridge.published.at(-1));
   assert.deepEqual(jsonMessages(socketB).map((event) => event.type), ["party.update"]);
 
@@ -1089,11 +1095,14 @@ test("two event hubs relay targeted, presence, and session replacement events ex
   socketB.clearWrites();
   serviceA.emit({
     type: "session.replaced",
+    eventId: "server_event_32",
     eventSeq: 32,
     targetSessionIds: ["sess_b"],
   });
   await nextImmediate();
   assert.equal(jsonMessages(socketB).at(-1).type, "session.replaced");
+  assert.equal(Object.hasOwn(jsonMessages(socketB).at(-1), "eventSeq"), false);
+  assert.equal(Object.hasOwn(jsonMessages(socketB).at(-1), "eventId"), false);
   assert.equal(socketB.ended, true);
   assert.equal(hubB.clientCount(), 0);
 
