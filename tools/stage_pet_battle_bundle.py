@@ -537,9 +537,23 @@ def _replace_staging(temp: Path, destination: Path, force: bool) -> None:
         shutil.rmtree(backup)
 
 
+def _bundle_identity(args: argparse.Namespace) -> tuple[str, str | None]:
+    kind = getattr(args, "kind", "pet")
+    character = getattr(args, "character", None)
+    if kind not in {"pet", "mounted"}:
+        raise StagingError("kind must be pet or mounted")
+    if kind == "mounted":
+        if not isinstance(character, str) or not FORM_ID_PATTERN.fullmatch(character):
+            raise StagingError("mounted bundles require a valid --character id")
+    elif character not in {None, ""}:
+        raise StagingError("pet bundles may not declare --character")
+    return kind, character or None
+
+
 def stage_bundle(args: argparse.Namespace) -> dict[str, Any]:
     if not FORM_ID_PATTERN.fullmatch(args.form):
         raise StagingError(f"invalid form id: {args.form!r}")
+    kind, character = _bundle_identity(args)
     for root, label in (
         (args.build_root, "build root"),
         (args.raw_root, "raw root"),
@@ -574,7 +588,7 @@ def stage_bundle(args: argparse.Namespace) -> dict[str, Any]:
             "schemaVersion": 1,
             "status": "passed",
             "formId": args.form,
-            "kind": "pet",
+            "kind": kind,
             "views": list(FORMAL_VIEWS),
             "actions": list(ACTION_SPECS),
             "totalFrameCount": sum(
@@ -591,7 +605,7 @@ def stage_bundle(args: argparse.Namespace) -> dict[str, Any]:
         manifest = {
             "schemaVersion": 1,
             "formId": args.form,
-            "kind": "pet",
+            "kind": kind,
             "bundleId": f"{args.form}_battle_v1",
             "artStatus": "in_production",
             "runtimeEnabled": False,
@@ -607,7 +621,7 @@ def stage_bundle(args: argparse.Namespace) -> dict[str, Any]:
             },
             "visualContract": {
                 "runtimeMirroring": False,
-                "integratedWholeFrame": False,
+                "integratedWholeFrame": kind == "mounted",
                 "runtimeLayeredComposition": False,
             },
             "provenance": {
@@ -631,6 +645,8 @@ def stage_bundle(args: argparse.Namespace) -> dict[str, Any]:
                 "qcSummarySha256": builder.sha256_file(qc_path),
             },
         }
+        if character is not None:
+            manifest["characterId"] = character
         _write_json(temp / "bundle-manifest.json", manifest)
         _replace_staging(temp, staging, args.force)
     except Exception:
@@ -640,6 +656,8 @@ def stage_bundle(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "status": "passed",
         "formId": args.form,
+        "kind": kind,
+        "characterId": character,
         "staging": str(staging),
         "viewCount": len(FORMAL_VIEWS),
         "actionCount": len(ACTION_SPECS),
@@ -656,6 +674,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--form", required=True)
     parser.add_argument("--display-name", required=True)
+    parser.add_argument("--kind", choices=("pet", "mounted"), default="pet")
+    parser.add_argument("--character")
     parser.add_argument("--build-root", required=True, type=Path)
     parser.add_argument("--raw-root", required=True, type=Path)
     parser.add_argument("--prompts-root", required=True, type=Path)

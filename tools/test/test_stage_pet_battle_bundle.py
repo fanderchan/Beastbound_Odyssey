@@ -222,6 +222,8 @@ class StagePetBattleBundleTest(unittest.TestCase):
                 argparse.Namespace(
                     form="fixture_fusion_pet_v1",
                     display_name="Fixture Fusion Pet",
+                    kind="mounted",
+                    character="novice_hunter_v1",
                     build_root=root / "build",
                     raw_root=root / "raw",
                     prompts_root=root / "prompts",
@@ -231,6 +233,8 @@ class StagePetBattleBundleTest(unittest.TestCase):
             )
 
             self.assertEqual(summary["totalFrameCount"], 180)
+            self.assertEqual(summary["kind"], "mounted")
+            self.assertEqual(summary["characterId"], "novice_hunter_v1")
             self.assertFalse(summary["runtimeEnabled"])
             self.assertEqual(summary["ownerReviewStatus"], "pending")
             self.assertEqual(
@@ -289,8 +293,8 @@ class StagePetBattleBundleTest(unittest.TestCase):
                     staging=staging,
                     destination=root / "isolated-pet-root",
                     form_id="fixture_fusion_pet_v1",
-                    kind="pet",
-                    character_id=None,
+                    kind="mounted",
+                    character_id="novice_hunter_v1",
                     dry_run=True,
                     archive_mode="full",
                 )
@@ -304,6 +308,22 @@ class StagePetBattleBundleTest(unittest.TestCase):
                     ]
                 ),
                 180,
+            )
+
+    def test_bundle_identity_defaults_to_pet_and_validates_mounted(self) -> None:
+        self.assertEqual(
+            STAGER._bundle_identity(argparse.Namespace()),
+            ("pet", None),
+        )
+        self.assertEqual(
+            STAGER._bundle_identity(
+                argparse.Namespace(kind="mounted", character="novice_hunter_v1")
+            ),
+            ("mounted", "novice_hunter_v1"),
+        )
+        with self.assertRaisesRegex(STAGER.StagingError, "require a valid"):
+            STAGER._bundle_identity(
+                argparse.Namespace(kind="mounted", character=None)
             )
 
     def test_source_chain_must_stay_inside_action_raw_root(self) -> None:
