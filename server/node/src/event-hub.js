@@ -11,6 +11,9 @@ const {
   createEventSubscriptionIndex,
 } = require("./event-hub-subscriptions");
 const {
+  createEventClusterRelay,
+} = require("./event-cluster-relay");
+const {
   DEFAULT_EVENT_HUB_WRITER_LIMITS,
   createEventHubWriter,
   encodeEventFrame,
@@ -205,8 +208,26 @@ function createEventHub(service, options = {}) {
   let nextConnectionSerial = 0;
   let closing = false;
   let closePromise = null;
+  const clusterRelay = createEventClusterRelay({
+    bridge: options.clusterEventBridge,
+    required: options.clusterRequired === true,
+    nodeId: options.clusterNodeId,
+    originEpoch: options.clusterOriginEpoch,
+    randomBytes,
+    now,
+    maxEventBytes: options.maxClusterEventBytes,
+    maxDedupEntries: options.maxClusterDedupEntries,
+    publishTimeoutMs: options.clusterPublishTimeoutMs,
+    onRemoteEvent(event) {
+      publish(event);
+    },
+    onError: options.onClusterEventError,
+  });
   const unsubscribe = service && typeof service.onEvent === "function"
-    ? service.onEvent((event) => publish(event))
+    ? service.onEvent((event) => {
+      publish(event);
+      clusterRelay.publishLocal(event);
+    })
     : () => {};
   const heartbeatTimer = setInterval(() => heartbeatSweep(), heartbeatSweepMs);
   if (heartbeatTimer && typeof heartbeatTimer.unref === "function") {
@@ -1698,8 +1719,17 @@ function createEventHub(service, options = {}) {
       }
     }
     pendingSockets.clear();
+    let clusterRelayClosed;
+    try {
+      clusterRelayClosed = clusterRelay.close();
+    } catch {
+      clusterRelayClosed = Promise.resolve();
+    }
     const disconnects = Array.from(clients).map((client) => terminateClient(client));
-    closePromise = Promise.allSettled(disconnects).then(() => undefined);
+    closePromise = Promise.allSettled([
+      ...disconnects,
+      clusterRelayClosed,
+    ]).then(() => undefined);
     return closePromise;
   }
 
@@ -1732,6 +1762,7 @@ function createEventHub(service, options = {}) {
     }
     const admissionMetrics = admission.metrics();
     return Object.freeze({
+      ...(clusterRelay.enabled ? {clusterRelay: clusterRelay.metrics()} : {}),
       connections: clients.size,
       establishedConnections: admissionMetrics.establishedConnections,
       pendingUpgrades: admissionMetrics.pendingUpgrades,

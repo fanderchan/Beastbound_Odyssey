@@ -227,7 +227,8 @@
         - 证据（2026-07-11）：最后两个未接档形态沿用现有中心成长并正式进入 authority-v1：免费新手老虎继续偏高速且较弱，雷龙继续以高血防、低敏低攻承担付费/庄园护卫骑宠职责，不在接档时暗改 3600 钻石商业价值。两档各 10,000 只模拟通过并写入 139 级观察表，Lv140 平均战力 897.64/1016.27；新蛋与 GM 创建带私有权威成长，旧无 envelope 坐骑保持 `legacy_existing`。目录达到 32/32，Inspector `errors=0`；Node 定向 51/51、完整 275/275，Godot 相关 6/6。额外旧宠物安全检查仍有与本项无关的任务/批量/培养夹具失败，保留为独立测试债。见 `docs/phase_224_mount_pet_growth_profiles.md`。
     - [x] **P0.2d-3 玩家观察证据区间、32 形态最终万人报告与真实旧档只读迁移报告**
       - 证据（2026-07-11）：正式 Node authority 算法完成 32 档各 10,000 只、共 320,000 个体的 Lv1→Lv140 总审计，全部目标范围通过；32 个档案的 Lv20 万人阈值均单调且 P25→P85 间距 0.210–0.474/级，界面继续用 Lv1→当前实测成长外推 140，不读取私有品质。新增严格只读旧档审计工具，扫描本机 42 份真实服务器缓存、171 条宠物引用，全部为应原样保留的 `legacy_existing_linked`，0 未知/损坏/人工复核，输入 SHA-256 前后一致；工具拒绝覆盖输入且报告权限 0600。定向 9/9、完整 Node 278/278。P0.2d 至此完成，见 `docs/phase_225_all_pet_growth_audit_and_legacy_report.md`。
-- [ ] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**
+- [x] **P0.3 打通真实 Lv1–140 练级/挂机路线与可配置离线收益**
+  - 汇总闭环（2026-08-15）：`P0.3a` 正式路线目录、`P0.3b` 服务端权威经验与真实 Lv1→140 隔离练级、`P0.3c` 可配置离线修行及断线重登录领取均已有代码、定向测试和实机证据；父项此前只是漏勾，本次只修正文档状态，不改数值或运行行为。
   - [x] **P0.3a 正式路线目录、Lv65–140 地图生态与阶段奖励来源**
     - 证据（2026-07-11）：先复现正式地图只连续到 Lv65、路线表含 3 个空 mapIds、5 个无运行时遇敌分组及错误 `shadow_oath_cave_f5`，雾帽/裂日/风镜还会回退新手奖励。现新增服务端启动期严格路线目录与只读审计工具，9 段路线经 20 条引用/19 张地图连续覆盖 Lv1–140；四洞 1–3 层与玄影 4–5 层新增 14 个重复练级区，正常等级怪与独立 Lv1 条目按 99%/1% 分配，玄影四系总 Lv1 率仍为 1%。`rewardTableId` 在不改稳定生态 group 的前提下连接正式阶段奖励；真实服务测试锁定雾帽来源 group 与 45–90 石币成长档。完整 Node 283/283、Godot 路线相关 8/8、数值经济样本 7/7 非负，idle/moving `process_total` 约 `0.22–0.27ms`/`0.17–0.25ms`。经验目标门禁仍仅 5/11、战数 4/9，明确留给 P0.3b，见 `docs/phase_227_formal_leveling_route_catalog.md`。
   - [x] **P0.3b 统一服务端权威经验、真实 Lv1→140 隔离练级与在线挂机产出**
@@ -275,7 +276,8 @@
     - 方案/风险/验收：先建立只读装备战力审计和客户端/服务端固定向量，再把有效且未损坏装备、强化和精灵的最终属性统一物化到服务端 battle snapshot；由 focused 纯规则统一人物普攻、反击、合击和相关宠技的攻防输入，Godot 只显示服务器事实。涉及 equipment catalogs/model、profile equipment instances、`auth-service.js` 的 snapshot/伤害 wiring、新 server combat formula module、数值与回放测试。
     - 风险/验收：这是会改变装备经济和现有 PvP 伤害的数值阶段，不能在 P0.4e 中暗改。固定覆盖裸装/武器/防具/强化/损坏/近战/远程/骑乘/石化组合；同一档案两端战力一致，损坏装备不生效，伤害单调且有明确封顶/保底；N 对 N、耐久写回和完整经济回归全绿，并提供玩家可对照的战斗前后面板与日志证据。
     - 证据（2026-07-12）：服务端严格共享装备目录并物化有效槽位、门槛、耐久、强化、精灵、动作与骑乘前基础属性；错误槽位/旧档重复生命/无效装备抢耐久均失败关闭。`combat_v1` 统一普攻、宠技、反击、合击、石化与守护，移除人物固定底伤；耐久阈值及余数写回 canonical instance。玄影连射由私有 authority 选 6–10 个不重复目标，逐目标 0.65、防御/闪避/骑宠分伤且不反击、整次只磨一次武器，也不会被普通合击吞掉。Godot 协议 7 逐目标纯回放；Node 聚焦 116/116、Godot 15 个唯一检查、装备 visual、317 次跨帧输入及真实 Metal 10v10 性能通过，完整合同见 `docs/phase_238_authoritative_equipment_combat_and_wear.md`。
-- [ ] **P0.5 版本化档案迁移 + 全面 GM QA 账号**
+- [x] **P0.5 版本化档案迁移 + 全面 GM QA 账号**
+  - 汇总闭环（2026-08-15）：`P0.5a`～`P0.5d` 的迁移 registry、装备实例迁移、跨容器信封、durable commit、批量演练和受限 GM QA 档案均已完成并各自留有定向证据；父项此前只是漏勾，本次不执行真实数据库迁移或修改 QA 授权。
   - [x] **P0.5a 迁移脚本删除风险封堵与纯版本 registry**
     - 问题/原因：旧 userdata→MySQL 脚本用过时白名单重建整份服务快照，遗漏市场、离线挂机配置、家族/庄园和战斗历史；MySQL 增量 diff 会把遗漏桶解释为删除，且旧入口默认写入、无备份和写后资产校验。
     - 方案/涉及文件：迁移改为默认 read-only dry-run，完整深拷贝 store 快照并只排除目标允许变化路径；`--apply` 前写 0600 完整备份，写后重读核对，失败尝试回滚。新增纯 `profile-migrations` registry，missing/v1→v2 只建立版本边界，非法/未来版本及任一坏档整批失败关闭。涉及 MySQL store、userdata migration script、focused migration/storage tests 与 Phase239。
@@ -399,6 +401,9 @@
             - 证据（2026-08-14）：accounts／sessions／bindings／四角色槽／profiles／market 进入统一深冻结 record lineage，planner 只消费 touched entity，账号 record key 与 SQL accountId 分离；普通上架总量和卖家数量改读增量缓存。200 套身份+四槽、120 挂单、200 活动邮件、20k 回执、100k 墓碑的组合门槛受保护容器枚举和 mail own-key 均为 0，steady fallback／checkpoint／full diff 均为 0，Apple M5 / Node v25.8.1 planner p95 `0.211ms`、max `0.217ms`；第 1025 次 mutation 单独记录 1 个 journal checkpoint 与通用 diff／条件资格各 1 次 fallback。只含本阶段的完整 Node 候选 `1783/1860`，未改动 `2939dd533` 基线 `1775/1854`，候选失败集合严格更小且无新增红灯。未连接共享 MySQL、未触玩家数据或全局参数；首次认证／reload／checkpoint 仍显式全扫，复杂装备真实 MySQL 收口继续留 2c-13。完整合同见 `docs/phase_424_general_planner_touched_set.md`。
         - [x] **P0.6d-2c-13 复杂装备 legacy 真实 MySQL 收口门槛**：补装备领取与 legacy 上架/转寄的双向真实交错、重复 listing/envelope identity 的全资产回滚，以及装备转寄 COMMIT 模糊后跨 Node 原 operation 精确重放。
           - 证据（2026-08-14）：一次性 MySQL `9.7.0-er2`／RR 门槛用 7 个独立业务库和 1 个装载夹具库，真实完成领取↔legacy 装备上架、领取↔legacy 装备转寄四种双向交错；每组均观察 InnoDB wait、首轮陈旧方已知冲突、原 operation reload 后成功，最终装备与两条 receipt 守恒。普通条件上架／文本邮件先占用固定 listing／装备邮件物理容器 ID 后，legacy 装备写在 strict INSERT 尾部冲突，前序档案、装备、挂单／邮件、receipt 与 global revision 全回滚，原赢家不变并可安全重试。装备转寄在真实 COMMIT 后丢回包且 exact read 暂时失败时只返回 outcome unknown；预先装载旧根的另一 Node 拒绝错 hash，并以原 operation 精确 `replayed=true`、`saveCalls=0` 恢复。完整组合 `qualified=true`，20k receipt 精确收口，全部 deadlock 增量、残留事务和锁等待为 0，临时实例／目录清理成功；扩大 Node 组合 `213/245` 的 32 个 fake harness 失败在干净 `90d210c69` 同命令严格同源，候选无新增红灯。由此 12、13、`P0.6d-2c` 与 `P0.6d-2` 一并关闭；`P0.6d` 仍等待横向 event／presence／WS 与长时多 Node 证据。完整合同见 `docs/phase_425_complex_equipment_legacy_mysql_gate.md`。
+  - [ ] **P0.6d-3 横向事件、presence 与 WebSocket 路由及长时多 Node 门槛**
+    - [x] **P0.6d-3a 跨 Node 事件中继语义与不安全拓扑围栏**：EventHub 新增可注入的严格中继合同；生产多 Node 必须明确提供 `at_least_once + bounded replay + per-origin ordering + account-sticky` 能力和唯一 node identity，缺任一项即在建服阶段失败关闭。版本化信封限制 1 MiB JSON、源节点回声忽略、32K 有界去重、异步发布 2 秒超时、关闭期 drain 均有独立门禁；两个真实 EventHub 实例已证明定向 party、AOI presence 与跨节点 `session.replaced` 精确一次抵达本节点 WebSocket，重复投递不重复出帧。Node 聚焦 `62/62`、HTTP／公网安全 `44/44`、社交／战斗房间／协议 `107/107`；未选择或接入 Redis／NATS／其他生产适配器，未做独立进程、账号节点接管、重放恢复或长时容量结论，详见 `docs/phase_428_cross_node_event_relay_contract.md`。
+    - [ ] **P0.6d-3b 生产适配器、节点接管与长时横向验收**：在明确运维基础设施后实现真实跨进程总线、有界重放、账号粘性与失效接管；覆盖独立进程／端口、事件丢失与重复、节点崩溃、会话迁移、presence revision、battle/party/chat 恢复，再执行 200 连接长时双 Node 门槛。完成前不得宣称服务可横向部署。
 - [x] **P0.7 确认并保留普通练级陪练伙伴边界**
   - 证据（2026-07-25）：项目所有者在核对当前真实逻辑后明确确认陪练小人设计 OK。错误退役提交已由 `62eccc0ca` 完整回退；当前客户端陪练检查证明 0–4 名陪练、人物/出战宠快照、默认选敌、普通攻击、合击与独立经验均保持，Godot parse + `--auto-training-partner-check` 为 `2/2 PASS`。联网服务端定向测试确认正常回合普通攻击，陪练人物仅在自己或配对宠物低于 40% 生命时按既有规则应急治疗，测试 `1/1 PASS`；捕捉回合保护与 GM 随机 10V10 隔离边界不变。本项只纠正路线图产品判断，没有修改运行代码。
 - [x] **P0.8 单账号固定四角色槽与登录后角色入口**

@@ -9,6 +9,9 @@ const {setTimeout: delay} = require("node:timers/promises");
 const test = require("node:test");
 const {TEST_AUTH_SUBPROTOCOL, createEventHub} = require("../src/event-hub");
 const {
+  REQUIRED_CLUSTER_EVENT_CAPABILITIES,
+} = require("../src/event-cluster-relay");
+const {
   DEFAULT_EVENT_HUB_WRITER_LIMITS,
   createEventHubWriter,
   encodeEventFrame,
@@ -1017,6 +1020,88 @@ test("event hub uses pure event sessions and AOI/account indexes for live routin
     eventTypes: hub.metrics().eventTypes,
   });
   await hub.close();
+});
+
+test("two event hubs relay targeted, presence, and session replacement events exactly once", async (t) => {
+  const bridge = new SharedClusterBridge();
+  const serviceA = createFakeEventService({sessions: {}});
+  const serviceB = createFakeEventService({
+    sessions: {
+      token_b: identity("acc_b", "sess_b", "b"),
+    },
+    aoiByToken: {
+      token_b: aoi("map_a", 10, 10),
+    },
+    projectEvent: projectV10PositionForFake,
+  });
+  const hubA = createTestEventHub(serviceA, {
+    clusterRequired: true,
+    clusterEventBridge: bridge,
+    clusterNodeId: "node-a",
+    clusterOriginEpoch: "event_hub_epoch_a_01",
+  });
+  const hubB = createTestEventHub(serviceB, {
+    clusterRequired: true,
+    clusterEventBridge: bridge,
+    clusterNodeId: "node-b",
+    clusterOriginEpoch: "event_hub_epoch_b_01",
+  });
+  t.after(async () => {
+    await Promise.all([hubA.close(), hubB.close()]);
+  });
+  const socketB = new FakeSocket();
+  await openFakeConnection(hubB, "token_b", socketB);
+  socketB.clearWrites();
+
+  serviceA.emit({
+    type: "party.update",
+    eventSeq: 31,
+    targetAccountIds: ["acc_b"],
+    party: {partyId: "party_cross_node"},
+  });
+  await nextImmediate();
+  assert.deepEqual(jsonMessages(socketB).map((event) => event.type), ["party.update"]);
+  bridge.redeliver(bridge.published.at(-1));
+  assert.deepEqual(jsonMessages(socketB).map((event) => event.type), ["party.update"]);
+
+  socketB.clearWrites();
+  serviceA.emit({
+    type: "online.position",
+    accountId: "acc_remote",
+    previousPosition: {mapId: "map_a", cellX: 11, cellY: 10, hasCell: true},
+    position: {mapId: "map_a", cellX: 12, cellY: 10, hasCell: true},
+    player: {
+      accountId: "acc_remote",
+      username: "remote",
+      displayName: "remote",
+      position: {mapId: "map_a", cellX: 12, cellY: 10, hasCell: true},
+    },
+    presenceRevision: 44,
+  });
+  await nextImmediate();
+  assert.equal(jsonMessages(socketB).length, 1);
+  assert.equal(jsonMessages(socketB)[0].type, "online.position");
+  assert.equal(jsonMessages(socketB)[0].change, "upsert");
+  bridge.redeliver(bridge.published.at(-1));
+  await nextImmediate();
+  assert.equal(jsonMessages(socketB).length, 1);
+
+  socketB.clearWrites();
+  serviceA.emit({
+    type: "session.replaced",
+    eventSeq: 32,
+    targetSessionIds: ["sess_b"],
+  });
+  await nextImmediate();
+  assert.equal(jsonMessages(socketB).at(-1).type, "session.replaced");
+  assert.equal(socketB.ended, true);
+  assert.equal(hubB.clientCount(), 0);
+
+  assert.equal(hubA.metrics().clusterRelay.localAccepted, 3);
+  assert.equal(hubA.metrics().clusterRelay.remoteSelfIgnored, 5);
+  assert.equal(hubB.metrics().clusterRelay.remoteDelivered, 3);
+  assert.equal(hubB.metrics().clusterRelay.remoteDuplicates, 2);
+  assert.equal(hubB.metrics().clusterRelay.capabilitiesAccepted, true);
 });
 
 test("event hub bounds and coalesces untargeted source position bursts without reordering accounts", async () => {
@@ -2821,6 +2906,37 @@ class ReferenceFakeSocket extends FakeSocket {
       this.writableNeedDrain = true;
     }
     return result;
+  }
+}
+
+class SharedClusterBridge {
+  constructor() {
+    this.capabilities = {...REQUIRED_CLUSTER_EVENT_CAPABILITIES};
+    this.listeners = new Set();
+    this.published = [];
+  }
+
+  subscribe(listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  publish(envelope) {
+    this.published.push(envelope);
+    for (const listener of this.listeners) {
+      listener(envelope);
+    }
+    return Promise.resolve();
+  }
+
+  redeliver(envelope) {
+    for (const listener of this.listeners) {
+      listener(envelope);
+    }
+  }
+
+  metrics() {
+    return {published: this.published.length};
   }
 }
 
