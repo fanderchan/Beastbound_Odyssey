@@ -47,9 +47,9 @@ Optional environment variables:
 - `BEASTBOUND_ALLOW_POSITION_TELEPORT`: set to `1` only on local QA servers to skip server-side position snapshot validation (teleport and cross-map jump checks) and the quest `talk` NPC proximity check. Never enable it for playtest or production servers.
 - `BEASTBOUND_ALLOW_PROFILE_SAVE`: set to `1` only for test/seed/ops tooling that must write whole profile documents through `saveProfile`. Production servers keep it unset so full-profile uploads are rejected (`profile_upload_denied`).
 
-## Optional Multi-Node Event Relay
+## Optional Multi-Node Event Relay And Account Ownership
 
-The default remains single Node. A deployment may opt into the first production relay adapter with Valkey Streams; enabling it does not by itself prove that account takeover, battle recovery, or 200-player horizontal capacity is complete.
+The default remains single Node. A deployment may opt into the Valkey Streams event relay and account-owner lease. The current gate proves account conflict rejection, crashed-owner expiry takeover, and presence revision continuity; it does not prove reconnect hydration, party/battle authority recovery, or 200-player horizontal capacity.
 
 Required settings for the Valkey adapter:
 
@@ -65,10 +65,18 @@ Bounded operational settings:
 - `BEASTBOUND_CLUSTER_VALKEY_STREAM_KEY`, default `beastbound:cluster:events:v1`;
 - `BEASTBOUND_CLUSTER_VALKEY_STREAM_MAXLEN`, default `262144`, accepted range `1024..10000000`;
 - `BEASTBOUND_CLUSTER_NODE_LEASE_MS`, default `15000`, accepted range `3000..120000`;
+- `BEASTBOUND_CLUSTER_ACCOUNT_LEASE_MS`, default `15000`, accepted range `3000..120000`;
+- `BEASTBOUND_CLUSTER_ACCOUNT_OWNER_MAX`, default `4096`, accepted range `1..100000`;
+- `BEASTBOUND_CLUSTER_ACCOUNT_ADMISSION_MAX_PENDING`, default `1024`, accepted range `1..10000`;
+- `BEASTBOUND_CLUSTER_ACCOUNT_OWNER_KEY_PREFIX`, optional account-owner key namespace;
 - `BEASTBOUND_CLUSTER_VALKEY_READ_BLOCK_MS`, default `250`;
 - `BEASTBOUND_CLUSTER_VALKEY_REQUEST_TIMEOUT_MS`, default at least `2000` and always greater than the blocking-read window.
 
-Each Node owns a Valkey lease and its own consumer group. Duplicate live node IDs fail startup; events are acknowledged only after the local relay accepts them; pending entries are replayed after a same-node restart. A trimmed pending entry or an `XINFO GROUPS` replay gap is fatal. Lease loss makes readiness return `503`, rejects new relay publishes, drains the HTTP/WebSocket server, and closes the process-owned Valkey clients. Health output exposes only sanitized booleans and counters, never node IDs, stream keys, credentials, events, accounts, or tokens.
+Each Node owns a Valkey lease and its own consumer group. Duplicate live node IDs fail startup; events are acknowledged only after the local relay accepts them; pending entries are replayed after a same-node restart. A trimmed pending entry or an `XINFO GROUPS` replay gap is fatal.
+
+Every active account is also guarded by a token-checked Valkey lease. Account IDs are SHA-256 hashed before they enter keys; the value is a process-random token. A persistent per-account generation raises the new owner's presence revision floor by `1,000,000,000`, so a takeover cannot emit a lower revision than an earlier owner. Verified login, bearer HTTP requests, and WebSocket authorization all acquire or confirm ownership before session replacement or gameplay mutation. A conflicting node returns bounded `503`; losing a locally held lease is fatal. Graceful shutdown releases account leases only after HTTP/WS admission, durable mutations, and storage flush have drained.
+
+Node-lease or account-owner loss makes readiness return `503`, rejects unsafe work, drains the server, and closes the process-owned Valkey clients. Health output exposes only sanitized booleans and counters, never node IDs, key hashes, stream keys, credentials, events, accounts, or tokens.
 
 The real local engine gate starts an ephemeral loopback Valkey process, runs the relay and HTTP entrypoint checks, rejects a duplicate node startup, and then removes the temporary state without installing a service:
 
@@ -76,15 +84,15 @@ The real local engine gate starts an ephemeral loopback Valkey process, runs the
 node tools/run_valkey_event_bridge_live_gate.mjs
 ```
 
-The independent-process live-event gate starts two game Node processes on different HTTP/WebSocket ports and proves cross-node presence, world chat, and stale-session replacement. It also verifies that a source-local `eventSeq` below the receiver's reconnect cursor cannot suppress a valid remote live event:
+The independent-process gate starts two game Node processes on different HTTP/WebSocket ports. It proves cross-node presence and world chat, receiver-local event-sequence isolation, wrong-node login rejection before session mutation, same-owner session replacement, forced owner-process death, expiry takeover, and presence revision generation advancement:
 
 ```sh
 node tools/run_valkey_two_node_event_gate.mjs
 ```
 
-Remote replayable events are intentionally projected as live-only frames on the receiving Node: the relay envelope remains deduplicated, while the source Node's private `eventSeq/eventId` is not reused as the receiving Node's cursor. This prevents silent live loss but does not provide reconnect hydration. Do not treat this gate as account ownership transfer, party/battle authority recovery, or offline-event replay proof.
+Remote replayable events are intentionally projected as live-only frames on the receiving Node: the relay envelope remains deduplicated, while the source Node's private `eventSeq/eventId` is not reused as the receiving Node's cursor. This prevents silent live loss but does not provide reconnect hydration.
 
-This gate still does not replace the remaining independent-process failover, account ownership transfer, presence revision continuity, battle/party/chat recovery, and 200-connection long soak required by `P0.6d-3b`.
+This gate still does not prove offline event hydration, authoritative party/battle runtime recovery, shared-state rebase after a dead process, network-partition fencing beyond lease expiry, or the 200-connection long soak required by `P0.6d-3b`.
 
 ## Local MySQL Live Server
 

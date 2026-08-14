@@ -93,3 +93,10 @@ replay cursor。后续不能通过“保留源序号”假装完成恢复，而�
 连接中断期间 chat／party／battle 的权威 hydration；party invite／battle room 等运行态不会只留在死亡
 进程；网络分区和 replay window 耗尽时失败关闭并从权威状态 rebase。上述完成后才有资格执行
 200 连接长时双 Node soak，父项 `P0.6d-3b` 与 `P0.6d` 继续保持未完成。
+
+## Phase 432 后续说明
+
+本页回执记录的是 Phase 431 提交时的历史门槛。Phase 432 启用账号 owner 后，跨 Node 登录不再允许
+先改会话、再靠远端 `session.replaced` 补救；当前同名工具已扩展为先证明 wrong-node 登录在 mutation
+前返回 503，再证明同 owner 会话替换、强杀 owner、租约到期接管及 presence revision 换代。实时事件
+序号隔离结论不变，新增结论见 `docs/phase_432_valkey_account_owner_takeover.md`。

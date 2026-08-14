@@ -14,6 +14,7 @@ test("cluster runtime defaults to single node and rejects unproven or insecure V
   const single = await createConfiguredClusterEventRuntime({});
   assert.equal(single.enabled, false);
   assert.deepEqual(single.eventHubOptions, {});
+  assert.equal(single.accountAdmission, null);
 
   await assert.rejects(
     createConfiguredClusterEventRuntime({
@@ -44,11 +45,18 @@ test("cluster runtime defaults to single node and rejects unproven or insecure V
 test("cluster runtime passes a bounded loopback Valkey configuration without exposing credentials", async () => {
   const calls = [];
   let closeCalls = 0;
+  let accountCloseCalls = 0;
   const bridge = {
     capabilities: {},
     publish() {},
     subscribe() { return () => {}; },
     async close() { closeCalls += 1; },
+  };
+  const accountAdmission = {
+    setPresenceRevisionObserver() {},
+    admit() { return Promise.resolve({ok: true}); },
+    health() { return {ok: true}; },
+    async close() { accountCloseCalls += 1; },
   };
   const runtime = await createConfiguredClusterEventRuntime({
     BEASTBOUND_CLUSTER_MODE: "valkey",
@@ -58,25 +66,64 @@ test("cluster runtime passes a bounded loopback Valkey configuration without exp
     BEASTBOUND_CLUSTER_VALKEY_TLS: "0",
     BEASTBOUND_CLUSTER_ACCOUNT_STICKY: "true",
     BEASTBOUND_CLUSTER_VALKEY_STREAM_MAXLEN: "4096",
+    BEASTBOUND_CLUSTER_ACCOUNT_LEASE_MS: "9000",
+    BEASTBOUND_CLUSTER_ACCOUNT_OWNER_MAX: "512",
+    BEASTBOUND_CLUSTER_ACCOUNT_ADMISSION_MAX_PENDING: "128",
     BEASTBOUND_CLUSTER_VALKEY_PASSWORD: "secret-not-for-logs",
   }, {
     async bridgeFactory(options) {
       calls.push(options);
       return bridge;
     },
+    async accountOwnerFactory(options) {
+      calls.push(options);
+      return accountAdmission;
+    },
   });
 
   assert.equal(runtime.enabled, true);
   assert.equal(runtime.eventHubOptions.clusterRequired, true);
   assert.equal(runtime.eventHubOptions.clusterNodeId, "node-a");
+  assert.equal(runtime.accountAdmission, accountAdmission);
   assert.equal(calls[0].connection.port, 6380);
   assert.equal(calls[0].connection.useTLS, false);
   assert.equal(calls[0].maxStreamLength, 4096);
   assert.equal(calls[0].connection.password, "secret-not-for-logs");
+  assert.equal(calls[1].leaseMs, 9000);
+  assert.equal(calls[1].maxOwnedAccounts, 512);
+  assert.equal(calls[1].maxPendingAdmissions, 128);
+  assert.equal(calls[1].connection.password, "secret-not-for-logs");
   assert.equal(JSON.stringify(runtime.eventHubOptions).includes("secret-not-for-logs"), false);
   await runtime.close();
   await runtime.close();
   assert.equal(closeCalls, 1);
+  assert.equal(accountCloseCalls, 1);
+});
+
+test("cluster runtime closes an initialized relay when account ownership fails to initialize", async () => {
+  let bridgeCloseCalls = 0;
+  const bridge = {
+    async close() { bridgeCloseCalls += 1; },
+  };
+  await assert.rejects(
+    createConfiguredClusterEventRuntime({
+      BEASTBOUND_CLUSTER_MODE: "valkey",
+      BEASTBOUND_CLUSTER_NODE_ID: "node-a",
+      BEASTBOUND_CLUSTER_VALKEY_HOST: "127.0.0.1",
+      BEASTBOUND_CLUSTER_ACCOUNT_STICKY: "1",
+    }, {
+      async bridgeFactory() {
+        return bridge;
+      },
+      async accountOwnerFactory() {
+        const error = new Error("owner failed");
+        error.code = "cluster_account_owner_connect_failed";
+        throw error;
+      },
+    }),
+    (error) => error.code === "cluster_account_owner_connect_failed",
+  );
+  assert.equal(bridgeCloseCalls, 1);
 });
 
 test("ready health fails closed when a required cluster relay is unhealthy", async (t) => {

@@ -85,6 +85,7 @@ function createEventHub(service, options = {}) {
     randomBytes,
   });
   const admission = createWebSocketAdmission(options, {now, randomBytes});
+  const clusterAccountAdmission = options.clusterAccountAdmission || null;
   const allowedOrigins = canonicalAllowedOrigins(options.allowedOrigins);
   const handshakeTimeoutMs = positiveInteger(options.handshakeTimeoutMs, DEFAULT_HANDSHAKE_TIMEOUT_MS);
   const heartbeatIntervalMs = positiveInteger(options.heartbeatIntervalMs, DEFAULT_HEARTBEAT_INTERVAL_MS);
@@ -307,6 +308,16 @@ function createEventHub(service, options = {}) {
         throw upgradeFailure(400, "ws_socket_closed", "bad request");
       }
       const modernSessionBoundary = Boolean(service && typeof service.getEventSession === "function");
+      const clusterIngress = clusterAccountAdmission
+        ? await withHandshakeDeadline(
+          handshakeDeadlineAt,
+          () => admitClusterEventSession(
+            clusterAccountAdmission,
+            service,
+            transport.token,
+          ),
+        )
+        : null;
       const authorized = await withHandshakeDeadline(
         handshakeDeadlineAt,
         () => authorizeEventSession(service, transport.token, modernSessionBoundary),
@@ -326,6 +337,15 @@ function createEventHub(service, options = {}) {
       const sessionId = String(session.sessionId || authorized.sessionId || "");
       if (!accountId || !sessionId) {
         throw upgradeFailure(401, "ws_identity_incomplete", "unauthorized");
+      }
+      if (
+        clusterIngress
+        && (
+          clusterIngress.accountId !== accountId
+          || clusterIngress.sessionId !== sessionId
+        )
+      ) {
+        throw upgradeFailure(401, "ws_account_identity_changed", "unauthorized");
       }
       establishedReservation = admission.establish({
         clientIp: networkIdentity.clientIp,
@@ -1886,6 +1906,65 @@ function createEventHub(service, options = {}) {
     clientCount,
     metrics,
   };
+}
+
+async function admitClusterEventSession(admission, service, token) {
+  if (
+    !admission
+    || typeof admission.admit !== "function"
+    || !service
+    || typeof service._clusterIngressIdentity !== "function"
+  ) {
+    throw upgradeFailure(
+      503,
+      "ws_account_admission_unavailable",
+      "service unavailable",
+      {retryAfterMs: 1000},
+    );
+  }
+  let identity;
+  try {
+    identity = await Promise.resolve(service._clusterIngressIdentity(token));
+  } catch {
+    throw upgradeFailure(
+      503,
+      "ws_account_admission_unavailable",
+      "service unavailable",
+      {retryAfterMs: 1000},
+    );
+  }
+  if (
+    !identity
+    || identity.ok !== true
+    || String(identity.accountId || "") === ""
+    || String(identity.sessionId || "") === ""
+  ) {
+    throw upgradeFailure(401, "ws_unauthorized", "unauthorized");
+  }
+  try {
+    await Promise.resolve(admission.admit(identity.accountId));
+  } catch (error) {
+    const conflict = String(error && error.code || "") === "cluster_account_owner_conflict";
+    throw upgradeFailure(
+      503,
+      conflict ? "ws_account_node_switching" : "ws_account_admission_unavailable",
+      "service unavailable",
+      {
+        retryAfterMs: boundedClusterRetryAfterMs(error && error.retryAfterMs),
+      },
+    );
+  }
+  return Object.freeze({
+    accountId: String(identity.accountId),
+    sessionId: String(identity.sessionId),
+  });
+}
+
+function boundedClusterRetryAfterMs(value) {
+  const number = Number(value);
+  return Number.isFinite(number)
+    ? Math.max(250, Math.min(120000, Math.ceil(number)))
+    : 1000;
 }
 
 async function authorizeEventSession(service, token, modernSessionBoundary) {

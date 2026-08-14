@@ -4,6 +4,9 @@ const net = require("node:net");
 const {
   createValkeyStreamEventBridge,
 } = require("./valkey-stream-event-bridge");
+const {
+  createValkeyAccountOwner,
+} = require("./valkey-account-owner");
 
 const CLUSTER_MODE_SINGLE = "single";
 const CLUSTER_MODE_VALKEY = "valkey";
@@ -73,6 +76,27 @@ async function createConfiguredClusterEventRuntime(env = process.env, options = 
     120000,
     "cluster_valkey_lease_ms_invalid",
   );
+  const accountLeaseMs = strictInteger(
+    source.BEASTBOUND_CLUSTER_ACCOUNT_LEASE_MS,
+    15000,
+    3000,
+    120000,
+    "cluster_account_lease_ms_invalid",
+  );
+  const maxOwnedAccounts = strictInteger(
+    source.BEASTBOUND_CLUSTER_ACCOUNT_OWNER_MAX,
+    4096,
+    1,
+    100000,
+    "cluster_account_owner_max_invalid",
+  );
+  const maxPendingAdmissions = strictInteger(
+    source.BEASTBOUND_CLUSTER_ACCOUNT_ADMISSION_MAX_PENDING,
+    1024,
+    1,
+    10000,
+    "cluster_account_admission_max_pending_invalid",
+  );
   const readBlockMs = strictInteger(
     source.BEASTBOUND_CLUSTER_VALKEY_READ_BLOCK_MS,
     250,
@@ -90,37 +114,67 @@ async function createConfiguredClusterEventRuntime(env = process.env, options = 
   const bridgeFactory = typeof options.bridgeFactory === "function"
     ? options.bridgeFactory
     : createValkeyStreamEventBridge;
+  const accountOwnerFactory = typeof options.accountOwnerFactory === "function"
+    ? options.accountOwnerFactory
+    : createValkeyAccountOwner;
   const onError = typeof options.onError === "function" ? options.onError : () => {};
   const onFatal = typeof options.onFatal === "function" ? options.onFatal : () => {};
-  const bridge = await bridgeFactory({
-    nodeId,
-    streamKey: optionalText(source.BEASTBOUND_CLUSTER_VALKEY_STREAM_KEY),
-    maxStreamLength,
-    leaseMs,
-    readBlockMs,
-    onError,
-    onFatal,
-    connection: {
-      host,
-      port,
-      useTLS,
-      databaseId: strictInteger(
-        source.BEASTBOUND_CLUSTER_VALKEY_DATABASE,
-        0,
-        0,
-        15,
-        "cluster_valkey_database_invalid",
-      ),
-      requestTimeoutMs,
-      username: optionalText(source.BEASTBOUND_CLUSTER_VALKEY_USERNAME),
-      password: optionalText(source.BEASTBOUND_CLUSTER_VALKEY_PASSWORD),
-    },
-  });
+  const connection = {
+    host,
+    port,
+    useTLS,
+    databaseId: strictInteger(
+      source.BEASTBOUND_CLUSTER_VALKEY_DATABASE,
+      0,
+      0,
+      15,
+      "cluster_valkey_database_invalid",
+    ),
+    requestTimeoutMs,
+    username: optionalText(source.BEASTBOUND_CLUSTER_VALKEY_USERNAME),
+    password: optionalText(source.BEASTBOUND_CLUSTER_VALKEY_PASSWORD),
+  };
+  let bridge = null;
+  let accountAdmission = null;
+  try {
+    bridge = await bridgeFactory({
+      nodeId,
+      streamKey: optionalText(source.BEASTBOUND_CLUSTER_VALKEY_STREAM_KEY),
+      maxStreamLength,
+      leaseMs,
+      readBlockMs,
+      onError,
+      onFatal,
+      connection,
+    });
+    accountAdmission = await accountOwnerFactory({
+      nodeId,
+      keyPrefix: optionalText(source.BEASTBOUND_CLUSTER_ACCOUNT_OWNER_KEY_PREFIX),
+      leaseMs: accountLeaseMs,
+      maxOwnedAccounts,
+      maxPendingAdmissions,
+      onError,
+      onFatal,
+      connection,
+    });
+  } catch (error) {
+    try {
+      await closeRuntimeParts(accountAdmission, bridge);
+    } catch (cleanupError) {
+      try {
+        onError(cleanupError);
+      } catch {
+        // Preserve the initialization failure as the primary startup error.
+      }
+    }
+    throw error;
+  }
   let closed = false;
   return Object.freeze({
     mode,
     enabled: true,
     bridge,
+    accountAdmission,
     eventHubOptions: Object.freeze({
       clusterEventBridge: bridge,
       clusterRequired: true,
@@ -132,9 +186,7 @@ async function createConfiguredClusterEventRuntime(env = process.env, options = 
         return;
       }
       closed = true;
-      if (bridge && typeof bridge.close === "function") {
-        await bridge.close();
-      }
+      await closeRuntimeParts(accountAdmission, bridge);
     },
   });
 }
@@ -144,9 +196,32 @@ function disabledRuntime() {
     mode: CLUSTER_MODE_SINGLE,
     enabled: false,
     bridge: null,
+    accountAdmission: null,
     eventHubOptions: Object.freeze({}),
     close() { return Promise.resolve(); },
   });
+}
+
+async function closeRuntimeParts(accountAdmission, bridge) {
+  const results = await Promise.allSettled([
+    closeRuntimePart(accountAdmission),
+    closeRuntimePart(bridge),
+  ]);
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure) {
+    throw failure.reason;
+  }
+}
+
+function closeRuntimePart(part) {
+  if (!part || typeof part.close !== "function") {
+    return Promise.resolve();
+  }
+  try {
+    return Promise.resolve(part.close());
+  } catch (error) {
+    return Promise.reject(error);
+  }
 }
 
 function isLoopbackHost(host) {

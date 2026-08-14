@@ -21,8 +21,29 @@ test("presence revisions advance independently per account", () => {
   assert.equal(revisions.ensure("account_a"), 2);
   assert.equal(revisions.ensure("account_c"), 1);
   assert.equal(revisions.next("account_c"), 2);
+  assert.equal(revisions.raiseFloor("account_c", 1_000_000_000), 1_000_000_000);
+  assert.equal(revisions.next("account_c"), 1_000_000_001);
+  assert.equal(revisions.raiseFloor("account_c", 10), 1_000_000_001);
+  assert.equal(revisions.raiseFloor("", 20), 0);
   revisions.clear("account_a");
   assert.equal(revisions.current("account_a"), 0);
+});
+
+test("cluster presence generations cannot overlap or advance beyond their fenced window", () => {
+  const revisions = createPresenceRevisionTracker();
+  assert.equal(revisions.raiseFloor("account_fenced", 10, 11), 10);
+  assert.equal(revisions.next("account_fenced"), 11);
+  assert.throws(
+    () => revisions.next("account_fenced"),
+    (error) => error.code === "cluster_presence_revision_window_exhausted",
+  );
+  assert.equal(revisions.raiseFloor("account_fenced", 20, 29), 20);
+  assert.equal(revisions.next("account_fenced"), 21);
+  assert.throws(
+    () => revisions.raiseFloor("account_fenced", 21, 30),
+    (error) => error.code === "cluster_presence_revision_window_overlap",
+  );
+  assert.equal(revisions.raiseFloor("account_invalid", 30, 29), 0);
 });
 
 test("presence rebase contains only AOI membership differences", () => {

@@ -200,6 +200,8 @@ const IDEMPOTENCY_REQUIRED_BATTLE_COMMAND_HTTP_PATH_PATTERN = /^\/battle\/rooms\
 
 function createHttpServer(options = {}) {
   const baseService = options.service || createAuthService();
+  const clusterAccountAdmission = options.clusterAccountAdmission || null;
+  installClusterAccountAdmission(clusterAccountAdmission, baseService);
   const requestContexts = new AsyncLocalStorage();
   const service = createDurableHttpServiceProxy(baseService, requestContexts);
   const commandCatalog = options.commandCatalog || DEFAULT_COMMAND_CATALOG;
@@ -217,10 +219,23 @@ function createHttpServer(options = {}) {
   }
   const eventHub = options.eventHub || createEventHub(baseService, {
     ...eventHubOptions,
+    clusterAccountAdmission,
     networkIdentity: (req) => networkAdmission.networkIdentity(req),
   });
+  const httpAuthOptions = {...(options.httpAuthOptions || {})};
+  if (clusterAccountAdmission) {
+    const configuredBeforeLogin = typeof httpAuthOptions.beforeLogin === "function"
+      ? httpAuthOptions.beforeLogin
+      : null;
+    httpAuthOptions.beforeLogin = async (identity) => {
+      await admitClusterAccount(clusterAccountAdmission, identity && identity.accountId);
+      if (configuredBeforeLogin) {
+        await configuredBeforeLogin(identity);
+      }
+    };
+  }
   const httpAuth = hasHttpCredentialBoundary(baseService)
-    ? createHttpAuthBoundary(baseService, service, options.httpAuthOptions || {})
+    ? createHttpAuthBoundary(baseService, service, httpAuthOptions)
     : createLegacyHttpAuthBoundary(service);
   const healthMonitor = options.healthMonitor || createHealthMonitor(store, {
     ...(options.healthMonitorOptions || {}),
@@ -359,7 +374,14 @@ function createHttpServer(options = {}) {
         return sendJson(res, 200, healthMonitor.liveSnapshot());
       }
       if (req.method === "GET" && (url.pathname === "/health" || url.pathname === "/health/ready")) {
-        const health = healthPayload(healthMonitor, eventHub, baseService, networkAdmission, httpAuth);
+        const health = healthPayload(
+          healthMonitor,
+          eventHub,
+          baseService,
+          networkAdmission,
+          httpAuth,
+          clusterAccountAdmission,
+        );
         return sendJson(res, health.ok ? 200 : 503, health);
       }
       if (req.method === "POST" && url.pathname === "/__qa/clock/advance" && qaAdvanceClock) {
@@ -392,6 +414,12 @@ function createHttpServer(options = {}) {
         networkAdmission.admitAuthAccount(networkContext, "login", payload.username);
         return sendResult(res, httpAuth.login(payload, networkContext.clientIp));
       }
+      await admitClusterSessionRequest(
+        clusterAccountAdmission,
+        baseService,
+        requestToken,
+        {allowRefreshGrace: url.pathname === "/auth/refresh"},
+      );
       if (req.method === "POST" && url.pathname === "/auth/refresh") {
         return sendResult(res, service.refreshSession(requestToken));
       }
@@ -839,6 +867,7 @@ function createHttpServer(options = {}) {
   server.eventHub = eventHub;
   server.authService = baseService;
   server.networkAdmission = networkAdmission;
+  server.clusterAccountAdmission = clusterAccountAdmission;
   server.healthMonitor = healthMonitor;
   server.mailArchiveMaintenance = mailArchiveMaintenance;
   server.rewardVaultDeliveryMaintenance = rewardVaultDeliveryMaintenance;
@@ -1295,7 +1324,14 @@ function mailArchiveOptionsFromSearchParams(searchParams) {
   }
 }
 
-function healthPayload(healthMonitor, eventHub, service = null, networkAdmission = null, httpAuth = null) {
+function healthPayload(
+  healthMonitor,
+  eventHub,
+  service = null,
+  networkAdmission = null,
+  httpAuth = null,
+  clusterAccountAdmission = null,
+) {
   const storage = healthMonitor.snapshot();
   const eventStreamMetrics = eventHub && typeof eventHub.metrics === "function"
     ? eventHub.metrics()
@@ -1304,11 +1340,12 @@ function healthPayload(healthMonitor, eventHub, service = null, networkAdmission
     ? eventStreamMetrics.clusterRelay
     : null;
   const clusterReady = clusterRelay === null || clusterRelay.runtimeHealthy === true;
+  const accountOwnership = clusterAccountHealth(clusterAccountAdmission);
   return {
     // A configured store is not ready until its first background probe has
     // positively completed. Store-less isolated servers report ok=true from
     // the monitor even though no probe is required.
-    ok: storage.ok === true && clusterReady,
+    ok: storage.ok === true && clusterReady && accountOwnership.ok,
     service: "beastbound-auth",
     storage,
     eventStream: {
@@ -1327,8 +1364,111 @@ function healthPayload(healthMonitor, eventHub, service = null, networkAdmission
     authSecurity: service && typeof service.authSecurityMetrics === "function"
       ? service.authSecurityMetrics()
       : {checked: false},
+    accountOwnership,
     healthProbe: healthMonitor.metrics(),
   };
+}
+
+function installClusterAccountAdmission(admission, service) {
+  if (!admission) {
+    return;
+  }
+  if (
+    typeof admission.admit !== "function"
+    || typeof admission.health !== "function"
+    || typeof admission.setPresenceRevisionObserver !== "function"
+    || !service
+    || typeof service._clusterIngressIdentity !== "function"
+    || typeof service._httpClusterLoginIdentity !== "function"
+    || typeof service._adoptClusterPresenceRevisionFloor !== "function"
+  ) {
+    const error = new Error("Cluster account admission boundary is incomplete");
+    error.code = "cluster_account_admission_boundary_invalid";
+    throw error;
+  }
+  admission.setPresenceRevisionObserver((accountId, floor, ceiling) => (
+    service._adoptClusterPresenceRevisionFloor(accountId, floor, ceiling)
+  ));
+}
+
+async function admitClusterSessionRequest(admission, service, token, options = {}) {
+  if (!admission || String(token || "") === "") {
+    return null;
+  }
+  let identity;
+  try {
+    identity = await Promise.resolve(service._clusterIngressIdentity(token, options));
+  } catch (error) {
+    throw publicClusterAccountAdmissionError(error);
+  }
+  if (!identity || identity.ok !== true) {
+    return null;
+  }
+  return admitClusterAccount(admission, identity.accountId);
+}
+
+async function admitClusterAccount(admission, accountId) {
+  try {
+    return await Promise.resolve(admission.admit(String(accountId || "")));
+  } catch (error) {
+    throw publicClusterAccountAdmissionError(error);
+  }
+}
+
+function publicClusterAccountAdmissionError(cause) {
+  const conflict = String(cause && cause.code || "") === "cluster_account_owner_conflict";
+  const error = new Error(conflict
+    ? "账号正在切换服务器，请稍后重试。"
+    : "账号服务暂时不可用，请稍后重试。");
+  error.name = "ClusterAccountAdmissionError";
+  error.statusCode = 503;
+  error.code = conflict ? "account_node_switching" : "account_node_unavailable";
+  error.publicMessage = error.message;
+  error.retryAfterMs = boundedClusterRetryAfterMs(cause && cause.retryAfterMs);
+  error.cause = cause;
+  return error;
+}
+
+function clusterAccountHealth(admission) {
+  if (!admission) {
+    return Object.freeze({enabled: false, checked: false, ok: true});
+  }
+  try {
+    const source = admission.health();
+    return Object.freeze({
+      enabled: true,
+      checked: true,
+      ok: source && source.ok === true,
+      runtimeHealthy: source && source.runtimeHealthy === true,
+      closed: Boolean(source && source.closed),
+      fatal: Boolean(source && source.fatal),
+      ownedAccounts: boundedClusterHealthCount(source && source.ownedAccounts),
+      pendingAdmissions: boundedClusterHealthCount(source && source.pendingAdmissions),
+    });
+  } catch {
+    return Object.freeze({
+      enabled: true,
+      checked: true,
+      ok: false,
+      runtimeHealthy: false,
+      closed: false,
+      fatal: true,
+      ownedAccounts: 0,
+      pendingAdmissions: 0,
+    });
+  }
+}
+
+function boundedClusterRetryAfterMs(value) {
+  const number = Number(value);
+  return Number.isFinite(number)
+    ? Math.max(250, Math.min(120000, Math.ceil(number)))
+    : 1000;
+}
+
+function boundedClusterHealthCount(value) {
+  const number = Number(value);
+  return Number.isSafeInteger(number) && number > 0 ? number : 0;
 }
 
 function configuredTrustedProxies(value) {
@@ -1513,6 +1653,7 @@ async function startDefaultHttpServer(options = {}) {
       service,
       store,
       eventHubOptions: clusterRuntime.eventHubOptions,
+      clusterAccountAdmission: clusterRuntime.accountAdmission,
     });
     server.clusterEventRuntime = clusterRuntime;
     await new Promise((resolve, reject) => {
@@ -1656,9 +1797,20 @@ async function drainServerForShutdown(server, store) {
   } catch (error) {
     flushError = error;
   }
+  let accountAdmissionError = null;
+  try {
+    if (
+      server.clusterAccountAdmission
+      && typeof server.clusterAccountAdmission.close === "function"
+    ) {
+      await server.clusterAccountAdmission.close();
+    }
+  } catch (error) {
+    accountAdmissionError = error;
+  }
   const drainFailure = drainResults.find((result) => result.status === "rejected");
-  if (drainFailure || flushError) {
-    throw (drainFailure ? drainFailure.reason : flushError);
+  if (drainFailure || flushError || accountAdmissionError) {
+    throw (drainFailure ? drainFailure.reason : flushError || accountAdmissionError);
   }
 }
 

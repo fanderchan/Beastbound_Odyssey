@@ -29,6 +29,7 @@ const FIXTURE_PASSWORD = "cluster-gate-password-1";
 const HTTP_TIMEOUT_MS = 5000;
 const EVENT_TIMEOUT_MS = 5000;
 const NODE_LEASE_MS = 3000;
+const ACCOUNT_LEASE_MS = 3000;
 
 async function runGate() {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-two-node-gate-"));
@@ -131,6 +132,21 @@ async function runGate() {
     assert.equal(Number.isSafeInteger(remotePositionResult.event.presenceRevision), true);
     assert.ok(remotePositionResult.event.presenceRevision > 0);
 
+    const crossNodeLogin = await request(nodeA, "/auth/login", {
+      method: "POST",
+      body: {
+        username: replacement.username,
+        password: FIXTURE_PASSWORD,
+      },
+    });
+    assert.equal(crossNodeLogin.status, 503);
+    assert.equal(crossNodeLogin.json.code, "account_node_switching");
+    assert.equal(replacedSocket.closed, false);
+    const oldSessionStillValid = await expectOk(nodeB, "/auth/session", {
+      token: replacement.token,
+    });
+    assert.equal(oldSessionStillValid.json.session.sessionId, replacement.sessionId);
+
     replacedSocket.expectedClose = true;
     const replacementEvent = replacedSocket.waitFor((event) => (
       event
@@ -138,7 +154,7 @@ async function runGate() {
       && Array.isArray(event.targetSessionIds)
       && event.targetSessionIds.includes(replacement.sessionId)
     ), EVENT_TIMEOUT_MS);
-    const loginResponse = await expectOk(nodeA, "/auth/login", {
+    const loginResponse = await expectOk(nodeB, "/auth/login", {
       method: "POST",
       body: {
         username: replacement.username,
@@ -147,7 +163,7 @@ async function runGate() {
     });
     assert.notEqual(loginResponse.json.session.sessionId, replacement.sessionId);
     const replacementResult = await replacementEvent;
-    assert.equal(Object.hasOwn(replacementResult.event, "eventSeq"), false);
+    assert.ok(replacementResult.event.eventSeq > 100);
     await waitFor(() => replacedSocket.closed, EVENT_TIMEOUT_MS, "replaced websocket did not close");
 
     const [healthA, healthB] = await Promise.all([
@@ -158,21 +174,57 @@ async function runGate() {
     assert.equal(healthB.status, 200);
     assert.equal(healthA.json.eventStream.clusterRelay.runtimeHealthy, true);
     assert.equal(healthB.json.eventStream.clusterRelay.runtimeHealthy, true);
-    assert.ok(healthA.json.eventStream.clusterRelay.localAccepted >= 4);
+    assert.equal(healthA.json.accountOwnership.ok, true);
+    assert.equal(healthB.json.accountOwnership.ok, true);
+    assert.ok(healthA.json.eventStream.clusterRelay.localAccepted >= 3);
     assert.ok(healthB.json.eventStream.clusterRelay.remoteDelivered >= 3);
     assert.equal(bobSocket.eventSeqRegressions, 0);
     assert.equal(bobSocket.eventSeqDuplicates, 0);
     assert.equal(bobSocket.presenceRevisionRegressions, 0);
     assert.equal(bobSocket.protocolErrors, 0);
 
+    aliceSocket.expectedClose = true;
+    await nodeA.crash();
+    const conflictBeforeExpiry = await request(nodeB, "/players/position", {
+      method: "POST",
+      token: alice.token,
+      body: positionPayload(12, 10, "east", false),
+    });
+    assert.equal(conflictBeforeExpiry.status, 503);
+    assert.equal(conflictBeforeExpiry.json.code, "account_node_switching");
+
+    const takeoverPresence = bobSocket.waitFor((event) => (
+      event
+      && event.type === "online.position"
+      && event.accountId === alice.accountId
+      && event.change === "upsert"
+      && event.player
+      && event.player.position
+      && event.player.position.cellX === 12
+    ), EVENT_TIMEOUT_MS + ACCOUNT_LEASE_MS);
+    let takeoverResponse = null;
+    await waitFor(async () => {
+      takeoverResponse = await request(nodeB, "/players/position", {
+        method: "POST",
+        token: alice.token,
+        body: positionPayload(12, 10, "east", false),
+      });
+      return takeoverResponse.status === 200 && takeoverResponse.json.ok === true;
+    }, EVENT_TIMEOUT_MS + ACCOUNT_LEASE_MS, "account ownership did not transfer after lease expiry");
+    const takeoverEvent = await takeoverPresence;
+    assert.ok(takeoverResponse.json.presenceRevision >= 2_000_000_001);
+    assert.equal(takeoverEvent.event.presenceRevision, takeoverResponse.json.presenceRevision);
+    assert.ok(takeoverEvent.event.presenceRevision > remotePositionResult.event.presenceRevision);
+    const takeoverHealth = await clusterHealth(nodeB);
+    assert.equal(takeoverHealth.status, 200);
+    assert.equal(takeoverHealth.json.accountOwnership.ok, true);
+
     for (const socket of sockets) {
       socket.close();
     }
     await Promise.all([
-      nodeA.stop(),
       nodeB.stop(),
     ]);
-    nodeA = null;
     nodeB = null;
     await stopExactChild(valkey.process);
     valkey = null;
@@ -180,14 +232,17 @@ async function runGate() {
 
     process.stdout.write(`${JSON.stringify({
       status: "PASS",
-      gate: "valkey_two_independent_node_event",
+      gate: "valkey_two_node_event_and_account_takeover",
       engine: "real_loopback_valkey",
       independentGameNodeProcesses: 2,
       independentHttpAndWebSocketPorts: true,
       remoteSourceSequenceBelowReceiverCursorDelivered: true,
       livePresence: true,
       liveWorldChat: true,
-      remoteSessionReplacement: true,
+      crossNodeLoginConflictBeforeMutation: true,
+      sameOwnerSessionReplacement: true,
+      crashedOwnerLeaseExpiryTakeover: true,
+      presenceRevisionGenerationAdvanced: true,
       partyAndBattleAuthorityTakeoverProven: false,
       reconnectHydrationProven: false,
       persistentServiceStarted: false,
@@ -351,6 +406,17 @@ class NodeWorker {
     }
   }
 
+  async crash() {
+    if (!childRunning(this.child)) {
+      return;
+    }
+    this.child.kill("SIGKILL");
+    await waitForChildStop(this.child, 1500);
+    if (childRunning(this.child)) {
+      throw new Error(`node worker ${this.nodeId} did not crash`);
+    }
+  }
+
   diagnostic() {
     return {
       nodeId: this.nodeId,
@@ -423,6 +489,7 @@ async function runNodeWorker() {
       BEASTBOUND_CLUSTER_VALKEY_TLS: "0",
       BEASTBOUND_CLUSTER_VALKEY_STREAM_KEY: process.env.BEASTBOUND_GATE_STREAM_KEY,
       BEASTBOUND_CLUSTER_NODE_LEASE_MS: String(NODE_LEASE_MS),
+      BEASTBOUND_CLUSTER_ACCOUNT_LEASE_MS: String(ACCOUNT_LEASE_MS),
       BEASTBOUND_CLUSTER_VALKEY_READ_BLOCK_MS: "25",
       BEASTBOUND_CLUSTER_VALKEY_REQUEST_TIMEOUT_MS: "1000",
     }, {
@@ -447,6 +514,7 @@ async function runNodeWorker() {
       service,
       store,
       eventHubOptions: clusterRuntime.eventHubOptions,
+      clusterAccountAdmission: clusterRuntime.accountAdmission,
       logger() {},
     });
     await new Promise((resolve, reject) => {
@@ -594,14 +662,7 @@ function positionPayload(cellX, cellY, facing, moving) {
 }
 
 async function expectOk(worker, pathname, options = {}) {
-  const result = await fetchJsonMeasured(`http://${LOOPBACK_HOST}:${worker.port}${pathname}`, {
-    method: options.method,
-    token: options.token,
-    body: options.body,
-    protocolVersion: PROTOCOL_VERSION,
-    clientVersion: SERVER_VERSION,
-    timeoutMs: HTTP_TIMEOUT_MS,
-  });
+  const result = await request(worker, pathname, options);
   assert.equal(
     result.status,
     200,
@@ -609,6 +670,17 @@ async function expectOk(worker, pathname, options = {}) {
   );
   assert.equal(result.json && result.json.ok, true, `${worker.nodeId} ${pathname}: ${JSON.stringify(result.json)}`);
   return result;
+}
+
+function request(worker, pathname, options = {}) {
+  return fetchJsonMeasured(`http://${LOOPBACK_HOST}:${worker.port}${pathname}`, {
+    method: options.method,
+    token: options.token,
+    body: options.body,
+    protocolVersion: PROTOCOL_VERSION,
+    clientVersion: SERVER_VERSION,
+    timeoutMs: HTTP_TIMEOUT_MS,
+  });
 }
 
 function clusterHealth(worker) {
@@ -628,7 +700,9 @@ async function waitForClusterReady(worker) {
         && last.json.ok === true
         && last.json.eventStream
         && last.json.eventStream.clusterRelay
-        && last.json.eventStream.clusterRelay.runtimeHealthy === true,
+        && last.json.eventStream.clusterRelay.runtimeHealthy === true
+        && last.json.accountOwnership
+        && last.json.accountOwnership.ok === true
       );
     } catch {
       return false;

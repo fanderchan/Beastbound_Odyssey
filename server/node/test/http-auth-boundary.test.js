@@ -60,3 +60,68 @@ test("HTTP auth boundary never forwards plaintext passwords to durable methods",
   assert.match(calls[0].credential.passwordHash, /^[a-f0-9]{64}$/);
   assert.match(calls[1].passwordHash, /^[a-f0-9]{64}$/);
 });
+
+test("cluster login admission runs only after credential verification and before durable mutation", async () => {
+  const order = [];
+  const salt = "0123456789abcdef0123456789abcdef";
+  const acceptedHash = await createAsyncScryptQueue().derive("correct123", salt);
+  const credentialSource = {
+    _httpPasswordVerificationRecord() {
+      return {salt};
+    },
+    _httpClusterLoginIdentity(username, passwordHash) {
+      order.push(`verify:${username}`);
+      return passwordHash === acceptedHash
+        ? {ok: true, accountId: "acc_owner"}
+        : {ok: false};
+    },
+  };
+  const durableService = {
+    _httpLoginPasswordDigest(_payload, passwordHash) {
+      order.push("durable");
+      return {ok: passwordHash === acceptedHash};
+    },
+  };
+  const boundary = createHttpAuthBoundary(credentialSource, durableService, {
+    async beforeLogin(identity) {
+      order.push(`admit:${identity.accountId}`);
+    },
+  });
+
+  assert.equal((await boundary.login({username: "owner", password: "wrong123"})).ok, false);
+  assert.deepEqual(order, ["verify:owner", "durable"]);
+  order.length = 0;
+  assert.equal((await boundary.login({username: "owner", password: "correct123"})).ok, true);
+  assert.deepEqual(order, ["verify:owner", "admit:acc_owner", "durable"]);
+});
+
+test("cluster login admission rejection prevents durable login mutation", async () => {
+  let durableCalls = 0;
+  const credentialSource = {
+    _httpPasswordVerificationRecord() {
+      return {salt: "0123456789abcdef0123456789abcdef"};
+    },
+    _httpClusterLoginIdentity() {
+      return {ok: true, accountId: "acc_conflict"};
+    },
+  };
+  const durableService = {
+    _httpLoginPasswordDigest() {
+      durableCalls += 1;
+      return {ok: true};
+    },
+  };
+  const boundary = createHttpAuthBoundary(credentialSource, durableService, {
+    beforeLogin() {
+      const error = new Error("conflict");
+      error.code = "cluster_account_owner_conflict";
+      throw error;
+    },
+  });
+
+  await assert.rejects(
+    boundary.login({username: "owner", password: "correct123"}),
+    (error) => error.code === "cluster_account_owner_conflict",
+  );
+  assert.equal(durableCalls, 0);
+});

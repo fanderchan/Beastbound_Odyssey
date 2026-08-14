@@ -15,6 +15,15 @@ class AuthWorkQueueError extends Error {
 
 function createHttpAuthBoundary(credentialSource, durableService, options = {}) {
   const queue = options.queue || createAsyncScryptQueue(options);
+  const beforeLogin = typeof options.beforeLogin === "function" ? options.beforeLogin : null;
+  if (
+    beforeLogin
+    && (!credentialSource || typeof credentialSource._httpClusterLoginIdentity !== "function")
+  ) {
+    const error = new Error("Cluster login identity resolver is required");
+    error.code = "cluster_login_identity_resolver_required";
+    throw error;
+  }
 
   async function register(payload = {}, clientIp = "") {
     const validation = credentialSource._httpValidateRegistration(payload);
@@ -39,6 +48,15 @@ function createHttpAuthBoundary(credentialSource, durableService, options = {}) 
     }
     const record = credentialSource._httpPasswordVerificationRecord(payload.username);
     const passwordHash = await queue.derive(password, record.salt);
+    if (beforeLogin) {
+      const identity = credentialSource._httpClusterLoginIdentity(
+        payload.username,
+        passwordHash,
+      );
+      if (identity && identity.ok === true) {
+        await beforeLogin(identity);
+      }
+    }
     const intent = {username: payload.username, clientIp};
     return durableService._httpLoginPasswordDigest(intent, passwordHash);
   }

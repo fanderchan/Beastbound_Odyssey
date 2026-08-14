@@ -880,7 +880,7 @@ function createAuthService(options = {}) {
   const runtimeActiveSessionIds = new Map();
   runtimeActiveSessionIds.connectedSessionIds = new Set();
   runtimeActiveSessionIds.membershipRevision = 0;
-  const presenceRevisions = createPresenceRevisionTracker();
+  const presenceRevisions = options.presenceRevisionTracker || createPresenceRevisionTracker();
   const serverStartedAtMs = now();
   const asyncWriteStore = Boolean(store && (store.asyncWrites === true || String(store.mode || "").startsWith("async:")));
   const durableMutationCoordinator = options.durableMutationCoordinator || createDurableMutationCoordinator({
@@ -1506,6 +1506,47 @@ function createAuthService(options = {}) {
     return Object.freeze({
       salt: PASSWORD_SALT_PATTERN.test(salt) ? salt : HTTP_DUMMY_PASSWORD_SALT,
     });
+  }
+
+  function httpClusterLoginIdentity(usernameValue, passwordHashValue = "") {
+    const username = normalizeUsername(usernameValue);
+    const account = load().accounts[username];
+    const passwordHash = String(passwordHashValue || "").trim().toLowerCase();
+    if (
+      !account
+      || !PASSWORD_HASH_PATTERN.test(passwordHash)
+      || !passwordHashesEqual(passwordHash, account.passwordHash)
+    ) {
+      return Object.freeze({ok: false});
+    }
+    return Object.freeze({
+      ok: true,
+      accountId: String(account.accountId || ""),
+    });
+  }
+
+  function clusterIngressIdentity(token, options = {}) {
+    const resolved = resolveSession(load(), token, now, {
+      allowExpired: options.allowRefreshGrace === true,
+      refreshGraceMs: options.allowRefreshGrace === true ? SESSION_REFRESH_GRACE_MS : 0,
+      allowUnselectedCharacter: true,
+      serverStartedAtMs,
+    });
+    if (!resolved.ok) {
+      return Object.freeze({
+        ok: false,
+        code: String(resolved.code || "session_missing"),
+      });
+    }
+    return Object.freeze({
+      ok: true,
+      accountId: String(resolved.account.accountId || ""),
+      sessionId: String(resolved.session.sessionId || ""),
+    });
+  }
+
+  function adoptClusterPresenceRevisionFloor(accountId, floor, ceiling) {
+    return presenceRevisions.raiseFloor(accountId, floor, ceiling);
   }
 
   function httpLoginPasswordDigest(payload = {}, passwordHashValue = "") {
@@ -6850,8 +6891,11 @@ function createAuthService(options = {}) {
     login,
     _httpValidateRegistration: httpValidateRegistration,
     _httpPasswordVerificationRecord: httpPasswordVerificationRecord,
+    _httpClusterLoginIdentity: httpClusterLoginIdentity,
     _httpRegisterPasswordDigest: httpRegisterPasswordDigest,
     _httpLoginPasswordDigest: httpLoginPasswordDigest,
+    _clusterIngressIdentity: clusterIngressIdentity,
+    _adoptClusterPresenceRevisionFloor: adoptClusterPresenceRevisionFloor,
     authSecurityMetrics,
     runtimeCapacityMetrics,
     refreshSession,

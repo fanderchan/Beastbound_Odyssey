@@ -457,6 +457,70 @@ test("production websocket handshake requires strict RFC headers, an allowed Ori
   await hub.close();
 });
 
+test("cluster account ownership is admitted before websocket session authorization", async (t) => {
+  const order = [];
+  const connection = identity("acc_cluster", "sess_cluster", "cluster");
+  const service = createFakeEventService({
+    sessions: {[PRODUCTION_TOKEN_A]: connection},
+    getEventSession() {
+      order.push("authorize");
+      return {ok: true, ...connection};
+    },
+  });
+  service._clusterIngressIdentity = () => {
+    order.push("identity");
+    return {ok: true, accountId: "acc_cluster", sessionId: "sess_cluster"};
+  };
+  const accountAdmission = {
+    admit(accountId) {
+      order.push(`admit:${accountId}`);
+      return {ok: true};
+    },
+  };
+  const hub = createEventHub(service, {
+    eventStreamEpoch: TEST_EVENT_STREAM_EPOCH,
+    clusterAccountAdmission: accountAdmission,
+  });
+  t.after(() => hub.close());
+  const socket = new FakeSocket();
+  await hub.handleUpgrade(productionUpgradeRequest(PRODUCTION_TOKEN_A, socket), socket);
+  assert.match(String(socket.writes[0]), /^HTTP\/1\.1 101 /);
+  assert.deepEqual(order.slice(0, 3), ["identity", "admit:acc_cluster", "authorize"]);
+  await hub.close();
+
+  const rejectedService = createFakeEventService({
+    sessions: {[PRODUCTION_TOKEN_A]: connection},
+  });
+  rejectedService._clusterIngressIdentity = () => ({
+    ok: true,
+    accountId: "acc_cluster",
+    sessionId: "sess_cluster",
+  });
+  const rejectedHub = createEventHub(rejectedService, {
+    eventStreamEpoch: TEST_EVENT_STREAM_EPOCH,
+    clusterAccountAdmission: {
+      admit() {
+        const error = new Error("owned elsewhere");
+        error.code = "cluster_account_owner_conflict";
+        error.retryAfterMs = 2750;
+        throw error;
+      },
+    },
+  });
+  t.after(() => rejectedHub.close());
+  const rejectedSocket = new FakeSocket();
+  await rejectedHub.handleUpgrade(
+    productionUpgradeRequest(PRODUCTION_TOKEN_A, rejectedSocket),
+    rejectedSocket,
+  );
+  assert.match(httpResponse(rejectedSocket), /^HTTP\/1\.1 503 /);
+  assert.match(httpResponse(rejectedSocket), /\r\nRetry-After: 3\r\n/);
+  assert.equal(rejectedService.eventSessionCalls, 0);
+  assert.equal(rejectedHub.metrics().upgradeRejectReasons.ws_account_node_switching, 1);
+  assertAdmissionCleared(rejectedHub.metrics(), "owner conflict releases pending admission");
+  await rejectedHub.close();
+});
+
 test("malformed upgrade metadata is rejected before session authorization", async (t) => {
   const cases = [
     [{method: "POST"}, 400, "ws_method_invalid"],

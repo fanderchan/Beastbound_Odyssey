@@ -5,6 +5,8 @@ const PRESENCE_CHANGE_REMOVE = "remove";
 
 function createPresenceRevisionTracker() {
   const revisionByAccountId = new Map();
+  const floorByAccountId = new Map();
+  const ceilingByAccountId = new Map();
 
   return {
     next(accountIdValue) {
@@ -12,9 +14,16 @@ function createPresenceRevisionTracker() {
       if (accountId === "") {
         return 0;
       }
+      const current = normalizePresenceRevision(revisionByAccountId.get(accountId));
+      const ceiling = normalizePresenceRevision(ceilingByAccountId.get(accountId));
+      if (ceiling > 0 && current >= ceiling) {
+        const error = new Error("Cluster presence revision window is exhausted");
+        error.code = "cluster_presence_revision_window_exhausted";
+        throw error;
+      }
       const revision = Math.min(
         Number.MAX_SAFE_INTEGER,
-        normalizePresenceRevision(revisionByAccountId.get(accountId)) + 1,
+        current + 1,
       );
       revisionByAccountId.set(accountId, revision);
       return revision;
@@ -34,8 +43,33 @@ function createPresenceRevisionTracker() {
       revisionByAccountId.set(accountId, 1);
       return 1;
     },
+    raiseFloor(accountIdValue, floorValue, ceilingValue = Number.MAX_SAFE_INTEGER) {
+      const accountId = String(accountIdValue || "");
+      const floor = normalizePresenceRevision(floorValue);
+      const ceiling = normalizePresenceRevision(ceilingValue);
+      if (accountId === "" || floor <= 0 || ceiling < floor) {
+        return 0;
+      }
+      const current = normalizePresenceRevision(revisionByAccountId.get(accountId));
+      const currentFloor = normalizePresenceRevision(floorByAccountId.get(accountId));
+      if (floor > currentFloor && current > 0 && floor <= current) {
+        const error = new Error("Cluster presence revision generation overlaps current state");
+        error.code = "cluster_presence_revision_window_overlap";
+        throw error;
+      }
+      const revision = Math.max(current, floor);
+      revisionByAccountId.set(accountId, revision);
+      if (floor >= currentFloor) {
+        floorByAccountId.set(accountId, floor);
+        ceilingByAccountId.set(accountId, ceiling);
+      }
+      return revision;
+    },
     clear(accountIdValue) {
-      revisionByAccountId.delete(String(accountIdValue || ""));
+      const accountId = String(accountIdValue || "");
+      revisionByAccountId.delete(accountId);
+      floorByAccountId.delete(accountId);
+      ceilingByAccountId.delete(accountId);
     },
   };
 }
