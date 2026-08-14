@@ -163,6 +163,29 @@ test("cluster relay records asynchronous publish rejection and close drains acce
   await rejecting.close();
 });
 
+test("cluster relay sanitizes bridge health and owns bridge shutdown", async () => {
+  const bridge = new FakeClusterBridge();
+  bridge.healthResult = {
+    ok: false,
+    leaseHeld: false,
+    readerRunning: true,
+    readerHealthy: false,
+    secretTopic: "must-not-leak",
+  };
+  const relay = createRelay(bridge, "node-a", "epoch_node_a_000004", []);
+  const metrics = relay.metrics();
+  assert.equal(metrics.runtimeHealthy, false);
+  assert.equal(metrics.bridgeHealthChecked, true);
+  assert.equal(metrics.bridgeLeaseHeld, false);
+  assert.equal(metrics.bridgeReaderRunning, true);
+  assert.equal(metrics.bridgeReaderHealthy, false);
+  assert.equal(Object.hasOwn(metrics, "secretTopic"), false);
+
+  await relay.close();
+  await relay.close();
+  assert.equal(bridge.closeCalls, 1);
+});
+
 function createRelay(bridge, nodeId, originEpoch, target) {
   return createEventClusterRelay({
     bridge,
@@ -184,6 +207,8 @@ class FakeClusterBridge {
     this.listeners = new Set();
     this.published = [];
     this.publishResult = null;
+    this.healthResult = null;
+    this.closeCalls = 0;
   }
 
   subscribe(listener) {
@@ -211,6 +236,19 @@ class FakeClusterBridge {
 
   metrics() {
     return {published: this.published.length};
+  }
+
+  health() {
+    return this.healthResult || {
+      ok: true,
+      leaseHeld: true,
+      readerRunning: true,
+      readerHealthy: true,
+    };
+  }
+
+  async close() {
+    this.closeCalls += 1;
   }
 }
 

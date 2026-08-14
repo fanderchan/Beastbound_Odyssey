@@ -238,16 +238,26 @@ function createEventClusterRelay(options = {}) {
       ));
     }
     unsubscribe = () => {};
-    closePromise = Promise.allSettled(Array.from(pendingPublishes)).then(() => undefined);
+    closePromise = Promise.allSettled(Array.from(pendingPublishes)).then(async () => {
+      if (typeof bridge.close === "function") {
+        await bridge.close();
+      }
+    }).then(() => undefined);
     return closePromise;
   }
 
   function metrics() {
+    const bridgeHealth = safeBridgeHealth(bridge);
     return Object.freeze({
       enabled: true,
       required,
       closed,
       capabilitiesAccepted: true,
+      runtimeHealthy: !closed && bridgeHealth.ok,
+      bridgeHealthChecked: bridgeHealth.checked,
+      bridgeLeaseHeld: bridgeHealth.leaseHeld,
+      bridgeReaderRunning: bridgeHealth.readerRunning,
+      bridgeReaderHealthy: bridgeHealth.readerHealthy,
       pendingPublishes: pendingPublishes.size,
       dedupEntries: seenEventIds.size,
       ...totals,
@@ -261,6 +271,37 @@ function createEventClusterRelay(options = {}) {
     close,
     metrics,
   });
+}
+
+function safeBridgeHealth(bridge) {
+  if (!bridge || typeof bridge.health !== "function") {
+    return {
+      checked: false,
+      ok: true,
+      leaseHeld: false,
+      readerRunning: false,
+      readerHealthy: false,
+    };
+  }
+  try {
+    const value = bridge.health();
+    const source = plainRecord(value) ? value : {};
+    return {
+      checked: true,
+      ok: source.ok === true,
+      leaseHeld: source.leaseHeld === true,
+      readerRunning: source.readerRunning === true,
+      readerHealthy: source.readerHealthy === true,
+    };
+  } catch {
+    return {
+      checked: true,
+      ok: false,
+      leaseHeld: false,
+      readerRunning: false,
+      readerHealthy: false,
+    };
+  }
 }
 
 function disabledRelay() {
@@ -392,6 +433,13 @@ function validateEnvelope(value, maxEventBytes) {
       event: snapshot.event,
     }),
   };
+}
+
+function validateClusterEventEnvelope(value, maxEventBytes = DEFAULT_MAX_CLUSTER_EVENT_BYTES) {
+  return validateEnvelope(
+    value,
+    positiveInteger(maxEventBytes, DEFAULT_MAX_CLUSTER_EVENT_BYTES),
+  );
 }
 
 function invalidEnvelope(code) {
@@ -529,4 +577,5 @@ module.exports = {
   DEFAULT_MAX_DEDUP_ENTRIES,
   REQUIRED_CLUSTER_EVENT_CAPABILITIES,
   createEventClusterRelay,
+  validateClusterEventEnvelope,
 };

@@ -47,6 +47,37 @@ Optional environment variables:
 - `BEASTBOUND_ALLOW_POSITION_TELEPORT`: set to `1` only on local QA servers to skip server-side position snapshot validation (teleport and cross-map jump checks) and the quest `talk` NPC proximity check. Never enable it for playtest or production servers.
 - `BEASTBOUND_ALLOW_PROFILE_SAVE`: set to `1` only for test/seed/ops tooling that must write whole profile documents through `saveProfile`. Production servers keep it unset so full-profile uploads are rejected (`profile_upload_denied`).
 
+## Optional Multi-Node Event Relay
+
+The default remains single Node. A deployment may opt into the first production relay adapter with Valkey Streams; enabling it does not by itself prove that account takeover, battle recovery, or 200-player horizontal capacity is complete.
+
+Required settings for the Valkey adapter:
+
+- `BEASTBOUND_CLUSTER_MODE=valkey`;
+- `BEASTBOUND_CLUSTER_NODE_ID`: stable, unique ID for this Node process slot;
+- `BEASTBOUND_CLUSTER_ACCOUNT_STICKY=1`: explicit assertion that HTTP and WebSocket ingress keep one account on one Node while the current authority model requires it;
+- `BEASTBOUND_CLUSTER_VALKEY_HOST` and optional `BEASTBOUND_CLUSTER_VALKEY_PORT` (default `6379`);
+- `BEASTBOUND_CLUSTER_VALKEY_TLS=1` for every non-loopback host. Remote plaintext is rejected at startup;
+- optional `BEASTBOUND_CLUSTER_VALKEY_USERNAME`, `BEASTBOUND_CLUSTER_VALKEY_PASSWORD`, and `BEASTBOUND_CLUSTER_VALKEY_DATABASE`. Keep credentials only in the ignored local secret environment or the deployment secret manager, never in tracked files or command examples.
+
+Bounded operational settings:
+
+- `BEASTBOUND_CLUSTER_VALKEY_STREAM_KEY`, default `beastbound:cluster:events:v1`;
+- `BEASTBOUND_CLUSTER_VALKEY_STREAM_MAXLEN`, default `262144`, accepted range `1024..10000000`;
+- `BEASTBOUND_CLUSTER_NODE_LEASE_MS`, default `15000`, accepted range `3000..120000`;
+- `BEASTBOUND_CLUSTER_VALKEY_READ_BLOCK_MS`, default `250`;
+- `BEASTBOUND_CLUSTER_VALKEY_REQUEST_TIMEOUT_MS`, default at least `2000` and always greater than the blocking-read window.
+
+Each Node owns a Valkey lease and its own consumer group. Duplicate live node IDs fail startup; events are acknowledged only after the local relay accepts them; pending entries are replayed after a same-node restart. A trimmed pending entry or an `XINFO GROUPS` replay gap is fatal. Lease loss makes readiness return `503`, rejects new relay publishes, drains the HTTP/WebSocket server, and closes the process-owned Valkey clients. Health output exposes only sanitized booleans and counters, never node IDs, stream keys, credentials, events, accounts, or tokens.
+
+The real local engine gate starts an ephemeral loopback Valkey process, runs the relay and HTTP entrypoint checks, rejects a duplicate node startup, and then removes the temporary state without installing a service:
+
+```sh
+node tools/run_valkey_event_bridge_live_gate.mjs
+```
+
+This gate still does not replace the remaining independent-process failover, account ownership transfer, presence revision continuity, battle/party/chat recovery, and 200-connection long soak required by `P0.6d-3b`.
+
 ## Local MySQL Live Server
 
 The repeatable local setup flow is:

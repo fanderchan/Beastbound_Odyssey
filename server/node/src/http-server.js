@@ -16,6 +16,9 @@ const {
   createEventHub,
 } = require("./event-hub");
 const {
+  createConfiguredClusterEventRuntime,
+} = require("./cluster-event-runtime-config");
+const {
   attachProtocolMetadata,
   protocolCompatibility,
   protocolMismatchResult,
@@ -1297,11 +1300,15 @@ function healthPayload(healthMonitor, eventHub, service = null, networkAdmission
   const eventStreamMetrics = eventHub && typeof eventHub.metrics === "function"
     ? eventHub.metrics()
     : {};
+  const clusterRelay = eventStreamMetrics.clusterRelay && typeof eventStreamMetrics.clusterRelay === "object"
+    ? eventStreamMetrics.clusterRelay
+    : null;
+  const clusterReady = clusterRelay === null || clusterRelay.runtimeHealthy === true;
   return {
     // A configured store is not ready until its first background probe has
     // positively completed. Store-less isolated servers report ok=true from
     // the monitor even though no probe is required.
-    ok: storage.ok === true,
+    ok: storage.ok === true && clusterReady,
     service: "beastbound-auth",
     storage,
     eventStream: {
@@ -1449,15 +1456,95 @@ function durationMsSince(startedAt) {
 }
 
 if (require.main === module) {
-  const port = Number(process.env.BEASTBOUND_AUTH_PORT || 8787);
-  const host = process.env.BEASTBOUND_AUTH_HOST || "127.0.0.1";
-  const store = createDefaultStore();
-  const service = createPreloadedAuthService(store);
-  const server = createHttpServer({service, store});
-  server.listen(port, host, () => {
-    console.log(`Beastbound auth server listening on http://${host}:${port}`);
+  startDefaultHttpServer().catch((error) => {
+    console.error(`Beastbound auth server failed to start: ${String(error && error.code || "server_start_failed")}`);
+    process.exitCode = 1;
   });
-  installShutdownFlush(server, store);
+}
+
+async function startDefaultHttpServer(options = {}) {
+  const env = options.env && typeof options.env === "object" ? options.env : process.env;
+  const port = Number(env.BEASTBOUND_AUTH_PORT || 8787);
+  const host = String(env.BEASTBOUND_AUTH_HOST || "127.0.0.1");
+  const createClusterRuntime = typeof options.createClusterRuntime === "function"
+    ? options.createClusterRuntime
+    : createConfiguredClusterEventRuntime;
+  const createStore = typeof options.createStore === "function"
+    ? options.createStore
+    : createDefaultStore;
+  let clusterRuntime = null;
+  let store = null;
+  let server = null;
+  let fatalShutdownStarted = false;
+  let startupFatal = null;
+  const reportClusterError = typeof options.onClusterError === "function"
+    ? options.onClusterError
+    : (error) => console.error(`Beastbound cluster relay error: ${String(error && error.code || "cluster_relay_failed")}`);
+
+  const onClusterFatal = (error) => {
+    startupFatal = error || new Error("cluster relay failed");
+    reportClusterError(startupFatal);
+    if (!server || fatalShutdownStarted) {
+      return;
+    }
+    fatalShutdownStarted = true;
+    void drainServerForShutdown(server, store).then(async () => {
+      if (store && typeof store.close === "function") {
+        await store.close();
+      }
+    }).catch((shutdownError) => {
+      reportClusterError(shutdownError);
+    }).finally(() => {
+      process.exitCode = 1;
+    });
+  };
+
+  try {
+    clusterRuntime = await createClusterRuntime(env, {
+      onError: reportClusterError,
+      onFatal: onClusterFatal,
+    });
+    if (startupFatal) {
+      throw startupFatal;
+    }
+    store = createStore();
+    const service = createPreloadedAuthService(store);
+    server = createHttpServer({
+      service,
+      store,
+      eventHubOptions: clusterRuntime.eventHubOptions,
+    });
+    server.clusterEventRuntime = clusterRuntime;
+    await new Promise((resolve, reject) => {
+      const onError = (error) => {
+        server.off("error", onError);
+        reject(error);
+      };
+      server.once("error", onError);
+      server.listen(port, host, () => {
+        server.off("error", onError);
+        resolve();
+      });
+    });
+    installShutdownFlush(server, store);
+    if (startupFatal) {
+      onClusterFatal(startupFatal);
+      throw startupFatal;
+    }
+    console.log(`Beastbound auth server listening on http://${host}:${port}`);
+    return server;
+  } catch (error) {
+    if (server && server.listening) {
+      await new Promise((resolve) => server.close(() => resolve()));
+    }
+    if (clusterRuntime && typeof clusterRuntime.close === "function") {
+      await clusterRuntime.close().catch(() => undefined);
+    }
+    if (store && typeof store.close === "function") {
+      await Promise.resolve(store.close()).catch(() => undefined);
+    }
+    throw error;
+  }
 }
 
 function createPreloadedAuthService(store, options = {}) {
@@ -1589,4 +1676,5 @@ module.exports = {
   DEFAULT_COMMAND_CATALOG,
   createDefaultStore,
   drainServerForShutdown,
+  startDefaultHttpServer,
 };
