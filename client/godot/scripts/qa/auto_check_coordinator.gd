@@ -15,6 +15,7 @@ const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd"
 const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
 const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
+const ServerBattleInterruptionModel := preload("res://scripts/battle/server_battle_interruption_model.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const ServerBattleReactionReplayCheck := preload("res://scripts/battle/server_battle_reaction_replay_check.gd")
 const ServerBattleStatusReplayCheck := preload("res://scripts/battle/server_battle_status_replay_check.gd")
@@ -22695,6 +22696,21 @@ func _run_auto_auth_server_client_check() -> void:
 	var party_decline_spec = ServerAuthClientModel.party_invite_decline_request("http://127.0.0.1:8787/", "token_test", "invite_test")
 	var party_leave_spec = ServerAuthClientModel.party_leave_request("http://127.0.0.1:8787/", "token_test")
 	var battle_state_spec = ServerAuthClientModel.battle_state_request("http://127.0.0.1:8787/", "token_test")
+	var battle_interruption_fixture := {
+		"kind": "battle_owner_interruption",
+		"ticketId": "battle_failure_%s" % "a".repeat(32),
+		"roomId": "battle_room_interrupted",
+		"mode": "party_pve",
+		"startedAt": "2026-08-15T04:00:00.000Z",
+		"encounterReturnAvailable": true,
+		"schemaVersion": 1,
+	}
+	var battle_interruption_operation_id := ServerBattleInterruptionModel.recovery_operation_id(battle_interruption_fixture)
+	var battle_interruption_spec = ServerAuthClientModel.battle_interruption_recover_request(
+		"http://127.0.0.1:8787/",
+		"token_test",
+		battle_interruption_operation_id,
+	)
 	var battle_invite_spec = ServerAuthClientModel.battle_invite_request("http://127.0.0.1:8787/", "token_test", "friend")
 	var battle_accept_spec = ServerAuthClientModel.battle_invite_accept_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
 	var battle_decline_spec = ServerAuthClientModel.battle_invite_decline_request("http://127.0.0.1:8787/", "token_test", "battle_invite_test")
@@ -22732,6 +22748,12 @@ func _run_auto_auth_server_client_check() -> void:
 	var battle_request_ok = (
 		str(battle_state_spec.get("url", "")) == "http://127.0.0.1:8787/battle/state"
 		and int(battle_state_spec.get("method", -1)) == HTTPClient.METHOD_GET
+		and str(battle_interruption_spec.get("url", "")) == "http://127.0.0.1:8787/battle/interruption/recover"
+		and int(battle_interruption_spec.get("method", -1)) == HTTPClient.METHOD_POST
+		and str(battle_interruption_spec.get("body", "")) == "{}"
+		and bool(battle_interruption_spec.get("durableMutation", false))
+		and ServerAuthClientModel.request_idempotency_key(battle_interruption_spec) == battle_interruption_operation_id
+		and ServerAuthClientModel.request_retry_policy(battle_interruption_spec) == ServerAuthClientModel.RETRY_POLICY_IDEMPOTENT
 		and str(battle_invite_spec.get("url", "")) == "http://127.0.0.1:8787/battle/invite"
 		and int(battle_invite_spec.get("method", -1)) == HTTPClient.METHOD_POST
 		and str(battle_invite_spec.get("body", "")).find("\"username\":\"friend\"") >= 0
@@ -22892,8 +22914,15 @@ func _run_auto_auth_server_client_check() -> void:
 	var parsed_battle_state = ServerAuthClientModel.parse_battle_state_response(200, JSON.stringify({
 		"ok": true,
 		"room": null,
+		"interruption": battle_interruption_fixture,
 		"incomingInvites": [{"inviteId": "battle_invite_test", "fromUsername": "friend"}],
 		"outgoingInvites": [],
+	}).to_utf8_buffer())
+	var parsed_battle_interruption_recovery = ServerAuthClientModel.parse_battle_interruption_recovery_response(200, JSON.stringify({
+		"ok": true,
+		"interruption": null,
+		"encounterReturned": true,
+		"message": "战斗已中性终止。",
 	}).to_utf8_buffer())
 	var parsed_battle_action = ServerAuthClientModel.parse_battle_action_response(200, JSON.stringify({
 		"ok": true,
@@ -22923,9 +22952,50 @@ func _run_auto_auth_server_client_check() -> void:
 		},
 		"result": {"reason": "defeat", "winnerAccountId": "account_test"},
 	}).to_utf8_buffer())
+	var saved_interruption_poll_authenticated: bool = host.account_authenticated
+	var saved_interruption_poll_session: Dictionary = host.current_account_session.duplicate(true)
+	var saved_interruption_poll_party: Dictionary = host.party_current_state.duplicate(true)
+	var saved_interruption_poll_battle_active: bool = host.battle_active
+	var saved_interruption_poll_server_state: Dictionary = host.server_battle_state.duplicate(true)
+	var saved_interruption_poll_state_request: bool = host.server_battle_state_poll_request_active
+	var saved_interruption_poll_command_request: bool = host.server_battle_command_request_active
+	var saved_interruption_poll_encounter_request: bool = host.server_party_encounter_request_pending
+	var saved_interruption_recovery_request: bool = host._server_battle().interruption_recovery_request_active
+	host.account_authenticated = true
+	host.current_account_session = {
+		"authSource": ServerAuthClientModel.SOURCE_SERVER,
+		"serverSessionToken": "token_interruption_poll",
+		"serverBaseUrl": ServerAuthClientModel.DEFAULT_BASE_URL,
+	}
+	host.party_current_state = {"party": null, "incomingInvites": [], "maxMembers": 5}
+	host.battle_active = false
+	host.server_battle_state = {"room": null, "interruption": battle_interruption_fixture.duplicate(true)}
+	host.server_battle_state_poll_request_active = false
+	host.server_battle_command_request_active = false
+	host.server_party_encounter_request_pending = false
+	host._server_battle().interruption_recovery_request_active = false
+	var solo_interruption_poll_ok: bool = host._server_battle().should_poll_room_restore()
+	host._server_battle().interruption_recovery_request_active = true
+	var interruption_singleflight_poll_ok: bool = not host._server_battle().should_poll_room_restore()
+	host.account_authenticated = saved_interruption_poll_authenticated
+	host.current_account_session = saved_interruption_poll_session
+	host.party_current_state = saved_interruption_poll_party
+	host.battle_active = saved_interruption_poll_battle_active
+	host.server_battle_state = saved_interruption_poll_server_state
+	host.server_battle_state_poll_request_active = saved_interruption_poll_state_request
+	host.server_battle_command_request_active = saved_interruption_poll_command_request
+	host.server_party_encounter_request_pending = saved_interruption_poll_encounter_request
+	host._server_battle().interruption_recovery_request_active = saved_interruption_recovery_request
+	var battle_interruption_poll_ok := solo_interruption_poll_ok and interruption_singleflight_poll_ok
 	var battle_parse_ok = (
 		bool(parsed_battle_state.get("ok", false))
 		and (parsed_battle_state.get("incomingInvites", []) as Array).size() == 1
+		and str((parsed_battle_state.get("interruption", {}) as Dictionary).get("ticketId", "")) == str(battle_interruption_fixture.get("ticketId", ""))
+		and bool(parsed_battle_interruption_recovery.get("ok", false))
+		and bool(parsed_battle_interruption_recovery.get("encounterReturned", false))
+		and parsed_battle_interruption_recovery.get("interruption", {}) == null
+		and bool(ServerBattleInterruptionModel.self_check().get("ok", false))
+		and battle_interruption_poll_ok
 		and bool(parsed_battle_action.get("ok", false))
 		and str((parsed_battle_action.get("room", {}) as Dictionary).get("status", "")) == "ready"
 		and str((parsed_battle_action.get("result", {}) as Dictionary).get("reason", "")) == "leave"
@@ -28021,12 +28091,28 @@ func _run_auto_server_battle_stale_room_check() -> void:
 		and (host.battle_command_panel == null or not host.battle_command_panel.visible)
 		and (host.action_bar == null or host.action_bar.visible)
 	)
-	var status = "ok" if before_ok and cleared_ok and ui_ok else "failed"
-	print("server battle stale room check ready: status=%s before=%s cleared=%s ui=%s battle_active=%s room_is_dict=%s message=%s" % [
+	host._clear_world_log_panel()
+	var interruption_started_ok = host._apply_server_battle_room_state(room, true)
+	host._clear_stale_server_battle_room(ServerBattleInterruptionModel.recovering_message())
+	await host.get_tree().process_frame
+	var interruption_ui_ok = (
+		interruption_started_ok
+		and not host.battle_active
+		and host.battle_state.is_empty()
+		and host.world_log_message.find("本场不计胜负") >= 0
+		and host.world_log_message.find("正在返回地图") >= 0
+		and host.player != null
+		and host.player.visible
+		and (host.battle_command_panel == null or not host.battle_command_panel.visible)
+		and (host.action_bar == null or host.action_bar.visible)
+	)
+	var status = "ok" if before_ok and cleared_ok and ui_ok and interruption_ui_ok else "failed"
+	print("server battle stale room check ready: status=%s before=%s cleared=%s ui=%s interruption_ui=%s battle_active=%s room_is_dict=%s message=%s" % [
 		status,
 		str(before_ok),
 		str(cleared_ok),
 		str(ui_ok),
+		str(interruption_ui_ok),
 		str(host.battle_active),
 		str(host.server_battle_state.get("room", null) is Dictionary),
 		host.world_log_message.replace("\n", " / "),

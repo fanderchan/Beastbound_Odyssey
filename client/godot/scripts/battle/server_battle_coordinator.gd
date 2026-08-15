@@ -3,6 +3,7 @@ extends RefCounted
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
+const ServerBattleInterruptionModel := preload("res://scripts/battle/server_battle_interruption_model.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
@@ -17,6 +18,12 @@ var state_request_generation: int = 0
 var state_request_serial: int = 0
 var state_request_owner: Dictionary = {}
 var state_request_rerun_queued: bool = false
+var interruption_recovery_generation: int = 0
+var interruption_recovery_serial: int = 0
+var interruption_recovery_owner: Dictionary = {}
+var interruption_recovery_request_active: bool = false
+var interruption_notice_ticket_id: String = ""
+var interruption_retry_notice_ticket_id: String = ""
 
 
 func _init(main_host = null) -> void:
@@ -31,6 +38,11 @@ func invalidate_state_requests() -> void:
 	state_request_generation += 1
 	state_request_owner.clear()
 	state_request_rerun_queued = false
+	interruption_recovery_generation += 1
+	interruption_recovery_owner.clear()
+	interruption_recovery_request_active = false
+	interruption_notice_ticket_id = ""
+	interruption_retry_notice_ticket_id = ""
 	if host != null:
 		host.server_battle_state_poll_request_active = false
 
@@ -73,6 +85,134 @@ func request_owner_self_check() -> Dictionary:
 		"ok": int(first.get("id")) != int(second.get("id")) and int(first.get("generation")) < int(second.get("generation")),
 		"olderOwnerCannotClear": int(first.get("id")) != int(second.get("id")),
 	}
+
+
+func _begin_interruption_recovery(token: String, ticket_id: String) -> Dictionary:
+	interruption_recovery_serial += 1
+	var owner := {
+		"id": interruption_recovery_serial,
+		"generation": interruption_recovery_generation,
+		"token": token,
+		"ticketId": ticket_id,
+	}
+	interruption_recovery_owner = owner
+	interruption_recovery_request_active = true
+	return owner
+
+
+func _finish_interruption_recovery(owner: Dictionary) -> bool:
+	if int(interruption_recovery_owner.get("id", -1)) != int(owner.get("id", -2)):
+		return false
+	interruption_recovery_owner.clear()
+	interruption_recovery_request_active = false
+	return (
+		int(owner.get("generation", -1)) == interruption_recovery_generation
+		and str(owner.get("token", "")) == host._server_profile_token()
+		and str(owner.get("ticketId", "")) == _current_interruption_ticket_id()
+		and host._is_server_account_session()
+	)
+
+
+func _current_interruption_ticket_id() -> String:
+	var read := ServerBattleInterruptionModel.read(host.server_battle_state.get("interruption", null))
+	if not bool(read.get("ok", false)):
+		return ""
+	var interruption := read.get("interruption", {}) as Dictionary if read.get("interruption", {}) is Dictionary else {}
+	return str(interruption.get("ticketId", "")).strip_edges()
+
+
+func _has_pending_interruption_state() -> bool:
+	return host.server_battle_state.get("interruption", null) is Dictionary and not (host.server_battle_state.get("interruption", {}) as Dictionary).is_empty()
+
+
+func _sync_interruption_from_state(parsed: Dictionary) -> Dictionary:
+	var read := ServerBattleInterruptionModel.read(parsed.get("interruption", null))
+	if not bool(read.get("ok", false)):
+		host.server_battle_state["interruption"] = {"contractInvalid": true, "schemaVersion": 1}
+		return read
+	var interruption := read.get("interruption", {}) as Dictionary if read.get("interruption", {}) is Dictionary else {}
+	host.server_battle_state["interruption"] = interruption.duplicate(true) if not interruption.is_empty() else null
+	if interruption.is_empty():
+		interruption_notice_ticket_id = ""
+		interruption_retry_notice_ticket_id = ""
+	return read
+
+
+func _handle_state_interruption(parsed: Dictionary, room_present: bool) -> bool:
+	var read := _sync_interruption_from_state(parsed)
+	if room_present:
+		return false
+	if not bool(read.get("ok", false)):
+		_handle_invalid_interruption_contract()
+		return true
+	var interruption := read.get("interruption", {}) as Dictionary if read.get("interruption", {}) is Dictionary else {}
+	if interruption.is_empty():
+		return false
+	await _recover_interruption(interruption)
+	return true
+
+
+func _handle_invalid_interruption_contract() -> void:
+	var message := ServerBattleInterruptionModel.invalid_message()
+	if host._battle_is_server_authority():
+		host._clear_stale_server_battle_room(message)
+	elif interruption_retry_notice_ticket_id != "contract_invalid":
+		host._set_world_log_message(message)
+	interruption_retry_notice_ticket_id = "contract_invalid"
+	host.server_battle_room_restore_poll_elapsed = 0.0
+
+
+func _recover_interruption(interruption: Dictionary) -> void:
+	if interruption_recovery_request_active or not host._is_server_account_session():
+		return
+	var ticket_id := str(interruption.get("ticketId", "")).strip_edges()
+	var operation_id := ServerBattleInterruptionModel.recovery_operation_id(interruption)
+	if ticket_id == "" or not ServerAuthClientModel.idempotency_key_is_valid(operation_id):
+		_handle_invalid_interruption_contract()
+		return
+	if interruption_notice_ticket_id != ticket_id:
+		interruption_notice_ticket_id = ticket_id
+		interruption_retry_notice_ticket_id = ""
+		var returning_message := ServerBattleInterruptionModel.recovering_message()
+		if host._battle_is_server_authority():
+			host._clear_stale_server_battle_room(returning_message)
+		else:
+			host._set_world_log_message(returning_message)
+	var token: String = str(host._server_profile_token())
+	var owner := _begin_interruption_recovery(token, ticket_id)
+	var response: Dictionary = await host._auto_http_request_spec(ServerAuthClientModel.battle_interruption_recover_request(
+		host._server_profile_base_url(),
+		token,
+		operation_id,
+	))
+	if not _finish_interruption_recovery(owner):
+		return
+	var parsed := ServerAuthClientModel.parse_battle_interruption_recovery_response(
+		int(response.get("responseCode", 0)),
+		response.get("body", PackedByteArray()) as PackedByteArray,
+	)
+	if bool(parsed.get("ok", false)):
+		var encounter_returned := bool(parsed.get("encounterReturned", false))
+		host.server_battle_state["interruption"] = null
+		interruption_notice_ticket_id = ""
+		interruption_retry_notice_ticket_id = ""
+		host.server_battle_room_restore_poll_elapsed = 0.0
+		host._set_world_log_message(ServerBattleInterruptionModel.recovered_message(encounter_returned))
+		if encounter_returned:
+			host._queue_server_profile_pull()
+		host._sync_battle_buttons()
+		host._layout_hud()
+		return
+	if handle_session_invalid_response(parsed):
+		return
+	if str(parsed.get("code", "")).strip_edges() == "battle_interruption_room_active":
+		host._set_world_log_message("战斗仍在进行，正在重新进入。")
+		queue_state_restore()
+		return
+	if interruption_retry_notice_ticket_id != ticket_id:
+		interruption_retry_notice_ticket_id = ticket_id
+		host._set_world_log_message(ServerBattleInterruptionModel.retry_message())
+	host.server_battle_room_restore_poll_elapsed = 0.0
 
 
 func handle_session_invalid_response(parsed: Dictionary) -> bool:
@@ -128,11 +268,12 @@ func update_waiting_state_poll(delta: float) -> void:
 func should_poll_room_restore() -> bool:
 	return (
 		host._is_server_account_session()
-		and host._current_player_is_party_member()
+		and (host._current_player_is_party_member() or _has_pending_interruption_state())
 		and not host.battle_active
 		and not host.server_party_encounter_request_pending
 		and not host.server_battle_state_poll_request_active
 		and not host.server_battle_command_request_active
+		and not interruption_recovery_request_active
 	)
 
 
@@ -170,6 +311,8 @@ func request_room_restore_poll() -> void:
 	host.server_battle_state["incomingInvites"] = parsed.get("incomingInvites", [])
 	host.server_battle_state["outgoingInvites"] = parsed.get("outgoingInvites", [])
 	var room = parsed.get("room", null)
+	if await _handle_state_interruption(parsed, room is Dictionary):
+		return
 	if room is Dictionary and ServerBattleRoomModel.is_restorable_room(room as Dictionary):
 		host._stop_party_member_local_movement(false)
 		if host._apply_server_battle_room_state(room as Dictionary, true):
@@ -198,6 +341,8 @@ func request_waiting_state_poll() -> void:
 		return
 	clear_battle_network_reconnect()
 	var room = parsed.get("room", null)
+	if await _handle_state_interruption(parsed, room is Dictionary):
+		return
 	if room is Dictionary:
 		apply_polled_room(room as Dictionary, expected_room_id)
 	elif host._battle_is_server_authority():
@@ -296,6 +441,8 @@ func request_state_restore() -> void:
 	host.server_battle_state["incomingInvites"] = parsed.get("incomingInvites", [])
 	host.server_battle_state["outgoingInvites"] = parsed.get("outgoingInvites", [])
 	var room = parsed.get("room", null)
+	if await _handle_state_interruption(parsed, room is Dictionary):
+		return
 	if room is Dictionary:
 		if str((room as Dictionary).get("status", "")).strip_edges() == "closed" and not host.battle_active:
 			host.server_battle_state["room"] = null

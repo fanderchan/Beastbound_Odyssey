@@ -104,6 +104,19 @@ const ERROR_CODE_MESSAGES := {
 	"battle_capture_candidate_invalid": "这只野生宠物暂时无法捕捉，请重新遇敌。",
 	"battle_auto_capture_filter_no_match": "这只宠物不符合当前自动捕捉条件。",
 	"battle_auto_capture_filter_unavailable": "自动捕捉筛选暂时无法判断，请稍后重试。",
+	"battle_interruption_room_active": "当前战斗仍在继续，正在重新同步。",
+	"battle_interruption_pending": "上一场中断战斗正在确认，请稍候。",
+	"battle_failure_ticket_participant_missing": "战斗恢复状态不完整，请稍后重试。",
+	"battle_failure_ticket_session_missing": "战斗恢复状态已失效，请重新登录后重试。",
+	"battle_failure_ticket_room_invalid": "战斗恢复状态暂时不可用，请稍后重试。",
+	"battle_failure_ticket_account_invalid": "战斗恢复状态异常，请重新登录后重试。",
+	"battle_failure_ticket_invalid": "战斗恢复状态异常，请重新登录后重试。",
+	"battle_failure_ticket_conflict": "战斗恢复状态冲突，请联系 GM 处理。",
+	"battle_failure_ticket_account_mismatch": "战斗恢复状态异常，请联系 GM 处理。",
+	"battle_failure_ticket_recovery_unavailable": "战斗补偿暂时不可用，请稍后重试。",
+	"battle_failure_ticket_recovery_invalid": "战斗补偿状态异常，请联系 GM 处理。",
+	"battle_failure_ticket_profile_missing": "角色资料暂时不可用，请稍后重试。",
+	"battle_failure_ticket_cleanup_failed": "战斗恢复暂时不可用，请稍后重试。",
 	"auto_capture_filter_policy_invalid": "自动捕捉筛选条件不正确，请检查后再保存。",
 	"pet_growth_evaluation_policy_invalid": "成长评估参考线不正确，请检查后再保存。",
 	"pet_growth_evaluation_settings_payload_invalid": "成长评估设置请求不正确，请重新打开宠物面板。",
@@ -1127,6 +1140,17 @@ static func battle_state_request(base_url: String, session_token: String) -> Dic
 	}
 
 
+static func battle_interruption_recover_request(base_url: String, session_token: String, operation_id: String = "") -> Dictionary:
+	var spec := {
+		"url": "%s/battle/interruption/recover" % normalized_base_url(base_url),
+		"headers": _json_auth_headers(session_token),
+		"method": HTTPClient.METHOD_POST,
+		"body": "{}",
+		"durableMutation": true,
+	}
+	return prepare_request_with_idempotency_key(spec, operation_id) if idempotency_key_is_valid(operation_id) else prepare_request_for_send(spec)
+
+
 static func battle_record_summary_request(base_url: String, session_token: String, username: String) -> Dictionary:
 	return {
 		"url": "%s/battle/records/summary?username=%s" % [normalized_base_url(base_url), username.uri_encode()],
@@ -1828,8 +1852,19 @@ static func parse_battle_state_response(response_code: int, body: PackedByteArra
 		return parsed
 	var response := parsed.get("response", {}) as Dictionary
 	parsed["room"] = response.get("room", null)
+	parsed["interruption"] = (response.get("interruption", {}) as Dictionary).duplicate(true) if response.get("interruption", null) is Dictionary else null
 	parsed["incomingInvites"] = _dictionary_array(response.get("incomingInvites", []))
 	parsed["outgoingInvites"] = _dictionary_array(response.get("outgoingInvites", []))
+	return parsed
+
+
+static func parse_battle_interruption_recovery_response(response_code: int, body: PackedByteArray) -> Dictionary:
+	var parsed := _parse_server_json(response_code, body, "战斗中断恢复失败。")
+	if not bool(parsed.get("ok", false)):
+		return parsed
+	var response := parsed.get("response", {}) as Dictionary
+	parsed["interruption"] = (response.get("interruption", {}) as Dictionary).duplicate(true) if response.get("interruption", null) is Dictionary else null
+	parsed["encounterReturned"] = bool(response.get("encounterReturned", false))
 	return parsed
 
 
