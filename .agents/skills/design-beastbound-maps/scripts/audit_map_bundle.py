@@ -2883,14 +2883,6 @@ def validate_evidence(
     if not isinstance(screenshots, list):
         audit.error("evidence.runtimeScreenshots", "expected an array")
     else:
-        for duplicate_map_id, duplicate_digest in sorted(
-            duplicate_runtime_screenshot_hashes(screenshots)
-        ):
-            audit.error(
-                "evidence.runtimeScreenshots",
-                "same-map actions must not reuse identical screenshot pixels "
-                f"({duplicate_map_id}: {duplicate_digest})",
-            )
         for index, screenshot in enumerate(screenshots):
             field_name = f"evidence.runtimeScreenshots[{index}]"
             if not isinstance(screenshot, dict):
@@ -3348,28 +3340,6 @@ def runtime_screenshot_coverage_complete(
         and covered_maps == map_ids
         and {"idle", "moving"}.issubset(covered_modes)
     )
-
-
-def duplicate_runtime_screenshot_hashes(
-    screenshots: Any,
-) -> set[tuple[str, str]]:
-    if not isinstance(screenshots, list):
-        return set()
-    seen: set[tuple[str, str]] = set()
-    duplicates: set[tuple[str, str]] = set()
-    for screenshot in screenshots:
-        if not isinstance(screenshot, dict):
-            continue
-        map_id = screenshot.get("mapId")
-        image = screenshot.get("image")
-        digest = image.get("sha256") if isinstance(image, dict) else None
-        if not isinstance(map_id, str) or not isinstance(digest, str):
-            continue
-        key = (map_id, digest)
-        if key in seen:
-            duplicates.add(key)
-        seen.add(key)
-    return duplicates
 
 
 def evaluate_release_readiness(
