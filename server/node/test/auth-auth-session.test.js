@@ -567,6 +567,17 @@ test("server startup bounds legacy terminal session history before any account l
     revokedAt: null,
     schemaVersion: 1,
   };
+  legacyData.sessions.legacy_revoked_099.battleFailureTicket = {
+    kind: "battle_owner_failure_ticket",
+    ticketId: `battle_failure_${"a".repeat(32)}`,
+    roomId: "battle_room_prune_guard",
+    mode: "duel",
+    accountId,
+    participantAccountIds: [accountId],
+    startedAt: "2026-07-12T23:59:00.000Z",
+    encounterRecovery: null,
+    schemaVersion: 1,
+  };
 
   const legacyStore = createMemoryAuthStore(legacyData);
   const restarted = createAuthService({
@@ -574,10 +585,11 @@ test("server startup bounds legacy terminal session history before any account l
     now: () => nowMs,
   });
   const restartedSessions = restarted.snapshot().sessions;
-  assert.equal(Object.keys(restartedSessions).length, 9);
+  assert.equal(Object.keys(restartedSessions).length, 10);
   assert.equal(Boolean(restartedSessions[registered.session.sessionId]), true);
   assert.equal(Boolean(restartedSessions.legacy_expired_unrevoked), false);
   assert.equal(Boolean(restartedSessions.legacy_refreshable_unrevoked), true);
+  assert.equal(Boolean(restartedSessions.legacy_revoked_099.battleFailureTicket), true);
   assert.equal(restarted.getSession(registered.session.token).ok, true);
 
   const unrelatedWrite = restarted.register({
@@ -586,7 +598,7 @@ test("server startup bounds legacy terminal session history before any account l
     displayName: "无关写入玩家",
   });
   assert.equal(unrelatedWrite.ok, true);
-  assert.equal(Object.keys(legacyStore.load().sessions).length, 10);
+  assert.equal(Object.keys(legacyStore.load().sessions).length, 11);
   assert.equal(Boolean(legacyStore.load().sessions.legacy_expired_unrevoked), false);
 });
 

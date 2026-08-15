@@ -5640,7 +5640,7 @@ test("duel battle rooms require nearby settled positions", () => {
   assert.equal(teleportNear.code, "position_desync");
 });
 
-test("battle rooms are runtime-only and are not restored from the auth store", () => {
+test("battle rooms stay runtime-only while a neutral owner-failure interruption survives restart", () => {
   const store = createCountingAuthStore();
   const service = createAuthService({"store": store});
   const challenger = service.register({"username": "runtimea", "password": "test1234", "displayName": "运行甲"});
@@ -5656,11 +5656,104 @@ test("battle rooms are runtime-only and are not restored from the auth store", (
   assert.notEqual(service.snapshot().battleRooms[accept.room.roomId], undefined);
   assert.deepEqual(store.snapshot().battleRooms, {});
   assert.deepEqual(store.snapshot().battleInvites, {});
+  assert.equal(Boolean(store.snapshot().sessions[challenger.session.sessionId].battleFailureTicket), true);
+  assert.equal(Boolean(store.snapshot().sessions[opponent.session.sessionId].battleFailureTicket), true);
 
   const restarted = createAuthService({"store": store});
-  const restartedState = restarted.getBattleState(challenger.session.token);
+  const relogged = restarted.login({username: "runtimea", password: "test1234"});
+  assert.equal(relogged.ok, true);
+  assert.notEqual(relogged.session.sessionId, challenger.session.sessionId);
+  assert.equal(Boolean(store.snapshot().sessions[challenger.session.sessionId].battleFailureTicket), true);
+  assert.notEqual(store.snapshot().sessions[challenger.session.sessionId].revokedAt, null);
+  const restartedState = restarted.getBattleState(relogged.session.token);
   assert.equal(restartedState.ok, true);
   assert.equal(restartedState.room, null);
+  assert.equal(restartedState.interruption.kind, "battle_owner_interruption");
+  assert.equal(restartedState.interruption.roomId, accept.room.roomId);
+  assert.equal(restartedState.interruption.encounterReturnAvailable, false);
+  assert.equal(restarted.snapshot().battleRecords.length, 0);
+
+  const recovered = restarted.recoverBattleInterruption(relogged.session.token);
+  assert.equal(recovered.ok, true);
+  assert.equal(recovered.encounterReturned, false);
+  assert.equal(restarted.getBattleState(relogged.session.token).interruption, null);
+  assert.equal(Boolean(store.snapshot().sessions[challenger.session.sessionId].battleFailureTicket), false);
+  assert.equal(Boolean(store.snapshot().sessions[opponent.session.sessionId].battleFailureTicket), true);
+  assert.equal(restarted.snapshot().battleRecords.length, 0);
+});
+
+test("a clean battle closure clears every participant failure ticket", () => {
+  const store = createCountingAuthStore();
+  const service = createAuthService({store});
+  const challenger = service.register({username: "ticketcleana", password: "test1234"});
+  const opponent = service.register({username: "ticketcleanb", password: "test1234"});
+  service.updatePlayerPosition(challenger.session.token, {mapId: "village", cellX: 10, cellY: 10});
+  service.updatePlayerPosition(opponent.session.token, {mapId: "village", cellX: 11, cellY: 10});
+  const invite = service.inviteToBattle(challenger.session.token, {username: "ticketcleanb"});
+  const accepted = service.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accepted.ok, true);
+  assert.equal(Boolean(store.snapshot().sessions[challenger.session.sessionId].battleFailureTicket), true);
+  assert.equal(Boolean(store.snapshot().sessions[opponent.session.sessionId].battleFailureTicket), true);
+
+  const left = service.leaveBattleRoom(opponent.session.token, accepted.room.roomId);
+  assert.equal(left.ok, true);
+  assert.equal(Boolean(store.snapshot().sessions[challenger.session.sessionId].battleFailureTicket), false);
+  assert.equal(Boolean(store.snapshot().sessions[opponent.session.sessionId].battleFailureTicket), false);
+  assert.equal(service.getBattleState(challenger.session.token).interruption, null);
+  assert.equal(service.getBattleState(opponent.session.token).interruption, null);
+});
+
+test("owner-failure recovery returns only the exact consumed encounter-stone slot", () => {
+  let nowMs = Date.parse("2026-08-15T05:00:00.000Z");
+  const store = createCountingAuthStore();
+  const service = createAuthService({
+    store,
+    now: () => nowMs,
+    useStrictPetEncounterPermitAuthority: true,
+  });
+  const player = service.register({username: "ticketstone", password: "test1234"});
+  const profile = battleProfile("遇敌恢复", {level: 10, hp: 120, maxHp: 120}, null);
+  profile.backpackSlots = [{itemId: "encounter_stone_patrol", count: 1}];
+  assert.equal(service.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+  assert.equal(service.updatePlayerPosition(player.session.token, {
+    mapId: "firebud_village_gate", cellX: 10, cellY: 17, moving: false,
+  }).ok, true);
+  for (const [fromCellX, fromCellY, toCellX, toCellY] of [
+    [10, 17, 11, 17], [11, 17, 11, 16], [11, 16, 11, 15],
+  ]) {
+    assert.equal(service.movePlayerStep(player.session.token, {
+      mapId: "firebud_village_gate", fromCellX, fromCellY, toCellX, toCellY, moving: false,
+    }).ok, true);
+  }
+  const started = service.startHangSession(player.session.token, {
+    mode: "encounter_stone",
+    itemId: "encounter_stone_patrol",
+    mapId: "firebud_village_gate",
+    cellX: 11,
+    cellY: 15,
+  });
+  assert.equal(started.ok, true);
+  nowMs += 2500;
+  const encounter = service.startPartyEncounter(player.session.token, {
+    encounterIntent: {zoneId: "village_grass", encounterGroupId: "firebud_grass_01"},
+  });
+  assert.equal(encounter.ok, true);
+  assert.equal(internalProfileForAccount(service, player.account.accountId).hangSession.encounterConsumedSlot, 1);
+
+  const restarted = createAuthService({
+    store,
+    now: () => nowMs,
+    useStrictPetEncounterPermitAuthority: true,
+  });
+  const interrupted = restarted.getBattleState(player.session.token);
+  assert.equal(interrupted.ok, true);
+  assert.equal(interrupted.room, null);
+  assert.equal(interrupted.interruption.encounterReturnAvailable, true);
+  const recovered = restarted.recoverBattleInterruption(player.session.token);
+  assert.equal(recovered.ok, true);
+  assert.equal(recovered.encounterReturned, true);
+  assert.equal(internalProfileForAccount(restarted, player.account.accountId).hangSession.encounterConsumedSlot, 0);
+  assert.equal(restarted.getBattleState(player.session.token).interruption, null);
 });
 
 test("a replaced event-stream session can still finish its trusted battle disconnect", () => {

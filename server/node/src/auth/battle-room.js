@@ -34,18 +34,22 @@ function createBattleRoomDomain(ctx) {
     battleRoomConnectionStateForMutation,
     battleRoomEntryCheck,
     battleRoomResultForLeave,
-    battleRandomAuthority,
     battleStatePayload,
+    battleFailureTicketAdmission,
+    battleFailureTicketStateForAccount,
     clampInt,
     clone,
+    clearBattleFailureTickets,
     closeBattleRoomWithResult,
     createBattleRoomBattleState,
     consumePartyEncounterAuthorization,
     emitServiceEvent,
+    encounterRecoveryForAuthorization,
     expireBattleInvite,
     expireBattleTimeoutsAndEmit,
     fail,
     isoNow,
+    installBattleFailureTickets,
     load,
     markBattleConnectionForAccount,
     matchmakingContextForParty,
@@ -54,10 +58,12 @@ function createBattleRoomDomain(ctx) {
     now,
     offlinePartyPveBattleParticipantAccountIds,
     ok,
+    openBattleRandomRoom,
     partyEncounterEntry,
     partyForAccount,
     preparePartyEncounterCaptureCandidates,
     publicBattleCommand,
+    publicBattleInterruption,
     publicBattleInvite,
     publicBattleResult,
     publicBattleRoom,
@@ -66,6 +72,7 @@ function createBattleRoomDomain(ctx) {
     randomBytes,
     randomId,
     recordBattleTrace,
+    recoverBattleEncounterSlot,
     removeAccountFromParty,
     removeOfflinePartyPveParticipantsFromRoom,
     refreshPartyPresence,
@@ -101,7 +108,58 @@ function createBattleRoomDomain(ctx) {
       }
       data = load();
     }
-    return ok(battleStatePayload(data, resolved.account.accountId, now));
+    const payload = battleStatePayload(data, resolved.account.accountId, now);
+    const interruptionState = battleFailureTicketStateForAccount(data, resolved.account.accountId);
+    if (!interruptionState.ok) {
+      return fail(interruptionState.code, interruptionState.message);
+    }
+    payload.interruption = payload.room
+      ? null
+      : publicBattleInterruption(interruptionState.ticket);
+    return ok(payload);
+  }
+
+  function recoverBattleInterruption(token) {
+    const data = load();
+    const resolved = resolveSession(data, token, now);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    if (activeBattleRoomForAccount(data, resolved.account.accountId)) {
+      return fail("battle_interruption_room_active", "当前战斗仍在进行中，无需处理中断恢复。");
+    }
+    const interruptionState = battleFailureTicketStateForAccount(data, resolved.account.accountId);
+    if (!interruptionState.ok) {
+      return fail(interruptionState.code, interruptionState.message);
+    }
+    const ticket = interruptionState.ticket;
+    if (!ticket) {
+      return ok({
+        interruption: null,
+        encounterReturned: false,
+        message: "当前没有需要处理的中断战斗。",
+      });
+    }
+    const encounterRecovery = recoverBattleEncounterSlot(data, ticket);
+    if (!encounterRecovery.ok) {
+      return fail(encounterRecovery.code, encounterRecovery.message);
+    }
+    const cleared = clearBattleFailureTickets(
+      data,
+      ticket.roomId,
+      [resolved.account.accountId],
+    );
+    if (!cleared.ok) {
+      return fail(cleared.code, cleared.message);
+    }
+    save(data);
+    return ok({
+      interruption: null,
+      encounterReturned: Boolean(encounterRecovery.refunded),
+      message: encounterRecovery.refunded
+        ? "战斗因服务器切换中断，本场未计胜负；本次遇敌次数已返还，可以重新发起。"
+        : "战斗因服务器切换中断，本场未计胜负；现在可以重新发起。",
+    });
   }
 
   function pruneOfflinePartyPveParticipants(data, viewerAccountId) {
@@ -210,6 +268,13 @@ function createBattleRoomDomain(ctx) {
     if (activeBattleRoomForAccount(data, target.accountId)) {
       return fail("battle_target_busy", "对方已经在切磋房间中。");
     }
+    const ticketAdmission = battleFailureTicketAdmission(
+      data,
+      [resolved.account.accountId, target.accountId],
+    );
+    if (!ticketAdmission.ok) {
+      return fail(ticketAdmission.code, ticketAdmission.message);
+    }
     const backpackEntry = battleBackpackEntryCheck(data, [resolved.account.accountId, target.accountId]);
     if (!backpackEntry.ok) {
       return backpackEntry;
@@ -291,6 +356,13 @@ function createBattleRoomDomain(ctx) {
     if (!entryCheck.ok) {
       return entryCheck;
     }
+    const ticketAdmission = battleFailureTicketAdmission(
+      data,
+      [invite.fromAccountId, invite.toAccountId],
+    );
+    if (!ticketAdmission.ok) {
+      return fail(ticketAdmission.code, ticketAdmission.message);
+    }
     const completedInvite = terminalInvite(data.battleInvites, invite.inviteId, BATTLE_INVITE_ACCEPTED, {now});
     const room = {
       roomId: `battle_room_${randomId()}`,
@@ -309,6 +381,10 @@ function createBattleRoomDomain(ctx) {
       schemaVersion: 1,
     };
     room.battle = createBattleRoomBattleState(room, now);
+    const ticketInstall = installBattleFailureTickets(data, room);
+    if (!ticketInstall.ok) {
+      return fail(ticketInstall.code, ticketInstall.message);
+    }
     openPrivateBattleRandomRoom(room);
     battleRoomConnectionStateForMutation(room);
     data.battleRooms[room.roomId] = room;
@@ -376,6 +452,10 @@ function createBattleRoomDomain(ctx) {
     if (busyAccountId) {
       const busyAccount = accountById(data, busyAccountId);
       return fail("battle_room_busy", `${busyAccount ? busyAccount.displayName || busyAccount.username : "队员"} 已在战斗房间中。`);
+    }
+    const ticketAdmission = battleFailureTicketAdmission(data, memberAccountIds);
+    if (!ticketAdmission.ok) {
+      return fail(ticketAdmission.code, ticketAdmission.message);
     }
     const authorizationResult = authorizePartyEncounter(data, resolved, payload, memberAccountIds);
     if (!authorizationResult.ok) {
@@ -465,9 +545,21 @@ function createBattleRoomDomain(ctx) {
     }
     Object.assign(room, candidatePreparation.room);
     battleRoomConnectionStateForMutation(room);
+    const encounterRecovery = encounterRecoveryForAuthorization(data, authorization);
+    if (String(authorization.mode || "") === "timed" && !encounterRecovery) {
+      return fail("battle_failure_ticket_recovery_invalid", "遇敌恢复状态不完整，请重新使用遇敌石。");
+    }
     const consumed = consumePartyEncounterAuthorization(data, authorization);
     if (!consumed.ok) {
       return fail(consumed.code, consumed.message);
+    }
+    const ticketInstall = installBattleFailureTickets(data, room, {
+      encounterRecoveryByAccountId: encounterRecovery
+        ? {[String(authorization.accountId || "")]: encounterRecovery}
+        : {},
+    });
+    if (!ticketInstall.ok) {
+      return fail(ticketInstall.code, ticketInstall.message);
     }
     openPrivateBattleRandomRoom(room);
     if (partyPresencePreview) {
@@ -506,9 +598,8 @@ function createBattleRoomDomain(ctx) {
 
   function openPrivateBattleRandomRoom(room) {
     if (
-      !battleRandomAuthority
-      || typeof battleRandomAuthority.openRoom !== "function"
-      || battleRandomAuthority.openRoom(room && room.roomId) !== true
+      typeof openBattleRandomRoom !== "function"
+      || openBattleRandomRoom(room) !== true
     ) {
       const error = new Error("battle random room could not be opened");
       error.code = "battle_random_room_unavailable";
@@ -746,6 +837,7 @@ function createBattleRoomDomain(ctx) {
 
   return {
     getBattleState,
+    recoverBattleInterruption,
     getBattleTrace,
     getBattleRecordSummary,
     inviteToBattle,

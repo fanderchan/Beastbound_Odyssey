@@ -162,6 +162,16 @@ const {createHangMatchmakingDomain} = require("./auth/hang-matchmaking");
 const {createBattleRoomDomain} = require("./auth/battle-room");
 const {battleRoomForMutation} = require("./auth/battle-room-cow");
 const {
+  battleFailureTicketAdmission,
+  battleFailureTicketStateForAccount,
+  clearBattleFailureTickets,
+  encounterRecoveryForAuthorization,
+  installBattleFailureTickets,
+  publicBattleInterruption,
+  recoverBattleEncounterSlot,
+  sessionHasBattleFailureTicket,
+} = require("./auth/battle-failure-ticket");
+const {
   battleRoomRecoveryMetrics,
   latestBattleRoomRecoveryForAccount,
   retireClosedBattleRooms,
@@ -365,6 +375,7 @@ const DURABLE_RECEIPT_PRECHECK_METHODS = new Set([
   "cancelMarketListing",
   "claimPetRecovery",
   "gmPetCaptureRecovery",
+  "recoverBattleInterruption",
   "claimMailAttachments",
   "claimRewardVault",
   "markMailRead",
@@ -384,6 +395,7 @@ const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "claimPetRecovery",
   "gmPetCaptureRecovery",
   "prepareGmPetPaidResetQa",
+  "recoverBattleInterruption",
   "submitBattleCommand",
   "sendMail",
   "markMailRead",
@@ -4139,6 +4151,7 @@ function createAuthService(options = {}) {
       battleBossRules,
       battleRandomAuthority,
       battleVictoryRewardResolver,
+      clearBattleFailureTickets: clearBattleFailureTicketsForRoom,
       issueRewardVault: stageRewardVaultIssue,
       rewardVaultEnabled: rewardVaultFeatureEnabled,
       rewardVaultSourceKey: deterministicRewardSourceKey,
@@ -6696,6 +6709,37 @@ function createAuthService(options = {}) {
     return {ok: true};
   }
 
+  function storeBattleFailureTicketSession(serviceData, sessionId, session) {
+    return storeAuthorityRootRecord(serviceData, "sessions", sessionId, session);
+  }
+
+  function clearBattleFailureTicketsForRoom(serviceData, roomId, accountIds) {
+    return clearBattleFailureTickets(serviceData, roomId, accountIds, {
+      storeSession: storeBattleFailureTicketSession,
+    });
+  }
+
+  function openBattleRandomRoomAfterCommit(roomValue) {
+    const roomId = String(roomValue && roomValue.roomId || "");
+    const open = () => {
+      if (
+        !battleRandomAuthority
+        || typeof battleRandomAuthority.openRoom !== "function"
+        || battleRandomAuthority.openRoom(roomId) !== true
+      ) {
+        const error = new Error("battle random room could not be opened");
+        error.code = "battle_random_room_unavailable";
+        throw error;
+      }
+      return true;
+    };
+    if (activeDurableMutation) {
+      applyAfterDurableCommit(open);
+      return true;
+    }
+    return open();
+  }
+
   const domainContext = {
     BATTLE_INVITE_ACCEPTED,
     BATTLE_INVITE_CANCELLED,
@@ -6791,6 +6835,12 @@ function createAuthService(options = {}) {
     battleRoomEntryCheck,
     battleRoomResultForLeave,
     battleStatePayload,
+    battleFailureTicketAdmission: (serviceData, accountIds) => battleFailureTicketAdmission(
+      serviceData,
+      accountIds,
+      {now},
+    ),
+    battleFailureTicketStateForAccount,
     captureToolBagFromProfile,
     claimQuestByIdToProfile,
     clampInt,
@@ -6803,10 +6853,20 @@ function createAuthService(options = {}) {
       roomValue,
       result,
       nowFn,
-      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, randomId, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver, issueRewardVault: stageRewardVaultIssue, rewardVaultEnabled: rewardVaultFeatureEnabled, rewardVaultSourceKey: deterministicRewardSourceKey},
+      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, randomId, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver, clearBattleFailureTickets: clearBattleFailureTicketsForRoom, issueRewardVault: stageRewardVaultIssue, rewardVaultEnabled: rewardVaultFeatureEnabled, rewardVaultSourceKey: deterministicRewardSourceKey},
     ),
     authorizePartyEncounter,
     consumePartyEncounterAuthorization,
+    encounterRecoveryForAuthorization,
+    installBattleFailureTickets: (serviceData, roomValue, ticketOptions = {}) => installBattleFailureTickets(
+      serviceData,
+      roomValue,
+      {
+        ...ticketOptions,
+        now,
+        storeSession: storeBattleFailureTicketSession,
+      },
+    ),
     consumeBackpackItem,
     createBattleRoomBattleState: (roomValue, nowFn) => createBattleRoomBattleState(
       roomValue,
@@ -6866,6 +6926,7 @@ function createAuthService(options = {}) {
     ensureActivePetAfterInstanceRemoval,
     objectOrEmpty,
     ok,
+    openBattleRandomRoom: openBattleRandomRoomAfterCommit,
     offlinePartyPveBattleParticipantAccountIds: (serviceData, roomValue) => offlinePartyPveBattleParticipantAccountIds(serviceData, roomValue, {now, runtimeActiveSessionIds}),
     partyEncounterEntry,
     preparePartyEncounterCaptureCandidates: (roomValue) => petCaptureCandidateAuthority.prepareRoom(roomValue),
@@ -6946,6 +7007,7 @@ function createAuthService(options = {}) {
     profileStoragePetCount,
     publicAccount,
     publicBattleCommand,
+    publicBattleInterruption,
     publicBattleInvite,
     publicBattleResult,
     publicBattleRoom,
@@ -6988,8 +7050,14 @@ function createAuthService(options = {}) {
       serviceData,
       roomValue,
       accountIds,
-      {now, runtimeActiveSessionIds, applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver, issueRewardVault: stageRewardVaultIssue, rewardVaultEnabled: rewardVaultFeatureEnabled, rewardVaultSourceKey: deterministicRewardSourceKey},
+      {now, runtimeActiveSessionIds, applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver, clearBattleFailureTickets: clearBattleFailureTicketsForRoom, issueRewardVault: stageRewardVaultIssue, rewardVaultEnabled: rewardVaultFeatureEnabled, rewardVaultSourceKey: deterministicRewardSourceKey},
     ),
+    recoverBattleEncounterSlot: (serviceData, ticketValue) => recoverBattleEncounterSlot(
+      serviceData,
+      ticketValue,
+      {accountById, normalizeHangSession, now, persistProfileForAccount},
+    ),
+    clearBattleFailureTickets: clearBattleFailureTicketsForRoom,
     refreshPartyPresence: (serviceData, partyValue, options = {}) => refreshPartyPresence(serviceData, partyValue, now, runtimeActiveSessionIds, options),
     resolveSessionReadOnly: (sessionData, token) => resolveSession(sessionData, token, now, {serverStartedAtMs}),
     requiredBattleCommandAccountIds,
@@ -6999,7 +7067,7 @@ function createAuthService(options = {}) {
       roomValue,
       battleValue,
       nowFn,
-      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver, issueRewardVault: stageRewardVaultIssue, rewardVaultEnabled: rewardVaultFeatureEnabled, rewardVaultSourceKey: deterministicRewardSourceKey},
+      {applyAfterDurableCommit, newPetFactory, petExpSettlement, petCaptureCandidateAuthority, petAutoCaptureFilter, battleActorRules, battleBossRules, battleRandomAuthority, battleVictoryRewardResolver, clearBattleFailureTickets: clearBattleFailureTicketsForRoom, issueRewardVault: stageRewardVaultIssue, rewardVaultEnabled: rewardVaultFeatureEnabled, rewardVaultSourceKey: deterministicRewardSourceKey},
     ),
     resolveSession: (sessionData, token, nowFn, options = {}) => resolveSession(sessionData, token, nowFn, {
       ...options,
@@ -7207,6 +7275,7 @@ function createAuthService(options = {}) {
     listChatMessages: mailChat.listChatMessages,
     sendChatMessage: mailChat.sendChatMessage,
     getBattleState: battleRoom.getBattleState,
+    recoverBattleInterruption: battleRoom.recoverBattleInterruption,
     getBattleTrace: battleRoom.getBattleTrace,
     getBattleRecordSummary: battleRoom.getBattleRecordSummary,
     inviteToBattle: battleRoom.inviteToBattle,
@@ -8802,6 +8871,7 @@ function pruneSessionHistoryForAccount(data, accountId, keepSessionId = "", now 
     .filter((session, index) => (
       String(session.sessionId || "") === normalizedKeepSessionId
       || index < SESSION_HISTORY_MAX_PER_ACCOUNT
+      || sessionHasBattleFailureTicket(session)
     ))
     .map((session) => String(session.sessionId || ""))
     .filter(Boolean));
@@ -12464,6 +12534,18 @@ function removeOfflinePartyPveParticipantsFromRoom(data, room, accountIds, optio
       }
     }
     room.leaderAccountId = replacementLeaderAccountId || String(room.participantAccountIds[0] || "");
+  }
+  if (typeof options.clearBattleFailureTickets === "function") {
+    const ticketCleanup = options.clearBattleFailureTickets(
+      data,
+      room.roomId,
+      result.removedAccountIds,
+    );
+    if (!ticketCleanup || ticketCleanup.ok !== true) {
+      const error = new Error("离线队员的战斗故障票据未能安全清除。");
+      error.code = String(ticketCleanup && ticketCleanup.code || "battle_failure_ticket_cleanup_failed");
+      throw error;
+    }
   }
   if (room.participantAccountIds.length <= 0) {
     const closeResult = battleRoomResultForLeave(room, result.removedAccountIds[0] || "", nowFn);
@@ -16193,6 +16275,18 @@ function closeBattleRoomWithResult(data, room, result, now, options = {}) {
     reason: String(result.reason || ""),
     battleReturnCount: battleReturns.length,
   }, now);
+  if (typeof options.clearBattleFailureTickets === "function") {
+    const ticketCleanup = options.clearBattleFailureTickets(
+      data,
+      room.roomId,
+      Array.isArray(room.participantAccountIds) ? room.participantAccountIds : [],
+    );
+    if (!ticketCleanup || ticketCleanup.ok !== true) {
+      const error = new Error("战斗故障票据未能随结算安全清除。");
+      error.code = String(ticketCleanup && ticketCleanup.code || "battle_failure_ticket_cleanup_failed");
+      throw error;
+    }
+  }
   if (options.battleRandomAuthority && typeof options.battleRandomAuthority.closeRoom === "function") {
     const closeRandomRoom = () => options.battleRandomAuthority.closeRoom(room.roomId);
     if (typeof options.applyAfterDurableCommit === "function") {

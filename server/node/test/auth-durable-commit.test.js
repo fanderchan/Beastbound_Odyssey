@@ -547,7 +547,7 @@ test("auth responses wait for durability without persisting raw session tokens i
   assert.equal(Object.keys(base.load().mutationReceipts).length, 0);
 });
 
-test("runtime battle invitation does not open a durable store transaction", async (t) => {
+test("battle start persists one failure ticket while invitation and nonterminal turns remain runtime-only", async (t) => {
   const base = createMemoryAuthStore();
   const seedService = createAuthService({store: base});
   const challenger = seedService.register({username: "runtimeinvitea", password: "test1234", displayName: "邀请A"});
@@ -614,7 +614,7 @@ test("runtime battle invitation does not open a durable store transaction", asyn
     headers: {authorization: `Bearer ${opponent.session.token}`},
   });
   assert.equal(accepted.ok, true);
-  assert.equal(saveCount, 0);
+  assert.equal(saveCount, 1);
 
   const intermediate = await service.invokeDurable("submitBattleCommand", [
     challenger.session.token,
@@ -627,7 +627,7 @@ test("runtime battle invitation does not open a durable store transaction", asyn
   });
   assert.equal(intermediate.ok, true);
   assert.equal(intermediate.turn, null);
-  assert.equal(saveCount, 0);
+  assert.equal(saveCount, 1);
   assert.equal(receiptReadCount, 0);
 
   intermediate.room.status = "corrupted_by_caller";
@@ -662,7 +662,7 @@ test("runtime battle invitation does not open a durable store transaction", asyn
     {channel: "nearby", text: "真实持久消息"},
   ], {actionId: "test_runtime_replay_retention_flush"});
   assert.equal(durableChat.ok, true);
-  assert.equal(saveCount, 1);
+  assert.equal(saveCount, 2);
   const persistedEvents = base.load().serviceEvents;
   assert.equal(persistedEvents.some((event) => String(event.type || "").startsWith("battle.")), false);
   assert.equal(persistedEvents.some((event) => event.message && event.message.text === "真实持久消息"), true);
@@ -740,8 +740,8 @@ test("runtime fast candidate matches the full normalizer for all runtime roots a
     fallback.service.acceptBattleInvite = originalAccept;
   }
   assert.equal(projectionFailureObserved, true);
-  assert.equal(fast.saveCount(), 0);
-  assert.equal(fallback.saveCount(), 0);
+  assert.equal(fast.saveCount(), 1);
+  assert.equal(fallback.saveCount(), 1);
   const fastSnapshot = fast.service.snapshot();
   const fallbackSnapshot = fallback.service.snapshot();
   for (const field of RUNTIME_ROOT_FIELDS) {
@@ -755,8 +755,8 @@ test("runtime fast candidate matches the full normalizer for all runtime roots a
   assert.deepEqual(fallbackSnapshot.serviceEvents, fastSnapshot.serviceEvents);
   const fastMetrics = fast.service.durableMutationMetrics().precommitByMethod.acceptBattleInvite;
   const fallbackMetrics = fallback.service.durableMutationMetrics().precommitByMethod.acceptBattleInvite;
-  assert.equal(fastMetrics.phases.runtime_normalize.count, 1);
-  assert.equal(Object.hasOwn(fastMetrics.phases, "normalize"), false);
+  assert.equal(fastMetrics.phases.normalize.count, 1);
+  assert.equal(Object.hasOwn(fastMetrics.phases, "runtime_normalize"), false);
   assert.equal(fallbackMetrics.phases.raw_compare.count, 1);
   assert.equal(fallbackMetrics.phases.normalize.count, 1);
   assert.equal(Object.hasOwn(fallbackMetrics.phases, "runtime_normalize"), false);
@@ -808,6 +808,58 @@ test("runtime replay and trace survive uncovered async mutation rollback", async
   assert.equal(after.accounts[challenger.account.username].role, "player");
 });
 
+test("failed battle-start COMMIT publishes neither failure tickets nor private random state", async () => {
+  const base = createMemoryAuthStore();
+  const seed = createAuthService({store: base});
+  const challenger = seed.register({username: "startcommita", password: "test1234"});
+  const opponent = seed.register({username: "startcommitb", password: "test1234"});
+  const authority = trackingBattleRandomAuthority();
+  let rejectNextSave = true;
+  const service = createAuthService({
+    randomId: () => "start_commit_fixed_id",
+    battleRandomAuthority: authority,
+    store: createAsyncWriteAuthStore({
+      mode: "memory",
+      load: () => base.load(),
+      async saveAsync(nextData) {
+        if (rejectNextSave) {
+          rejectNextSave = false;
+          throw new Error("synthetic battle start commit failure");
+        }
+        base.save(nextData);
+      },
+    }, {onError: () => {}}),
+  });
+  assert.equal(service.updatePlayerPosition(challenger.session.token, {
+    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
+  }).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, {
+    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
+  }).ok, true);
+  const invited = await service.invokeDurable("inviteToBattle", [
+    challenger.session.token, {username: opponent.account.username},
+  ], {actionId: "test_start_commit_invite"});
+  const roomId = "battle_room_start_commit_fixed_id";
+  await assert.rejects(
+    service.invokeDurable("acceptBattleInvite", [
+      opponent.session.token, invited.invite.inviteId,
+    ], {actionId: "test_start_commit_failure"}),
+    (error) => error && error.code === "storage_write_failed",
+  );
+  assert.equal(authority.hasRoom(roomId), false);
+  assert.equal(Boolean(base.load().sessions[challenger.session.sessionId].battleFailureTicket), false);
+  assert.equal(Boolean(base.load().sessions[opponent.session.sessionId].battleFailureTicket), false);
+  assert.equal(service.snapshot().battleRooms[roomId], undefined);
+
+  const retried = await service.invokeDurable("acceptBattleInvite", [
+    opponent.session.token, invited.invite.inviteId,
+  ], {actionId: "test_start_commit_retry"});
+  assert.equal(retried.ok, true);
+  assert.equal(authority.hasRoom(roomId), true);
+  assert.equal(Boolean(base.load().sessions[challenger.session.sessionId].battleFailureTicket), true);
+  assert.equal(Boolean(base.load().sessions[opponent.session.sessionId].battleFailureTicket), true);
+});
+
 test("battle random secret closes only after the terminal COMMIT succeeds", async () => {
   const nowMs = Date.parse("2026-07-13T00:00:00.000Z");
   const base = createMemoryAuthStore();
@@ -816,7 +868,7 @@ test("battle random secret closes only after the terminal COMMIT succeeds", asyn
   const opponent = seed.register({username: "rngcommitb", password: "test1234", displayName: "随机乙"});
   const authority = trackingBattleRandomAuthority();
   let saveAttempts = 0;
-  let rejectNextSave = true;
+  let rejectNextSave = false;
   const service = createAuthService({
     now: () => nowMs,
     randomId: () => "rng_commit_fixed_id",
@@ -846,6 +898,9 @@ test("battle random secret closes only after the terminal COMMIT succeeds", asyn
   const accepted = await service.invokeDurable("acceptBattleInvite", [
     opponent.session.token, invited.invite.inviteId,
   ], {actionId: "test_rng_commit_accept"});
+  assert.equal(accepted.ok, true);
+  assert.equal(saveAttempts, 1);
+  rejectNextSave = true;
   const roomId = accepted.room.roomId;
   const runtimeBeforeFailedCommit = service.snapshot();
   assert.ok(runtimeBeforeFailedCommit.battleTrace.length > 0);
@@ -857,7 +912,7 @@ test("battle random secret closes only after the terminal COMMIT succeeds", asyn
     }),
     (error) => error && error.code === "storage_write_failed",
   );
-  assert.equal(saveAttempts, 1);
+  assert.equal(saveAttempts, 2);
   assert.equal(authority.hasRoom(roomId), true);
   assert.equal(base.load().battleRecords.some((record) => record.roomId === roomId), false);
   const refreshed = await service.invokeDurable("getProfile", [challenger.session.token], {
@@ -868,12 +923,12 @@ test("battle random secret closes only after the terminal COMMIT succeeds", asyn
   assert.deepEqual(runtimeAfterReload.battleTrace, runtimeBeforeFailedCommit.battleTrace);
   assert.deepEqual(runtimeAfterReload.serviceEvents, runtimeBeforeFailedCommit.serviceEvents);
   assert.equal(runtimeAfterReload.serviceEventSeq, runtimeBeforeFailedCommit.serviceEventSeq);
-  assert.equal(saveAttempts, 1);
+  assert.equal(saveAttempts, 2);
   const retried = await service.invokeDurable("leaveBattleRoom", [challenger.session.token, roomId], {
     actionId: "test_rng_commit_leave_retry",
   });
   assert.equal(retried.ok, true);
-  assert.equal(saveAttempts, 2);
+  assert.equal(saveAttempts, 3);
   assert.equal(authority.hasRoom(roomId), false);
   assert.equal(base.load().battleRecords.some((record) => record.roomId === roomId), true);
 });
@@ -923,7 +978,7 @@ test("terminal battle command falls back from raw comparison to durable victory 
     invited.invite.inviteId,
   ], {actionId: "test_terminal_victory_accept"});
   assert.equal(accepted.ok, true);
-  assert.equal(saveCount, 0);
+  assert.equal(saveCount, 1);
   const challengerActor = accepted.room.battle.actors.find((actor) => actor.accountId === challenger.account.accountId);
   const opponentActor = accepted.room.battle.actors.find((actor) => actor.accountId === opponent.account.accountId);
   const first = await service.invokeDurable("submitBattleCommand", [
@@ -937,7 +992,7 @@ test("terminal battle command falls back from raw comparison to durable victory 
   });
   assert.equal(first.ok, true);
   assert.equal(first.turn, null);
-  assert.equal(saveCount, 0);
+  assert.equal(saveCount, 1);
   const terminal = await service.invokeDurable("submitBattleCommand", [
     opponent.session.token,
     accepted.room.roomId,
@@ -949,7 +1004,7 @@ test("terminal battle command falls back from raw comparison to durable victory 
   });
   assert.equal(terminal.ok, true);
   assert.equal(terminal.room.status, "closed");
-  assert.equal(saveCount, 1);
+  assert.equal(saveCount, 2);
   assert.equal(base.load().battleRecords.some((record) => record.roomId === accepted.room.roomId), true);
 
   const metrics = service.durableMutationMetrics().precommitByMethod.submitBattleCommand;
@@ -999,7 +1054,7 @@ test("successful capture command durably writes the pet and consumed tool", asyn
     },
   }], {actionId: "test_durable_capture_encounter"});
   assert.equal(encounter.ok, true);
-  assert.equal(saveCount, 0);
+  assert.equal(saveCount, 1);
   const playerActor = encounter.room.battle.actors.find((actor) => actor.accountId === player.account.accountId);
   const enemyActor = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
   const captured = await service.invokeDurable("submitBattleCommand", [
@@ -1019,14 +1074,14 @@ test("successful capture command durably writes the pet and consumed tool", asyn
   });
   assert.equal(captured.ok, true);
   assert.equal(captured.room.status, "closed");
-  assert.equal(saveCount, 1);
+  assert.equal(saveCount, 2);
   const storedProfile = base.load().profiles[player.profileBinding.playerId].profile;
   assert.equal(profileItemCount(storedProfile, "capture_net"), 0);
   assert.equal(storedProfile.petInstances.some((pet) => pet.formId === "wuli_normal_orange_fire10"), true);
   assert.equal(base.load().battleRecords.some((record) => record.roomId === encounter.room.roomId), true);
   const encounterMetrics = service.durableMutationMetrics().precommitByMethod.startPartyEncounter;
-  assert.equal(encounterMetrics.phases.runtime_normalize.count, 1);
-  assert.equal(Object.hasOwn(encounterMetrics.phases, "normalize"), false);
+  assert.equal(encounterMetrics.phases.normalize.count, 1);
+  assert.equal(Object.hasOwn(encounterMetrics.phases, "runtime_normalize"), false);
   const captureMetrics = service.durableMutationMetrics().precommitByMethod.submitBattleCommand;
   assert.equal(captureMetrics.phases.raw_compare.count, 1);
   assert.equal(captureMetrics.phases.normalize.count, 1);
@@ -1066,14 +1121,14 @@ test("battle timeout maintenance remains a durable record settlement", async () 
     invited.invite.inviteId,
   ], {actionId: "test_timeout_accept"});
   assert.equal(accepted.ok, true);
-  assert.equal(saveCount, 0);
+  assert.equal(saveCount, 1);
   nowMs += 100_000;
   const maintenance = await service.invokeDurable("runBattleMaintenance", [], {
     actionId: "test_timeout_maintenance",
   });
   assert.equal(maintenance.ok, true);
   assert.equal(maintenance.events.some((event) => event.type === "battle.room_closed"), true);
-  assert.equal(saveCount, 1);
+  assert.equal(saveCount, 2);
   assert.equal(base.load().battleRecords.some((record) => record.roomId === accepted.room.roomId), true);
   const metrics = service.durableMutationMetrics().precommitByMethod.runBattleMaintenance;
   assert.equal(metrics.phases.raw_compare.count, 1);

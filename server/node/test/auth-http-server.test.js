@@ -2308,6 +2308,72 @@ test("HTTP server exposes battle room endpoints and websocket events", async (t)
   ws.close();
 });
 
+test("HTTP battle interruption recovery is authenticated, idempotent, and neutral", async (t) => {
+  const store = createCountingAuthStore();
+  const original = createAuthService({store});
+  const challenger = original.register({username: "httpfaila", password: "test1234"});
+  const opponent = original.register({username: "httpfailb", password: "test1234"});
+  original.updatePlayerPosition(challenger.session.token, {
+    mapId: "village", cellX: 10, cellY: 10, facing: "east", moving: false,
+  });
+  original.updatePlayerPosition(opponent.session.token, {
+    mapId: "village", cellX: 11, cellY: 10, facing: "west", moving: false,
+  });
+  const invite = original.inviteToBattle(challenger.session.token, {username: "httpfailb"});
+  const accepted = original.acceptBattleInvite(opponent.session.token, invite.invite.inviteId);
+  assert.equal(accepted.ok, true);
+
+  const restarted = createAuthService({store});
+  const server = createHttpServer({service: restarted});
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => {
+    server.eventHub.close();
+    server.close();
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const state = await fetchJson(`${base}/battle/state`, {
+    headers: {authorization: `Bearer ${challenger.session.token}`},
+  });
+  assert.equal(state.ok, true);
+  assert.equal(state.room, null);
+  assert.equal(state.interruption.roomId, accepted.room.roomId);
+
+  const missingKey = await fetchJson(`${base}/battle/interruption/recover`, {
+    method: "POST",
+    headers: {authorization: `Bearer ${challenger.session.token}`},
+    body: JSON.stringify({}),
+  });
+  assert.equal(missingKey.ok, false);
+  assert.equal(missingKey.code, "idempotency_key_required");
+
+  const operationId = "operation_http_battle_interruption_0001";
+  const recovered = await fetchJson(`${base}/battle/interruption/recover`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${challenger.session.token}`,
+      "Idempotency-Key": operationId,
+    },
+    body: JSON.stringify({}),
+  });
+  assert.equal(recovered.ok, true);
+  assert.equal(recovered.encounterReturned, false);
+  assert.equal(recovered.interruption, null);
+  assert.equal(restarted.snapshot().battleRecords.length, 0);
+
+  const replayed = await fetchJson(`${base}/battle/interruption/recover`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${challenger.session.token}`,
+      "Idempotency-Key": operationId,
+    },
+    body: JSON.stringify({}),
+  });
+  assert.equal(replayed.ok, true);
+  assert.equal(replayed.durableCommit.replayed, true);
+  assert.equal(replayed.message, recovered.message);
+});
+
 test("HTTP login replaces same-account websocket session", async (t) => {
   const service = createAuthService({"store": createMemoryAuthStore()});
   const server = createHttpServer({service});

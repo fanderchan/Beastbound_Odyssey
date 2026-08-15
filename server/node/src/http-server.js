@@ -149,6 +149,7 @@ const DURABLE_HTTP_SERVICE_METHODS = new Set([
   "leaveManorWar",
   "resolveManorWar",
   "getBattleState",
+  "recoverBattleInterruption",
   "inviteToBattle",
   "startPartyEncounter",
   "acceptBattleInvite",
@@ -192,6 +193,7 @@ const IDEMPOTENCY_REQUIRED_ASSET_HTTP_PATHS = new Set([
   "/pets/paid-reset",
   "/pets/evolution",
   "/pets/fusion",
+  "/battle/interruption/recover",
 ]);
 const IDEMPOTENCY_REQUIRED_MAIL_HTTP_PATH_PATTERN = /^\/mail\/[^/]+\/(?:read|claim)$/;
 const IDEMPOTENCY_REQUIRED_REWARD_VAULT_HTTP_PATH_PATTERN = /^\/rewards\/vault\/[^/]+\/claim$/;
@@ -782,6 +784,10 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "GET" && url.pathname === "/battle/state") {
         return sendResult(res, service.getBattleState(bearerToken(req)));
+      }
+      if (req.method === "POST" && url.pathname === "/battle/interruption/recover") {
+        await readJson(req);
+        return sendResult(res, service.recoverBattleInterruption(bearerToken(req)));
       }
       if (req.method === "GET" && url.pathname === "/battle/debug/trace") {
         return sendResult(res, service.getBattleTrace(bearerToken(req), {

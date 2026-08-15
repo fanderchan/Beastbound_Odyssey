@@ -181,6 +181,7 @@ Structured logs use one JSON object per event with `schemaVersion` and `createdA
 - `GET /chat/messages?channel={channel}&limit={limit}`
 - `POST /chat/send`
 - `GET /battle/state`
+- `POST /battle/interruption/recover` (`Idempotency-Key` required)
 - `POST /battle/invite`
 - `POST /battle/invites/{inviteId}/accept`
 - `POST /battle/invites/{inviteId}/decline`
@@ -297,7 +298,8 @@ The stream is an event fanout for already-authorized HTTP actions. Replay histor
 Duel rooms are the first server-owned battle entry point:
 
 - `POST /battle/invite` sends a pending duel invite to an online account.
-- `GET /battle/state` returns the current ready room and pending incoming/outgoing duel invites.
+- `GET /battle/state` returns the current ready room, pending incoming/outgoing duel invites, and a neutral interruption notice when a persisted failure ticket exists but its runtime room no longer does.
+- `POST /battle/interruption/recover` idempotently confirms that neutral interruption. It records no winner or loser, clears only the caller's matching ticket, and returns an encounter-stone slot only when the character, activation id, and consumed slot still match exactly.
 - `POST /battle/invites/{inviteId}/accept` marks the invite accepted, creates a `ready` battle room, and generates a server seed.
 - `POST /battle/invites/{inviteId}/decline` declines one pending invite.
 - `POST /battle/rooms/{roomId}/commands` submits the current account's room command for the current round.
@@ -306,8 +308,9 @@ Duel rooms are the first server-owned battle entry point:
 - The first room turn model supports `attack` and `defend`. Command submissions publish `battle.command_submitted` without revealing the command details early.
 - When all room participants have submitted the current round, the server creates a `battle_event_list` and publishes `battle.turn_resolved`.
 - The battle room public state includes the round, phase, actors, submitted account ids, and the last resolved event list.
+- Opening a duel, party encounter, or manor-war room persists one lightweight failure ticket per human participant in the same durable start boundary. Normal leave, timeout, victory, defeat, or offline removal clears the matching tickets with settlement. Nonterminal commands still add no persistent write.
 
-This is the first turn-command authority slice only. It does not yet consume items, resolve full pet/team 10v10 actions, persist battle results, handle leave/timeout, or recover a disconnected player into the visible battle scene.
+Active rooms and the private battle-random secret remain process-local and are deliberately not serialized. The ticket is a fair neutral-termination contract, not a replay snapshot: it cannot resume a half-finished round. Cross-node live battle command routing, seamless battle continuation, and a real two-Node owner-failure gate remain separate work.
 
 ## Chat Boundary
 
@@ -341,4 +344,4 @@ Persisted tables include:
 - `service_events`
 - `server_state`
 
-Player positions, battle invites, and active battle rooms remain runtime memory state and are cleared from the persisted document before writes. This is a bridge for local persistence and inspection, not the final normalized MMO transaction model yet.
+Player positions, battle invites, and active battle rooms remain runtime memory state and are cleared from the persisted document before writes. Battle starts now attach a lightweight owner-failure ticket to persisted session documents so a restart can terminate the lost room neutrally; no room actors, commands, HP, or private RNG material are persisted through that ticket.

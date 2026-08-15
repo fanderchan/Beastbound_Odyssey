@@ -24,16 +24,18 @@ function createFamilyManorDomain(ctx) {
     activeBattleRoomForAccount,
     battleBackpackEntryCheck,
     battleParticipantSnapshot,
-    battleRandomAuthority,
+    battleFailureTicketAdmission,
     battleRoomConnectionStateForMutation,
     createBattleRoomBattleState,
     emitServiceEvent,
     fail,
     isoNow,
+    installBattleFailureTickets,
     load,
     manorEntries,
     now,
     ok,
+    openBattleRandomRoom,
     publicBattleRoom,
     publicPlayerPosition = (position) => position,
     randomId,
@@ -386,6 +388,10 @@ function createFamilyManorDomain(ctx) {
       const busyAccount = accountById(data, busyAccountId);
       return fail("battle_room_busy", `${busyAccount ? busyAccount.displayName || busyAccount.username : "参战成员"} 已在战斗房间中。`);
     }
+    const ticketAdmission = battleFailureTicketAdmission(data, participantAccountIds);
+    if (!ticketAdmission.ok) {
+      return fail(ticketAdmission.code, ticketAdmission.message);
+    }
     const backpackEntry = battleBackpackEntryCheck(data, participantAccountIds);
     if (!backpackEntry.ok) {
       return backpackEntry;
@@ -426,10 +432,13 @@ function createFamilyManorDomain(ctx) {
       schemaVersion: 1,
     };
     room.battle = createBattleRoomBattleState(room, now);
+    const ticketInstall = installBattleFailureTickets(data, room);
+    if (!ticketInstall.ok) {
+      return fail(ticketInstall.code, ticketInstall.message);
+    }
     if (
-      !battleRandomAuthority
-      || typeof battleRandomAuthority.openRoom !== "function"
-      || battleRandomAuthority.openRoom(room.roomId) !== true
+      typeof openBattleRandomRoom !== "function"
+      || openBattleRandomRoom(room) !== true
     ) {
       const error = new Error("battle random room could not be opened");
       error.code = "battle_random_room_unavailable";
