@@ -2360,7 +2360,15 @@ func _run_auto_facility_dialog_options_check() -> void:
 	host.profile_save_enabled = false
 	host.world_log_history.clear()
 	host.world_log_message = ""
-	host.player_profile = host._profile_with_active_quest("quest_buy_supply")
+	var quest_profile = host._profile_with_active_quest("quest_buy_supply")
+	var facility_profile = _qa_bui_pet_profile()
+	facility_profile[PlayerProgressModel.QUEST_STATES_KEY] = (
+		quest_profile.get(PlayerProgressModel.QUEST_STATES_KEY, {}) as Dictionary
+	).duplicate(true)
+	facility_profile[PlayerProgressModel.ACTIVE_QUEST_ID_KEY] = str(
+		quest_profile.get(PlayerProgressModel.ACTIVE_QUEST_ID_KEY, "")
+	)
+	host.player_profile = PlayerProgressModel.normalize_profile(facility_profile)
 	host._load_map("firebud_village_gate", "from_training_yard")
 	var shopkeeper = InteractionModel.find_by_id(host.map_data, "firebud_shopkeeper")
 	var doctor = InteractionModel.find_by_id(host.map_data, "firebud_doctor")
@@ -2422,8 +2430,26 @@ func _run_auto_facility_dialog_options_check() -> void:
 	var trainer_options_ok = host._dialog_is_open() and host.dialog_option_button != null and host.dialog_option_button.text == "训练"
 	host._confirm_dialog_action()
 	await host.get_tree().process_frame
-	var trainer_primary_ok = host.pet_skill_panel != null and host.pet_skill_panel.visible and not host._dialog_is_open()
-	host._close_pet_skill_panel()
+	var trainer_skill_overview = host._panel_flow()._pet_skill_overview_panel
+	var trainer_skill_snapshot: Dictionary = (
+		trainer_skill_overview.call("snapshot")
+		if trainer_skill_overview != null
+		else {}
+	)
+	var trainer_primary_ok = (
+		host.pet_panel != null
+		and host.pet_panel.visible
+		and host.pet_detail_mode == host.PET_DETAIL_MODE_SKILLS
+		and host.pet_skill_training_mode
+		and host.pet_skill_trainer_id == str(
+			pet_trainer.get("trainerId", PetSkillTrainingModel.DEFAULT_TRAINER_ID)
+		)
+		and trainer_skill_overview != null
+		and trainer_skill_overview.visible
+		and bool(trainer_skill_snapshot.get("trainingMode", false))
+		and not host._dialog_is_open()
+	)
+	host._close_pet_panel()
 
 	host._open_interaction_dialog(stable_keeper)
 	await host.get_tree().process_frame
