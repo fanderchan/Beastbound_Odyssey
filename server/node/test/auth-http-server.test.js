@@ -37,6 +37,7 @@ const {loadPetEncounterCatalog} = require("../src/auth/pet-encounter-authority")
 const {createPetEncounterPermitAuthority} = require("../src/auth/pet-encounter-permit-authority");
 const {encodeMailInboxCursor} = require("../src/auth/mail-inbox-pagination");
 const {encodeMailArchiveCursor} = require("../src/auth/mail-archive-pagination");
+const {startDefaultHttpServer} = require("../src/http-server");
 const PET_PAID_RESET_FORM_POLICY_COUNT = require(
   "../../../client/godot/data/balance/pet_paid_reset_policy.json",
 ).formPolicies.length;
@@ -88,6 +89,54 @@ test("health uses the non-mutating storage probe when the store provides one", a
   assert.equal(health.storage.mode, "async:health-probe");
   assert.equal(healthChecks, 1);
   assert.equal(fullLoads, 0);
+});
+
+test("default HTTP entry fences MySQL transactions before cluster fatal drain", async (t) => {
+  const previousExitCode = process.exitCode;
+  let clusterFatal = null;
+  let transactionSignal = null;
+  const store = createMemoryAuthStore();
+  const server = await startDefaultHttpServer({
+    env: {
+      BEASTBOUND_AUTH_HOST: "127.0.0.1",
+      BEASTBOUND_AUTH_PORT: "0",
+    },
+    async createClusterRuntime(_env, observers) {
+      clusterFatal = observers.onFatal;
+      return {
+        eventHubOptions: {},
+        accountAdmission: null,
+        async close() {},
+      };
+    },
+    createStore(options) {
+      transactionSignal = options.transactionSignal;
+      return store;
+    },
+    onClusterError() {},
+  });
+  t.after(() => {
+    process.exitCode = previousExitCode;
+    if (server.listening) {
+      server.close();
+    }
+  });
+  assert.equal(typeof clusterFatal, "function");
+  assert.equal(transactionSignal.aborted, false);
+
+  const closed = once(server, "close");
+  const fatalError = Object.assign(new Error("account owner lease expired"), {
+    code: "cluster_account_owner_lease_expired",
+  });
+  clusterFatal(fatalError);
+  assert.equal(transactionSignal.aborted, true);
+  assert.equal(transactionSignal.reason, fatalError);
+  await closed;
+  for (let index = 0; index < 20 && process.exitCode !== 1; index += 1) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.equal(process.exitCode, 1);
+  process.exitCode = previousExitCode;
 });
 
 test("HTTP market and inbox reads await authoritative shared projections and surface failures as 503", async (t) => {

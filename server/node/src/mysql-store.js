@@ -185,6 +185,7 @@ const ACCOUNT_CHARACTER_SLOT_COUNT = 4;
 const MYSQL_ENTITY_STATE_PRESENT = Symbol("beastbound.mysqlEntityStatePresent");
 const MYSQL_STORE_REVISION = Symbol("beastbound.mysqlStoreRevision");
 const MYSQL_STORE_REVISION_PRESENT = Symbol("beastbound.mysqlStoreRevisionPresent");
+const MYSQL_POOL_TRANSACTION_SIGNALS = new WeakMap();
 const MYSQL_HISTORY_SEQUENCE_CONTRACTS = Object.freeze([
   Object.freeze({tableName: "battle_records", indexName: "uq_battle_records_history_seq"}),
   Object.freeze({tableName: "battle_trace", indexName: "uq_battle_trace_history_seq"}),
@@ -247,6 +248,9 @@ function createMysqlAuthStore(options = {}) {
       const candidate = config.poolFactory(mysqlPoolOptions(config));
       if (!candidate || typeof candidate.getConnection !== "function" || typeof candidate.end !== "function") {
         throw new Error("MySQL 持久连接池工厂返回了无效对象。");
+      }
+      if (config.transactionSignal !== null) {
+        MYSQL_POOL_TRANSACTION_SIGNALS.set(candidate, config.transactionSignal);
       }
       writePool = candidate;
     }
@@ -1321,6 +1325,7 @@ function createMysqlAuthStore(options = {}) {
         return undefined;
       }
       closePromise = Promise.resolve(writePool.end());
+      MYSQL_POOL_TRANSACTION_SIGNALS.delete(writePool);
       return closePromise;
     },
   };
@@ -7494,11 +7499,27 @@ function mysqlConfig(options) {
         ?? options.metadataLockWaitTimeoutSeconds
         ?? process.env.BEASTBOUND_MYSQL_METADATA_LOCK_WAIT_TIMEOUT_SECONDS,
     }),
+    transactionSignal: mysqlTransactionSignal(options.transactionSignal),
     singleWriterMaintenance: boolConfig(
       options.singleWriterMaintenance,
       process.env.BEASTBOUND_MYSQL_SINGLE_WRITER_MAINTENANCE,
     ),
   };
+}
+
+function mysqlTransactionSignal(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (
+    typeof value !== "object"
+    || typeof value.aborted !== "boolean"
+    || typeof value.addEventListener !== "function"
+    || typeof value.removeEventListener !== "function"
+  ) {
+    throw new TypeError("MySQL transaction signal must be an AbortSignal.");
+  }
+  return value;
 }
 
 function mysqlPoolEnabled(options, mysqlPathExplicit) {
@@ -8436,6 +8457,7 @@ async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites)
       "retryable",
       "rollbackConfirmed",
       "timeout",
+      "transactionFenced",
       "transactionPhase",
     ]) {
       if (error && error[field] !== undefined) {
@@ -8452,10 +8474,14 @@ async function runMysqlPoolSaveTransaction(pool, options, executeBusinessWrites)
 
 async function runMysqlGuardedPoolTransaction(pool, options, executeBusiness, lifecycle = {}) {
   const policy = normalizeMysqlTransactionPolicy(options && options.transactionPolicy);
-  const guardOptions = options && options.transactionGuardOptions
+  const configuredGuardOptions = options && options.transactionGuardOptions
     && typeof options.transactionGuardOptions === "object"
     ? options.transactionGuardOptions
     : {};
+  const pooledSignal = pool && MYSQL_POOL_TRANSACTION_SIGNALS.get(pool);
+  const guardOptions = configuredGuardOptions.signal === undefined && pooledSignal !== undefined
+    ? {...configuredGuardOptions, signal: pooledSignal}
+    : configuredGuardOptions;
   let connection = null;
   let deadline = null;
   let transactionStarted = false;
@@ -8465,13 +8491,16 @@ async function runMysqlGuardedPoolTransaction(pool, options, executeBusiness, li
     deadline = createMysqlTransactionDeadlineController(connection, policy, guardOptions);
     const guardedConnection = mysqlDeadlineConnection(connection, deadline);
     if (typeof lifecycle.beforeBegin === "function") {
+      deadline.assertActive();
       await deadline.track(
         mysqlCallbackOperation(() => lifecycle.beforeBegin(guardedConnection)),
         {classifyFailure: false},
       );
     }
+    deadline.assertActive();
     await deadline.track(mysqlConnectionOperation(connection, "beginTransaction"));
     transactionStarted = true;
+    deadline.assertActive();
     const result = await deadline.track(
       mysqlCallbackOperation(() => executeBusiness(guardedConnection)),
       {classifyFailure: false},
@@ -8495,7 +8524,7 @@ async function runMysqlGuardedPoolTransaction(pool, options, executeBusiness, li
       }
       error = classifyMysqlTransactionFailure(error, {commitDispatched: true});
     } else if (connection !== null && transactionStarted) {
-      if (deadlineTerminated && error && error.timeout === true) {
+      if (deadlineTerminated && error && error.noCommitGuaranteed === true) {
         connectionReusable = false;
       } else {
         try {
@@ -8513,7 +8542,7 @@ async function runMysqlGuardedPoolTransaction(pool, options, executeBusiness, li
         ? decorateMysqlNoCommitError(error, rollbackCompleted)
         : classifyMysqlTransactionFailure(error, {rollbackCompleted});
     } else if (connection !== null && deadline !== null) {
-      if (deadlineTerminated && error && error.timeout === true) {
+      if (deadlineTerminated && error && error.noCommitGuaranteed === true) {
         connectionReusable = false;
       } else {
         // Isolation/BEGIN failures have no possible COMMIT, but the driver's

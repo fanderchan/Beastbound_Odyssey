@@ -177,6 +177,37 @@ test("pre-COMMIT hard deadline destroys the connection with a known no-commit re
   blocked.resolve([[], []]);
 });
 
+test("cluster fatal transaction fence destroys a blocked pre-COMMIT connection", async () => {
+  const timers = fakeTimers();
+  const blocked = deferred();
+  const fence = new AbortController();
+  const fixture = fakeConnection({
+    query(sql) {
+      return sql === "UPDATE blocked_row" ? blocked.promise : Promise.resolve([[], []]);
+    },
+  });
+  const operation = runMysqlTransaction(
+    {getConnection: async () => fixture.connection},
+    {transactionGuardOptions: {timers, signal: fence.signal}},
+    (connection) => connection.query("UPDATE blocked_row"),
+  );
+  await waitFor(() => fixture.events.includes("query:UPDATE blocked_row:"));
+  fence.abort(Object.assign(new Error("account owner lease expired"), {
+    code: "cluster_account_owner_lease_expired",
+  }));
+  await assert.rejects(operation, (error) => error.code === MYSQL_TRANSACTION_ROLLED_BACK
+    && error.transactionFenced === true
+    && error.commitDispatched === false
+    && error.noCommitGuaranteed === true
+    && error.outcomeUnknown === false);
+  assert.equal(fixture.destroys(), 1);
+  assert.equal(fixture.events.includes("rollback"), false);
+  assert.equal(fixture.events.includes("commit"), false);
+  assert.equal(fixture.events.includes("release"), false);
+  assert.equal(timers.activeCount(), 0);
+  blocked.resolve([[], []]);
+});
+
 test("deadline after COMMIT dispatch is ambiguous and never sends ROLLBACK", async () => {
   const timers = fakeTimers();
   const pendingCommit = deferred();

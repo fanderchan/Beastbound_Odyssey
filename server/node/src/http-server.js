@@ -1625,12 +1625,16 @@ async function startDefaultHttpServer(options = {}) {
   let server = null;
   let fatalShutdownStarted = false;
   let startupFatal = null;
+  const clusterFatalTransactionFence = new AbortController();
   const reportClusterError = typeof options.onClusterError === "function"
     ? options.onClusterError
     : (error) => console.error(`Beastbound cluster relay error: ${String(error && error.code || "cluster_relay_failed")}`);
 
   const onClusterFatal = (error) => {
     startupFatal = error || new Error("cluster relay failed");
+    if (!clusterFatalTransactionFence.signal.aborted) {
+      clusterFatalTransactionFence.abort(startupFatal);
+    }
     reportClusterError(startupFatal);
     if (!server || fatalShutdownStarted) {
       return;
@@ -1655,7 +1659,7 @@ async function startDefaultHttpServer(options = {}) {
     if (startupFatal) {
       throw startupFatal;
     }
-    store = createStore();
+    store = createStore({transactionSignal: clusterFatalTransactionFence.signal});
     const service = createPreloadedAuthService(store);
     server = createHttpServer({
       service,
@@ -1719,7 +1723,11 @@ function createDefaultStore(options = {}) {
   const mysqlStoreOptions = options.mysqlStoreOptions && typeof options.mysqlStoreOptions === "object"
     ? options.mysqlStoreOptions
     : {};
-  return createAsyncWriteAuthStore(createMysqlAuthStore({...mysqlStoreOptions, usePool: true}), {
+  return createAsyncWriteAuthStore(createMysqlAuthStore({
+    ...mysqlStoreOptions,
+    transactionSignal: options.transactionSignal ?? mysqlStoreOptions.transactionSignal,
+    usePool: true,
+  }), {
     onError(error) {
       console.error(`Beastbound MySQL auth store save failed: ${error.message}`);
     },

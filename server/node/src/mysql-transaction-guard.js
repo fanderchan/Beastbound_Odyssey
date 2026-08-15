@@ -147,24 +147,55 @@ function createMysqlTransactionDeadlineController(connection, policyValue = {}, 
   }
   const policy = normalizeMysqlTransactionPolicy(policyValue);
   const timers = mysqlGuardTimers(options);
+  const signal = mysqlTransactionAbortSignal(options.signal);
   let commitDispatched = false;
   let finished = false;
   let terminalError = null;
   const waiters = new Set();
-  let timer = timers.setTimeout(() => {
-    timer = null;
+  let abortListener = null;
+  let timer = null;
+
+  function clearLifecycleTriggers() {
+    if (timer !== null) {
+      timers.clearTimeout(timer);
+      timer = null;
+    }
+    if (signal !== null && abortListener !== null) {
+      signal.removeEventListener("abort", abortListener);
+      abortListener = null;
+    }
+  }
+
+  function terminate(error) {
     if (finished) {
       return;
     }
-    terminalError = transactionOutcomeError(null, {commitDispatched, timedOut: true});
+    clearLifecycleTriggers();
+    terminalError = error;
     finished = true;
     destroyMysqlConnection(connection, terminalError);
     for (const waiter of waiters) {
       waiter.reject(terminalError);
     }
     waiters.clear();
-  }, policy.transactionTimeoutMs);
+  }
+
+  timer = timers.setTimeout(() => terminate(
+    transactionOutcomeError(null, {commitDispatched, timedOut: true}),
+  ), policy.transactionTimeoutMs);
   timer?.unref?.();
+
+  if (signal !== null) {
+    abortListener = () => terminate(transactionOutcomeError(signal.reason, {
+      commitDispatched,
+      fenced: true,
+    }));
+    if (signal.aborted) {
+      abortListener();
+    } else {
+      signal.addEventListener("abort", abortListener, {once: true});
+    }
+  }
 
   function track(operationValue, trackOptions = {}) {
     if (terminalError !== null) {
@@ -199,16 +230,20 @@ function createMysqlTransactionDeadlineController(connection, policyValue = {}, 
     commitDispatched = true;
   }
 
-  function complete() {
-    if (timer !== null) {
-      timers.clearTimeout(timer);
-      timer = null;
+  function assertActive() {
+    if (finished) {
+      throw terminalError || new Error("MySQL transaction deadline controller is finished.");
     }
+  }
+
+  function complete() {
+    clearLifecycleTriggers();
     finished = true;
   }
 
   return Object.freeze({
     track,
+    assertActive,
     markCommitDispatched,
     complete,
     isCommitDispatched: () => commitDispatched,
@@ -248,6 +283,7 @@ function transactionOutcomeError(cause, options = {}) {
       cause: cause || undefined,
       mysqlCode: cause && typeof cause.code === "string" ? cause.code : undefined,
       timeout: options.timedOut === true,
+      transactionFenced: options.fenced === true,
       transactionPhase: ambiguous ? "commit_ambiguous" : "rolled_back",
       commitDispatched: options.commitDispatched === true,
       outcomeAmbiguous: ambiguous,
@@ -257,6 +293,21 @@ function transactionOutcomeError(cause, options = {}) {
       retryable: !ambiguous,
     },
   );
+}
+
+function mysqlTransactionAbortSignal(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (
+    typeof value !== "object"
+    || typeof value.aborted !== "boolean"
+    || typeof value.addEventListener !== "function"
+    || typeof value.removeEventListener !== "function"
+  ) {
+    throw new TypeError("MySQL transaction signal must be an AbortSignal.");
+  }
+  return value;
 }
 
 function settleWithDeadline({
