@@ -10,14 +10,20 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import tempfile
 from typing import Any
+import uuid
 
+import godot_qa_user_data_lane as lane_helper
 import map_visual_evidence_builder as builder
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GODOT = "godot"
+QA_LANE = "automation"
+QA_LANE_ARGUMENT = "--beastbound-qa-user-data-lane=automation"
+QA_ATTESTATION_PREFIX = "BEASTBOUND_QA_USER_DATA_ATTESTATION: "
+QA_FEATURE = "beastbound_qa_automation"
+QA_CUSTOM_USER_DIR_NAME = "BeastboundOdysseyQA_Automation"
 
 
 def _utc_now() -> str:
@@ -30,15 +36,11 @@ def _command(
     map_id: str,
     variant: str,
     mode: str,
-    *,
-    user_data_dir: Path,
 ) -> list[str]:
     command = [
         GODOT,
         "--path",
         "client/godot",
-        "--user-data-dir",
-        str(user_data_dir),
         "--scene",
         "res://scenes/Main.tscn",
         "--windowed",
@@ -53,43 +55,217 @@ def _command(
         "--quit-after",
         "480" if mode == "idle" else "2600",
         "--",
+        QA_LANE_ARGUMENT,
         f"--map-perf-probe-map={map_id}",
     ]
     if variant == "candidate":
         command.append(f"--map-art-review-preview={map_id}")
     if mode == "moving":
         command.append("--movement-spam-click-check")
-        command.append("--movement-spam-click-limit=30")
+        command.append("--movement-spam-click-limit=60")
     command.append("--perf-probe")
     return command
 
 
-def _run(command: list[str], map_id: str, variant: str, mode: str) -> dict[str, Any]:
-    started = _utc_now()
-    completed = subprocess.run(
-        command,
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
+def _lane_environment(
+    prepared: dict[str, Any],
+    *,
+    base_environment: dict[str, str],
+) -> dict[str, str]:
+    editor_features = [
+        value.strip()
+        for value in str(prepared.get("editorCustomFeatures", "")).split(",")
+        if value.strip()
+    ]
+    if (
+        prepared.get("status") != "prepared"
+        or prepared.get("lane") != QA_LANE
+        or prepared.get("feature") != QA_FEATURE
+        or prepared.get("customUserDirName") != QA_CUSTOM_USER_DIR_NAME
+        or not str(prepared.get("godotLaneRoot", "")).strip()
+        or QA_FEATURE not in editor_features
+    ):
+        raise builder.EvidenceError("QA lane prepare identity is invalid")
+    environment = dict(base_environment)
+    environment.update(
+        {
+            "GODOT_EDITOR_CUSTOM_FEATURES": str(prepared["editorCustomFeatures"]),
+            "BEASTBOUND_QA_USER_DATA_LANE": QA_LANE,
+            "BEASTBOUND_QA_EXPECTED_USER_DATA_ROOT": str(prepared["godotLaneRoot"]),
+        }
     )
-    ended = _utc_now()
-    record = {
-        "schemaVersion": 1,
-        "recordType": "beastbound_map_performance_runner_receipt",
-        "mapId": map_id,
-        "variant": variant,
-        "mode": mode,
-        "runner": "godot",
-        "argv": command,
-        "startedAtUtc": started,
-        "endedAtUtc": ended,
-        "returncode": completed.returncode,
-        "stdout": completed.stdout,
-        "stderr": completed.stderr,
+    return environment
+
+
+def _parse_qa_lane_attestation(
+    text: str,
+    prepared: dict[str, Any],
+) -> dict[str, str]:
+    lines = [
+        line
+        for line in text.splitlines()
+        if QA_ATTESTATION_PREFIX in line
+    ]
+    if len(lines) != 1 or not lines[0].startswith(QA_ATTESTATION_PREFIX):
+        raise builder.EvidenceError(
+            f"performance run must emit exactly one QA lane attestation; got {len(lines)}"
+        )
+    try:
+        payload = json.loads(lines[0][len(QA_ATTESTATION_PREFIX) :])
+    except json.JSONDecodeError as error:
+        raise builder.EvidenceError("invalid QA lane attestation JSON") from error
+    expected = {
+        "customUserDirName": QA_CUSTOM_USER_DIR_NAME,
+        "feature": QA_FEATURE,
+        "lane": QA_LANE,
+        "status": "passed",
+        "userDataRoot": str(prepared["godotLaneRoot"]),
     }
-    # Validate each run before it can enter the frozen receipt.
-    builder.parse_perf_run(record)
+    if payload != expected:
+        raise builder.EvidenceError("QA lane attestation identity mismatch")
+    return expected
+
+
+def _validate_lane_cleanup(
+    prepared: dict[str, Any],
+    verified: dict[str, Any] | None,
+    cleaned: dict[str, Any],
+    inspected: dict[str, Any],
+) -> None:
+    if verified is not None and (
+        verified.get("status") != "verified"
+        or verified.get("lane") != QA_LANE
+        or verified.get("owner") != prepared.get("owner")
+        or verified.get("realUnchanged") is not True
+        or verified.get("realInventorySha256")
+        != prepared.get("realInventorySha256")
+    ):
+        raise builder.EvidenceError("QA lane verification identity mismatch")
+    if (
+        cleaned.get("status") != "cleaned"
+        or cleaned.get("lane") != QA_LANE
+        or cleaned.get("owner") != prepared.get("owner")
+        or cleaned.get("laneAbsent") is not True
+        or cleaned.get("realUnchanged") is not True
+        or cleaned.get("realInventorySha256")
+        != prepared.get("realInventorySha256")
+    ):
+        raise builder.EvidenceError("QA lane cleanup did not prove isolation")
+    if (
+        inspected.get("status") != "inspected"
+        or inspected.get("lane") != QA_LANE
+        or inspected.get("owner") != prepared.get("owner")
+        or inspected.get("laneRootState") != "absent"
+        or inspected.get("pendingLockState") != "absent"
+        or inspected.get("publishedLockState") != "absent"
+        or inspected.get("realInventorySha256")
+        != prepared.get("realInventorySha256")
+    ):
+        raise builder.EvidenceError("QA lane post-clean inspection failed")
+
+
+def _run(
+    command: list[str],
+    map_id: str,
+    variant: str,
+    mode: str,
+    *,
+    runner: Any = subprocess.run,
+    lane_api: Any = lane_helper,
+    base_environment: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    base = dict(os.environ if base_environment is None else base_environment)
+    owner = uuid.uuid4().hex
+    prepared = dict(
+        lane_api.prepare_lane(
+            QA_LANE,
+            str(base.get("GODOT_EDITOR_CUSTOM_FEATURES", "")),
+            owner,
+        )
+    )
+    started = _utc_now()
+    record: dict[str, Any] | None = None
+    verified: dict[str, Any] | None = None
+    primary_error: BaseException | None = None
+    try:
+        environment = _lane_environment(prepared, base_environment=base)
+        completed = runner(
+            command,
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=environment,
+        )
+        ended = _utc_now()
+        attestation = _parse_qa_lane_attestation(
+            completed.stdout + completed.stderr,
+            prepared,
+        )
+        record = {
+            "schemaVersion": 1,
+            "recordType": "beastbound_map_performance_runner_receipt",
+            "mapId": map_id,
+            "variant": variant,
+            "mode": mode,
+            "runner": "godot",
+            "argv": command,
+            "startedAtUtc": started,
+            "endedAtUtc": ended,
+            "returncode": completed.returncode,
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+            "qaLane": {"attestation": attestation},
+        }
+        # Validate each run before it can enter the frozen receipt.
+        builder.parse_perf_run(record)
+        verified = dict(
+            lane_api.verify_lane(
+                QA_LANE,
+                str(prepared["owner"]),
+                str(prepared["realInventorySha256"]),
+            )
+        )
+    except BaseException as error:
+        primary_error = error
+
+    cleanup_error: BaseException | None = None
+    cleaned: dict[str, Any] = {}
+    inspected: dict[str, Any] = {}
+    try:
+        cleaned = dict(
+            lane_api.cleanup_lane(
+                QA_LANE,
+                str(prepared["owner"]),
+                str(prepared["realInventorySha256"]),
+            )
+        )
+        inspected = dict(lane_api.inspect_lane(QA_LANE, str(prepared["owner"])))
+        _validate_lane_cleanup(prepared, verified, cleaned, inspected)
+    except BaseException as error:
+        cleanup_error = error
+
+    if cleanup_error is not None:
+        if primary_error is not None:
+            raise builder.EvidenceError(
+                f"performance run failed ({primary_error}) and QA lane cleanup failed ({cleanup_error})"
+            ) from cleanup_error
+        raise builder.EvidenceError(
+            f"QA lane cleanup failed: {cleanup_error}"
+        ) from cleanup_error
+    if primary_error is not None:
+        raise primary_error
+    if record is None or verified is None:
+        raise builder.EvidenceError("performance run did not produce a validated record")
+    record["qaLane"].update(
+        {
+            "verified": True,
+            "realUnchanged": True,
+            "laneAbsentAfterCleanup": True,
+            "realInventorySha256": str(cleaned["realInventorySha256"]),
+            "postCleanupInspectionSha256": str(inspected["inspectionSha256"]),
+        }
+    )
     return record
 
 
@@ -145,6 +321,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     try:
+        lane_helper.validate_repository_contract(REPO_ROOT)
         current_identity = builder.build_identity()
         if args.build_identity != current_identity:
             raise builder.EvidenceError(
@@ -159,22 +336,14 @@ def main(argv: list[str] | None = None) -> int:
             for map_id in map_ids:
                 for variant in ("baseline", "candidate"):
                     for mode in ("idle", "moving"):
-                        with tempfile.TemporaryDirectory(
-                            prefix=f"beastbound-map-perf-{map_id}-{variant}-{mode}-"
-                        ) as temporary:
-                            all_records[bundle_id].append(
-                                _run(
-                                    _command(
-                                        map_id,
-                                        variant,
-                                        mode,
-                                        user_data_dir=Path(temporary),
-                                    ),
-                                    map_id,
-                                    variant,
-                                    mode,
-                                )
+                        all_records[bundle_id].append(
+                            _run(
+                                _command(map_id, variant, mode),
+                                map_id,
+                                variant,
+                                mode,
                             )
+                        )
         if builder.build_identity() != current_identity:
             raise builder.EvidenceError(
                 "map runtime identity drifted during performance execution"
