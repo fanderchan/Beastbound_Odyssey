@@ -88,13 +88,13 @@ The real local engine gate starts an ephemeral loopback Valkey process, runs the
 node tools/run_valkey_event_bridge_live_gate.mjs
 ```
 
-The independent-process gate starts two game Node processes on different HTTP/WebSocket ports. It proves cross-node presence and world chat, receiver-local event-sequence isolation, wrong-node login rejection before session mutation, same-owner session replacement, forced owner-process death, expiry takeover, presence revision generation advancement, and generation-two authority reload after an isolated backing store advances the account, profile revision, persistent party, and latest service-event sequence while the takeover Node's service cache remains stale. The reconnect WebSocket is the first successful post-expiry admission and must receive the new account, latest sequence, epoch reset, and persistent party snapshot:
+The independent-process gate starts two game Node processes on different HTTP/WebSocket ports. It proves cross-node presence and world chat, receiver-local event-sequence isolation, wrong-node login rejection before session mutation, same-owner session replacement, forced owner-process death, expiry takeover, presence revision generation advancement, and generation-two authority reload after an isolated backing store advances the account, profile revision, persistent party, durable nearby-chat history, and latest service-event sequence while the takeover Node's service cache remains stale. The reconnect WebSocket is the first successful post-expiry admission and must receive the new account, latest sequence, epoch reset, and persistent party snapshot; the normal authenticated chat-history endpoint must then expose the missing durable message from the rebased root:
 
 ```sh
 node tools/run_valkey_two_node_event_gate.mjs
 ```
 
-Remote replayable events are intentionally projected as live-only frames on the receiving Node: the relay envelope remains deduplicated, while the source Node's private `eventSeq/eventId` is not reused as the receiving Node's cursor. This prevents silent live loss. Cross-owner reconnect now has a proven epoch-reset plus persistent-state snapshot, but still no cross-owner event-by-event replay.
+Remote replayable events are intentionally projected as live-only frames on the receiving Node: the relay envelope remains deduplicated, while the source Node's private `eventSeq/eventId` is not reused as the receiving Node's cursor. This prevents silent live loss. Cross-owner reconnect now has a proven epoch-reset, persistent-party snapshot, and durable chat-history refetch, but still no cross-owner event-by-event replay.
 
 This fixture proves the takeover/rebase and persistent reconnect-state mechanism but is not a real shared-MySQL two-process gate. Offline event-by-event hydration, authoritative battle-runtime recovery, network-partition fencing beyond lease expiry, and the 200-connection long soak required by `P0.6d-3b` also remain unproven.
 

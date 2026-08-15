@@ -32,6 +32,8 @@ const NODE_LEASE_MS = 3000;
 const ACCOUNT_LEASE_MS = 3000;
 const TAKEOVER_AUTHORITY_MARKER = "generation-2-authority-reloaded";
 const TAKEOVER_DISPLAY_NAME = "跨节点接管新事实";
+const TAKEOVER_CHAT_MESSAGE_ID = "chat_cluster_takeover_gate";
+const TAKEOVER_CHAT_TEXT = "接管后补回的持久聊天";
 
 async function runGate() {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-two-node-gate-"));
@@ -196,6 +198,9 @@ async function runGate() {
     assert.equal(seededAuthority.storedDisplayName, TAKEOVER_DISPLAY_NAME);
     assert.equal(seededAuthority.storedProfileMarker, TAKEOVER_AUTHORITY_MARKER);
     assert.equal(seededAuthority.storedPartyId, "party_cluster_takeover_gate");
+    assert.equal(seededAuthority.localChatMessagePresent, false);
+    assert.equal(seededAuthority.storedChatMessageId, TAKEOVER_CHAT_MESSAGE_ID);
+    assert.equal(seededAuthority.storedChatMessageText, TAKEOVER_CHAT_TEXT);
     assert.ok(seededAuthority.storedLatestEventSeq > seededAuthority.localLatestEventSeq);
 
     aliceSocket.expectedClose = true;
@@ -247,6 +252,23 @@ async function runGate() {
     );
     assert.equal(aliceReconnectSocket.resetCount, 1);
     assert.equal(aliceReconnectSocket.protocolErrors, 0);
+
+    // Reset deliberately does not pretend that two node-local eventSeq spaces
+    // form one replay cursor. The client responds by refetching each durable
+    // domain; prove that the new owner now serves the chat gap from persistent
+    // history while the party's current state already arrived in the snapshot.
+    const recoveredChatHistory = await expectOk(
+      nodeB,
+      "/chat/messages?channel=nearby&limit=50",
+      {token: alice.token},
+    );
+    assert.equal(recoveredChatHistory.json.channel, "nearby");
+    const recoveredTakeoverChat = recoveredChatHistory.json.messages.find((message) => (
+      message && message.messageId === TAKEOVER_CHAT_MESSAGE_ID
+    ));
+    assert.ok(recoveredTakeoverChat, JSON.stringify(recoveredChatHistory.json));
+    assert.equal(recoveredTakeoverChat.text, TAKEOVER_CHAT_TEXT);
+    assert.equal(recoveredTakeoverChat.senderDisplayName, TAKEOVER_DISPLAY_NAME);
 
     const takeoverPresence = bobSocket.waitFor((event) => (
       event
@@ -304,6 +326,9 @@ async function runGate() {
       takeoverWebSocketFirstSuccessfulAdmission: true,
       ownerEpochResetBeforeReconnectSnapshot: true,
       persistentReconnectStateHydrationProven: true,
+      partyCurrentStateHydrationProven: true,
+      persistentChatHistoryHydrationProven: true,
+      crossOwnerChatAndPartyRecoveryProven: true,
       partyAndBattleAuthorityTakeoverProven: false,
       reconnectEventReplayProven: false,
       battleRuntimeReconnectHydrationProven: false,
@@ -625,6 +650,20 @@ async function runNodeWorker() {
           updatedAt: new Date(nowMs + 1000).toISOString(),
           schemaVersion: 1,
         };
+        data.chatMessages = [
+          ...(Array.isArray(data.chatMessages) ? data.chatMessages : []),
+          {
+            messageId: TAKEOVER_CHAT_MESSAGE_ID,
+            channel: "nearby",
+            partyId: "",
+            senderAccountId: alice.accountId,
+            senderUsername: alice.username,
+            senderDisplayName: TAKEOVER_DISPLAY_NAME,
+            text: TAKEOVER_CHAT_TEXT,
+            createdAt: new Date(nowMs + 1000).toISOString(),
+            schemaVersion: 1,
+          },
+        ];
         const latestEventSeq = Math.max(
           Number(data.serviceEventSeq || 0),
           ...(Array.isArray(data.serviceEvents)
@@ -646,6 +685,11 @@ async function runNodeWorker() {
         ];
         store.save(data);
         const stored = store.load();
+        const storedChatMessage = Array.isArray(stored.chatMessages)
+          ? stored.chatMessages.find((entry) => (
+            entry && entry.messageId === TAKEOVER_CHAT_MESSAGE_ID
+          ))
+          : null;
         send({
           id: message.id,
           ok: true,
@@ -663,6 +707,12 @@ async function runNodeWorker() {
               && stored.parties.party_cluster_takeover_gate.partyId
               || "",
             ),
+            localChatMessagePresent: Array.isArray(local.chatMessages)
+              && local.chatMessages.some((entry) => (
+                entry && entry.messageId === TAKEOVER_CHAT_MESSAGE_ID
+              )),
+            storedChatMessageId: String(storedChatMessage && storedChatMessage.messageId || ""),
+            storedChatMessageText: String(storedChatMessage && storedChatMessage.text || ""),
           },
         });
       } catch (error) {
