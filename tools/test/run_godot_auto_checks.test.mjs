@@ -1015,10 +1015,36 @@ test("text auto completion rejects contradictory success evidence", () => {
   }
 });
 
+test("auth server client success evidence does not reuse a reserved failure field", () => {
+  const coordinatorSource = fs.readFileSync(
+    path.join(repoRoot, "client/godot/scripts/qa/auto_check_coordinator.gd"),
+    "utf8",
+  );
+  const completionFormat = coordinatorSource
+    .split(/\r?\n/)
+    .find((line) => line.includes('print("auth server client check ready:')) || "";
+  assert.match(completionFormat, / error_contract=%s /);
+  assert.doesNotMatch(completionFormat, / error=%s /);
+  assert.equal(
+    parseAutoCheckCompletion(
+      "auth server client check ready: status=ok reconnect_ui=true error_contract=true ui_server=true",
+      "--auto-auth-server-client-check",
+    ).status,
+    "ok",
+  );
+  assert.equal(
+    parseAutoCheckCompletion(
+      "auth server client check ready: status=ok reconnect_ui=true error=true ui_server=true",
+      "--auto-auth-server-client-check",
+    ).status,
+    "failed",
+  );
+});
+
 test("every discovered auto flag has one unique source-backed completion contract", () => {
   const source = scriptSourceTree(path.join(repoRoot, "client/godot/scripts"));
   const flags = discoverAutoCheckFlags();
-  assert.equal(flags.length, 221);
+  assert.equal(flags.length, 222);
   const prefixes = new Set();
   for (const flag of flags) {
     const contract = autoCheckCompletionContract(flag);
