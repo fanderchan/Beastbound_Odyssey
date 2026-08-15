@@ -133,6 +133,18 @@ class RuntimeScreenshotCoverageTests(unittest.TestCase):
             )
         )
 
+    def test_same_map_action_screenshots_must_not_share_pixel_hash(self) -> None:
+        digest = "a" * 64
+        screenshots = [
+            {"mapId": "solo_map", "image": {"sha256": digest}},
+            {"mapId": "solo_map", "image": {"sha256": digest}},
+            {"mapId": "second_map", "image": {"sha256": digest}},
+        ]
+        self.assertEqual(
+            {("solo_map", digest)},
+            AUDITOR.duplicate_runtime_screenshot_hashes(screenshots),
+        )
+
 
 class ReleaseAttestationTests(unittest.TestCase):
     def _write_attestation(
