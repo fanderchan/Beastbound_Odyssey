@@ -2,19 +2,29 @@
 
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import {fork, spawn} from "node:child_process";
+import {execFileSync, fork, spawn} from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import {
+  PerformanceObserver,
+  constants as performanceConstants,
+  monitorEventLoopDelay,
+  performance,
+} from "node:perf_hooks";
 import {createRequire} from "node:module";
 import {fileURLToPath} from "node:url";
 import {
+  LatencyBook,
   RawJsonWebSocket,
   boundedTail,
+  bytesToMiB,
   delay,
   fetchJsonMeasured,
+  round,
+  seededRandom,
   withTimeout,
 } from "./lib/public-capacity-harness.mjs";
 import {
@@ -38,11 +48,147 @@ const ACCOUNT_LEASE_MS = 3000;
 const PARTITION_TRANSACTION_TIMEOUT_MS = 15000;
 const PARTITION_ROW_LOCK_WAIT_TIMEOUT_SECONDS = 15;
 const PARTITION_HTTP_TIMEOUT_MS = 10000;
+const CAPACITY_GC_KIND_NAMES = new Map([
+  [performanceConstants.NODE_PERFORMANCE_GC_MAJOR, "major"],
+  [performanceConstants.NODE_PERFORMANCE_GC_MINOR, "minor"],
+  [performanceConstants.NODE_PERFORMANCE_GC_INCREMENTAL, "incremental"],
+  [performanceConstants.NODE_PERFORMANCE_GC_WEAKCB, "weak_callback"],
+].filter(([value]) => Number.isInteger(value)));
 const TAKEOVER_AUTHORITY_MARKER = "generation-2-authority-reloaded";
 const TAKEOVER_DISPLAY_NAME = "跨节点接管新事实";
 const TAKEOVER_CHAT_MESSAGE_ID = "chat_cluster_takeover_gate";
 const TAKEOVER_CHAT_TEXT = "接管后补回的持久聊天";
 const BATTLE_FAILURE_TICKET_PATTERN = /^battle_failure_[a-f0-9]{32}$/;
+const CAPACITY_ACCOUNT_COUNT = 200;
+const CAPACITY_QUICK_SECONDS = 120;
+const CAPACITY_FULL_SECONDS = 1800;
+const CAPACITY_TICK_MS = 100;
+const CAPACITY_SAMPLE_MS = 1000;
+const CAPACITY_CLUSTER_PATHS = Object.freeze([
+  Object.freeze([[5, 5], [6, 5], [6, 6], [5, 6]]),
+  Object.freeze([[28, 5], [29, 5], [29, 6], [28, 6]]),
+  Object.freeze([[5, 27], [6, 27], [6, 28], [5, 28]]),
+  Object.freeze([[28, 27], [29, 27], [29, 28], [28, 28]]),
+]);
+const CAPACITY_MAX_FAILURE_ROWS = 200;
+
+function createCapacityGcTelemetry(enabled) {
+  let available = false;
+  let unavailableReason = enabled ? "gc_performance_observer_unavailable" : "capacity_mode_disabled";
+  let observer = null;
+  let interval = emptyCapacityGcInterval();
+  const recordEntries = (entries) => {
+    for (const entry of entries) {
+      const durationMs = Number(entry && entry.duration);
+      if (!Number.isFinite(durationMs) || durationMs < 0) {
+        continue;
+      }
+      const detail = entry.detail && typeof entry.detail === "object" ? entry.detail : {};
+      const kind = Number.isInteger(Number(detail.kind))
+        ? Number(detail.kind)
+        : Number(entry.kind || 0);
+      const flags = Number.isInteger(Number(detail.flags))
+        ? Number(detail.flags)
+        : Number(entry.flags || 0);
+      const kindName = CAPACITY_GC_KIND_NAMES.get(kind) || `unknown_${kind}`;
+      const normalized = {
+        kind,
+        kindName,
+        flags,
+        durationMs: round(durationMs),
+        startTimeMs: round(Number(entry.startTime || 0)),
+      };
+      interval.count += 1;
+      interval.durationMs += durationMs;
+      const byKind = interval.byKind[kindName] || {count: 0, durationMs: 0, maxDurationMs: 0};
+      byKind.count += 1;
+      byKind.durationMs += durationMs;
+      byKind.maxDurationMs = Math.max(byKind.maxDurationMs, durationMs);
+      interval.byKind[kindName] = byKind;
+      if (!interval.maxEvent || durationMs > interval.maxEvent.durationMs) {
+        interval.maxEvent = normalized;
+      }
+    }
+  };
+  if (enabled) {
+    try {
+      if (!PerformanceObserver.supportedEntryTypes.includes("gc")) {
+        throw new Error("gc performance entries are unsupported");
+      }
+      observer = new PerformanceObserver((list) => recordEntries(list.getEntries()));
+      observer.observe({entryTypes: ["gc"]});
+      available = true;
+      unavailableReason = "";
+    } catch (error) {
+      unavailableReason = String(error && error.message || error);
+    }
+  }
+  return Object.freeze({
+    snapshotAndReset() {
+      if (observer && typeof observer.takeRecords === "function") {
+        recordEntries(observer.takeRecords());
+      }
+      const maxEvent = interval.maxEvent ? {...interval.maxEvent} : null;
+      const result = {
+        available,
+        unavailableReason,
+        count: interval.count,
+        durationMs: round(interval.durationMs),
+        maxDurationMs: maxEvent ? maxEvent.durationMs : 0,
+        maxEvent,
+        byKind: Object.fromEntries(Object.entries(interval.byKind).map(([kindName, row]) => [kindName, {
+          count: row.count,
+          durationMs: round(row.durationMs),
+          maxDurationMs: round(row.maxDurationMs),
+        }])),
+      };
+      interval = emptyCapacityGcInterval();
+      return result;
+    },
+    disconnect() {
+      if (observer && typeof observer.takeRecords === "function") {
+        recordEntries(observer.takeRecords());
+      }
+      observer?.disconnect();
+      observer = null;
+    },
+  });
+}
+
+function emptyCapacityGcInterval() {
+  return {count: 0, durationMs: 0, maxEvent: null, byKind: {}};
+}
+
+function normalizeCapacityWorkerScheduling(enabled) {
+  if (!enabled || process.platform !== "darwin") {
+    return {
+      required: false,
+      supported: process.platform === "darwin",
+      success: true,
+      action: enabled ? "not_required_on_non_darwin" : "capacity_mode_disabled",
+    };
+  }
+  try {
+    execFileSync("/usr/sbin/taskpolicy", ["-B", "-p", String(process.pid)], {
+      stdio: "ignore",
+      timeout: 5000,
+    });
+    return {
+      required: true,
+      supported: true,
+      success: true,
+      action: "remove_darwin_background_policy",
+    };
+  } catch (error) {
+    return {
+      required: true,
+      supported: true,
+      success: false,
+      action: "remove_darwin_background_policy",
+      error: String(error && error.message || error),
+    };
+  }
+}
 
 async function runGate() {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-two-node-gate-"));
@@ -1362,6 +1508,10 @@ class NodeWorker {
         BEASTBOUND_GATE_MYSQL_DATABASE: String(mysqlConfiguration.database || ""),
         BEASTBOUND_GATE_MYSQL_BIN: String(mysqlConfiguration.mysqlPath || ""),
         BEASTBOUND_GATE_MYSQL_USER: String(mysqlConfiguration.user || "root"),
+        BEASTBOUND_GATE_CAPACITY_MODE: configuration.capacityMode === true ? "1" : "0",
+        BEASTBOUND_GATE_FIXTURE_ACCOUNT_COUNT: String(
+          configuration.fixtureAccountCount || 5,
+        ),
         BEASTBOUND_MYSQL_TRANSACTION_TIMEOUT_MS: String(mysqlConfiguration.transactionTimeoutMs || ""),
         BEASTBOUND_MYSQL_ROW_LOCK_WAIT_TIMEOUT_SECONDS: String(
           mysqlConfiguration.rowLockWaitTimeoutSeconds || "",
@@ -1371,7 +1521,11 @@ class NodeWorker {
       },
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     });
-    const worker = new NodeWorker(child, configuration.nodeId);
+    const worker = new NodeWorker(
+      child,
+      configuration.nodeId,
+      configuration.capacityMode === true ? 60000 : 10000,
+    );
     try {
       await worker.ready();
       return worker;
@@ -1381,12 +1535,13 @@ class NodeWorker {
     }
   }
 
-  constructor(child, nodeId) {
+  constructor(child, nodeId, readyTimeoutMs = 10000) {
     this.child = child;
     this.nodeId = nodeId;
     this.port = 0;
     this.accounts = [];
     this.fixtureDigest = "";
+    this.schedulingPolicy = null;
     this.stdout = "";
     this.stderr = "";
     this.requestId = 0;
@@ -1394,6 +1549,7 @@ class NodeWorker {
     this.fatalCodes = [];
     this.fatalErrors = [];
     this.readySettled = false;
+    this.readyTimeoutMs = readyTimeoutMs;
     this.readyPromise = new Promise((resolve, reject) => {
       this.resolveReady = resolve;
       this.rejectReady = reject;
@@ -1416,7 +1572,11 @@ class NodeWorker {
   }
 
   ready() {
-    return withTimeout(this.readyPromise, 10000, `node worker ${this.nodeId} ready timeout`);
+    return withTimeout(
+      this.readyPromise,
+      this.readyTimeoutMs,
+      `node worker ${this.nodeId} ready timeout`,
+    );
   }
 
   onMessage(message) {
@@ -1427,6 +1587,7 @@ class NodeWorker {
       this.port = Number(message.port || 0);
       this.accounts = Array.isArray(message.accounts) ? message.accounts : [];
       this.fixtureDigest = String(message.fixtureDigest || "");
+      this.schedulingPolicy = message.schedulingPolicy || null;
       this.readySettled = true;
       this.resolveReady(this);
       return;
@@ -1522,6 +1683,7 @@ class NodeWorker {
       exitCode: this.child.exitCode,
       signalCode: this.child.signalCode,
       fatalCodes: this.fatalCodes.slice(),
+      schedulingPolicy: this.schedulingPolicy,
       stdout: this.stdout,
       stderr: this.stderr,
     };
@@ -1545,10 +1707,22 @@ async function runNodeWorker() {
   } = require("../server/node/src/cluster-event-runtime-config");
 
   const nowMs = Date.now();
+  const capacityMode = process.env.BEASTBOUND_GATE_CAPACITY_MODE === "1";
+  const schedulingPolicy = normalizeCapacityWorkerScheduling(capacityMode);
+  if (schedulingPolicy.required && schedulingPolicy.success !== true) {
+    throw new Error(`capacity worker scheduling normalization failed: ${schedulingPolicy.error}`);
+  }
+  const fixtureAccountCount = Math.max(
+    5,
+    Math.min(1000, Math.trunc(Number(
+      process.env.BEASTBOUND_GATE_FIXTURE_ACCOUNT_COUNT || 5,
+    )) || 5),
+  );
   const clusterFatalTransactionFence = new AbortController();
   const fixture = clusterFixture(
     nowMs,
     Number(process.env.BEASTBOUND_GATE_SERVICE_EVENT_SEQ || 0),
+    {accountCount: fixtureAccountCount},
   );
   const sharedStorePath = String(process.env.BEASTBOUND_GATE_SHARED_STORE_PATH || "").trim();
   const mysqlDatabase = String(process.env.BEASTBOUND_GATE_MYSQL_DATABASE || "").trim();
@@ -1587,6 +1761,13 @@ async function runNodeWorker() {
   let clusterRuntime = null;
   let service = null;
   let shutdownStarted = false;
+  const eventLoopDelay = capacityMode
+    ? monitorEventLoopDelay({resolution: 10})
+    : null;
+  const gcTelemetry = createCapacityGcTelemetry(capacityMode);
+  if (eventLoopDelay) {
+    eventLoopDelay.enable();
+  }
 
   const shutdown = async (exitCode = 0) => {
     if (shutdownStarted) {
@@ -1602,6 +1783,8 @@ async function runNodeWorker() {
     if (store && typeof store.close === "function") {
       await store.close().catch(() => undefined);
     }
+    eventLoopDelay?.disable();
+    gcTelemetry.disconnect();
     setImmediate(() => process.exit(exitCode));
   };
   const fatal = (error) => {
@@ -1639,7 +1822,7 @@ async function runNodeWorker() {
     });
     service = createAuthService({
       store,
-      now: () => nowMs,
+      now: capacityMode ? () => Date.now() : () => nowMs,
       allowPositionTeleport: false,
       allowInitialPositionSeedForTests: true,
     });
@@ -1654,7 +1837,14 @@ async function runNodeWorker() {
     server = createHttpServer({
       service,
       store,
-      eventHubOptions: clusterRuntime.eventHubOptions,
+      eventHubOptions: {
+        ...clusterRuntime.eventHubOptions,
+        ...(capacityMode ? {
+          maxConnectionsPerIp: 256,
+          upgradeIpCapacity: 640,
+          upgradeIpWindowMs: 60_000,
+        } : {}),
+      },
       clusterAccountAdmission: clusterRuntime.accountAdmission,
       logger() {},
     });
@@ -1667,6 +1857,8 @@ async function runNodeWorker() {
       port: server.address().port,
       accounts: fixture.accounts,
       fixtureDigest: fixture.fixtureDigest,
+      capacityMode,
+      schedulingPolicy,
     });
   } catch (error) {
     fatal(error);
@@ -1674,6 +1866,47 @@ async function runNodeWorker() {
 
   process.on("message", (message) => {
     if (!message || typeof message !== "object" || !message.id) {
+      return;
+    }
+    if (message.command === "capacity-metrics") {
+      try {
+        const memory = process.memoryUsage();
+        const resource = process.resourceUsage();
+        const loopCount = Number(eventLoopDelay && eventLoopDelay.count || 0);
+        const capacityMetrics = [
+          "capacityMetrics",
+          "runtimeCapacityMetrics",
+          "authorityCardinalityMetrics",
+        ].map((methodName) => (
+          service && typeof service[methodName] === "function"
+            ? service[methodName]()
+            : null
+        )).find((value) => value && typeof value === "object") || null;
+        const result = {
+          memory: Object.fromEntries(Object.entries(memory).map(([key, value]) => [key, Number(value)])),
+          resourceUsage: {
+            userCpuTime: Number(resource.userCPUTime || 0),
+            systemCpuTime: Number(resource.systemCPUTime || 0),
+            maxRssKiB: Number(resource.maxRSS || 0),
+          },
+          eventLoop: {
+            count: loopCount,
+            p95Ms: loopCount > 0 ? Number(eventLoopDelay.percentile(95)) / 1e6 : 0,
+            p99Ms: loopCount > 0 ? Number(eventLoopDelay.percentile(99)) / 1e6 : 0,
+            maxMs: loopCount > 0 ? Number(eventLoopDelay.max) / 1e6 : 0,
+            utilization: Number(performance.eventLoopUtilization().utilization || 0),
+          },
+          gc: gcTelemetry.snapshotAndReset(),
+          durableMutations: service && typeof service.durableMutationMetrics === "function"
+            ? service.durableMutationMetrics()
+            : null,
+          capacityMetrics,
+        };
+        eventLoopDelay?.reset();
+        send({id: message.id, ok: true, result});
+      } catch (error) {
+        send({id: message.id, ok: false, error: String(error && error.stack || error)});
+      }
       return;
     }
     if (message.command === "seed-takeover-authority") {
@@ -1812,7 +2045,7 @@ async function runNodeWorker() {
   });
 }
 
-function clusterFixture(nowMs, serviceEventSeq) {
+function clusterFixture(nowMs, serviceEventSeq, options = {}) {
   const createdAt = new Date(nowMs).toISOString();
   const data = {
     accounts: {},
@@ -1829,6 +2062,14 @@ function clusterFixture(nowMs, serviceEventSeq) {
     fixtureIdentity("battle_challenger", "故障切磋甲"),
     fixtureIdentity("battle_opponent", "故障切磋乙"),
   ];
+  const accountCount = Math.max(
+    accounts.length,
+    Math.min(1000, Math.trunc(Number(options.accountCount || accounts.length)) || accounts.length),
+  );
+  for (let index = accounts.length; index < accountCount; index += 1) {
+    const suffix = String(index).padStart(3, "0");
+    accounts.push(fixtureIdentity(`capacity_${suffix}`, `容量旅人${suffix}`));
+  }
   for (const account of accounts) {
     const salt = crypto.createHash("sha256").update(`salt:${account.key}`).digest("hex").slice(0, 32);
     const playerId = `player_cluster_gate_${account.key}`;
@@ -2188,12 +2429,40 @@ function childRunning(child) {
   return Boolean(child && child.exitCode === null && child.signalCode === null);
 }
 
-if (process.argv.includes("--node-worker")) {
-  await runNodeWorker();
-} else if (process.argv.includes("--valkey-partition-only")) {
-  await runValkeyPartitionOldOwnerFenceGate();
-} else if (process.argv.includes("--mysql-battle-only")) {
-  await runMysqlBattleOwnerFailureGate();
-} else {
-  await runGate();
+if (process.argv[1] && path.resolve(process.argv[1]) === filePath) {
+  if (process.argv.includes("--node-worker")) {
+    await runNodeWorker();
+  } else if (process.argv.includes("--valkey-partition-only")) {
+    await runValkeyPartitionOldOwnerFenceGate();
+  } else if (process.argv.includes("--mysql-battle-only")) {
+    await runMysqlBattleOwnerFailureGate();
+  } else {
+    await runGate();
+  }
 }
+
+export {
+  ACCOUNT_LEASE_MS,
+  CAPACITY_ACCOUNT_COUNT,
+  CAPACITY_CLUSTER_PATHS,
+  LOOPBACK_HOST,
+  MAP_ID,
+  NodeWorker,
+  clusterFixture,
+  clusterHealth,
+  isolatedMysqlActivity,
+  isolatedMysqlAuthRevision,
+  isolatedMysqlDeadlockCount,
+  isolatedMysqlGlobalValues,
+  isolatedMysqlVersion,
+  loadMysqlBattleAuthority,
+  mysqlBattleAuthorityFixture,
+  mysqlBattleStoreOptions,
+  request,
+  reserveLoopbackPort,
+  startValkey,
+  stopExactChild,
+  waitFor,
+  waitForClusterReady,
+  waitForLoopback,
+};
