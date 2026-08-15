@@ -185,12 +185,18 @@ async function runGate() {
     assert.equal(bobSocket.presenceRevisionRegressions, 0);
     assert.equal(bobSocket.protocolErrors, 0);
 
+    const aliceReconnectEpoch = aliceSocket.epoch;
+    const aliceReconnectCursor = aliceSocket.lastEventSeq;
+    assert.match(aliceReconnectEpoch, /^[A-Za-z0-9_-]{22}$/);
+    assert.ok(aliceReconnectCursor > 0);
+
     const seededAuthority = await nodeB.rpc("seed-takeover-authority");
     assert.equal(seededAuthority.accountId, alice.accountId);
     assert.notEqual(seededAuthority.localDisplayName, TAKEOVER_DISPLAY_NAME);
     assert.equal(seededAuthority.storedDisplayName, TAKEOVER_DISPLAY_NAME);
     assert.equal(seededAuthority.storedProfileMarker, TAKEOVER_AUTHORITY_MARKER);
     assert.equal(seededAuthority.storedPartyId, "party_cluster_takeover_gate");
+    assert.ok(seededAuthority.storedLatestEventSeq > seededAuthority.localLatestEventSeq);
 
     aliceSocket.expectedClose = true;
     await nodeA.crash();
@@ -202,6 +208,46 @@ async function runGate() {
     assert.equal(conflictBeforeExpiry.status, 503, JSON.stringify(conflictBeforeExpiry.json));
     assert.equal(conflictBeforeExpiry.json.code, "account_node_switching");
 
+    // Let the crashed owner's lease expire, then make WebSocket reconnect the
+    // first successful admission on the new owner. Its replay catalog and
+    // online snapshot must therefore observe the authority rebase performed
+    // by the owner observer, not Node B's deliberately stale service cache.
+    await delay(ACCOUNT_LEASE_MS + 500);
+    const aliceReconnectSocket = eventSocket(
+      nodeB,
+      alice,
+      3,
+      aliceReconnectCursor,
+      aliceReconnectEpoch,
+    );
+    sockets.push(aliceReconnectSocket);
+    const reconnectReset = aliceReconnectSocket.waitFor(
+      (event) => event && event.type === "events.reset",
+      EVENT_TIMEOUT_MS,
+    );
+    await aliceReconnectSocket.connect(EVENT_TIMEOUT_MS);
+    const reconnectResetResult = await reconnectReset;
+    assert.equal(aliceReconnectSocket.ready.replayMode, "reset");
+    assert.equal(aliceReconnectSocket.ready.account.displayName, TAKEOVER_DISPLAY_NAME);
+    assert.equal(
+      aliceReconnectSocket.ready.latestEventSeq,
+      seededAuthority.storedLatestEventSeq,
+    );
+    assert.notEqual(aliceReconnectSocket.epoch, aliceReconnectEpoch);
+    assert.equal(reconnectResetResult.event.reason, "epoch_mismatch");
+    assert.equal(
+      reconnectResetResult.event.latestEventSeq,
+      seededAuthority.storedLatestEventSeq,
+    );
+    assert.equal(
+      aliceReconnectSocket.snapshot
+      && aliceReconnectSocket.snapshot.party
+      && aliceReconnectSocket.snapshot.party.partyId,
+      "party_cluster_takeover_gate",
+    );
+    assert.equal(aliceReconnectSocket.resetCount, 1);
+    assert.equal(aliceReconnectSocket.protocolErrors, 0);
+
     const takeoverPresence = bobSocket.waitFor((event) => (
       event
       && event.type === "online.position"
@@ -211,15 +257,11 @@ async function runGate() {
       && event.player.position
       && event.player.position.cellX === 12
     ), EVENT_TIMEOUT_MS + ACCOUNT_LEASE_MS);
-    let takeoverResponse = null;
-    await waitFor(async () => {
-      takeoverResponse = await request(nodeB, "/players/position", {
-        method: "POST",
-        token: alice.token,
-        body: positionPayload(12, 10, "east", false),
-      });
-      return takeoverResponse.status === 200 && takeoverResponse.json.ok === true;
-    }, EVENT_TIMEOUT_MS + ACCOUNT_LEASE_MS, "account ownership did not transfer after lease expiry");
+    const takeoverResponse = await expectOk(nodeB, "/players/position", {
+      method: "POST",
+      token: alice.token,
+      body: positionPayload(12, 10, "east", false),
+    });
     const takeoverEvent = await takeoverPresence;
     assert.ok(takeoverResponse.json.presenceRevision >= 2_000_000_001);
     assert.equal(takeoverEvent.event.presenceRevision, takeoverResponse.json.presenceRevision);
@@ -259,7 +301,12 @@ async function runGate() {
       presenceRevisionGenerationAdvanced: true,
       takeoverAuthorityReloadFromAdvancedStoreFixtureProven: true,
       persistentProfileAndPartyAuthorityReloadProven: true,
+      takeoverWebSocketFirstSuccessfulAdmission: true,
+      ownerEpochResetBeforeReconnectSnapshot: true,
+      persistentReconnectStateHydrationProven: true,
       partyAndBattleAuthorityTakeoverProven: false,
+      reconnectEventReplayProven: false,
+      battleRuntimeReconnectHydrationProven: false,
       reconnectHydrationProven: false,
       persistentServiceStarted: false,
       temporaryStateRemoved: true,
@@ -578,6 +625,25 @@ async function runNodeWorker() {
           updatedAt: new Date(nowMs + 1000).toISOString(),
           schemaVersion: 1,
         };
+        const latestEventSeq = Math.max(
+          Number(data.serviceEventSeq || 0),
+          ...(Array.isArray(data.serviceEvents)
+            ? data.serviceEvents.map((event) => Number(event && event.eventSeq || 0))
+            : [0]),
+        ) + 1;
+        data.serviceEventSeq = latestEventSeq;
+        data.serviceEvents = [
+          ...(Array.isArray(data.serviceEvents) ? data.serviceEvents : []),
+          {
+            type: "party.update",
+            eventId: `server_event_${latestEventSeq}`,
+            eventSeq: latestEventSeq,
+            targetAccountIds: [alice.accountId],
+            partyId: "party_cluster_takeover_gate",
+            createdAt: new Date(nowMs + 1000).toISOString(),
+            schemaVersion: 1,
+          },
+        ];
         store.save(data);
         const stored = store.load();
         send({
@@ -586,7 +652,9 @@ async function runNodeWorker() {
           result: {
             accountId: alice.accountId,
             localDisplayName: String(local.accounts[alice.username].displayName || ""),
+            localLatestEventSeq: Number(local.serviceEventSeq || 0),
             storedDisplayName: String(stored.accounts[alice.username].displayName || ""),
+            storedLatestEventSeq: Number(stored.serviceEventSeq || 0),
             storedProfileMarker: String(
               stored.profiles[binding.playerId].profile.takeoverAuthorityMarker || "",
             ),
@@ -727,12 +795,15 @@ function fixtureAccount(accounts, key) {
   return account;
 }
 
-function eventSocket(worker, account, index, cursor) {
+function eventSocket(worker, account, index, cursor, eventStreamEpoch = "") {
   const query = new URLSearchParams({
     clientVersion: SERVER_VERSION,
     clientProtocolVersion: String(PROTOCOL_VERSION),
     lastEventSeq: String(cursor),
   });
+  if (String(eventStreamEpoch || "") !== "") {
+    query.set("eventStreamEpoch", String(eventStreamEpoch));
+  }
   return new RawJsonWebSocket({
     host: LOOPBACK_HOST,
     port: worker.port,

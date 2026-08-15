@@ -521,6 +521,87 @@ test("cluster account ownership is admitted before websocket session authorizati
   await rejectedHub.close();
 });
 
+test("cluster takeover rebases authority before reconnect reset and snapshot hydration", async (t) => {
+  const order = [];
+  const connection = identity("acc_cluster_reconnect", "sess_cluster_reconnect", "cluster-reconnect");
+  let displayName = "接管前缓存";
+  let latestEventSeq = 4;
+  let party = null;
+  const service = createFakeEventService({
+    sessions: {[PRODUCTION_TOKEN_A]: connection},
+    getEventSession() {
+      order.push("authorize");
+      return {
+        ok: true,
+        account: {...connection.account, displayName},
+        session: connection.session,
+      };
+    },
+    replayResult() {
+      order.push("replay");
+      return {
+        ok: true,
+        events: [],
+        earliestEventSeq: latestEventSeq + 1,
+        latestEventSeq,
+      };
+    },
+    listOnlinePlayers() {
+      order.push("snapshot");
+      return {ok: true, players: [], party, aoi: {scope: "all"}};
+    },
+  });
+  service._clusterIngressIdentity = () => {
+    order.push("identity");
+    return {
+      ok: true,
+      accountId: connection.account.accountId,
+      sessionId: connection.session.sessionId,
+    };
+  };
+  const hub = createEventHub(service, {
+    eventStreamEpoch: TEST_EVENT_STREAM_EPOCH,
+    clusterAccountAdmission: {
+      async admit(accountId) {
+        order.push(`admit-start:${accountId}`);
+        await nextImmediate();
+        displayName = "接管后权威";
+        latestEventSeq = 19;
+        party = {partyId: "party_cluster_reconnect", schemaVersion: 1};
+        order.push("admit-complete");
+        return {ok: true};
+      },
+    },
+  });
+  t.after(() => hub.close());
+
+  const previousNodeEpoch = Buffer.alloc(16, 0x6B).toString("base64url");
+  assert.notEqual(previousNodeEpoch, TEST_EVENT_STREAM_EPOCH);
+  const socket = new FakeSocket();
+  await hub.handleUpgrade(productionUpgradeRequest(PRODUCTION_TOKEN_A, socket, {
+    url: `/events?clientVersion=test&clientProtocolVersion=${PROTOCOL_VERSION}&lastEventSeq=4&eventStreamEpoch=${previousNodeEpoch}`,
+  }), socket);
+  assert.match(String(socket.writes[0]), /^HTTP\/1\.1 101 /);
+
+  const messages = jsonMessages(socket);
+  const ready = messages.find((event) => event.type === "events.ready");
+  const reset = messages.find((event) => event.type === "events.reset");
+  const snapshot = messages.find((event) => event.type === "online.snapshot");
+  assert.equal(ready.replayMode, "reset");
+  assert.equal(ready.account.displayName, "接管后权威");
+  assert.equal(ready.latestEventSeq, 19);
+  assert.equal(reset.reason, "epoch_mismatch");
+  assert.equal(reset.latestEventSeq, 19);
+  assert.equal(snapshot.party.partyId, "party_cluster_reconnect");
+  const rebaseFinishedAt = order.indexOf("admit-complete");
+  assert.ok(rebaseFinishedAt >= 0);
+  for (const phase of ["authorize", "replay", "snapshot"]) {
+    assert.ok(order.indexOf(phase) > rebaseFinishedAt, `${phase} ran before authority rebase`);
+  }
+  assert.equal(hub.metrics().cursorResets, 1);
+  await hub.close();
+});
+
 test("malformed upgrade metadata is rejected before session authorization", async (t) => {
   const cases = [
     [{method: "POST"}, 400, "ws_method_invalid"],
