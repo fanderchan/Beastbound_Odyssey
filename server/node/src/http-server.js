@@ -1379,15 +1379,17 @@ function installClusterAccountAdmission(admission, service) {
     || typeof admission.setPresenceRevisionObserver !== "function"
     || !service
     || typeof service._clusterIngressIdentity !== "function"
+    || typeof service._httpClusterPasswordVerificationRecord !== "function"
     || typeof service._httpClusterLoginIdentity !== "function"
     || typeof service._adoptClusterPresenceRevisionFloor !== "function"
+    || typeof service._adoptClusterAccountOwner !== "function"
   ) {
     const error = new Error("Cluster account admission boundary is incomplete");
     error.code = "cluster_account_admission_boundary_invalid";
     throw error;
   }
-  admission.setPresenceRevisionObserver((accountId, floor, ceiling) => (
-    service._adoptClusterPresenceRevisionFloor(accountId, floor, ceiling)
+  admission.setPresenceRevisionObserver((accountId, floor, ceiling, metadata) => (
+    service._adoptClusterAccountOwner(accountId, floor, ceiling, metadata)
   ));
 }
 

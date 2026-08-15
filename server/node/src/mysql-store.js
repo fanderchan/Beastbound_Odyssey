@@ -22,6 +22,10 @@ const {
   sharedAssetReadReferencedEnvelopeIds,
 } = require("./auth/shared-asset-read-model");
 const {
+  canonicalClusterLoginCredentialView,
+  canonicalClusterSessionIdentityView,
+} = require("./auth/cluster-account-authority");
+const {
   canonicalDurableReceiptReadView,
   durableReceiptReadOperationId,
 } = require("./auth/durable-receipt-read-model");
@@ -569,14 +573,38 @@ function createMysqlAuthStore(options = {}) {
 
   function loadAuthoritySnapshot() {
     ensureSchema();
-    const loaded = canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
+    return adoptLoadedAuthoritySnapshot(canonicalizeLoadedAuthorityCollections(loadPersistentData(config, config.database, {
       includeAccountCharacterSlots: ensureSchemaEnabled,
       includeConsumedEquipmentEnvelopes: ensureSchemaEnabled,
       includeMutationReceipts: ensureSchemaEnabled,
       includeStoreRevision: ensureSchemaEnabled,
       detectStoreRevision: !readOnly && (config.usePool || config.singleWriterMaintenance),
       strictRowIdentity,
-    }));
+    })));
+  }
+
+  async function loadClusterAuthoritySnapshotAsync() {
+    ensureSchema();
+    // Cluster takeover is a live request path. Use the asynchronous client
+    // process and require the complete current schema instead of blocking the
+    // Node event loop with the startup-only synchronous loader.
+    const output = await runMysqlAsync(
+      config,
+      config.database,
+      loadPersistentDataSql({
+        includeAccountCharacterSlots: true,
+        includeConsumedEquipmentEnvelopes: true,
+        includeMutationReceipts: true,
+        includeStoreRevision: true,
+      }),
+      {timeoutMs: config.authorityLoadTimeoutMs},
+    );
+    return adoptLoadedAuthoritySnapshot(canonicalizeLoadedAuthorityCollections(
+      parsePersistentDataRows(output, {strictRowIdentity}),
+    ));
+  }
+
+  function adoptLoadedAuthoritySnapshot(loaded) {
     const revisionPresent = mysqlStoreRevisionPresent(loaded);
     if (!readOnly && (config.usePool || config.singleWriterMaintenance) && !revisionPresent) {
       const error = new Error("MySQL全局存档版本行缺失，拒绝启动可写服务。");
@@ -834,6 +862,79 @@ function createMysqlAuthStore(options = {}) {
           && view.storeRevision === lastPersistentRevision
           && isDeepStrictEqual(baselineReceipt, view.receipt),
       }, operationId);
+    },
+    async readClusterLoginCredential(usernameValue) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (!config.usePool) {
+        const error = new Error("集群登录凭据读穿必须使用 MySQL 连接池。");
+        error.code = "mysql_cluster_login_credential_pool_required";
+        throw error;
+      }
+      ensureSchema();
+      const view = await runMysqlClusterLoginCredentialRead(
+        persistentWritePool(),
+        usernameValue,
+        {transactionPolicy: config.transactionPolicy},
+      );
+      const baselineAccount = lastPersistentData
+        && lastPersistentData.accounts
+        ? lastPersistentData.accounts[view.username] || null
+        : null;
+      return canonicalClusterLoginCredentialView({
+        ...view,
+        authorityCurrent: lastPersistentRevision === view.storeRevision
+          && isDeepStrictEqual(baselineAccount, view.account),
+      }, view.username);
+    },
+    async readClusterSessionIdentity(tokenHashValue) {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      if (!config.usePool) {
+        const error = new Error("集群会话身份读穿必须使用 MySQL 连接池。");
+        error.code = "mysql_cluster_session_identity_pool_required";
+        throw error;
+      }
+      ensureSchema();
+      const view = await runMysqlClusterSessionIdentityRead(
+        persistentWritePool(),
+        tokenHashValue,
+        {transactionPolicy: config.transactionPolicy},
+      );
+      const baselineSession = lastPersistentData
+        ? Object.values(objectOrEmpty(lastPersistentData.sessions)).find((entry) => (
+          entry && String(entry.tokenHash || "") === view.tokenHash
+        )) || null
+        : null;
+      const baselineAccount = baselineSession && lastPersistentData
+        ? Object.values(objectOrEmpty(lastPersistentData.accounts)).find((entry) => (
+          entry && String(entry.accountId || "") === String(baselineSession.accountId || "")
+        )) || null
+        : null;
+      return canonicalClusterSessionIdentityView({
+        ...view,
+        authorityCurrent: lastPersistentRevision === view.storeRevision
+          && isDeepStrictEqual(baselineSession, view.session)
+          && isDeepStrictEqual(baselineAccount, view.account),
+      }, view.tokenHash);
+    },
+    async readClusterAuthoritySnapshot() {
+      if (closed) {
+        throw new Error("MySQL 持久连接池已关闭。");
+      }
+      const data = await loadClusterAuthoritySnapshotAsync();
+      if (!Number.isSafeInteger(lastPersistentRevision) || lastPersistentRevision < 0) {
+        const error = new Error("MySQL 集群接管快照缺少权威版本。");
+        error.code = "mysql_cluster_authority_snapshot_revision_invalid";
+        throw error;
+      }
+      return {
+        schemaVersion: 1,
+        storeRevision: lastPersistentRevision,
+        data,
+      };
     },
     async readMailInboxPage(accountId, pageOptions = {}) {
       if (closed) {
@@ -1266,6 +1367,181 @@ function assertRewardVaultStartupEnabled(state) {
     error.code = "reward_vault_feature_disabled_or_drifted";
     throw error;
   }
+}
+
+async function runMysqlClusterLoginCredentialRead(pool, usernameValue, options = {}) {
+  const username = clusterLoginUsername(usernameValue);
+  return runMysqlGuardedPoolTransaction(pool, options, async (connection) => {
+    const rows = mysqlQueryRows(await connection.query(
+      `SELECT revision_row.revision AS store_revision,
+        account.account_id, account.username, account.display_name, account.role,
+        account.created_at, account.updated_at, account.document_json
+        FROM auth_store_revisions AS revision_row
+        LEFT JOIN accounts AS account ON account.username = ?
+        WHERE revision_row.scope_key = ?`,
+      [username, MYSQL_STORE_REVISION_SCOPE],
+    ));
+    if (rows.length !== 1) {
+      throw mysqlClusterAuthorityIntegrityError("login_row_count", username);
+    }
+    const row = rows[0] || {};
+    const storeRevision = mysqlClusterStoreRevision(row, username);
+    if (row.account_id === null || row.account_id === undefined) {
+      if ([
+        row.username,
+        row.display_name,
+        row.role,
+        row.created_at,
+        row.updated_at,
+        row.document_json,
+      ].some((value) => value !== null && value !== undefined)) {
+        throw mysqlClusterAuthorityIntegrityError("login_missing_row_partial", username);
+      }
+      return canonicalClusterLoginCredentialView({
+        schemaVersion: 1,
+        username,
+        storeRevision,
+        account: null,
+      }, username);
+    }
+    const account = mysqlClusterAccountDocument(row, "", username);
+    return canonicalClusterLoginCredentialView({
+      schemaVersion: 1,
+      username,
+      storeRevision,
+      account,
+    }, username);
+  });
+}
+
+async function runMysqlClusterSessionIdentityRead(pool, tokenHashValue, options = {}) {
+  const tokenHash = clusterTokenHash(tokenHashValue);
+  return runMysqlGuardedPoolTransaction(pool, options, async (connection) => {
+    const rows = mysqlQueryRows(await connection.query(
+      `SELECT revision_row.revision AS store_revision,
+        session.session_id, session.account_id AS session_account_id,
+        session.token_hash, session.expires_at, session.revoked_at,
+        session.document_json AS session_document_json,
+        account.account_id, account.username, account.display_name, account.role,
+        account.created_at, account.updated_at, account.document_json AS account_document_json
+        FROM auth_store_revisions AS revision_row
+        LEFT JOIN sessions AS session ON session.token_hash = ?
+        LEFT JOIN accounts AS account ON account.account_id = session.account_id
+        WHERE revision_row.scope_key = ?`,
+      [tokenHash, MYSQL_STORE_REVISION_SCOPE],
+    ));
+    if (rows.length !== 1) {
+      throw mysqlClusterAuthorityIntegrityError("session_row_count", tokenHash);
+    }
+    const row = rows[0] || {};
+    const storeRevision = mysqlClusterStoreRevision(row, tokenHash);
+    if (row.session_id === null || row.session_id === undefined) {
+      if ([
+        row.session_account_id,
+        row.token_hash,
+        row.expires_at,
+        row.revoked_at,
+        row.session_document_json,
+        row.account_id,
+        row.username,
+        row.display_name,
+        row.role,
+        row.created_at,
+        row.updated_at,
+        row.account_document_json,
+      ].some((value) => value !== null && value !== undefined)) {
+        throw mysqlClusterAuthorityIntegrityError("session_missing_row_partial", tokenHash);
+      }
+      return canonicalClusterSessionIdentityView({
+        schemaVersion: 1,
+        tokenHash,
+        storeRevision,
+        session: null,
+        account: null,
+      }, tokenHash);
+    }
+    const session = mysqlSharedJsonDocument(row.session_document_json, "cluster_session_json");
+    const rowRevokedAt = row.revoked_at === null || row.revoked_at === undefined
+      ? null
+      : String(row.revoked_at || "");
+    const documentRevokedAt = session.revokedAt === null || session.revokedAt === undefined
+      ? null
+      : String(session.revokedAt || "");
+    if (
+      String(session.sessionId || "") !== String(row.session_id || "")
+      || String(session.accountId || "") !== String(row.session_account_id || "")
+      || String(session.tokenHash || "") !== tokenHash
+      || String(row.token_hash || "") !== tokenHash
+      || String(session.expiresAt || "") !== String(row.expires_at || "")
+      || documentRevokedAt !== rowRevokedAt
+      || String(row.account_id || "") !== String(row.session_account_id || "")
+    ) {
+      throw mysqlClusterAuthorityIntegrityError("session_row_document_drift", String(row.session_id || ""));
+    }
+    const account = mysqlClusterAccountDocument(row, "account_", String(row.username || ""));
+    return canonicalClusterSessionIdentityView({
+      schemaVersion: 1,
+      tokenHash,
+      storeRevision,
+      session,
+      account,
+    }, tokenHash);
+  });
+}
+
+function mysqlClusterAccountDocument(row, documentPrefix, expectedUsername) {
+  const documentField = `${documentPrefix}document_json`;
+  const account = mysqlSharedJsonDocument(row && row[documentField], "cluster_account_json");
+  const accountId = String(row && row.account_id || "");
+  const username = String(row && row.username || "");
+  if (
+    username !== expectedUsername
+    || String(account.accountId || "") !== accountId
+    || String(account.username || "") !== username
+    || String(account.displayName || "") !== String(row && row.display_name || "")
+    || String(account.role || "") !== String(row && row.role || "")
+    || String(account.createdAt || "") !== String(row && row.created_at || "")
+    || String(account.updatedAt || "") !== String(row && row.updated_at || "")
+  ) {
+    throw mysqlClusterAuthorityIntegrityError("account_row_document_drift", accountId || username);
+  }
+  return account;
+}
+
+function mysqlClusterStoreRevision(row, key) {
+  const revision = Number(row && row.store_revision);
+  if (!Number.isSafeInteger(revision) || revision < 0) {
+    throw mysqlClusterAuthorityIntegrityError("store_revision", key);
+  }
+  return revision;
+}
+
+function clusterLoginUsername(value) {
+  const username = String(value || "").trim().toLowerCase();
+  if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+    const error = new Error("集群登录账号格式无效。");
+    error.code = "cluster_login_username_invalid";
+    throw error;
+  }
+  return username;
+}
+
+function clusterTokenHash(value) {
+  const tokenHash = String(value || "").trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(tokenHash)) {
+    const error = new Error("集群会话摘要格式无效。");
+    error.code = "cluster_session_token_hash_invalid";
+    throw error;
+  }
+  return tokenHash;
+}
+
+function mysqlClusterAuthorityIntegrityError(reason, key) {
+  const error = new Error("MySQL 集群账号权威行与文档不一致。");
+  error.code = "mysql_cluster_account_authority_integrity_invalid";
+  error.reason = String(reason || "invalid");
+  error.resourceKey = String(key || "");
+  return error;
 }
 
 async function runMysqlDurableReceiptRead(pool, operationIdValue, options = {}) {
@@ -8930,6 +9206,8 @@ module.exports = {
   __canonicalizeMysqlMailAuthorityBaselineForTest: canonicalizeMysqlMailAuthorityBaseline,
   __entityChangedForTest: entityChanged,
   __mergeMysqlSaveBaselineAfterCommitForTest: mergeMysqlSaveBaselineAfterCommit,
+  __runMysqlClusterLoginCredentialReadForTest: runMysqlClusterLoginCredentialRead,
+  __runMysqlClusterSessionIdentityReadForTest: runMysqlClusterSessionIdentityRead,
   __runMysqlDurableReceiptReadForTest: runMysqlDurableReceiptRead,
   __runMysqlGuardedPoolTransactionForTest: runMysqlGuardedPoolTransaction,
   __runMysqlMailInboxPageReadForTest: runMysqlMailInboxPageRead,

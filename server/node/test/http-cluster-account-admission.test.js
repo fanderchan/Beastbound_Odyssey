@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {once} = require("node:events");
 const test = require("node:test");
 const {
+  createAsyncWriteAuthStore,
   createAuthService,
   createMemoryAuthStore,
 } = require("../src/auth-service");
@@ -106,6 +107,87 @@ test("owner conflict returns a bounded public 503 before login can revoke the ol
   assert.equal(service.getSession(registered.session.token).ok, true);
 });
 
+test("HTTP login exact-reads a remote account and reloads it before first-node admission", async (t) => {
+  const nowMs = Date.UTC(2026, 7, 15, 5, 0, 0);
+  const backing = createMemoryAuthStore();
+  const staleService = createAuthService({
+    store: createAsyncWriteAuthStore(backing),
+    initialData: backing.load(),
+    now: () => nowMs,
+  });
+  const writer = createAuthService({store: backing, now: () => nowMs});
+  const registered = writer.register({
+    username: "remotehttpowner",
+    password: "remotehttp123",
+    displayName: "远端HTTP账号",
+  });
+  assert.equal(staleService.snapshot().accounts.remotehttpowner, undefined);
+
+  const admission = fakeAdmission();
+  admission.invokeObserver = true;
+  const server = createHttpServer({
+    service: staleService,
+    eventHub: eventHubStub(),
+    clusterAccountAdmission: admission,
+    logger: false,
+  });
+  const base = await listen(server, t);
+  const login = await postJson(`${base}/auth/login`, {
+    username: "remotehttpowner",
+    password: "remotehttp123",
+  });
+
+  assert.equal(login.response.status, 200);
+  assert.equal(login.body.ok, true);
+  assert.deepEqual(admission.admitted, [registered.account.accountId]);
+  assert.equal(
+    staleService.snapshot().accounts.remotehttpowner.accountId,
+    registered.account.accountId,
+  );
+  assert.deepEqual(staleService._clusterAccountRecoveryMetrics(), {
+    authorityReloads: 1,
+    pendingAuthorityReloads: 0,
+    runtimeResets: 0,
+  });
+});
+
+test("cluster credential read failure returns a sanitized 503 without owner admission", async (t) => {
+  const backing = createMemoryAuthStore();
+  const writer = createAuthService({store: backing});
+  writer.register({
+    username: "credentialdown",
+    password: "credential123",
+    displayName: "凭据故障",
+  });
+  const service = createAuthService({
+    initialData: backing.load(),
+    store: {
+      ...backing,
+      readClusterLoginCredential() {
+        throw new Error("raw database credential failure");
+      },
+    },
+  });
+  const admission = fakeAdmission();
+  const server = createHttpServer({
+    service,
+    eventHub: eventHubStub(),
+    clusterAccountAdmission: admission,
+    logger: false,
+  });
+  const base = await listen(server, t);
+  const login = await postJson(`${base}/auth/login`, {
+    username: "credentialdown",
+    password: "credential123",
+  });
+
+  assert.equal(login.response.status, 503);
+  assert.equal(login.body.code, "account_node_unavailable");
+  assert.equal(login.body.message, "账号服务暂时不可用，请稍后重试。");
+  assert.equal(JSON.stringify(login.body).includes("raw database"), false);
+  assert.deepEqual(admission.admitted, []);
+});
+
 test("readiness includes only sanitized account ownership health and fails closed", async (t) => {
   const service = createAuthService({store: createMemoryAuthStore()});
   const admission = fakeAdmission();
@@ -195,6 +277,7 @@ function fakeAdmission() {
   return {
     admitted: [],
     observer: null,
+    invokeObserver: false,
     rejectWith: null,
     closeCalls: 0,
     healthState: {
@@ -208,10 +291,18 @@ function fakeAdmission() {
     setPresenceRevisionObserver(observer) {
       this.observer = observer;
     },
-    admit(accountId) {
+    async admit(accountId) {
       this.admitted.push(accountId);
       if (this.rejectWith) {
         throw this.rejectWith;
+      }
+      if (this.invokeObserver && this.observer) {
+        await this.observer(
+          accountId,
+          1_000_000_000,
+          1_999_999_999,
+          {acquired: true, generation: 1, reused: false},
+        );
       }
       return {ok: true};
     },

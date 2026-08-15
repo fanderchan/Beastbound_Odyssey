@@ -17,12 +17,12 @@ test("account owner rejects a second node, then advances generation and presence
   const backend = createFakeValkeyBackend(clock);
   const observedA = [];
   const observedB = [];
-  const ownerA = await createOwner(backend, clock, "node-a", TOKEN_A, (accountId, floor) => {
-    observedA.push([accountId, floor]);
+  const ownerA = await createOwner(backend, clock, "node-a", TOKEN_A, (accountId, floor, _ceiling, metadata) => {
+    observedA.push([accountId, floor, metadata]);
     return floor;
   });
-  const ownerB = await createOwner(backend, clock, "node-b", TOKEN_B, (accountId, floor) => {
-    observedB.push([accountId, floor]);
+  const ownerB = await createOwner(backend, clock, "node-b", TOKEN_B, (accountId, floor, _ceiling, metadata) => {
+    observedB.push([accountId, floor, metadata]);
     return floor;
   });
 
@@ -40,6 +40,10 @@ test("account owner rejects a second node, then advances generation and presence
     assert.equal(reused.generation, 1);
     assert.equal(backend.ownerKeys()[0].includes("acc_alpha"), false);
     assert.equal(backend.ownerKeys()[0].endsWith(accountDigest("acc_alpha")), true);
+    clock.advance(1600);
+    const renewed = await ownerA.admit("acc_alpha");
+    assert.equal(renewed.acquired, false);
+    assert.equal(renewed.generation, 1);
 
     await assert.rejects(
       ownerB.admit("acc_alpha"),
@@ -56,8 +60,23 @@ test("account owner rejects a second node, then advances generation and presence
     assert.equal(takeover.acquired, true);
     assert.equal(takeover.generation, 2);
     assert.equal(takeover.presenceRevisionFloor, PRESENCE_REVISION_STRIDE * 2);
-    assert.deepEqual(observedA, [["acc_alpha", PRESENCE_REVISION_STRIDE]]);
-    assert.deepEqual(observedB, [["acc_alpha", PRESENCE_REVISION_STRIDE * 2]]);
+    assert.deepEqual(observedA, [
+      ["acc_alpha", PRESENCE_REVISION_STRIDE, {
+        acquired: true,
+        generation: 1,
+        reused: false,
+      }],
+      ["acc_alpha", PRESENCE_REVISION_STRIDE, {
+        acquired: false,
+        generation: 1,
+        reused: true,
+      }],
+    ]);
+    assert.deepEqual(observedB, [["acc_alpha", PRESENCE_REVISION_STRIDE * 2, {
+      acquired: true,
+      generation: 2,
+      reused: false,
+    }]]);
     assert.equal(ownerA.health().ok, true);
     assert.equal(ownerB.health().ok, true);
     assert.equal(JSON.stringify(ownerB.metrics()).includes("acc_alpha"), false);

@@ -46,12 +46,29 @@ function createHttpAuthBoundary(credentialSource, durableService, options = {}) 
     if (Buffer.byteLength(password) > 128) {
       return {ok: false, code: "invalid_credentials", message: "账号或密码不正确。"};
     }
-    const record = credentialSource._httpPasswordVerificationRecord(payload.username);
+    const clusterRecordReader = beforeLogin
+      && typeof credentialSource._httpClusterPasswordVerificationRecord === "function"
+      ? credentialSource._httpClusterPasswordVerificationRecord
+      : null;
+    let record;
+    try {
+      record = await Promise.resolve(clusterRecordReader
+        ? clusterRecordReader.call(credentialSource, payload.username)
+        : credentialSource._httpPasswordVerificationRecord(payload.username));
+    } catch (cause) {
+      if (clusterRecordReader) {
+        throw clusterCredentialReadError(cause);
+      }
+      throw cause;
+    }
     const passwordHash = await queue.derive(password, record.salt);
     if (beforeLogin) {
-      const identity = credentialSource._httpClusterLoginIdentity(
-        payload.username,
-        passwordHash,
+      const identity = await Promise.resolve(
+        credentialSource._httpClusterLoginIdentity(
+          payload.username,
+          passwordHash,
+          record,
+        ),
       );
       if (identity && identity.ok === true) {
         await beforeLogin(identity);
@@ -66,6 +83,16 @@ function createHttpAuthBoundary(credentialSource, durableService, options = {}) 
     login,
     metrics: () => queue.metrics(),
   };
+}
+
+function clusterCredentialReadError(cause) {
+  const error = new Error("账号服务暂时不可用，请稍后重试。");
+  error.name = "ClusterCredentialReadError";
+  error.statusCode = 503;
+  error.code = "account_node_unavailable";
+  error.publicMessage = error.message;
+  error.cause = cause;
+  return error;
 }
 
 function createAsyncScryptQueue(options = {}) {

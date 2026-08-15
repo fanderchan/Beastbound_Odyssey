@@ -295,6 +295,11 @@ async function createValkeyAccountOwner(options = {}) {
           accountId,
           presenceRevisionFloor,
           presenceRevisionCeiling,
+          Object.freeze({
+            acquired,
+            generation,
+            reused: !acquired,
+          }),
         ),
       );
       if (Number(observed) < presenceRevisionFloor) {

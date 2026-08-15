@@ -95,6 +95,57 @@ test("cluster login admission runs only after credential verification and before
   assert.deepEqual(order, ["verify:owner", "admit:acc_owner", "durable"]);
 });
 
+test("cluster login awaits the exact credential proof and preserves its identity", async () => {
+  const order = [];
+  const salt = "fedcba9876543210fedcba9876543210";
+  const proof = Object.freeze({
+    salt,
+    accountId: "acc_exact_owner",
+    username: "exactowner",
+    passwordHash: await createAsyncScryptQueue().derive("exactpass123", salt),
+    source: "store",
+    storeRevision: 42,
+  });
+  const credentialSource = {
+    _httpPasswordVerificationRecord() {
+      throw new Error("local credential reader must not run");
+    },
+    async _httpClusterPasswordVerificationRecord(username) {
+      order.push(`read:${username}`);
+      await Promise.resolve();
+      return proof;
+    },
+    _httpClusterLoginIdentity(username, passwordHash, receivedProof) {
+      order.push(`verify:${username}`);
+      assert.equal(receivedProof, proof);
+      assert.equal(passwordHash, proof.passwordHash);
+      return {ok: true, accountId: proof.accountId};
+    },
+  };
+  const durableService = {
+    _httpLoginPasswordDigest() {
+      order.push("durable");
+      return {ok: true};
+    },
+  };
+  const boundary = createHttpAuthBoundary(credentialSource, durableService, {
+    async beforeLogin(identity) {
+      order.push(`admit:${identity.accountId}`);
+    },
+  });
+
+  assert.equal((await boundary.login({
+    username: "exactowner",
+    password: "exactpass123",
+  })).ok, true);
+  assert.deepEqual(order, [
+    "read:exactowner",
+    "verify:exactowner",
+    "admit:acc_exact_owner",
+    "durable",
+  ]);
+});
+
 test("cluster login admission rejection prevents durable login mutation", async () => {
   let durableCalls = 0;
   const credentialSource = {

@@ -149,6 +149,11 @@ const {
   assertSharedAssetReadViewMatchesRequest,
 } = require("./auth/shared-asset-read-model");
 const {
+  canonicalClusterLoginCredentialView,
+  canonicalClusterSessionIdentityView,
+  resetClusterAccountRuntime,
+} = require("./auth/cluster-account-authority");
+const {
   canonicalDurableReceiptReadView,
 } = require("./auth/durable-receipt-read-model");
 const {createPetServiceAccess} = require("./auth/pet-service-access");
@@ -881,6 +886,10 @@ function createAuthService(options = {}) {
   runtimeActiveSessionIds.connectedSessionIds = new Set();
   runtimeActiveSessionIds.membershipRevision = 0;
   const presenceRevisions = options.presenceRevisionTracker || createPresenceRevisionTracker();
+  const clusterCredentialProofs = new WeakSet();
+  const clusterAccountsRequiringAuthorityReload = new Set();
+  let clusterAuthorityReloads = 0;
+  let clusterRuntimeResets = 0;
   const serverStartedAtMs = now();
   const asyncWriteStore = Boolean(store && (store.asyncWrites === true || String(store.mode || "").startsWith("async:")));
   const durableMutationCoordinator = options.durableMutationCoordinator || createDurableMutationCoordinator({
@@ -1508,21 +1517,91 @@ function createAuthService(options = {}) {
     });
   }
 
-  function httpClusterLoginIdentity(usernameValue, passwordHashValue = "") {
+  function httpClusterPasswordVerificationRecord(usernameValue) {
+    const username = normalizeUsername(usernameValue);
+    const account = load().accounts[username];
+    if (!isValidUsername(username)) {
+      return clusterCredentialProof(null, "missing", 0, username);
+    }
+    if (!store || typeof store.readClusterLoginCredential !== "function") {
+      return clusterCredentialProof(account, account ? "local" : "missing", 0, username);
+    }
+    return Promise.resolve(store.readClusterLoginCredential(username)).then((value) => {
+      const view = canonicalClusterLoginCredentialView(value, username);
+      if (!view.account) {
+        return clusterCredentialProof(
+          null,
+          "missing",
+          view.storeRevision,
+          username,
+          view.authorityCurrent,
+        );
+      }
+      return clusterCredentialProof(
+        view.account,
+        "store",
+        view.storeRevision,
+        username,
+        view.authorityCurrent,
+      );
+    }).catch((cause) => {
+      throw clusterAuthorityReadFailure(cause);
+    });
+  }
+
+  function clusterCredentialProof(
+    accountValue,
+    source,
+    storeRevision,
+    usernameValue = "",
+    authorityCurrent = false,
+  ) {
+    const account = accountValue && typeof accountValue === "object" && !Array.isArray(accountValue)
+      ? accountValue
+      : null;
+    const salt = String(account && account.passwordSalt || "").trim().toLowerCase();
+    const proof = Object.freeze({
+      salt: PASSWORD_SALT_PATTERN.test(salt) ? salt : HTTP_DUMMY_PASSWORD_SALT,
+      accountId: String(account && account.accountId || ""),
+      username: String(account && account.username || usernameValue || ""),
+      passwordHash: String(account && account.passwordHash || "").trim().toLowerCase(),
+      source: String(source || "missing"),
+      storeRevision: Number.isSafeInteger(Number(storeRevision)) ? Number(storeRevision) : 0,
+      authorityCurrent: authorityCurrent === true,
+    });
+    clusterCredentialProofs.add(proof);
+    return proof;
+  }
+
+  function httpClusterLoginIdentity(usernameValue, passwordHashValue = "", credentialProof = null) {
     const username = normalizeUsername(usernameValue);
     const account = load().accounts[username];
     const passwordHash = String(passwordHashValue || "").trim().toLowerCase();
-    if (
-      !account
-      || !PASSWORD_HASH_PATTERN.test(passwordHash)
-      || !passwordHashesEqual(passwordHash, account.passwordHash)
-    ) {
+    if (!PASSWORD_HASH_PATTERN.test(passwordHash)) {
       return Object.freeze({ok: false});
     }
-    return Object.freeze({
-      ok: true,
-      accountId: String(account.accountId || ""),
-    });
+    if (credentialProof) {
+      if (
+        !clusterCredentialProofs.has(credentialProof)
+        || String(credentialProof.username || "") !== username
+        || !PASSWORD_HASH_PATTERN.test(String(credentialProof.passwordHash || ""))
+        || !passwordHashesEqual(passwordHash, credentialProof.passwordHash)
+        || String(credentialProof.accountId || "") === ""
+      ) {
+        return Object.freeze({ok: false});
+      }
+      if (
+        String(credentialProof.source || "") === "store"
+        && credentialProof.authorityCurrent !== true
+      ) {
+        requireClusterAuthorityReload(credentialProof.accountId);
+      }
+      return Object.freeze({ok: true, accountId: String(credentialProof.accountId)});
+    }
+    if (account && passwordHashesEqual(passwordHash, account.passwordHash)) {
+      return Object.freeze({ok: true, accountId: String(account.accountId || "")});
+    }
+    return Object.freeze({ok: false});
   }
 
   function clusterIngressIdentity(token, options = {}) {
@@ -1532,21 +1611,129 @@ function createAuthService(options = {}) {
       allowUnselectedCharacter: true,
       serverStartedAtMs,
     });
-    if (!resolved.ok) {
+    if (resolved.ok) {
       return Object.freeze({
-        ok: false,
-        code: String(resolved.code || "session_missing"),
+        ok: true,
+        accountId: String(resolved.account.accountId || ""),
+        sessionId: String(resolved.session.sessionId || ""),
       });
     }
-    return Object.freeze({
-      ok: true,
-      accountId: String(resolved.account.accountId || ""),
-      sessionId: String(resolved.session.sessionId || ""),
+    const localFailure = Object.freeze({
+      ok: false,
+      code: String(resolved.code || "session_missing"),
+    });
+    if (
+      localFailure.code !== "session_missing"
+      || !SESSION_TOKEN_PATTERN.test(String(token || ""))
+      || !store
+      || typeof store.readClusterSessionIdentity !== "function"
+    ) {
+      return localFailure;
+    }
+    const tokenHash = hashToken(token);
+    return Promise.resolve(store.readClusterSessionIdentity(tokenHash)).then((value) => {
+      const view = canonicalClusterSessionIdentityView(value, tokenHash);
+      if (!view.session || !view.account) {
+        return localFailure;
+      }
+      const proof = clusterSessionProofDecision(view, options, now());
+      if (!proof.ok) {
+        return proof;
+      }
+      if (view.authorityCurrent !== true) {
+        requireClusterAuthorityReload(view.account.accountId);
+      }
+      return Object.freeze({
+        ok: true,
+        accountId: String(view.account.accountId),
+        sessionId: String(view.session.sessionId),
+      });
+    }).catch((cause) => {
+      throw clusterAuthorityReadFailure(cause);
     });
   }
 
   function adoptClusterPresenceRevisionFloor(accountId, floor, ceiling) {
     return presenceRevisions.raiseFloor(accountId, floor, ceiling);
+  }
+
+  function adoptClusterAccountOwner(accountIdValue, floor, ceiling, metadata = {}) {
+    const accountId = String(accountIdValue || "").trim();
+    const observed = adoptClusterPresenceRevisionFloor(accountId, floor, ceiling);
+    const generation = Number(metadata && metadata.generation);
+    const acquired = metadata && metadata.acquired === true;
+    const reloadRequired = acquired && (
+      (Number.isSafeInteger(generation) && generation > 1)
+      || clusterAccountsRequiringAuthorityReload.has(accountId)
+    );
+    if (!reloadRequired) {
+      return observed;
+    }
+    if (!store || typeof store.readClusterAuthoritySnapshot !== "function") {
+      throw clusterAuthorityReadFailure(new Error("cluster authority snapshot reader is unavailable"));
+    }
+    return durableMutationCoordinator.run(async () => {
+      const snapshotValue = await store.readClusterAuthoritySnapshot();
+      const snapshot = snapshotValue && typeof snapshotValue === "object" && !Array.isArray(snapshotValue)
+        ? snapshotValue
+        : {};
+      if (Number(snapshot.schemaVersion) !== 1 || !snapshot.data || typeof snapshot.data !== "object") {
+        throw clusterAuthorityReadFailure(new Error("cluster authority snapshot is invalid"));
+      }
+      // Build and certify the replacement before touching the published root
+      // or process-local session sets. The coordinator fences every durable
+      // mutation, while runtime fields are copied at this exact publish point.
+      const reloaded = authorityRootFromStoredSnapshot(snapshot.data);
+      if (!accountById(reloaded, accountId)) {
+        throw clusterAuthorityReadFailure(new Error("cluster takeover account is missing"));
+      }
+      const reset = resetClusterAccountRuntime(reloaded, accountId);
+      const committed = commitAuthorityRootLargeCollections(normalizeData(reloaded, {owned: true}));
+      const baseline = publishedRollbackBaseline(
+        persistentDataForStore(committed),
+        committed,
+      );
+      clearRuntimeSessionsForAccount(cachedData || committed, accountId, runtimeActiveSessionIds);
+      clearRuntimeSessionsForAccount(committed, accountId, runtimeActiveSessionIds);
+      const processLocalResetCount = Number(movementStepRateByAccountId.delete(accountId))
+        + Number(runtimePositionBarrierCounts.delete(accountId));
+      activeOnlineAccountsCache = null;
+      cachedData = committed;
+      lastPublishedPersistentData = baseline;
+      scheduleBattleMaintenance(cachedData);
+      clusterAuthorityReloads += 1;
+      if (
+        processLocalResetCount > 0
+        || Object.values(reset).some((count) => Number(count) > 0)
+      ) {
+        clusterRuntimeResets += 1;
+      }
+      clusterAccountsRequiringAuthorityReload.delete(accountId);
+      return observed;
+    }, {timeoutMs: 0}).catch((cause) => {
+      throw cause && cause.code === "cluster_account_authority_read_failed"
+        ? cause
+        : clusterAuthorityReadFailure(cause);
+    });
+  }
+
+  function requireClusterAuthorityReload(accountIdValue) {
+    const accountId = String(accountIdValue || "").trim();
+    if (accountId === "") {
+      return;
+    }
+    if (!clusterAccountsRequiringAuthorityReload.has(accountId) && clusterAccountsRequiringAuthorityReload.size >= 4096) {
+      clusterAccountsRequiringAuthorityReload.delete(clusterAccountsRequiringAuthorityReload.values().next().value);
+    }
+    clusterAccountsRequiringAuthorityReload.add(accountId);
+  }
+
+  function clusterAuthorityReadFailure(cause) {
+    const error = new Error("账号正在恢复权威状态，请稍后重试。");
+    error.code = "cluster_account_authority_read_failed";
+    error.retryable = true;
+    error.cause = cause;
+    return error;
   }
 
   function httpLoginPasswordDigest(payload = {}, passwordHashValue = "") {
@@ -5954,8 +6141,12 @@ function createAuthService(options = {}) {
   }
 
   function reloadPublishedDataFromStore() {
+    return reloadPublishedDataFromSnapshot(store.load());
+  }
+
+  function authorityRootFromStoredSnapshot(storedData) {
     const current = cachedData ? cloneAuthorityRoot(cachedData) : normalizeData({});
-    const reloaded = normalizeData(store.load());
+    const reloaded = normalizeData(storedData);
     inheritAuthorityIdentityIndexes(cachedData, reloaded);
     for (const field of RUNTIME_ROOT_FIELDS) {
       reloaded[field] = clone(current[field]);
@@ -5976,6 +6167,11 @@ function createAuthService(options = {}) {
       normalizeEventSeq(current.serviceEventSeq),
       ...reloaded.serviceEvents.map((event) => normalizeEventSeq(event && event.eventSeq)),
     );
+    return reloaded;
+  }
+
+  function reloadPublishedDataFromSnapshot(storedData) {
+    const reloaded = authorityRootFromStoredSnapshot(storedData);
     cachedData = reloaded;
     lastPublishedPersistentData = publishedRollbackBaseline(
       persistentDataForStore(reloaded),
@@ -6891,11 +7087,18 @@ function createAuthService(options = {}) {
     login,
     _httpValidateRegistration: httpValidateRegistration,
     _httpPasswordVerificationRecord: httpPasswordVerificationRecord,
+    _httpClusterPasswordVerificationRecord: httpClusterPasswordVerificationRecord,
     _httpClusterLoginIdentity: httpClusterLoginIdentity,
     _httpRegisterPasswordDigest: httpRegisterPasswordDigest,
     _httpLoginPasswordDigest: httpLoginPasswordDigest,
     _clusterIngressIdentity: clusterIngressIdentity,
     _adoptClusterPresenceRevisionFloor: adoptClusterPresenceRevisionFloor,
+    _adoptClusterAccountOwner: adoptClusterAccountOwner,
+    _clusterAccountRecoveryMetrics: () => Object.freeze({
+      authorityReloads: clusterAuthorityReloads,
+      pendingAuthorityReloads: clusterAccountsRequiringAuthorityReload.size,
+      runtimeResets: clusterRuntimeResets,
+    }),
     authSecurityMetrics,
     runtimeCapacityMetrics,
     refreshSession,
@@ -7036,6 +7239,13 @@ function createAuthService(options = {}) {
       // into an empty object.
       || name === "listMailArchive"
       || name === "listRewardVault"
+      // Cluster admission is an internal transport boundary. These methods
+      // may await exact storage reads and one proof object is identity-bound
+      // through a WeakSet; cloning or spreading either value would erase the
+      // Promise/proof contract before ownership is admitted.
+      || name === "_httpClusterPasswordVerificationRecord"
+      || name === "_clusterIngressIdentity"
+      || name === "_adoptClusterAccountOwner"
       || typeof method !== "function"
     ) {
       continue;
@@ -7260,6 +7470,7 @@ function projectPublicServiceResult(value) {
 
 function createMemoryAuthStore(initialData = null) {
   let data = normalizeData(initialData || {});
+  let storeRevision = 0;
   return {
     mode: "memory",
     checkHealth() {
@@ -7271,8 +7482,22 @@ function createMemoryAuthStore(initialData = null) {
     load() {
       return clone(materializeAuthorityRootLargeCollections(data));
     },
+    readClusterLoginCredential(username) {
+      return clusterLoginCredentialViewFromData(data, username, storeRevision);
+    },
+    readClusterSessionIdentity(tokenHash) {
+      return clusterSessionIdentityViewFromData(data, tokenHash, storeRevision);
+    },
+    readClusterAuthoritySnapshot() {
+      return {
+        schemaVersion: 1,
+        storeRevision,
+        data: clone(materializeAuthorityRootLargeCollections(data)),
+      };
+    },
     save(nextData) {
       data = normalizeData(materializeAuthorityRootLargeCollections(nextData));
+      storeRevision += 1;
     },
   };
 }
@@ -7300,6 +7525,15 @@ function createJsonAuthStore(filePath) {
         throw loadError;
       }
     },
+    readClusterLoginCredential(username) {
+      return clusterLoginCredentialViewFromData(this.load(), username, 0);
+    },
+    readClusterSessionIdentity(tokenHash) {
+      return clusterSessionIdentityViewFromData(this.load(), tokenHash, 0);
+    },
+    readClusterAuthoritySnapshot() {
+      return {schemaVersion: 1, storeRevision: 0, data: this.load()};
+    },
     save(nextData) {
       fs.mkdirSync(path.dirname(filePath), {"recursive": true});
       const materialized = materializeAuthorityRootLargeCollections(normalizeData(nextData));
@@ -7313,11 +7547,42 @@ function createJsonAuthStore(filePath) {
   };
 }
 
+function clusterLoginCredentialViewFromData(dataValue, usernameValue, storeRevision) {
+  const data = objectOrEmpty(dataValue);
+  const username = normalizeUsername(usernameValue);
+  const account = objectOrEmpty(data.accounts)[username] || null;
+  return canonicalClusterLoginCredentialView({
+    schemaVersion: 1,
+    username,
+    storeRevision,
+    account,
+  }, username);
+}
+
+function clusterSessionIdentityViewFromData(dataValue, tokenHashValue, storeRevision) {
+  const data = objectOrEmpty(dataValue);
+  const tokenHash = String(tokenHashValue || "").trim().toLowerCase();
+  const session = Object.values(objectOrEmpty(data.sessions)).find((entry) => (
+    entry && String(entry.tokenHash || "") === tokenHash
+  )) || null;
+  const account = session ? accountById(data, session.accountId) : null;
+  return canonicalClusterSessionIdentityView({
+    schemaVersion: 1,
+    tokenHash,
+    storeRevision,
+    session,
+    account,
+  }, tokenHash);
+}
+
 function createAsyncWriteAuthStore(store, options = {}) {
   let writeQueue = Promise.resolve();
   let lastSaveError = null;
   let lastSaveOperation = null;
   let ambiguousCommitRecoveries = 0;
+  let clusterAuthoritySnapshotReadCount = 0;
+  let clusterLoginCredentialReadCount = 0;
+  let clusterSessionIdentityReadCount = 0;
   let durableReceiptReadHits = 0;
   let durableReceiptReadCount = 0;
   let revisionConflicts = 0;
@@ -7396,6 +7661,28 @@ function createAsyncWriteAuthStore(store, options = {}) {
     // Reads share the same per-Node storage tail so a fresh projection cannot
     // overtake an earlier local COMMIT. A read failure heals the tail but does
     // not masquerade as an uncertain write outcome.
+    writeQueue = readJob.then(() => undefined, () => undefined);
+    return readJob;
+  }
+  function enqueueClusterAuthorityRead(methodName, args = []) {
+    if (!store || typeof store[methodName] !== "function") {
+      const error = new Error("当前存储不支持集群账号权威读穿。");
+      error.code = "cluster_account_authority_read_unsupported";
+      return Promise.reject(error);
+    }
+    const readArgs = args.map((value) => String(value || ""));
+    const readJob = writeQueue.then(() => {
+      if (methodName === "readClusterLoginCredential") {
+        clusterLoginCredentialReadCount += 1;
+      } else if (methodName === "readClusterSessionIdentity") {
+        clusterSessionIdentityReadCount += 1;
+      } else if (methodName === "readClusterAuthoritySnapshot") {
+        clusterAuthoritySnapshotReadCount += 1;
+      }
+      return store[methodName](...readArgs);
+    });
+    // Account takeover reads must observe all earlier local COMMITs. A failed
+    // read remains scoped to its admission while the storage tail heals.
     writeQueue = readJob.then(() => undefined, () => undefined);
     return readJob;
   }
@@ -7522,6 +7809,15 @@ function createAsyncWriteAuthStore(store, options = {}) {
     rewardVaultNotificationBatches: Boolean(
       store && typeof store.deliverRewardVaultNotificationsBatch === "function"
     ),
+    clusterLoginCredentialReads: Boolean(
+      store && typeof store.readClusterLoginCredential === "function"
+    ),
+    clusterSessionIdentityReads: Boolean(
+      store && typeof store.readClusterSessionIdentity === "function"
+    ),
+    clusterAuthoritySnapshotReads: Boolean(
+      store && typeof store.readClusterAuthoritySnapshot === "function"
+    ),
     sharedAssetReads: Boolean(store && typeof store.readSharedAssetView === "function"),
     checkHealth() {
       if (typeof store.checkHealth === "function") {
@@ -7543,6 +7839,15 @@ function createAsyncWriteAuthStore(store, options = {}) {
     },
     readSharedAssetView(request, readOptions = {}) {
       return enqueueSharedAssetRead(request, readOptions);
+    },
+    readClusterLoginCredential(username) {
+      return enqueueClusterAuthorityRead("readClusterLoginCredential", [username]);
+    },
+    readClusterSessionIdentity(tokenHash) {
+      return enqueueClusterAuthorityRead("readClusterSessionIdentity", [tokenHash]);
+    },
+    readClusterAuthoritySnapshot() {
+      return enqueueClusterAuthorityRead("readClusterAuthoritySnapshot");
     },
     readMailInboxPage(accountId, pageOptions = {}) {
       return enqueueMailInboxPageRead(accountId, pageOptions);
@@ -7604,6 +7909,9 @@ function createAsyncWriteAuthStore(store, options = {}) {
     metrics() {
       return {
         ambiguousCommitRecoveries,
+        clusterAuthoritySnapshotReads: clusterAuthoritySnapshotReadCount,
+        clusterLoginCredentialReads: clusterLoginCredentialReadCount,
+        clusterSessionIdentityReads: clusterSessionIdentityReadCount,
         durableReceiptReadHits,
         durableReceiptReads: durableReceiptReadCount,
         revisionConflicts,
@@ -26694,6 +27002,35 @@ function hashPassword(password, salt) {
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
+}
+
+function clusterSessionProofDecision(view, options, currentMsValue) {
+  const session = view && view.session && typeof view.session === "object" && !Array.isArray(view.session)
+    ? view.session
+    : null;
+  if (!session) {
+    return Object.freeze({ok: false, code: "session_missing"});
+  }
+  if (session.revokedAt) {
+    return Object.freeze({
+      ok: false,
+      code: String(session.revokedCode || "session_revoked"),
+    });
+  }
+  const expiresAtMs = Date.parse(String(session.expiresAt || ""));
+  const currentMs = Number(currentMsValue);
+  if (!Number.isFinite(expiresAtMs) || !Number.isFinite(currentMs)) {
+    return Object.freeze({ok: false, code: "session_missing"});
+  }
+  if (expiresAtMs <= currentMs) {
+    if (!options || options.allowRefreshGrace !== true) {
+      return Object.freeze({ok: false, code: "session_expired"});
+    }
+    if (expiresAtMs + SESSION_REFRESH_GRACE_MS <= currentMs) {
+      return Object.freeze({ok: false, code: "session_refresh_expired"});
+    }
+  }
+  return Object.freeze({ok: true});
 }
 
 function isoNow(now) {

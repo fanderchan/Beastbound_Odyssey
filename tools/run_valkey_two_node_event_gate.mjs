@@ -30,6 +30,8 @@ const HTTP_TIMEOUT_MS = 5000;
 const EVENT_TIMEOUT_MS = 5000;
 const NODE_LEASE_MS = 3000;
 const ACCOUNT_LEASE_MS = 3000;
+const TAKEOVER_AUTHORITY_MARKER = "generation-2-authority-reloaded";
+const TAKEOVER_DISPLAY_NAME = "跨节点接管新事实";
 
 async function runGate() {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-two-node-gate-"));
@@ -139,7 +141,7 @@ async function runGate() {
         password: FIXTURE_PASSWORD,
       },
     });
-    assert.equal(crossNodeLogin.status, 503);
+    assert.equal(crossNodeLogin.status, 503, JSON.stringify(crossNodeLogin.json));
     assert.equal(crossNodeLogin.json.code, "account_node_switching");
     assert.equal(replacedSocket.closed, false);
     const oldSessionStillValid = await expectOk(nodeB, "/auth/session", {
@@ -183,6 +185,13 @@ async function runGate() {
     assert.equal(bobSocket.presenceRevisionRegressions, 0);
     assert.equal(bobSocket.protocolErrors, 0);
 
+    const seededAuthority = await nodeB.rpc("seed-takeover-authority");
+    assert.equal(seededAuthority.accountId, alice.accountId);
+    assert.notEqual(seededAuthority.localDisplayName, TAKEOVER_DISPLAY_NAME);
+    assert.equal(seededAuthority.storedDisplayName, TAKEOVER_DISPLAY_NAME);
+    assert.equal(seededAuthority.storedProfileMarker, TAKEOVER_AUTHORITY_MARKER);
+    assert.equal(seededAuthority.storedPartyId, "party_cluster_takeover_gate");
+
     aliceSocket.expectedClose = true;
     await nodeA.crash();
     const conflictBeforeExpiry = await request(nodeB, "/players/position", {
@@ -190,7 +199,7 @@ async function runGate() {
       token: alice.token,
       body: positionPayload(12, 10, "east", false),
     });
-    assert.equal(conflictBeforeExpiry.status, 503);
+    assert.equal(conflictBeforeExpiry.status, 503, JSON.stringify(conflictBeforeExpiry.json));
     assert.equal(conflictBeforeExpiry.json.code, "account_node_switching");
 
     const takeoverPresence = bobSocket.waitFor((event) => (
@@ -218,6 +227,11 @@ async function runGate() {
     const takeoverHealth = await clusterHealth(nodeB);
     assert.equal(takeoverHealth.status, 200);
     assert.equal(takeoverHealth.json.accountOwnership.ok, true);
+    const takeoverAuthority = await nodeB.rpc("probe-takeover-authority");
+    assert.equal(takeoverAuthority.displayName, TAKEOVER_DISPLAY_NAME);
+    assert.equal(takeoverAuthority.profileMarker, TAKEOVER_AUTHORITY_MARKER);
+    assert.equal(takeoverAuthority.partyId, "party_cluster_takeover_gate");
+    assert.ok(takeoverAuthority.recoveryMetrics.authorityReloads >= 1);
 
     for (const socket of sockets) {
       socket.close();
@@ -243,6 +257,8 @@ async function runGate() {
       sameOwnerSessionReplacement: true,
       crashedOwnerLeaseExpiryTakeover: true,
       presenceRevisionGenerationAdvanced: true,
+      takeoverAuthorityReloadFromAdvancedStoreFixtureProven: true,
+      persistentProfileAndPartyAuthorityReloadProven: true,
       partyAndBattleAuthorityTakeoverProven: false,
       reconnectHydrationProven: false,
       persistentServiceStarted: false,
@@ -455,6 +471,7 @@ async function runNodeWorker() {
   };
   let server = null;
   let clusterRuntime = null;
+  let service = null;
   let shutdownStarted = false;
 
   const shutdown = async (exitCode = 0) => {
@@ -496,7 +513,7 @@ async function runNodeWorker() {
       onError() {},
       onFatal: fatal,
     });
-    const service = createAuthService({
+    service = createAuthService({
       store,
       now: () => nowMs,
       allowPositionTeleport: false,
@@ -535,12 +552,93 @@ async function runNodeWorker() {
     if (!message || typeof message !== "object" || !message.id) {
       return;
     }
-    if (message.command !== "shutdown") {
-      send({id: message.id, ok: false, error: "unknown node worker command"});
+    if (message.command === "seed-takeover-authority") {
+      try {
+        const alice = fixtureAccount(fixture.accounts, "alice");
+        const local = service.snapshot();
+        const data = store.load();
+        const binding = data.profileBindings[alice.accountId];
+        const profileDocument = binding && data.profiles[binding.playerId];
+        if (!binding || !profileDocument || !profileDocument.profile) {
+          throw new Error("takeover authority fixture profile is missing");
+        }
+        data.accounts[alice.username].displayName = TAKEOVER_DISPLAY_NAME;
+        data.accounts[alice.username].updatedAt = new Date(nowMs + 1000).toISOString();
+        profileDocument.profile.takeoverAuthorityMarker = TAKEOVER_AUTHORITY_MARKER;
+        if (profileDocument.profile.player && typeof profileDocument.profile.player === "object") {
+          profileDocument.profile.player.name = TAKEOVER_DISPLAY_NAME;
+        }
+        profileDocument.profileRevision = Number(profileDocument.profileRevision || 0) + 1;
+        binding.profileRevision = Number(binding.profileRevision || 0) + 1;
+        data.parties.party_cluster_takeover_gate = {
+          partyId: "party_cluster_takeover_gate",
+          leaderAccountId: alice.accountId,
+          memberAccountIds: [alice.accountId],
+          createdAt: new Date(nowMs + 1000).toISOString(),
+          updatedAt: new Date(nowMs + 1000).toISOString(),
+          schemaVersion: 1,
+        };
+        store.save(data);
+        const stored = store.load();
+        send({
+          id: message.id,
+          ok: true,
+          result: {
+            accountId: alice.accountId,
+            localDisplayName: String(local.accounts[alice.username].displayName || ""),
+            storedDisplayName: String(stored.accounts[alice.username].displayName || ""),
+            storedProfileMarker: String(
+              stored.profiles[binding.playerId].profile.takeoverAuthorityMarker || "",
+            ),
+            storedPartyId: String(
+              stored.parties.party_cluster_takeover_gate
+              && stored.parties.party_cluster_takeover_gate.partyId
+              || "",
+            ),
+          },
+        });
+      } catch (error) {
+        send({id: message.id, ok: false, error: String(error && error.stack || error)});
+      }
       return;
     }
-    send({id: message.id, ok: true, result: {closing: true}});
-    void shutdown(0);
+    if (message.command === "probe-takeover-authority") {
+      try {
+        const alice = fixtureAccount(fixture.accounts, "alice");
+        const snapshot = service.snapshot();
+        const binding = snapshot.profileBindings[alice.accountId];
+        const profileDocument = binding && snapshot.profiles[binding.playerId];
+        const party = Object.values(snapshot.parties || {}).find((entry) => (
+          entry
+          && Array.isArray(entry.memberAccountIds)
+          && entry.memberAccountIds.includes(alice.accountId)
+        )) || null;
+        send({
+          id: message.id,
+          ok: true,
+          result: {
+            displayName: String(snapshot.accounts[alice.username].displayName || ""),
+            profileMarker: String(
+              profileDocument
+              && profileDocument.profile
+              && profileDocument.profile.takeoverAuthorityMarker
+              || "",
+            ),
+            partyId: String(party && party.partyId || ""),
+            recoveryMetrics: service._clusterAccountRecoveryMetrics(),
+          },
+        });
+      } catch (error) {
+        send({id: message.id, ok: false, error: String(error && error.stack || error)});
+      }
+      return;
+    }
+    if (message.command === "shutdown") {
+      send({id: message.id, ok: true, result: {closing: true}});
+      void shutdown(0);
+      return;
+    }
+    send({id: message.id, ok: false, error: "unknown node worker command"});
   });
 }
 
@@ -616,7 +714,7 @@ function fixtureIdentity(key, displayName) {
   return {
     key,
     accountId: `acc_cluster_gate_${key}`,
-    username: `cluster_gate_${key}`,
+    username: `cl_gate_${key}`,
     displayName,
     sessionId: `sess_cluster_gate_${key}`,
     token: crypto.createHash("sha256").update(`cluster-gate-token:${key}`).digest("base64url"),

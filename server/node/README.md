@@ -49,7 +49,7 @@ Optional environment variables:
 
 ## Optional Multi-Node Event Relay And Account Ownership
 
-The default remains single Node. A deployment may opt into the Valkey Streams event relay and account-owner lease. The current gate proves account conflict rejection, crashed-owner expiry takeover, and presence revision continuity; it does not prove reconnect hydration, party/battle authority recovery, or 200-player horizontal capacity.
+The default remains single Node. A deployment may opt into the Valkey Streams event relay and account-owner lease. The current gate proves account conflict rejection, crashed-owner expiry takeover, presence revision continuity, and an authority reload of account/profile/persistent-party facts from an independently advanced backing-store fixture. It does not prove a real shared-MySQL two-process deployment, reconnect hydration, battle-runtime recovery, or 200-player horizontal capacity.
 
 Required settings for the Valkey adapter:
 
@@ -76,6 +76,8 @@ Each Node owns a Valkey lease and its own consumer group. Duplicate live node ID
 
 Every active account is also guarded by a token-checked Valkey lease. Account IDs are SHA-256 hashed before they enter keys; the value is a process-random token. A persistent per-account generation raises the new owner's presence revision floor by `1,000,000,000`, so a takeover cannot emit a lower revision than an earlier owner. Verified login, bearer HTTP requests, and WebSocket authorization all acquire or confirm ownership before session replacement or gameplay mutation. A conflicting node returns bounded `503`; losing a locally held lease is fatal. Graceful shutdown releases account leases only after HTTP/WS admission, durable mutations, and storage flush have drained.
 
+With cluster admission enabled, login credentials are exact-read by normalized username and a locally missing bearer session is exact-read by token hash before ownership is requested. MySQL validates the indexed SQL mirrors, JSON documents, account/session identity, expiry/revocation facts, and global store revision in one guarded transaction. A newly acquired generation greater than one always reloads the complete persistent authority root before admission returns; generation one reloads when the exact proof shows the local baseline is stale. Reload runs behind the durable mutation coordinator, atomically publishes only after full validation, preserves persistent profiles and parties, and clears only the acquired account's process-local position, invitations, battle rooms/recoveries, trades, sessions, and movement guards. Read or validation failure rejects admission and fails the owner Node closed.
+
 Node-lease or account-owner loss makes readiness return `503`, rejects unsafe work, drains the server, and closes the process-owned Valkey clients. Health output exposes only sanitized booleans and counters, never node IDs, key hashes, stream keys, credentials, events, accounts, or tokens.
 
 The real local engine gate starts an ephemeral loopback Valkey process, runs the relay and HTTP entrypoint checks, rejects a duplicate node startup, and then removes the temporary state without installing a service:
@@ -84,7 +86,7 @@ The real local engine gate starts an ephemeral loopback Valkey process, runs the
 node tools/run_valkey_event_bridge_live_gate.mjs
 ```
 
-The independent-process gate starts two game Node processes on different HTTP/WebSocket ports. It proves cross-node presence and world chat, receiver-local event-sequence isolation, wrong-node login rejection before session mutation, same-owner session replacement, forced owner-process death, expiry takeover, and presence revision generation advancement:
+The independent-process gate starts two game Node processes on different HTTP/WebSocket ports. It proves cross-node presence and world chat, receiver-local event-sequence isolation, wrong-node login rejection before session mutation, same-owner session replacement, forced owner-process death, expiry takeover, presence revision generation advancement, and generation-two authority reload after an isolated backing store advances the account, profile revision, and persistent party while the takeover Node's service cache remains stale:
 
 ```sh
 node tools/run_valkey_two_node_event_gate.mjs
@@ -92,7 +94,7 @@ node tools/run_valkey_two_node_event_gate.mjs
 
 Remote replayable events are intentionally projected as live-only frames on the receiving Node: the relay envelope remains deduplicated, while the source Node's private `eventSeq/eventId` is not reused as the receiving Node's cursor. This prevents silent live loss but does not provide reconnect hydration.
 
-This gate still does not prove offline event hydration, authoritative party/battle runtime recovery, shared-state rebase after a dead process, network-partition fencing beyond lease expiry, or the 200-connection long soak required by `P0.6d-3b`.
+This fixture proves the takeover/rebase mechanism but is not a real shared-MySQL two-process gate. Offline event hydration, authoritative battle-runtime recovery, network-partition fencing beyond lease expiry, and the 200-connection long soak required by `P0.6d-3b` also remain unproven.
 
 ## Local MySQL Live Server
 
