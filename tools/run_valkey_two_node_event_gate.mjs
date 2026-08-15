@@ -34,6 +34,7 @@ const TAKEOVER_AUTHORITY_MARKER = "generation-2-authority-reloaded";
 const TAKEOVER_DISPLAY_NAME = "跨节点接管新事实";
 const TAKEOVER_CHAT_MESSAGE_ID = "chat_cluster_takeover_gate";
 const TAKEOVER_CHAT_TEXT = "接管后补回的持久聊天";
+const BATTLE_FAILURE_TICKET_PATTERN = /^battle_failure_[a-f0-9]{32}$/;
 
 async function runGate() {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-two-node-gate-"));
@@ -304,6 +305,11 @@ async function runGate() {
       nodeB.stop(),
     ]);
     nodeB = null;
+    const battleOwnerFailure = await runBattleOwnerFailureSubgate({
+      temporaryRoot,
+      valkeyPort,
+      streamKey: `${streamKey}:battle-owner-failure`,
+    });
     await stopExactChild(valkey.process);
     valkey = null;
     fs.rmSync(temporaryRoot, {recursive: true, force: true});
@@ -330,6 +336,16 @@ async function runGate() {
       persistentChatHistoryHydrationProven: true,
       crossOwnerChatAndPartyRecoveryProven: true,
       partyAndBattleAuthorityTakeoverProven: false,
+      battleOwnerFailureNodeProcesses: battleOwnerFailure.independentGameNodeProcesses,
+      battleOwnerFailureSharedJsonAuthorityFixtureProven: battleOwnerFailure.sharedJsonAuthorityFixtureProven,
+      battleOwnerFailureGenerationTwoTakeoverProven: battleOwnerFailure.generationTwoTakeoverProven,
+      battleOwnerFailureTicketTakeoverProven: battleOwnerFailure.ticketTakeoverProven,
+      battleOwnerFailureNeutralRecoveryProven: battleOwnerFailure.neutralRecoveryProven,
+      battleOwnerFailureStableRecoveryReplayProven: battleOwnerFailure.stableRecoveryReplayProven,
+      battleOwnerFailureWinLossUnaffected: battleOwnerFailure.winLossUnaffected,
+      battleParticipantsCanRematchAfterRecovery: battleOwnerFailure.participantsCanRematch,
+      sharedMysqlBattleTakeoverProven: false,
+      crossNodeNormalBattleCommandRoutingProven: false,
       reconnectEventReplayProven: false,
       battleRuntimeReconnectHydrationProven: false,
       reconnectHydrationProven: false,
@@ -361,6 +377,202 @@ async function runGate() {
   }
 }
 
+async function runBattleOwnerFailureSubgate(options) {
+  const sharedStorePath = path.join(options.temporaryRoot, "battle-owner-authority.json");
+  const fixture = clusterFixture(Date.now(), 0);
+  fs.writeFileSync(sharedStorePath, JSON.stringify(fixture.data, null, 2));
+  let ownerNode = null;
+  let takeoverNode = null;
+  try {
+    ownerNode = await NodeWorker.start({
+      nodeId: "two-node-battle-owner-a",
+      valkeyPort: options.valkeyPort,
+      streamKey: options.streamKey,
+      serviceEventSeq: 0,
+      sharedStorePath,
+    });
+    takeoverNode = await NodeWorker.start({
+      nodeId: "two-node-battle-owner-b",
+      valkeyPort: options.valkeyPort,
+      streamKey: options.streamKey,
+      serviceEventSeq: 0,
+      sharedStorePath,
+    });
+    assert.deepEqual(ownerNode.fixtureDigest, takeoverNode.fixtureDigest);
+    await Promise.all([
+      waitForClusterReady(ownerNode),
+      waitForClusterReady(takeoverNode),
+    ]);
+
+    const challenger = fixtureAccount(ownerNode.accounts, "battle_challenger");
+    const opponent = fixtureAccount(ownerNode.accounts, "battle_opponent");
+    const challengerPosition = await expectOk(ownerNode, "/players/position", {
+      method: "POST",
+      token: challenger.token,
+      body: positionPayload(20, 20, "east", false),
+    });
+    const opponentPosition = await expectOk(ownerNode, "/players/position", {
+      method: "POST",
+      token: opponent.token,
+      body: positionPayload(21, 20, "west", false),
+    });
+    assert.ok(challengerPosition.json.presenceRevision >= 1_000_000_001);
+    assert.ok(opponentPosition.json.presenceRevision >= 1_000_000_001);
+
+    const invite = await expectOk(ownerNode, "/battle/invite", {
+      method: "POST",
+      token: challenger.token,
+      body: {username: opponent.username},
+    });
+    const accepted = await expectOk(
+      ownerNode,
+      `/battle/invites/${encodeURIComponent(invite.json.invite.inviteId)}/accept`,
+      {method: "POST", token: opponent.token},
+    );
+    const interruptedRoomId = String(accepted.json.room && accepted.json.room.roomId || "");
+    assert.notEqual(interruptedRoomId, "");
+    assert.equal(accepted.json.room.status, "ready");
+    for (const account of [challenger, opponent]) {
+      const activeState = await expectOk(ownerNode, "/battle/state", {token: account.token});
+      assert.equal(activeState.json.room.roomId, interruptedRoomId);
+      assert.equal(activeState.json.interruption, null);
+    }
+
+    const persistedBeforeCrash = JSON.parse(fs.readFileSync(sharedStorePath, "utf8"));
+    assert.equal(Object.keys(persistedBeforeCrash.battleRooms || {}).length, 0);
+    assert.equal((persistedBeforeCrash.battleRecords || []).length, 0);
+    const persistedTickets = [challenger, opponent].map((account) => {
+      const tickets = Object.values(persistedBeforeCrash.sessions || {})
+        .filter((session) => session && session.accountId === account.accountId)
+        .map((session) => session.battleFailureTicket)
+        .filter(Boolean);
+      assert.equal(tickets.length, 1);
+      assert.match(String(tickets[0].ticketId || ""), BATTLE_FAILURE_TICKET_PATTERN);
+      assert.equal(tickets[0].roomId, interruptedRoomId);
+      return tickets[0];
+    });
+    assert.notEqual(persistedTickets[0].ticketId, persistedTickets[1].ticketId);
+
+    await ownerNode.crash();
+    ownerNode = null;
+    const conflictBeforeExpiry = await request(takeoverNode, "/battle/state", {
+      token: challenger.token,
+    });
+    assert.equal(conflictBeforeExpiry.status, 503, JSON.stringify(conflictBeforeExpiry.json));
+    assert.equal(conflictBeforeExpiry.json.code, "account_node_switching");
+
+    await delay(ACCOUNT_LEASE_MS + 500);
+    const interruptionStates = [];
+    for (const account of [challenger, opponent]) {
+      const interrupted = await expectOk(takeoverNode, "/battle/state", {token: account.token});
+      assert.equal(interrupted.json.room, null);
+      assert.equal(interrupted.json.interruption.kind, "battle_owner_interruption");
+      assert.equal(interrupted.json.interruption.roomId, interruptedRoomId);
+      assert.match(interrupted.json.interruption.ticketId, BATTLE_FAILURE_TICKET_PATTERN);
+      assert.equal(interrupted.json.interruption.encounterReturnAvailable, false);
+      interruptionStates.push(interrupted.json.interruption);
+    }
+
+    for (let index = 0; index < interruptionStates.length; index += 1) {
+      const account = index === 0 ? challenger : opponent;
+      const interruption = interruptionStates[index];
+      const operationId = battleInterruptionOperationId(interruption.ticketId);
+      const recovered = await expectOk(takeoverNode, "/battle/interruption/recover", {
+        method: "POST",
+        token: account.token,
+        headers: {"Idempotency-Key": operationId},
+        body: {},
+      });
+      assert.equal(recovered.json.interruption, null);
+      assert.equal(recovered.json.encounterReturned, false);
+      const replayed = await expectOk(takeoverNode, "/battle/interruption/recover", {
+        method: "POST",
+        token: account.token,
+        headers: {"Idempotency-Key": operationId},
+        body: {},
+      });
+      assert.equal(replayed.json.durableCommit.replayed, true);
+      assert.equal(replayed.json.message, recovered.json.message);
+      const cleared = await expectOk(takeoverNode, "/battle/state", {token: account.token});
+      assert.equal(cleared.json.room, null);
+      assert.equal(cleared.json.interruption, null);
+    }
+
+    const summaries = await Promise.all([
+      expectOk(
+        takeoverNode,
+        `/battle/records/summary?username=${encodeURIComponent(opponent.username)}`,
+        {token: challenger.token},
+      ),
+      expectOk(
+        takeoverNode,
+        `/battle/records/summary?username=${encodeURIComponent(challenger.username)}`,
+        {token: opponent.token},
+      ),
+    ]);
+    for (const summary of summaries) {
+      assert.equal(summary.json.summary.total, 0);
+      assert.equal(summary.json.summary.wins, 0);
+      assert.equal(summary.json.summary.losses, 0);
+      assert.equal(summary.json.summary.draws, 0);
+    }
+
+    const challengerTakeoverPosition = await expectOk(takeoverNode, "/players/position", {
+      method: "POST",
+      token: challenger.token,
+      body: positionPayload(20, 20, "east", false),
+    });
+    const opponentTakeoverPosition = await expectOk(takeoverNode, "/players/position", {
+      method: "POST",
+      token: opponent.token,
+      body: positionPayload(21, 20, "west", false),
+    });
+    assert.ok(challengerTakeoverPosition.json.presenceRevision >= 2_000_000_001);
+    assert.ok(opponentTakeoverPosition.json.presenceRevision >= 2_000_000_001);
+    const rematchInvite = await expectOk(takeoverNode, "/battle/invite", {
+      method: "POST",
+      token: challenger.token,
+      body: {username: opponent.username},
+    });
+    const rematch = await expectOk(
+      takeoverNode,
+      `/battle/invites/${encodeURIComponent(rematchInvite.json.invite.inviteId)}/accept`,
+      {method: "POST", token: opponent.token},
+    );
+    assert.equal(rematch.json.room.status, "ready");
+    assert.notEqual(rematch.json.room.roomId, interruptedRoomId);
+    for (const account of [challenger, opponent]) {
+      const rematchState = await expectOk(takeoverNode, "/battle/state", {token: account.token});
+      assert.equal(rematchState.json.room.roomId, rematch.json.room.roomId);
+      assert.equal(rematchState.json.interruption, null);
+    }
+
+    await takeoverNode.stop();
+    takeoverNode = null;
+    return {
+      independentGameNodeProcesses: 2,
+      sharedJsonAuthorityFixtureProven: true,
+      generationTwoTakeoverProven: true,
+      ticketTakeoverProven: true,
+      neutralRecoveryProven: true,
+      stableRecoveryReplayProven: true,
+      winLossUnaffected: true,
+      participantsCanRematch: true,
+    };
+  } finally {
+    await Promise.allSettled([
+      ownerNode && ownerNode.stop(false),
+      takeoverNode && takeoverNode.stop(false),
+    ]);
+  }
+}
+
+function battleInterruptionOperationId(ticketIdValue) {
+  const ticketId = String(ticketIdValue || "");
+  assert.match(ticketId, BATTLE_FAILURE_TICKET_PATTERN);
+  return `bbo_battle_recover_${ticketId.slice("battle_failure_".length)}`;
+}
+
 class NodeWorker {
   static async start(configuration) {
     const child = fork(filePath, ["--node-worker"], {
@@ -371,6 +583,7 @@ class NodeWorker {
         BEASTBOUND_GATE_VALKEY_PORT: String(configuration.valkeyPort),
         BEASTBOUND_GATE_STREAM_KEY: configuration.streamKey,
         BEASTBOUND_GATE_SERVICE_EVENT_SEQ: String(configuration.serviceEventSeq),
+        BEASTBOUND_GATE_SHARED_STORE_PATH: String(configuration.sharedStorePath || ""),
       },
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     });
@@ -520,6 +733,7 @@ class NodeWorker {
 async function runNodeWorker() {
   const {
     createAuthService,
+    createJsonAuthStore,
     createMemoryAuthStore,
   } = require("../server/node/src/auth-service");
   const {
@@ -535,7 +749,10 @@ async function runNodeWorker() {
     nowMs,
     Number(process.env.BEASTBOUND_GATE_SERVICE_EVENT_SEQ || 0),
   );
-  const store = createMemoryAuthStore(fixture.data);
+  const sharedStorePath = String(process.env.BEASTBOUND_GATE_SHARED_STORE_PATH || "").trim();
+  const store = sharedStorePath !== ""
+    ? createJsonAuthStore(sharedStorePath)
+    : createMemoryAuthStore(fixture.data);
   const send = (message) => {
     if (typeof process.send === "function" && process.connected) {
       process.send(message);
@@ -774,10 +991,16 @@ function clusterFixture(nowMs, serviceEventSeq) {
     fixtureIdentity("alice", "跨节点甲"),
     fixtureIdentity("bob", "跨节点乙"),
     fixtureIdentity("replacement", "换线验证"),
+    fixtureIdentity("battle_challenger", "故障切磋甲"),
+    fixtureIdentity("battle_opponent", "故障切磋乙"),
   ];
   for (const account of accounts) {
     const salt = crypto.createHash("sha256").update(`salt:${account.key}`).digest("hex").slice(0, 32);
     const playerId = `player_cluster_gate_${account.key}`;
+    const isBattleFixture = account.key === "battle_challenger" || account.key === "battle_opponent";
+    const battleElements = account.key === "battle_opponent"
+      ? {earth: 0, water: 10, fire: 0, wind: 0}
+      : {earth: 10, water: 0, fire: 0, wind: 0};
     data.accounts[account.username] = {
       accountId: account.accountId,
       username: account.username,
@@ -815,6 +1038,17 @@ function clusterFixture(nowMs, serviceEventSeq) {
       schemaVersion: 1,
       profile: {
         name: account.displayName,
+        ...(isBattleFixture ? {
+          player: {
+            name: account.displayName,
+            level: 1,
+            hp: 120,
+            maxHp: 120,
+            baseStats: {maxHp: 120, attack: 18, defense: 6, quick: 70},
+            elements: battleElements,
+          },
+          activePetInstanceId: "",
+        } : {}),
         backpackSlots: [],
         equipmentInstances: {},
         petInstances: [],
@@ -896,6 +1130,7 @@ function request(worker, pathname, options = {}) {
     method: options.method,
     token: options.token,
     body: options.body,
+    headers: options.headers,
     protocolVersion: PROTOCOL_VERSION,
     clientVersion: SERVER_VERSION,
     timeoutMs: HTTP_TIMEOUT_MS,
