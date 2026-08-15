@@ -119,6 +119,9 @@ SUPPORT_BAND_HEIGHT_PX = 18
 CENTER_GATE_METRIC = "alpha_bounds_support_pair_consensus_v1"
 MAX_ALPHA_HEIGHT_RATIO = 1.12
 MAX_STRONG_MAGENTA_EDGE_RATIO = 0.02
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+FORMAL_BATTLE_ARCHIVE_MODES = {"lean", "full"}
+FORMAL_BATTLE_INSTALLER = "install_pet_battle_bundle.py"
 
 
 @dataclass(frozen=True)
@@ -137,6 +140,40 @@ def _issue(code: str, message: str, path: str = "") -> dict[str, str]:
     if path:
         result["path"] = path
     return result
+
+
+def _is_sha256(value: Any) -> bool:
+    return isinstance(value, str) and SHA256_PATTERN.fullmatch(value) is not None
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _safe_bundle_relative_path(root: Path, value: Any) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip()
+    pure = PurePosixPath(raw)
+    if (
+        raw.startswith(("/", "\\"))
+        or raw.startswith("res://")
+        or "\\" in raw
+        or pure.is_absolute()
+        or ".." in pure.parts
+    ):
+        return None
+    resolved_root = root.resolve(strict=False)
+    resolved = (root / Path(*pure.parts)).resolve(strict=False)
+    try:
+        resolved.relative_to(resolved_root)
+    except ValueError:
+        return None
+    return resolved
 
 
 def _repo_relative(path: Path, repo_root: Path) -> str:
@@ -1689,6 +1726,551 @@ def _audit_orphans(
         )
 
 
+def _audit_mounted_battle_source_readiness(
+    spec: BundleSpec,
+    metadata: dict[str, Any],
+    required_actions: list[str],
+    *,
+    form_result: dict[str, Any],
+    bundle_result: dict[str, Any],
+    repo_root: Path,
+) -> None:
+    readiness = {
+        "declared": False,
+        "status": "not_declared",
+        "archiveMode": "",
+        "sourceFramesTracked": None,
+        "bundleDigest": "",
+        "sourceLedger": "",
+        "installManifest": "source/battle/install-manifest.json",
+        "expectedPromptCount": 0,
+        "trackedPromptCount": 0,
+        "expectedSourceFrameHashCount": 0,
+        "validatedSourceFrameHashCount": 0,
+        "installedFileCount": 0,
+        "validatedSourceFileCount": 0,
+        "linkedBundleDigests": {},
+    }
+    bundle_result["battle"]["sourceReadiness"] = readiness
+    if spec.kind != "mounted":
+        return
+    battle_visual = metadata.get("battleVisual")
+    if not isinstance(battle_visual, dict):
+        return
+    formally_declared = any(
+        key in battle_visual
+        for key in ("status", "bundleDigest", "qcSummary", "runtimeRoot")
+    )
+    if not formally_declared:
+        return
+
+    readiness["declared"] = True
+    initial_issue_count = len(bundle_result["errors"]) + len(
+        bundle_result["pending"]
+    )
+
+    def add(code: str, message: str, path: Path | str | None = None) -> None:
+        rendered_path = ""
+        if isinstance(path, Path):
+            rendered_path = _repo_relative(path, repo_root)
+        elif isinstance(path, str):
+            rendered_path = path
+        _add_asset_issue(
+            form_result,
+            bundle_result,
+            code,
+            message,
+            rendered_path,
+        )
+
+    def load_json(path: Path, code: str, label: str) -> dict[str, Any] | None:
+        if not path.is_file():
+            add(code, f"缺少{label}", path)
+            return None
+        try:
+            value = _load_json(path)
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            add(code, f"{label}无法解析：{error}", path)
+            return None
+        if not isinstance(value, dict):
+            add(code, f"{label}必须是 JSON 对象", path)
+            return None
+        return value
+
+    archive_mode = battle_visual.get("archiveMode")
+    readiness["archiveMode"] = archive_mode if isinstance(archive_mode, str) else ""
+    if archive_mode not in FORMAL_BATTLE_ARCHIVE_MODES:
+        add(
+            "invalid_battle_archive_mode",
+            "正式骑乘战斗包 battleVisual.archiveMode 必须为 lean 或 full",
+            spec.metadata_path,
+        )
+    tracks_source = battle_visual.get("sourceFramesTracked")
+    readiness["sourceFramesTracked"] = (
+        tracks_source if type(tracks_source) is bool else None
+    )
+    if type(tracks_source) is not bool or (
+        archive_mode in FORMAL_BATTLE_ARCHIVE_MODES
+        and tracks_source is not (archive_mode == "full")
+    ):
+        add(
+            "invalid_battle_source_tracking",
+            "full 必须 sourceFramesTracked=true，lean 必须为 false",
+            spec.metadata_path,
+        )
+
+    linked_digests: dict[str, str] = {}
+    metadata_digest = battle_visual.get("bundleDigest")
+    if _is_sha256(metadata_digest):
+        readiness["bundleDigest"] = metadata_digest
+        linked_digests["metadata"] = metadata_digest
+    else:
+        add(
+            "invalid_battle_bundle_digest",
+            "正式骑乘战斗包缺少有效的 battleVisual.bundleDigest",
+            spec.metadata_path,
+        )
+
+    source_ledger: dict[str, Any] | None = None
+    source_ledger_path = _safe_bundle_relative_path(
+        spec.root,
+        battle_visual.get("sourceLedger"),
+    )
+    if source_ledger_path is None:
+        add(
+            "missing_battle_source_ledger",
+            "正式骑乘战斗包缺少安全的 battleVisual.sourceLedger",
+            spec.metadata_path,
+        )
+    else:
+        readiness["sourceLedger"] = source_ledger_path.relative_to(
+            spec.root.resolve(strict=False)
+        ).as_posix()
+        source_ledger = load_json(
+            source_ledger_path,
+            "missing_battle_source_ledger",
+            "骑乘战斗来源 ledger",
+        )
+
+    qc_summary: dict[str, Any] | None = None
+    qc_summary_path = _safe_bundle_relative_path(
+        spec.root,
+        battle_visual.get("qcSummary"),
+    )
+    if qc_summary_path is None:
+        add(
+            "missing_battle_qc_summary",
+            "正式骑乘战斗包缺少安全的 battleVisual.qcSummary",
+            spec.metadata_path,
+        )
+    else:
+        qc_summary = load_json(
+            qc_summary_path,
+            "missing_battle_qc_summary",
+            "骑乘战斗 QC 摘要",
+        )
+        if isinstance(qc_summary, dict) and _is_sha256(
+            qc_summary.get("bundleDigest")
+        ):
+            linked_digests["qcSummary"] = qc_summary["bundleDigest"]
+
+    # Legacy candidate ledgers are not accepted as the formal source ledger, but
+    # their digest remains useful for exposing stale metadata instead of hiding it.
+    source_archive = metadata.get("sourceArchive")
+    legacy_ledger_path: Path | None = None
+    if source_ledger is None and isinstance(source_archive, dict):
+        legacy_ledger_path = _safe_bundle_relative_path(
+            spec.root,
+            source_archive.get("formalProductionLedger"),
+        )
+    if legacy_ledger_path is not None and legacy_ledger_path.is_file():
+        try:
+            legacy_ledger = _load_json(legacy_ledger_path)
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            legacy_ledger = None
+        if isinstance(legacy_ledger, dict) and _is_sha256(
+            legacy_ledger.get("bundleDigest")
+        ):
+            linked_digests["legacyLedger"] = legacy_ledger["bundleDigest"]
+
+    install_manifest_path = spec.root / "source/battle/install-manifest.json"
+    install_manifest = load_json(
+        install_manifest_path,
+        "missing_battle_install_manifest",
+        "骑乘战斗安装清单",
+    )
+    installed_hashes: dict[str, Any] = {}
+    validated_hashes: dict[str, Any] = {}
+    if install_manifest is not None:
+        manifest_contract_errors: list[str] = []
+        expected_identity = {
+            "schemaVersion": 1,
+            "tool": FORMAL_BATTLE_INSTALLER,
+            "formId": str(metadata.get("mountFormId", "")).strip(),
+            "kind": "mounted",
+            "characterId": spec.character_id,
+            "archiveMode": archive_mode,
+            "runtimeEnabled": False,
+            "ownerReviewStatus": "pending",
+        }
+        for field, expected in expected_identity.items():
+            if install_manifest.get(field) != expected:
+                manifest_contract_errors.append(
+                    f"{field}={install_manifest.get(field)!r}（应为 {expected!r}）"
+                )
+        manifest_digest = install_manifest.get("bundleDigest")
+        if _is_sha256(manifest_digest):
+            linked_digests["installManifest"] = manifest_digest
+        else:
+            manifest_contract_errors.append("bundleDigest 无效")
+        installed_value = install_manifest.get("installedFileHashes")
+        validated_value = install_manifest.get("validatedSourceFileHashes")
+        if isinstance(installed_value, dict) and installed_value:
+            installed_hashes = installed_value
+        else:
+            manifest_contract_errors.append("installedFileHashes 为空或无效")
+        if isinstance(validated_value, dict) and validated_value:
+            validated_hashes = validated_value
+        else:
+            manifest_contract_errors.append(
+                "validatedSourceFileHashes 为空或无效"
+            )
+        if manifest_contract_errors:
+            add(
+                "invalid_battle_install_manifest",
+                "骑乘战斗安装清单合同不一致："
+                + "；".join(manifest_contract_errors[:6]),
+                install_manifest_path,
+            )
+
+    readiness["installedFileCount"] = len(installed_hashes)
+    readiness["validatedSourceFileCount"] = len(validated_hashes)
+
+    installed_hash_errors: list[str] = []
+    for relative, expected_sha in installed_hashes.items():
+        path = _safe_bundle_relative_path(spec.root, relative)
+        if path is None or not _is_sha256(expected_sha):
+            installed_hash_errors.append(str(relative))
+            continue
+        if not path.is_file():
+            installed_hash_errors.append(f"{relative}（缺失）")
+            continue
+        try:
+            actual_sha = _sha256_file(path)
+        except OSError:
+            installed_hash_errors.append(f"{relative}（不可读）")
+            continue
+        if actual_sha != expected_sha:
+            installed_hash_errors.append(f"{relative}（哈希漂移）")
+    if installed_hash_errors:
+        add(
+            "battle_installed_file_hash_mismatch",
+            f"安装文件哈希不一致 {len(installed_hash_errors)} 项："
+            + "、".join(installed_hash_errors[:5]),
+            install_manifest_path,
+        )
+
+    invalid_validated_hashes = [
+        str(relative)
+        for relative, expected_sha in validated_hashes.items()
+        if _safe_bundle_relative_path(spec.root, relative) is None
+        or not _is_sha256(expected_sha)
+    ]
+    if invalid_validated_hashes:
+        add(
+            "invalid_validated_source_hashes",
+            f"完整来源验证哈希表含 {len(invalid_validated_hashes)} 个无效条目："
+            + "、".join(invalid_validated_hashes[:5]),
+            install_manifest_path,
+        )
+
+    actions_meta = metadata.get("actions")
+    expected_paths: dict[str, list[str]] = {
+        "runtime": [],
+        "prompt": [],
+        "pipeline": [],
+        "qc": [],
+        "source": [],
+    }
+    for view in BATTLE_VIEWS:
+        for action in required_actions:
+            action_meta = (
+                actions_meta.get(action)
+                if isinstance(actions_meta, dict)
+                else None
+            )
+            frame_count = (
+                action_meta.get("frameCount")
+                if isinstance(action_meta, dict)
+                else 0
+            )
+            if not isinstance(frame_count, int) or frame_count <= 0:
+                continue
+            action_root = f"source/battle/{view}/{action}"
+            expected_paths["prompt"].append(f"{action_root}/prompt-used.txt")
+            expected_paths["pipeline"].append(f"{action_root}/pipeline-meta.json")
+            expected_paths["qc"].append(f"{action_root}/qa.json")
+            for index in range(1, frame_count + 1):
+                expected_paths["runtime"].append(
+                    f"views/{view}/{action}/{action}-{index}.png"
+                )
+                expected_paths["source"].append(
+                    f"{action_root}/source-frames/{action}-{index}.png"
+                )
+
+    readiness["expectedPromptCount"] = len(expected_paths["prompt"])
+    readiness["expectedSourceFrameHashCount"] = len(expected_paths["source"])
+    readiness["validatedSourceFrameHashCount"] = sum(
+        path in validated_hashes for path in expected_paths["source"]
+    )
+
+    missing_installed_entries: list[str] = []
+    if installed_hashes:
+        required_installed = (
+            expected_paths["runtime"]
+            + expected_paths["prompt"]
+            + expected_paths["pipeline"]
+            + expected_paths["qc"]
+        )
+        if readiness["sourceLedger"]:
+            required_installed.append(readiness["sourceLedger"])
+        if qc_summary_path is not None:
+            required_installed.append(
+                qc_summary_path.relative_to(
+                    spec.root.resolve(strict=False)
+                ).as_posix()
+            )
+        if archive_mode == "full":
+            required_installed += expected_paths["source"]
+        missing_installed_entries = sorted(
+            path for path in set(required_installed) if path not in installed_hashes
+        )
+    if missing_installed_entries:
+        add(
+            "battle_install_manifest_incomplete",
+            f"安装清单漏记 {len(missing_installed_entries)} 个正式文件："
+            + "、".join(missing_installed_entries[:5]),
+            install_manifest_path,
+        )
+
+    missing_validated_entries: list[str] = []
+    if validated_hashes:
+        required_validated = (
+            expected_paths["source"]
+            + expected_paths["prompt"]
+            + expected_paths["pipeline"]
+            + expected_paths["qc"]
+        )
+        missing_validated_entries = sorted(
+            path for path in set(required_validated) if path not in validated_hashes
+        )
+    if missing_validated_entries:
+        add(
+            "validated_battle_source_manifest_incomplete",
+            f"完整来源验证表漏记 {len(missing_validated_entries)} 个文件："
+            + "、".join(missing_validated_entries[:5]),
+            install_manifest_path,
+        )
+
+    raw_archive_errors: list[str] = []
+    if validated_hashes:
+        for view in BATTLE_VIEWS:
+            for action in required_actions:
+                action_root = f"source/battle/{view}/{action}"
+                validated_raw = [
+                    path
+                    for path in validated_hashes
+                    if path.startswith(f"{action_root}/raw-sheet-lossless.")
+                ]
+                if len(validated_raw) != 1:
+                    raw_archive_errors.append(
+                        f"{view}/{action}（完整验证原表 {len(validated_raw)} 份）"
+                    )
+                if f"{action_root}/source-meta.json" not in validated_hashes:
+                    raw_archive_errors.append(f"{view}/{action}（缺 source-meta）")
+                if archive_mode == "full" or action == "idle":
+                    installed_raw = [
+                        path
+                        for path in installed_hashes
+                        if path.startswith(f"{action_root}/raw-sheet-lossless.")
+                    ]
+                    if len(installed_raw) != 1:
+                        raw_archive_errors.append(
+                            f"{view}/{action}（安装原表 {len(installed_raw)} 份）"
+                        )
+                    if f"{action_root}/source-meta.json" not in installed_hashes:
+                        raw_archive_errors.append(
+                            f"{view}/{action}（安装包缺 source-meta）"
+                        )
+    if raw_archive_errors:
+        add(
+            "battle_lossless_source_archive_incomplete",
+            f"无损生成表／来源元数据不完整 {len(raw_archive_errors)} 项："
+            + "、".join(raw_archive_errors[:6]),
+            install_manifest_path,
+        )
+
+    ledger_contract_errors: list[str] = []
+    ledger_actions = (
+        source_ledger.get("actions")
+        if isinstance(source_ledger, dict)
+        else None
+    )
+    if source_ledger is not None:
+        expected_ledger_identity = {
+            "schemaVersion": 1,
+            "archiveMode": archive_mode,
+            "formId": str(metadata.get("mountFormId", "")).strip(),
+            "kind": "mounted",
+            "characterId": spec.character_id,
+            "fullSourceValidationRequiredBeforeInstall": True,
+        }
+        for field, expected in expected_ledger_identity.items():
+            if source_ledger.get(field) != expected:
+                ledger_contract_errors.append(field)
+        for field in ("generator", "sourceOrigin", "ownership", "replacementPath"):
+            if not _is_non_empty(source_ledger.get(field)):
+                ledger_contract_errors.append(field)
+        if not isinstance(ledger_actions, dict):
+            ledger_contract_errors.append("actions")
+
+    tracked_prompt_count = 0
+    prompt_errors: list[str] = []
+    provenance_hash_errors: list[str] = []
+    for view in BATTLE_VIEWS:
+        view_ledger = (
+            ledger_actions.get(view)
+            if isinstance(ledger_actions, dict)
+            else None
+        )
+        for action in required_actions:
+            action_meta = (
+                actions_meta.get(action)
+                if isinstance(actions_meta, dict)
+                else None
+            )
+            frame_count = (
+                action_meta.get("frameCount")
+                if isinstance(action_meta, dict)
+                else 0
+            )
+            if not isinstance(frame_count, int) or frame_count <= 0:
+                continue
+            label = f"{view}/{action}"
+            action_ledger = (
+                view_ledger.get(action)
+                if isinstance(view_ledger, dict)
+                else None
+            )
+            if source_ledger is not None and not isinstance(action_ledger, dict):
+                ledger_contract_errors.append(label)
+                action_ledger = None
+            if isinstance(action_ledger, dict):
+                expected_tracking = archive_mode == "full"
+                if action_ledger.get("sourceFramesTracked") is not expected_tracking:
+                    ledger_contract_errors.append(f"{label}.sourceFramesTracked")
+                source_hashes = action_ledger.get("sourceFrameRgbaSha256")
+                runtime_hashes = action_ledger.get("runtimeFrameRgbaSha256")
+                if (
+                    not isinstance(source_hashes, list)
+                    or len(source_hashes) != frame_count
+                    or any(not _is_sha256(value) for value in source_hashes)
+                ):
+                    ledger_contract_errors.append(f"{label}.sourceFrameRgbaSha256")
+                if (
+                    not isinstance(runtime_hashes, list)
+                    or len(runtime_hashes) != frame_count
+                    or any(not _is_sha256(value) for value in runtime_hashes)
+                ):
+                    ledger_contract_errors.append(f"{label}.runtimeFrameRgbaSha256")
+                for field in ("promptSha256", "pipelineSha256", "qcSha256"):
+                    if not _is_sha256(action_ledger.get(field)):
+                        ledger_contract_errors.append(f"{label}.{field}")
+                if (archive_mode == "full" or action == "idle") and (
+                    action_ledger.get("representativeRawTracked") is not True
+                ):
+                    ledger_contract_errors.append(f"{label}.representativeRawTracked")
+
+            action_root = spec.root / "source" / "battle" / view / action
+            evidence_files = (
+                ("promptSha256", action_root / "prompt-used.txt"),
+                ("pipelineSha256", action_root / "pipeline-meta.json"),
+                ("qcSha256", action_root / "qa.json"),
+            )
+            for field, path in evidence_files:
+                if not path.is_file():
+                    if field == "promptSha256":
+                        prompt_errors.append(label)
+                    else:
+                        provenance_hash_errors.append(f"{label}/{path.name}（缺失）")
+                    continue
+                try:
+                    actual_sha = _sha256_file(path)
+                except OSError:
+                    provenance_hash_errors.append(f"{label}/{path.name}（不可读）")
+                    continue
+                if field == "promptSha256":
+                    try:
+                        prompt_text = path.read_text(encoding="utf-8").strip()
+                    except (OSError, UnicodeError):
+                        prompt_text = ""
+                    if len(prompt_text) < 40:
+                        prompt_errors.append(f"{label}（内容过短）")
+                    else:
+                        tracked_prompt_count += 1
+                if isinstance(action_ledger, dict) and (
+                    action_ledger.get(field) != actual_sha
+                ):
+                    provenance_hash_errors.append(f"{label}/{path.name}（ledger 哈希漂移）")
+
+    readiness["trackedPromptCount"] = tracked_prompt_count
+    if prompt_errors:
+        add(
+            "missing_battle_action_prompts",
+            f"逐动作 exact prompt 不完整 {len(prompt_errors)} 项："
+            + "、".join(prompt_errors[:5]),
+            spec.root / "source/battle",
+        )
+    if provenance_hash_errors:
+        add(
+            "battle_provenance_hash_mismatch",
+            f"逐动作处理/QC 证据缺失或哈希不一致 {len(provenance_hash_errors)} 项："
+            + "、".join(provenance_hash_errors[:5]),
+            spec.root / "source/battle",
+        )
+    if ledger_contract_errors:
+        add(
+            "invalid_battle_source_ledger",
+            f"骑乘战斗来源 ledger 合同不完整 {len(ledger_contract_errors)} 项："
+            + "、".join(ledger_contract_errors[:8]),
+            source_ledger_path or spec.metadata_path,
+        )
+
+    readiness["linkedBundleDigests"] = dict(sorted(linked_digests.items()))
+    unique_digests = sorted(set(linked_digests.values()))
+    if len(unique_digests) > 1:
+        rendered = "，".join(
+            f"{label}={digest[:12]}…"
+            for label, digest in sorted(linked_digests.items())
+        )
+        add(
+            "battle_bundle_digest_mismatch",
+            "骑乘战斗 metadata／安装清单／QC／来源账本的 bundle digest 不一致："
+            + rendered,
+            spec.metadata_path,
+        )
+
+    final_issue_count = len(bundle_result["errors"]) + len(
+        bundle_result["pending"]
+    )
+    if final_issue_count == initial_issue_count:
+        readiness["status"] = "verified"
+    elif bool(form_result.get("runtimeEnabled", False)):
+        readiness["status"] = "failed"
+    else:
+        readiness["status"] = "pending"
+
+
 def _audit_bundle(
     spec: BundleSpec,
     *,
@@ -1827,6 +2409,14 @@ def _audit_bundle(
         repo_root=repo_root,
         cache=cache,
         expected_pngs=expected_pngs,
+    )
+    _audit_mounted_battle_source_readiness(
+        spec,
+        metadata,
+        required_actions,
+        form_result=form_result,
+        bundle_result=result,
+        repo_root=repo_root,
     )
     if spec.kind == "pet":
         _audit_evolution(

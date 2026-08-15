@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import subprocess
 import sys
@@ -571,6 +572,182 @@ def _materialize_full_source_battle(
             "actions": actions,
         },
     )
+
+
+def _fixture_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _materialize_mounted_lean_release_contract(
+    repo_root: Path,
+    catalog: dict[str, Any],
+) -> Path:
+    form = catalog["forms"][0]
+    form["status"] = "owner_review_pending"
+    form["runtimeEnabled"] = False
+    bundle = form["mounted"]
+    root = repo_root / bundle["root"]
+    metadata_path = repo_root / bundle["metadataPath"]
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    bundle_digest = "a" * 64
+    metadata["battleVisual"] = {
+        "status": "owner_review_pending",
+        "kind": "mounted",
+        "bundleDigest": bundle_digest,
+        "archiveMode": "lean",
+        "sourceFramesTracked": False,
+        "sourceLedger": "source/battle/source-ledger.json",
+        "runtimeRoot": "views",
+        "qcSummary": "qa/battle/qc-summary.json",
+    }
+    _write_json(metadata_path, metadata)
+
+    installed_hashes: dict[str, str] = {}
+    validated_hashes: dict[str, str] = {}
+    ledger_actions: dict[str, dict[str, object]] = {}
+    for view in VIEWS:
+        view_actions: dict[str, object] = {}
+        for action in catalog["requiredBattleActions"]:
+            frame_count = metadata["actions"][action]["frameCount"]
+            action_root = root / "source" / "battle" / view / action
+            prompt = action_root / "prompt-used.txt"
+            prompt.parent.mkdir(parents=True, exist_ok=True)
+            prompt.write_text(
+                f"Fixture exact mounted battle prompt for {view}/{action}; "
+                "whole-frame rider and mount, no mirroring or layered composition.\n",
+                encoding="utf-8",
+            )
+            pipeline = action_root / "pipeline-meta.json"
+            qa = action_root / "qa.json"
+            _write_json(pipeline, {"schemaVersion": 1, "action": action})
+            _write_json(qa, {"schemaVersion": 1, "status": "passed"})
+            evidence_paths = (prompt, pipeline, qa)
+            for evidence_path in evidence_paths:
+                relative = evidence_path.relative_to(root).as_posix()
+                digest = _fixture_sha256(evidence_path)
+                installed_hashes[relative] = digest
+                validated_hashes[relative] = digest
+
+            source_hashes: list[str] = []
+            runtime_hashes: list[str] = []
+            for index in range(1, frame_count + 1):
+                source_relative = (
+                    f"source/battle/{view}/{action}/source-frames/"
+                    f"{action}-{index}.png"
+                )
+                runtime_relative = f"views/{view}/{action}/{action}-{index}.png"
+                source_digest = hashlib.sha256(
+                    source_relative.encode("utf-8")
+                ).hexdigest()
+                with Image.open(root / runtime_relative) as opened:
+                    runtime_digest = rgba_hash(opened.convert("RGBA"))
+                source_hashes.append(source_digest)
+                runtime_hashes.append(runtime_digest)
+                validated_hashes[source_relative] = source_digest
+                installed_hashes[runtime_relative] = _fixture_sha256(
+                    root / runtime_relative
+                )
+
+            raw_relative = f"source/battle/{view}/{action}/raw-sheet-lossless.png"
+            source_meta_relative = f"source/battle/{view}/{action}/source-meta.json"
+            validated_hashes[raw_relative] = hashlib.sha256(
+                raw_relative.encode("utf-8")
+            ).hexdigest()
+            validated_hashes[source_meta_relative] = hashlib.sha256(
+                source_meta_relative.encode("utf-8")
+            ).hexdigest()
+            if action == "idle":
+                raw = root / raw_relative
+                raw.parent.mkdir(parents=True, exist_ok=True)
+                Image.new("RGB", (32, 32), (255, 0, 255)).save(raw)
+                source_meta = root / source_meta_relative
+                _write_json(
+                    source_meta,
+                    {"schemaVersion": 1, "sourceOrigin": "fixture"},
+                )
+                installed_hashes[raw_relative] = _fixture_sha256(raw)
+                installed_hashes[source_meta_relative] = _fixture_sha256(
+                    source_meta
+                )
+                validated_hashes[raw_relative] = installed_hashes[raw_relative]
+                validated_hashes[source_meta_relative] = installed_hashes[
+                    source_meta_relative
+                ]
+
+            view_actions[action] = {
+                "originalGeneratedSha256": "1" * 64,
+                "originalGeneratedDecodedRgbaSha256": "2" * 64,
+                "rawArchiveSha256": "3" * 64,
+                "rawDecodedRgbaSha256": "4" * 64,
+                "promptSha256": _fixture_sha256(prompt),
+                "pipelineSha256": _fixture_sha256(pipeline),
+                "qcSha256": _fixture_sha256(qa),
+                "sourceFrameRgbaSha256": source_hashes,
+                "runtimeFrameRgbaSha256": runtime_hashes,
+                "representativeRawTracked": action == "idle",
+                "sourceFramesTracked": False,
+            }
+        ledger_actions[view] = view_actions
+
+    qc_summary = root / "qa/battle/qc-summary.json"
+    _write_json(
+        qc_summary,
+        {
+            "schemaVersion": 1,
+            "status": "passed",
+            "ownerReviewStatus": "pending",
+        },
+    )
+    installed_hashes[qc_summary.relative_to(root).as_posix()] = _fixture_sha256(
+        qc_summary
+    )
+    validated_hashes[qc_summary.relative_to(root).as_posix()] = _fixture_sha256(
+        qc_summary
+    )
+
+    source_ledger = root / "source/battle/source-ledger.json"
+    _write_json(
+        source_ledger,
+        {
+            "schemaVersion": 1,
+            "archiveMode": "lean",
+            "formId": form["formId"],
+            "kind": "mounted",
+            "characterId": catalog["defaultCharacterId"],
+            "generator": "fixture generator",
+            "sourceOrigin": "project-owned fixture generation",
+            "ownership": "fixture project ownership",
+            "replacementPath": "regenerate from fixture prompts",
+            "fullSourceValidationRequiredBeforeInstall": True,
+            "actions": ledger_actions,
+        },
+    )
+    installed_hashes[source_ledger.relative_to(root).as_posix()] = _fixture_sha256(
+        source_ledger
+    )
+
+    install_manifest = root / "source/battle/install-manifest.json"
+    _write_json(
+        install_manifest,
+        {
+            "schemaVersion": 1,
+            "tool": "install_pet_battle_bundle.py",
+            "formId": form["formId"],
+            "kind": "mounted",
+            "characterId": catalog["defaultCharacterId"],
+            "bundleDigest": bundle_digest,
+            "archiveMode": "lean",
+            "installedFileHashes": dict(sorted(installed_hashes.items())),
+            "validatedSourceFileHashes": dict(sorted(validated_hashes.items())),
+            "runtimeEnabled": False,
+            "ownerReviewStatus": "pending",
+        },
+    )
+    return root
 
 
 def _run(
@@ -1317,6 +1494,108 @@ class PetArtBatchAuditTest(unittest.TestCase):
                 mounted["canonicalDerivedRuntimeFrameCount"],
                 180,
             )
+
+    def test_mounted_lean_release_source_contract_is_verified(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            _materialize_mounted_lean_release_contract(root, catalog)
+            completed, report = _run(root, catalog)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            readiness = report["forms"][0]["mounted"]["battle"][
+                "sourceReadiness"
+            ]
+            self.assertTrue(readiness["declared"])
+            self.assertEqual(readiness["status"], "verified")
+            self.assertEqual(readiness["archiveMode"], "lean")
+            self.assertEqual(readiness["trackedPromptCount"], 24)
+            self.assertEqual(readiness["expectedPromptCount"], 24)
+            self.assertEqual(readiness["validatedSourceFrameHashCount"], 24)
+            self.assertEqual(readiness["expectedSourceFrameHashCount"], 24)
+
+    def test_mounted_legacy_lean_candidate_reports_specific_source_gaps(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            catalog["forms"][0]["runtimeEnabled"] = False
+            _materialize_all(root, catalog)
+            mounted = catalog["forms"][0]["mounted"]
+            mounted_root = root / mounted["root"]
+            metadata_path = root / mounted["metadataPath"]
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["battleVisual"] = {
+                "status": "owner_review_pending",
+                "bundleDigest": "a" * 64,
+                "archiveMode": "lean",
+                "sourceFramesTracked": False,
+                "runtimeRoot": "views",
+                "qcSummary": "qa/battle/qc-summary.json",
+            }
+            metadata["sourceArchive"] = {
+                "formalProductionLedger": (
+                    "source/formal-production/source-ledger.json"
+                )
+            }
+            _write_json(metadata_path, metadata)
+            _write_json(
+                mounted_root / "qa/battle/qc-summary.json",
+                {"schemaVersion": 1, "bundleDigest": "b" * 64},
+            )
+            _write_json(
+                mounted_root / "source/formal-production/source-ledger.json",
+                {"schemaVersion": 1, "bundleDigest": "b" * 64},
+            )
+
+            completed, report = _run(root, catalog)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            codes = _issue_codes(report, "pending")
+            self.assertIn("missing_battle_source_ledger", codes)
+            self.assertIn("missing_battle_install_manifest", codes)
+            self.assertIn("missing_battle_action_prompts", codes)
+            self.assertIn("battle_bundle_digest_mismatch", codes)
+            readiness = report["forms"][0]["mounted"]["battle"][
+                "sourceReadiness"
+            ]
+            self.assertEqual(readiness["status"], "pending")
+            self.assertEqual(readiness["trackedPromptCount"], 0)
+            self.assertEqual(
+                set(readiness["linkedBundleDigests"]),
+                {"legacyLedger", "metadata", "qcSummary"},
+            )
+
+    def test_mounted_source_gap_blocks_runtime_enabled_form(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            catalog = _read_fixture()
+            _materialize_all(root, catalog)
+            mounted = catalog["forms"][0]["mounted"]
+            metadata_path = root / mounted["metadataPath"]
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["battleVisual"] = {
+                "status": "owner_review_pending",
+                "bundleDigest": "a" * 64,
+                "archiveMode": "lean",
+                "sourceFramesTracked": False,
+                "runtimeRoot": "views",
+                "qcSummary": "qa/battle/qc-summary.json",
+            }
+            _write_json(metadata_path, metadata)
+            _write_json(
+                root / mounted["root"] / "qa/battle/qc-summary.json",
+                {"schemaVersion": 1},
+            )
+
+            completed, report = _run(root, catalog)
+
+            self.assertEqual(completed.returncode, 1)
+            readiness = report["forms"][0]["mounted"]["battle"][
+                "sourceReadiness"
+            ]
+            self.assertEqual(readiness["status"], "failed")
+            self.assertIn("missing_battle_source_ledger", _issue_codes(report))
 
     def test_mounted_runtime_overlay_breaks_full_source_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
