@@ -1,5 +1,9 @@
 extends RefCounted
 
+const PetFusionReleaseAttestationModel := preload(
+	"res://scripts/progression/pet_fusion_release_attestation_model.gd"
+)
+
 const CATALOG_SCHEMA_VERSION := 2
 const CATALOG_ID := "pet_fusion_recipes_v2"
 const AUTHORITY_MODEL := "pet_growth_authority_v1"
@@ -22,6 +26,7 @@ const MINIMUM_LEVEL := 131
 const MAXIMUM_LEVEL := 140
 const SPECIAL_ACTIVE_INHERITANCE_CHANCE := 0.5
 const RESULT_PASSIVE_SKILL_COUNT := 1
+const RELEASE_GATE_CLOSED_MESSAGE := "宠物融合尚未开放；当前不会消耗任何宠物。"
 const PASSIVE_SOURCE_WEIGHTS := {
 	"core": 0.4,
 	"resonance_one": 0.3,
@@ -37,6 +42,49 @@ static func validation_errors(
 	battle_actions,
 	battle_passives,
 	skill_training
+) -> Array[String]:
+	return _validation_errors(
+		document,
+		pet_templates,
+		growth_profiles,
+		paid_reset_policy,
+		battle_actions,
+		battle_passives,
+		skill_training,
+		true
+	)
+
+
+static func fixture_validation_errors(
+	document,
+	pet_templates,
+	growth_profiles,
+	paid_reset_policy,
+	battle_actions,
+	battle_passives,
+	skill_training
+) -> Array[String]:
+	return _validation_errors(
+		document,
+		pet_templates,
+		growth_profiles,
+		paid_reset_policy,
+		battle_actions,
+		battle_passives,
+		skill_training,
+		false
+	)
+
+
+static func _validation_errors(
+	document,
+	pet_templates,
+	growth_profiles,
+	paid_reset_policy,
+	battle_actions,
+	battle_passives,
+	skill_training,
+	require_release_attestation: bool
 ) -> Array[String]:
 	var errors: Array[String] = []
 	if not (document is Dictionary):
@@ -188,6 +236,10 @@ static func validation_errors(
 			errors.append("融合目录开启时必须至少有一条正式配方")
 		if formal_recipe_count != (raw_recipes as Array).size():
 			errors.append("融合目录开启时每条配方都必须通过正式资源门禁")
+		if require_release_attestation:
+			errors.append_array(
+				PetFusionReleaseAttestationModel.validation_errors(data)
+			)
 	return errors
 
 
@@ -209,6 +261,21 @@ static func runtime_available(document) -> bool:
 		and recipes is Array
 		and not (recipes as Array).is_empty()
 	)
+
+
+static func production_document(
+	document,
+	contract_errors: Array[String]
+) -> Dictionary:
+	if not (document is Dictionary):
+		return {}
+	var projected := (document as Dictionary).duplicate(true)
+	if projected.get("runtimeEnabled", null) != true:
+		return projected
+	if not runtime_available(projected) or not contract_errors.is_empty():
+		projected["runtimeEnabled"] = false
+		projected["disabledMessage"] = RELEASE_GATE_CLOSED_MESSAGE
+	return projected
 
 
 static func recipe_by_id(document, recipe_id: String) -> Dictionary:

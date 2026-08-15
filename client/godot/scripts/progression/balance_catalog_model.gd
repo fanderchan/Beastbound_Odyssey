@@ -15,6 +15,7 @@ const PET_REBIRTH_BALANCE_PATH := BALANCE_DIR + "/pet_rebirth_balance.json"
 const PET_EVOLUTION_BALANCE_PATH := BALANCE_DIR + "/pet_evolution_balance.json"
 const PET_EVOLUTION_ROUTES_PATH := "res://data/pet_evolution_routes.json"
 const PET_FUSION_RECIPES_PATH := "res://data/pet_fusion_recipes.json"
+const PET_FUSION_RUNTIME_CACHE_KEY := "runtime://pet_fusion_recipes"
 const PET_TEMPLATES_PATH := "res://data/pet_templates.json"
 const PET_PAID_RESET_POLICY_PATH := BALANCE_DIR + "/pet_paid_reset_policy.json"
 const PET_SKILL_TRAINING_PATH := "res://data/pet_skill_training.json"
@@ -96,7 +97,14 @@ static func pet_evolution_routes() -> Dictionary:
 
 
 static func pet_fusion_recipes() -> Dictionary:
-	return _data(PET_FUSION_RECIPES_PATH)
+	if cache.has(PET_FUSION_RUNTIME_CACHE_KEY):
+		return cache.get(PET_FUSION_RUNTIME_CACHE_KEY, {}) as Dictionary
+	var raw_document := _data(PET_FUSION_RECIPES_PATH)
+	var errors := _pet_fusion_recipe_validation_errors(raw_document)
+	cache[PET_FUSION_RUNTIME_CACHE_KEY] = (
+		PetFusionRecipeCatalogModel.production_document(raw_document, errors)
+	)
+	return cache.get(PET_FUSION_RUNTIME_CACHE_KEY, {}) as Dictionary
 
 
 static func terminal_fusion_form_ids() -> Array[String]:
@@ -934,15 +942,23 @@ static func _validate_pet_evolution_routes(errors: Array[String]) -> void:
 
 
 static func _validate_pet_fusion_recipes(errors: Array[String]) -> void:
-	errors.append_array(PetFusionRecipeCatalogModel.validation_errors(
-		pet_fusion_recipes(),
+	errors.append_array(_pet_fusion_recipe_validation_errors(
+		_data(PET_FUSION_RECIPES_PATH)
+	))
+
+
+static func _pet_fusion_recipe_validation_errors(
+	document: Dictionary
+) -> Array[String]:
+	return PetFusionRecipeCatalogModel.validation_errors(
+		document,
 		_data(PET_TEMPLATES_PATH),
 		pet_growth_species_profiles(),
 		_data(PET_PAID_RESET_POLICY_PATH),
 		_data(BATTLE_ACTIONS_PATH),
 		_data(BATTLE_PASSIVES_PATH),
 		_data(PET_SKILL_TRAINING_PATH)
-	))
+	)
 
 
 static func _validate_pet_rebirth_threshold_series(value, path_label: String, errors: Array[String]) -> void:

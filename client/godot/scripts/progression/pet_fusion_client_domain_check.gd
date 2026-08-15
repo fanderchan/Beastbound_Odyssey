@@ -12,6 +12,9 @@ const PetFusionPresentationModel := preload(
 const PetFusionRecipeCatalogModel := preload(
 	"res://scripts/progression/pet_fusion_recipe_catalog_model.gd"
 )
+const PetFusionReleaseAttestationModel := preload(
+	"res://scripts/progression/pet_fusion_release_attestation_model.gd"
+)
 const PetFusionSelectionModel := preload(
 	"res://scripts/progression/pet_fusion_selection_model.gd"
 )
@@ -112,6 +115,127 @@ func _initialize() -> void:
 	_expect(
 		PetFusionRecipeCatalogModel.runtime_available(enabled_catalog),
 		"仅用于合同检查的启用副本不可用",
+		errors
+	)
+	var release_fixture := _release_attestation_fixture(enabled_catalog)
+	var release_fixture_files := release_fixture.get("files", {}) as Dictionary
+	var release_fixture_content := str(
+		release_fixture.get("attestationContent", "")
+	)
+	var release_errors := (
+		PetFusionReleaseAttestationModel.fixture_validation_errors(
+			release_fixture_content,
+			enabled_catalog,
+			release_fixture_files
+		)
+	)
+	var approved_projection := PetFusionRecipeCatalogModel.production_document(
+		enabled_catalog,
+		release_errors
+	)
+	var missing_release_errors := (
+		PetFusionReleaseAttestationModel.validation_errors(enabled_catalog)
+	)
+	var unattested_projection := PetFusionRecipeCatalogModel.production_document(
+		enabled_catalog,
+		missing_release_errors
+	)
+	var drifted_catalog := enabled_catalog.duplicate(true)
+	var drifted_recipes := (
+		(drifted_catalog.get("recipes", []) as Array).duplicate(true)
+	)
+	drifted_recipes.reverse()
+	drifted_catalog["recipes"] = drifted_recipes
+	var catalog_drift_errors := (
+		PetFusionReleaseAttestationModel.fixture_validation_errors(
+			release_fixture_content,
+			drifted_catalog,
+			release_fixture_files
+		)
+	)
+	var owner_drift_files := release_fixture_files.duplicate(true)
+	var owner_path := PetFusionReleaseAttestationModel.OWNER_DECISION_REPO_PATH
+	var owner_document = JSON.parse_string(str(owner_drift_files.get(owner_path, "")))
+	if owner_document is Dictionary:
+		(owner_document as Dictionary)["runtimeEnabled"] = false
+		owner_drift_files[owner_path] = _fixture_json(owner_document)
+	var owner_drift_errors := (
+		PetFusionReleaseAttestationModel.fixture_validation_errors(
+			release_fixture_content,
+			enabled_catalog,
+			owner_drift_files
+		)
+	)
+	var portrait_drift_files := release_fixture_files.duplicate(true)
+	var first_contract := (
+		PetFusionReleaseAttestationModel.FORM_CONTRACTS[0] as Dictionary
+	)
+	var portrait_path := str(first_contract.get("portraitMetadataPath", ""))
+	var portrait_document = JSON.parse_string(
+		str(portrait_drift_files.get(portrait_path, ""))
+	)
+	if portrait_document is Dictionary:
+		(portrait_document as Dictionary)["releaseGate"] = false
+		portrait_drift_files[portrait_path] = _fixture_json(portrait_document)
+	var portrait_drift_errors := (
+		PetFusionReleaseAttestationModel.fixture_validation_errors(
+			release_fixture_content,
+			enabled_catalog,
+			portrait_drift_files
+		)
+	)
+	var metadata_drift_files := release_fixture_files.duplicate(true)
+	var metadata_path := str(first_contract.get("petMetadataPath", ""))
+	var metadata_document = JSON.parse_string(
+		str(metadata_drift_files.get(metadata_path, ""))
+	)
+	if metadata_document is Dictionary:
+		(metadata_document as Dictionary)["runtimeEnabled"] = false
+		metadata_drift_files[metadata_path] = _fixture_json(metadata_document)
+	var metadata_drift_errors := (
+		PetFusionReleaseAttestationModel.fixture_validation_errors(
+			release_fixture_content,
+			enabled_catalog,
+			metadata_drift_files
+		)
+	)
+	var evidence_document = JSON.parse_string(release_fixture_content)
+	var evidence_drift_content := release_fixture_content
+	if evidence_document is Dictionary:
+		var evidence_rows := (
+			(evidence_document as Dictionary).get("validationEvidence", []) as Array
+		)
+		if not evidence_rows.is_empty():
+			var first_evidence := (evidence_rows[0] as Dictionary).duplicate(true)
+			first_evidence["status"] = "failed"
+			evidence_rows[0] = first_evidence
+			(evidence_document as Dictionary)["validationEvidence"] = evidence_rows
+			evidence_drift_content = _fixture_json(evidence_document)
+	var evidence_drift_errors := (
+		PetFusionReleaseAttestationModel.fixture_validation_errors(
+			evidence_drift_content,
+			enabled_catalog,
+			release_fixture_files
+		)
+	)
+	var release_gate_contract_ok := (
+		release_errors.is_empty()
+		and not missing_release_errors.is_empty()
+		and PetFusionRecipeCatalogModel.runtime_available(approved_projection)
+		and not PetFusionRecipeCatalogModel.runtime_available(
+			unattested_projection
+		)
+		and str(unattested_projection.get("disabledMessage", ""))
+			== PetFusionRecipeCatalogModel.RELEASE_GATE_CLOSED_MESSAGE
+		and not catalog_drift_errors.is_empty()
+		and not owner_drift_errors.is_empty()
+		and not portrait_drift_errors.is_empty()
+		and not metadata_drift_errors.is_empty()
+		and not evidence_drift_errors.is_empty()
+	)
+	_expect(
+		release_gate_contract_ok,
+		"融合客户端发布证明未对目录、owner、画像、整包或证据漂移失败关闭",
 		errors
 	)
 
@@ -483,6 +607,7 @@ func _initialize() -> void:
 			"skillLevelRuleDeferred": (
 				presentation_source.find("skillLevel") < 0
 			),
+			"clientReleaseAttestationGate": release_gate_contract_ok,
 		},
 		"errors": errors,
 	}
@@ -598,6 +723,264 @@ static func _quote_fixture(
 			"tradeEligibility": "not_eligible",
 		},
 	}
+
+
+static func _release_attestation_fixture(catalog_document: Dictionary) -> Dictionary:
+	var files := {}
+	var catalog_reference := _put_fixture_json(
+		files,
+		PetFusionReleaseAttestationModel.CATALOG_REPO_PATH,
+		catalog_document
+	)
+	var prior_forms: Array[Dictionary] = []
+	for contract_value in PetFusionReleaseAttestationModel.FORM_CONTRACTS:
+		var contract := contract_value as Dictionary
+		prior_forms.append({
+			"formId": str(contract.get("formId", "")),
+			"battleBundleDigest": str(contract.get("battleBundleDigest", "")),
+		})
+	var prior_reference := _put_fixture_json(
+		files,
+		PetFusionReleaseAttestationModel.PRIOR_BODY_VISUAL_DECISION_REPO_PATH,
+		{
+			"schemaVersion": 1,
+			"decisionType": (
+				"beastbound_pet_fusion_full_nonrideable_visual_owner_decision"
+			),
+			"decisionId": (
+				"pet_fusion_p1_4e_full_nonrideable_visual_20260730"
+			),
+			"decision": "approved",
+			"approvedScopes": (
+				PetFusionReleaseAttestationModel.PRIOR_APPROVED_SCOPES.duplicate()
+			),
+			"excludedScopes": (
+				PetFusionReleaseAttestationModel.PRIOR_EXCLUDED_SCOPES.duplicate()
+			),
+			"evidence": {"forms": prior_forms},
+			"releaseApproved": false,
+			"runtimeEnabled": false,
+		}
+	)
+	var fixed_test_sha := (
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	)
+	var owner_reference := _put_fixture_json(
+		files,
+		PetFusionReleaseAttestationModel.OWNER_DECISION_REPO_PATH,
+		{
+			"schemaVersion": 1,
+			"decisionType": PetFusionReleaseAttestationModel.OWNER_DECISION_TYPE,
+			"decisionId": PetFusionReleaseAttestationModel.OWNER_DECISION_ID,
+			"roadmapItem": "P1.4",
+			"decision": "approved",
+			"reviewer": "project-owner:fixture",
+			"recordedDecisionText": "批准首批融合正式开放。",
+			"ownerReviewStatus": "approved",
+			"releaseApproved": true,
+			"runtimeEnabled": true,
+			"playerEntryOpened": true,
+			"approvedAtUtc": "2026-08-12T08:00:00Z",
+			"catalogId": PetFusionReleaseAttestationModel.CATALOG_ID,
+			"recipeIds": PetFusionReleaseAttestationModel.RECIPE_IDS.duplicate(),
+			"targetFormIds": PetFusionReleaseAttestationModel.FORM_IDS.duplicate(),
+			"nonRideableTargetFormIds": (
+				PetFusionReleaseAttestationModel.FORM_IDS.duplicate()
+			),
+			"approvedScopes": (
+				PetFusionReleaseAttestationModel.APPROVED_SCOPES.duplicate()
+			),
+			"evidence": {
+				"mainOwnerReview": {
+					"path": "docs/release_evidence/pet_fusion_main_owner_review_v1.json",
+					"sha256": fixed_test_sha,
+				},
+				"phaseRecord": {
+					"path": "docs/phase_999_pet_fusion_runtime_release.md",
+					"sha256": fixed_test_sha,
+				},
+			},
+		}
+	)
+	var portrait_references: Array[Dictionary] = []
+	for contract_value in PetFusionReleaseAttestationModel.FORM_CONTRACTS:
+		var contract := contract_value as Dictionary
+		var form_id := str(contract.get("formId", ""))
+		var runtime_path := str(contract.get("portraitRuntimePath", ""))
+		var mask_path := runtime_path.replace(
+			"/portrait/default.png",
+			"/source/portrait/headshot-chroma-eligibility-mask.png"
+		)
+		var runtime_reference := _put_fixture_text(
+			files,
+			runtime_path,
+			"%s:portrait" % form_id
+		)
+		var mask_reference := _put_fixture_text(
+			files,
+			mask_path,
+			"%s:mask" % form_id
+		)
+		portrait_references.append(_put_fixture_json(
+			files,
+			str(contract.get("portraitMetadataPath", "")),
+			{
+				"schemaVersion": 1,
+				"formId": form_id,
+				"capability": "shared_dedicated_headshot_v1",
+				"independentlyAuthoredClaim": true,
+				"independentAuthorshipClaimTrust": "owner_verified",
+				"semanticIndependenceVerified": true,
+				"releaseGate": true,
+				"fullBodyCropAllowed": false,
+				"processing": {
+					"alphaMatte": {
+						"despill": {
+							"scope": "same_operation_exact_eligibility_mask_only",
+							"globalColorAdjustmentApplied": false,
+							"changedOutsideEligibilityPixels": 0,
+							"alphaPixelsChanged": 0,
+						},
+					},
+				},
+				"assets": {
+					"runtime": runtime_reference,
+					"eligibilityMask": {
+						"path": str(mask_reference.get("path", "")),
+						"sha256": str(mask_reference.get("sha256", "")),
+						"nonzeroPixels": 42,
+					},
+				},
+				"ownerReview": {
+					"required": true,
+					"status": "approved",
+					"evidencePaths": [str(owner_reference.get("path", ""))],
+				},
+			}
+		))
+	var validation_evidence: Array[Dictionary] = []
+	for kind in PetFusionReleaseAttestationModel.VALIDATION_KINDS:
+		validation_evidence.append({
+			"kind": kind,
+			"status": "passed",
+			"path": "docs/release_evidence/%s.json" % kind,
+			"sha256": fixed_test_sha,
+		})
+	var attestation_document := {
+		"schemaVersion": 1,
+		"attestationType": PetFusionReleaseAttestationModel.ATTESTATION_TYPE,
+		"attestationId": PetFusionReleaseAttestationModel.ATTESTATION_ID,
+		"status": "approved",
+		"ownerReviewStatus": "approved",
+		"releaseApproved": true,
+		"runtimeEnabled": true,
+		"playerEntryOpened": true,
+		"approvedAtUtc": "2026-08-12T08:00:00Z",
+		"ownerDecision": owner_reference,
+		"priorBodyVisualDecision": prior_reference,
+		"catalog": catalog_reference,
+		"recipeIds": PetFusionReleaseAttestationModel.RECIPE_IDS.duplicate(),
+		"targetFormIds": PetFusionReleaseAttestationModel.FORM_IDS.duplicate(),
+		"forms": [],
+		"validationEvidence": validation_evidence,
+		"expectedLifecycle": {
+			"artStatus": "approved",
+			"ownerReviewStatus": "approved",
+			"releaseApproved": true,
+			"runtimeEnabled": true,
+			"playerEntryOpened": true,
+			"resultRideable": false,
+			"petWorldRuntimeEnabled": true,
+			"petBattleRuntimeEnabled": true,
+			"portraitSemanticIndependenceVerified": true,
+			"portraitReleaseGate": true,
+		},
+	}
+	var form_entries: Array[Dictionary] = []
+	for index in range(PetFusionReleaseAttestationModel.FORM_CONTRACTS.size()):
+		var contract := (
+			PetFusionReleaseAttestationModel.FORM_CONTRACTS[index] as Dictionary
+		)
+		form_entries.append({
+			"formId": str(contract.get("formId", "")),
+			"petMetadataPath": str(contract.get("petMetadataPath", "")),
+			"portraitMetadata": portrait_references[index],
+			"battleBundleDigest": str(contract.get("battleBundleDigest", "")),
+		})
+	attestation_document["forms"] = form_entries
+	var attestation_content := _fixture_json(attestation_document)
+	var attestation_sha := attestation_content.sha256_text()
+	for contract_value in PetFusionReleaseAttestationModel.FORM_CONTRACTS:
+		var contract := contract_value as Dictionary
+		var form_id := str(contract.get("formId", ""))
+		_put_fixture_json(
+			files,
+			str(contract.get("petMetadataPath", "")),
+			{
+				"formId": form_id,
+				"artStatus": "approved",
+				"ownerReviewStatus": "approved",
+				"runtimeEnabled": true,
+				"releaseAttestation": {
+					"path": PetFusionReleaseAttestationModel.REPO_DATA_PATH,
+					"sha256": attestation_sha,
+				},
+				"riding": null,
+				"worldVisual": {
+					"status": "approved",
+					"runtimeEnabled": true,
+					"strategy": "independent_8",
+					"runtimeMirroring": false,
+					"runtimeMountedComposition": false,
+					"totalFrameCount": 40,
+					"directions": (
+						PetFusionReleaseAttestationModel.WORLD_DIRECTIONS.duplicate()
+					),
+					"actions": {
+						"idle": {"frameCount": 1, "fps": 4},
+						"walk": {"frameCount": 4, "fps": 10},
+					},
+				},
+				"battleVisual": {
+					"status": "approved",
+					"runtimeEnabled": true,
+					"kind": "pet",
+					"views": PetFusionReleaseAttestationModel.BATTLE_VIEWS.duplicate(),
+					"totalFrameCount": 180,
+					"runtimeMirroring": false,
+					"integratedWholeFrame": false,
+					"runtimeLayeredComposition": false,
+					"bundleDigest": str(contract.get("battleBundleDigest", "")),
+					"archiveMode": "full",
+					"sourceFramesTracked": true,
+				},
+			}
+		)
+	return {
+		"files": files,
+		"attestationContent": attestation_content,
+	}
+
+
+static func _put_fixture_json(
+	files: Dictionary,
+	path: String,
+	value
+) -> Dictionary:
+	return _put_fixture_text(files, path, _fixture_json(value))
+
+
+static func _put_fixture_text(
+	files: Dictionary,
+	path: String,
+	content: String
+) -> Dictionary:
+	files[path] = content
+	return {"path": path, "sha256": content.sha256_text()}
+
+
+static func _fixture_json(value) -> String:
+	return JSON.stringify(value, "\t", true) + "\n"
 
 
 static func _read_text(path: String) -> String:

@@ -1022,7 +1022,7 @@ static func _fusion_result_fixture() -> Dictionary:
 
 
 static func _catalog_errors(catalog, dependencies: Dictionary) -> Array[String]:
-	return PetFusionRecipeCatalogModel.validation_errors(
+	return PetFusionRecipeCatalogModel.fixture_validation_errors(
 		catalog,
 		dependencies.get("petTemplates", {}),
 		dependencies.get("growthProfiles", {}),
