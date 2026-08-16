@@ -218,18 +218,37 @@ PORTRAIT_AUXILIARY_REFERENCE_RECORDS = {
 PORTRAIT_DIRECT_AUXILIARY_REFERENCE_RECORDS = {
     FORM_SPECS[1].form_id: (
         {
-            "index": 0,
+            "index": 1,
+            "pathLabel": (
+                "repository:client/godot/assets/pets/"
+                "emberhorn_fusion_solar_crown_fire7_wind3/portrait/"
+                "default.png"
+            ),
+            "role": "repository_reference",
+            "matchesDeclaredIdentityReference": False,
+            "currentFileSha256": (
+                "94f268b58859fff9ff89dee21de7f611c01e279a0dd2d3c2c1c22321d60d8b59"
+            ),
+            "currentFileByteLength": 199190,
+            "currentFileWidth": 512,
+            "currentFileHeight": 512,
+            "currentFileFormat": "PNG",
+            "currentFileMode": "RGBA",
+            "historicalRequestBytesVerified": False,
+        },
+        {
+            "index": 2,
             "pathLabel": (
                 ".codex/generated_images/"
                 "019fe7c8-2fd7-7972-94a7-98382ddfe591/"
-                "exec-798259de-fac7-47f7-b6b4-f1690f5e72e4.png"
+                "exec-571f647a-1bbb-4903-862b-a82328a31c63.png"
             ),
             "role": "codex_generated_iteration_reference",
             "matchesDeclaredIdentityReference": False,
             "currentFileSha256": (
-                "f76ff58596fc5d51fe35a2e16b3c8eecdd91a910641b4ab1ee362cac779b4a1e"
+                "14b9b63c08093cedb7967c41565b1fac9da53e2ec7276e9d351c48e330e31b7c"
             ),
-            "currentFileByteLength": 2003667,
+            "currentFileByteLength": 1870258,
             "currentFileWidth": 1254,
             "currentFileHeight": 1254,
             "currentFileFormat": "PNG",
@@ -2463,8 +2482,29 @@ def _validate_direct_portrait_references(
         raise VerificationError(
             f"{spec.form_id} portrait direct identity bytes drift"
         )
+    expected_reference_count = len(auxiliary_records) + 1
+    auxiliary_indexes = [record.get("index") for record in auxiliary_records]
+    if (
+        any(
+            not isinstance(index, int)
+            or isinstance(index, bool)
+            or not 0 <= index < expected_reference_count
+            for index in auxiliary_indexes
+        )
+        or len(set(auxiliary_indexes)) != len(auxiliary_indexes)
+    ):
+        raise VerificationError(
+            f"{spec.form_id} portrait auxiliary reference indexes are invalid"
+        )
+    identity_indexes = sorted(
+        set(range(expected_reference_count)) - set(auxiliary_indexes)
+    )
+    if len(identity_indexes) != 1:
+        raise VerificationError(
+            f"{spec.form_id} portrait direct identity index is ambiguous"
+        )
     direct_reference = {
-        "index": len(auxiliary_records),
+        "index": identity_indexes[0],
         "pathLabel": f"repository:{identity['path']}",
         "role": "declared_identity_reference",
         "matchesDeclaredIdentityReference": True,
@@ -2476,7 +2516,10 @@ def _validate_direct_portrait_references(
         "currentFileMode": "RGBA",
         "historicalRequestBytesVerified": False,
     }
-    expected_referenced_images = [*auxiliary_records, direct_reference]
+    expected_referenced_images = sorted(
+        [*auxiliary_records, direct_reference],
+        key=lambda record: record["index"],
+    )
     reference_key_order = (
         "index",
         "pathLabel",

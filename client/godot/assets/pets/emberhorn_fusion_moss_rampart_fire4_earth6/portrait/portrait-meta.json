@@ -23,11 +23,11 @@
   "source": {
     "method": "built_in_imagegen_chroma_headshot_v1",
     "generator": "built_in_imagegen",
-    "generationId": "exec-2f8ba0a5-4a22-469e-9460-4738159db22b",
+    "generationId": "exec-477b5023-0daa-40e8-b36f-71c2741cc6da",
     "originalInput": {
-      "path": ".run/fusion-portrait-revision-20260812/moss-rampart/input/raw-v8.png",
-      "sha256": "077927295f6bd366fc1681416c860218aab2f67e0dec248f38d18f70c72b517f",
-      "rgbaSha256": "71dbfca0557ddd6d1e99d73d5c0492520c35bf566912acc63ce9f40f3d4f2f34",
+      "path": ".run/art_rebuild_phase445_moss_portrait/candidates/moss-headshot-v4e-formal-chroma.png",
+      "sha256": "c96a666c17272dedaa5de11f434ef309812767eefbeb7dda3a0bf33eb23f2ff9",
+      "rgbaSha256": "188e43b6cefbdecbe23d67953a8648debe37f37a41295de7c75717b4e1c9a21f",
       "width": 1254,
       "height": 1254,
       "mode": "RGB",
@@ -37,9 +37,9 @@
     "rawLosslessPath": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-raw-lossless.webp",
     "generationAttestation": {
       "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/generation-attestation.json",
-      "sha256": "0c15a071ff8abcf9e72caef0c29645a8cea3dd7d48f8b4509c21242cc2224d73",
+      "sha256": "210bd619aae0f2177db09b1944843ca3d10bfdccc5da779870432aa34b399af4",
       "schemaVersion": 3,
-      "generationId": "exec-2f8ba0a5-4a22-469e-9460-4738159db22b"
+      "generationId": "exec-477b5023-0daa-40e8-b36f-71c2741cc6da"
     }
   },
   "independentCompositionEvidence": {
@@ -69,17 +69,17 @@
   },
   "prompt": {
     "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/prompts/portrait-v1.txt",
-    "sha256": "9caa71fb0182becefa6ab030993eb746b74b2f813934ea6e046ac901dfd8edee",
-    "sourceSha256": "9caa71fb0182becefa6ab030993eb746b74b2f813934ea6e046ac901dfd8edee",
+    "sha256": "74aab066a41b2e7f0d27def50d34d348147700b7f91c68b3303f03a7808a660e",
+    "sourceSha256": "74aab066a41b2e7f0d27def50d34d348147700b7f91c68b3303f03a7808a660e",
     "encoding": "utf-8",
-    "selectionDocumentationPath": ".run/fusion-portrait-revision-20260812/moss-rampart/input/prompt-v8.txt",
-    "selectionDocumentationSha256": "fe174c421e607d8b2af49bb550a7118d1b8fdc53e0a2b44fa063c6d58a6e83c5",
+    "selectionDocumentationPath": ".run/art_rebuild_phase445_moss_portrait/prompt-v4e-formal.txt",
+    "selectionDocumentationSha256": "714d8e5ba207ca9e3d4276582a27c4282c14557facef37ba2402cffc79875962",
     "sourceKind": "actual_imagegen_request",
     "actualRequestPromptVerified": true
   },
   "ownership": {
     "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/portrait/source-and-ownership.md",
-    "sha256": "2bda26ef3fc8958b16e2eac5237cd4347fb319939ff9047273f779dacebebd63"
+    "sha256": "6703013f7df6530bd7801e7bc67d6bff0a835485d4a8deaffce441c102dab984"
   },
   "processing": {
     "edgeContractVersion": 1,
@@ -93,36 +93,36 @@
     },
     "alphaMatte": {
       "method": "distance_alpha_matte_v1",
-      "key": "#F30BEC",
-      "transparentDistance": 48.0,
+      "key": "#EA22D6",
+      "transparentDistance": 36.0,
       "opaqueDistance": 140.0,
       "alphaThreshold": 8,
       "cornerDistances": [
-        13.856,
-        19.313,
-        37.216,
-        28.46
+        11.576,
+        3.464,
+        10.392,
+        6.557
       ],
-      "candidatePixels": 1097934,
-      "eligiblePixels": 2513,
-      "transparentPixels": 1095421,
-      "partialAlphaPixels": 2509,
+      "candidatePixels": 1187387,
+      "eligiblePixels": 2356,
+      "transparentPixels": 1185031,
+      "partialAlphaPixels": 2354,
       "despill": {
         "helper": "sprite_alpha_despill.despill_transparent_alpha",
         "scope": "same_operation_exact_eligibility_mask_only",
         "despillApplied": true,
         "globalColorAdjustmentApplied": false,
-        "changedPixelCount": 2486,
+        "changedPixelCount": 2340,
         "changedOutsideEligibilityPixels": 0,
         "alphaPixelsChanged": 0,
-        "beforeRgbaSha256": "354ceae07390d68b0782bf0aebff4a78e93d47b51da8f2632d1cf3cef7d486a6",
-        "afterRgbaSha256": "5eb0c3732816b5bcf238549019ee52312166aea32811788c368717b99b4564f9",
+        "beforeRgbaSha256": "a79edb1da2bae2b58647785c3a25149e503fc020ad3c27ce8e8d07cb21ec9c24",
+        "afterRgbaSha256": "0f6542c94a4bbbbd7908769ccd441c741b798a7b4412f2d6134c32ea4720c3f7",
         "helperMetrics": {
-          "edgePixelCount": 9952,
-          "strongMagentaEdgePixelsBefore": 2486,
-          "strongMagentaEdgePixelsAfter": 84,
-          "strongMagentaEdgeRatioAfter": 0.008441,
-          "despilledPixels": 2486,
+          "edgePixelCount": 8005,
+          "strongMagentaEdgePixelsBefore": 2340,
+          "strongMagentaEdgePixelsAfter": 44,
+          "strongMagentaEdgeRatioAfter": 0.005497,
+          "despilledPixels": 2340,
           "alphaPixelsChanged": 0
         }
       }
@@ -156,8 +156,8 @@
   "assets": {
     "originalGeneratedPng": {
       "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-original-generated.png",
-      "sha256": "077927295f6bd366fc1681416c860218aab2f67e0dec248f38d18f70c72b517f",
-      "rgbaSha256": "71dbfca0557ddd6d1e99d73d5c0492520c35bf566912acc63ce9f40f3d4f2f34",
+      "sha256": "c96a666c17272dedaa5de11f434ef309812767eefbeb7dda3a0bf33eb23f2ff9",
+      "rgbaSha256": "188e43b6cefbdecbe23d67953a8648debe37f37a41295de7c75717b4e1c9a21f",
       "width": 1254,
       "height": 1254,
       "mode": "RGB",
@@ -165,8 +165,8 @@
     },
     "rawLossless": {
       "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-raw-lossless.webp",
-      "sha256": "fe8211cd11e08a2a1d83d31437d0ee9d7110fa8569e182789f6a4a6819f7a293",
-      "rgbaSha256": "71dbfca0557ddd6d1e99d73d5c0492520c35bf566912acc63ce9f40f3d4f2f34",
+      "sha256": "90e1a7b09834c9a4de5b3a770a45906be421bdb6cad3fe1e2f3406ef8292b22e",
+      "rgbaSha256": "188e43b6cefbdecbe23d67953a8648debe37f37a41295de7c75717b4e1c9a21f",
       "width": 1254,
       "height": 1254,
       "mode": "RGB",
@@ -174,8 +174,8 @@
     },
     "master": {
       "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-master-1024.png",
-      "sha256": "97fabf485c6d153ca78bb13f2918ed26ff9bdba455e7188daa376665657b6480",
-      "rgbaSha256": "7e20a13c47c963e691a8f8c530c55d1e2519fd737b4ac3c1d36d59e59924d9d4",
+      "sha256": "33cd6012e5ef03b0db68c67c12bb42ec94ff160b5b3e44da836f69035f5710eb",
+      "rgbaSha256": "827264099e16d307a1ff5c1cacf55c7f1519a8916db45d6f7aafae26dd322154",
       "width": 1024,
       "height": 1024,
       "mode": "RGBA",
@@ -183,8 +183,8 @@
     },
     "runtime": {
       "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/portrait/default.png",
-      "sha256": "1c8f0a7840255675e612f7cb29cfdbfb07d84bbe6ca9f9ba206da175e38ce237",
-      "rgbaSha256": "6085c81335b0f00eb3fbc63764997c30ad44bbaa5cc0d620f6f3fc0376a54eab",
+      "sha256": "0d4aba0c27e449dc77a161720c7c553d630e0eb0f69af8d9c19ee52738a9f124",
+      "rgbaSha256": "e0ae04fae6513a744c9208a8ada6cc5643ae619b2506c710543fa5807b2f6002",
       "width": 512,
       "height": 512,
       "mode": "RGBA",
@@ -192,40 +192,40 @@
     },
     "eligibilityMask": {
       "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-chroma-eligibility-mask.png",
-      "sha256": "2d15d2f34bdc7078741eacf1660f6a8603319b8f539a6d6e1cccbee07e396308",
+      "sha256": "57db240c18008036e97e0b2c24106b429d5971a8a4ce4f6d0e2922bcf07cc7ba",
       "width": 1254,
       "height": 1254,
       "mode": "L",
       "format": "PNG",
-      "nonzeroPixels": 2513
+      "nonzeroPixels": 2356
     },
     "alphaMask": {
       "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-alpha-mask.png",
-      "sha256": "eeee855bb8b337a41e8ac064a49755a8d81e374c8198ad3939cafa2c5e362f76",
+      "sha256": "a42d69bd4fd26be932835833d78c77d9f97830cc25a8466984695191bdbdc755",
       "width": 1254,
       "height": 1254,
       "mode": "L",
       "format": "PNG",
-      "nonzeroPixels": 477095
+      "nonzeroPixels": 387485
     }
   },
   "composition": {
     "master": {
-      "visibleCoverage": 0.304508,
-      "transparentCoverage": 0.695492,
-      "visiblePixelCount": 319300,
+      "visibleCoverage": 0.247216,
+      "transparentCoverage": 0.752784,
+      "visiblePixelCount": 259225,
       "visibleBbox": [
-        211,
-        144,
-        834,
-        884
+        305,
+        283,
+        857,
+        942
       ],
       "minimumEdgeMargin": 82,
       "edgeMargins": {
-        "left": 211,
-        "top": 144,
-        "right": 190,
-        "bottom": 140
+        "left": 305,
+        "top": 283,
+        "right": 167,
+        "bottom": 82
       },
       "cornerPatchSize": 8,
       "cornerMaxAlpha": {
@@ -236,21 +236,21 @@
       }
     },
     "runtime": {
-      "visibleCoverage": 0.306362,
-      "transparentCoverage": 0.693638,
-      "visiblePixelCount": 80311,
+      "visibleCoverage": 0.248913,
+      "transparentCoverage": 0.751087,
+      "visiblePixelCount": 65251,
       "visibleBbox": [
-        105,
-        72,
-        417,
-        443
+        152,
+        141,
+        429,
+        471
       ],
       "minimumEdgeMargin": 41,
       "edgeMargins": {
-        "left": 105,
-        "top": 72,
-        "right": 95,
-        "bottom": 69
+        "left": 152,
+        "top": 141,
+        "right": 83,
+        "bottom": 41
       },
       "cornerPatchSize": 8,
       "cornerMaxAlpha": {
@@ -264,8 +264,8 @@
   "evidence": {
     "contactSheet": {
       "path": "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/qa/portrait/contact-sheet.png",
-      "sha256": "d92b8aa995c74210668b81908a68b1465a221b09ed17d024b98564630ca36d89",
-      "rgbaSha256": "69e42b6fe5dcb2f0ba51e0dcb889e3e5b5b27f40d3278645a065b4b415c40126",
+      "sha256": "a38746ffb0f5f04bc1c872a713ae3d216326f5b2beb8c55b6bda688b6f33d316",
+      "rgbaSha256": "d46154edab72f30278aea701e6c96ac533fee1320e1c277dd35508ca08dfa1ff",
       "width": 1600,
       "height": 1180,
       "mode": "RGBA",

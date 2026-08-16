@@ -1768,25 +1768,32 @@ class ClosedFusionReleaseVerifierTest(unittest.TestCase):
                 spec.form_id
             ]
         ]
-        request["referencedImages"] = [
-            *auxiliary,
-            {
-                "index": len(auxiliary),
-                "pathLabel": (
-                    f"repository:{spec.root_relative.as_posix()}/"
-                    "identity/front_3quarter_sw.png"
-                ),
-                "role": "declared_identity_reference",
-                "matchesDeclaredIdentityReference": True,
-                "currentFileSha256": _sha256(identity_path),
-                "currentFileByteLength": identity_path.stat().st_size,
-                "currentFileWidth": 512,
-                "currentFileHeight": 512,
-                "currentFileFormat": "PNG",
-                "currentFileMode": "RGBA",
-                "historicalRequestBytesVerified": False,
-            },
-        ]
+        reference_count = len(auxiliary) + 1
+        identity_indexes = sorted(
+            set(range(reference_count))
+            - {record["index"] for record in auxiliary}
+        )
+        self.assertEqual(len(identity_indexes), 1)
+        identity_reference = {
+            "index": identity_indexes[0],
+            "pathLabel": (
+                f"repository:{spec.root_relative.as_posix()}/"
+                "identity/front_3quarter_sw.png"
+            ),
+            "role": "declared_identity_reference",
+            "matchesDeclaredIdentityReference": True,
+            "currentFileSha256": _sha256(identity_path),
+            "currentFileByteLength": identity_path.stat().st_size,
+            "currentFileWidth": 512,
+            "currentFileHeight": 512,
+            "currentFileFormat": "PNG",
+            "currentFileMode": "RGBA",
+            "historicalRequestBytesVerified": False,
+        }
+        request["referencedImages"] = sorted(
+            [*auxiliary, identity_reference],
+            key=lambda record: record["index"],
+        )
         _write_json(generation_path, generation)
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         metadata["source"]["generationAttestation"]["sha256"] = _sha256(
@@ -1799,7 +1806,11 @@ class ClosedFusionReleaseVerifierTest(unittest.TestCase):
         referenced_images = generation["generationResultEvidence"][
             "transcriptEvidence"
         ]["requestArgumentBinding"]["referencedImages"]
-        referenced_images[-1]["matchesDeclaredIdentityReference"] = False
+        next(
+            record
+            for record in referenced_images
+            if record["role"] == "declared_identity_reference"
+        )["matchesDeclaredIdentityReference"] = False
         _write_json(generation_path, generation)
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         metadata["source"]["generationAttestation"]["sha256"] = _sha256(
