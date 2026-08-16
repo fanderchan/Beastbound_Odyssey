@@ -178,12 +178,13 @@
     "prompt": "prompts/full-production-generation-contract-v1.md",
     "qualityRepairManifests": [
       "source/battle/quality-repair-pre-despill-restore-v1-manifest.json",
-      "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json"
+      "source/battle/quality-repair-down-revive-ko-semantics-v2-manifest.json",
+      "source/world-direction-repair-v2/manifest.json"
     ]
   },
   "evidence": {
     "worldContactSheet": "qa/world/full-world-contact.png",
-    "worldContactSheetSha256": "53c10e039bf71d98c44655a94a78edad788e4855f064c6484ee4eed18390677e",
+    "worldContactSheetSha256": "5e18409a8a3f71a28c01875fd5cf3ade6a08765745a537015db773ea3db47dd5",
     "battleContactSheet": "qa/battle/contact-sheet.png",
     "battleContactSheetSha256": "a7bba7006a44cc6ec06063e7b7450809ed292a2c98b1512d601e732e2d114e12",
     "battlePresentationFacingContact": "qa/battle/presentation-facing-contact.png",
@@ -202,7 +203,9 @@
     "motionIntegrityBeforeAfter": "qa/battle/repairs/standalone-motion-integrity-v1/before-after.png",
     "motionIntegrityBeforeAfterSha256": "8c1f3d997fe3ccdbac38c906904bae1d88c7d1370f8c2e63838197e67045ac9b",
     "motionIntegrityAudit": "qa/battle/repairs/standalone-motion-integrity-v1/audit.json",
-    "motionIntegrityAuditSha256": "3a757b9d3078fb9f64e2f4f0e3d7798c743b7a4f1c43999d04f2d29dc72811c1"
+    "motionIntegrityAuditSha256": "3a757b9d3078fb9f64e2f4f0e3d7798c743b7a4f1c43999d04f2d29dc72811c1",
+    "worldDirectionRepairBeforeAfter": "qa/world/direction-repair-v2-before-after.png",
+    "worldDirectionRepairBeforeAfterSha256": "0aa67834de9f0d7d2f88b0e1e36b76f43f010c88cc55f61903644e4b863730db"
   },
   "ownerReviewStatus": "pending",
   "notes": "Standalone pet true-eight world and two-view twelve-action battle matrices are self-reviewed. Runtime remains disabled until data-driven integration, real Godot review, and owner acceptance. Battle180 已逐字节恢复到完整 pre-despill 备份；未运行任何 despill/去边处理，仅保留获批的 KO 眼部局部 RGB 与连续复起时序，世界、骑乘、身份和 alpha 均未改变。",

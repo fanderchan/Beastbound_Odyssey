@@ -41,16 +41,16 @@
     "front_3quarter_sw": true,
     "back_3quarter_ne": true
   },
-  "minimumWorldRuntimeEdgeMargin": 13,
-  "bundleDigest": "85ac3322e749f55bdf937d81b54e4986501f0bafc979562ee863cb10a1447474",
+  "minimumWorldRuntimeEdgeMargin": 12,
+  "bundleDigest": "dd4379c2edcecbb8fc06bf9279ec7724047e19175c060fa4e88589f297e4bb8e",
   "contactSheet": "qa/battle/contact-sheet.png",
   "contactSheetSha256": "4dbc0880180f186f06476772b849a6cff5dc7f16747e79341d474bbbe19acc49",
   "facingContractPreview": "qa/battle/facing-contract-preview.png",
   "facingContractPreviewSha256": "eb065ebf62966aa8b3a567b9d6117c29d002018fb20b19340137101281caf1b3",
   "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
-  "worldContactSheetSha256": "38d545336586b11dbbda0bc6a84def927892715fb867bfaee9b3cc27ca0d2334",
+  "worldContactSheetSha256": "6a91b3f76d36d76eac611d9d1e352d017fd00a7e5bb8be5fd8f056c4fd627b4a",
   "worldCycleGif": "qa/world/true8-world-cycle.gif",
-  "worldCycleGifSha256": "b6d5b774b01c3f3cc41bc7aa2474859ec93eaac6bcd96d8af0774e13810629b2",
+  "worldCycleGifSha256": "7764e26e73dbdf221931f22d6382335642c43e940d02bd71f86713e61afa9207",
   "actionEvidence": [
     {
       "view": "front_3quarter_sw",

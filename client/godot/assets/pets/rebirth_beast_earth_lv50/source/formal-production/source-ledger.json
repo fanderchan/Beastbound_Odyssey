@@ -4,7 +4,7 @@
   "kind": "pet",
   "archiveMode": "lean",
   "runtimeFrameCount": 220,
-  "runtimeBundleDigest": "85ac3322e749f55bdf937d81b54e4986501f0bafc979562ee863cb10a1447474",
+  "runtimeBundleDigest": "dd4379c2edcecbb8fc06bf9279ec7724047e19175c060fa4e88589f297e4bb8e",
   "sourceFramesTracked": false,
   "rawGenerationSheetsTracked": false,
   "rawGenerationSheetCount": 36,
@@ -215,6 +215,10 @@
     {
       "path": "source/formal-production/quality-repair-g20-skill-exact-provenance-fringe-manifest.json",
       "sha256": "c3af588edbb63dffae9dbf347c1425bc0ac1ffd471149631588c33d7a2c291f4"
+    },
+    {
+      "path": "source/formal-production/world-scale-normalization-v1-manifest.json",
+      "sha256": "7a21e36a3e450c5c69e156a25bb2231a1162ff89ff16be7fa37cff30a0b35c60"
     }
   ],
   "provenanceColorRecovery": {
@@ -245,5 +249,12 @@
     "manifestSha256": "c3af588edbb63dffae9dbf347c1425bc0ac1ffd471149631588c33d7a2c291f4",
     "runtimePixelsChanged": 136,
     "remainingFailurePixels": 0
+  },
+  "worldScaleNormalization": {
+    "id": "world-scale-normalization-v1",
+    "manifest": "source/formal-production/world-scale-normalization-v1-manifest.json",
+    "manifestSha256": "7a21e36a3e450c5c69e156a25bb2231a1162ff89ff16be7fa37cff30a0b35c60",
+    "frameCount": 24,
+    "method": "uniform complete-subject scale from 512 source; feet baseline preserved; no mirror/stretch/relabel/redraw"
   }
 }

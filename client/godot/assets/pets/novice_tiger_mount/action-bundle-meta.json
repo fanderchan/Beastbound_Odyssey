@@ -288,20 +288,25 @@
     "qualityRepairManifests": [
       "source/formal-production/quality-repair-pre-despill-restore-v1-manifest.json",
       "source/formal-production/quality-repair-down-revive-ko-semantics-v2-manifest.json",
-      "source/formal-production/quality-repair-semantic-proportion-rebase-v1-manifest.json"
+      "source/formal-production/quality-repair-semantic-proportion-rebase-v1-manifest.json",
+      "source/formal-production/world-scale-normalization-v1-manifest.json",
+      "source/formal-production/world-semantic-direction-repair-v1-manifest.json",
+      "source/formal-production/world-semantic-direction-repair-v2-manifest.json"
     ]
   },
   "evidence": {
     "battleContactSheet": "qa/battle/contact-sheet.png",
     "battleContactSheetSha256": "faa218a7368df1716c28255ca318e01f61a11b1ae8a0746030e8bc0f00df742f",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "c8bde453f784d5eb369453781a27b4576e78283528acec38ce2d7e3e48b88639",
+    "battleQcSha256": "9138033c468172e3e4efebd4e2a16cb8ba57baf4b070420c7dac930a86d071ec",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
     "battleFacingContractPreviewSha256": "7f15d92287d9e880660668bfc257ad3bcc647c145593544b17871a60f5feaaa3",
     "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
-    "worldContactSheetSha256": "61e8fa1db2be29c14436e7a7d991e0afdd84ea7814b4fb67dd223571e3c23060",
+    "worldContactSheetSha256": "df0c39f0c68b283792d5a4d01b89abe6559ed3d3b420e88107b42eaf0dedefd9",
     "worldCycleGif": "qa/world/true8-world-cycle.gif",
-    "worldCycleGifSha256": "eae88c87c7875dcafd7e3be38669187bc6ba3561f56170b562e56e8aa1b38583",
+    "worldCycleGifSha256": "1b70c301def0bddf7e5f7537094fdabf9a2e846cbd09fd60927d59712dd6ad17",
+    "worldQc": "qa/world/world-qc.json",
+    "worldQcSha256": "aeecd4568eeb6ff5c8620b2492bf9900380678ecec772b07a1c2be8a9cad2410",
     "battleKoExpressionBeforeAfter": "qa/battle/repairs/ko-expression-v1-before-after.png",
     "battleKoExpressionBeforeAfterSha256": "84abaef292dbd79a3efc3c45899882ad3c55d7603a424ac764ba4fd98eee6a8c",
     "battleDownReviveKoSemanticsBeforeAfter": "qa/battle/repairs/down-revive-ko-semantics-v2-before-after.png",
@@ -312,7 +317,7 @@
     "battleSemanticProportionRebaseBeforeAfterSha256": "5432b8c6571f0bddb383f71170abf555fb1f1a35e3899c4748f4ce9139c8ce8e"
   },
   "ownerReviewStatus": "pending",
-  "notes": "新手老虎的身份、真八向世界动作与双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。 Battle180 已逐字节恢复到完整 pre-despill 备份；未运行任何 despill/去边处理，仅保留获批的 KO 眼部局部 RGB 与连续复起时序，世界、骑乘、身份和 alpha 均未改变。 Batch-B 已批准的动作语义/比例修复已在当前 formal 基线上重基：仅目标动作帧变化，后来完成的 KO、颜色、Down/Revive 连续性和来源记录全部保留。",
+  "notes": "新手老虎的身份、真八向世界动作与双视角十二战斗动作已完成静态工程自评；正式战斗统一 enemy=front_3quarter_sw+flipH=true、ally=back_3quarter_ne+flipH=true。项目所有者审美验收与真实 Godot 10v10 回放仍待完成，因此 runtimeEnabled 保持 false。 Battle180 已逐字节恢复到完整 pre-despill 备份；未运行任何 despill/去边处理，仅保留获批的 KO 眼部局部 RGB 与连续复起时序，世界、骑乘、身份和 alpha 均未改变。 Batch-B 已批准的动作语义/比例修复已在当前 formal 基线上重基：仅目标动作帧变化，后来完成的 KO、颜色、Down/Revive 连续性和来源记录全部保留。Phase324 源帧复核发现 standalone pet 的 east/walk 四帧误朝西并用独立文生图东向步态替换；Phase325 在完整重导入后重新确认源 PNG、Godot import 与 Texture2D 运行像素一致。未镜像、未改 battle、未改其他方向，仍待项目所有者审美验收。",
   "displayName": "新手老虎",
   "supportedMountedCharacterIds": [
     "novice_hunter_v1"

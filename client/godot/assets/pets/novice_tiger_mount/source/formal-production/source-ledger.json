@@ -5,7 +5,7 @@
   "archivePolicy": "lean_runtime_plus_prompts_qc_and_hash_ledger",
   "generatedBy": "OpenAI built-in image generation",
   "runtimeFrameCount": 220,
-  "bundleDigest": "0246149b3239d1872ca1e888b839e2eb36990543a08df46d22d6650a0d140903",
+  "bundleDigest": "4cde4024dbb8bab962b852a24e86670bdf4f2833eb3a91009da2fd04471a12f5",
   "rawBattleSheets": [
     {
       "view": "front_3quarter_sw",
@@ -175,6 +175,18 @@
     {
       "path": "source/formal-production/quality-repair-semantic-proportion-rebase-v1-manifest.json",
       "sha256": "1ebe81f30dbeed5be20d76c911e9f936d772bf47727b9e48ceb5103cb28c8d97"
+    },
+    {
+      "path": "source/formal-production/world-scale-normalization-v1-manifest.json",
+      "sha256": "e194ccbef174753d64f57766d6d0b4a8ddab3f0d3fd4942d0ef6786c1e607f69"
+    },
+    {
+      "path": "source/formal-production/world-semantic-direction-repair-v1-manifest.json",
+      "sha256": "4e1ae8926a231e88b8096124777398c338a9f8eca8c7216f58ef7f39eed93036"
+    },
+    {
+      "path": "source/formal-production/world-semantic-direction-repair-v2-manifest.json",
+      "sha256": "ac2ebe308657f62ecdca223bbae1984946090e5ed36ff0f6bd6e3c86c0b9a3db"
     }
   ],
   "preDespillRestore": {
@@ -209,5 +221,29 @@
     "runtimeFramesChanged": 52,
     "downReviveFramesChanged": 0,
     "despillApplied": false
+  },
+  "worldScaleNormalization": {
+    "id": "world-scale-normalization-v1",
+    "manifest": "source/formal-production/world-scale-normalization-v1-manifest.json",
+    "manifestSha256": "e194ccbef174753d64f57766d6d0b4a8ddab3f0d3fd4942d0ef6786c1e607f69",
+    "frameCount": 8,
+    "method": "uniform complete-subject scale from 512 source; feet baseline preserved; no mirror/stretch/relabel/redraw"
+  },
+  "worldSemanticDirectionRepair": {
+    "id": "pet-world-rear-diagonal-walk-semantic-regeneration-v1",
+    "manifest": "source/formal-production/world-semantic-direction-repair-v1-manifest.json",
+    "manifestSha256": "4e1ae8926a231e88b8096124777398c338a9f8eca8c7216f58ef7f39eed93036",
+    "sourceFramesTracked": 8,
+    "runtimeFramesChanged": 8,
+    "productionArchive": ".run/art_batch_phase324/semantic-direction-repair-v1"
+  },
+  "worldEastDirectionRepair": {
+    "id": "pet-world-east-walk-semantic-regeneration-v2",
+    "manifest": "source/formal-production/world-semantic-direction-repair-v2-manifest.json",
+    "manifestSha256": "ac2ebe308657f62ecdca223bbae1984946090e5ed36ff0f6bd6e3c86c0b9a3db",
+    "sourceFramesTracked": 4,
+    "runtimeFramesChanged": 4,
+    "runtimeMirroring": false,
+    "productionArchive": ".run/art_batch_phase324/semantic-direction-repair-v1/tiger-pet/east/walk"
   }
 }
