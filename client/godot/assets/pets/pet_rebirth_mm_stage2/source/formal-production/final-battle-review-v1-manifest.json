@@ -2,12 +2,12 @@
   "schemaVersion": 1,
   "formId": "pet_rebirth_mm_stage2",
   "runtimeFrameCount": 180,
-  "runtimeBundleDigest": "f225f208fc346694dae27942e7360236f5073d18bc84dcafb285d556902a2e94",
+  "runtimeBundleDigest": "4900f6988d756faff09af2d1814b2e00950ccc2015c938ae370320eb581cafe9",
   "runtimeEnabled": false,
   "sequenceReview": {
     "id": "battle180-sequence-review-v1",
     "contactSheet": "qa/battle/contact-sheet.png",
-    "contactSheetSha256": "e38e0b85aea050166bc875238ee84f07405cf0cd314296adecea650d0c3bbe98",
+    "contactSheetSha256": "70fe154416b96bc7179b54f0e2f809fc3d047ed18b7287d623d8df5541cc0f0e",
     "reviewedViews": [
       "front_3quarter_sw",
       "back_3quarter_ne"
@@ -35,9 +35,47 @@
       "enemy": true,
       "ally": true
     },
-    "checkScript": ".run/batch_e_battle_load_check.gd"
+    "checkScript": ".run/pet-art-batch-g08-g09/check_pet_battle_only.gd"
   },
   "catalogAudit": "passed 180/180",
   "battleActionCatalogCheck": "passed",
-  "ownerReviewStatus": "pending"
+  "ownerReviewStatus": "pending",
+  "installationStatus": "installed-and-verified",
+  "sourceHandoff": {
+    "id": "mm2-source-handoff-v1",
+    "status": "passed",
+    "audit": "source/formal-production/source-handoff-v1-audit.json",
+    "auditSha256": "b0313bac057d59b7253186706f8dd148b9f23bd96ae9278fc142422a1f73c84f",
+    "evidence": "qa/battle/repairs/mm2-source-handoff-v1-contact.png",
+    "evidenceSha256": "57231dfcf3c5594364a6f61e4dd66d2abeaeebffcd86b199b3ad2fcc9b780b1a",
+    "trackedRoot": "source/formal-production/handoff-512",
+    "trackedFrameCount": 4,
+    "externalWorkingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle",
+    "externalSourceArchiveFrameCount": 180,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "sourceDown8Revive1EncodedExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "sourceDown8Revive1DecodedRgbaExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "derivedRuntimeDecodedRgbaExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "runtimeTreeUnchanged": true,
+    "runtimeTreeDigest": "b792058f1eb66d4cd446a3869e301270f8f8541196bac3096e7ed910967f1adf",
+    "creativeGeneration": false,
+    "mirrored": false,
+    "sourceAlphaPreserved": true
+  }
 }

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "formId": "pet_rebirth_mm_stage2",
   "kind": "pet",
-  "scope": "standalone_pet_battle180_semantic_repair_overlay",
+  "scope": "standalone_pet_battle180_installed_semantic_repair_and_source_handoff",
   "archiveMode": "lean",
   "componentMode": "all",
   "runtimeFrameCount": 180,
@@ -132,7 +132,7 @@
       "sizeBytes": 1978421
     }
   ],
-  "workingArchive": "source/formal-production",
+  "workingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle",
   "runtimeEnabled": false,
   "ownerReviewStatus": "pending",
   "repairManifests": [
@@ -639,6 +639,52 @@
     "front-down-monotonic-v1"
   ],
   "installManifest": "source/battle/install-manifest.json",
-  "formalWrites": false,
-  "sharedInstallerUsed": false
+  "formalWrites": true,
+  "sharedInstallerUsed": false,
+  "fullSourceArchiveMode": "lean-external",
+  "externalSourceArchiveFrameCount": 180,
+  "sourceHandoffFramesTracked": true,
+  "sourceHandoffFrameCount": 4,
+  "sourceHandoff": {
+    "id": "mm2-source-handoff-v1",
+    "status": "passed",
+    "audit": "source/formal-production/source-handoff-v1-audit.json",
+    "auditSha256": "b0313bac057d59b7253186706f8dd148b9f23bd96ae9278fc142422a1f73c84f",
+    "evidence": "qa/battle/repairs/mm2-source-handoff-v1-contact.png",
+    "evidenceSha256": "57231dfcf3c5594364a6f61e4dd66d2abeaeebffcd86b199b3ad2fcc9b780b1a",
+    "trackedRoot": "source/formal-production/handoff-512",
+    "trackedFrameCount": 4,
+    "externalWorkingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle",
+    "externalSourceArchiveFrameCount": 180,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "sourceDown8Revive1EncodedExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "sourceDown8Revive1DecodedRgbaExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "derivedRuntimeDecodedRgbaExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "runtimeTreeUnchanged": true,
+    "runtimeTreeDigest": "b792058f1eb66d4cd446a3869e301270f8f8541196bac3096e7ed910967f1adf",
+    "creativeGeneration": false,
+    "mirrored": false,
+    "sourceAlphaPreserved": true
+  },
+  "sourceHandoffValidationStatus": "passed",
+  "installationStatus": "installed-and-verified",
+  "repairManifestHashes": {
+    "source/formal-production/mm2-semantic-repair-v1-manifest.json": "ac685595c9e6d64cc98ee87addd4adf3ed015f10abba7c9c9a74a89f0c43bd7e"
+  }
 }

@@ -3,7 +3,7 @@
   "formId": "pet_rebirth_mm_stage2",
   "displayName": "2转小MM",
   "artStatus": "in_production",
-  "productionScope": "identity_and_formal_two_view_12_action_battle_semantic_repair_staged_owner_review_pending",
+  "productionScope": "identity_and_formal_two_view_12_action_battle_installed_source_handoff_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -137,17 +137,19 @@
     "prompt": "prompts/identity-board-v1.txt",
     "formalProductionLedger": "source/formal-production/source-ledger.json",
     "promptDirectory": "prompts/production",
-    "workingArchive": "source/formal-production"
+    "workingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle",
+    "formalSourceHandoffRoot": "source/formal-production/handoff-512",
+    "formalSourceHandoffAudit": "source/formal-production/source-handoff-v1-audit.json"
   },
   "evidence": {
     "battleContactSheet": "qa/battle/contact-sheet.png",
     "battleContactSheetSha256": "70fe154416b96bc7179b54f0e2f809fc3d047ed18b7287d623d8df5541cc0f0e",
     "battleQc": "qa/battle/qc-summary.json",
-    "battleQcSha256": "f6556faaa10419ca88fdd88086d60d9260d38c5198a77d55709148981e388f82",
+    "battleQcSha256": "02c1a0f483e2ee427ac3ab7e1963b7fc643f05cdc8f66784e164ed24a6c9a908",
     "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
     "battleFacingContractPreviewSha256": "d0fc98089030321291b2b6e8962dcc39907f6ae92f85f51a582aee4e1039df1f",
     "semanticRepairManifest": "source/formal-production/mm2-semantic-repair-v1-manifest.json",
-    "semanticRepairManifestSha256": "30fc428053e121c2405236610d248ec812e8dc1884ad1a5ddf61b64879334984",
+    "semanticRepairManifestSha256": "ac685595c9e6d64cc98ee87addd4adf3ed015f10abba7c9c9a74a89f0c43bd7e",
     "semanticRepairStrictAudit": "source/formal-production/mm2-semantic-repair-v1-strict-audit.json",
     "semanticRepairStrictAuditSha256": "818f4402234b16352800d5acb99a33c71663848fa21bcaaabb1958dfd6ac2425",
     "continuityEvidence": [
@@ -193,10 +195,16 @@
         "path": "qa/battle/repairs/semantic-component-cleanup-before-after.png",
         "sha256": "c43b637a864bb68dc45c4231708ed63359d11a99f9026f1c377a37c66902c1ca"
       }
-    ]
+    ],
+    "sourceHandoffAudit": "source/formal-production/source-handoff-v1-audit.json",
+    "sourceHandoffAuditSha256": "b0313bac057d59b7253186706f8dd148b9f23bd96ae9278fc142422a1f73c84f",
+    "sourceHandoffContact": "qa/battle/repairs/mm2-source-handoff-v1-contact.png",
+    "sourceHandoffContactSha256": "57231dfcf3c5594364a6f61e4dd66d2abeaeebffcd86b199b3ad2fcc9b780b1a",
+    "finalBattleReview": "source/formal-production/final-battle-review-v1-manifest.json",
+    "finalBattleReviewSha256": "3dfc70aecdfb4767b94b6b9e95ed2ebe1a42cdaa5dd33eda1c66050122efb28e"
   },
   "ownerReviewStatus": "pending",
-  "notes": "MM2 semantic repair candidate is staged with a guarded 180-frame overlay and static QA. Runtime remains disabled; owner aesthetic review, guarded install, Godot load, and real battle replay remain pending.",
+  "notes": "MM2 standalone battle runtime and its semantic repair are installed and Godot-loaded. The formal 512px KO/revive handoff is durable and exactly re-derives the unchanged runtime hold; runtime remains disabled pending owner aesthetic review and parent 10v10 integration evidence.",
   "battleViewMapping": {
     "enemy": {
       "view": "front_3quarter_sw",
@@ -210,7 +218,7 @@
     }
   },
   "battleVisual": {
-    "status": "semantic_repair_staged_static_self_review_passed_owner_pending",
+    "status": "installed_static_self_review_passed_source_handoff_verified_owner_pending",
     "battleViewMapping": {
       "enemy": {
         "view": "front_3quarter_sw",
@@ -340,10 +348,11 @@
       "ownerReviewStatus": "pending"
     },
     "godotBattleLoadReview": {
-      "status": "pending_candidate_install_and_real_client_review",
+      "status": "passed",
+      "godotVersion": "4.7.stable",
       "actions": 12,
       "views": 2,
-      "framesStaticallyDecoded": 180,
+      "framesLoaded": 180,
       "textureSize": [
         256,
         256
@@ -351,7 +360,8 @@
       "finalPresentationFlipH": {
         "enemy": true,
         "ally": true
-      }
+      },
+      "checkScript": ".run/pet-art-batch-g08-g09/check_pet_battle_only.gd"
     },
     "runtimeEnabled": false,
     "minimumBattleRuntimeEdgeMarginAtAlpha8": 14,
@@ -360,7 +370,7 @@
       "replacementFrameCount": 41,
       "preserveFrameCount": 139,
       "manifest": "source/formal-production/mm2-semantic-repair-v1-manifest.json",
-      "manifestSha256": "30fc428053e121c2405236610d248ec812e8dc1884ad1a5ddf61b64879334984",
+      "manifestSha256": "ac685595c9e6d64cc98ee87addd4adf3ed015f10abba7c9c9a74a89f0c43bd7e",
       "strictAudit": "source/formal-production/mm2-semantic-repair-v1-strict-audit.json",
       "strictAuditSha256": "818f4402234b16352800d5acb99a33c71663848fa21bcaaabb1958dfd6ac2425",
       "repairEvidence": [
@@ -383,7 +393,48 @@
       ],
       "selfReviewStatus": "passed",
       "ownerReviewStatus": "pending",
-      "installationStatus": "not-installed"
+      "installationStatus": "installed-and-verified"
+    },
+    "fullSourceArchiveMode": "lean-external",
+    "externalSourceArchiveFrameCount": 180,
+    "sourceHandoffFramesTracked": true,
+    "sourceHandoffFrameCount": 4,
+    "sourceHandoff": {
+      "id": "mm2-source-handoff-v1",
+      "status": "passed",
+      "audit": "source/formal-production/source-handoff-v1-audit.json",
+      "auditSha256": "b0313bac057d59b7253186706f8dd148b9f23bd96ae9278fc142422a1f73c84f",
+      "evidence": "qa/battle/repairs/mm2-source-handoff-v1-contact.png",
+      "evidenceSha256": "57231dfcf3c5594364a6f61e4dd66d2abeaeebffcd86b199b3ad2fcc9b780b1a",
+      "trackedRoot": "source/formal-production/handoff-512",
+      "trackedFrameCount": 4,
+      "externalWorkingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle",
+      "externalSourceArchiveFrameCount": 180,
+      "sourceFrameSize": [
+        512,
+        512
+      ],
+      "runtimeFrameSize": [
+        256,
+        256
+      ],
+      "sourceDown8Revive1EncodedExact": {
+        "front_3quarter_sw": true,
+        "back_3quarter_ne": true
+      },
+      "sourceDown8Revive1DecodedRgbaExact": {
+        "front_3quarter_sw": true,
+        "back_3quarter_ne": true
+      },
+      "derivedRuntimeDecodedRgbaExact": {
+        "front_3quarter_sw": true,
+        "back_3quarter_ne": true
+      },
+      "runtimeTreeUnchanged": true,
+      "runtimeTreeDigest": "b792058f1eb66d4cd446a3869e301270f8f8541196bac3096e7ed910967f1adf",
+      "creativeGeneration": false,
+      "mirrored": false,
+      "sourceAlphaPreserved": true
     }
   }
 }

@@ -414,7 +414,7 @@
     "replacementFrameCount": 41,
     "preserveFrameCount": 139,
     "manifest": "source/formal-production/mm2-semantic-repair-v1-manifest.json",
-    "manifestSha256": "30fc428053e121c2405236610d248ec812e8dc1884ad1a5ddf61b64879334984",
+    "manifestSha256": "ac685595c9e6d64cc98ee87addd4adf3ed015f10abba7c9c9a74a89f0c43bd7e",
     "strictAudit": "source/formal-production/mm2-semantic-repair-v1-strict-audit.json",
     "strictAuditSha256": "818f4402234b16352800d5acb99a33c71663848fa21bcaaabb1958dfd6ac2425",
     "repairEvidence": [
@@ -437,7 +437,7 @@
     ],
     "selfReviewStatus": "passed",
     "ownerReviewStatus": "pending",
-    "installationStatus": "not-installed"
+    "installationStatus": "installed-and-verified"
   },
   "errors": [],
   "totalFrameCount": 180,
@@ -449,7 +449,7 @@
   "qualityRepairs": [
     "mm2-semantic-repair-v1"
   ],
-  "qualityGateStatus": "staged_static_self_review_passed_owner_pending",
+  "qualityGateStatus": "installed_runtime_and_source_handoff_verified_owner_pending",
   "sequenceReview": {
     "id": "battle180-semantic-repair-review-v1",
     "contactSheet": "qa/battle/contact-sheet.png",
@@ -492,10 +492,11 @@
     "ownerReviewStatus": "pending"
   },
   "godotBattleLoadReview": {
-    "status": "pending_candidate_install_and_real_client_review",
+    "status": "passed",
+    "godotVersion": "4.7.stable",
     "actions": 12,
     "views": 2,
-    "framesStaticallyDecoded": 180,
+    "framesLoaded": 180,
     "textureSize": [
       256,
       256
@@ -503,6 +504,45 @@
     "finalPresentationFlipH": {
       "enemy": true,
       "ally": true
-    }
+    },
+    "checkScript": ".run/pet-art-batch-g08-g09/check_pet_battle_only.gd"
+  },
+  "installationStatus": "installed-and-verified",
+  "sourceHandoff": {
+    "id": "mm2-source-handoff-v1",
+    "status": "passed",
+    "audit": "source/formal-production/source-handoff-v1-audit.json",
+    "auditSha256": "b0313bac057d59b7253186706f8dd148b9f23bd96ae9278fc142422a1f73c84f",
+    "evidence": "qa/battle/repairs/mm2-source-handoff-v1-contact.png",
+    "evidenceSha256": "57231dfcf3c5594364a6f61e4dd66d2abeaeebffcd86b199b3ad2fcc9b780b1a",
+    "trackedRoot": "source/formal-production/handoff-512",
+    "trackedFrameCount": 4,
+    "externalWorkingArchive": ".run/art_full_g11_g12/pet_rebirth_mm_stage2/pet/battle",
+    "externalSourceArchiveFrameCount": 180,
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "sourceDown8Revive1EncodedExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "sourceDown8Revive1DecodedRgbaExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "derivedRuntimeDecodedRgbaExact": {
+      "front_3quarter_sw": true,
+      "back_3quarter_ne": true
+    },
+    "runtimeTreeUnchanged": true,
+    "runtimeTreeDigest": "b792058f1eb66d4cd446a3869e301270f8f8541196bac3096e7ed910967f1adf",
+    "creativeGeneration": false,
+    "mirrored": false,
+    "sourceAlphaPreserved": true
   }
 }
