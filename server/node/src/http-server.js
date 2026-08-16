@@ -19,6 +19,9 @@ const {
   createConfiguredClusterEventRuntime,
 } = require("./cluster-event-runtime-config");
 const {
+  createPublicEdgeRuntimeConfig,
+} = require("./public-edge-runtime-config");
+const {
   createClusterBattleRouter,
 } = require("./cluster-battle-router");
 const {
@@ -1772,6 +1775,7 @@ async function startDefaultHttpServer(options = {}) {
   const env = options.env && typeof options.env === "object" ? options.env : process.env;
   const port = Number(env.BEASTBOUND_AUTH_PORT || 8787);
   const host = String(env.BEASTBOUND_AUTH_HOST || "127.0.0.1");
+  const publicEdgeRuntime = createPublicEdgeRuntimeConfig(env, {backendHost: host});
   const createClusterRuntime = typeof options.createClusterRuntime === "function"
     ? options.createClusterRuntime
     : createConfiguredClusterEventRuntime;
@@ -1819,15 +1823,22 @@ async function startDefaultHttpServer(options = {}) {
     }
     store = createStore({transactionSignal: clusterFatalTransactionFence.signal});
     const service = createPreloadedAuthService(store);
+    const eventHubOptions = {
+      ...clusterRuntime.eventHubOptions,
+      allowedOrigins: publicEdgeRuntime.allowedOrigins,
+    };
     server = createHttpServer({
       service,
       store,
-      eventHubOptions: clusterRuntime.eventHubOptions,
+      eventHubOptions,
+      trustedProxies: publicEdgeRuntime.trustedProxies,
+      networkAdmissionOptions: publicEdgeRuntime.networkAdmissionOptions,
       clusterAccountAdmission: clusterRuntime.accountAdmission,
       clusterBattleRuntime: clusterRuntime.battleRuntime,
       onStorageFatal: onClusterFatal,
     });
     server.clusterEventRuntime = clusterRuntime;
+    server.publicEdgeRuntime = publicEdgeRuntime.summary;
     await new Promise((resolve, reject) => {
       const onError = (error) => {
         server.off("error", onError);

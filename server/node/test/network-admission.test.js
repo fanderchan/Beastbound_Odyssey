@@ -34,6 +34,9 @@ test("network identity ignores forwarded headers unless the immediate peer is tr
 });
 
 test("trusted proxy parsing rejects malformed, overlong and all-trusted chains", () => {
+  for (const invalid of ["127.0.0.1/", "127.0.0.1/01", "::1/"]) {
+    assert.throws(() => createTrustedProxyMatcher([invalid]), /Invalid trusted proxy CIDR/);
+  }
   const trustedProxy = createTrustedProxyMatcher(["127.0.0.0/8"]);
   for (const forwardedFor of [
     "bad-ip",
@@ -46,6 +49,87 @@ test("trusted proxy parsing rejects malformed, overlong and all-trusted chains",
       (error) => error instanceof NetworkAdmissionError && error.code === "forwarded_for_invalid",
     );
   }
+});
+
+test("trusted TLS proxy mode rejects direct product traffic and invalid forwarding metadata", () => {
+  assert.throws(
+    () => createNetworkAdmission({requireTrustedTlsProxy: true}),
+    (error) => error.code === "trusted_tls_proxy_configuration_invalid",
+  );
+  const admission = createNetworkAdmission({
+    trustedProxies: ["127.0.0.1"],
+    requireTrustedTlsProxy: true,
+  });
+  const directProduct = {...request("127.0.0.1"), url: "/profiles/me"};
+  assert.throws(
+    () => admission.networkIdentity(directProduct),
+    (error) => error.code === "forwarded_for_required" && error.statusCode === 400,
+  );
+  for (const [forwardedFor, forwardedProto, code] of [
+    ["", "https", "forwarded_for_required"],
+    ["198.51.100.8", "", "forwarded_proto_invalid"],
+    ["198.51.100.8", "http", "forwarded_proto_invalid"],
+    ["198.51.100.8", "https,http", "forwarded_proto_invalid"],
+  ]) {
+    const req = {
+      ...request("127.0.0.1", forwardedFor),
+      url: "/profiles/me",
+      headers: {
+        ...(forwardedFor ? {"x-forwarded-for": forwardedFor} : {}),
+        ...(forwardedProto ? {"x-forwarded-proto": forwardedProto} : {}),
+      },
+    };
+    assert.throws(
+      () => admission.networkIdentity(req),
+      (error) => error.code === code,
+    );
+  }
+  assert.throws(
+    () => admission.networkIdentity({
+      ...request("198.51.100.9", "198.51.100.8"),
+      url: "/profiles/me",
+      headers: {
+        "x-forwarded-for": "198.51.100.8",
+        "x-forwarded-proto": "https",
+      },
+    }),
+    (error) => error.code === "trusted_tls_proxy_required" && error.statusCode === 403,
+  );
+  assert.throws(
+    () => admission.networkIdentity({...request("127.0.0.1"), url: "/health/live?verbose=1"}),
+    (error) => error.code === "forwarded_for_required" && error.statusCode === 400,
+  );
+});
+
+test("trusted TLS proxy mode accepts secure forwarding while retaining direct private health", () => {
+  const admission = createNetworkAdmission({
+    trustedProxies: ["127.0.0.1"],
+    requireTrustedTlsProxy: true,
+  });
+  const identity = admission.networkIdentity({
+    ...request("127.0.0.1", "198.51.100.8"),
+    url: "/profiles/me",
+    headers: {
+      "x-forwarded-for": "198.51.100.8",
+      "x-forwarded-proto": "https",
+    },
+  });
+  assert.equal(identity.clientIp, "198.51.100.8");
+  assert.equal(identity.forwarded, true);
+  assert.equal(identity.secureTransport, true);
+  assert.equal(identity.directHealth, false);
+
+  const health = admission.networkIdentity({...request("127.0.0.1"), url: "/health/ready"});
+  assert.equal(health.clientIp, "127.0.0.1");
+  assert.equal(health.forwarded, false);
+  assert.equal(health.secureTransport, false);
+  assert.equal(health.directHealth, true);
+
+  const metrics = admission.metrics();
+  assert.equal(metrics.edgeMode, "trusted_tls_proxy");
+  assert.equal(metrics.secureProxyRequired, true);
+  assert.equal(metrics.trustedProxyCount, 1);
+  assert.equal(metrics.directHealthAllowed, true);
 });
 
 test("bounded token buckets refill, expire and fail closed at the key cap", () => {

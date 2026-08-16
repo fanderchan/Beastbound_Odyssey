@@ -36,6 +36,9 @@ Optional environment variables:
 
 - `BEASTBOUND_AUTH_PORT`: local port, default `8787`.
 - `BEASTBOUND_AUTH_HOST`: bind host, default `127.0.0.1`. Use `0.0.0.0` for LAN playtests.
+- `BEASTBOUND_EDGE_MODE`: public-edge contract, default `direct`. Set to `trusted_tls_proxy` only when a reverse proxy terminates TLS and overwrites forwarding headers.
+- `BEASTBOUND_TRUSTED_PROXIES`: comma-separated exact proxy IPs or CIDRs. It is required by `trusted_tls_proxy`; trust-all ranges are rejected.
+- `BEASTBOUND_WS_ALLOWED_ORIGINS`: comma-separated exact browser origins. In `trusted_tls_proxy` mode every configured origin must be canonical HTTPS, for example `https://game.example`. Native clients without an `Origin` header remain supported.
 - `BEASTBOUND_AUTH_STORE` or `BEASTBOUND_STORE`: defaults to `mysql`. Set to `json` only for local tests that intentionally use the JSON store.
 - `BEASTBOUND_AUTH_STORE_PATH`: JSON test store path when `BEASTBOUND_AUTH_STORE=json`, default `.local/auth-store.json`.
 - `BEASTBOUND_MYSQL_HOST`, `BEASTBOUND_MYSQL_PORT`, `BEASTBOUND_MYSQL_USER`, `BEASTBOUND_MYSQL_PASSWORD`, `BEASTBOUND_MYSQL_DATABASE`: MySQL connection settings.
@@ -46,6 +49,25 @@ Optional environment variables:
 - `BEASTBOUND_STRUCTURED_LOGS`: set to `1` to write JSON lines for HTTP request duration, profile writebacks, and battle settlements.
 - `BEASTBOUND_ALLOW_POSITION_TELEPORT`: set to `1` only on local QA servers to skip server-side position snapshot validation (teleport and cross-map jump checks) and the quest `talk` NPC proximity check. Never enable it for playtest or production servers.
 - `BEASTBOUND_ALLOW_PROFILE_SAVE`: set to `1` only for test/seed/ops tooling that must write whole profile documents through `saveProfile`. Production servers keep it unset so full-profile uploads are rejected (`profile_upload_denied`).
+
+## Trusted TLS Reverse Proxy Mode
+
+The Node process still serves private HTTP; TLS certificates, firewall policy, WAF/CDN behavior, and forwarding-header sanitation belong to the deployment edge. When that edge exists, enable the fail-closed application contract:
+
+```sh
+BEASTBOUND_AUTH_HOST=127.0.0.1
+BEASTBOUND_EDGE_MODE=trusted_tls_proxy
+BEASTBOUND_TRUSTED_PROXIES=127.0.0.1
+BEASTBOUND_WS_ALLOWED_ORIGINS=https://game.example
+```
+
+This mode refuses to start if the backend bind is public, the trusted proxy list is absent/invalid/trust-all, or a configured browser origin is not canonical HTTPS. Every HTTP product request and WebSocket upgrade must then arrive from a trusted immediate peer with a valid `X-Forwarded-For` chain and exactly `X-Forwarded-Proto: https`. Exact `/health`, `/health/live`, and `/health/ready` checks may still reach the private backend directly without forwarding headers.
+
+The proxy must discard client-supplied `Forwarded`, `X-Forwarded-*`, and `X-Real-IP` values before writing its own canonical headers. The application cannot prove that a deployed third-party proxy is configured correctly, so run the deployment's own conformance test before opening public traffic. The repository's isolated transport gate proves the application boundary with a temporary CA, TLS 1.3, two private backend listeners, spoofed-header overwrite, rate limiting, and a real WSS `events.ready`; it does not certify a production proxy vendor, account-sticky load balancer, firewall, or public certificate lifecycle:
+
+```sh
+node tools/run_trusted_tls_edge_gate.mjs
+```
 
 ## Optional Multi-Node Event Relay And Account Ownership
 
@@ -132,11 +154,11 @@ See `../../docs/phase_182_mysql_live_server.md` for the architecture and LAN pla
 Every non-health HTTP request must include:
 
 - `X-Beastbound-Client-Version`: current Godot client build version, currently `0.1.0`.
-- `X-Beastbound-Protocol-Version`: client protocol version, currently `1`.
+- `X-Beastbound-Protocol-Version`: client protocol version, currently `10`.
 
 Every JSON response includes `protocolVersion`, `serverVersion`, `minClientProtocolVersion`, `maxClientProtocolVersion`, and a reserved `hotUpdate` object. Incompatible or missing client protocol metadata returns HTTP `426` with `protocol_version_mismatch` or `client_version_missing` plus a Chinese upgrade prompt. WebSocket event streams carry the same fields as query parameters: `clientVersion` and `clientProtocolVersion`.
 
-Compatibility window strategy: client build version and protocol version are separate. UI text, art, balance data, or bug-fix builds may change `CLIENT_VERSION` while keeping protocol `1` if HTTP/WS request and response contracts stay compatible. Any breaking request/response, event-stream, or save-interaction change must bump both Godot `CLIENT_PROTOCOL_VERSION` and server `PROTOCOL_VERSION`, then update `MIN_CLIENT_PROTOCOL_VERSION` / `MAX_CLIENT_PROTOCOL_VERSION` to the supported release window. The current release window is `1..1`; clients outside it receive HTTP `426` and the reserved `hotUpdate` payload remains non-required until a real update manifest exists.
+Compatibility window strategy: client build version and protocol version are separate. UI text, art, balance data, or bug-fix builds may change `CLIENT_VERSION` while keeping protocol `10` if HTTP/WS request and response contracts stay compatible. Any breaking request/response, event-stream, or save-interaction change must bump both Godot `CLIENT_PROTOCOL_VERSION` and server `PROTOCOL_VERSION`, then update `MIN_CLIENT_PROTOCOL_VERSION` / `MAX_CLIENT_PROTOCOL_VERSION` to the supported release window. The current release window is `10..10`; clients outside it receive HTTP `426` and the reserved `hotUpdate` payload remains non-required until a real update manifest exists.
 
 ## Health And Logs
 
@@ -161,8 +183,8 @@ Structured logs use one JSON object per event with `schemaVersion` and `createdA
 - `GET /players/online?scope=aoi&mapId={mapId}&cellX={x}&cellY={y}&radius={cells}`
 - `POST /players/position`
 - `POST /movement/step`
-- `WS /events?clientVersion={clientVersion}&clientProtocolVersion={protocolVersion}&token={sessionToken}`
-- `WS /events?clientVersion={clientVersion}&clientProtocolVersion={protocolVersion}&token={sessionToken}&lastEventSeq={eventSeq}`
+- `WS /events?clientVersion={clientVersion}&clientProtocolVersion={protocolVersion}` (`Authorization: Bearer` required)
+- `WS /events?clientVersion={clientVersion}&clientProtocolVersion={protocolVersion}&lastEventSeq={eventSeq}` (`Authorization: Bearer` required)
 - `GET /events/latest`
 - `GET /profiles/me`
 - `PUT /profiles/me` (disabled; returns `403 profile_upload_denied`)
@@ -280,7 +302,7 @@ This does not yet provide full path authority, collision between players/NPCs, p
 
 ## Event Stream Boundary
 
-`WS /events?token={sessionToken}` upgrades a valid server session to a lightweight WebSocket stream:
+`WS /events?clientVersion={clientVersion}&clientProtocolVersion={protocolVersion}` upgrades a valid `Authorization: Bearer` server session to a lightweight WebSocket stream. Session tokens are forbidden in the query string:
 
 - On connect, the server sends `events.ready` with the session account and `online.snapshot` with the current AOI-filtered online roster when the account already has a position.
 - `GET /events/latest` returns the latest service cursor for an authenticated session, so local checks can subscribe from the current edge instead of replaying old development events.

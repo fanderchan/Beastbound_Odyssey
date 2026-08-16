@@ -150,6 +150,45 @@ test("HTTP client identity ignores spoofed forwarding by default and accepts an 
   assert.equal(forwarded.observedClientIp, "198.51.100.8");
 });
 
+test("HTTP trusted TLS proxy mode keeps health private but rejects direct product traffic", async (t) => {
+  const service = {
+    register(payload) { return {ok: true, observedClientIp: payload.clientIp}; },
+  };
+  const server = createHttpServer({
+    service,
+    eventHub: eventHubStub(),
+    logger: false,
+    trustedProxies: ["127.0.0.1"],
+    networkAdmissionOptions: {requireTrustedTlsProxy: true},
+  });
+  const base = await listen(server, t);
+  const directHealth = await fetch(`${base}/health/ready`);
+  assert.equal(directHealth.status, 200);
+  const healthBody = await directHealth.json();
+  assert.equal(healthBody.transport.edgeMode, "trusted_tls_proxy");
+  assert.equal(healthBody.transport.secureProxyRequired, true);
+
+  const direct = await fetch(`${base}/auth/register`, {
+    method: "POST",
+    headers: protocolHeaders({"content-type": "application/json"}),
+    body: JSON.stringify({username: "directedge", password: "test1234"}),
+  });
+  assert.equal(direct.status, 400);
+  assert.equal((await direct.json()).code, "forwarded_for_required");
+
+  const forwarded = await fetch(`${base}/auth/register`, {
+    method: "POST",
+    headers: protocolHeaders({
+      "content-type": "application/json",
+      "x-forwarded-for": "198.51.100.18",
+      "x-forwarded-proto": "https",
+    }),
+    body: JSON.stringify({username: "secureedge", password: "test1234"}),
+  });
+  assert.equal(forwarded.status, 200);
+  assert.equal((await forwarded.json()).observedClientIp, "198.51.100.18");
+});
+
 test("HTTP bearer boundary forwards only canonical 43-byte base64url session tokens", async (t) => {
   const server = createHttpServer({
     service: {getSession(token) { return {ok: true, observedToken: token}; }},

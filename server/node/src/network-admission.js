@@ -104,6 +104,13 @@ function createNetworkAdmission(options = {}) {
     maxKeys: options.limiterMaxKeys,
   });
   const trustedProxy = createTrustedProxyMatcher(options.trustedProxies || []);
+  const requireTrustedTlsProxy = options.requireTrustedTlsProxy === true;
+  const allowDirectHealthPaths = options.allowDirectHealthPaths !== false;
+  if (requireTrustedTlsProxy && trustedProxy.count < 1) {
+    const error = new Error("trusted TLS proxy mode requires at least one trusted proxy");
+    error.code = "trusted_tls_proxy_configuration_invalid";
+    throw error;
+  }
   const processSalt = options.processSalt || crypto.randomBytes(32);
   const maxActiveHttp = positiveInteger(options.maxActiveHttp, 512);
   const policies = {
@@ -129,6 +136,8 @@ function createNetworkAdmission(options = {}) {
       trustedProxy,
       maxForwardedBytes: options.maxForwardedBytes,
       maxForwardedHops: options.maxForwardedHops,
+      requireTrustedTlsProxy,
+      allowDirectHealthPaths,
     });
   }
 
@@ -232,6 +241,10 @@ function createNetworkAdmission(options = {}) {
       rateLimitMaxKeys: rate.maxKeys,
       rateLimitRejected: rate.rejected,
       rateLimitCapacityRejected: rate.capacityRejected,
+      edgeMode: requireTrustedTlsProxy ? "trusted_tls_proxy" : "direct",
+      secureProxyRequired: requireTrustedTlsProxy,
+      trustedProxyCount: trustedProxy.count,
+      directHealthAllowed: requireTrustedTlsProxy && allowDirectHealthPaths,
       httpResponses: Object.freeze({
         count: httpResponseCount,
         bytes: httpResponseBytes,
@@ -312,12 +325,65 @@ function saturatingAdd(left, right) {
 function requestNetworkIdentity(req, options = {}) {
   const peerIp = normalizeIp(req && req.socket && req.socket.remoteAddress, {strict: false}) || "unknown";
   const trustedProxy = options.trustedProxy || createTrustedProxyMatcher([]);
-  if (!trustedProxy.matches(peerIp)) {
-    return {peerIp, clientIp: peerIp, forwarded: false};
-  }
+  const peerTrusted = trustedProxy.matches(peerIp);
   const header = req && req.headers ? req.headers["x-forwarded-for"] : undefined;
+  const protoHeader = req && req.headers ? req.headers["x-forwarded-proto"] : undefined;
+  const requireTrustedTlsProxy = options.requireTrustedTlsProxy === true;
+  const directHealthAllowed = (
+    requireTrustedTlsProxy
+    && options.allowDirectHealthPaths !== false
+    && directHealthRequest(req)
+    && header === undefined
+    && protoHeader === undefined
+  );
+  if (requireTrustedTlsProxy && !directHealthAllowed) {
+    if (!peerTrusted) {
+      throw new NetworkAdmissionError(
+        403,
+        "trusted_tls_proxy_required",
+        "请通过安全游戏入口连接。",
+        {closeConnection: true},
+      );
+    }
+    if (header === undefined || String(header).trim() === "") {
+      throw new NetworkAdmissionError(
+        400,
+        "forwarded_for_required",
+        "代理来源信息不正确。",
+        {closeConnection: true},
+      );
+    }
+    if (
+      protoHeader === undefined
+      || Array.isArray(protoHeader)
+      || Buffer.byteLength(String(protoHeader)) > 16
+      || String(protoHeader).trim().toLowerCase() !== "https"
+    ) {
+      throw new NetworkAdmissionError(
+        400,
+        "forwarded_proto_invalid",
+        "安全入口信息不正确。",
+        {closeConnection: true},
+      );
+    }
+  }
+  if (!peerTrusted || directHealthAllowed) {
+    return {
+      peerIp,
+      clientIp: peerIp,
+      forwarded: false,
+      secureTransport: false,
+      directHealth: directHealthAllowed,
+    };
+  }
   if (header === undefined || String(header).trim() === "") {
-    return {peerIp, clientIp: peerIp, forwarded: false};
+    return {
+      peerIp,
+      clientIp: peerIp,
+      forwarded: false,
+      secureTransport: false,
+      directHealth: false,
+    };
   }
   if (Array.isArray(header) || Buffer.byteLength(String(header)) > positiveInteger(options.maxForwardedBytes, 256)) {
     throw new NetworkAdmissionError(400, "forwarded_for_invalid", "代理来源信息不正确。", {closeConnection: true});
@@ -328,10 +394,21 @@ function requestNetworkIdentity(req, options = {}) {
   }
   for (let index = hops.length - 1; index >= 0; index -= 1) {
     if (!trustedProxy.matches(hops[index])) {
-      return {peerIp, clientIp: hops[index], forwarded: true};
+      return {
+        peerIp,
+        clientIp: hops[index],
+        forwarded: true,
+        secureTransport: requireTrustedTlsProxy,
+        directHealth: false,
+      };
     }
   }
   throw new NetworkAdmissionError(400, "forwarded_for_invalid", "代理来源信息不正确。", {closeConnection: true});
+}
+
+function directHealthRequest(req) {
+  const target = String(req && req.url || "");
+  return ["/health", "/health/live", "/health/ready"].includes(target);
 }
 
 function createTrustedProxyMatcher(values) {
@@ -355,6 +432,9 @@ function createTrustedProxyMatcher(values) {
     if (prefixText === undefined) {
       blockList.addAddress(address, family);
     } else {
+      if (!/^(?:0|[1-9][0-9]*)$/.test(prefixText)) {
+        throw new Error(`Invalid trusted proxy CIDR: ${value}`);
+      }
       const prefix = Number(prefixText);
       const maxPrefix = familyNumber === 4 ? 32 : 128;
       if (!Number.isInteger(prefix) || prefix < 0 || prefix > maxPrefix) {
