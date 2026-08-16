@@ -3,7 +3,7 @@
   "mountFormId": "rebirth_beast_earth_lv50",
   "characterId": "novice_hunter_v1",
   "artStatus": "in_production",
-  "productionScope": "mounted_key_pose_gate",
+  "productionScope": "formal_battle_two_view_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -13,6 +13,18 @@
     "front_3quarter_sw",
     "back_3quarter_ne"
   ],
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
   "identity": {
     "status": "self_review_passed_owner_pending",
     "sourceFrameSize": [
@@ -26,81 +38,136 @@
     },
     "integratedWholeFrame": true,
     "runtimeLayeredComposition": false,
-    "runtimeMirroring": false
+    "authoredSourceMirroring": false
   },
   "actions": {
     "idle": {
       "frameCount": 6,
       "fps": 8,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
       "fps": 10,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     }
+  },
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "mounted",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "bec92dff03c6c279d5e9ef33df85542918a7cf53fa32390d4ae6eca22449e1a7",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json"
   },
   "worldVisual": {
     "status": "self_review_passed_owner_pending",
@@ -155,17 +222,29 @@
     }
   },
   "sourceArchive": {
-    "policy": "tracked_lossless_webp_with_original_sha256",
-    "raw": "source/mounted-keypose-raw.webp",
-    "sourceMetadata": "source/mounted-keypose-source-meta.json",
-    "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
-    "prompt": "prompts/generation-contract.md"
+    "policy": "lean_runtime_plus_prompts_qc_and_hash_ledger",
+    "identityRaw": "source/mounted-keypose-raw.webp",
+    "identitySourceMetadata": "source/mounted-keypose-source-meta.json",
+    "identityPipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
+    "worldDirectionSemanticRepairManifest": "source/formal-production/world-direction-semantic-repair-v1-manifest.json",
+    "promptDirectory": "source/battle",
+    "battleLedger": "source/battle/source-ledger.json",
+    "installManifest": "source/battle/install-manifest.json",
+    "generationAttestation": "source/battle/repairs/phase458-rebirth-mounted-full-source-v1/generation-attestation.json",
+    "generationAttestationSha256": "d7192e4a3b0f16be28adf3fd860e8940e9d7b48deeeff4d11c3982ac7922dbc9"
   },
   "evidence": {
-    "contactSheet": ".run/art_batch_phase320/rebirth_beast/earth/mounted-build-v1/contact-sheet.png",
-    "contactSheetSha256": "d906a6b530646a32b6d56562504ea4420f345072a9a9d09aa72f21416e6fd53e"
+    "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
+    "worldContactSheetSha256": "1831bb6ce0c045efb784bde50020dcd32125b6869a585ad629253abfd1cd0221",
+    "worldQc": "qa/world/world-qc.json",
+    "worldQcSha256": "fc1432ed035afda34fe8c0abea00448f91ec14a78e6626b88b5a47e52856a057",
+    "worldCycleGif": "qa/world/true8-world-cycle.gif",
+    "worldCycleGifSha256": "9fb8e66c692ac1ad43a9ae9629f89a1fcee3a9d07f9e8f677274f7e3684442c3",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "478217578dc0ba81e7012a910ad1f5c39a3fee00efcaf8316399fe2048e534dc",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "d84e9807c0a6ea4977bd0fed116f7cd30b4c56259eef5f91372274ac17b3ac3a"
   },
-  "keyPoseReviewStatus": "owner_review_pending",
   "ownerReviewStatus": "pending",
-  "notes": "Integrated novice_hunter_v1 riding 地灵转生兽 front/back key poses only. World and battle mounted animation matrices are intentionally not produced in this owner-review gate."
+  "notes": "Identity and the complete two-view battle matrix are installed for isolated owner review. World art is not declared complete by this battle installer, and this metadata does not grant runtime or release approval."
 }

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "repairId": "phase458-rebirth-mounted-full-source-v1",
+  "generator": "built_in_imagegen",
+  "generatorSessionId": "019fe7c8-2fd7-7972-94a7-98382ddfe591",
+  "transcriptPath": "sessions/2026/08/10/rollout-2026-08-10T02-28-04-019fe7c8-2fd7-7972-94a7-98382ddfe591.jsonl",
+  "compositionClaim": "integrated_mounted_whole_frame_action_sheets",
+  "independentlyAuthoredSourceViews": true,
+  "runtimeOrOfflineLayeredComposition": false,
+  "semanticIndependenceVerified": false,
+  "ownerReviewStatus": "pending",
+  "releaseGate": false,
+  "runtimeEnabled": false,
+  "bundleDigest": "bec92dff03c6c279d5e9ef33df85542918a7cf53fa32390d4ae6eca22449e1a7",
+  "references": [
+    {
+      "label": "identity_board",
+      "path": "client/godot/assets/mounted/novice_hunter_v1/rebirth_beast_earth_lv50/identity/identity-board-transparent.png",
+      "sha256": "9be899a7576648630f9b686f8cf2d087c722a3520883565ffb7a2f757a6230ac"
+    }
+  ],
+  "formalReplay": {
+    "workingArchive": ".run/art_repair_phase458_rebirth_mounted/formal-production-v1",
+    "standardBuildManifest": ".run/art_repair_phase458_rebirth_mounted/formal-production-v1/standard-build-manifest.json",
+    "standardBuildManifestSha256": "999f31e5f5c54b4ffc7f615a8a020a45b4eb777aaec1ce7c11a79a9f687ec089",
+    "promptGenerationManifest": ".run/art_repair_phase458_rebirth_mounted/formal-production-v1/prompt-generation-manifest.json",
+    "promptGenerationManifestSha256": "fb2fe65162156df4a22194ec5276425503cfb170335456bb7f7b407d00593427",
+    "stagingManifest": ".run/art_repair_phase458_rebirth_mounted/formal-production-v1/staging/bundle-manifest.json",
+    "stagingManifestSha256": "95ca902a757bf51d68949e44322c0180014b3c6ed1243a2f9e0d1e7814c9353e",
+    "actionViewCount": 24,
+    "sourceAndRuntimeRgbaReplayExact": true,
+    "frameCount": 180
+  },
+  "installedProvenance": {
+    "sourceLedger": "client/godot/assets/mounted/novice_hunter_v1/rebirth_beast_earth_lv50/source/battle/source-ledger.json",
+    "sourceLedgerSha256": "388816c45ebcd839d97ee17ec92198d81b7b38d89aed9929818bb30fe1b4236d",
+    "installManifest": "client/godot/assets/mounted/novice_hunter_v1/rebirth_beast_earth_lv50/source/battle/install-manifest.json",
+    "installManifestSha256": "2411b22a97c8e036bb315eb7ffaf7c225e6162338fe12faf353d60400a0f3cfa",
+    "trackedPromptCount": 24,
+    "validatedSourceFrameHashCount": 180,
+    "validatedRuntimeFrameHashCount": 180,
+    "downReviveSourceAndRuntimeExactRgba": true
+  },
+  "actions": {
+    "front_3quarter_sw/idle": {"generationId": "exec-a81e6d87-5db1-43a2-8dc5-173c90a9d9ca", "sourceSha256": "16dc38fb8875cf99fdb6508cd0bbe26ec405f1dae94cf5b57fafb0d883ba077c", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/walk": {"generationId": "exec-0f110302-a148-4e98-be60-c5fe043c8246", "sourceSha256": "f26d006d3d99a75c78efd2cdcf45b14e2717f98c0f2632d65ba06a24bcdbf0b7", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/attack": {"generationId": "exec-dfd4de98-92c2-4d4e-af35-257e4a5d2b87", "sourceSha256": "fe5d429689a86f269b492359ea67c6b37a19ae1da1c4d714da5de4e3f8475d27", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/skill": {"generationId": "exec-436d9af5-7135-4627-b043-b625afae77c3", "sourceSha256": "fdf6b31ec9dce4f0845ba550ce9d9999cd9713967c980ed9e11a911a7152c27c", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/hurt": {"generationId": "exec-318468e2-e9bb-4a76-b964-7bacf6a28bb9", "sourceSha256": "e5d033449b63555b96f78d99449773bb129d8598e07144dc7016843f1072f153", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/defend": {"generationId": "exec-03b900f6-ac4b-4b49-88b6-f382f341bc6d", "sourceSha256": "d2ce6effbab3e798d7e391a36ae2d6d07c915a4eb9c238ea9e368dd815bcf21d", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/dodge": {"generationId": "exec-c6ece8ab-b5e2-49b2-969a-bc07d76c936b", "sourceSha256": "37942c899271a3c8fd41993fe04dcbced2c357f8b7d6daa90f43fa126549d5dc", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/counter": {"generationId": "exec-8df3fc2b-17fa-4fed-83a8-4c76dd22353a", "sourceSha256": "84e6b1e8d99d9dcfd9cf1a1aec49118d76b0b622a231d76db681e87580958e13", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/stagger": {"generationId": "exec-9f5154e3-7dd0-446c-b66e-822a7022fcc8", "sourceSha256": "9fbc8ae379f12223620f283a9ba3cfd6b5d1786d0ebbc750de50e9b97e6ba6f3", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/knockaway": {"generationId": "exec-f549b5be-2818-4593-9640-4466135a3345", "sourceSha256": "d0bedc496e5d0e570160984af2eb5e187593c03ed732d758a5be60429e28a380", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/down": {"generationId": "exec-97ae556f-07ac-44eb-907c-88c2f494c5b4", "sourceSha256": "71e62ec0104b6ba3b3f363c270d8974ccf17062213931fb93284ad10a5eb46c1", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/revive": {"generationId": "exec-439cee55-81f4-4989-b345-160deb2bddae", "sourceSha256": "3a2fbd4ea7b0560830918167a6b965109b6cf9dd4a20f44f8091bf38e3c509c0", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/idle": {"generationId": "exec-70416b0b-a11f-4e5b-bc5a-20a151d153a6", "sourceSha256": "9662371eb4bc4d33547605c8363058e626e389453e9ea96bddd5abb1f4a189af", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/walk": {"generationId": "exec-8dbf59e7-05ff-462d-be42-c6b80a3ef4da", "sourceSha256": "e3b060462f7bc6e1d4878c71a81b1054e4124404b3b8a5b346c45d3a09008535", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/attack": {"generationId": "exec-16f04225-8784-48c4-bb0c-62429bcd812a", "sourceSha256": "f13ec5906e53d8c1f36028a005b1f55630b098df0ba9d3cd5a2014211792483d", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/skill": {"generationId": "exec-ab4223ee-80fc-4869-a921-bfb1572f8e8e", "sourceSha256": "fcb6f1a9e6c1161680111f170f4ce0e6a82e0c132b21a50d209dbb27dc38dce1", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/hurt": {"generationId": "exec-6fd01f18-d86d-4d82-9257-c73f4ab839cd", "sourceSha256": "50baad1f24269eb16404cefb04a71b6fb95ea18495549a1d7c4a8a05b3bfe0db", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/defend": {"generationId": "exec-44facd17-e262-4ef4-a7c5-2b2689f4ff0d", "sourceSha256": "d8632962b1c2cccc7e8327f927e8a83173387c618fc4d9e4f24063ba137b8422", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/dodge": {"generationId": "exec-975143e1-efc7-4a26-819a-b407978e72b3", "sourceSha256": "e1168dc6dc70c1ca2419465147ffcc771a3302c41b0e09197dd759a171fcfd87", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/counter": {"generationId": "exec-2ea3050d-8182-4c8b-8f37-807d9b918bc7", "sourceSha256": "5f8bbb2e17a65278aa198de0ff03e10acf46c3287a071063247c1190950a0a26", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/stagger": {"generationId": "exec-ea8227d1-847b-4101-9d57-a03d939fb8e6", "sourceSha256": "afa2d0e9b5f3ac026dcd4c301538e701cc554f0076122b94583ba027295caafb", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/knockaway": {"generationId": "exec-210a85d2-195b-4dd8-90ef-11db45e9ad9a", "sourceSha256": "edcd6bc8676f5e1aa14b83309d4c118501688d0d3189f8fef2d36190a5fa8efa", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/down": {"generationId": "exec-77a9a9d1-1a5c-4617-8db5-7ff1d6d76d76", "sourceSha256": "e4194465869495321ddcfd7b53d0edd9b7b86386020637d4062983e445d9ec56", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/revive": {"generationId": "exec-3cce3700-17c3-4cad-90aa-8a5ab04eb7e7", "sourceSha256": "daf7052c301758dc972eaf7e6ef061286d4da4c1ce2615f5483275509b4cc761", "generatedCacheByteParityVerified": true}
+  },
+  "claimLimit": "binds the current generator transcript, identity reference, final lossless action sheets, exact tracked prompts, deterministic preprocessing, source/runtime hashes, and installed bundle; it does not prove copyright provenance, semantic independence, owner approval, or player release"
+}

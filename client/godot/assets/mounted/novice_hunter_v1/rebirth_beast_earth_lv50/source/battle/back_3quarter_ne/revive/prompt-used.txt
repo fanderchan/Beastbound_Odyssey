@@ -1,0 +1,16 @@
+Regenerate a production 4x2 sheet, exactly 8 DISTINCT row-major frames, for the mounted character REVIVING in independently authored BACK THREE-QUARTER NORTHEAST view. Reference 1 is the exact rear-view prone down pose. Reference 2 is ONLY a timing/height guide for monotonic progression; do not copy or mirror its front-facing artwork. Reference 3 locks rear-view identity. Reference 4 is layout only.
+
+Critical monotonic height contract:
+1 fully prone, rider folded over;
+2 still fully prone, only head/shoulders twitch upward a little;
+3 chest only 20% raised, forepaws bracing, belly and hindquarters still on ground, rider still folded;
+4 chest 45% raised, mount on elbows/low forelegs, hindquarters still low, rider beginning to push up;
+5 low all-fours crouch at about 65% standing height, rider hunched far forward;
+6 about 80% standing height, rider halfway upright;
+7 about 95% standing and almost stable;
+8 fully upright guarded rear-view stance.
+Every frame must be higher than or equal to the previous; never stand before frame 5, never fall or hunch lower after rising. No teleport, attack, roar or airborne pose. Rider and mount remain one integrated whole-frame subject.
+
+Same identity: brown-haired novice male rider, cream fur-collar ochre Stone-Age tunic; massive earth rebirth beast, dark warm-brown fur, cream paws, gold forehead crystal/tusks/shoulder armor, orange earth marking, saddle. Independently authored BACK THREE-QUARTER NORTHEAST view only; no mirroring and no front face. Consistent anatomy, palette and scale.
+
+Subject about 52% per cell, generous uninterrupted exact #FF00FF gutters, no overlap or boundary crossing. Flat exact #FF00FF opaque background. No dust, rocks, shadows, floor marks, particles, Zzz, stars, halo, text, labels, borders, effects, extra objects, duplicate or missing frames. Deliver only the sheet.

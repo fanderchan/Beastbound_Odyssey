@@ -1,0 +1,12 @@
+Create a production sprite sheet with exactly 8 sequential walk-cycle frames arranged in a strict 4 columns x 2 rows grid, read left-to-right across the top row then left-to-right across the bottom row. Use the layout-guide image only for cell placement and safe margins; do not draw its lines, boxes, labels, or guides. Each cell contains exactly one complete integrated whole-frame subject: the same novice hunter riding the same giant earth rebirth beast. Preserve the approved key-pose identity exactly: rider face, hair, ochre fur-trim clothing, teal strap, red sash, saddle, reins, believable deep seat and leg placement; beast dark mahogany fur, cream muzzle and paws, honey sandstone shoulder armor, curled ochre body markings, feathered tail, tusks and horn. Never split or layer rider and mount, never mirror source art, never add a second rider or beast, and never crop any body part. Maintain identical camera angle, scale, canvas position, ground baseline, anatomy, palette, line weight, and lighting across all 8 cells.
+
+The 8 poses form one mechanically readable loop with real alternating legs and no foot sliding:
+1) left foreleg plus right hind leg reach/contact while the opposite diagonal pair trails;
+2) weight settles into that diagonal with mild body compression;
+3) first diagonal passes under the body, rider pelvis rises slightly;
+4) right foreleg plus left hind leg reach forward;
+5) second diagonal makes firm contact while the first trails;
+6) weight settles into the second diagonal with mild compression;
+7) second diagonal passes under the body, rider pelvis rises slightly;
+8) first diagonal reaches forward to connect smoothly back to frame 1.
+Show clear hoof/paw contact changes, modest shoulder and hip roll, tail counter-swing, and a restrained 2-3 percent rider pelvis bob. Rider torso stays controlled; hands follow the reins; both legs remain visibly engaged around the saddle. No static-leg gliding, no hopping, no one-legged gait, no speed lines, dust, shadows, weapons, effects, ground plane, text, labels, borders, or UI. Use a uniform vivid hot-magenta chroma field behind all cells, with generous empty gutters and safe padding. Use only the approved back three-quarter northeast source view in every cell: the unmirrored beast and rider face toward the upper-right of the source canvas, with the rider's back and the beast's rear volume clearly readable. Keep this exact rear/diagonal visibility throughout the walk; do not rotate toward side-on, camera-front, or front view.

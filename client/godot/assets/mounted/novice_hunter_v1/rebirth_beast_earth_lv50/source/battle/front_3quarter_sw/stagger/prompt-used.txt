@@ -1,0 +1,16 @@
+Regenerate this as a production animation sheet, 4 columns x 2 rows, exactly 8 DISTINCT sequential frames. Preserve the original mounted character identity and FRONT THREE-QUARTER SOUTHWEST view. This must visibly animate STAGGER / prolonged imbalance while remaining on all fours, not eight idle duplicates.
+
+Exact row-major motion:
+1 guarded stance just after impact;
+2 head and shoulders jerk left, rider torso thrown opposite;
+3 front knees dip and body lists lower;
+4 weight shifts backward and to the right, reins pull taut;
+5 strongest off-balance pose, mount torso clearly tilted and legs scrambling, but NO fall and NO airborne body;
+6 corrective step in the opposite direction, rider counterbalances;
+7 body rising and stabilizing;
+8 guarded recovery close to frame 1.
+Silhouettes, mount head height, torso angle, rider lean, and planted legs must change clearly from frame to frame. Do not merely change facial expression or tiny pixels.
+
+Identity: novice male rider, brown tousled hair, cream fur-collar ochre Stone-Age tunic; massive earth rebirth beast, dark warm-brown fur, cream muzzle and paws, gold crystal forehead horn, gold layered shoulder armor, orange earth markings, large curved tusks. Rider and mount are one integrated whole-frame subject. No runtime mirroring. Consistent anatomy, scale, palette, armor, saddle, horn and tusks.
+
+Each subject occupies about 55% of its cell and is centered inside its own cell. Leave very wide uninterrupted solid #FF00FF gutters on all four sides of every cell. No subject pixels may touch another frame or cross a cell boundary. Use the layout reference only for spacing. Flat exact #FF00FF background, no transparency, no ground shadow, no dust, no rocks, no text, no labels, no borders, no panel lines, no attack or spell effects, no duplicate or missing frame. Deliver only the sheet.
