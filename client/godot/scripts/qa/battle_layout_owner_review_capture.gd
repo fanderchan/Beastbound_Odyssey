@@ -77,6 +77,83 @@ const FORMAL_ARENA_SHA256 := (
 )
 const MAX_CHARACTER_NAME := "晨星远征守望猎团首席先锋队长苍岚逐月行者踏风归来"
 const MAX_PET_NAME := "晶甲苍穹守望乌力"
+const MAX_PET_NAME_ALT := "月岚苍穹守望风狐"
+const REPRESENTATIVE_CHARACTER_APPEARANCE_IDS: Array[String] = [
+	"novice_hunter_v1",
+	"obsidian_scout_v1",
+	"frost_whisper_v1",
+	FORMAL_CHARACTER_APPEARANCE_ID,
+]
+const REPRESENTATIVE_CHARACTER_META_PATHS := {
+	"novice_hunter_v1": (
+		"res://assets/characters/novice_hunter/action-bundle-meta.json"
+	),
+	"obsidian_scout_v1": (
+		"res://assets/characters/obsidian_scout_v1/action-bundle-meta.json"
+	),
+	"frost_whisper_v1": (
+		"res://assets/characters/frost_whisper_v1/action-bundle-meta.json"
+	),
+	"ember_spark_v1": FORMAL_CHARACTER_META_PATH,
+}
+const REPRESENTATIVE_PET_FORM_IDS: Array[String] = [
+	"bui_novice_sprout_earth5_wind5",
+	"driftfox_evolved_moon_gale_wind7_water3",
+	FORMAL_PET_FORM_ID,
+]
+const REPRESENTATIVE_PET_STATUSES := {
+	"bui_novice_sprout_earth5_wind5": PetArtCatalog.STATUS_IN_PRODUCTION,
+	"driftfox_evolved_moon_gale_wind7_water3": PetArtCatalog.STATUS_APPROVED,
+	"wuli_evolved_crystal_earth8_water2": PetArtCatalog.STATUS_APPROVED,
+}
+const CHARACTER_APPEARANCE_BY_ACTOR_ID := {
+	"enemy_back_1": "novice_hunter_v1",
+	"enemy_back_2": "obsidian_scout_v1",
+	"enemy_back_3": "frost_whisper_v1",
+	"enemy_back_4": "ember_spark_v1",
+	"enemy_back_5": "novice_hunter_v1",
+	"ally_back_1": "ember_spark_v1",
+	"ally_back_2": "frost_whisper_v1",
+	"ally_player": "ember_spark_v1",
+	"ally_back_4": "obsidian_scout_v1",
+	"ally_back_5": "novice_hunter_v1",
+}
+const CHARACTER_NAME_BY_ACTOR_ID := {
+	"enemy_back_1": "岩锋",
+	"enemy_back_2": "玄鸦",
+	"enemy_back_3": "霜弦",
+	"enemy_back_4": "赤绯",
+	"enemy_back_5": "荒羽",
+	"ally_back_1": "烬火",
+	"ally_back_2": "雪弦",
+	"ally_player": MAX_CHARACTER_NAME,
+	"ally_back_4": "黑曜",
+	"ally_back_5": "风岚",
+}
+const PET_FORM_BY_ACTOR_ID := {
+	"enemy_front_1": "wuli_evolved_crystal_earth8_water2",
+	"enemy_front_2": "driftfox_evolved_moon_gale_wind7_water3",
+	"enemy_front_3": "bui_novice_sprout_earth5_wind5",
+	"enemy_front_4": "wuli_evolved_crystal_earth8_water2",
+	"enemy_front_5": "driftfox_evolved_moon_gale_wind7_water3",
+	"ally_front_1": "bui_novice_sprout_earth5_wind5",
+	"ally_front_2": "driftfox_evolved_moon_gale_wind7_water3",
+	"ally_pet": FORMAL_PET_FORM_ID,
+	"ally_front_4": "bui_novice_sprout_earth5_wind5",
+	"ally_front_5": "driftfox_evolved_moon_gale_wind7_water3",
+}
+const PET_NAME_BY_ACTOR_ID := {
+	"enemy_front_1": "晶甲乌力",
+	"enemy_front_2": "月岚风狐",
+	"enemy_front_3": "芽耳布伊",
+	"enemy_front_4": MAX_PET_NAME,
+	"enemy_front_5": MAX_PET_NAME_ALT,
+	"ally_front_1": "林芽",
+	"ally_front_2": "月痕",
+	"ally_pet": MAX_PET_NAME,
+	"ally_front_4": "新芽",
+	"ally_front_5": "岚月",
+}
 const EXPECTED_PLAYER_COMMAND_LABELS: Array[String] = [
 	"咒术",
 	"攻击",
@@ -499,6 +576,7 @@ func _prepare_real_main_battle() -> bool:
 			_fail_capture("20人阵型存在非字典actor")
 			return false
 		var actor := (actors[index] as Dictionary).duplicate(true)
+		var actor_id := str(actor.get("id", "")).strip_edges()
 		actor["level"] = 140
 		actor["actionState"] = "idle"
 		actor.erase("ridePetInstanceId")
@@ -506,11 +584,29 @@ func _prepare_real_main_battle() -> bool:
 		actor.erase("ridePetHp")
 		actor.erase("ridePetMaxHp")
 		if str(actor.get("kind", "")) == "player":
-			actor["name"] = MAX_CHARACTER_NAME
-			actor["appearanceId"] = FORMAL_CHARACTER_APPEARANCE_ID
+			var appearance_id := str(
+				CHARACTER_APPEARANCE_BY_ACTOR_ID.get(actor_id, "")
+			).strip_edges()
+			var character_name := str(
+				CHARACTER_NAME_BY_ACTOR_ID.get(actor_id, "")
+			).strip_edges()
+			if appearance_id == "" or character_name == "":
+				_fail_capture("代表性人物fixture缺少精确actor映射：%s" % actor_id)
+				return false
+			actor["name"] = character_name
+			actor["appearanceId"] = appearance_id
 		else:
-			actor["name"] = MAX_PET_NAME
-			actor["formId"] = FORMAL_PET_FORM_ID
+			var form_id := str(
+				PET_FORM_BY_ACTOR_ID.get(actor_id, "")
+			).strip_edges()
+			var pet_name := str(
+				PET_NAME_BY_ACTOR_ID.get(actor_id, "")
+			).strip_edges()
+			if form_id == "" or pet_name == "":
+				_fail_capture("代表性宠物fixture缺少精确actor映射：%s" % actor_id)
+				return false
+			actor["name"] = pet_name
+			actor["formId"] = form_id
 		actors[index] = actor
 	state["actors"] = actors
 	if str(state.get("formationTemplate", "")) != FORMATION_TEMPLATE:
@@ -522,12 +618,16 @@ func _prepare_real_main_battle() -> bool:
 	if _mounted_player_actor_count(state) != 0:
 		_fail_capture("普通正式战斗fixture不得混入整体骑乘")
 		return false
-	if not CharacterActionAssetCatalog.warm_battle(FORMAL_CHARACTER_APPEARANCE_ID):
-		_fail_capture("正式最大人物动作包无法预热")
+	if not _assert_representative_actor_identity_contract(state):
 		return false
-	if not PetActionAssetCatalog.warm_battle_form(FORMAL_PET_FORM_ID):
-		_fail_capture("正式最大宠物动作包无法预热")
-		return false
+	for appearance_id in REPRESENTATIVE_CHARACTER_APPEARANCE_IDS:
+		if not CharacterActionAssetCatalog.warm_battle(appearance_id):
+			_fail_capture("代表性人物动作包无法预热：%s" % appearance_id)
+			return false
+	for form_id in REPRESENTATIVE_PET_FORM_IDS:
+		if not PetActionAssetCatalog.warm_battle_form(form_id):
+			_fail_capture("代表性宠物动作包无法预热：%s" % form_id)
+			return false
 	host.call("_start_battle", state)
 	await host.get_tree().process_frame
 	if not _assert_owner_review_arena_visual_contract():
@@ -612,6 +712,84 @@ func _assert_owner_review_arena_visual_contract() -> bool:
 	return true
 
 
+func _assert_representative_actor_identity_contract(state: Dictionary) -> bool:
+	var appearances: Dictionary = {}
+	var forms: Dictionary = {}
+	var character_count := 0
+	var pet_count := 0
+	for value in state.get("actors", []):
+		if not (value is Dictionary):
+			_fail_capture("代表性20人fixture存在非字典actor")
+			return false
+		var actor := value as Dictionary
+		var actor_id := str(actor.get("id", "")).strip_edges()
+		var kind := str(actor.get("kind", "")).strip_edges()
+		if kind == "player":
+			character_count += 1
+			var expected_appearance := str(
+				CHARACTER_APPEARANCE_BY_ACTOR_ID.get(actor_id, "")
+			).strip_edges()
+			var expected_character_name := str(
+				CHARACTER_NAME_BY_ACTOR_ID.get(actor_id, "")
+			).strip_edges()
+			var actual_appearance := str(
+				actor.get("appearanceId", "")
+			).strip_edges()
+			if (
+				expected_appearance == ""
+				or actual_appearance != expected_appearance
+				or str(actor.get("name", "")) != expected_character_name
+			):
+				_fail_capture("代表性人物fixture漂移：%s" % actor_id)
+				return false
+			appearances[actual_appearance] = true
+		elif kind == "pet" or kind == "wild_pet":
+			pet_count += 1
+			var expected_form := str(
+				PET_FORM_BY_ACTOR_ID.get(actor_id, "")
+			).strip_edges()
+			var expected_pet_name := str(
+				PET_NAME_BY_ACTOR_ID.get(actor_id, "")
+			).strip_edges()
+			var actual_form := str(actor.get("formId", "")).strip_edges()
+			if (
+				expected_form == ""
+				or actual_form != expected_form
+				or str(actor.get("name", "")) != expected_pet_name
+			):
+				_fail_capture("代表性宠物fixture漂移：%s" % actor_id)
+				return false
+			forms[actual_form] = true
+		else:
+			_fail_capture("代表性20人fixture存在未知actor kind：%s" % kind)
+			return false
+	if (
+		character_count != 10
+		or pet_count != 10
+		or appearances.size() != REPRESENTATIVE_CHARACTER_APPEARANCE_IDS.size()
+		or forms.size() != REPRESENTATIVE_PET_FORM_IDS.size()
+	):
+		_fail_capture(
+			"代表性20人fixture差异化不完整 character=%d/%d pet=%d/%d"
+			% [
+				character_count,
+				appearances.size(),
+				pet_count,
+				forms.size(),
+			]
+		)
+		return false
+	for appearance_id in REPRESENTATIVE_CHARACTER_APPEARANCE_IDS:
+		if not appearances.has(appearance_id):
+			_fail_capture("代表性人物fixture缺少运行形象：%s" % appearance_id)
+			return false
+	for form_id in REPRESENTATIVE_PET_FORM_IDS:
+		if not forms.has(form_id):
+			_fail_capture("代表性宠物fixture缺少运行形态：%s" % form_id)
+			return false
+	return true
+
+
 func _battle_readiness_snapshot() -> Dictionary:
 	var state_value = _host_property("battle_state")
 	var battle_state := state_value as Dictionary if state_value is Dictionary else {}
@@ -623,6 +801,8 @@ func _battle_readiness_snapshot() -> Dictionary:
 	var ally_count := 0
 	var enemy_count := 0
 	var ally_pet: Dictionary = {}
+	var character_appearances: Dictionary = {}
+	var pet_forms: Dictionary = {}
 	for value in actors:
 		if not (value is Dictionary):
 			invalid_actor_count += 1
@@ -635,6 +815,10 @@ func _battle_readiness_snapshot() -> Dictionary:
 			enemy_count += 1
 		if str(actor.get("id", "")) == "ally_pet":
 			ally_pet = actor
+		if str(actor.get("kind", "")) == "player":
+			character_appearances[str(actor.get("appearanceId", ""))] = true
+		else:
+			pet_forms[str(actor.get("formId", ""))] = true
 		var slot_id := str(actor.get("slotId", ""))
 		if not BattleLayoutSafeAreaModel.is_valid_slot_id(slot_id):
 			invalid_actor_count += 1
@@ -675,6 +859,8 @@ func _battle_readiness_snapshot() -> Dictionary:
 		"allyPetInstanceId": str(ally_pet.get("instanceId", "")),
 		"allyPetFormId": str(ally_pet.get("formId", "")),
 		"allyPetName": str(ally_pet.get("name", "")),
+		"characterAppearanceCount": character_appearances.size(),
+		"petFormCount": pet_forms.size(),
 		"layoutOk": layout_ok,
 	}
 
@@ -693,13 +879,23 @@ func _assert_post_start_formation_contract() -> bool:
 		or str(readiness.get("allyPetInstanceId", "")) != FORMAL_PET_INSTANCE_ID
 		or str(readiness.get("allyPetFormId", "")) != FORMAL_PET_FORM_ID
 		or str(readiness.get("allyPetName", "")) != MAX_PET_NAME
+		or int(readiness.get("characterAppearanceCount", 0))
+		!= REPRESENTATIVE_CHARACTER_APPEARANCE_IDS.size()
+		or int(readiness.get("petFormCount", 0))
+		!= REPRESENTATIVE_PET_FORM_IDS.size()
 	):
 		_fail_capture(
 			"真实Main归一化后不是精确正式20人阵型 readiness=%s"
 			% JSON.stringify(readiness)
 		)
 		return false
-	return true
+	var state_value = _host_property("battle_state")
+	if not (state_value is Dictionary):
+		_fail_capture("真实Main归一化后缺少代表性20人战斗状态")
+		return false
+	return _assert_representative_actor_identity_contract(
+		state_value as Dictionary
+	)
 
 
 func _assert_formal_fixture_assets() -> bool:
@@ -712,42 +908,75 @@ func _assert_formal_fixture_assets() -> bool:
 	if MAX_PET_NAME.length() != PlayerProgressModel.PET_NAME_MAX_LENGTH:
 		_fail_capture("宠物最长名字fixture不是精确8字")
 		return false
-	if not PlayerAppearanceCatalog.appearance_ids().has(FORMAL_CHARACTER_APPEARANCE_ID):
-		_fail_capture("最大正式人物形象不是可选择运行形象")
+	if MAX_PET_NAME_ALT.length() != PlayerProgressModel.PET_NAME_MAX_LENGTH:
+		_fail_capture("第二个宠物最长名字fixture不是精确8字")
 		return false
-	if not CharacterActionAssetCatalog.supports_battle_appearance(
-		FORMAL_CHARACTER_APPEARANCE_ID
+	if (
+		CHARACTER_APPEARANCE_BY_ACTOR_ID.size() != 10
+		or CHARACTER_NAME_BY_ACTOR_ID.size() != 10
+		or PET_FORM_BY_ACTOR_ID.size() != 10
+		or PET_NAME_BY_ACTOR_ID.size() != 10
 	):
-		_fail_capture("最大正式人物形象不能进入战斗运行路径")
+		_fail_capture("代表性20人fixture映射必须精确覆盖10人物+10宠物")
 		return false
+	var selectable_appearances := PlayerAppearanceCatalog.appearance_ids()
+	for appearance_id in REPRESENTATIVE_CHARACTER_APPEARANCE_IDS:
+		if not selectable_appearances.has(appearance_id):
+			_fail_capture("代表性人物不是可选择运行形象：%s" % appearance_id)
+			return false
+		if not CharacterActionAssetCatalog.supports_battle_appearance(appearance_id):
+			_fail_capture("代表性人物不能进入战斗运行路径：%s" % appearance_id)
+			return false
+		var meta_path := str(
+			REPRESENTATIVE_CHARACTER_META_PATHS.get(appearance_id, "")
+		).strip_edges()
+		var metadata := _read_json_dictionary(meta_path)
+		if (
+			meta_path == ""
+			or not bool(metadata.get("runtimeEnabled", false))
+			or str(metadata.get("ownerReviewStatus", ""))
+			!= "owner_review_pending"
+			or _normalized_frame_size(metadata.get("sourceFrameSize", []))
+			!= Vector2i(512, 512)
+			or _normalized_frame_size(metadata.get("runtimeFrameSize", []))
+			!= Vector2i(256, 256)
+		):
+			_fail_capture("代表性人物动作包生命周期或帧尺寸漂移：%s" % appearance_id)
+			return false
 	if (
 		CharacterActionAssetCatalog.battle_view_for_side("ally")
 		!= CharacterActionAssetCatalog.VIEW_BACK
 		or CharacterActionAssetCatalog.battle_view_for_side("enemy")
 		!= CharacterActionAssetCatalog.VIEW_FRONT
-		or not CharacterActionAssetCatalog.battle_flip_h_for_side(
-			"ally",
-			FORMAL_CHARACTER_APPEARANCE_ID
-		)
-		or not CharacterActionAssetCatalog.battle_flip_h_for_side(
-			"enemy",
-			FORMAL_CHARACTER_APPEARANCE_ID
-		)
-		or CharacterActionAssetCatalog.battle_flip_h_for_side(
-			"unknown",
-			FORMAL_CHARACTER_APPEARANCE_ID
-		)
 	):
-		_fail_capture("正式人物双方没有按NW/SE方向朝向战场中心")
+		_fail_capture("代表性人物战斗视角没有按正式正背斜向")
 		return false
-	if (
-		not PetArtCatalog.supports_form(FORMAL_PET_FORM_ID)
-		or PetArtCatalog.status_for_form(FORMAL_PET_FORM_ID)
-		!= PetArtCatalog.STATUS_APPROVED
-		or not PetActionAssetCatalog.supports_form(FORMAL_PET_FORM_ID)
-	):
-		_fail_capture("最大正式宠物形象不是approved运行战斗形象")
-		return false
+	for facing_appearance_id in REPRESENTATIVE_CHARACTER_APPEARANCE_IDS:
+		if (
+			not CharacterActionAssetCatalog.battle_flip_h_for_side(
+				"ally",
+				facing_appearance_id
+			)
+			or not CharacterActionAssetCatalog.battle_flip_h_for_side(
+				"enemy",
+				facing_appearance_id
+			)
+			or CharacterActionAssetCatalog.battle_flip_h_for_side(
+				"unknown",
+				facing_appearance_id
+			)
+		):
+			_fail_capture("代表性人物没有共同朝向战场中心：%s" % facing_appearance_id)
+			return false
+	for form_id in REPRESENTATIVE_PET_FORM_IDS:
+		var expected_status := str(REPRESENTATIVE_PET_STATUSES.get(form_id, ""))
+		if (
+			not PetArtCatalog.supports_form(form_id)
+			or PetArtCatalog.status_for_form(form_id) != expected_status
+			or not PetActionAssetCatalog.supports_form(form_id)
+		):
+			_fail_capture("代表性宠物运行形态或生命周期漂移：%s" % form_id)
+			return false
 	var character_meta := _read_json_dictionary(FORMAL_CHARACTER_META_PATH)
 	var pet_meta := _read_json_dictionary(FORMAL_PET_META_PATH)
 	if (
@@ -1076,7 +1305,10 @@ func _print_fixture_marker() -> void:
 		+ "pet_lifecycle=approved runtime_frame=256x256 "
 		+ "source_image_frame=512x512 "
 		+ "draw_canvas=156x156 visual_scale=0.74 character_name_chars=24 "
-		+ "pet_name_chars=8 mounted_player_actors=0 lifecycle_unchanged=true"
+		+ "pet_name_chars=8 character_variants=4 pet_variants=3 "
+		+ "representative_runtime_mix=true single_asset_stress=false "
+		+ "maximum_label_stress_preserved=true mounted_player_actors=0 "
+		+ "lifecycle_unchanged=true"
 	)
 
 

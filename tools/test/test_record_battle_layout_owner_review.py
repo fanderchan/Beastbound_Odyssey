@@ -281,7 +281,10 @@ def _godot_log() -> str:
             "pet_lifecycle=approved runtime_frame=256x256 "
             "source_image_frame=512x512 draw_canvas=156x156 visual_scale=0.74 "
             "character_name_chars=24 pet_name_chars=8 "
-            "mounted_player_actors=0 lifecycle_unchanged=true"
+            "character_variants=4 pet_variants=3 "
+            "representative_runtime_mix=true single_asset_stress=false "
+            "maximum_label_stress_preserved=true mounted_player_actors=0 "
+            "lifecycle_unchanged=true"
         ),
         (
             "PHASE403_BATTLE_LAYOUT_IDENTITY "
@@ -381,6 +384,24 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
         TOOL._require_main_flag_wiring()
         tool_source = TOOL_PATH.read_text(encoding="utf-8")
         capture_source = TOOL.CAPTURE_SCRIPT_PATH.read_text(encoding="utf-8")
+        for appearance_id in (
+            "novice_hunter_v1",
+            "obsidian_scout_v1",
+            "frost_whisper_v1",
+            "ember_spark_v1",
+        ):
+            self.assertIn(f'"{appearance_id}"', capture_source)
+        for form_id in (
+            "bui_novice_sprout_earth5_wind5",
+            "driftfox_evolved_moon_gale_wind7_water3",
+            "wuli_evolved_crystal_earth8_water2",
+        ):
+            self.assertIn(f'"{form_id}"', capture_source)
+        self.assertIn(
+            "_assert_representative_actor_identity_contract(state)",
+            capture_source,
+        )
+        self.assertIn("single_asset_stress=false", capture_source)
         self.assertNotIn("strict=True", tool_source)
         TOOL._require_frame_size_normalization_contract(capture_source)
         TOOL._require_host_property_cache_contract(capture_source)
@@ -412,8 +433,10 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
                 TOOL._require_host_property_cache_contract(invalid_source)
         invalid_sources = (
             capture_source.replace(
-                "Vector2i(512, 512)",
-                "Vector2i(511, 512)",
+                '_normalized_frame_size(character_meta.get("sourceFrameSize", []))\n'
+                "\t\t!= Vector2i(512, 512)",
+                '_normalized_frame_size(character_meta.get("sourceFrameSize", []))\n'
+                "\t\t!= Vector2i(511, 512)",
                 1,
             ),
             capture_source.replace("values.size() != 2", "values.size() != 3", 1),
@@ -1293,6 +1316,9 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
         self.assertTrue(result["reviewOnlyMountWidthOnly"])
         self.assertFalse(result["reviewOnlyMountSlotCollisionClaimed"])
         self.assertFalse(result["ordinaryBattleContainsMount"])
+        self.assertEqual(result["representativeCharacterVariantCount"], 4)
+        self.assertEqual(result["representativePetVariantCount"], 3)
+        self.assertFalse(result["singleAssetStressFixture"])
         self.assertEqual(result["arenaVisual"]["id"], "moss_meadow")
         self.assertEqual(
             result["arenaVisual"]["sha256"],
@@ -1464,6 +1490,17 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
             ("actors=20", "actors=19"),
             ("origin=94x340.4", "origin=128x338.4"),
             ("character_name_chars=24", "character_name_chars=23"),
+            ("character_variants=4", "character_variants=1"),
+            ("pet_variants=3", "pet_variants=1"),
+            (
+                "representative_runtime_mix=true",
+                "representative_runtime_mix=false",
+            ),
+            ("single_asset_stress=false", "single_asset_stress=true"),
+            (
+                "maximum_label_stress_preserved=true",
+                "maximum_label_stress_preserved=false",
+            ),
             ("pet_lifecycle=approved", "pet_lifecycle=owner_review_pending"),
             ("runtime_frame=256x256", "source_frame=256x256"),
             ("source_image_frame=512x512", "source_image_frame=256x256"),
@@ -2141,6 +2178,24 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
         self.assertTrue(contract["reviewOnlyMountWidthOnly"])
         self.assertFalse(contract["reviewOnlyMountSlotCollisionClaimed"])
         self.assertFalse(contract["ordinaryBattleContainsMount"])
+        self.assertEqual(
+            contract["representativeCharacterAppearances"],
+            [
+                "novice_hunter_v1",
+                "obsidian_scout_v1",
+                "frost_whisper_v1",
+                "ember_spark_v1",
+            ],
+        )
+        self.assertEqual(
+            contract["representativePetForms"],
+            [
+                "bui_novice_sprout_earth5_wind5",
+                "driftfox_evolved_moon_gale_wind7_water3",
+                "wuli_evolved_crystal_earth8_water2",
+            ],
+        )
+        self.assertFalse(contract["singleAssetStressFixture"])
         self.assertEqual(contract["arenaVisual"]["id"], "moss_meadow")
         self.assertEqual(
             contract["arenaVisual"]["ownerReviewStatus"],

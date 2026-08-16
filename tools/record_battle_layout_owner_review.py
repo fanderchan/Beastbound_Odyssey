@@ -3012,14 +3012,23 @@ def _validate_godot_log(
         "visual_scale": "0.74",
         "character_name_chars": "24",
         "pet_name_chars": "8",
+        "character_variants": "4",
+        "pet_variants": "3",
         "mounted_player_actors": "0",
     }
     if any(fixture.get(key) != value for key, value in expected_fixture.items()):
         raise Phase403BattleLayoutRecordingError(
-            "Phase403录像fixture没有绑定最大正式人物/宠物/长名"
+            "Phase403录像fixture没有同时绑定最大标签压力与代表性运行阵容"
         )
-    for key in ("character_runtime", "pet_runtime", "lifecycle_unchanged"):
+    for key in (
+        "character_runtime",
+        "pet_runtime",
+        "representative_runtime_mix",
+        "maximum_label_stress_preserved",
+        "lifecycle_unchanged",
+    ):
         _require_bool(fixture, key, True)
+    _require_bool(fixture, "single_asset_stress", False)
 
     layout = _parse_fields(layout_line)
     if (
@@ -3163,6 +3172,9 @@ def _validate_godot_log(
         "reviewOnlyMountWidthOnly": True,
         "reviewOnlyMountSlotCollisionClaimed": False,
         "ordinaryBattleContainsMount": False,
+        "representativeCharacterVariantCount": 4,
+        "representativePetVariantCount": 3,
+        "singleAssetStressFixture": False,
         "arenaVisual": arena_visual,
         "attackInput": attack_input,
     }
@@ -3180,6 +3192,18 @@ def _phase403_capture_contract() -> dict[str, Any]:
         "layoutIdentity": LAYOUT_IDENTITY,
         "formalCharacter": "ember_spark_v1",
         "formalPet": "wuli_evolved_crystal_earth8_water2",
+        "representativeCharacterAppearances": [
+            "novice_hunter_v1",
+            "obsidian_scout_v1",
+            "frost_whisper_v1",
+            "ember_spark_v1",
+        ],
+        "representativePetForms": [
+            "bui_novice_sprout_earth5_wind5",
+            "driftfox_evolved_moon_gale_wind7_water3",
+            "wuli_evolved_crystal_earth8_water2",
+        ],
+        "singleAssetStressFixture": False,
         "maximumCharacterNameChars": 24,
         "maximumPetNameChars": 8,
         "realCrossFrameLeftClicks": True,
