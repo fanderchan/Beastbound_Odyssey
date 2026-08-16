@@ -129,6 +129,29 @@ func _initialize() -> void:
 			release_fixture_files
 		)
 	)
+	var runtime_owner_identity_fixture := _release_attestation_fixture(
+		enabled_catalog,
+		"project-owner:attacker"
+	)
+	var runtime_owner_identity_errors := (
+		PetFusionReleaseAttestationModel.fixture_validation_errors(
+			str(runtime_owner_identity_fixture.get("attestationContent", "")),
+			enabled_catalog,
+			runtime_owner_identity_fixture.get("files", {}) as Dictionary
+		)
+	)
+	var portrait_owner_identity_fixture := _release_attestation_fixture(
+		enabled_catalog,
+		PetFusionReleaseAttestationModel.TRUSTED_PROJECT_OWNER_ID,
+		"project-owner:attacker"
+	)
+	var portrait_owner_identity_errors := (
+		PetFusionReleaseAttestationModel.fixture_validation_errors(
+			str(portrait_owner_identity_fixture.get("attestationContent", "")),
+			enabled_catalog,
+			portrait_owner_identity_fixture.get("files", {}) as Dictionary
+		)
+	)
 	var approved_projection := PetFusionRecipeCatalogModel.production_document(
 		enabled_catalog,
 		release_errors
@@ -220,6 +243,8 @@ func _initialize() -> void:
 	)
 	var release_gate_contract_ok := (
 		release_errors.is_empty()
+		and not runtime_owner_identity_errors.is_empty()
+		and not portrait_owner_identity_errors.is_empty()
 		and not missing_release_errors.is_empty()
 		and PetFusionRecipeCatalogModel.runtime_available(approved_projection)
 		and not PetFusionRecipeCatalogModel.runtime_available(
@@ -235,7 +260,25 @@ func _initialize() -> void:
 	)
 	_expect(
 		release_gate_contract_ok,
-		"融合客户端发布证明未对目录、owner、画像、整包或证据漂移失败关闭",
+		(
+			(
+				"融合客户端发布证明未对目录、owner、画像、整包或证据漂移失败关闭："
+				+ "fixture=%d runtimeIdentity=%d portraitIdentity=%d missing=%d "
+				+ "catalog=%d owner=%d portrait=%d metadata=%d evidence=%d fixtureErrors=%s"
+			)
+			% [
+				release_errors.size(),
+				runtime_owner_identity_errors.size(),
+				portrait_owner_identity_errors.size(),
+				missing_release_errors.size(),
+				catalog_drift_errors.size(),
+				owner_drift_errors.size(),
+				portrait_drift_errors.size(),
+				metadata_drift_errors.size(),
+				evidence_drift_errors.size(),
+				str(release_errors),
+			]
+		),
 		errors
 	)
 
@@ -725,7 +768,11 @@ static func _quote_fixture(
 	}
 
 
-static func _release_attestation_fixture(catalog_document: Dictionary) -> Dictionary:
+static func _release_attestation_fixture(
+	catalog_document: Dictionary,
+	runtime_reviewer: String = PetFusionReleaseAttestationModel.TRUSTED_PROJECT_OWNER_ID,
+	portrait_owner_id: String = PetFusionReleaseAttestationModel.TRUSTED_PROJECT_OWNER_ID
+) -> Dictionary:
 	var files := {}
 	var catalog_reference := _put_fixture_json(
 		files,
@@ -765,6 +812,16 @@ static func _release_attestation_fixture(catalog_document: Dictionary) -> Dictio
 	var fixed_test_sha := (
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	)
+	var main_review_reference := _put_fixture_text(
+		files,
+		"docs/release_evidence/pet_fusion_main_owner_review_v1.json",
+		"fixture main owner review"
+	)
+	var phase_record_reference := _put_fixture_text(
+		files,
+		"docs/phase_999_pet_fusion_runtime_release.md",
+		"fixture P1.4 release phase"
+	)
 	var owner_reference := _put_fixture_json(
 		files,
 		PetFusionReleaseAttestationModel.OWNER_DECISION_REPO_PATH,
@@ -774,7 +831,7 @@ static func _release_attestation_fixture(catalog_document: Dictionary) -> Dictio
 			"decisionId": PetFusionReleaseAttestationModel.OWNER_DECISION_ID,
 			"roadmapItem": "P1.4",
 			"decision": "approved",
-			"reviewer": "project-owner:fixture",
+			"reviewer": runtime_reviewer,
 			"recordedDecisionText": "批准首批融合正式开放。",
 			"ownerReviewStatus": "approved",
 			"releaseApproved": true,
@@ -791,14 +848,8 @@ static func _release_attestation_fixture(catalog_document: Dictionary) -> Dictio
 				PetFusionReleaseAttestationModel.APPROVED_SCOPES.duplicate()
 			),
 			"evidence": {
-				"mainOwnerReview": {
-					"path": "docs/release_evidence/pet_fusion_main_owner_review_v1.json",
-					"sha256": fixed_test_sha,
-				},
-				"phaseRecord": {
-					"path": "docs/phase_999_pet_fusion_runtime_release.md",
-					"sha256": fixed_test_sha,
-				},
+				"mainOwnerReview": main_review_reference,
+				"phaseRecord": phase_record_reference,
 			},
 		}
 	)
@@ -816,10 +867,46 @@ static func _release_attestation_fixture(catalog_document: Dictionary) -> Dictio
 			runtime_path,
 			"%s:portrait" % form_id
 		)
+		var master_reference := _put_fixture_text(
+			files,
+			str(contract.get("portraitMasterPath", "")),
+			"%s:master" % form_id
+		)
+		var ownership_reference := _put_fixture_text(
+			files,
+			str(contract.get("portraitOwnershipPath", "")),
+			"%s:owner-reviewed-source-record" % form_id
+		)
 		var mask_reference := _put_fixture_text(
 			files,
 			mask_path,
 			"%s:mask" % form_id
+		)
+		var portrait_evidence: Array[Dictionary] = [
+			main_review_reference,
+			phase_record_reference,
+		]
+		var portrait_decision_reference := _put_fixture_json(
+			files,
+			str(contract.get("portraitDecisionPath", "")),
+			{
+				"schemaVersion": 2,
+				"decisionType": (
+					PetFusionReleaseAttestationModel.PORTRAIT_OWNER_DECISION_TYPE
+				),
+				"ownerId": portrait_owner_id,
+				"decision": "approved",
+				"subject": {
+					"kind": "shared_dedicated_headshot_v1",
+					"formId": form_id,
+					"petRoot": str(contract.get("petRoot", "")),
+					"master": master_reference,
+					"runtime": runtime_reference,
+					"ownership": ownership_reference,
+				},
+				"acceptedEvidence": portrait_evidence,
+				"reviewedAt": "2026-08-12T08:00:00Z",
+			}
 		)
 		portrait_references.append(_put_fixture_json(
 			files,
@@ -854,7 +941,8 @@ static func _release_attestation_fixture(catalog_document: Dictionary) -> Dictio
 				"ownerReview": {
 					"required": true,
 					"status": "approved",
-					"evidencePaths": [str(owner_reference.get("path", ""))],
+					"evidence": portrait_evidence,
+					"decision": portrait_decision_reference,
 				},
 			}
 		))

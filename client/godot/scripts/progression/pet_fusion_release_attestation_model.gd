@@ -15,6 +15,8 @@ const ATTESTATION_TYPE := "beastbound_pet_fusion_runtime_release_attestation"
 const ATTESTATION_ID := "pet_fusion_p1_4_runtime_release_v1"
 const OWNER_DECISION_TYPE := "beastbound_pet_fusion_runtime_release_owner_decision"
 const OWNER_DECISION_ID := "pet_fusion_p1_4_runtime_release_v1"
+const PORTRAIT_OWNER_DECISION_TYPE := "beastbound_pet_portrait_owner_approval"
+const TRUSTED_PROJECT_OWNER_ID := "project-owner:fander"
 const CATALOG_ID := "pet_fusion_recipes_v2"
 const RECIPE_IDS: Array[String] = [
 	"emberhorn_solar_crown_fusion_v1",
@@ -27,6 +29,10 @@ const FORM_IDS: Array[String] = [
 const FORM_CONTRACTS := [
 	{
 		"formId": "emberhorn_fusion_solar_crown_fire7_wind3",
+		"petRoot": (
+			"client/godot/assets/pets/"
+			+ "emberhorn_fusion_solar_crown_fire7_wind3"
+		),
 		"petMetadataPath": (
 			"client/godot/assets/pets/"
 			+ "emberhorn_fusion_solar_crown_fire7_wind3/action-bundle-meta.json"
@@ -39,12 +45,31 @@ const FORM_CONTRACTS := [
 			"client/godot/assets/pets/"
 			+ "emberhorn_fusion_solar_crown_fire7_wind3/portrait/default.png"
 		),
+		"portraitMasterPath": (
+			"client/godot/assets/pets/"
+			+ "emberhorn_fusion_solar_crown_fire7_wind3/"
+			+ "source/portrait/headshot-master-1024.png"
+		),
+		"portraitOwnershipPath": (
+			"client/godot/assets/pets/"
+			+ "emberhorn_fusion_solar_crown_fire7_wind3/"
+			+ "portrait/source-and-ownership.md"
+		),
+		"portraitDecisionPath": (
+			"client/godot/assets/pets/"
+			+ "emberhorn_fusion_solar_crown_fire7_wind3/"
+			+ "qa/portrait/owner-decision.json"
+		),
 		"battleBundleDigest": (
 			"5a4896f64614b4eceaad220071fdd80fe85909bfa78d67ffb0637090a71da2fc"
 		),
 	},
 	{
 		"formId": "emberhorn_fusion_moss_rampart_fire4_earth6",
+		"petRoot": (
+			"client/godot/assets/pets/"
+			+ "emberhorn_fusion_moss_rampart_fire4_earth6"
+		),
 		"petMetadataPath": (
 			"client/godot/assets/pets/"
 			+ "emberhorn_fusion_moss_rampart_fire4_earth6/action-bundle-meta.json"
@@ -56,6 +81,21 @@ const FORM_CONTRACTS := [
 		"portraitRuntimePath": (
 			"client/godot/assets/pets/"
 			+ "emberhorn_fusion_moss_rampart_fire4_earth6/portrait/default.png"
+		),
+		"portraitMasterPath": (
+			"client/godot/assets/pets/"
+			+ "emberhorn_fusion_moss_rampart_fire4_earth6/"
+			+ "source/portrait/headshot-master-1024.png"
+		),
+		"portraitOwnershipPath": (
+			"client/godot/assets/pets/"
+			+ "emberhorn_fusion_moss_rampart_fire4_earth6/"
+			+ "portrait/source-and-ownership.md"
+		),
+		"portraitDecisionPath": (
+			"client/godot/assets/pets/"
+			+ "emberhorn_fusion_moss_rampart_fire4_earth6/"
+			+ "qa/portrait/owner-decision.json"
 		),
 		"battleBundleDigest": (
 			"27c3a0784ab6a2e55a3f3acc6624a722a8b4240bbb04bcd0ffbc53a52d524107"
@@ -311,7 +351,6 @@ static func _document_validation_errors(
 			_validate_portrait_metadata(
 				contract,
 				_dict(portrait_reference.get("document", {})),
-				owner_decision_path,
 				fixture_files,
 				fixture_mode,
 				errors
@@ -434,7 +473,7 @@ static func _validate_owner_decision(
 		or str(document.get("decisionId", "")) != OWNER_DECISION_ID
 		or str(document.get("roadmapItem", "")) != "P1.4"
 		or str(document.get("decision", "")) != "approved"
-		or not str(document.get("reviewer", "")).begins_with("project-owner:")
+		or str(document.get("reviewer", "")) != TRUSTED_PROJECT_OWNER_ID
 		or str(document.get("recordedDecisionText", "")).strip_edges() == ""
 		or str(document.get("ownerReviewStatus", "")) != "approved"
 		or document.get("releaseApproved", null) != true
@@ -472,7 +511,6 @@ static func _validate_owner_decision(
 static func _validate_portrait_metadata(
 	contract: Dictionary,
 	document: Dictionary,
-	owner_decision_path: String,
 	fixture_files: Dictionary,
 	fixture_mode: bool,
 	errors: Array[String]
@@ -487,6 +525,12 @@ static func _validate_portrait_metadata(
 	var assets := _dict(document.get("assets", {}))
 	var runtime_asset := _dict(assets.get("runtime", {}))
 	var eligibility_mask := _dict(assets.get("eligibilityMask", {}))
+	_validate_exact_keys(
+		owner_review,
+		["required", "status", "evidence", "decision"],
+		"%s 专用画像 ownerReview" % form_id,
+		errors
+	)
 	if (
 		int(document.get("schemaVersion", 0)) != 1
 		or str(document.get("formId", "")) != form_id
@@ -499,12 +543,44 @@ static func _validate_portrait_metadata(
 		or document.get("fullBodyCropAllowed", null) != false
 		or owner_review.get("required", null) != true
 		or str(owner_review.get("status", "")) != "approved"
-		or not (owner_review.get("evidencePaths", []) is Array)
-		or not (owner_review.get("evidencePaths", []) as Array).has(
-			owner_decision_path
-		)
 	):
 		errors.append("%s 专用画像未通过独立创作与项目所有者发布门禁" % form_id)
+	var accepted_evidence: Array[Dictionary] = []
+	var evidence_value = owner_review.get("evidence", [])
+	if evidence_value is Array:
+		for index in range((evidence_value as Array).size()):
+			var reference := _dict((evidence_value as Array)[index])
+			_validate_evidence_reference(
+				reference,
+				"%s 专用画像 owner 证据[%d]" % [form_id, index],
+				errors
+			)
+			accepted_evidence.append({
+				"path": _safe_repo_path(str(reference.get("path", ""))),
+				"sha256": str(reference.get("sha256", "")).strip_edges().to_lower(),
+			})
+	if accepted_evidence.is_empty():
+		errors.append("%s 专用画像 owner 批准必须绑定非空证据" % form_id)
+	var portrait_decision_reference := _validated_reference(
+		owner_review.get("decision", {}),
+		"%s 专用画像 owner decision" % form_id,
+		fixture_files,
+		fixture_mode,
+		errors
+	)
+	if (
+		str(portrait_decision_reference.get("path", ""))
+		!= str(contract.get("portraitDecisionPath", ""))
+	):
+		errors.append("%s 专用画像 owner decision 路径未冻结" % form_id)
+	_validate_portrait_owner_decision(
+		contract,
+		_dict(portrait_decision_reference.get("document", {})),
+		accepted_evidence,
+		fixture_files,
+		fixture_mode,
+		errors
+	)
 	if (
 		str(despill.get("scope", ""))
 			!= "same_operation_exact_eligibility_mask_only"
@@ -543,6 +619,83 @@ static func _validate_portrait_metadata(
 		errors,
 		false
 	)
+
+
+static func _validate_portrait_owner_decision(
+	contract: Dictionary,
+	document: Dictionary,
+	accepted_evidence: Array[Dictionary],
+	fixture_files: Dictionary,
+	fixture_mode: bool,
+	errors: Array[String]
+) -> void:
+	var form_id := str(contract.get("formId", ""))
+	_validate_exact_keys(
+		document,
+		[
+			"schemaVersion",
+			"decisionType",
+			"ownerId",
+			"decision",
+			"subject",
+			"acceptedEvidence",
+			"reviewedAt",
+		],
+		"%s 专用画像 owner decision" % form_id,
+		errors
+	)
+	if (
+		int(document.get("schemaVersion", 0)) != 2
+		or str(document.get("decisionType", "")) != PORTRAIT_OWNER_DECISION_TYPE
+		or str(document.get("ownerId", "")) != TRUSTED_PROJECT_OWNER_ID
+		or str(document.get("decision", "")) != "approved"
+		or not _is_iso_utc(str(document.get("reviewedAt", "")))
+		or not _deep_equal(document.get("acceptedEvidence", []), accepted_evidence)
+	):
+		errors.append("%s 专用画像 owner decision 不是精确可信批准" % form_id)
+	var subject := _dict(document.get("subject", {}))
+	_validate_exact_keys(
+		subject,
+		["kind", "formId", "petRoot", "master", "runtime", "ownership"],
+		"%s 专用画像 owner decision.subject" % form_id,
+		errors
+	)
+	var master_reference := _validated_reference(
+		subject.get("master", {}),
+		"%s 专用画像 owner decision.master" % form_id,
+		fixture_files,
+		fixture_mode,
+		errors,
+		false
+	)
+	var runtime_reference := _validated_reference(
+		subject.get("runtime", {}),
+		"%s 专用画像 owner decision.runtime" % form_id,
+		fixture_files,
+		fixture_mode,
+		errors,
+		false
+	)
+	var ownership_reference := _validated_reference(
+		subject.get("ownership", {}),
+		"%s 专用画像 owner decision.ownership" % form_id,
+		fixture_files,
+		fixture_mode,
+		errors,
+		false
+	)
+	if (
+		str(subject.get("kind", "")) != "shared_dedicated_headshot_v1"
+		or str(subject.get("formId", "")) != form_id
+		or str(subject.get("petRoot", "")) != str(contract.get("petRoot", ""))
+		or str(master_reference.get("path", ""))
+			!= str(contract.get("portraitMasterPath", ""))
+		or str(runtime_reference.get("path", ""))
+			!= str(contract.get("portraitRuntimePath", ""))
+		or str(ownership_reference.get("path", ""))
+			!= str(contract.get("portraitOwnershipPath", ""))
+	):
+		errors.append("%s 专用画像 owner decision subject 漂移" % form_id)
 
 
 static func _validate_pet_metadata(

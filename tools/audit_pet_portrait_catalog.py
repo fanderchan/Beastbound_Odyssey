@@ -211,6 +211,15 @@ TRUSTED_PROJECT_OWNER_ID = "project-owner:fander"
 # explicit acceptance records the exact immutable decision-file SHA here;
 # merely creating a plausible JSON file can therefore never self-approve art.
 TRUSTED_OWNER_DECISION_SHA256_BY_FORM: dict[str, frozenset[str]] = {}
+PENDING_PORTRAIT_CLAIM_LIMIT = (
+    "project-directed generated candidate; automated checks do not prove "
+    "semantic independence, copyright provenance, or owner approval"
+)
+OWNER_APPROVED_PORTRAIT_CLAIM_LIMIT = (
+    "project-directed generated portrait; deterministic checks prove source "
+    "and processing integrity, while semantic independence and release "
+    "approval are bound only to the trusted project-owner decision"
+)
 # The 8% framing gate has one independent visibility definition.  Chroma
 # processing may record another alpha cutoff for replay diagnostics, but it
 # cannot redefine which portrait pixels count when the audit measures margins.
@@ -3758,26 +3767,36 @@ def _audit_target(
         errors.append(f"{prefix} capability 错误")
     if metadata.get("independentlyAuthoredClaim") is not True:
         errors.append(f"{prefix} independentlyAuthoredClaim 必须为 true")
+    owner_review_value = metadata.get("ownerReview")
+    declared_owner_status = (
+        owner_review_value.get("status")
+        if isinstance(owner_review_value, dict)
+        else None
+    )
+    owner_approved = declared_owner_status == "approved"
+    expected_authorship_trust = (
+        "owner_verified" if owner_approved else "untrusted_claim"
+    )
     if (
         metadata.get("independentAuthorshipClaimTrust")
-        != "untrusted_claim"
+        != expected_authorship_trust
     ):
         errors.append(
             f"{prefix} independentAuthorshipClaimTrust "
-            "必须诚实标记为 untrusted_claim"
+            f"必须诚实标记为 {expected_authorship_trust}"
         )
-    if metadata.get("semanticIndependenceVerified") is not False:
+    if metadata.get("semanticIndependenceVerified") is not owner_approved:
         errors.append(
-            f"{prefix} semanticIndependenceVerified 必须为 false"
+            f"{prefix} semanticIndependenceVerified 与 owner 状态不一致"
         )
-    if "releaseGate" in metadata and metadata.get("releaseGate") is not False:
-        errors.append(f"{prefix} releaseGate 必须显式为 false")
+    if "releaseGate" in metadata and metadata.get("releaseGate") is not owner_approved:
+        errors.append(f"{prefix} releaseGate 与 owner 状态不一致")
     if (
         prefix in PORTRAIT_RELEASE_GATE_REQUIRED_FORM_IDS
-        and metadata.get("releaseGate") is not False
+        and metadata.get("releaseGate") is not owner_approved
     ):
         errors.append(
-            f"{prefix} 正式融合画像 releaseGate 必须显式为 false"
+            f"{prefix} 正式融合画像 releaseGate 与 owner 状态不一致"
         )
     if "independentlyAuthored" in metadata:
         errors.append(
@@ -3786,11 +3805,12 @@ def _audit_target(
         )
     if metadata.get("fullBodyCropAllowed") is not False:
         errors.append(f"{prefix} fullBodyCropAllowed 必须为 false")
-    if metadata.get("claimLimit") != (
-        "project-directed generated candidate; automated checks do "
-        "not prove semantic independence, copyright provenance, or "
-        "owner approval"
-    ):
+    expected_claim_limit = (
+        OWNER_APPROVED_PORTRAIT_CLAIM_LIMIT
+        if owner_approved
+        else PENDING_PORTRAIT_CLAIM_LIMIT
+    )
+    if metadata.get("claimLimit") != expected_claim_limit:
         errors.append(f"{prefix} claimLimit 缺失或扩大了自动证明边界")
     shared_uses = metadata.get("sharedUses")
     if (

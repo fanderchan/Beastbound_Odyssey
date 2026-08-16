@@ -16,6 +16,8 @@ const ATTESTATION_TYPE = "beastbound_pet_fusion_runtime_release_attestation";
 const ATTESTATION_ID = "pet_fusion_p1_4_runtime_release_v1";
 const OWNER_DECISION_TYPE = "beastbound_pet_fusion_runtime_release_owner_decision";
 const OWNER_DECISION_ID = "pet_fusion_p1_4_runtime_release_v1";
+const PORTRAIT_OWNER_DECISION_TYPE = "beastbound_pet_portrait_owner_approval";
+const TRUSTED_PROJECT_OWNER_ID = "project-owner:fander";
 const CATALOG_ID = "pet_fusion_recipes_v2";
 const RECIPE_IDS = Object.freeze([
   "emberhorn_solar_crown_fusion_v1",
@@ -24,22 +26,38 @@ const RECIPE_IDS = Object.freeze([
 const FORM_CONTRACTS = Object.freeze([
   Object.freeze({
     formId: "emberhorn_fusion_solar_crown_fire7_wind3",
+    petRoot:
+      "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3",
     petMetadataPath:
       "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/action-bundle-meta.json",
     portraitMetadataPath:
       "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/portrait/portrait-meta.json",
     portraitRuntimePath:
       "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/portrait/default.png",
+    portraitMasterPath:
+      "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/source/portrait/headshot-master-1024.png",
+    portraitOwnershipPath:
+      "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/portrait/source-and-ownership.md",
+    portraitDecisionPath:
+      "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/qa/portrait/owner-decision.json",
     battleBundleDigest: "5a4896f64614b4eceaad220071fdd80fe85909bfa78d67ffb0637090a71da2fc",
   }),
   Object.freeze({
     formId: "emberhorn_fusion_moss_rampart_fire4_earth6",
+    petRoot:
+      "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6",
     petMetadataPath:
       "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/action-bundle-meta.json",
     portraitMetadataPath:
       "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/portrait/portrait-meta.json",
     portraitRuntimePath:
       "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/portrait/default.png",
+    portraitMasterPath:
+      "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/source/portrait/headshot-master-1024.png",
+    portraitOwnershipPath:
+      "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/portrait/source-and-ownership.md",
+    portraitDecisionPath:
+      "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/qa/portrait/owner-decision.json",
     battleBundleDigest: "27c3a0784ab6a2e55a3f3acc6624a722a8b4240bbb04bcd0ffbc53a52d524107",
   }),
 ]);
@@ -274,7 +292,6 @@ function normalizePetFusionReleaseAttestation(input = {}) {
     validatePortraitMetadata(
       contract,
       portraitReference.document,
-      ownerDecisionReference.path,
       repoRoot,
       readFile,
       errors,
@@ -463,7 +480,7 @@ function validateOwnerDecision(documentValue, repoRoot, readFile, errors) {
     || text(document.decisionId) !== OWNER_DECISION_ID
     || text(document.roadmapItem) !== "P1.4"
     || text(document.decision) !== "approved"
-    || !text(document.reviewer).startsWith("project-owner:")
+    || text(document.reviewer) !== TRUSTED_PROJECT_OWNER_ID
     || text(document.recordedDecisionText) === ""
     || text(document.ownerReviewStatus) !== "approved"
     || document.releaseApproved !== true
@@ -557,7 +574,6 @@ function validatePetMetadata(contract, repoRoot, readFile, attestationSha256, er
 function validatePortraitMetadata(
   contract,
   documentValue,
-  ownerDecisionPath,
   repoRoot,
   readFile,
   errors,
@@ -570,6 +586,12 @@ function validatePortraitMetadata(
   const assets = record(document.assets);
   const runtimeAsset = record(assets.runtime);
   const eligibilityMask = record(assets.eligibilityMask);
+  exactKeys(
+    ownerReview,
+    ["required", "status", "evidence", "decision"],
+    `${contract.formId}.portraitOwnerReview`,
+    errors,
+  );
   if (
     document.schemaVersion !== 1
     || text(document.formId) !== contract.formId
@@ -581,10 +603,42 @@ function validatePortraitMetadata(
     || document.fullBodyCropAllowed !== false
     || ownerReview.required !== true
     || text(ownerReview.status) !== "approved"
-    || !array(ownerReview.evidencePaths).includes(ownerDecisionPath)
   ) {
     errors.push(`${contract.formId} portrait is not a dedicated owner-approved release asset`);
   }
+  const acceptedEvidence = [];
+  for (const [index, evidenceValue] of array(ownerReview.evidence).entries()) {
+    const reference = validateFrozenReference(
+      evidenceValue,
+      `${contract.formId}.portraitOwnerEvidence[${index}]`,
+      repoRoot,
+      readFile,
+      errors,
+      false,
+    );
+    acceptedEvidence.push({path: reference.path, sha256: reference.sha256});
+  }
+  if (acceptedEvidence.length === 0) {
+    errors.push(`${contract.formId} portrait owner approval must bind non-empty evidence`);
+  }
+  const portraitDecisionReference = validateFrozenReference(
+    ownerReview.decision,
+    `${contract.formId}.portraitOwnerDecision`,
+    repoRoot,
+    readFile,
+    errors,
+  );
+  if (portraitDecisionReference.path !== contract.portraitDecisionPath) {
+    errors.push(`${contract.formId} portrait owner decision path is not frozen`);
+  }
+  validatePortraitOwnerDecision(
+    contract,
+    portraitDecisionReference.document,
+    acceptedEvidence,
+    repoRoot,
+    readFile,
+    errors,
+  );
   if (
     text(despill.scope) !== "same_operation_exact_eligibility_mask_only"
     || despill.globalColorAdjustmentApplied !== false
@@ -622,6 +676,77 @@ function validatePortraitMetadata(
     errors,
     false,
   );
+}
+
+function validatePortraitOwnerDecision(
+  contract,
+  documentValue,
+  acceptedEvidence,
+  repoRoot,
+  readFile,
+  errors,
+) {
+  const document = record(documentValue);
+  exactKeys(document, [
+    "schemaVersion",
+    "decisionType",
+    "ownerId",
+    "decision",
+    "subject",
+    "acceptedEvidence",
+    "reviewedAt",
+  ], `${contract.formId}.portraitOwnerDecision.document`, errors);
+  if (
+    document.schemaVersion !== 2
+    || text(document.decisionType) !== PORTRAIT_OWNER_DECISION_TYPE
+    || text(document.ownerId) !== TRUSTED_PROJECT_OWNER_ID
+    || text(document.decision) !== "approved"
+    || !isIsoUtc(document.reviewedAt)
+    || !isDeepStrictEqual(array(document.acceptedEvidence), acceptedEvidence)
+  ) {
+    errors.push(`${contract.formId} portrait owner decision is not the exact trusted approval`);
+  }
+  const subject = record(document.subject);
+  exactKeys(
+    subject,
+    ["kind", "formId", "petRoot", "master", "runtime", "ownership"],
+    `${contract.formId}.portraitOwnerDecision.subject`,
+    errors,
+  );
+  const masterReference = validateFrozenReference(
+    subject.master,
+    `${contract.formId}.portraitOwnerDecision.master`,
+    repoRoot,
+    readFile,
+    errors,
+    false,
+  );
+  const runtimeReference = validateFrozenReference(
+    subject.runtime,
+    `${contract.formId}.portraitOwnerDecision.runtime`,
+    repoRoot,
+    readFile,
+    errors,
+    false,
+  );
+  const ownershipReference = validateFrozenReference(
+    subject.ownership,
+    `${contract.formId}.portraitOwnerDecision.ownership`,
+    repoRoot,
+    readFile,
+    errors,
+    false,
+  );
+  if (
+    text(subject.kind) !== "shared_dedicated_headshot_v1"
+    || text(subject.formId) !== contract.formId
+    || text(subject.petRoot) !== contract.petRoot
+    || masterReference.path !== contract.portraitMasterPath
+    || runtimeReference.path !== contract.portraitRuntimePath
+    || ownershipReference.path !== contract.portraitOwnershipPath
+  ) {
+    errors.push(`${contract.formId} portrait owner decision subject drifted`);
+  }
 }
 
 function validateFrozenReference(value, label, repoRoot, readFile, errors, parseJson = true) {

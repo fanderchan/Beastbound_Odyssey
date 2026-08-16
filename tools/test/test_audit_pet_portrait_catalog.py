@@ -505,6 +505,10 @@ class PetPortraitCatalogAuditTests(unittest.TestCase):
         metadata["ownership"]["sha256"] = portrait.sha256_file(
             ownership_path
         )
+        metadata["independentAuthorshipClaimTrust"] = "owner_verified"
+        metadata["semanticIndependenceVerified"] = True
+        metadata["releaseGate"] = True
+        metadata["claimLimit"] = audit.OWNER_APPROVED_PORTRAIT_CLAIM_LIMIT
 
         evidence_path = pet_root / portrait.CONTACT_SHEET_PATH
         evidence = {

@@ -31,7 +31,10 @@ function jsonBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
 }
 
-function buildFixture() {
+function buildFixture({
+  runtimeReviewer = "project-owner:fander",
+  portraitOwnerId = "project-owner:fander",
+} = {}) {
   const repoRoot = path.resolve("/virtual/beastbound-odyssey");
   const files = new Map();
   function put(repoPath, value) {
@@ -102,7 +105,7 @@ function buildFixture() {
     decisionId: OWNER_DECISION_ID,
     roadmapItem: "P1.4",
     decision: "approved",
-    reviewer: "project-owner:test",
+    reviewer: runtimeReviewer,
     recordedDecisionText: "批准首批融合正式开放。",
     ownerReviewStatus: "approved",
     releaseApproved: true,
@@ -127,6 +130,11 @@ function buildFixture() {
   const portraitReferences = [];
   for (const contract of FORM_CONTRACTS) {
     const runtimeReference = put(contract.portraitRuntimePath, `${contract.formId}:portrait`);
+    const masterReference = put(contract.portraitMasterPath, `${contract.formId}:master`);
+    const ownershipReference = put(
+      contract.portraitOwnershipPath,
+      `${contract.formId}:owner-reviewed-source-record`,
+    );
     const eligibilityReference = put(
       contract.portraitRuntimePath.replace(
         "/portrait/default.png",
@@ -134,6 +142,23 @@ function buildFixture() {
       ),
       `${contract.formId}:mask`,
     );
+    const portraitEvidence = [mainReviewReference, phaseRecordReference];
+    const portraitDecisionReference = put(contract.portraitDecisionPath, {
+      schemaVersion: 2,
+      decisionType: "beastbound_pet_portrait_owner_approval",
+      ownerId: portraitOwnerId,
+      decision: "approved",
+      subject: {
+        kind: "shared_dedicated_headshot_v1",
+        formId: contract.formId,
+        petRoot: contract.petRoot,
+        master: masterReference,
+        runtime: runtimeReference,
+        ownership: ownershipReference,
+      },
+      acceptedEvidence: portraitEvidence,
+      reviewedAt: "2026-08-12T08:00:00Z",
+    });
     const portraitDocument = {
       schemaVersion: 1,
       formId: contract.formId,
@@ -160,7 +185,8 @@ function buildFixture() {
       ownerReview: {
         required: true,
         status: "approved",
-        evidencePaths: [ownerDecisionReference.path],
+        evidence: portraitEvidence,
+        decision: portraitDecisionReference,
       },
     };
     portraitReferences.push(put(contract.portraitMetadataPath, portraitDocument));
@@ -308,6 +334,40 @@ test("P1.4 release attestation fails closed on approval, portrait, catalog or li
       (error) => (
         error instanceof PetFusionReleaseAttestationError
         && /SHA-256 does not match/.test(error.message)
+      ),
+    );
+  });
+
+  await t.test("exact runtime owner identity", () => {
+    const fixture = buildFixture({runtimeReviewer: "project-owner:attacker"});
+    assert.throws(
+      () => loadPetFusionReleaseAttestation({
+        repoRoot: fixture.repoRoot,
+        attestationPath: fixture.attestationPath,
+        expectedCatalogDocument: fixture.catalogDocument,
+        expectedCatalogPath: path.join(fixture.repoRoot, DEFAULT_CATALOG_REPO_PATH),
+        readFile: fixture.readFile,
+      }),
+      (error) => (
+        error instanceof PetFusionReleaseAttestationError
+        && /exact P1\.4 scope/.test(error.message)
+      ),
+    );
+  });
+
+  await t.test("exact portrait owner identity", () => {
+    const fixture = buildFixture({portraitOwnerId: "project-owner:attacker"});
+    assert.throws(
+      () => loadPetFusionReleaseAttestation({
+        repoRoot: fixture.repoRoot,
+        attestationPath: fixture.attestationPath,
+        expectedCatalogDocument: fixture.catalogDocument,
+        expectedCatalogPath: path.join(fixture.repoRoot, DEFAULT_CATALOG_REPO_PATH),
+        readFile: fixture.readFile,
+      }),
+      (error) => (
+        error instanceof PetFusionReleaseAttestationError
+        && /exact trusted approval/.test(error.message)
       ),
     );
   });
