@@ -8243,6 +8243,19 @@ func _run_auto_battle_switch_pet_check() -> void:
 	)
 	var standby_pet_id = str(host.battle_switch_pet_button_pet_ids.get("spirit", ""))
 	var standby_entry = BattleModel.pet_party_entry_by_id(host.battle_state, standby_pet_id)
+	var switch_round_events := BattleModel.build_player_pet_round_events(
+		host.battle_state.duplicate(true),
+		{"command": "switch_pet", "petId": standby_pet_id},
+		{}
+	)
+	var no_pet_command := true
+	for event_value in switch_round_events:
+		if (
+			event_value is Dictionary
+			and str((event_value as Dictionary).get("attackerId", "")) == BattleModel.PLAYER_PET_ID
+		):
+			no_pet_command = false
+			break
 	host._on_battle_command_pressed("spirit")
 	var saw_switch: bool = await host._auto_wait_for_event_type("switch_pet", 900)
 	var active_actor = BattleModel.actor_by_id(host.battle_state, BattleModel.PLAYER_PET_ID)
@@ -8250,7 +8263,6 @@ func _run_auto_battle_switch_pet_check() -> void:
 	var old_entry = BattleModel.pet_party_entry_by_id(host.battle_state, str(initial_active.get("petId", "")))
 	var switched_name_ok = str(active_actor.get("name", "")) == str(standby_entry.get("name", "")) and str(active_after.get("petId", "")) == standby_pet_id
 	var old_pet_standby = str(old_entry.get("state", "")) == BattleModel.PET_STATE_STANDBY and str(old_entry.get("name", "")) == initial_active_name
-	var no_pet_command = not host.battle_last_round_actor_order.has(BattleModel.PLAYER_PET_ID)
 	var status = "ok" if loaded and zone_found and party.size() >= 4 and menu_open and active_disabled and standby_enabled and rest_disabled and pve_forecast_hidden and pve_label_bounds_ok and saw_switch and switched_name_ok and old_pet_standby and no_pet_command else "failed"
 	print("battle switch pet check ready: status=%s menu=%s active_disabled=%s standby_enabled=%s rest_disabled=%s pve_hidden=%s labels=%s saw_switch=%s active_after=%s old_state=%s no_pet_command=%s" % [
 		status,
@@ -28996,13 +29008,245 @@ func _run_auto_server_battle_pet_command_live_check() -> void:
 	host._stop_server_event_stream()
 	host.get_tree().quit(0 if status == "ok" else 1)
 
+
+func _prepare_registered_live_character_session(
+	parsed_register: Dictionary,
+	display_name: String
+) -> Dictionary:
+	var pending_session: Dictionary = (
+		(parsed_register.get("session", {}) as Dictionary).duplicate(true)
+		if parsed_register.get("session", {}) is Dictionary
+		else {}
+	)
+	var pending_token := str(pending_session.get("serverSessionToken", "")).strip_edges()
+	if not bool(parsed_register.get("ok", false)) or pending_token == "":
+		return {
+			"ok": false,
+			"listed": false,
+			"created": false,
+			"selected": false,
+			"session": {},
+		}
+	var base_url := ServerAuthClientModel.DEFAULT_BASE_URL
+	pending_session["serverBaseUrl"] = base_url
+	var roster_response: Dictionary = await host._auto_http_request_spec(
+		ServerAuthClientModel.characters_request(base_url, pending_token)
+	)
+	var roster_parsed := ServerAuthClientModel.parse_characters_response(
+		int(roster_response.get("responseCode", 0)),
+		roster_response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	if not bool(roster_parsed.get("ok", false)):
+		return {
+			"ok": false,
+			"listed": false,
+			"created": false,
+			"selected": false,
+			"session": pending_session,
+		}
+	var player_id := str(
+		(roster_parsed.get("selectedCharacter", {}) as Dictionary).get(
+			"playerId",
+			""
+		)
+	).strip_edges()
+	var characters: Array = (
+		roster_parsed.get("characters", []) as Array
+		if roster_parsed.get("characters", []) is Array
+		else []
+	)
+	if player_id == "":
+		for value in characters:
+			if not (value is Dictionary):
+				continue
+			player_id = str((value as Dictionary).get("playerId", "")).strip_edges()
+			if player_id != "":
+				break
+	var created := false
+	if player_id == "":
+		var create_response: Dictionary = await host._auto_http_request_spec(
+			ServerAuthClientModel.character_create_request(
+				base_url,
+				pending_token,
+				0,
+				display_name,
+				"novice_hunter_v1",
+				{"earth": 6, "water": 4, "fire": 0, "wind": 0}
+			)
+		)
+		var create_parsed := ServerAuthClientModel.parse_character_create_response(
+			int(create_response.get("responseCode", 0)),
+			create_response.get("body", PackedByteArray()) as PackedByteArray
+		)
+		if not bool(create_parsed.get("ok", false)):
+			return {
+				"ok": false,
+				"listed": true,
+				"created": false,
+				"selected": false,
+				"session": pending_session,
+			}
+		player_id = str(
+			(create_parsed.get("character", {}) as Dictionary).get(
+				"playerId",
+				""
+			)
+		).strip_edges()
+		created = player_id != ""
+	if player_id == "":
+		return {
+			"ok": false,
+			"listed": true,
+			"created": created,
+			"selected": false,
+			"session": pending_session,
+		}
+	var select_response: Dictionary = await host._auto_http_request_spec(
+		ServerAuthClientModel.character_select_request(
+			base_url,
+			pending_token,
+			player_id
+		)
+	)
+	var select_parsed := ServerAuthClientModel.parse_character_select_response(
+		int(select_response.get("responseCode", 0)),
+		select_response.get("body", PackedByteArray()) as PackedByteArray,
+		pending_session
+	)
+	var selected_session: Dictionary = (
+		(select_parsed.get("session", {}) as Dictionary).duplicate(true)
+		if select_parsed.get("session", {}) is Dictionary
+		else {}
+	)
+	selected_session["serverBaseUrl"] = base_url
+	var selected := (
+		bool(select_parsed.get("ok", false))
+		and str(selected_session.get("serverSessionToken", "")).strip_edges() != ""
+		and str(selected_session.get("playerId", "")).strip_edges() == player_id
+	)
+	return {
+		"ok": selected,
+		"listed": true,
+		"created": created,
+		"selected": selected,
+		"playerId": player_id,
+		"session": selected_session if selected else pending_session,
+	}
+
+
+func _prepare_live_battle_pet_roster(session: Dictionary) -> Dictionary:
+	var session_token := str(session.get("serverSessionToken", "")).strip_edges()
+	if session_token == "":
+		return {
+			"ok": false,
+			"completedQuestEvents": 0,
+			"hatchedPetIds": [],
+			"code": "session_token_missing",
+		}
+	var base_url := ServerAuthClientModel.DEFAULT_BASE_URL
+	var tutorial_events: Array[Dictionary] = [
+		{"type": "talk", "targetId": "trainer"},
+		{"type": "open_feature", "featureId": "quest"},
+		{"type": "open_feature", "featureId": "map"},
+		{"type": "talk", "targetId": "firebud_bank_keeper"},
+		{"type": "talk", "targetId": "firebud_stable_keeper"},
+	]
+	var completed_quest_events := 0
+	for event in tutorial_events:
+		var quest_response: Dictionary = await host._auto_http_request_spec(
+			ServerAuthClientModel.quest_record_request(
+				base_url,
+				session_token,
+				event
+			)
+		)
+		var quest_parsed := ServerAuthClientModel.parse_quest_action_response(
+			int(quest_response.get("responseCode", 0)),
+			quest_response.get("body", PackedByteArray()) as PackedByteArray
+		)
+		if not bool(quest_parsed.get("ok", false)):
+			return {
+				"ok": false,
+				"completedQuestEvents": completed_quest_events,
+				"hatchedPetIds": [],
+				"code": str(quest_parsed.get("code", "quest_prepare_failed")),
+			}
+		completed_quest_events += 1
+	var hatched_pet_ids: Array[String] = []
+	for item_id in [
+		PlayerProgressModel.ITEM_NOVICE_BATTLE_PET_EGG,
+		PlayerProgressModel.ITEM_NOVICE_TIGER_EGG,
+	]:
+		var hatch_response: Dictionary = await host._auto_http_request_spec(
+			ServerAuthClientModel.profile_action_request(
+				base_url,
+				session_token,
+				"world_item_use",
+				{"itemId": item_id}
+			)
+		)
+		var hatch_parsed := ServerAuthClientModel.parse_profile_action_response(
+			int(hatch_response.get("responseCode", 0)),
+			hatch_response.get("body", PackedByteArray()) as PackedByteArray
+		)
+		var hatch_result: Dictionary = (
+			hatch_parsed.get("result", {}) as Dictionary
+			if hatch_parsed.get("result", {}) is Dictionary
+			else {}
+		)
+		var pet_id := str(hatch_result.get("instanceId", "")).strip_edges()
+		if not bool(hatch_parsed.get("ok", false)) or pet_id == "":
+			return {
+				"ok": false,
+				"completedQuestEvents": completed_quest_events,
+				"hatchedPetIds": hatched_pet_ids,
+				"code": str(hatch_parsed.get("code", "pet_hatch_failed")),
+			}
+		hatched_pet_ids.append(pet_id)
+	var active_pet_id := hatched_pet_ids[0] if not hatched_pet_ids.is_empty() else ""
+	var cycle_response: Dictionary = await host._auto_http_request_spec(
+		ServerAuthClientModel.profile_action_request(
+			base_url,
+			session_token,
+			"pet_state_cycle",
+			{"instanceId": active_pet_id}
+		)
+	)
+	var cycle_parsed := ServerAuthClientModel.parse_profile_action_response(
+		int(cycle_response.get("responseCode", 0)),
+		cycle_response.get("body", PackedByteArray()) as PackedByteArray
+	)
+	var cycle_result: Dictionary = (
+		cycle_parsed.get("result", {}) as Dictionary
+		if cycle_parsed.get("result", {}) is Dictionary
+		else {}
+	)
+	var active_ready := (
+		bool(cycle_parsed.get("ok", false))
+		and str(cycle_result.get("instanceId", "")) == active_pet_id
+		and str(cycle_result.get("state", "")) == BattleModel.PET_STATE_BATTLE
+	)
+	return {
+		"ok": active_ready and hatched_pet_ids.size() == 2,
+		"completedQuestEvents": completed_quest_events,
+		"hatchedPetIds": hatched_pet_ids,
+		"activePetId": active_pet_id,
+		"code": "" if active_ready else str(cycle_parsed.get("code", "pet_state_prepare_failed")),
+	}
+
+
 func _run_auto_server_battle_switch_pet_live_check() -> void:
 	host.profile_save_enabled = false
-	var suffix = str(Time.get_ticks_usec() % 10000000000)
-	var challenger_username = "bsa%s" % suffix
-	var opponent_username = "bsb%s" % suffix
-	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
-	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
+	var transport_response: Dictionary = await host._auto_http_request_spec({
+		"url": "%s/health" % ServerAuthClientModel.DEFAULT_BASE_URL,
+		"headers": PackedStringArray(),
+		"method": HTTPClient.METHOD_GET,
+		"body": "",
+		"retryAttempts": 3,
+	})
+	var transport_ready := int(transport_response.get("responseCode", 0)) == 200
+	var challenger_username := str(host._live_check_username("bsa"))
+	var opponent_username := str(host._live_check_username("bsb"))
 	var challenger_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
 		ServerAuthClientModel.DEFAULT_BASE_URL,
 		challenger_username,
@@ -29017,9 +29261,35 @@ func _run_auto_server_battle_switch_pet_live_check() -> void:
 	))
 	var challenger_parsed = ServerAuthClientModel.parse_auth_response(int(challenger_register.get("responseCode", 0)), challenger_register.get("body", PackedByteArray()) as PackedByteArray)
 	var opponent_parsed = ServerAuthClientModel.parse_auth_response(int(opponent_register.get("responseCode", 0)), opponent_register.get("body", PackedByteArray()) as PackedByteArray)
-	var challenger_session = challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
-	var opponent_session = opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
 	var register_ok = bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	var challenger_character := await _prepare_registered_live_character_session(
+		challenger_parsed,
+		"换宠甲"
+	)
+	var opponent_character := await _prepare_registered_live_character_session(
+		opponent_parsed,
+		"换宠乙"
+	)
+	var challenger_session: Dictionary = (
+		challenger_character.get("session", {}) as Dictionary
+		if challenger_character.get("session", {}) is Dictionary
+		else {}
+	)
+	var opponent_session: Dictionary = (
+		opponent_character.get("session", {}) as Dictionary
+		if opponent_character.get("session", {}) is Dictionary
+		else {}
+	)
+	var character_ok := (
+		bool(challenger_character.get("ok", false))
+		and bool(opponent_character.get("ok", false))
+	)
+	var challenger_roster := await _prepare_live_battle_pet_roster(challenger_session)
+	var opponent_roster := await _prepare_live_battle_pet_roster(opponent_session)
+	var roster_ok := (
+		bool(challenger_roster.get("ok", false))
+		and bool(opponent_roster.get("ok", false))
+	)
 	var challenger_profile_ready = await host._auto_fetch_server_profile_for_session(challenger_session)
 	var opponent_profile_ready = await host._auto_fetch_server_profile_for_session(opponent_session)
 	var challenger_pet_ids = host._auto_server_profile_pet_ids(challenger_profile_ready)
@@ -29028,7 +29298,9 @@ func _run_auto_server_battle_switch_pet_live_check() -> void:
 	var standby_pet_id = str(challenger_pet_ids.get("standbyPetId", ""))
 	var opponent_pet_id = str(opponent_pet_ids.get("activePetId", ""))
 	var profile_ok = (
-		bool(challenger_profile_ready.get("ok", false))
+		roster_ok
+		and character_ok
+		and bool(challenger_profile_ready.get("ok", false))
 		and bool(opponent_profile_ready.get("ok", false))
 		and active_pet_id != ""
 		and standby_pet_id != ""
@@ -29068,7 +29340,8 @@ func _run_auto_server_battle_switch_pet_live_check() -> void:
 	host.server_battle_pending_closed_room.clear()
 	host.server_event_last_seq = 0
 	host.server_event_seen.clear()
-	host._start_server_event_stream_if_needed()
+	if character_ok:
+		host._start_server_event_stream_if_needed()
 	var frames = 0
 	while frames < 720 and host.server_event_state != "open" and not host._server_event_type_seen("events.ready"):
 		frames += 1
@@ -29254,14 +29527,28 @@ func _run_auto_server_battle_switch_pet_live_check() -> void:
 	var local_event_ok = host.battle_last_round_event_types.has("switch_pet") or str(host.battle_state.get("lastPetId", "")) == standby_pet_id
 	var round_ok = int(host.battle_state.get("round", 1)) >= 2
 	var command_flow_ok = menu_ok and switch_submit_ok and remote_commands_ok and switch_event_ok and actor_switched_ok and next_required_ok and local_event_ok and round_ok
-	var status = "ok" if register_ok and profile_ok and positions_ok and stream_ready and invite_ok and accepted_room_applied and ready_ok and visible_ok and command_flow_ok else "failed"
-	print("server battle switch pet live check ready: status=%s register=%s profile=%s positions=%s stream=%s invite=%s room_apply=%s ready=%s visible=%s menu=%s switch_submit=%s remote=%s switch_event=%s actor=%s next_required=%s local_event=%s round=%s old_pet=%s next_pet=%s last_pet=%s event_types=%s room_id=%s challenger=%s opponent=%s" % [
+	var status = "ok" if transport_ready and register_ok and character_ok and profile_ok and positions_ok and stream_ready and invite_ok and accepted_room_applied and ready_ok and visible_ok and command_flow_ok else "failed"
+	print("server battle switch pet live check ready: status=%s transport=%s/%d register=%s register_http=%d/%d character=%s roster=%s/%s(%s/%s) profile=%s positions=%s(%d/%d:%s/%s) stream=%s invite=%s accept=%s room_apply=%s ready=%s visible=%s menu=%s switch_submit=%s remote=%s switch_event=%s actor=%s next_required=%s local_event=%s round=%s old_pet=%s next_pet=%s last_pet=%s event_types=%s room_id=%s challenger=%s opponent=%s" % [
 		status,
+		str(transport_ready),
+		int(transport_response.get("attempts", 0)),
 		str(register_ok),
+		int(challenger_register.get("responseCode", 0)),
+		int(opponent_register.get("responseCode", 0)),
+		str(character_ok),
+		str(bool(challenger_roster.get("ok", false))),
+		str(bool(opponent_roster.get("ok", false))),
+		str(challenger_roster.get("code", "")),
+		str(opponent_roster.get("code", "")),
 		str(profile_ok),
 		str(positions_ok),
+		int(challenger_position_response.get("responseCode", 0)),
+		int(opponent_position_response.get("responseCode", 0)),
+		str(challenger_position_parsed.get("code", "")),
+		str(opponent_position_parsed.get("code", "")),
 		str(stream_ready),
 		str(invite_ok),
+		str(accept_parsed.get("code", "")),
 		str(accepted_room_applied),
 		str(ready_ok),
 		str(visible_ok),
@@ -29288,6 +29575,15 @@ func _run_auto_server_battle_switch_pet_live_check() -> void:
 			room_id
 		))
 	host._stop_server_event_stream()
+	for session in [challenger_session, opponent_session]:
+		var token := str((session as Dictionary).get("serverSessionToken", "")).strip_edges()
+		if token != "":
+			await host._auto_http_request_spec(
+				ServerAuthClientModel.logout_request(
+					ServerAuthClientModel.DEFAULT_BASE_URL,
+					token
+				)
+			)
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_server_battle_item_live_check() -> void:
