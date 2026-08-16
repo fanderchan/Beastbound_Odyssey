@@ -729,7 +729,7 @@ func _assert_formal_fixture_assets() -> bool:
 			"ally",
 			FORMAL_CHARACTER_APPEARANCE_ID
 		)
-		or CharacterActionAssetCatalog.battle_flip_h_for_side(
+		or not CharacterActionAssetCatalog.battle_flip_h_for_side(
 			"enemy",
 			FORMAL_CHARACTER_APPEARANCE_ID
 		)

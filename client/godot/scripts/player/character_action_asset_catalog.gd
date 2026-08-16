@@ -153,10 +153,10 @@ static func battle_view_for_side(side: String) -> String:
 
 
 static func battle_flip_h_for_side(side: String, _appearance_id: String = CHARACTER_ID) -> bool:
-	# Front and back remain independently authored sources. Visual review proved
-	# their horizontal semantics are asymmetric: enemy front already faces SE,
-	# while ally back needs one board-presentation flip to face NW.
-	return side.strip_edges().to_lower() == "ally"
+	# Front and back remain independently authored sources. Their canonical
+	# source directions are SW-front and NE-back, so the battle presentation
+	# flips both valid sides to face enemy art SE and ally art NW respectively.
+	return ["ally", "enemy"].has(side.strip_edges().to_lower())
 
 
 static func battle_actions_for_appearance(appearance_id: String) -> Array[String]:

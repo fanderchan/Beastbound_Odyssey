@@ -182,8 +182,8 @@ static func _append_direction_contract_errors(
 		errors.append("人物战斗前后视角与阵营映射不一致：%s" % appearance_id)
 	if not CharacterActionAssetCatalog.battle_flip_h_for_side("ally", appearance_id):
 		errors.append("人物我方背视角没有朝向战场左上：%s" % appearance_id)
-	if CharacterActionAssetCatalog.battle_flip_h_for_side("enemy", appearance_id):
-		errors.append("人物敌方正视角被错误翻向战场外侧：%s" % appearance_id)
+	if not CharacterActionAssetCatalog.battle_flip_h_for_side("enemy", appearance_id):
+		errors.append("人物敌方正视角没有朝向战场右下：%s" % appearance_id)
 	if CharacterActionAssetCatalog.battle_flip_h_for_side("unknown", appearance_id):
 		errors.append("人物未知战斗阵营错误启用了展示翻转：%s" % appearance_id)
 	var available_actions := CharacterActionAssetCatalog.battle_actions_for_appearance(
