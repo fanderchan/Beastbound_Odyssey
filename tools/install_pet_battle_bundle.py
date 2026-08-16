@@ -1136,6 +1136,10 @@ def _build_target_metadata(
     result["views"] = list(FORMAL_VIEWS)
     result["actions"] = validated.action_metadata
     result["battleViewMapping"] = copy.deepcopy(CANONICAL_BATTLE_VIEW_MAPPING)
+    installed_output_hashes = {
+        str(entry.destination_relative): entry.sha256
+        for entry in (*validated.copies, *validated.generated)
+    }
     result["battleVisual"] = {
         "status": "owner_review_pending",
         "kind": options.kind,
@@ -1158,6 +1162,57 @@ def _build_target_metadata(
         "contactSheet": "qa/battle/contact-sheet.png",
         "qcSummary": "qa/battle/qc-summary.json",
     }
+    source_archive = result.get("sourceArchive")
+    if not isinstance(source_archive, dict):
+        source_archive = {}
+    else:
+        source_archive = copy.deepcopy(source_archive)
+    for stale_key in (
+        "formalProductionLedger",
+        "workingArchive",
+        "representativeRebuildHandoff",
+        "formalReplaySummary",
+    ):
+        source_archive.pop(stale_key, None)
+    source_archive.update(
+        {
+            "policy": (
+                "lean_runtime_plus_prompts_qc_and_hash_ledger"
+                if options.archive_mode == "lean"
+                else "full_runtime_source_prompts_qc_and_hash_ledger"
+            ),
+            "battleLedger": "source/battle/source-ledger.json",
+            "installManifest": "source/battle/install-manifest.json",
+            "promptDirectory": "source/battle",
+        }
+    )
+    result["sourceArchive"] = source_archive
+
+    evidence = result.get("evidence")
+    if not isinstance(evidence, dict):
+        evidence = {}
+    else:
+        evidence = copy.deepcopy(evidence)
+    # ``qa/battle`` is atomically replaced below.  Preserve unrelated world
+    # evidence, but never leave metadata pointing at files from the previous
+    # battle bundle that no longer exist after the replacement.
+    for key, value in list(evidence.items()):
+        if isinstance(value, str) and value.startswith("qa/battle/"):
+            evidence.pop(key, None)
+            evidence.pop(f"{key}Sha256", None)
+    evidence.update(
+        {
+            "battleContactSheet": "qa/battle/contact-sheet.png",
+            "battleContactSheetSha256": installed_output_hashes[
+                "qa/battle/contact-sheet.png"
+            ],
+            "battleQc": "qa/battle/qc-summary.json",
+            "battleQcSha256": installed_output_hashes[
+                "qa/battle/qc-summary.json"
+            ],
+        }
+    )
+    result["evidence"] = evidence
     world_visual = result.get("worldVisual")
     world_matrix_present = (
         isinstance(world_visual, dict)

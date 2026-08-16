@@ -730,6 +730,79 @@ class InstallPetBattleBundleTest(unittest.TestCase):
             )
             self.assertNotIn("key poses only", metadata["notes"])
 
+    def test_install_refreshes_battle_provenance_and_removes_stale_qa_links(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            staging, _ = _materialize_staging(root)
+            destination = root / "asset-root"
+            destination.mkdir(parents=True)
+            stale_preview = destination / "qa/battle/facing-contract-preview.png"
+            stale_preview.parent.mkdir(parents=True)
+            stale_preview.write_bytes(b"stale")
+            _write_json(
+                destination / "action-bundle-meta.json",
+                {
+                    "schemaVersion": 1,
+                    "formId": "fixture_pet_v1",
+                    "runtimeEnabled": False,
+                    "sourceArchive": {
+                        "formalProductionLedger": "source/formal-production/source-ledger.json",
+                        "workingArchive": ".run/old-battle-production",
+                        "identityRaw": "source/identity-raw.webp",
+                    },
+                    "evidence": {
+                        "battleFacingContractPreview": "qa/battle/facing-contract-preview.png",
+                        "battleFacingContractPreviewSha256": "0" * 64,
+                        "worldContactSheet": "qa/world/contact.png",
+                        "worldContactSheetSha256": "1" * 64,
+                    },
+                },
+            )
+
+            first = MODULE.install_bundle(
+                _options(staging, destination, archive_mode="lean")
+            )
+
+            self.assertTrue(first["changed"])
+            metadata = json.loads(
+                (destination / "action-bundle-meta.json").read_text(encoding="utf-8")
+            )
+            source_archive = metadata["sourceArchive"]
+            self.assertEqual(
+                source_archive["battleLedger"],
+                "source/battle/source-ledger.json",
+            )
+            self.assertEqual(
+                source_archive["installManifest"],
+                "source/battle/install-manifest.json",
+            )
+            self.assertEqual(source_archive["promptDirectory"], "source/battle")
+            self.assertEqual(source_archive["identityRaw"], "source/identity-raw.webp")
+            self.assertNotIn("formalProductionLedger", source_archive)
+            self.assertNotIn("workingArchive", source_archive)
+
+            evidence = metadata["evidence"]
+            self.assertNotIn("battleFacingContractPreview", evidence)
+            self.assertNotIn("battleFacingContractPreviewSha256", evidence)
+            self.assertEqual(evidence["worldContactSheet"], "qa/world/contact.png")
+            self.assertEqual(evidence["worldContactSheetSha256"], "1" * 64)
+            self.assertEqual(
+                evidence["battleContactSheetSha256"],
+                MODULE.sha256_file(destination / evidence["battleContactSheet"]),
+            )
+            self.assertEqual(
+                evidence["battleQcSha256"],
+                MODULE.sha256_file(destination / evidence["battleQc"]),
+            )
+            self.assertFalse(stale_preview.exists())
+
+            repeated = MODULE.install_bundle(
+                _options(staging, destination, archive_mode="lean")
+            )
+            self.assertFalse(repeated["changed"])
+
     def test_repack_preprocessing_chain_is_archived_and_recorded(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
