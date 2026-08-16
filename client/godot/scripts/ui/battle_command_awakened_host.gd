@@ -66,6 +66,13 @@ func sync_command_layout(owner: String, visible_ids: Array, ordered_ids: Array) 
 	return true
 
 
+func sync_command_label_accents(accents: Dictionary) -> bool:
+	if _view == null:
+		return false
+	_view.set_command_label_accents(accents)
+	return true
+
+
 func sync_auto_state() -> bool:
 	if _view == null:
 		return false

@@ -39,6 +39,7 @@ var _layout_apply_count := 0
 var _layout_skip_count := 0
 var _button_medallion_kinds: Dictionary = {}
 var _medallion_styles: Dictionary = {}
+var _command_label_accents: Dictionary = {}
 
 var _command_layer: Control
 var _contract_grid: GridContainer
@@ -236,6 +237,11 @@ func sync_enabled_state() -> void:
 	_sync_disabled_visuals()
 
 
+func set_command_label_accents(accents: Dictionary) -> void:
+	_command_label_accents = accents.duplicate(true)
+	_sync_command_label_accents()
+
+
 func set_interaction_state(battle_active: bool, commands_locked: bool) -> void:
 	_battle_active = battle_active
 	_commands_locked = commands_locked
@@ -267,6 +273,8 @@ func snapshot() -> Dictionary:
 	var visible_labels: Array[String] = []
 	var touch_targets_ok := true
 	var icons_ok := true
+	var compact_label_bounds_ok := true
+	var labels_clip_text := true
 	for control in _active_controls:
 		if not (control is Button) or not control.visible:
 			continue
@@ -276,6 +284,14 @@ func snapshot() -> Dictionary:
 		var icon_rect := parts.get("icon", null) as TextureRect
 		if label != null and label.text != "":
 			visible_labels.append(label.text)
+			if _owner != "player":
+				compact_label_bounds_ok = (
+					compact_label_bounds_ok
+					and Rect2(Vector2.ZERO, button.size).encloses(
+						Rect2(label.position, label.size)
+					)
+				)
+				labels_clip_text = labels_clip_text and label.clip_text
 		touch_targets_ok = touch_targets_ok and button.size.x >= 60.0 and button.size.y >= 60.0
 		icons_ok = icons_ok and icon_rect != null and icon_rect.texture != null
 	return {
@@ -287,11 +303,14 @@ func snapshot() -> Dictionary:
 		"visibleLabels": visible_labels,
 		"touchTargetsOk": touch_targets_ok,
 		"iconsOk": icons_ok,
+		"compactLabelBoundsOk": compact_label_bounds_ok,
+		"labelsClipText": labels_clip_text,
 		"activeButtonCount": visible_labels.size(),
 		"panelSize": size,
 		"layoutApplyCount": _layout_apply_count,
 		"layoutSkipCount": _layout_skip_count,
 		"medallionStyleResourceCount": _medallion_styles.size(),
+		"submenuRect": Rect2(_submenu_panel.position, _submenu_panel.size),
 	}
 
 
@@ -467,6 +486,8 @@ func _prepare_button(button: Button, label_text: String, icon_id: String) -> voi
 	var label := Label.new()
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.clip_text = true
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.add_theme_font_size_override("font_size", 15)
 	label.add_theme_color_override("font_color", Color("f7e8c5"))
 	label.add_theme_color_override("font_outline_color", Color("21180fe8"))
@@ -521,7 +542,30 @@ func _sync_command_labels() -> void:
 		var button := _command_buttons[command_id] as Button
 		if button == null:
 			continue
-		_set_button_content(button, button.text, str(PLAYER_ICONS.get(command_id, "attack")))
+		_set_button_content(button, button.text, _command_icon_id(str(command_id)))
+	_sync_command_label_accents()
+
+
+func _command_icon_id(command_id: String) -> String:
+	if _owner == "switch_pet":
+		return "return" if command_id == "run" else "summon"
+	return str(PLAYER_ICONS.get(command_id, "attack"))
+
+
+func _sync_command_label_accents() -> void:
+	for command_id in _command_buttons.keys():
+		var button := _command_buttons[command_id] as Button
+		if button == null:
+			continue
+		var parts := _button_parts.get(button, {}) as Dictionary
+		var label := parts.get("label", null) as Label
+		if label != null:
+			label.add_theme_color_override(
+				"font_color",
+				VisualSkin.command_label_color(
+					str(_command_label_accents.get(command_id, "normal"))
+				)
+			)
 
 
 func _hide_all_controls() -> void:
@@ -590,7 +634,15 @@ func _apply_auto_layout() -> void:
 
 func _apply_submenu_layout(visible_ids: Array, ordered_ids: Array) -> void:
 	_submenu_panel.visible = true
-	var panel_rect := Presenter.scaled_rect(Rect2(112, 10, 374, 282), size)
+	var panel_design_rect := Rect2(112, 10, 374, 282)
+	var button_origin_y := 26.0
+	if _owner == "switch_pet":
+		var row_count := maxi(1, ceili(float(visible_ids.size()) / 2.0))
+		var panel_height := minf(282.0, float(row_count * 62 + 34))
+		panel_design_rect.position.y = 292.0 - panel_height
+		panel_design_rect.size.y = panel_height
+		button_origin_y = panel_design_rect.position.y + 16.0
+	var panel_rect := Presenter.scaled_rect(panel_design_rect, size)
 	_submenu_panel.position = panel_rect.position
 	_submenu_panel.size = panel_rect.size
 	var index := 0
@@ -600,7 +652,7 @@ func _apply_submenu_layout(visible_ids: Array, ordered_ids: Array) -> void:
 		var button := _command_buttons[command_id] as Button
 		var row := index / 2
 		var column := index % 2
-		var rect := Rect2(124 + column * 180, 26 + row * 62, 170, 60)
+		var rect := Rect2(124 + column * 180, button_origin_y + row * 62, 170, 60)
 		_show_button(button, rect, true)
 		index += 1
 	_capture_capacity_label.position = Presenter.scaled_rect(Rect2(128, 260, 340, 24), size).position
@@ -656,7 +708,10 @@ func _apply_button_parts_geometry(button: Button, compact: bool, danger: bool) -
 		label.position = Vector2(52, 0)
 		label.size = Vector2(maxf(0.0, button.size.x - 56.0), button.size.y)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		label.add_theme_font_size_override("font_size", 15)
+		label.add_theme_font_size_override(
+			"font_size",
+			14 if label.text.contains("\n") else 15
+		)
 	else:
 		medallion.position = Vector2(6, 0)
 		medallion.size = Vector2(maxf(52.0, button.size.x - 12.0), maxf(52.0, button.size.x - 12.0))

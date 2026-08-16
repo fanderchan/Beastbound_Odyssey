@@ -21,6 +21,9 @@ const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visu
 const BattleElementTacticsModel := preload(
 	"res://scripts/battle/battle_element_tactics_model.gd"
 )
+const BattlePetSwitchTacticsModel := preload(
+	"res://scripts/battle/battle_pet_switch_tactics_model.gd"
+)
 const BattleRangedProjectileAssetCatalog := preload(
 	"res://scripts/battle/battle_ranged_projectile_asset_catalog.gd"
 )
@@ -1364,6 +1367,8 @@ var battle_pending_item_id: String = ""
 var battle_pending_capture_tool_id: String = ""
 var battle_pending_pet_skill_id: String = ""
 var battle_switch_pet_button_pet_ids: Dictionary = {}
+var battle_switch_pet_button_presentations: Dictionary = {}
+var battle_command_label_accents: Dictionary = {}
 var battle_spirit_button_spirit_ids: Dictionary = {}
 var battle_capture_button_tool_ids: Dictionary = {}
 var battle_pending_player_command: Dictionary = {}
@@ -7539,6 +7544,8 @@ func _battle_player_run_label() -> String:
 func _set_battle_command_owner(owner: String) -> void:
 	battle_command_owner = owner
 	battle_switch_pet_button_pet_ids.clear()
+	battle_switch_pet_button_presentations.clear()
+	battle_command_label_accents.clear()
 	battle_spirit_button_spirit_ids.clear()
 	battle_capture_button_tool_ids.clear()
 	if battle_command_title_label == null:
@@ -8297,11 +8304,34 @@ func _apply_switch_pet_button_labels() -> void:
 		"run": "返回",
 	}
 	var party := BattleModel.player_pet_party(battle_state)
+	var menu_plan := BattlePetSwitchTacticsModel.menu_plan(
+		battle_state,
+		party,
+		_battle_is_server_authority()
+	)
+	var entry_plans := (
+		menu_plan.get("entries", {}) as Dictionary
+		if menu_plan.get("entries", {}) is Dictionary
+		else {}
+	)
 	for index in range(mini(command_slots.size(), party.size())):
 		var entry := party[index] as Dictionary
 		var command_id := str(command_slots[index])
-		labels[command_id] = _battle_pet_party_button_label(entry)
-		battle_switch_pet_button_pet_ids[command_id] = str(entry.get("petId", ""))
+		var pet_id := str(entry.get("petId", ""))
+		var presentation := (
+			entry_plans.get(pet_id, {}) as Dictionary
+			if entry_plans.get(pet_id, {}) is Dictionary
+			else {}
+		)
+		labels[command_id] = str(
+			presentation.get("label", _battle_pet_party_button_label(entry))
+		)
+		battle_switch_pet_button_pet_ids[command_id] = pet_id
+		battle_switch_pet_button_presentations[command_id] = presentation
+		if bool(presentation.get("forecastVisible", false)):
+			battle_command_label_accents[command_id] = str(
+				presentation.get("disposition", "")
+			)
 	_apply_battle_button_labels(labels)
 
 
@@ -8400,6 +8430,10 @@ func _apply_battle_button_labels(labels: Dictionary) -> void:
 		if button != null:
 			button.text = str(labels[command_id])
 	_sync_battle_command_layout()
+	if battle_command_awakened_host != null:
+		battle_command_awakened_host.sync_command_label_accents(
+			battle_command_label_accents
+		)
 
 
 func _sync_battle_command_layout() -> void:
@@ -8480,7 +8514,12 @@ func _battle_command_visible_ids() -> Array[String]:
 			visible.append("help")
 			return visible
 		"switch_pet":
-			return ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet", "run"]
+			var visible: Array[String] = []
+			for command_id in _battle_command_order_for_owner():
+				if battle_switch_pet_button_pet_ids.has(command_id):
+					visible.append(command_id)
+			visible.append("run")
+			return visible
 		_:
 			return ["attack", "spirit", "capture", "help", "defend", "item", "switch_pet", "run"]
 
@@ -13753,6 +13792,12 @@ func _sync_battle_buttons() -> void:
 				elif battle_switch_pet_button_pet_ids.has(command_id):
 					var pet_id := str(battle_switch_pet_button_pet_ids.get(command_id, ""))
 					button.disabled = not BattleModel.is_pet_switchable(battle_state, pet_id)
+					var presentation := (
+						battle_switch_pet_button_presentations.get(command_id, {}) as Dictionary
+						if battle_switch_pet_button_presentations.get(command_id, {}) is Dictionary
+						else {}
+					)
+					button.tooltip_text = str(presentation.get("tooltip", ""))
 				else:
 					button.disabled = true
 			else:

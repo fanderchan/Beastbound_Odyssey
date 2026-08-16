@@ -27,6 +27,18 @@ static func icon(icon_id: String) -> Texture2D:
 	return ICONS[normalized_id] as Texture2D
 
 
+static func command_label_color(kind: String = "normal") -> Color:
+	match kind:
+		"advantage":
+			return Color(0.74, 0.94, 0.34, 0.98)
+		"disadvantage":
+			return Color(1.0, 0.42, 0.30, 0.98)
+		"neutral":
+			return Color(1.0, 0.78, 0.20, 0.96)
+		_:
+			return Color("f7e8c5")
+
+
 static func transparent_panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0, 0, 0, 0)

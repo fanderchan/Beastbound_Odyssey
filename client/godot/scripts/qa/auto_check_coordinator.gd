@@ -19,6 +19,9 @@ const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visu
 const BattleElementTacticsModel := preload(
 	"res://scripts/battle/battle_element_tactics_model.gd"
 )
+const BattlePetSwitchTacticsModel := preload(
+	"res://scripts/battle/battle_pet_switch_tactics_model.gd"
+)
 const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleInterruptionModel := preload("res://scripts/battle/server_battle_interruption_model.gd")
@@ -8223,6 +8226,21 @@ func _run_auto_battle_switch_pet_check() -> void:
 	var active_disabled = active_button != null and active_button.disabled
 	var standby_enabled = standby_button != null and not standby_button.disabled
 	var rest_disabled = rest_button != null and rest_button.disabled
+	var pve_forecast_hidden = (
+		standby_button != null
+		and not standby_button.text.contains("克制")
+		and not standby_button.text.contains("受制")
+		and not standby_button.text.contains("均势")
+	)
+	var pve_menu_snapshot: Dictionary = (
+		host.battle_command_awakened_view.snapshot()
+		if host.battle_command_awakened_view != null
+		else {}
+	)
+	var pve_label_bounds_ok = (
+		bool(pve_menu_snapshot.get("compactLabelBoundsOk", false))
+		and bool(pve_menu_snapshot.get("labelsClipText", false))
+	)
 	var standby_pet_id = str(host.battle_switch_pet_button_pet_ids.get("spirit", ""))
 	var standby_entry = BattleModel.pet_party_entry_by_id(host.battle_state, standby_pet_id)
 	host._on_battle_command_pressed("spirit")
@@ -8233,13 +8251,15 @@ func _run_auto_battle_switch_pet_check() -> void:
 	var switched_name_ok = str(active_actor.get("name", "")) == str(standby_entry.get("name", "")) and str(active_after.get("petId", "")) == standby_pet_id
 	var old_pet_standby = str(old_entry.get("state", "")) == BattleModel.PET_STATE_STANDBY and str(old_entry.get("name", "")) == initial_active_name
 	var no_pet_command = not host.battle_last_round_actor_order.has(BattleModel.PLAYER_PET_ID)
-	var status = "ok" if loaded and zone_found and party.size() >= 4 and menu_open and active_disabled and standby_enabled and rest_disabled and saw_switch and switched_name_ok and old_pet_standby and no_pet_command else "failed"
-	print("battle switch pet check ready: status=%s menu=%s active_disabled=%s standby_enabled=%s rest_disabled=%s saw_switch=%s active_after=%s old_state=%s no_pet_command=%s" % [
+	var status = "ok" if loaded and zone_found and party.size() >= 4 and menu_open and active_disabled and standby_enabled and rest_disabled and pve_forecast_hidden and pve_label_bounds_ok and saw_switch and switched_name_ok and old_pet_standby and no_pet_command else "failed"
+	print("battle switch pet check ready: status=%s menu=%s active_disabled=%s standby_enabled=%s rest_disabled=%s pve_hidden=%s labels=%s saw_switch=%s active_after=%s old_state=%s no_pet_command=%s" % [
 		status,
 		str(menu_open),
 		str(active_disabled),
 		str(standby_enabled),
 		str(rest_disabled),
+		str(pve_forecast_hidden),
+		str(pve_label_bounds_ok),
 		str(saw_switch),
 		str(active_actor.get("name", "")),
 		str(old_entry.get("state", "")),
@@ -26751,6 +26771,55 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		"status": "ready",
 		"roomId": "target_mapping_room",
 		"seed": "target_mapping_seed",
+		"participants": [{
+			"accountId": "acc_b",
+			"username": "attacker_owner",
+			"teamSnapshot": {
+				"battlePets": [
+					{
+						"petId": "pet_attacker",
+						"name": "我方布伊",
+						"state": BattleModel.PET_STATE_BATTLE,
+						"activeInBattle": true,
+						"hp": 90,
+						"maxHp": 90,
+						"elements": {"earth": 0, "water": 10, "fire": 0, "wind": 0},
+					},
+					{
+						"petId": "pet_switch_strong",
+						"name": "苍岩守望者甲号",
+						"state": BattleModel.PET_STATE_STANDBY,
+						"hp": 86,
+						"maxHp": 86,
+						"elements": {"earth": 10, "water": 0, "fire": 0, "wind": 0},
+					},
+					{
+						"petId": "pet_switch_weak",
+						"name": "赤焰布伊",
+						"state": BattleModel.PET_STATE_STANDBY,
+						"hp": 84,
+						"maxHp": 84,
+						"elements": {"earth": 0, "water": 0, "fire": 10, "wind": 0},
+					},
+					{
+						"petId": "pet_switch_neutral",
+						"name": "潮纹布伊",
+						"state": BattleModel.PET_STATE_STANDBY,
+						"hp": 82,
+						"maxHp": 82,
+						"elements": {"earth": 0, "water": 10, "fire": 0, "wind": 0},
+					},
+					{
+						"petId": "pet_switch_invalid",
+						"name": "残缺档案宠",
+						"state": BattleModel.PET_STATE_STANDBY,
+						"hp": 80,
+						"maxHp": 80,
+						"elements": {"earth": 9, "water": 0, "fire": 0, "wind": 0},
+					},
+				],
+			},
+		}],
 		"battle": {
 			"round": 1,
 			"phase": "command",
@@ -26811,6 +26880,95 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and str(mixed_tactics.get("label", "")) == "克制 +18%"
 		and absf(float(mixed_tactics.get("multiplier", 0.0)) - 1.175) <= 0.0001
 		and not bool(invalid_tactics.get("visible", true))
+	)
+	var switch_party := BattleModel.player_pet_party(state)
+	var switch_menu_plan := BattlePetSwitchTacticsModel.menu_plan(
+		state,
+		switch_party,
+		true
+	)
+	var switch_entry_plans := (
+		switch_menu_plan.get("entries", {}) as Dictionary
+		if switch_menu_plan.get("entries", {}) is Dictionary
+		else {}
+	)
+	var active_switch_plan := (
+		switch_entry_plans.get("pet_attacker", {}) as Dictionary
+		if switch_entry_plans.get("pet_attacker", {}) is Dictionary
+		else {}
+	)
+	var strong_switch_plan := (
+		switch_entry_plans.get("pet_switch_strong", {}) as Dictionary
+		if switch_entry_plans.get("pet_switch_strong", {}) is Dictionary
+		else {}
+	)
+	var weak_switch_plan := (
+		switch_entry_plans.get("pet_switch_weak", {}) as Dictionary
+		if switch_entry_plans.get("pet_switch_weak", {}) is Dictionary
+		else {}
+	)
+	var neutral_switch_plan := (
+		switch_entry_plans.get("pet_switch_neutral", {}) as Dictionary
+		if switch_entry_plans.get("pet_switch_neutral", {}) is Dictionary
+		else {}
+	)
+	var invalid_switch_plan := (
+		switch_entry_plans.get("pet_switch_invalid", {}) as Dictionary
+		if switch_entry_plans.get("pet_switch_invalid", {}) is Dictionary
+		else {}
+	)
+	var pve_switch_state := state.duplicate(true)
+	pve_switch_state["serverRoomMode"] = "party_pve"
+	var pve_switch_plan := BattlePetSwitchTacticsModel.menu_plan(
+		pve_switch_state,
+		switch_party,
+		true
+	)
+	var pve_switch_entries := (
+		pve_switch_plan.get("entries", {}) as Dictionary
+		if pve_switch_plan.get("entries", {}) is Dictionary
+		else {}
+	)
+	var pve_strong_plan := (
+		pve_switch_entries.get("pet_switch_strong", {}) as Dictionary
+		if pve_switch_entries.get("pet_switch_strong", {}) is Dictionary
+		else {}
+	)
+	var multi_pet_switch_state := state.duplicate(true)
+	var multi_pet_actors: Array = (state.get("actors", []) as Array).duplicate(true)
+	multi_pet_actors.append({
+		"id": "enemy_pet_extra",
+		"side": BattleModel.SIDE_ENEMY,
+		"kind": "pet",
+		"name": "额外敌宠",
+		"hp": 50,
+		"maxHp": 50,
+		"elements": {"earth": 0, "water": 10, "fire": 0, "wind": 0},
+	})
+	multi_pet_switch_state["actors"] = multi_pet_actors
+	var multi_pet_switch_plan := BattlePetSwitchTacticsModel.menu_plan(
+		multi_pet_switch_state,
+		switch_party,
+		true
+	)
+	var switch_tactics_model_ok: bool = (
+		bool(switch_menu_plan.get("forecastVisible", false))
+		and str(switch_menu_plan.get("targetActorId", "")) == "enemy_pet"
+		and switch_party.size() == 5
+		and str(active_switch_plan.get("label", "")) == "我方布伊\n出战中"
+		and not bool(active_switch_plan.get("forecastVisible", true))
+		and str(strong_switch_plan.get("label", "")) == "苍岩守望者…\n克制 +35%"
+		and str(strong_switch_plan.get("disposition", "")) == "advantage"
+		and str(strong_switch_plan.get("tooltip", "")).find("敌方布伊") >= 0
+		and str(weak_switch_plan.get("label", "")) == "赤焰布伊\n受制 -25%"
+		and str(weak_switch_plan.get("disposition", "")) == "disadvantage"
+		and str(neutral_switch_plan.get("label", "")) == "潮纹布伊\n均势"
+		and str(neutral_switch_plan.get("disposition", "")) == "neutral"
+		and str(invalid_switch_plan.get("label", "")) == "残缺档案宠\n待机"
+		and not bool(invalid_switch_plan.get("forecastVisible", true))
+		and not bool(pve_switch_plan.get("forecastVisible", true))
+		and str(pve_strong_plan.get("label", "")) == "苍岩守望者…\n待机"
+		and not bool(multi_pet_switch_plan.get("forecastVisible", true))
 	)
 	var downed_room = room.duplicate(true)
 	downed_room["mode"] = "party_pve"
@@ -26964,6 +27122,12 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 	host.server_battle_state.clear()
 	host.server_battle_state["room"] = room.duplicate(true)
 	host.server_battle_last_playback_turn_key = ""
+	var switch_capture_path := OS.get_environment(
+		"BEASTBOUND_BATTLE_SWITCH_TACTICS_CAPTURE"
+	).strip_edges()
+	if switch_capture_path != "":
+		host.profile_save_enabled = false
+		host._load_map("firebud_village_gate", "from_training_yard")
 	host._start_battle(state)
 	host.battle_target_mode = "player_attack_target"
 	host.battle_hover_target_id = "enemy_pet"
@@ -27008,6 +27172,61 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and not bool(host_pve_hidden_tactics.get("visible", true))
 		and not bool(host_item_hidden_tactics.get("visible", true))
 	)
+	host._open_switch_pet_command_menu()
+	await host.get_tree().process_frame
+	var switch_command_ids := {}
+	for command_id in host.battle_switch_pet_button_pet_ids.keys():
+		switch_command_ids[str(host.battle_switch_pet_button_pet_ids.get(command_id, ""))] = str(command_id)
+	var strong_switch_command_id := str(switch_command_ids.get("pet_switch_strong", ""))
+	var weak_switch_command_id := str(switch_command_ids.get("pet_switch_weak", ""))
+	var neutral_switch_command_id := str(switch_command_ids.get("pet_switch_neutral", ""))
+	var invalid_switch_command_id := str(switch_command_ids.get("pet_switch_invalid", ""))
+	var strong_switch_button := host.battle_command_buttons.get(strong_switch_command_id) as Button
+	var weak_switch_button := host.battle_command_buttons.get(weak_switch_command_id) as Button
+	var neutral_switch_button := host.battle_command_buttons.get(neutral_switch_command_id) as Button
+	var invalid_switch_button := host.battle_command_buttons.get(invalid_switch_command_id) as Button
+	var switch_view_snapshot: Dictionary = (
+		host.battle_command_awakened_view.snapshot()
+		if host.battle_command_awakened_view != null
+		else {}
+	)
+	var switch_submenu_rect := (
+		switch_view_snapshot.get("submenuRect", Rect2()) as Rect2
+		if switch_view_snapshot.get("submenuRect", Rect2()) is Rect2
+		else Rect2()
+	)
+	var switch_ui_gate_ok: bool = (
+		host.battle_command_owner == "switch_pet"
+		and strong_switch_button != null
+		and strong_switch_button.text == "苍岩守望者…\n克制 +35%"
+		and not strong_switch_button.disabled
+		and strong_switch_button.tooltip_text.find("敌方布伊") >= 0
+		and weak_switch_button != null
+		and weak_switch_button.text == "赤焰布伊\n受制 -25%"
+		and neutral_switch_button != null
+		and neutral_switch_button.text == "潮纹布伊\n均势"
+		and invalid_switch_button != null
+		and invalid_switch_button.text == "残缺档案宠\n待机"
+		and bool(switch_view_snapshot.get("compactLabelBoundsOk", false))
+		and bool(switch_view_snapshot.get("labelsClipText", false))
+		and int(switch_view_snapshot.get("activeButtonCount", 0)) == 6
+		and is_equal_approx(switch_submenu_rect.size.y, 220.0)
+	)
+	var switch_capture_ok := true
+	if switch_capture_path != "":
+		var switch_capture_directory := switch_capture_path.get_base_dir()
+		if switch_capture_directory != "":
+			DirAccess.make_dir_recursive_absolute(switch_capture_directory)
+		for _switch_capture_frame in range(4):
+			await host.get_tree().process_frame
+		var switch_capture_image: Image = host.get_viewport().get_texture().get_image()
+		switch_capture_ok = (
+			switch_capture_image != null
+			and switch_capture_image.get_size() == Vector2i(1280, 720)
+			and switch_capture_image.save_png(switch_capture_path) == OK
+		)
+	host._set_battle_command_owner("player")
+	host.battle_target_mode = "enemy"
 	host.battle_state["phase"] = "server_waiting"
 	host._apply_polled_server_battle_room(polled_room, "target_mapping_room")
 	var poll_started_ok = host._server_battle_event_playback_active() or str(host.battle_state.get("phase", "")) == "round_events"
@@ -27448,13 +27667,16 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and str(duel_hang_after.get(HangSettingsModel.SESSION_LAST_STOP_REASON_KEY, "")) == "low_hp"
 		and not host.hang_mode_active
 	)
-	var status = "ok" if element_mapping_ok and element_tactics_ok and element_ui_gate_ok and element_capture_ok and converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and transport_helper_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_singleflight_guard_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_outcome_overlay_ok and pve_outcome_dedupe_ok and teammate_pve_victory_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
-	print("server battle target mapping check ready: status=%s elements=%s tactics=%s ui_gate=%s capture=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s transport=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_singleflight=%s restore_poll_enabled=%s explicit_restore=%s active_poll=%s pve_overlay=%s pve_dedupe=%s teammate_victory=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_outcome=%s duplicate_outcome=%s teammate_outcome=%s closed_text=%s" % [
+	var status = "ok" if element_mapping_ok and element_tactics_ok and switch_tactics_model_ok and element_ui_gate_ok and switch_ui_gate_ok and element_capture_ok and switch_capture_ok and converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and transport_helper_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_singleflight_guard_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_outcome_overlay_ok and pve_outcome_dedupe_ok and teammate_pve_victory_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
+	print("server battle target mapping check ready: status=%s elements=%s tactics=%s switch_model=%s ui_gate=%s switch_ui=%s capture=%s switch_capture=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s transport=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_singleflight=%s restore_poll_enabled=%s explicit_restore=%s active_poll=%s pve_overlay=%s pve_dedupe=%s teammate_victory=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_outcome=%s duplicate_outcome=%s teammate_outcome=%s closed_text=%s" % [
 		status,
 		str(element_mapping_ok),
 		str(element_tactics_ok),
+		str(switch_tactics_model_ok),
 		str(element_ui_gate_ok),
+		str(switch_ui_gate_ok),
 		str(element_capture_ok),
+		str(switch_capture_ok),
 		str(converted_target_ok),
 		str(converted_attacker_ok),
 		str(downed_skip_ok),
