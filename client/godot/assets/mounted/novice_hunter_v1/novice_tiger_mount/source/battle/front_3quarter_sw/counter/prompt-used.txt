@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use attached front identity, approved idle, defend, hurt, and attack sheets as strict identity, costume, mount, tack, camera, palette, scale, and rendering references. Preserve same integrated novice hunter and orange-gold tiger, same hair ornament, ochre fur outfit, green strap, red belt, cream markings, dark stripes, tail, reins, saddle. One coherent whole rider+tiger subject per cell.
+
+Deliver exactly one chronological 8-frame COUNTERATTACK sheet in a precise 4x2 grid, frames 1-4 top then 5-8 bottom, flat fully opaque exact #FF00FF magenta. No labels, borders, shadow, floor, scenery, UI, slash arc, hit flash, dust, glow, or VFX.
+
+AUTHORED VIEW: front three-quarter facing screen lower-left / southwest throughout. Never rotate to front-on, profile, right, or back.
+
+Eight-phase choreography, distinct from basic attack:
+1 mounted idle;
+2 compact incoming-hit brace: tiger lowers one shoulder, rider tightens reins;
+3 controlled deflection/recoil, tiger shifts weight to hindquarters and near forepaw, rider leans with it;
+4 immediate counter anticipation: tiger coils low, eyes focused lower-left, rider gives a short rein cue;
+5 fast peak retaliatory near-forepaw swat and short head/body drive toward lower-left, stronger asymmetrical silhouette but no VFX;
+6 follow-through with paw returning and weight crossing forward;
+7 balance resets, rider re-centers reins;
+8 idle.
+Counter must read as “absorb then answer,” not a second full pounce and not dodge. Four legs anatomically correct; rider stays seated, no detached tack.
+
+Preserve identity/proportions/markings, soft painterly 2.5D style, orthographic camera, upper-left light, shared scale/bottom-center anchor, generous gutters. No boundary crossing, extra/missing/fused limbs, detached marks, wounds, anatomy drift, text, watermark. Clean chroma source for 256px runtime.

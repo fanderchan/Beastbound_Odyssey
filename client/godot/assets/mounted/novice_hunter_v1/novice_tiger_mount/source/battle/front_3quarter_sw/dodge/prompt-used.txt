@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use attached front-view identity, approved idle, walk, and defend sheets as strict identity, costume, mount, tack, camera, palette, scale, and rendering references. Preserve the same integrated young adult novice hunter and orange-gold tiger, same hair ornament, ochre fur outfit, green strap, red belt, cream tiger markings, dark stripes, tail, reins, saddle. One coherent whole rider+tiger subject per cell, never separate layers.
+
+Deliver exactly one chronological 8-frame DODGE / EVASIVE SIDESTEP sprite sheet in a precise 4 columns x 2 rows grid, frames 1-4 top row and 5-8 bottom row. Flat fully opaque exact #FF00FF magenta background. No labels, borders, shadow, floor, scenery, UI, speed lines, dust, afterimages, flash, or VFX.
+
+AUTHORED VIEW: front three-quarter facing screen lower-left / southwest throughout. The heading remains lower-left even while the body evades slightly toward screen upper-right. Never turn to profile, front-on, right, or back.
+
+CHOREOGRAPHY, eight readable smooth phases:
+1 mounted idle;
+2 tiger notices danger, weight shifts onto near forepaw, rider gathers reins;
+3 low spring-loaded crouch with hindlegs under body, rider compact;
+4 quick lateral push toward screen upper-right, forelegs lifting in sequence, heading still southwest;
+5 peak low evasive hop/side-step, body elongated only slightly, all four legs readable, rider seated and balanced;
+6 landing on the opposite forepaw/hindpaw pair, knees/shoulders absorb;
+7 corrective step returns to original bottom-center anchor;
+8 clean idle.
+This is a small nimble side dodge, not a forward attack, run, spin, or knockaway. Avoid teleporting, excessive airborne height, crossed/fused legs, or rider sliding. Four legs alternate naturally.
+
+Keep identity, proportions, markings, tack, soft painterly 2.5D style, orthographic camera, upper-left light. Use shared overall scale and common bottom-center alignment after extraction; leave generous cell gutters for the intentional lean. No boundary crossing, extra/missing/fused limbs, detached marks, anatomy drift, text, or watermark. Clean chroma-key source for 256px runtime.

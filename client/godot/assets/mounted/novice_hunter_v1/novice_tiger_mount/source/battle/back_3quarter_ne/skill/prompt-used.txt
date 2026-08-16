@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use the attached back-view identity, approved back idle, and approved back attack sheets as strict identity, costume, rider+tiger integration, camera, palette, scale, tack, and rendering references. The attached front-view skill sheet is the authoritative eight-phase timing and intensity reference only; translate it into the correct authored back view without rotating toward the front. Preserve the exact same young adult male novice hunter and orange-gold tiger, with the same back-view hair ornament, ochre fur-trimmed outfit, green diagonal back strap, red belt, boots, tiger cream areas, dark-brown stripe map, tail, reins, and saddle. Rider, tiger, reins, and tack are illustrated together as one coherent whole subject per frame, never separate layers.
+
+Deliver exactly one chronological 8-frame ACTIVE SKILL / COMMANDING ROAR sprite sheet in a precise 4 columns x 2 rows grid. Frames 1-4 top row, 5-8 bottom row. Flat fully opaque exact #FF00FF magenta background. No labels, numbers, borders, grid lines, shadow, floor, scenery, text, UI, aura, glow, magic particles, sound rings, dust, slash arcs, or baked VFX.
+
+AUTHORED VIEW: back three-quarter facing screen upper-right / northeast in every frame. Show rider's back and green strap, tiger's back/rump/tail and upper-right-facing head. Never rotate to front-on, profile, left, or front three-quarter.
+
+ACTION CHOREOGRAPHY matching the front skill:
+1 calm back-view idle;
+2 rider shortens reins, tiger plants all four paws;
+3 tiger lowers shoulders and gathers breath, rider leans forward;
+4 tiger raises chest and head, jaws beginning to open;
+5 peak roar toward upper-right with braced forelegs; rider raises one open commanding hand while the other controls reins;
+6 short held power pose, no VFX;
+7 head lowers and raised hand returns to reins;
+8 controlled recovery matching back idle.
+This is a command/roar skill, not a leap, claw attack, or spellcaster pose. Four tiger legs remain correct and grounded. Rider stays seated with stable pelvis and tack.
+
+CONSISTENCY: identical identity, proportions, markings, costume, tack, line weight, soft painterly 2.5D commercial game style, orthographic camera, upper-left light. Shared scale and bottom-center anchor. Generous empty magenta gutter in every cell; no hair, ear, tail, paw, hand, or rein touches/crosses a cell boundary. No detached marks, extra/missing/fused limbs, changing weapons, anatomy drift, gore, wounds, text, or watermark. Clean chroma-key production source for 256px runtime downsampling.

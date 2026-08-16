@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use attached back identity, idle, hurt, and down sheets as strict identity/costume/mount/tack/camera/palette/scale/rendering references. Use attached front stagger only for eight-phase timing/intensity. Preserve same integrated novice hunter and orange-gold tiger, identical back-view hair/green strap, ochre outfit, tiger markings, tail, reins, saddle.
+
+Deliver exactly one chronological 8-frame STAGGER / HEAVY REEL sheet in precise 4x2 grid, 1-4 top then 5-8 bottom, flat fully opaque exact #FF00FF magenta. No labels, borders, shadow, floor, scenery, UI, hit VFX, stars, dust, blood, wounds, gore.
+
+AUTHORED VIEW: back three-quarter facing screen upper-right / northeast throughout. Rider back/strap and tiger rump/tail/head stay readable. Never rotate front/profile/left.
+
+Choreography matching front and visibly heavier than hurt:
+1 back idle;
+2 strong impact recoil, head/shoulders jerk down-left, rider braces;
+3 uncontrolled backstep, one forepaw lifts, hindquarters sink, rider shoulders thrown back;
+4 peak stagger sway toward screen left, legs spread, head low, rider leans opposite with taut reins;
+5 near-loss crouch, one foreleg bends deeply but tiger does not fall, rider folds forward;
+6 corrective paw plants, chest rises;
+7 balance/reins re-center;
+8 back idle.
+Must show weight/asymmetry, not similar poses; not knockaway/down. Four legs correct, rider/tack integrated.
+
+Preserve identity/proportions/markings, soft painterly 2.5D style, orthographic camera, upper-left light, shared scale/bottom anchor, generous gutters. No boundary crossing, extra/missing limbs, detached marks, anatomy drift, text, watermark. Clean chroma source for 256px runtime.

@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use attached back identity, approved back idle, walk and defend sheets as strict identity, costume, mount, tack, camera, palette, scale, and rendering references. Use attached front dodge only for eight-phase timing. Preserve the same integrated novice hunter and orange-gold tiger with identical back-view hair/green strap, ochre outfit, tiger markings, tail, reins, saddle.
+
+Deliver exactly one chronological 8-frame DODGE / EVASIVE SIDESTEP sheet in a precise 4x2 grid, frames 1-4 top and 5-8 bottom, flat fully opaque exact #FF00FF magenta background. No labels, borders, shadow, floor, scenery, UI, speed lines, dust, afterimages, flash, or VFX.
+
+AUTHORED VIEW: back three-quarter facing screen upper-right / northeast in every frame. Heading stays upper-right while body evades slightly toward screen down-left. Never rotate to front, profile, left, or front three-quarter.
+
+CHOREOGRAPHY matching front:
+1 back idle;
+2 weight shifts and rider gathers reins;
+3 low spring-loaded crouch, hindlegs under body;
+4 quick lateral push toward down-left, forelegs lift in sequence, heading remains northeast;
+5 peak low evasive hop/side-step, all four legs readable, rider seated/balanced;
+6 landing on opposite paw pair;
+7 corrective step returns to original anchor;
+8 back idle.
+Small nimble side dodge, not forward attack, run, spin, or knockaway. No teleporting, excessive height, crossed/fused legs, or sliding rider.
+
+Preserve identity/proportions/markings/tack, soft painterly 2.5D style, orthographic camera, upper-left light. Shared scale/bottom-center alignment, generous gutters. No boundary crossing, extra/missing limbs, detached marks, anatomy drift, text, watermark. Clean chroma source for 256px runtime.

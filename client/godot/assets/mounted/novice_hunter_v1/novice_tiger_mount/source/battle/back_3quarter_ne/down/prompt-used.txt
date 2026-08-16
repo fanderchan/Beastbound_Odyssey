@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use the attached back-view identity image, approved back-view idle sheet, and approved back-view attack sheet as strict identity, costume, mount, tack, camera, palette, scale, and rendering references. Preserve the same integrated whole rider+tiger subject in every frame: the same young adult male novice hunter seen from behind in ochre fur-trimmed clothing with green diagonal back strap, red belt, boots, reins and saddle, riding the same friendly orange-gold tiger with cream muzzle/chest/paws, dark-brown stripes, amber eyes, and striped tail. Rider, tiger, reins, and tack are one coherently illustrated whole-frame character in every cell; never separate, paste, or layer the rider and mount.
+
+Deliver exactly one chronological 8-frame TEMPORARY DOWN / FAINT transition sprite sheet in a precise 4 columns x 2 rows grid. Read left-to-right top row frames 1-4, then left-to-right bottom row frames 5-8. Flat, fully opaque exact #FF00FF magenta background across the entire canvas. No labels, numbers, borders, grid lines, shadow, floor, scenery, text, UI, halo, stars, dust, glow, blood, wounds, gore, death imagery, or baked VFX.
+
+AUTHORED VIEW: back three-quarter facing screen upper-right / northeast. Show the rider's back, green diagonal strap and fur collar, and the tiger's back, rump, tail, and upper-right-facing head throughout. Never rotate to front-on, profile, left, or front three-quarter.
+
+ACTION CHOREOGRAPHY, eight clear evenly spaced phases:
+1 mounted ready stance close to approved back idle, tiger alert;
+2 weakened recoil, tiger's shoulders dip and rider braces, tiger still alert but tired;
+3 legs begin to buckle while rider folds closer, tiger eyes visibly half-lidded;
+4 tiger lowers chest and hindquarters in a controlled collapse, eyes mostly closed;
+5 compact crouched/lying transition, rider safely integrated, tiger eyes gently closed;
+6 body rests lower, head and folded paws readable, rider slumped coherently, eyes remain closed;
+7 nearly settled temporary-faint pose, eyes remain closed;
+8 stable final down pose: tiger resting compactly on side/belly facing upper-right, eyes gently closed, rider safely slumped against tiger and saddle, both alive and unharmed. Frame 8 must be the visual starting pose for a later REVIVE animation.
+Never reopen the tiger's eyes after frame 4. This is temporary battle incapacitation, never sleep comedy and never death. No rider falling away, detached body, broken limbs, missing tack, or injury expression.
+
+CONSISTENCY: identical back-view hair, costume, tiger markings, proportions, tail, saddle, reins, line weight, soft painterly 2.5D commercial game style, orthographic camera, and upper-left lighting. Use a common bottom-center ground anchor as the silhouette lowers. Leave generous empty magenta gutter in every cell; no hair, tail, paw, or rein may touch/cross a logical cell boundary. Four tiger legs remain anatomically coherent even folded or partly occluded. No detached motion marks, duplicated parts, anatomy drift, text, or watermark. Clean production source suitable for deterministic chroma-key extraction and 256px runtime downsampling.

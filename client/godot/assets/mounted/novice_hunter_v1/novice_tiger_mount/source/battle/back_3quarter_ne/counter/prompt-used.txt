@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use attached back identity, approved back idle, defend, and hurt sheets as strict identity/costume/mount/tack/camera/palette/scale/rendering references. Use attached front counter only for eight-phase timing. Preserve same integrated novice hunter and orange-gold tiger with identical back-view hair/green strap, ochre outfit, tiger markings, tail, reins, saddle.
+
+Deliver exactly one chronological 8-frame COUNTERATTACK sheet in precise 4x2 grid, 1-4 top then 5-8 bottom, flat fully opaque exact #FF00FF magenta. No labels, borders, shadow, floor, scenery, UI, slash arc, hit flash, dust, glow, VFX.
+
+AUTHORED VIEW: back three-quarter facing screen upper-right / northeast throughout. Never rotate to front, profile, left, or front-three-quarter.
+
+Choreography matching front:
+1 back idle;
+2 compact incoming-hit brace, tiger lowers one shoulder and rider tightens reins;
+3 controlled deflection/recoil, weight shifts to hindquarters/near forepaw;
+4 immediate counter coil low, focus upper-right, short rein cue;
+5 fast peak retaliatory near-forepaw swat and short body drive toward upper-right, strong asymmetric silhouette without VFX;
+6 follow-through, paw returns and weight crosses forward;
+7 balance/reins reset;
+8 back idle.
+Must read absorb-then-answer, not full pounce or dodge. Four legs correct, rider seated, tack attached.
+
+Preserve identity/proportions/markings, soft painterly 2.5D style, orthographic camera, upper-left light, shared scale/bottom anchor, generous gutters. No boundary crossing, extra/missing/fused limbs, detached marks, wounds, anatomy drift, text, watermark. Clean chroma source for 256px runtime.

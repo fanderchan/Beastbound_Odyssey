@@ -1,0 +1,18 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use the attached front-view identity, approved idle, and approved hurt sheets as strict identity, costume, mount, tack, camera, palette, scale, and rendering references. Keep the exact same integrated young adult male novice hunter and orange-gold tiger with identical hair ornament, ochre fur outfit, green strap, red belt, cream tiger markings, dark stripes, tail, reins, and saddle. Every frame is one whole coherently illustrated rider+tiger subject, never separate layers.
+
+Deliver exactly one chronological 6-frame DEFEND / BRACE sprite sheet in a precise 3 columns x 2 rows grid. Top row frames 1-3, bottom row 4-6. Flat fully opaque exact #FF00FF magenta background. No labels, numbers, borders, grid lines, shadow, floor, scenery, text, UI, shield object, barrier, aura, dust, flash, or baked VFX.
+
+AUTHORED VIEW: front three-quarter facing screen lower-left / southwest throughout. Never rotate to front-on, profile, right, or back.
+
+ACTION CHOREOGRAPHY:
+1 mounted idle ready;
+2 rider shortens reins and lowers center of gravity, tiger widens forepaw stance;
+3 tiger deliberately crouches with shoulders forward, chin tucked, ears focused; rider leans low over neck with elbows bent;
+4 peak defensive brace held toward lower-left: forelegs firmly planted apart, back/hindquarters supporting, rider compact and secure in saddle, both hands steady on reins;
+5 tension releases, tiger chest rises and rider returns upright;
+6 clean idle recovery.
+This is a grounded brace, not hurt, not dodge, not down. No shield appears; defense is conveyed entirely by posture. All four tiger legs remain correct and load-bearing. Rider never dismounts or floats.
+
+CONSISTENCY: identical identity, markings, proportions, costume, tack, line weight, soft painterly 2.5D commercial style, orthographic camera, upper-left light. Shared scale and bottom-center anchor. Generous empty magenta gutters; no hair, ear, tail, paw, or rein crosses cell boundaries. No extra/missing/fused limbs, detached marks, anatomy drift, text, or watermark. Clean chroma-key production source for 256px runtime downsampling.

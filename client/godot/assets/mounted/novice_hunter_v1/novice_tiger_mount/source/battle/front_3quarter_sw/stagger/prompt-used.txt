@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use attached front identity, idle, hurt, defend, and down sheets as strict identity/costume/mount/tack/camera/palette/scale/rendering references. Preserve same integrated novice hunter and orange-gold tiger, identical hair ornament, ochre outfit, green strap, red belt, cream markings, dark stripes, tail, reins, saddle.
+
+Deliver exactly one chronological 8-frame STAGGER / HEAVY REEL sheet in precise 4x2 grid, frames 1-4 top then 5-8 bottom, flat fully opaque exact #FF00FF magenta. No labels, borders, shadow, floor, scenery, UI, hit VFX, stars, dust, blood, wounds, gore.
+
+AUTHORED VIEW: front three-quarter toward screen lower-left / southwest throughout. Keep heading readable; never rotate to right, back, profile, or front-on.
+
+Eight-phase choreography, clearly heavier than HURT but not knockaway or down:
+1 mounted idle;
+2 strong impact recoil, tiger head/shoulders jerk up-right and rider braces hard;
+3 first uncontrolled backstep: near forepaw lifts and hindquarters sink, rider shoulders thrown back but pelvis remains saddle-bound;
+4 peak stagger: tiger torso sways toward screen right, legs spread for balance, head low; rider leans opposite with taut reins;
+5 near-loss-of-balance crouch, one knee/foreleg bends deeply but tiger does not fall; rider folds forward;
+6 corrective step plants a paw and chest begins to rise;
+7 balance and reins re-center;
+8 idle recovery.
+Must show visible weight and asymmetrical recovery, not eight similar poses. Four tiger legs remain anatomically correct; no rider separation, missing tack, or fatal injury.
+
+Preserve identity/proportions/markings, soft painterly 2.5D style, orthographic camera, upper-left light, shared scale/bottom anchor, generous gutters for sway. No boundary crossing, extra/missing/fused limbs, detached marks, anatomy drift, text, watermark. Clean chroma source for 256px runtime.

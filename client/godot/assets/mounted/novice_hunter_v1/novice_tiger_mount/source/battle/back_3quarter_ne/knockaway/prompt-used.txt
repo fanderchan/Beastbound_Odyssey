@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use the attached back-view idle, stagger, and down sheets as strict identity, costume, mount, tack, camera, palette, scale, rendering, and motion-intensity references. Preserve the same integrated novice hunter and orange-gold tiger, identical back-view brown hair, green diagonal strap, ochre fur-trimmed outfit, red belt, boots, tiger markings, cream paws, striped tail, reins, and saddle. Rider, tiger, reins, and tack remain one coherent whole-frame illustrated subject in every cell.
+
+Deliver exactly one chronological 8-frame KNOCKAWAY / FORCEFUL KNOCKBACK sheet in a precise 4 columns x 2 rows grid, frames 1-4 on the top row then frames 5-8 on the bottom row. Use a flat, fully opaque exact #FF00FF magenta background across the entire canvas. No labels, borders, grid lines, shadow, floor, scenery, UI, hit VFX, slash arc, stars, dust, blood, wounds, gore, or text.
+
+AUTHORED VIEW: back three-quarter facing screen upper-right / northeast throughout. Keep the rider's back and green strap, tiger rump, tail, foreshortened torso, and head direction readable. Never rotate front-on, profile, left, or southwest. The incoming impact is from screen upper-right, so the combined rider+tiger body is displaced backward toward screen lower-left, opposite its facing direction.
+
+Eight clearly distinct phases matching the front view, much stronger than STAGGER but not death or dismount:
+1 mounted back-view idle ready pose;
+2 severe impact compression, tiger head and shoulders snap down-left while rider braces hard and stays saddle-bound;
+3 backward launch begins toward lower-left, all four paws leaving or nearly leaving the ground as one compact mass;
+4 peak low airborne knockback, clearly translated backward with legs tucked naturally and rider pelvis fixed to saddle;
+5 descending backward, tiger extends paws to prepare a landing while rider leans into the deceleration;
+6 hard controlled four-paw or forepaw-first landing, torso compressed and reins taut, no collapse;
+7 one heavy recovery step and chest rise;
+8 stable mounted back-view idle recovery.
+Show unmistakable backward displacement and weight, not an attack, jump, dodge, stagger, or fall-down cycle. Keep the travel bounded inside each cell and use pose/composition to communicate displacement; do not cross cell boundaries. The tiger always has four anatomically coherent legs, and the rider remains securely mounted with both hands and boots coherent; no floating rider, dismount, separated layers, or fatal injury.
+
+Preserve exact identity, proportions, markings, soft painterly 2.5D commercial game style, orthographic camera, dark-brown linework, and upper-left lighting. Use one shared subject scale and bottom-center ground reference with generous empty magenta gutters for the airborne arc. No extra, missing, fused, or detached limbs; no anatomy drift, watermark, logo, or magenta on the subject. Clean production source suitable for deterministic chroma-key extraction and 256px runtime downsampling.

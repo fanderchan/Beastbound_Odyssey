@@ -1,0 +1,18 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use the attached back-view identity, approved back idle, and approved back hurt sheets as strict identity, costume, mount, tack, camera, palette, scale, and rendering references. Use the attached front defend sheet only for six-phase timing and brace intensity. Keep the exact same integrated novice hunter and orange-gold tiger with identical back-view hair, ochre fur outfit, green diagonal strap, red belt, cream tiger markings, dark stripes, tail, reins, and saddle. Every frame is one coherent whole rider+tiger subject.
+
+Deliver exactly one chronological 6-frame DEFEND / BRACE sprite sheet in a precise 3 columns x 2 rows grid, top row frames 1-3 and bottom row 4-6, on flat fully opaque exact #FF00FF magenta. No labels, borders, shadow, floor, scenery, UI, shield, barrier, aura, dust, flash, or VFX.
+
+AUTHORED VIEW: back three-quarter toward screen upper-right / northeast throughout. Rider's back/green strap and tiger's rump/tail/upper-right-facing head stay readable. Never rotate to front or profile.
+
+CHOREOGRAPHY matching the front defend:
+1 back idle ready;
+2 rider shortens reins and lowers center, tiger widens forepaw stance;
+3 tiger crouches, shoulders forward and chin tucked, rider low over neck;
+4 peak grounded brace toward upper-right, forelegs firmly planted apart, hindquarters supporting, rider compact in saddle with both hands on reins;
+5 chest rises and rider returns upright;
+6 clean back idle.
+Defense is posture only: no shield. Not hurt, dodge, or down. Four tiger legs correct and load-bearing; rider never floats/dismounts.
+
+Preserve identity, markings, proportions, tack, soft painterly 2.5D style, orthographic camera, upper-left light. Shared scale and bottom-center anchor, generous cell gutters. No crossing boundaries, extra/missing/fused limbs, detached marks, anatomy drift, text, or watermark. Clean chroma-key source for 256px runtime.

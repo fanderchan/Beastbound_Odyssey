@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use the attached front-view identity, approved idle, and approved attack sheets as strict identity, costume, rider+tiger integration, camera, palette, scale, tack, and rendering references. Preserve the exact same young adult male novice hunter and friendly orange-gold tiger, with the same face, hair ornament, ochre fur-trimmed outfit, green strap, red belt, boots, tiger cream muzzle/chest/paws, dark-brown stripe map, amber eyes, tail, reins, and saddle. Rider, tiger, reins, and tack are newly illustrated together as one coherent whole subject per frame, never separate layers.
+
+Deliver exactly one chronological 8-frame ACTIVE SKILL / COMMANDING ROAR sprite sheet in a precise 4 columns x 2 rows grid. Read frames 1-4 across the top row and 5-8 across the bottom row. Use a flat fully opaque exact #FF00FF magenta background across the entire canvas. No labels, numbers, borders, grid lines, shadow, floor, scenery, text, UI, aura, glow, magic particles, sound rings, dust, slash arcs, or other baked VFX; runtime effects will be separate.
+
+AUTHORED VIEW: front three-quarter facing screen lower-left / southwest, unchanged in all eight frames. Never rotate to front-on, profile, right, or back.
+
+ACTION CHOREOGRAPHY, eight evenly spaced readable phases, visually distinct from the basic attack:
+1 calm mounted ready stance close to approved idle;
+2 rider shortens the reins and tiger plants all four paws;
+3 tiger lowers shoulders and gathers breath, rider leans forward in command;
+4 tiger raises chest and head, jaws beginning to open;
+5 peak commanding roar toward lower-left: mouth open in a strong but non-gory roar, chest expanded, forelegs braced; rider raises one open commanding hand while the other still controls the reins;
+6 brief held power pose, no VFX, rider/tiger remain integrated;
+7 head lowers and rider returns the raised hand to the reins;
+8 controlled recovery matching idle.
+This is a mounted command/roar skill, not a leap, not a claw strike, and not a spellcaster pose. Keep all four tiger legs anatomically correct and grounded. The rider remains seated with stable pelvis and tack; one hand gesture is clean, readable, and returns naturally.
+
+CONSISTENCY: identical character and tiger proportions, markings, costume, tack, line weight, soft painterly 2.5D commercial game style, orthographic camera, and upper-left light. Common bottom-center anchor and shared scale. Leave generous empty magenta gutter in every cell; no hair, ear, tail, paw, hand, or rein may touch/cross a cell boundary. No detached motion marks, extra/missing/fused limbs, changing weapons, anatomy drift, gore, blood, wounds, death, text, or watermark. Clean source suitable for deterministic chroma-key extraction and 256px runtime downsampling.

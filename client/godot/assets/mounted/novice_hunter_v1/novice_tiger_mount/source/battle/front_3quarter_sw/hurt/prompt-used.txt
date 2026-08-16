@@ -1,0 +1,18 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use the attached front-view identity, approved idle, and approved attack sheets as strict identity, costume, mount, tack, camera, palette, scale, and rendering references. Keep the exact same integrated young adult male novice hunter and orange-gold tiger with identical clothing, hair ornament, cream muzzle/chest/paws, dark-brown stripes, tail, reins, and saddle. Every frame is one coherently illustrated whole rider+tiger subject, never separate layers.
+
+Deliver exactly one chronological 6-frame HURT REACTION sprite sheet in a precise 3 columns x 2 rows grid. Frame order is top row 1-3, then bottom row 4-6. Flat fully opaque exact #FF00FF magenta background across the canvas. No labels, numbers, borders, grid lines, shadow, floor, scenery, text, UI, hit flash, impact star, dust, blood, wounds, gore, or baked VFX.
+
+AUTHORED VIEW: front three-quarter facing screen lower-left / southwest throughout. Do not rotate to front-on, profile, right, or back.
+
+ACTION CHOREOGRAPHY, six clear evenly spaced phases:
+1 mounted ready stance close to approved idle;
+2 sudden compact flinch: tiger shoulders and head recoil slightly up-right while paws remain controlled; rider tightens reins and braces;
+3 peak hurt recoil: tiger body compresses, ears angle back, one forepaw lightens; rider torso leans with the impact but pelvis stays in saddle;
+4 settling step, tiger regains four-paw balance and rider absorbs the motion through knees/elbows;
+5 posture and reins recover;
+6 clean return to idle.
+This is a brief non-graphic damage reaction, not stagger, not knockaway, not down. Keep the heading readable and displacement small. Four tiger legs stay anatomically correct, no sliding rider, no detached reins or tack.
+
+CONSISTENCY: identical identity, markings, proportions, costume, tack, line weight, soft painterly 2.5D commercial game style, orthographic camera, upper-left light. Shared scale and bottom-center anchor. Generous empty magenta gutter; no hair, ear, tail, paw, or rein touches/crosses cell boundaries. No extra/missing/fused limbs, detached motion marks, anatomy drift, text, or watermark. Clean production source for deterministic chroma extraction and 256px runtime downsampling.

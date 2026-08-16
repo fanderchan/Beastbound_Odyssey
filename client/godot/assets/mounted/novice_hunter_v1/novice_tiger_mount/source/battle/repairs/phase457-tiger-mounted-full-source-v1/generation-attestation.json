@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "repairId": "phase457-tiger-mounted-full-source-v1",
+  "generator": "built_in_imagegen",
+  "generatorSessionId": "019fe7c8-2fd7-7972-94a7-98382ddfe591",
+  "transcriptPath": "sessions/2026/08/10/rollout-2026-08-10T02-28-04-019fe7c8-2fd7-7972-94a7-98382ddfe591.jsonl",
+  "compositionClaim": "integrated_mounted_whole_frame_action_sheets",
+  "independentlyAuthoredSourceViews": true,
+  "runtimeOrOfflineLayeredComposition": false,
+  "semanticIndependenceVerified": false,
+  "ownerReviewStatus": "pending",
+  "releaseGate": false,
+  "runtimeEnabled": false,
+  "bundleDigest": "7f18dc67434cc7aa66444a3526c83468c615c9a65ce86fa778f674a27d0e0dcb",
+  "references": [
+    {
+      "label": "identity_board",
+      "path": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/identity/identity-board-transparent.png",
+      "sha256": "98942f5c0f6703f084f5ba4a15692af2989444e7b0a278fe9b94257a136728be"
+    }
+  ],
+  "formalReplay": {
+    "workingArchive": ".run/art_repair_phase457_tiger_mounted/formal-production-v1",
+    "summary": ".run/art_repair_phase457_tiger_mounted/formal-production-v1/formal-replay-summary.json",
+    "summarySha256": "3c56ca4807e9ff57e2a0271bd0c9ab5671c055037d9ecd3deb0542a6a663fb22",
+    "actionViewCount": 24,
+    "sourceAndRuntimeRgbaReplayExact": true,
+    "frameCount": 180
+  },
+  "installedProvenance": {
+    "sourceLedger": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/source/battle/source-ledger.json",
+    "sourceLedgerSha256": "ce610b8c4230a6c693ade884efe08c6419733c98faaf0cb98070ae0d84920b50",
+    "installManifest": "client/godot/assets/mounted/novice_hunter_v1/novice_tiger_mount/source/battle/install-manifest.json",
+    "installManifestSha256": "24c8f8301b161cea617bca0594b10aec7ca8614cab6f575eea6b291e7167ef8f",
+    "downReviveSourceAndRuntimeExactRgba": true
+  },
+  "actions": {
+    "front_3quarter_sw/idle": {"generationId": "exec-b183c75f-5da8-4f51-9725-10fa1e0f7e1c", "sourceSha256": "63ad8a2980022c25424da5f73f0f1e8aa7ed9402ef86def2a2a74d989974e207", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/walk": {"generationId": "exec-9921f7db-4a47-4502-8585-1de068f8fa97", "sourceSha256": "8620bcbab61ea659c7882d0a5228a1a688224e9a3f2932f646de58f3f571694c", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/attack": {"generationId": "exec-c01dc8c5-a068-4482-8110-7a744da7feba", "sourceSha256": "a614eac6d02376ab42b923650892832f9a4b6b9983a147bb65ba8ae6212afabe", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/skill": {"generationId": "exec-3424f0d6-834f-453e-8925-fcf2521a8172", "sourceSha256": "037e7a0a44cb24d5b3403d78db26fac4330276d2972dc2c1b3a21135c23b35d6", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/hurt": {"generationId": "exec-76b9dbe0-d057-4f44-843e-1b9b26b3007a", "sourceSha256": "24ae8d18dc336ee063025d2824babd8c36f9ce03fefddac62223d40b3ec6a5fe", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/defend": {"generationId": "exec-2976ca2a-e2ce-48fc-a84f-aa3de4582ca5", "sourceSha256": "dcc82a3f544087a068bbd6edc6ef52eaf4322ebc3d00fb3cf323fcb87aef9d20", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/dodge": {"generationId": "exec-ab378078-03e7-4353-8364-7ec2ac282616", "sourceSha256": "19f7244636c5f5b1a969e719bd99b303d94f84773dcc9ae1b895c77a77de3c12", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/counter": {"generationId": "exec-e911cbd3-62af-4c56-8f02-b215ab1d39ec", "sourceSha256": "33ec1274976a58fa026f204055b465deac878cdfe6338a6af4cba58197f15c44", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/stagger": {"generationId": "exec-84d334bf-2f1b-4f7b-ab18-e70a0c253592", "sourceSha256": "0dc7e0b771fc9377ba1f3186df6b3769d69f97eabbe92240ab74c9bbcb477e1f", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/knockaway": {"generationId": "exec-50eea90e-1d57-47c1-bade-778069980921", "sourceSha256": "0d56de7ed1db23892b2dc5c867263306d0e031e7e383992f861558a36af5e9d7", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/down": {"generationId": "exec-e724964e-1a31-4379-9b00-0c1e8174b567", "parentGenerationId": "exec-381f8ee1-6d90-4dac-9a5d-bec95dc304c9", "sourceSha256": "a714135244a63a2e21fccba605d96398e5a9a3c9f7964381a48a85adf7ec28a6", "generatedCacheByteParityVerified": true},
+    "front_3quarter_sw/revive": {"generationId": "exec-df72ee24-31af-4efd-9a2a-73768c187c42", "parentGenerationId": "exec-1a208937-6f9c-483c-a190-cbfceceb040e", "sourceSha256": "ef9cfd244edfd925da794d0ab2e005f690dcc271a731ad922483a9fe41158191", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/idle": {"generationId": "exec-0727cca3-7b46-4568-9fcd-00ff3aedb55f", "sourceSha256": "f5540be9b21bec6160ae86022d7b6a9b74a137bce3b0a2f08da335d524c944b1", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/walk": {"generationId": "exec-a26102a6-6cc5-4ac1-bb17-03390cf28697", "sourceSha256": "821175863cfa727857c726f765a33b87aec2822eaf15da4595a047d9f9af41e0", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/attack": {"generationId": "exec-4ab118d2-850c-46bb-8572-705bbc622b36", "sourceSha256": "0eea552a331557ec52c5a551dbf65a5d35593266fd89f959cf174cd94fe8ce19", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/skill": {"generationId": "exec-db1b09f0-2b74-4bc4-a19e-b3b6a92acdbb", "sourceSha256": "33ef4f132290de1f92404708785a90226a25e0ce15fcbcabaaeec0b80914a166", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/hurt": {"generationId": "exec-efb738ce-cde7-494b-aaf2-c3f29bf11240", "sourceSha256": "6c9943da8c6bf70e40655fecdce52ef64bd08b9db7c9fcd46de174b6e84e1c20", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/defend": {"generationId": "exec-bad59d8b-3ac4-4a65-bd7e-2348b4cd33a4", "sourceSha256": "dbbba58b4ab7a30243fcb6223c58f76b9a528e0002df6eb95b72bcb7a3030b10", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/dodge": {"generationId": "exec-bbc32373-532b-4837-bba6-12c944a1fa05", "sourceSha256": "17512a374b943ca7d42dba302ee2f62ed203979696d8abc060784082b3b22b1d", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/counter": {"generationId": "exec-2277100e-7254-4aec-b846-0ab11888d713", "sourceSha256": "a53322163742640ae6351e3714f50bfdd35fe116ac2cff129d46bb7237606077", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/stagger": {"generationId": "exec-b9b1ccb9-4cad-4651-8cec-e9b6d3ffdc8b", "sourceSha256": "65793d12b625f2305f5f16942b0d96bea35acca0fec29fdbcadc70d5bfc36b27", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/knockaway": {"generationId": "exec-f67e2ecb-697f-4dd4-858e-6e2a6acc49d6", "sourceSha256": "a3ca08a2e22e1f72dbf6357a79c7effedb16c332c3331b855d2e524931883686", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/down": {"generationId": "exec-55ea96c6-db41-4e79-ab7f-8aa8b30b29a1", "sourceSha256": "723cd62b98843ddf9ceaf6314a2d45326b9c79ae030c14fd2995dea15a97b193", "generatedCacheByteParityVerified": true},
+    "back_3quarter_ne/revive": {"generationId": "exec-bdf3943c-9493-4ba9-bce8-d6cc96c31039", "parentGenerationId": "exec-396e295d-efff-45ed-8ade-9d1c67fee384", "sourceSha256": "f2a4c5c6cbf9384bba2c11404460ebbe474cabdb071a6e8d3531158bc7350c48", "generatedCacheByteParityVerified": true}
+  },
+  "claimLimit": "binds current generator cache, identity reference, final lossless action sheets, exact tracked prompts, deterministic preprocessing/replay, and installed runtime hashes; it does not prove copyright provenance, semantic independence, owner approval, or player release"
+}

@@ -1,0 +1,20 @@
+Create one production 2D game sprite source sheet for Beastbound Odyssey.
+
+Use the attached back-view identity image, approved back-view idle and walk sheets as strict identity, costume, mount, tack, camera, palette, scale, and rendering references. The attached front-view attack sheet is only the authoritative eight-phase action-timing and silhouette-intensity reference; translate that choreography into the correct back three-quarter view without rotating toward the front. Preserve exactly the same integrated whole character in every frame: the same young adult male novice hunter, ochre fur-trimmed outfit, green diagonal back strap, red belt, boots, simple reins and saddle, riding the same friendly large orange-gold tiger with cream muzzle/chest/paws, dark-brown stripe pattern, round expressive head, amber eyes, and striped tail. Rider, tiger, reins, and tack must be illustrated together as one coherent whole-frame subject in every cell, never assembled as separate layers.
+
+Deliver exactly one chronological 8-frame BASIC ATTACK sprite sheet in a precise 4 columns x 2 rows grid. Frame order is left-to-right on the top row for frames 1-4, then left-to-right on the bottom row for frames 5-8. Flat, fully opaque exact #FF00FF magenta background across the entire canvas. No labels, numbers, borders, grid lines, shadow, floor, scenery, text, UI, impact flash, slash arc, dust, glow, or baked VFX.
+
+AUTHORED VIEW: back three-quarter facing screen upper-right / northeast. Show the rider's back, fur collar and green diagonal strap, the tiger's back and rump, tail, and right-facing head in correct back three-quarter perspective. Keep that exact heading in all frames. Never rotate to front-on, profile, left, or front three-quarter.
+
+ACTION CHOREOGRAPHY, matching the front-view attack's eight evenly spaced phases:
+1 ready stance close to approved back idle;
+2 anticipation, tiger lowers shoulders and rider leans slightly with reins gathered;
+3 push-off, rear legs drive and forelegs begin extending;
+4 forward lunge toward upper-right with one forepaw leading;
+5 clear peak claw-and-body strike toward upper-right, strongest silhouette but no VFX;
+6 short impact follow-through, body coherent and rider still seated;
+7 recoil, weight returns over hindquarters;
+8 controlled recovery that visibly connects back to idle.
+This is a compact mounted melee strike, not a run cycle and not a detached weapon swing. Maintain four anatomically correct tiger legs throughout; no extra, fused, or missing paws. The rider follows the tiger's mass with stable pelvis, knees and boots against the tiger, both hands managing the same reins; no floating, sliding, arm flapping, or dismounting.
+
+CONSISTENCY: identical back-view hair, clothing, tiger markings, head/body proportions, tail length, saddle and reins across all frames. Keep the same soft painterly 2.5D commercial game style, orthographic camera, line weight, and upper-left lighting. Use one shared scale and bottom-center anchor. Leave generous empty magenta gutter inside every logical cell; no hair, ear, tail, paw, or rein may touch or cross a cell boundary. No detached motion marks, gore, blood, wounds, death, text, watermark, or anatomy drift. Clean production source suitable for deterministic chroma-key extraction and 256px runtime downsampling.

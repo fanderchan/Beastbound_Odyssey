@@ -1,0 +1,18 @@
+Regenerate a production Beastbound Odyssey back-view mounted HURT animation with six visibly distinct chronological poses.
+
+The attached back-view identity and idle images strictly lock the same integrated rider+tiger identity, costume, stripe map, tack, camera, northeast heading, palette, and painterly 2.5D style. The attached front-view hurt sheet locks the intended compact hit-reaction timing. Do not produce six near-identical standing poses.
+
+Output exactly a 3 columns x 2 rows sheet, frames 1-3 top row then 4-6 bottom row, on a flat fully opaque exact #FF00FF magenta background. No text, labels, borders, dividers, shadow, floor, scenery, UI, impact VFX, stars, dust, blood, wounds, or gore.
+
+AUTHORED VIEW remains back three-quarter toward screen upper-right / northeast in every frame. Rider back, green diagonal strap, tiger rump/tail and upper-right-facing head stay readable. Never rotate to a front or side view.
+
+Make silhouette changes unmistakable but still a brief HURT, not stagger/knockaway:
+1 normal back-view idle, rider upright;
+2 first impact: tiger shoulders drop about one head-width and head jerks slightly down-left; one forepaw lifts; rider shoulders snap backward with elbows straightening against taut reins;
+3 peak recoil: tiger torso compresses and twists subtly, ears flat, hindquarters sink; rider torso leans back and to screen-left, head tucked, pelvis still securely in saddle;
+4 rebound: tiger takes one short corrective step with a different paw and begins raising chest; rider folds forward to absorb the return;
+5 balance restored, chest nearly normal, rider shoulders re-center and reins loosen;
+6 exact-feeling idle recovery.
+The rider, tiger, reins and saddle remain one integrated whole subject. All four tiger legs remain anatomically readable. No missing/extra/fused limbs or sliding rider.
+
+Use a shared bottom-center anchor and overall scale, with generous empty magenta gutters in every cell. Preserve identity/proportions/lighting/line weight. No detached motion marks, text, watermark, anatomy drift, or changing equipment. Clean source for deterministic chroma-key extraction and 256px runtime downsampling.

@@ -1,0 +1,13 @@
+Edit the attached Beastbound Odyssey 4x2 eight-frame mounted DOWN animation source sheet.
+
+Preserve the exact canvas size, 4 columns x 2 rows layout, chronological frame order, flat magenta background, authored front-three-quarter southwest view, same rider+tiger identity, proportions, costume, stripe map, saddle, reins, poses, scale, bottom alignment, lighting, rendering, and all silhouettes.
+
+Make one surgical continuity correction only: remove the tiger-eye flicker during the collapse. The tiger must progress naturally from alert to faint without reopening its eyes:
+- frame 1: eyes fully open;
+- frame 2: eyes open but tired;
+- frame 3: visibly half-lidded;
+- frame 4: mostly closed;
+- frames 5, 6, 7, and 8: eyes gently and consistently closed.
+The rider's expression should also progress smoothly from alert in frame 1 to tired in frame 2, eyes closing by frame 3 and staying closed through frame 8.
+
+Do not alter the body choreography, view direction, character identity, cell positions, paws, limbs, tail, hair, costume, reins, or background. Do not add labels, lines, shadows, VFX, halo, stars, wounds, blood, gore, detached marks, text, or watermark. Keep every whole integrated rider+tiger silhouette inside its logical cell with generous gutters. Output the corrected sprite sheet only.

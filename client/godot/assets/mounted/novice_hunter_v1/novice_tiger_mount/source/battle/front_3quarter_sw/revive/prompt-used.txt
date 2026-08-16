@@ -1,0 +1,7 @@
+Edit the attached Beastbound Odyssey 4x2 eight-frame mounted REVIVE animation source sheet.
+
+Preserve the exact canvas, 4 columns x 2 rows, chronological order, flat magenta background, authored front-three-quarter southwest view, character identity, costume, tiger markings, saddle, reins, scale, anchors, lighting, rendering, and frames 1, 2, 4, 5, 6, 7, and 8.
+
+Make one surgical timing correction only in frame 3, the third cell of the top row. Frame 3 must become a true intermediate between frame 2 and frame 4: the tiger has lifted its head and chest onto bent forelegs but remains low, with hindquarters still folded; the rider is only halfway upright, shoulders rising and one hand gathering the reins, not already sitting fully erect. Keep the same integrated whole rider+tiger identity and exact southwest heading. This must eliminate the visible jump from lying to upright.
+
+Do not change any other frame. Do not add or remove limbs, alter stripes/costume, rotate the view, move cell positions, change background, or add labels, borders, shadow, floor, VFX, halo, stars, dust, wounds, text, or watermark. Output only the corrected full sprite sheet.
