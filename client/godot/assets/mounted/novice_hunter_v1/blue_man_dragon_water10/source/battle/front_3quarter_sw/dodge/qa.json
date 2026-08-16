@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "front_3quarter_sw",
+  "action": "dodge",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "residualMagentaFrames": [],
+  "transparentRgbLeakFrames": [],
+  "visualSelfReview": "passed",
+  "ownerReviewStatus": "pending",
+  "frames": [
+    {
+      "slot": "dodge-1",
+      "bbox": [
+        34,
+        38,
+        222,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-2",
+      "bbox": [
+        31,
+        46,
+        225,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-3",
+      "bbox": [
+        40,
+        71,
+        216,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-4",
+      "bbox": [
+        22,
+        86,
+        234,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-5",
+      "bbox": [
+        31,
+        89,
+        226,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-6",
+      "bbox": [
+        48,
+        68,
+        207,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-7",
+      "bbox": [
+        34,
+        47,
+        222,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "dodge-8",
+      "bbox": [
+        34,
+        40,
+        223,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "mountFormId": "blue_man_dragon_water10",
   "characterId": "novice_hunter_v1",
   "artStatus": "in_production",
-  "productionScope": "mounted_world_true_eight_owner_review_pending",
+  "productionScope": "formal_battle_two_view_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -33,73 +33,73 @@
       "frameCount": 6,
       "fps": 8,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
       "fps": 10,
       "loop": true,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
       "fps": 12,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
       "fps": 10,
       "loop": false,
-      "status": "not_produced"
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -153,7 +153,8 @@
     "raw": "source/mounted-keypose-raw.webp",
     "sourceMetadata": "source/mounted-keypose-source-meta.json",
     "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
-    "prompt": "prompts/generation-contract.md"
+    "prompt": "prompts/generation-contract.md",
+    "battleEdgeSourceRepair": "source/battle/repairs/phase456-blue-mounted-edge-source-repair-v1/manifest.json"
   },
   "worldSourceArchive": {
     "policy": "eight_independent_tracked_lossless_webp_with_original_sha256",
@@ -177,14 +178,110 @@
     "contactSheet": ".run/art_batch_phase320/blue_man_dragon/mounted-keypose-build/contact-sheet.png",
     "contactSheetSha256": "0e83343e8d3a44bdfaf039d88b56e5ed1097609e83f0bdeeaf03ad3d02684b61",
     "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
-    "worldContactSheetSha256": "73c9fffa8453c19fff04b84758dac946414f9206b4a8561e953f1a2ae2a402b1",
+    "worldContactSheetSha256": "33f75057bfd9cfd004a9fbb6187d2e0439590d91221c1514955d0f6f54643b38",
     "worldCycleGif": "qa/world/true8-mounted-world-cycle.gif",
-    "worldCycleGifSha256": "2b5f9953566f031dc647d64c2f53fcc6990103a4abc497ee52d00ead0878980e",
+    "worldCycleGifSha256": "15c6c802aa54598ad6c37a17690af841ac909974a2ea4931ed4041347fd3b970",
     "map160ProportionEvidence": "qa/world/map-160px-proportion-calibrated.png",
-    "map160ProportionEvidenceSha256": "db3a5838c3038536a629660a42a162b7ef653af27b5f1dfb77fd4a4a2853f0ad",
+    "map160ProportionEvidenceSha256": "2efdbdd96b8dba4a7cca8cc4fcbe75db2dd2fd472efe071072b313775bc1bde8",
     "worldQc": "qa/world/world-qc.json",
-    "worldQcSha256": "215f4e5c223b4f77c321b2a602ddee1c3db398a094c7ed23333fcbcaf273bc62"
+    "worldQcSha256": "3138c599187d65413136931c3597908da3b405c1ef64f914ce2199d8667c1b36",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleActionContactPattern": "qa/battle/actions/{view}/{action}-contact.png",
+    "battleActionGifPattern": "qa/battle/actions/{view}/{action}.gif",
+    "battleContactSheetSha256": "2c50745891a39554e2f09d460fa2ea89b6a45a6c97b2aa4b0aef1f24183b920e",
+    "battleQcSha256": "7967e53201ef001277137d1ba5c99443c48ad763c301251a36ab5413a1c83f5f",
+    "edgeSourceRepairContact": "qa/battle/repairs/phase456-blue-mounted-edge-source-repair-v1-contact.png",
+    "edgeSourceRepairContactSha256": "ea2639a2ae8e8b388119bccd1fab43b9a82a80bbdbda11abe2177d24b8b0cd78",
+    "edgeSourceRepairAudit": "source/battle/repairs/phase456-blue-mounted-edge-source-repair-v1/replay-audit.json",
+    "edgeSourceRepairAuditSha256": "7279fd53c887bcfdc6fdf6bc11f42808796447ba6e2c7a4b7e237b2ca02ffa85"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Integrated front/back key poses plus independently generated true-eight mounted world idle/walk are self-reviewed. runtimeEnabled remains false and battle mounted animation remains unproduced until owner review and later catalog integration."
+  "notes": "Integrated identity, true-eight world movement, and both formal-view twelve-action mounted battle matrices remain owner-review candidates. Five source-driven actions now replace the two strict magenta findings and close exact 512/256 down-to-revive continuity for both battle views. Exact prompts, lossless generator sources, deterministic repack/replay evidence, and frame hashes are tracked. Canonical presentation remains enemy front_3quarter_sw plus flipH=true and ally back_3quarter_ne plus flipH=true, both facing arena center. runtimeEnabled remains false and owner review remains pending.",
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "mounted",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "b644f3bd7b5fe20c00b855ad937bdd8587147ae99858ac27c74f4b186fb67045",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "bundleDigestAlgorithm": "sha256-canonical-runtime-file-and-rgba-v1",
+    "edgeSourceRepair": {
+      "repairId": "phase456-blue-mounted-edge-source-repair-v1",
+      "status": "self_review_passed_owner_pending",
+      "actions": [
+        "front_3quarter_sw/stagger",
+        "front_3quarter_sw/down",
+        "front_3quarter_sw/revive",
+        "back_3quarter_ne/down",
+        "back_3quarter_ne/revive"
+      ],
+      "canonicalPipelineReplayExact": true,
+      "downReviveSourceAndRuntimeExact": true,
+      "runtimeEnabled": false,
+      "ownerReviewStatus": "pending",
+      "sourceManifest": "source/battle/repairs/phase456-blue-mounted-edge-source-repair-v1/manifest.json",
+      "replayAudit": "source/battle/repairs/phase456-blue-mounted-edge-source-repair-v1/replay-audit.json",
+      "evidence": "qa/battle/repairs/phase456-blue-mounted-edge-source-repair-v1-contact.png"
+    }
+  },
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  }
 }

@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "front_3quarter_sw",
+  "action": "defend",
+  "frameCount": 6,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "residualMagentaFrames": [],
+  "transparentRgbLeakFrames": [],
+  "visualSelfReview": "passed",
+  "ownerReviewStatus": "pending",
+  "frames": [
+    {
+      "slot": "defend-1",
+      "bbox": [
+        38,
+        43,
+        217,
+        248
+      ],
+      "minimumEdgeMargin": 8,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "defend-2",
+      "bbox": [
+        21,
+        71,
+        235,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "defend-3",
+      "bbox": [
+        36,
+        54,
+        220,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "defend-4",
+      "bbox": [
+        30,
+        83,
+        226,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "defend-5",
+      "bbox": [
+        37,
+        56,
+        219,
+        248
+      ],
+      "minimumEdgeMargin": 8,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    },
+    {
+      "slot": "defend-6",
+      "bbox": [
+        37,
+        55,
+        218,
+        247
+      ],
+      "minimumEdgeMargin": 9,
+      "residualMagentaPixels": 0,
+      "transparentRgbLeakPixels": 0
+    }
+  ]
+}

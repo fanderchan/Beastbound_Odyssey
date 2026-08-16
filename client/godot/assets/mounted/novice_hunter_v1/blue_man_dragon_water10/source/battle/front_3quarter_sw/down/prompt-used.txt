@@ -1,0 +1,8 @@
+Use case: precise-object-edit
+Asset type: production 2D mounted battle animation sheet
+Primary request: Correct only the layout containment of Image 1. Preserve the exact same eight-frame faint sequence, chronological poses, rider-and-dragon identity, front three-quarter southwest view, colors, crisp hand-painted 2.5D rendering and solid-magenta workflow. Use Image 2 as the immutable identity check and Image 3 only as an invisible 2x4 spacing guide.
+Change only scale and placement: uniformly reduce every complete integrated rider-and-mount subject so each occupies about 55% to 60% of its own equal cell, center it within that cell, and leave at least 40 pixels of perfectly flat #FF00FF magenta around every visible pixel on all four sides of every cell. The tail, crown fins, claws, rider, reins and all antialiased edge pixels must stay fully inside their own cell. Keep one consistent subject scale and stable bottom/ground anchor across all eight cells.
+Canvas and grid: exactly 1536x1024 landscape, exactly 2 rows by 4 columns, read row-major; invisible equal 384x512 cells. Do not draw cell borders, boxes, marks, labels or the guide.
+Preserve all invariants: same adult novice hunter, same cobalt-blue biped water dragon, low saddle and reins, integrated whole-frame subject, no pasted layers, no changed anatomy, no altered action timing. Keep frame 8 as the fully settled terminal pose suitable for exact reuse as revive frame 1.
+Background: replace the whole backdrop with one perfectly uniform solid #FF00FF field, no gradient, no checkerboard, no shadows or ground.
+Avoid: text, UI, border lines, extra or missing limbs, duplicate tail, wings, weapon, detached effects, blood, gore, death symbols, halo, stars, sleep bubble, watermark.

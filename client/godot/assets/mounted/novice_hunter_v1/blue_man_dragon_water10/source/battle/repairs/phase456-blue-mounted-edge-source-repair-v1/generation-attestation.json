@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "repairId": "phase456-blue-mounted-edge-source-repair-v1",
+  "generator": "built_in_imagegen",
+  "generatorSessionId": "019fe7c8-2fd7-7972-94a7-98382ddfe591",
+  "transcriptPath": "sessions/2026/08/10/rollout-2026-08-10T02-28-04-019fe7c8-2fd7-7972-94a7-98382ddfe591.jsonl",
+  "compositionClaim": "integrated_mounted_whole_frame_action_sheets",
+  "independentlyAuthoredClaim": true,
+  "semanticIndependenceVerified": false,
+  "ownerReviewStatus": "pending",
+  "releaseGate": false,
+  "runtimeEnabled": false,
+  "references": [
+    {
+      "label": "identity_board",
+      "path": "client/godot/assets/mounted/novice_hunter_v1/blue_man_dragon_water10/identity/identity-board-transparent.png",
+      "sha256": "3f1679164c4953c42d2c10df3014427d8e6c818a395f748296e59c047dfcee43"
+    },
+    {
+      "label": "layout_guide",
+      "path": ".run/art_repair_phase456_blue_mounted/references/2x4-layout-guide.png",
+      "sha256": "5eb9684621e46fd25ad5b189c554de624000ef633d6d2a9ba5d479ba2c6878b6"
+    },
+    {
+      "label": "old_front_down_contact",
+      "path": "client/godot/assets/mounted/novice_hunter_v1/blue_man_dragon_water10/qa/battle/actions/front_3quarter_sw/down-contact.png",
+      "sha256": "31c7fa8a49a6b4340545b7b4d2c55988d00fbf3bdd4291336d54c235fd8b7156"
+    },
+    {
+      "label": "old_front_stagger_contact",
+      "path": "client/godot/assets/mounted/novice_hunter_v1/blue_man_dragon_water10/qa/battle/actions/front_3quarter_sw/stagger-contact.png",
+      "sha256": "28fa7a9f99c77a2755b56dfc862424b71b0818066649804d897401d67b800aee"
+    },
+    {
+      "label": "old_front_revive_contact",
+      "path": "client/godot/assets/mounted/novice_hunter_v1/blue_man_dragon_water10/qa/battle/actions/front_3quarter_sw/revive-contact.png",
+      "sha256": "9a940be7441ab8e4e27676c0cbbf6cd45a0b31d82a9218fa983ba9ac9a6ae87a"
+    },
+    {
+      "label": "old_back_down_contact",
+      "path": "client/godot/assets/mounted/novice_hunter_v1/blue_man_dragon_water10/qa/battle/actions/back_3quarter_ne/down-contact.png",
+      "sha256": "36cd06a3e3b4d28259f6075083dba5f40561ecfc2f67652988ce9269bfe8bf7f"
+    },
+    {
+      "label": "old_back_revive_contact",
+      "path": "client/godot/assets/mounted/novice_hunter_v1/blue_man_dragon_water10/qa/battle/actions/back_3quarter_ne/revive-contact.png",
+      "sha256": "52744a4177619eb8c92f64e1b21f977c8edbb1c03f0f83ef1074c3e248f2cc36"
+    }
+  ],
+  "actions": [
+    {
+      "view": "front_3quarter_sw",
+      "action": "stagger",
+      "generationId": "exec-6aee762a-6f38-43e0-beac-87cd1da79ed4",
+      "parentGenerationId": null,
+      "generatorSource": ".codex/generated_images/019fe7c8-2fd7-7972-94a7-98382ddfe591/exec-6aee762a-6f38-43e0-beac-87cd1da79ed4.png",
+      "generatorSourceSha256": "8347cd47105c7ecd68ecb196e32a583416d2cf6333c805c548d13b660094b0ca",
+      "rawArchive": "source/battle/front_3quarter_sw/stagger/raw-sheet-lossless.png",
+      "rawArchiveSha256": "8347cd47105c7ecd68ecb196e32a583416d2cf6333c805c548d13b660094b0ca",
+      "rawDecodedRgbaSha256": "041efa0c515bfc7bc6ff152764548ebb81f69d92db03a1dfaf2ee640b39d9147",
+      "prompt": "source/battle/front_3quarter_sw/stagger/prompt-used.txt",
+      "promptSha256": "5e9f0df1c4847f79e4e7bf0048f94d5cf9eec12f6784a4a2b2ca8dfc101206f4",
+      "generatedCacheByteParityVerified": true,
+      "canonicalPipelineReplayExact": true,
+      "continuityOverride": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "down",
+      "generationId": "exec-bd725be2-1aeb-4f0b-92cf-3aa26abe7515",
+      "parentGenerationId": "exec-2fb501ea-e0c7-424b-a827-0928eba0da82",
+      "generatorSource": ".codex/generated_images/019fe7c8-2fd7-7972-94a7-98382ddfe591/exec-bd725be2-1aeb-4f0b-92cf-3aa26abe7515.png",
+      "generatorSourceSha256": "2e6541eae6c1ac31f504f9ed75a74e66c1211eb2282f0c16085d811086e2599b",
+      "rawArchive": "source/battle/front_3quarter_sw/down/raw-sheet-lossless.png",
+      "rawArchiveSha256": "2e6541eae6c1ac31f504f9ed75a74e66c1211eb2282f0c16085d811086e2599b",
+      "rawDecodedRgbaSha256": "b58c800195cdaf159c0d9995c332a2747a5dd845255880e8ad4ef810ef6db4b7",
+      "prompt": "source/battle/front_3quarter_sw/down/prompt-used.txt",
+      "promptSha256": "99ed175ca9b7f9759227a527eaee7e4ae918da9963540a2ee52db7964261fddf",
+      "generatedCacheByteParityVerified": true,
+      "canonicalPipelineReplayExact": true,
+      "continuityOverride": false
+    },
+    {
+      "view": "front_3quarter_sw",
+      "action": "revive",
+      "generationId": "exec-f31bce04-d3d0-46a9-b529-e3e9fea4c484",
+      "parentGenerationId": "exec-dd615463-a3ec-46b0-bc4f-980f13641ddc",
+      "generatorSource": ".codex/generated_images/019fe7c8-2fd7-7972-94a7-98382ddfe591/exec-f31bce04-d3d0-46a9-b529-e3e9fea4c484.png",
+      "generatorSourceSha256": "6be9f693097e3ca02cf2259d6b32f7a5c8350303ca8f6679c1ee5a4d2b25b55c",
+      "rawArchive": "source/battle/front_3quarter_sw/revive/raw-sheet-lossless.png",
+      "rawArchiveSha256": "6be9f693097e3ca02cf2259d6b32f7a5c8350303ca8f6679c1ee5a4d2b25b55c",
+      "rawDecodedRgbaSha256": "8cf860bbaf651151fd117b03c594373a27aad854cb978fff716fb1ece7434d1f",
+      "prompt": "source/battle/front_3quarter_sw/revive/prompt-used.txt",
+      "promptSha256": "40a130e5391583e7513bc85a16a3bc2d7ef22be6a648cf51eb3f1b0c524db9ba",
+      "generatedCacheByteParityVerified": true,
+      "canonicalPipelineReplayExact": true,
+      "continuityOverride": true
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "down",
+      "generationId": "exec-a98c533b-f29f-465f-a9fc-aac2e9cf27fc",
+      "parentGenerationId": null,
+      "generatorSource": ".codex/generated_images/019fe7c8-2fd7-7972-94a7-98382ddfe591/exec-a98c533b-f29f-465f-a9fc-aac2e9cf27fc.png",
+      "generatorSourceSha256": "3b11ebba1e93e4031b96d0d7815ed20c4b20ebc2ffec8cdb61ef65e3f62fe0d2",
+      "rawArchive": "source/battle/back_3quarter_ne/down/raw-sheet-lossless.png",
+      "rawArchiveSha256": "3b11ebba1e93e4031b96d0d7815ed20c4b20ebc2ffec8cdb61ef65e3f62fe0d2",
+      "rawDecodedRgbaSha256": "576d1c41f07340f32bafc2e77766022a7992e184f8532e1064821953a2888e4a",
+      "prompt": "source/battle/back_3quarter_ne/down/prompt-used.txt",
+      "promptSha256": "47f09f5d64f987e09f73308d71c054fca6f7d427f624131c7c17eb3933a7daac",
+      "generatedCacheByteParityVerified": true,
+      "canonicalPipelineReplayExact": true,
+      "continuityOverride": false
+    },
+    {
+      "view": "back_3quarter_ne",
+      "action": "revive",
+      "generationId": "exec-238cab8b-74a4-462a-8175-cc9e413b3ced",
+      "parentGenerationId": null,
+      "generatorSource": ".codex/generated_images/019fe7c8-2fd7-7972-94a7-98382ddfe591/exec-238cab8b-74a4-462a-8175-cc9e413b3ced.png",
+      "generatorSourceSha256": "8751a9d077c7b65bd25fe12588fb372060b14cd3db0fc0e660ab84136bda50e4",
+      "rawArchive": "source/battle/back_3quarter_ne/revive/raw-sheet-lossless.png",
+      "rawArchiveSha256": "8751a9d077c7b65bd25fe12588fb372060b14cd3db0fc0e660ab84136bda50e4",
+      "rawDecodedRgbaSha256": "fe48e36b7f9493dbf953b115a958c89ae3cf3e5c9f82d6973b930199dd245921",
+      "prompt": "source/battle/back_3quarter_ne/revive/prompt-used.txt",
+      "promptSha256": "1b4d8c63b4623a3305332e208de4bf30c92dc60e8f20d446ed1c9130a6c4e12f",
+      "generatedCacheByteParityVerified": true,
+      "canonicalPipelineReplayExact": true,
+      "continuityOverride": true
+    }
+  ],
+  "claimLimit": "binds current generator cache, references, exact prompts, lossless source, deterministic preprocessing/replay, and installed runtime; does not prove copyright provenance, semantic independence, or owner approval"
+}

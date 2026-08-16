@@ -34,9 +34,14 @@ JSON 报告新增 `mounted.battle.sourceReadiness`，直接给出归档模式、
 | 水晶乌力 | full | 24/24 | 180/180 | verified |
 | 月风漂狐 | full | 24/24 | 180/180 | verified |
 | 赤角兽 | lean | 24/24 | 180/180 | verified |
-| 蓝人龙 | lean | 24/24 | 180/180 | verified；另有独立 1px 洋红边待修 |
+| 蓝人龙 | lean | 24/24 | 180/180 | verified；Phase456 已完成独立边缘与倒地／复起来源修复 |
 | 地灵转生兽 | lean | 0/24 | 0/180 | pending |
 | 新手老虎 | lean | 0/24 | 0/180 | pending |
+
+后续进展（2026-08-16）：蓝人龙的五组问题动作已按正式来源重新生成，40 张修复运行帧的洋红疑似边、
+强洋红边和透明 RGB 泄漏均为 0，前／背视角的 512px 与 256px `down-8 == revive-1` 同时精确成立；
+隔离宠物审计对该 mounted 包给出 `errors=[] / pending=[] / warnings=[]`，真实 Main 14 段审片也已完成。
+这只候选仍保持 owner pending 和 runtime disabled，详见 `docs/phase_456_blue_mounted_edge_source_repair.md`。
 
 新手老虎当前 metadata digest 为 `cf81ed81f5a0…`，QC 与旧 formal-production ledger 为 `4624eee0e618…`；
 同时缺正式 source ledger、安装清单、24 份 exact prompt 和 48 份逐动作 pipeline/QC。其 24 张旧生成母板已按

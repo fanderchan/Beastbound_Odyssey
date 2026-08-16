@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "view": "back_3quarter_ne",
+  "action": "down",
+  "frameCount": 8,
+  "errors": [],
+  "emptyFrames": [],
+  "duplicateFrames": [],
+  "edgeTouchFrames": [],
+  "identityDriftFrames": [],
+  "ownerReviewStatus": "pending",
+  "continuityOverride": null,
+  "manualSemanticReview": "self_review_passed_owner_pending",
+  "runtimeEnabled": false,
+  "sourceRepair": {
+    "repairId": "phase456-blue-mounted-edge-source-repair-v1",
+    "status": "passed",
+    "sourceDriven": true,
+    "canonicalPipelineReplayExact": true,
+    "runtimeEnabled": false,
+    "ownerReviewStatus": "pending"
+  }
+}
