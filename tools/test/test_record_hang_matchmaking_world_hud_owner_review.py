@@ -179,7 +179,6 @@ class RecordHangMatchmakingWorldHudOwnerReviewTest(unittest.TestCase):
     ) -> None:
         command = TOOL._build_godot_command(
             godot="/opt/godot",
-            user_data_dir=Path("/tmp/phase395-world-party-user"),
             avi_path=Path("/tmp/phase395-world-party.avi"),
         )
         separator = command.index("--")
@@ -191,16 +190,22 @@ class RecordHangMatchmakingWorldHudOwnerReviewTest(unittest.TestCase):
             TOOL.MAIN_SCENE,
         )
         self.assertNotIn("--script", engine)
-        self.assertIn("--user-data-dir", engine)
+        self.assertNotIn("--user-data-dir", command)
         self.assertIn("1280x720", engine)
         self.assertEqual(engine[engine.index("--fixed-fps") + 1], "30")
         self.assertEqual(engine[engine.index("--time-scale") + 1], "1.0")
         self.assertIn("--write-movie", engine)
         self.assertIn(TOOL.DEFAULT_CAPTURE_FLAG, user)
+        self.assertEqual(command.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
+        native = TOOL._build_native_godot_command(godot="/opt/godot")
+        self.assertIn("--scene", native)
+        self.assertNotIn("--script", native)
+        self.assertNotIn("--user-data-dir", native)
+        self.assertNotIn("--write-movie", native)
+        self.assertEqual(native.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
         with self.assertRaises(TOOL.Phase395WorldPartyRecordingError):
             TOOL._build_godot_command(
                 godot="/opt/godot",
-                user_data_dir=Path("/tmp/phase395-world-party-user"),
                 avi_path=Path("/tmp/phase395-world-party.avi"),
                 review_args=("--auto-auth-server-live-check",),
             )

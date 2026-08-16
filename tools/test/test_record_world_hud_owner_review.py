@@ -11,6 +11,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOL_PATH = REPO_ROOT / "tools" / "record_world_hud_owner_review.py"
+CAPTURE_PATH = (
+    REPO_ROOT
+    / "client/godot/scripts/qa/world_hud_owner_review_capture.gd"
+)
 SPEC = importlib.util.spec_from_file_location(
     "record_world_hud_owner_review",
     TOOL_PATH,
@@ -112,12 +116,11 @@ def _godot_log() -> str:
 
 
 class RecordWorldHudOwnerReviewTest(unittest.TestCase):
-    def test_command_uses_main_1280x720_30fps_one_x_and_isolated_flag(
+    def test_commands_use_main_1280x720_and_exact_official_lane(
         self,
     ) -> None:
         command = TOOL._build_godot_command(
             godot="/opt/godot",
-            user_data_dir=Path("/tmp/world-hud-review-user"),
             avi_path=Path("/tmp/world-hud-review.avi"),
         )
         separator = command.index("--")
@@ -125,23 +128,29 @@ class RecordWorldHudOwnerReviewTest(unittest.TestCase):
         user = command[separator + 1 :]
         self.assertIn("--scene", engine)
         self.assertIn(TOOL.MAIN_SCENE, engine)
-        self.assertIn("--user-data-dir", engine)
+        self.assertNotIn("--user-data-dir", command)
         self.assertIn("1280x720", engine)
         self.assertEqual(engine[engine.index("--fixed-fps") + 1], "30")
         self.assertEqual(engine[engine.index("--time-scale") + 1], "1.0")
         self.assertIn("--write-movie", engine)
         self.assertIn(TOOL.DEFAULT_CAPTURE_FLAG, user)
+        self.assertEqual(command.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
+
+        native = TOOL._build_native_godot_command(godot="/opt/godot")
+        self.assertIn("--scene", native)
+        self.assertIn(TOOL.MAIN_SCENE, native)
+        self.assertNotIn("--user-data-dir", native)
+        self.assertNotIn("--write-movie", native)
+        self.assertEqual(native.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
         with self.assertRaises(TOOL.WorldHudRecordingError):
             TOOL._build_godot_command(
                 godot="/opt/godot",
-                user_data_dir=Path("/tmp/world-hud-review-user"),
                 avi_path=Path("/tmp/world-hud-review.avi"),
                 review_args=("--auto-auth-server-live-check",),
             )
         with self.assertRaises(TOOL.WorldHudRecordingError):
             TOOL._build_godot_command(
                 godot="/opt/godot",
-                user_data_dir=Path("/tmp/world-hud-review-user"),
                 avi_path=Path("/tmp/world-hud-review.avi"),
                 capture_flag="--different-capture",
             )
@@ -209,6 +218,7 @@ class RecordWorldHudOwnerReviewTest(unittest.TestCase):
 
     def test_transcode_decode_evidence_and_owner_gate_exist(self) -> None:
         source = TOOL_PATH.read_text(encoding="utf-8")
+        capture = CAPTURE_PATH.read_text(encoding="utf-8")
         self.assertIn(
             '"scale=in_range=pc:out_range=tv,format=yuv420p"',
             source,
@@ -217,11 +227,25 @@ class RecordWorldHudOwnerReviewTest(unittest.TestCase):
         self.assertIn('"-xerror"', source)
         self.assertIn('"contact-sheet.png"', source)
         self.assertIn("_write_sha256_manifest", source)
+        self.assertIn("_run_official_lane_godot_sequence", source)
+        self.assertNotIn('"--user-data-dir"', source)
         self.assertIn('"ownerReviewStatus": "pending"', source)
         self.assertIn("phase382_world_hud_owner_review", source)
         self.assertIn(
             "beastbound_world_hud_main_owner_review_video",
             source,
+        )
+        self.assertIn('"WorldHudPartyTaskTab"', capture)
+        self.assertIn('"WorldHudPartyTeamTab"', capture)
+        self.assertIn("_formal_party_roster", capture)
+        self.assertIn("_formal_side_tab_is", capture)
+        self.assertNotIn(
+            'var task_tab := _named_button("WorldHudTaskTab")',
+            capture,
+        )
+        self.assertNotIn(
+            'var party_tab := _named_button("WorldHudPartyTab")',
+            capture,
         )
 
 

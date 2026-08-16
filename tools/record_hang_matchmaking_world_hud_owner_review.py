@@ -118,7 +118,6 @@ def _new_run_id() -> str:
 def _build_godot_command(
     *,
     godot: str,
-    user_data_dir: Path,
     avi_path: Path,
     capture_flag: str = DEFAULT_CAPTURE_FLAG,
     review_args: Sequence[str] = (),
@@ -130,8 +129,27 @@ def _build_godot_command(
     try:
         return CORE._build_godot_command(
             godot=godot,
-            user_data_dir=user_data_dir,
             avi_path=avi_path,
+            capture_flag=capture_flag,
+            review_args=review_args,
+        )
+    except CORE.PetManagementRecordingError as error:
+        raise Phase395WorldPartyRecordingError(str(error)) from error
+
+
+def _build_native_godot_command(
+    *,
+    godot: str,
+    capture_flag: str = DEFAULT_CAPTURE_FLAG,
+    review_args: Sequence[str] = (),
+) -> list[str]:
+    if review_args:
+        raise Phase395WorldPartyRecordingError(
+            "Phase395正式HUD验收不接受附加Godot参数，避免登录、联网或旧HUD旁路"
+        )
+    try:
+        return CORE._build_native_godot_command(
+            godot=godot,
             capture_flag=capture_flag,
             review_args=review_args,
         )
@@ -409,29 +427,40 @@ def _record_into(
     godot = CORE._require_executable(args.godot, label="Godot")
     ffmpeg = CORE._require_executable(args.ffmpeg, label="ffmpeg")
     ffprobe = CORE._require_executable(args.ffprobe, label="ffprobe")
-    user_data_dir = run_dir / "user-data"
     temporary_dir = run_dir / "tmp"
-    user_data_dir.mkdir(parents=False, exist_ok=False)
     temporary_dir.mkdir(parents=False, exist_ok=False)
-    environment = CORE._isolated_environment(temporary_dir)
+    base_environment = CORE._isolated_environment(temporary_dir)
 
     avi_path = run_dir / "hang-matchmaking-world-hud-owner-review-1x.avi"
     video_path = run_dir / "hang-matchmaking-world-hud-owner-review-1x.mp4"
-    godot_log = run_dir / "godot-recording.log"
-    command = _build_godot_command(
+    native_log = run_dir / "godot-native.log"
+    movie_log = run_dir / "godot-movie.log"
+    native_command = _build_native_godot_command(
         godot=godot,
-        user_data_dir=user_data_dir,
+        capture_flag=str(args.capture_flag),
+        review_args=tuple(args.review_args or ()),
+    )
+    movie_command = _build_godot_command(
+        godot=godot,
         avi_path=avi_path,
         capture_flag=str(args.capture_flag),
         review_args=tuple(args.review_args or ()),
     )
-    CORE._run_logged(
-        command,
-        log_path=godot_log,
+    lane_evidence = CORE._run_official_lane_godot_sequence(
+        run_dir=run_dir,
+        godot=godot,
+        base_environment=base_environment,
+        native_command=native_command,
+        movie_command=movie_command,
+        native_log=native_log,
+        movie_log=movie_log,
         timeout_seconds=timeout_seconds,
-        environment=environment,
+        native_log_validator=_validate_godot_log,
+        movie_log_validator=_validate_godot_log,
     )
-    godot_sequence = _validate_godot_log(godot_log)
+    environment = lane_evidence["environment"]
+    native_sequence = lane_evidence["native"]["logValidation"]
+    movie_sequence = lane_evidence["movie"]["logValidation"]
     raw_movie = CORE._artifact_record(avi_path)
 
     transcode_log = run_dir / "ffmpeg-transcode.log"
@@ -541,9 +570,15 @@ def _record_into(
         "durationSeconds": media["durationSeconds"],
         "frameCount": media["frameCount"],
         "fullDecodeStatus": "passed",
-        "godotSequence": godot_sequence,
+        "godotSequence": movie_sequence,
+        "nativeGodotSequence": native_sequence,
         "isolation": {
-            "freshUserDataDirectory": True,
+            "officialQaLane": True,
+            "lane": CORE.QA_LANE,
+            "laneFeature": CORE.QA_LANE_FEATURE,
+            "laneFreshAtRecorderStart": True,
+            "laneAbsentAfterCleanup": True,
+            "realPlayerInventoryUnchanged": True,
             "normalPlayerSavePathUsed": False,
             "profileSaveEnabled": False,
             "backendProcessStartedByTool": False,
@@ -558,7 +593,12 @@ def _record_into(
         probe_path,
         metadata_path,
         run_dir / "contact-sheet.png",
-        godot_log,
+        native_log,
+        movie_log,
+        lane_evidence["lifecyclePath"],
+        lane_evidence["ownerEvidencePath"],
+        run_dir / "godot-version.log",
+        run_dir / "godot-help.log",
         transcode_log,
         decode_log,
         REPO_ROOT / contact["log"]["path"],
@@ -628,7 +668,27 @@ def _record_into(
             "audioRequired": True,
         },
         "isolation": {
-            "userData": CORE._user_data_inventory(user_data_dir),
+            "officialQaLane": {
+                "lane": CORE.QA_LANE,
+                "feature": CORE.QA_LANE_FEATURE,
+                "sourceCheck": lane_evidence["sourceCheck"],
+                "nativeAttestation": lane_evidence["native"][
+                    "attestation"
+                ],
+                "movieAttestation": lane_evidence["movie"][
+                    "attestation"
+                ],
+                "cleanup": lane_evidence["cleanup"],
+                "postCleanupInspect": lane_evidence[
+                    "postCleanupInspect"
+                ],
+                "lifecycle": CORE._artifact_record(
+                    lane_evidence["lifecyclePath"]
+                ),
+                "ownerEvidence": CORE._artifact_record(
+                    lane_evidence["ownerEvidencePath"]
+                ),
+            },
             "temporaryDirectory": CORE._repo_relative(temporary_dir),
             "normalPlayerSavePathUsed": False,
             "profileSaveEnabled": False,
@@ -641,8 +701,12 @@ def _record_into(
             "ffprobe": CORE._capture_version(ffprobe, ["-version"]),
             "python": sys.version.splitlines()[0],
         },
-        "command": CORE._redacted_command(command),
-        "godotSequence": godot_sequence,
+        "commands": {
+            "native": CORE._redacted_command(native_command),
+            "movie30": CORE._redacted_command(movie_command),
+        },
+        "godotSequence": movie_sequence,
+        "nativeGodotSequence": native_sequence,
         "rawMovie": raw_movie,
         "video": video,
         "metadata": CORE._artifact_record(metadata_path),
@@ -657,7 +721,8 @@ def _record_into(
         "contactSheet": contact,
         "sha256Manifest": CORE._artifact_record(hash_manifest_path),
         "logs": {
-            "godot": CORE._artifact_record(godot_log),
+            "nativeGodot": CORE._artifact_record(native_log),
+            "movieGodot": CORE._artifact_record(movie_log),
             "transcode": CORE._artifact_record(transcode_log),
         },
         "ownerReviewStatus": "pending",

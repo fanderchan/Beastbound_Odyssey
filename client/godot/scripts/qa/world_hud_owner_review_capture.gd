@@ -154,13 +154,28 @@ func _configure_isolated_world_profile() -> void:
 		"backpack",
 		"pet",
 		"map",
-		"quest",
-		"party",
 		"chat",
 	]:
 		var entry := _entry_button(entry_id)
 		if entry == null or not entry.is_visible_in_tree():
 			_fail_capture("完整世界 HUD 缺少真实入口：%s" % entry_id)
+			return
+	var roster = _formal_party_roster()
+	if roster == null:
+		return
+	var task_tab := _named_button("WorldHudPartyTaskTab")
+	var party_tab := _named_button("WorldHudPartyTeamTab")
+	if task_tab == null or party_tab == null:
+		return
+	if not task_tab.is_visible_in_tree() or not party_tab.is_visible_in_tree():
+		_fail_capture("完整世界 HUD 的正式任务/组队页签不可见")
+		return
+	for retired_entry_id in ["quest", "party"]:
+		var retired_entry := _entry_button(retired_entry_id)
+		if retired_entry == null:
+			return
+		if retired_entry.is_visible_in_tree():
+			_fail_capture("正式任务/组队组件接入后旧入口仍然可见：%s" % retired_entry_id)
 			return
 	var more_button := _named_button("WorldHudMoreButton")
 	var collapse_button := _named_button("WorldHudCollapseButton")
@@ -360,54 +375,32 @@ func _close_primary_panel(entry_id: String) -> void:
 
 
 func _review_task_and_party_tabs() -> void:
-	var task_tab := _named_button("WorldHudTaskTab")
-	if task_tab == null:
-		task_tab = _entry_button("quest")
-	if task_tab == null:
+	var roster = _formal_party_roster()
+	if roster == null:
+		return
+	var task_tab := _named_button("WorldHudPartyTaskTab")
+	var party_tab := _named_button("WorldHudPartyTeamTab")
+	if task_tab == null or party_tab == null:
 		return
 	await _left_click(task_tab, "世界 HUD 任务页签")
 	if _failed:
 		return
 	await _settle_frames(4)
-	var task_open: bool = (
-		host.quest_panel != null and host.quest_panel.visible
-	)
-	if not task_open and not _active_side_tab_is("task"):
-		_fail_capture("点击任务页签后没有显示真实任务内容")
+	if not _formal_side_tab_is(roster, "task"):
+		_fail_capture("点击任务页签后正式任务内容没有显示")
 		return
 	await _hold("task_tab", 3.0)
-	if task_open:
-		if not (host.quest_close_button is Button):
-			_fail_capture("任务页缺少关闭按钮")
-			return
-		await _left_click(host.quest_close_button as Button, "关闭任务页")
-		await _settle_frames(3)
-
-	var party_tab := _named_button("WorldHudPartyTab")
-	if party_tab == null:
-		party_tab = _entry_button("party")
-	if party_tab == null:
-		return
 	await _left_click(party_tab, "世界 HUD 队伍页签")
 	if _failed:
 		return
 	await _settle_frames(4)
-	var party_open: bool = (
-		host.party_panel != null and host.party_panel.visible
-	)
-	if not party_open and not _active_side_tab_is("party"):
-		_fail_capture("点击队伍页签后没有显示真实队伍内容")
+	if not _formal_side_tab_is(roster, "party"):
+		_fail_capture("点击队伍页签后正式五席队伍内容没有显示")
 		return
 	await _hold("party_tab", 3.0)
-	if party_open:
-		if not (host.party_close_button is Button):
-			_fail_capture("队伍页缺少关闭按钮")
-			return
-		await _left_click(host.party_close_button as Button, "关闭队伍页")
-		await _settle_frames(3)
 	print(
 		"WORLD_HUD_OWNER_REVIEW_TASK_PARTY reviewed=true task=true "
-		+ "party=true"
+		+ "party=true formal_tabs=true legacy_tabs_hidden=true"
 	)
 
 
@@ -499,13 +492,18 @@ func _review_more_collapse_and_restore() -> void:
 		"backpack",
 		"pet",
 		"map",
-		"quest",
-		"party",
 		"chat",
 	]:
 		var entry := _entry_button(entry_id)
 		if entry != null and entry.is_visible_in_tree():
 			_fail_capture("HUD 收起后仍显示入口：%s" % entry_id)
+			return
+	for formal_tab_name in ["WorldHudPartyTaskTab", "WorldHudPartyTeamTab"]:
+		var formal_tab := _named_button(formal_tab_name)
+		if formal_tab == null:
+			return
+		if formal_tab.is_visible_in_tree():
+			_fail_capture("HUD 收起后仍显示正式页签：%s" % formal_tab_name)
 			return
 	await _hold("hud_collapsed_restore_only", 3.5)
 
@@ -529,6 +527,13 @@ func _review_more_collapse_and_restore() -> void:
 	):
 		_fail_capture("点击恢复后完整 HUD 没有重新显示")
 		return
+	for formal_tab_name in ["WorldHudPartyTaskTab", "WorldHudPartyTeamTab"]:
+		var formal_tab := _named_button(formal_tab_name)
+		if formal_tab == null:
+			return
+		if not formal_tab.is_visible_in_tree():
+			_fail_capture("HUD 恢复后正式页签没有重新显示：%s" % formal_tab_name)
+			return
 	await _hold("hud_expanded", 3.0)
 	print(
 		"WORLD_HUD_OWNER_REVIEW_COLLAPSE restore_only=true expanded=true"
@@ -724,11 +729,44 @@ func _layout_contract() -> Dictionary:
 	return (value as Dictionary).duplicate(true)
 
 
-func _active_side_tab_is(expected: String) -> bool:
-	var active := str(_layout_contract().get("activeSideTab", "")).to_lower()
+func _formal_party_roster():
+	var roster = host.world_hud_party_roster_view
+	if roster == null or not is_instance_valid(roster):
+		_fail_capture("世界 HUD 缺少正式任务/五席组队组件")
+		return null
+	if not (roster is Control) or not (roster as Control).is_visible_in_tree():
+		_fail_capture("世界 HUD 正式任务/五席组队组件不可见")
+		return null
+	if not (host.world_hud_awakened_view as Node).is_ancestor_of(roster):
+		_fail_capture("正式任务/五席组队组件未嵌入世界 HUD")
+		return null
+	for method_name in ["active_tab", "debug_snapshot", "task_content_parent"]:
+		if not roster.has_method(method_name):
+			_fail_capture("正式任务/五席组队组件缺少稳定 API：%s" % method_name)
+			return null
+	return roster
+
+
+func _formal_side_tab_is(roster, expected: String) -> bool:
+	var active := str(roster.call("active_tab")).strip_edges().to_lower()
+	var snapshot_value = roster.call("debug_snapshot")
+	if not (snapshot_value is Dictionary):
+		return false
+	var snapshot := snapshot_value as Dictionary
+	if active != expected:
+		return false
 	if expected == "task":
-		return active == "task" or active == "quest"
-	return active == expected.to_lower()
+		return (
+			bool(snapshot.get("taskVisible", false))
+			and not bool(snapshot.get("partyVisible", true))
+		)
+	if expected == "party":
+		return (
+			bool(snapshot.get("partyVisible", false))
+			and not bool(snapshot.get("taskVisible", true))
+			and int(snapshot.get("rowCount", 0)) == 5
+		)
+	return false
 
 
 func _named_button(node_name: String) -> Button:
