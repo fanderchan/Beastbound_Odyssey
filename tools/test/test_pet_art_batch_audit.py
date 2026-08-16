@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -1077,6 +1078,29 @@ class PetArtBatchAuditTest(unittest.TestCase):
                     "schemaVersion": 2,
                     "status": "verified",
                 },
+            )
+
+    def test_schema2_identity_gate_survives_checkout_relocation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir).resolve()
+            original_root = parent / "checkout-a"
+            original_root.mkdir()
+            catalog = _read_fixture()
+            _materialize_schema2_identity_gate(original_root, catalog)
+
+            relocated_root = parent / "checkout-b"
+            shutil.copytree(original_root, relocated_root)
+            completed, report = _run(
+                relocated_root,
+                catalog,
+                _fusion_catalog_fixture(),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(report["summary"]["errors"], 0)
+            self.assertEqual(
+                report["forms"][0]["pet"]["identityGate"]["status"],
+                "verified",
             )
 
     def test_schema2_identity_gate_detects_action_meta_hash_drift(self) -> None:

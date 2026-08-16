@@ -24,6 +24,9 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from audit_pet_battle_catalog import _audit_tracked_source_derivation
 import finalize_pet_identity_gate as identity_gate
+from pet_identity_replay_contract import (
+    CLOSED_REGISTRATION_LEGACY_PATH_BOUND_REPLAY_SHA256,
+)
 from sprite_alpha_despill import magenta_edge_metrics
 
 
@@ -778,6 +781,150 @@ def _identity_load_json(path: Path, label: str) -> dict[str, Any]:
     return value
 
 
+def _accept_frozen_legacy_replay_digest(
+    *,
+    form_id: str,
+    spec: BundleSpec,
+    metadata: dict[str, Any],
+    pipeline_audit: dict[str, Any],
+    repo_root: Path,
+) -> bool:
+    """Validate one historical path-bound digest through its frozen manifest."""
+
+    legacy_pair = CLOSED_REGISTRATION_LEGACY_PATH_BOUND_REPLAY_SHA256.get(
+        form_id
+    )
+    if legacy_pair is None:
+        return False
+    evidence = metadata.get("evidence")
+    gate = evidence.get("identityGateAudit") if isinstance(evidence, dict) else None
+    stored_pipeline = (
+        gate.get("pipelineMetadata") if isinstance(gate, dict) else None
+    )
+    if not isinstance(stored_pipeline, dict):
+        return False
+    legacy_source_sha, legacy_candidate_sha = legacy_pair
+    if (
+        stored_pipeline.get("metadataReplaySha256")
+        != legacy_candidate_sha
+        or "metadataReplayDigestContractVersion" in stored_pipeline
+    ):
+        return False
+
+    manifest_path = (
+        spec.root / "qa/release/closed-registration-manifest-v1.json"
+    )
+    if manifest_path.is_symlink() or not manifest_path.is_file():
+        raise IdentityGateAuditError(
+            "invalid_identity_gate_legacy_replay",
+            "历史绝对路径回放摘要缺少冻结关闭登记清单",
+            manifest_path,
+        )
+    manifest = _identity_load_json(manifest_path, "融合宠关闭登记清单")
+    action_sha = identity_gate.sha256_file(spec.metadata_path)
+    action_size = spec.metadata_path.stat().st_size
+    pipeline_sha = pipeline_audit.get("sha256")
+    expected_destination = spec.root.relative_to(repo_root).as_posix()
+    expected_pipeline_path = (
+        spec.root / "source/identity-board-pipeline-meta.json"
+    ).relative_to(repo_root).as_posix()
+    if (
+        manifest.get("schemaVersion") != 1
+        or manifest.get("manifestType")
+        != "fusion_pet_closed_asset_copy_registration"
+        or manifest.get("tool") != "register_fusion_pet_closed_assets.py"
+        or manifest.get("formId") != form_id
+        or manifest.get("destinationRoot") != expected_destination
+    ):
+        raise IdentityGateAuditError(
+            "invalid_identity_gate_legacy_replay",
+            "历史回放摘要的冻结关闭登记身份不匹配",
+            manifest_path,
+        )
+
+    copied_files = manifest.get("copiedFiles")
+    action_records = (
+        [
+            item
+            for item in copied_files
+            if isinstance(item, dict)
+            and item.get("path") == "action-bundle-meta.json"
+        ]
+        if isinstance(copied_files, list)
+        else []
+    )
+    integrity_updates = manifest.get("engineeringIntegrityUpdates")
+    action_updates = (
+        [
+            item
+            for item in integrity_updates
+            if isinstance(item, dict)
+            and item.get("path") == "action-bundle-meta.json"
+        ]
+        if isinstance(integrity_updates, list)
+        else []
+    )
+    if len(action_records) != 1 or len(action_updates) != 1:
+        raise IdentityGateAuditError(
+            "invalid_identity_gate_legacy_replay",
+            "历史回放摘要未被唯一 action 登记记录绑定",
+            manifest_path,
+        )
+    if action_records[0] != {
+        "path": "action-bundle-meta.json",
+        "sha256": action_sha,
+        "size": action_size,
+    }:
+        raise IdentityGateAuditError(
+            "invalid_identity_gate_legacy_replay",
+            "历史回放摘要的 action 文件登记已漂移",
+            manifest_path,
+        )
+
+    action_update = action_updates[0]
+    field_updates = action_update.get("fieldUpdates")
+    replay_updates = (
+        [
+            item
+            for item in field_updates
+            if isinstance(item, dict)
+            and item.get("field")
+            == (
+                "evidence.identityGateAudit.pipelineMetadata."
+                "metadataReplaySha256"
+            )
+        ]
+        if isinstance(field_updates, list)
+        else []
+    )
+    if (
+        len(replay_updates) != 1
+        or replay_updates[0]
+        != {
+            "field": (
+                "evidence.identityGateAudit.pipelineMetadata."
+                "metadataReplaySha256"
+            ),
+            "digestKind": "pipeline_metadata_replay_sha256",
+            "from": legacy_source_sha,
+            "to": legacy_candidate_sha,
+        }
+        or action_update.get("candidateMetadataSha256") != action_sha
+        or action_update.get("candidateMetadataSize") != action_size
+        or action_update.get("boundFile")
+        != {
+            "path": expected_pipeline_path,
+            "sha256": pipeline_sha,
+        }
+    ):
+        raise IdentityGateAuditError(
+            "invalid_identity_gate_legacy_replay",
+            "历史回放摘要与冻结 action 变换证明不一致",
+            manifest_path,
+        )
+    return True
+
+
 def _first_json_subset_mismatch(
     actual: Any,
     expected: Any,
@@ -993,6 +1140,22 @@ def _audit_identity_gate_chain(
                 Path(directory),
             )
         pipeline_audit["path"] = pipeline_path.relative_to(root).as_posix()
+        if _accept_frozen_legacy_replay_digest(
+            form_id=form_id,
+            spec=spec,
+            metadata=metadata,
+            pipeline_audit=pipeline_audit,
+            repo_root=repo_root,
+        ):
+            pipeline_audit.pop(
+                "metadataReplayDigestContractVersion",
+                None,
+            )
+            pipeline_audit["metadataReplaySha256"] = (
+                metadata["evidence"]["identityGateAudit"][
+                    "pipelineMetadata"
+                ]["metadataReplaySha256"]
+            )
 
         archive_decoded = identity_gate.decoded_rgba_sha256(archive_path)
         archive_canonical = identity_gate.canonical_rgba_sha256(archive_path)

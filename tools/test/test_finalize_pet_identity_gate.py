@@ -389,6 +389,33 @@ class FinalizePetIdentityGateTest(unittest.TestCase):
             )
             self.assertTrue((source / "identity-board-raw.webp").is_file())
 
+    def test_replay_digest_is_stable_across_checkout_roots(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory).resolve()
+            digests: list[str] = []
+            for checkout_name in ("checkout-a", "checkout-b"):
+                root = parent / checkout_name
+                root.mkdir()
+                form, pet_root = self.make_bundle_fixture(root)
+                self.finalize_fixture(root, form)
+                metadata = json.loads(
+                    (pet_root / "action-bundle-meta.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                pipeline_audit = metadata["evidence"][
+                    "identityGateAudit"
+                ]["pipelineMetadata"]
+                self.assertEqual(
+                    pipeline_audit[
+                        "metadataReplayDigestContractVersion"
+                    ],
+                    MODULE.METADATA_REPLAY_DIGEST_CONTRACT_VERSION,
+                )
+                digests.append(pipeline_audit["metadataReplaySha256"])
+
+            self.assertEqual(digests[0], digests[1])
+
     def test_finalize_rejects_duplicate_poses_and_board_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()

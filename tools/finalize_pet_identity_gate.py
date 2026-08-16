@@ -51,6 +51,7 @@ PIPELINE_TOOL = pet_art_builder.TOOL_NAME
 PIPELINE_REPLAY_CONTRACT_VERSION = (
     pet_art_builder.REPLAY_CONTRACT_VERSION
 )
+METADATA_REPLAY_DIGEST_CONTRACT_VERSION = 2
 SELF_REVIEW_SCHEMA_VERSION = 1
 SELF_REVIEW_FILENAME = "identity-key-pose-qc.json"
 IDENTITY_POSES = [
@@ -330,6 +331,39 @@ def normalized_pipeline_metadata(
     return normalized
 
 
+def checkout_portable_pipeline_metadata_replay_sha256(
+    replay_metadata: dict[str, Any],
+    raw_png: Path,
+) -> str:
+    """Hash strict replay metadata without binding it to one checkout path."""
+
+    resolved_raw = raw_png.resolve()
+    try:
+        portable_input = resolved_raw.relative_to(
+            REPO_ROOT.resolve()
+        ).as_posix()
+    except ValueError as exc:
+        raise FinalizeError(
+            "pipeline replay input must stay under the repository root"
+        ) from exc
+    if replay_metadata.get("input") != str(resolved_raw):
+        raise FinalizeError(
+            "pipeline replay metadata input must match the resolved raw PNG"
+        )
+    portable_metadata = deepcopy(replay_metadata)
+    portable_metadata["input"] = portable_input
+    payload = (
+        json.dumps(
+            portable_metadata,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "\n"
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def strict_json_equal(left: Any, right: Any) -> bool:
     if type(left) is not type(right):
         return False
@@ -580,17 +614,15 @@ def inspect_pipeline_replay(
         "runtimeFrameSize": RUNTIME_FRAME_SIZE,
         "safeMargin": options.safe_margin,
         "effectiveSourceMargin": replay_metadata["effectiveSourceMargin"],
-        "metadataReplaySha256": hashlib.sha256(
-            (
-                json.dumps(
-                    replay_metadata,
-                    ensure_ascii=False,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                )
-                + "\n"
-            ).encode("utf-8")
-        ).hexdigest(),
+        "metadataReplayDigestContractVersion": (
+            METADATA_REPLAY_DIGEST_CONTRACT_VERSION
+        ),
+        "metadataReplaySha256": (
+            checkout_portable_pipeline_metadata_replay_sha256(
+                replay_metadata,
+                raw_png,
+            )
+        ),
         "sources": replay_sources,
         "runtimes": replay_runtimes,
         "transparentSheetCanonicalRgbaSha256": canonical_rgba_sha256(

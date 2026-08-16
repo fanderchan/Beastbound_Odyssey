@@ -36,7 +36,16 @@ from pathlib import Path, PurePosixPath
 import re
 import stat
 import subprocess
+import sys
 from typing import Any, Iterable, Mapping, Sequence
+
+
+TOOLS_DIR = Path(__file__).resolve().parent
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+from pet_identity_replay_contract import (
+    CLOSED_REGISTRATION_LEGACY_PATH_BOUND_REPLAY_SHA256,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -179,16 +188,9 @@ FORM_SPECS = (
     ),
 )
 
-EXPECTED_PIPELINE_REPLAY_SHA256 = {
-    "emberhorn_fusion_solar_crown_fire7_wind3": (
-        "afdd56cc28c6bdfe02b7740c4fded4a8b5a2261622409bfb2c5541f95481066e",
-        "0a8de7215e58d5a1ae7b423139e5575a352dadd13aa250e1f8a388f50deca994",
-    ),
-    "emberhorn_fusion_moss_rampart_fire4_earth6": (
-        "4b267b37e99447809d81da9b419f02a0da8a9127725d3d5d51e8f66b6468a36b",
-        "bcfb0c16fc0985f2facc183d09d3f806d9d6c179c075254e17071a2ce3acb2fa",
-    ),
-}
+EXPECTED_PIPELINE_REPLAY_SHA256 = dict(
+    CLOSED_REGISTRATION_LEGACY_PATH_BOUND_REPLAY_SHA256
+)
 
 PORTRAIT_AUXILIARY_REFERENCE_RECORDS = {
     FORM_SPECS[0].form_id: (
