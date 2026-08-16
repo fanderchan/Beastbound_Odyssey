@@ -38,6 +38,9 @@ test("account owner rejects a second node, then advances generation and presence
     const reused = await ownerA.admit("acc_alpha");
     assert.equal(reused.acquired, false);
     assert.equal(reused.generation, 1);
+    assert.equal(await ownerB.verifyRemoteOwner("acc_alpha", "node-a", 1), true);
+    assert.equal(await ownerB.verifyRemoteOwner("acc_alpha", "node-b", 1), false);
+    assert.equal(await ownerB.verifyRemoteOwner("acc_alpha", "node-a", 2), false);
     assert.equal(backend.ownerKeys()[0].includes("acc_alpha"), false);
     assert.equal(backend.ownerKeys()[0].endsWith(accountDigest("acc_alpha")), true);
     clock.advance(1600);
@@ -60,6 +63,8 @@ test("account owner rejects a second node, then advances generation and presence
     assert.equal(takeover.acquired, true);
     assert.equal(takeover.generation, 2);
     assert.equal(takeover.presenceRevisionFloor, PRESENCE_REVISION_STRIDE * 2);
+    assert.equal(await ownerA.verifyRemoteOwner("acc_alpha", "node-b", 2), true);
+    assert.equal(await ownerA.verifyRemoteOwner("acc_alpha", "node-a", 1), false);
     assert.deepEqual(observedA, [
       ["acc_alpha", PRESENCE_REVISION_STRIDE, {
         acquired: true,
@@ -338,6 +343,13 @@ function createFakeValkeyBackend(clock) {
           generations.set(keys[1], generation);
           owners.set(keys[0], {token: args[0], expiresAtMs: clock.now() + leaseMs});
           return [1, generation, leaseMs];
+        }
+        if (script.includes("string.sub(current")) {
+          const current = liveOwner(keys[0]);
+          if (!current || !current.token.startsWith(`${args[0]}:`)) {
+            return 0;
+          }
+          return Number(generations.get(keys[1]) || 0) === Number(args[1]) ? 1 : 0;
         }
         if (script.includes("redis.call('PEXPIRE', KEYS[1], ARGV[2])")) {
           const current = liveOwner(keys[0]);

@@ -41,6 +41,16 @@ const RELEASE_SCRIPT = [
   "return 0",
 ].join("\n");
 
+const VERIFY_REMOTE_OWNER_SCRIPT = [
+  "local current = redis.call('GET', KEYS[1])",
+  "if not current then return 0 end",
+  "local prefix = ARGV[1] .. ':'",
+  "if string.sub(current, 1, string.len(prefix)) ~= prefix then return 0 end",
+  "local generation = redis.call('GET', KEYS[2]) or '0'",
+  "if generation ~= ARGV[2] then return 0 end",
+  "return 1",
+].join("\n");
+
 async function createValkeyAccountOwner(options = {}) {
   const nodeId = canonicalNodeId(options.nodeId);
   if (nodeId === "") {
@@ -84,6 +94,7 @@ async function createValkeyAccountOwner(options = {}) {
       "Cluster account owner token is invalid",
     );
   }
+  const ownerToken = `${nodeId}:${processToken}`;
 
   const client = await createControlClient(options, nodeId);
   if (!client || typeof client.customCommand !== "function") {
@@ -216,7 +227,7 @@ async function createValkeyAccountOwner(options = {}) {
         "2",
         ownerKey(key),
         generationKey(key),
-        processToken,
+        ownerToken,
         String(leaseMs),
       ]);
       runtimeHealthy = true;
@@ -366,6 +377,45 @@ async function createValkeyAccountOwner(options = {}) {
     }
   }
 
+  async function verifyRemoteOwner(accountIdValue, nodeIdValue, generationValue) {
+    const accountId = canonicalAccountId(accountIdValue);
+    const remoteNodeId = canonicalNodeId(nodeIdValue);
+    const generation = Number(generationValue);
+    if (
+      accountId === ""
+      || remoteNodeId === ""
+      || !Number.isSafeInteger(generation)
+      || generation <= 0
+      || closed
+      || fatal
+    ) {
+      return false;
+    }
+    try {
+      const key = accountKey(accountId);
+      const result = await client.customCommand([
+        "EVAL",
+        VERIFY_REMOTE_OWNER_SCRIPT,
+        "2",
+        ownerKey(key),
+        generationKey(key),
+        remoteNodeId,
+        String(generation),
+      ]);
+      runtimeHealthy = true;
+      return Number(result) === 1;
+    } catch (error) {
+      runtimeHealthy = false;
+      const failure = runtimeError(
+        "cluster_account_owner_verify_failed",
+        "Cluster account ownership verification failed",
+        error,
+      );
+      reportError(failure);
+      throw failure;
+    }
+  }
+
   function scheduleRenewal() {
     if (closed || fatal || renewalTimer !== null) {
       return;
@@ -410,7 +460,7 @@ async function createValkeyAccountOwner(options = {}) {
         RENEW_SCRIPT,
         "1",
         ownerKey(record.key),
-        processToken,
+        ownerToken,
         String(leaseMs),
       ]);
       runtimeHealthy = true;
@@ -534,7 +584,7 @@ async function createValkeyAccountOwner(options = {}) {
         RELEASE_SCRIPT,
         "1",
         ownerKey(key),
-        processToken,
+        ownerToken,
       ]);
       runtimeHealthy = true;
       return Number(result) === 1;
@@ -566,6 +616,7 @@ async function createValkeyAccountOwner(options = {}) {
 
   return Object.freeze({
     admit,
+    verifyRemoteOwner,
     release,
     close,
     health,

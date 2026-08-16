@@ -46,6 +46,7 @@ const DURABLE_RECEIPT_FAILURE_RECONCILE_METHODS = new Set([
   "questClaim",
   "shopTransaction",
   "submitBattleCommand",
+  "_clusterSubmitBattleCommand",
   "equipmentEquip",
   "equipmentUnequip",
   "equipmentEnhance",
@@ -1114,7 +1115,13 @@ function durableReceiptReplayResult(receipt) {
   return response;
 }
 
-function durableMutationAccountId(data, args, hashToken) {
+function durableMutationAccountId(data, args, hashToken, options = {}) {
+  const clusterIdentity = options.allowClusterBattle === true
+    ? durableMutationClusterIdentity(args)
+    : null;
+  if (clusterIdentity) {
+    return clusterIdentity.accountId;
+  }
   const token = durableMutationToken(args);
   if (token === "") {
     return "";
@@ -1123,6 +1130,31 @@ function durableMutationAccountId(data, args, hashToken) {
   const session = Object.values(objectOrEmpty(data && data.sessions))
     .find((entry) => entry && entry.tokenHash === tokenHash);
   return String(session && session.accountId || "");
+}
+
+function durableMutationClusterIdentity(args) {
+  const credential = Array.isArray(args) ? args[0] : null;
+  if (
+    !credential
+    || typeof credential !== "object"
+    || Array.isArray(credential)
+    || String(credential.credentialKind || "") !== "cluster_battle_v1"
+  ) {
+    return null;
+  }
+  const accountId = String(credential.accountId || "").trim();
+  const playerId = String(credential.playerId || "").trim();
+  const selectionEpoch = Number(credential.selectionEpoch);
+  if (
+    !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(accountId)
+    || playerId === ""
+    || Buffer.byteLength(playerId) > 200
+    || !Number.isSafeInteger(selectionEpoch)
+    || selectionEpoch <= 0
+  ) {
+    return null;
+  }
+  return Object.freeze({accountId, playerId, selectionEpoch});
 }
 
 function durableMutationToken(args) {
@@ -1202,5 +1234,6 @@ module.exports = {
   durableCommitResult,
   durableReceiptReplayResult,
   durableMutationAccountId,
+  durableMutationClusterIdentity,
   durableMutationToken,
 };

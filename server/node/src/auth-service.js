@@ -72,6 +72,7 @@ const {
   durableMutationReceiptLedgerStats,
   durableMutationReceiptPayloadStats,
   durableMutationAccountId,
+  durableMutationClusterIdentity,
   durableMutationToken,
 } = require("./auth/durable-mutation-state");
 const {
@@ -397,6 +398,7 @@ const DURABLE_OPERATION_ID_REQUIRED_METHODS = new Set([
   "prepareGmPetPaidResetQa",
   "recoverBattleInterruption",
   "submitBattleCommand",
+  "_clusterSubmitBattleCommand",
   "sendMail",
   "markMailRead",
   "claimMailAttachments",
@@ -899,6 +901,7 @@ function createAuthService(options = {}) {
   runtimeActiveSessionIds.membershipRevision = 0;
   const presenceRevisions = options.presenceRevisionTracker || createPresenceRevisionTracker();
   const clusterCredentialProofs = new WeakSet();
+  const clusterBattleCredentialProofs = new WeakSet();
   const clusterAccountsRequiringAuthorityReload = new Set();
   let clusterAuthorityReloads = 0;
   let clusterRuntimeResets = 0;
@@ -1628,6 +1631,8 @@ function createAuthService(options = {}) {
         ok: true,
         accountId: String(resolved.account.accountId || ""),
         sessionId: String(resolved.session.sessionId || ""),
+        playerId: String(resolved.session.playerId || ""),
+        selectionEpoch: Math.max(0, Math.trunc(Number(resolved.session.selectionEpoch || 0))),
       });
     }
     const localFailure = Object.freeze({
@@ -1659,10 +1664,63 @@ function createAuthService(options = {}) {
         ok: true,
         accountId: String(view.account.accountId),
         sessionId: String(view.session.sessionId),
+        playerId: String(view.session.playerId || ""),
+        selectionEpoch: Math.max(0, Math.trunc(Number(view.session.selectionEpoch || 0))),
       });
     }).catch((cause) => {
       throw clusterAuthorityReadFailure(cause);
     });
+  }
+
+  function issueClusterBattleCredential(value) {
+    const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    const accountId = String(source.accountId || "").trim();
+    const playerId = String(source.playerId || "").trim();
+    const selectionEpoch = Number(source.selectionEpoch);
+    const data = load();
+    const account = accountById(data, accountId);
+    const binding = accountId && data.profileBindings ? data.profileBindings[accountId] || null : null;
+    if (
+      !account
+      || playerId === ""
+      || String(binding && binding.playerId || "") !== playerId
+      || !Number.isSafeInteger(selectionEpoch)
+      || selectionEpoch <= 0
+    ) {
+      return null;
+    }
+    const credential = Object.freeze({
+      credentialKind: "cluster_battle_v1",
+      accountId,
+      playerId,
+      selectionEpoch,
+    });
+    clusterBattleCredentialProofs.add(credential);
+    return credential;
+  }
+
+  function resolveClusterBattleCredential(data, credential) {
+    const identity = durableMutationClusterIdentity([credential]);
+    if (!identity || !clusterBattleCredentialProofs.has(credential)) {
+      return fail("cluster_battle_identity_invalid", "战斗服务器身份校验失败。");
+    }
+    const account = accountById(data, identity.accountId);
+    const binding = data.profileBindings && data.profileBindings[identity.accountId]
+      ? data.profileBindings[identity.accountId]
+      : null;
+    if (!account || String(binding && binding.playerId || "") !== identity.playerId) {
+      return fail("cluster_battle_identity_stale", "角色状态已经变化，请重新进入战斗。");
+    }
+    return {
+      ok: true,
+      account,
+      session: {
+        accountId: identity.accountId,
+        playerId: identity.playerId,
+        selectionEpoch: identity.selectionEpoch,
+        sessionId: "cluster_battle_route",
+      },
+    };
   }
 
   function adoptClusterPresenceRevisionFloor(accountId, floor, ceiling) {
@@ -1699,7 +1757,13 @@ function createAuthService(options = {}) {
       if (!accountById(reloaded, accountId)) {
         throw clusterAuthorityReadFailure(new Error("cluster takeover account is missing"));
       }
-      const reset = resetClusterAccountRuntime(reloaded, accountId);
+      // Account ownership can move while a battle remains deliberately owned
+      // by this process. Cluster commands delegate to that node-owned runtime,
+      // so an account rebase must not erase the room (or another participant's
+      // recovery) merely because this node reacquired one participant.
+      const reset = resetClusterAccountRuntime(reloaded, accountId, {
+        preserveBattleAuthority: true,
+      });
       const committed = commitAuthorityRootLargeCollections(normalizeData(reloaded, {owned: true}));
       const baseline = publishedRollbackBaseline(
         persistentDataForStore(committed),
@@ -5346,6 +5410,16 @@ function createAuthService(options = {}) {
     if (ACCOUNT_SCOPED_DURABLE_RECEIPT_METHODS.has(String(methodName || ""))) {
       return {scopeKind: "account", playerId: "", selectionEpoch: 0};
     }
+    const clusterIdentity = methodName === "_clusterSubmitBattleCommand"
+      ? durableMutationClusterIdentity(args)
+      : null;
+    if (clusterIdentity) {
+      return {
+        scopeKind: "character",
+        playerId: clusterIdentity.playerId,
+        selectionEpoch: clusterIdentity.selectionEpoch,
+      };
+    }
     const session = sessionByToken(data, durableMutationToken(args));
     if (!session) {
       return {scopeKind: "", playerId: "", selectionEpoch: 0};
@@ -5363,6 +5437,35 @@ function createAuthService(options = {}) {
     };
   }
 
+  function durableMutationResolvedSession(data, args, methodName) {
+    const clusterIdentity = methodName === "_clusterSubmitBattleCommand"
+      ? durableMutationClusterIdentity(args)
+      : null;
+    if (!clusterIdentity) {
+      return resolveServiceSession(
+        data,
+        durableMutationToken(args),
+        {allowUnselectedCharacter: true},
+      );
+    }
+    const account = accountById(data, clusterIdentity.accountId);
+    const binding = data.profileBindings && data.profileBindings[clusterIdentity.accountId]
+      ? data.profileBindings[clusterIdentity.accountId]
+      : null;
+    if (!account || String(binding && binding.playerId || "") !== clusterIdentity.playerId) {
+      return fail("cluster_battle_identity_stale", "角色状态已经变化，请重新进入战斗。");
+    }
+    return {
+      ok: true,
+      account,
+      session: {
+        accountId: clusterIdentity.accountId,
+        playerId: clusterIdentity.playerId,
+        selectionEpoch: clusterIdentity.selectionEpoch,
+      },
+    };
+  }
+
   function durableReceiptReplayDecision(
     published,
     args,
@@ -5371,11 +5474,7 @@ function createAuthService(options = {}) {
     actionId,
     methodName,
   ) {
-    const currentSession = resolveServiceSession(
-      published,
-      durableMutationToken(args),
-      {allowUnselectedCharacter: true},
-    );
+    const currentSession = durableMutationResolvedSession(published, args, methodName);
     if (!currentSession.ok) {
       return fail(currentSession.code, currentSession.message);
     }
@@ -5483,7 +5582,11 @@ function createAuthService(options = {}) {
     // canonical token newly issued by another Node to reach the exact proof and
     // authoritative reload path.
     const token = durableMutationToken(args);
-    if (!SESSION_TOKEN_PATTERN.test(token)) {
+    const allowsClusterIdentity = options.methodName === "_clusterSubmitBattleCommand";
+    if (
+      !SESSION_TOKEN_PATTERN.test(token)
+      && !(allowsClusterIdentity && durableMutationClusterIdentity(args))
+    ) {
       const localSession = resolveServiceSession(published, token);
       return {
         handled: true,
@@ -5578,6 +5681,18 @@ function createAuthService(options = {}) {
     const method = serviceApi && serviceApi[methodName];
     if (typeof method !== "function" || methodName === "invokeDurable") {
       return fail("durable_method_invalid", "服务器持久化操作不存在。");
+    }
+    // Cluster battle receipts are keyed by a transport-issued capability, not
+    // merely by the serializable account/player fields carried inside it. Do
+    // this WeakSet proof before any local or exact receipt lookup so an
+    // in-process caller cannot forge those fields and use a known operation id
+    // to disclose/replay another character's terminal result.
+    if (methodName === "_clusterSubmitBattleCommand") {
+      const credential = Array.isArray(args) ? args[0] : null;
+      const resolvedCredential = resolveClusterBattleCredential(load(), credential);
+      if (!resolvedCredential.ok) {
+        return resolvedCredential;
+      }
     }
     const operationId = String(operation && operation.operationId || "").trim();
     const requestHash = String(operation && operation.requestHash || "").trim().toLowerCase();
@@ -5903,7 +6018,9 @@ function createAuthService(options = {}) {
         operationId: receiptOperationId,
         requestHash,
         actionId,
-        accountId: durableMutationAccountId(before, args, hashToken),
+        accountId: durableMutationAccountId(before, args, hashToken, {
+          allowClusterBattle: methodName === "_clusterSubmitBattleCommand",
+        }),
         scopeKind: characterScope.scopeKind,
         ...(characterScope.scopeKind === "character" ? {
           playerId: characterScope.playerId,
@@ -7074,6 +7191,7 @@ function createAuthService(options = {}) {
       runtimeActiveSessionIds,
       serverStartedAtMs,
     }),
+    resolveClusterBattleCredential,
     rotateCharacterSession,
     save,
     sessionHasConnectedEventStream: (sessionId) => runtimeActiveSessionIds.connectedSessionIds.has(String(sessionId || "")),
@@ -7160,6 +7278,10 @@ function createAuthService(options = {}) {
     _httpRegisterPasswordDigest: httpRegisterPasswordDigest,
     _httpLoginPasswordDigest: httpLoginPasswordDigest,
     _clusterIngressIdentity: clusterIngressIdentity,
+    _issueClusterBattleCredential: issueClusterBattleCredential,
+    _clusterBattleRoomKnown: battleRoom.clusterBattleRoomKnown,
+    _clusterGetBattleState: battleRoom.getBattleStateForCluster,
+    _clusterSubmitBattleCommand: battleRoom.submitBattleCommandForCluster,
     _adoptClusterPresenceRevisionFloor: adoptClusterPresenceRevisionFloor,
     _adoptClusterAccountOwner: adoptClusterAccountOwner,
     _clusterAccountRecoveryMetrics: () => Object.freeze({
@@ -7314,6 +7436,10 @@ function createAuthService(options = {}) {
       // Promise/proof contract before ownership is admitted.
       || name === "_httpClusterPasswordVerificationRecord"
       || name === "_clusterIngressIdentity"
+      || name === "_issueClusterBattleCredential"
+      || name === "_clusterBattleRoomKnown"
+      || name === "_clusterGetBattleState"
+      || name === "_clusterSubmitBattleCommand"
       || name === "_adoptClusterAccountOwner"
       || typeof method !== "function"
     ) {

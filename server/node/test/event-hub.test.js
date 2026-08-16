@@ -1258,6 +1258,62 @@ test("two event hubs relay targeted, presence, and session replacement events ex
   assert.equal(hubB.metrics().clusterRelay.capabilitiesAccepted, true);
 });
 
+test("cluster battle control frames stay internal while ordinary remote events still reach observers and sockets", async (t) => {
+  const bridge = new SharedClusterBridge();
+  const serviceA = createFakeEventService({sessions: {}});
+  const serviceB = createFakeEventService({
+    sessions: {token_b: identity("acc_b", "sess_b", "b")},
+  });
+  const hubA = createTestEventHub(serviceA, {
+    clusterRequired: true,
+    clusterEventBridge: bridge,
+    clusterNodeId: "node-a",
+    clusterOriginEpoch: "control_event_epoch_a_01",
+  });
+  const hubB = createTestEventHub(serviceB, {
+    clusterRequired: true,
+    clusterEventBridge: bridge,
+    clusterNodeId: "node-b",
+    clusterOriginEpoch: "control_event_epoch_b_01",
+  });
+  t.after(async () => {
+    await Promise.all([hubA.close(), hubB.close()]);
+  });
+  const socketB = new FakeSocket();
+  await openFakeConnection(hubB, "token_b", socketB);
+  socketB.clearWrites();
+  const control = [];
+  const observed = [];
+  hubB.setClusterControlHandler((event, metadata) => control.push({event, metadata}));
+  hubB.setClusterRemoteEventObserver((event, metadata) => observed.push({event, metadata}));
+
+  assert.equal(hubA.publishClusterControl({
+    type: "cluster.control.battle.state.request",
+    schemaVersion: 1,
+    requestId: "battle_route_AAAAAAAAAAAAAAAAAAAAAAAA",
+  }), true);
+  await nextImmediate();
+  assert.equal(control.length, 1);
+  assert.equal(control[0].metadata.originNodeId, "node-a");
+  assert.deepEqual(jsonMessages(socketB), []);
+  assert.deepEqual(observed, []);
+
+  serviceA.emit({
+    type: "party.update",
+    targetAccountIds: ["acc_b"],
+    party: {partyId: "party_control_boundary"},
+  });
+  await nextImmediate();
+  assert.equal(observed.length, 1);
+  assert.equal(observed[0].event.type, "party.update");
+  assert.equal(jsonMessages(socketB).at(-1).type, "party.update");
+  assert.deepEqual(await hubB.clusterNodeLeaseState("node-a"), {
+    known: false,
+    alive: false,
+    ttlMs: 0,
+  });
+});
+
 test("event hub bounds and coalesces untargeted source position bursts without reordering accounts", async () => {
   const service = createFakeEventService({
     sessions: {token_a: identity("acc_a", "sess_a", "a")},

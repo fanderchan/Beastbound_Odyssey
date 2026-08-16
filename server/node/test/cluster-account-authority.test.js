@@ -173,3 +173,43 @@ test("takeover reset clears only target-owned runtime state and preserves durabl
   assert.deepEqual(data.battleRoomRecoveryByAccountId, {acc_peer: "recovery_peer"});
   assert.deepEqual(Object.keys(data.tradeOffers), ["trade_peer"]);
 });
+
+test("takeover reset can preserve node-owned battle authority during account migration", () => {
+  const room = {
+    roomId: "room_live_owner",
+    participantAccountIds: ["acc_target", "acc_ally"],
+  };
+  const recovery = {
+    roomId: "room_recovery_owner",
+    recoveryAccountIds: ["acc_target", "acc_ally"],
+  };
+  const data = {
+    playerPositions: {acc_target: {mapId: "village", cellX: 1, cellY: 2}},
+    partyInvites: {},
+    battleInvites: {},
+    battleRooms: {room_live_owner: room},
+    battleRoomRecoveries: {room_recovery_owner: recovery},
+    battleRoomRecoveryByAccountId: {
+      acc_target: "room_recovery_owner",
+      acc_ally: "room_recovery_owner",
+    },
+    tradeOffers: {},
+  };
+
+  assert.deepEqual(resetClusterAccountRuntime(data, "acc_target", {
+    preserveBattleAuthority: true,
+  }), {
+    playerPositions: 1,
+    partyInvites: 0,
+    battleInvites: 0,
+    battleRooms: 0,
+    battleRoomRecoveries: 0,
+    tradeOffers: 0,
+  });
+  assert.equal(data.battleRooms.room_live_owner, room);
+  assert.equal(data.battleRoomRecoveries.room_recovery_owner, recovery);
+  assert.deepEqual(data.battleRoomRecoveryByAccountId, {
+    acc_target: "room_recovery_owner",
+    acc_ally: "room_recovery_owner",
+  });
+});

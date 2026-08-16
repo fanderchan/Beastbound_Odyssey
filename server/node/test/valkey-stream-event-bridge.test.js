@@ -58,6 +58,19 @@ test("Valkey stream bridge serializes bounded publishes and acknowledges deliver
   assert.equal(bridge.health().ok, true);
   assert.equal(bridge.metrics().published, 1);
   assert.equal(bridge.metrics().acknowledged, 1);
+  assert.equal((await bridge.nodeLeaseState("node-a")).alive, true);
+  clients.control.remoteLeaseTtlMs = 1250;
+  assert.deepEqual(await bridge.nodeLeaseState("node-b"), {
+    known: true,
+    alive: true,
+    ttlMs: 1250,
+  });
+  clients.control.remoteLeaseTtlMs = -2;
+  assert.deepEqual(await bridge.nodeLeaseState("node-b"), {
+    known: true,
+    alive: false,
+    ttlMs: 0,
+  });
 
   unsubscribe();
   await bridge.close();
@@ -223,7 +236,7 @@ function fakeClients(options = {}) {
   return {
     writer: new FakeWriter(options.writerResult),
     reader: new FakeReader(options.reads || [], options.groupLag),
-    control: new FakeControl(options.leaseResult, options.renewResult),
+    control: new FakeControl(options.leaseResult, options.renewResult, options.remoteLeaseTtlMs),
   };
 }
 
@@ -297,9 +310,10 @@ class FakeReader {
 }
 
 class FakeControl {
-  constructor(leaseResult = "OK", renewResult = 1) {
+  constructor(leaseResult = "OK", renewResult = 1, remoteLeaseTtlMs = -2) {
     this.leaseResult = leaseResult;
     this.renewResult = renewResult;
+    this.remoteLeaseTtlMs = remoteLeaseTtlMs;
     this.calls = [];
     this.closed = false;
   }
@@ -311,6 +325,9 @@ class FakeControl {
     }
     if (args[0] === "EVAL") {
       return String(args[1]).includes("PEXPIRE") ? this.renewResult : 1;
+    }
+    if (args[0] === "PTTL") {
+      return this.remoteLeaseTtlMs;
     }
     throw new Error("unexpected command");
   }

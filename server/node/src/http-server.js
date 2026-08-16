@@ -19,6 +19,9 @@ const {
   createConfiguredClusterEventRuntime,
 } = require("./cluster-event-runtime-config");
 const {
+  createClusterBattleRouter,
+} = require("./cluster-battle-router");
+const {
   attachProtocolMetadata,
   protocolCompatibility,
   protocolMismatchResult,
@@ -228,6 +231,13 @@ function createHttpServer(options = {}) {
     clusterAccountAdmission,
     networkIdentity: (req) => networkAdmission.networkIdentity(req),
   });
+  const clusterBattleRouter = options.clusterBattleRouter || createHttpClusterBattleRouter({
+    accountOwner: clusterAccountAdmission,
+    eventHub,
+    nodeId: eventHubOptions.clusterNodeId,
+    required: eventHubOptions.clusterRequired === true,
+    service: baseService,
+  });
   const httpAuthOptions = {...(options.httpAuthOptions || {})};
   if (clusterAccountAdmission) {
     const configuredBeforeLogin = typeof httpAuthOptions.beforeLogin === "function"
@@ -427,7 +437,7 @@ function createHttpServer(options = {}) {
         networkAdmission.admitAuthAccount(networkContext, "login", payload.username);
         return sendResult(res, httpAuth.login(payload, networkContext.clientIp));
       }
-      await admitClusterSessionRequest(
+      req.beastboundClusterSession = await admitClusterSessionRequest(
         clusterAccountAdmission,
         baseService,
         requestToken,
@@ -794,7 +804,11 @@ function createHttpServer(options = {}) {
         return sendResult(res, service.resolveManorWar(bearerToken(req), await readJson(req)));
       }
       if (req.method === "GET" && url.pathname === "/battle/state") {
-        return sendResult(res, service.getBattleState(bearerToken(req)));
+        const localState = await Promise.resolve(service.getBattleState(bearerToken(req)));
+        const state = clusterBattleRouter
+          ? await clusterBattleRouter.routeState(req.beastboundClusterSession, localState)
+          : localState;
+        return sendResult(res, state);
       }
       if (req.method === "POST" && url.pathname === "/battle/interruption/recover") {
         await readJson(req);
@@ -831,7 +845,26 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "POST" && url.pathname.startsWith("/battle/rooms/") && url.pathname.endsWith("/commands")) {
         const roomId = decodeURIComponent(url.pathname.slice("/battle/rooms/".length, -"/commands".length));
-        return sendResult(res, service.submitBattleCommand(bearerToken(req), roomId, await readJson(req)));
+        const token = bearerToken(req);
+        const payload = await readJson(req);
+        const args = [token, roomId, payload];
+        const localResult = await Promise.resolve(service.submitBattleCommand(...args));
+        if (!clusterBattleRouter || String(localResult && localResult.code || "") !== "battle_room_missing") {
+          return sendResult(res, localResult);
+        }
+        const localState = await Promise.resolve(baseService.invokeDurable(
+          "getBattleState",
+          [token],
+          {actionId: "INTERNAL battle route probe"},
+        ));
+        return sendResult(res, clusterBattleRouter.routeCommand(
+          req.beastboundClusterSession,
+          roomId,
+          payload,
+          durableHttpOperation(req, "submitBattleCommand", args, token),
+          localResult,
+          localState,
+        ));
       }
       if (req.method === "POST" && url.pathname.startsWith("/battle/rooms/") && url.pathname.endsWith("/leave")) {
         const roomId = decodeURIComponent(url.pathname.slice("/battle/rooms/".length, -"/leave".length));
@@ -864,6 +897,7 @@ function createHttpServer(options = {}) {
   }
   server.on("close", () => {
     unsubscribeServiceLogger();
+    clusterBattleRouter?.close();
     healthMonitor.close();
     void mailArchiveMaintenance.close();
   });
@@ -885,6 +919,7 @@ function createHttpServer(options = {}) {
   server.authService = baseService;
   server.networkAdmission = networkAdmission;
   server.clusterAccountAdmission = clusterAccountAdmission;
+  server.clusterBattleRouter = clusterBattleRouter;
   server.healthMonitor = healthMonitor;
   server.mailArchiveMaintenance = mailArchiveMaintenance;
   server.rewardVaultDeliveryMaintenance = rewardVaultDeliveryMaintenance;
@@ -930,24 +965,31 @@ function createDurableHttpServiceProxy(service, requestContexts) {
         }
         const context = requestContexts.getStore() || {};
         const req = context.req || null;
-        const method = String(req && req.method || "").toUpperCase();
-        const pathName = String(req && req.beastboundPath || "");
-        const actionId = `${method || "INTERNAL"} ${pathName || String(property)}`;
-        const headerOperationId = String(req && req.headers && req.headers["idempotency-key"] || "").trim();
-        const bodyOperationId = ["joinHangMatchmaking", "cancelHangMatchmaking"].includes(String(property))
-          ? String(args && args[1] && args[1].idempotencyKey || "").trim()
-          : "";
-        const operationId = bodyOperationId || headerOperationId;
         const authToken = req ? bearerToken(req) : "";
-        return target.invokeDurable(String(property), args, {
-          operationId,
-          actionId,
-          requestHash: durableRequestHash(method, pathName, property, args, authToken),
-          signal: req && req.beastboundDisconnectSignal,
-        });
+        return target.invokeDurable(
+          String(property),
+          args,
+          durableHttpOperation(req, property, args, authToken),
+        );
       });
     },
   });
+}
+
+function durableHttpOperation(req, property, args, authToken = "") {
+  const method = String(req && req.method || "").toUpperCase();
+  const pathName = String(req && req.beastboundPath || "");
+  const actionId = `${method || "INTERNAL"} ${pathName || String(property)}`;
+  const headerOperationId = String(req && req.headers && req.headers["idempotency-key"] || "").trim();
+  const bodyOperationId = ["joinHangMatchmaking", "cancelHangMatchmaking"].includes(String(property))
+    ? String(args && args[1] && args[1].idempotencyKey || "").trim()
+    : "";
+  return {
+    operationId: bodyOperationId || headerOperationId,
+    actionId,
+    requestHash: durableRequestHash(method, pathName, property, args, authToken),
+    signal: req && req.beastboundDisconnectSignal,
+  };
 }
 
 function bindRequestDisconnectSignal(req, res) {
@@ -1386,6 +1428,43 @@ function healthPayload(
   };
 }
 
+function createHttpClusterBattleRouter(options = {}) {
+  const accountOwner = options.accountOwner || null;
+  if (!accountOwner) {
+    return null;
+  }
+  const eventHub = options.eventHub || null;
+  const service = options.service || null;
+  const nodeId = String(options.nodeId || "").trim();
+  const complete = Boolean(
+    nodeId
+    && eventHub
+    && typeof eventHub.publishClusterControl === "function"
+    && typeof eventHub.setClusterControlHandler === "function"
+    && typeof eventHub.setClusterRemoteEventObserver === "function"
+    && typeof eventHub.clusterNodeLeaseState === "function"
+    && typeof accountOwner.verifyRemoteOwner === "function"
+    && service
+    && typeof service._issueClusterBattleCredential === "function"
+    && typeof service._clusterBattleRoomKnown === "function"
+    && typeof service.invokeDurable === "function"
+  );
+  if (!complete) {
+    if (options.required === true) {
+      const error = new Error("Cluster battle routing boundary is incomplete");
+      error.code = "cluster_battle_boundary_invalid";
+      throw error;
+    }
+    return null;
+  }
+  return createClusterBattleRouter({
+    nodeId,
+    eventHub,
+    accountOwner,
+    service,
+  });
+}
+
 function installClusterAccountAdmission(admission, service) {
   if (!admission) {
     return;
@@ -1423,7 +1502,14 @@ async function admitClusterSessionRequest(admission, service, token, options = {
   if (!identity || identity.ok !== true) {
     return null;
   }
-  return admitClusterAccount(admission, identity.accountId);
+  const ownership = await admitClusterAccount(admission, identity.accountId);
+  return Object.freeze({
+    accountId: String(identity.accountId || ""),
+    sessionId: String(identity.sessionId || ""),
+    playerId: String(identity.playerId || ""),
+    selectionEpoch: Math.max(0, Math.trunc(Number(identity.selectionEpoch || 0))),
+    ownerGeneration: Math.max(0, Math.trunc(Number(ownership && ownership.generation || 0))),
+  });
 }
 
 async function admitClusterAccount(admission, accountId) {

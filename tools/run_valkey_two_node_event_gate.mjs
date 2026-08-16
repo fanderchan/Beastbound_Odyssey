@@ -711,6 +711,195 @@ async function runMysqlBattleOwnerFailureGate() {
   }, null, 2)}\n`);
 }
 
+async function runMysqlBattleCommandRoutingGate() {
+  // This lane owns disposable initialize-insecure infrastructure. Never read or
+  // inherit credentials for the normal player database while constructing it.
+  process.env.BEASTBOUND_MYSQL_PASSWORD = "";
+  process.env.MYSQL_PWD = "";
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-battle-routing-gate-"));
+  const database = `beastbound_battle_route_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  let mysqlRuntime = null;
+  let admin = null;
+  let bootstrap = null;
+  let valkey = null;
+  let report = null;
+  let failure = null;
+  let databaseDropped = false;
+  const cleanupErrors = [];
+  try {
+    mysqlRuntime = await startIsolatedMysql({
+      runtimePrefix: "beastbound-battle-routing-mysql",
+      maxConnections: 50,
+    });
+    assert.notEqual(mysqlRuntime.port, 3306);
+    const mysql = require("../server/node/node_modules/mysql2/promise");
+    const {createMysqlAuthStore} = require("../server/node/src/mysql-store");
+    admin = await mysql.createConnection(mysqlRuntime.connectionOptions);
+    const mysqlVersion = await isolatedMysqlVersion(admin);
+    assert.match(mysqlVersion, /^9\.7\./);
+    const globalsBefore = await isolatedMysqlGlobalValues(admin);
+    const deadlocksBefore = await isolatedMysqlDeadlockCount(admin);
+
+    bootstrap = createMysqlAuthStore(mysqlBattleStoreOptions(mysqlRuntime, database, true));
+    const empty = bootstrap.load();
+    const fixture = clusterFixture(Date.now(), 0);
+    await withTimeout(
+      bootstrap.saveAsync(mysqlBattleAuthorityFixture(empty, fixture.data)),
+      15000,
+      "isolated MySQL cross-node battle routing fixture bootstrap timeout",
+    );
+    await withTimeout(bootstrap.close(), 10000, "isolated MySQL battle routing bootstrap close timeout");
+    bootstrap = null;
+
+    const seeded = await loadMysqlBattleAuthority(mysqlRuntime, database);
+    assert.equal(Object.keys(seeded.accounts || {}).length, fixture.accounts.length);
+    assert.equal(Object.keys(seeded.sessions || {}).length, fixture.accounts.length);
+
+    const valkeyPort = await reserveLoopbackPort();
+    const streamKey = `beastbound:test:two-node:battle-routing:${process.pid}`;
+    valkey = startValkey(valkeyPort, temporaryRoot);
+    await waitForLoopback(valkeyPort, valkey);
+    const routing = await runBattleCommandRoutingSubgate({
+      valkeyPort,
+      streamKey,
+      mysqlConfiguration: {
+        port: mysqlRuntime.port,
+        database,
+        mysqlPath: mysqlRuntime.mysqlPath,
+      },
+      loadPersistedAuthority: () => loadMysqlBattleAuthority(mysqlRuntime, database),
+    });
+
+    const streamText = await readValkeyStreamText(valkeyPort, streamKey);
+    const lowerStreamText = streamText.toLowerCase();
+    assert.equal(streamText.includes(routing.challengerToken), false);
+    assert.equal(streamText.includes(routing.opponentToken), false);
+    assert.equal(streamText.includes(FIXTURE_PASSWORD), false);
+    assert.equal(lowerStreamText.includes("authorization"), false);
+    assert.equal(lowerStreamText.includes("bearer "), false);
+    assert.equal(streamText.includes("cluster.control.battle.state.request"), true);
+    assert.equal(streamText.includes("cluster.control.battle.command.request"), true);
+    assert.equal(streamText.includes("cluster.control.battle.command.response"), true);
+
+    let activity = null;
+    await waitFor(async () => {
+      activity = await isolatedMysqlActivity(admin);
+      return activity.activeTransactions === 0 && activity.activeLockWaits === 0;
+    }, 5000, "isolated MySQL battle routing gate left active transactions or lock waits");
+    const deadlocksAfter = await isolatedMysqlDeadlockCount(admin);
+    assert.equal(deadlocksAfter - deadlocksBefore, 0);
+    const globalsAfter = await isolatedMysqlGlobalValues(admin);
+    assert.deepEqual(globalsAfter, globalsBefore);
+    report = {
+      status: "PASS",
+      gate: "valkey_two_node_isolated_mysql_battle_command_routing",
+      engine: "two_independent_node_processes_real_loopback_valkey_and_isolated_mysql",
+      mysqlVersion,
+      isolatedMysql: true,
+      sharedPlayerDatabaseTouched: false,
+      mysqlPortIsNot3306: mysqlRuntime.port !== 3306,
+      independentGameNodeProcesses: routing.independentGameNodeProcesses,
+      independentHttpAndWebSocketPorts: true,
+      crossNodeBattleStateDelegationProven: routing.crossNodeBattleStateDelegationProven,
+      crossNodeNormalBattleCommandRoutingProven: routing.crossNodeNormalBattleCommandRoutingProven,
+      remoteCommandExecutedExactlyOnce: routing.remoteCommandExecutedExactlyOnce,
+      exactReplayStable: routing.exactReplayStable,
+      alteredReplayRejected: routing.alteredReplayRejected,
+      roundResolvedExactlyOnce: routing.roundResolvedExactlyOnce,
+      publicBattleEventsReachedBothNodes: routing.publicBattleEventsReachedBothNodes,
+      clusterControlFramesHiddenFromPlayerWebSockets: routing.clusterControlFramesHiddenFromPlayerWebSockets,
+      staleOwnerControlRejected: routing.staleOwnerControlRejected,
+      staleOwnerHttpRejectedBeforeExecution: routing.staleOwnerHttpRejectedBeforeExecution,
+      runtimeOnlyBattleRoomStayedOnOwnerNode: routing.runtimeOnlyBattleRoomStayedOnOwnerNode,
+      persistentFailureTicketsPreserved: routing.persistentFailureTicketsPreserved,
+      rawBearerAndPasswordAbsentFromValkeyStream: true,
+      mysqlGlobalValuesUnchanged: true,
+      mysqlDeadlockDelta: deadlocksAfter - deadlocksBefore,
+      mysqlResidualTransactions: activity.activeTransactions,
+      mysqlResidualLockWaits: activity.activeLockWaits,
+      battleRuntimeReconnectHydrationProven: false,
+      networkPartitionRecoveryProven: false,
+      twoHundredConnectionSoakProven: false,
+      persistentServiceStarted: false,
+    };
+  } catch (error) {
+    failure = error;
+  } finally {
+    if (bootstrap) {
+      try {
+        await withTimeout(bootstrap.close(), 10000, "isolated MySQL battle routing bootstrap cleanup timeout");
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (admin) {
+      try {
+        await admin.query(`DROP DATABASE IF EXISTS \`${mysqlDatabaseIdentifier(database)}\``);
+        const [rows] = await admin.query(
+          "SELECT COUNT(*) AS rowCount FROM information_schema.schemata WHERE schema_name = ?",
+          [database],
+        );
+        databaseDropped = Number(rows[0] && rows[0].rowCount || 0) === 0;
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+      try {
+        await admin.end();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (valkey) {
+      try {
+        await stopExactChild(valkey.process);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (mysqlRuntime) {
+      try {
+        await stopIsolatedMysql(mysqlRuntime);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    fs.rmSync(temporaryRoot, {recursive: true, force: true});
+  }
+
+  if (!failure && cleanupErrors.length > 0) {
+    failure = cleanupErrors[0];
+  }
+  const mysqlCleanupVerified = Boolean(
+    mysqlRuntime
+    && isolatedMysqlRuntimeStopped(mysqlRuntime)
+    && !fs.existsSync(mysqlRuntime.runtimeDir),
+  );
+  const temporaryStateRemoved = !fs.existsSync(temporaryRoot) && mysqlCleanupVerified;
+  if (failure) {
+    process.stderr.write(`${JSON.stringify({
+      status: "FAIL",
+      gate: "valkey_two_node_isolated_mysql_battle_command_routing",
+      code: String(failure && failure.code || "isolated_mysql_battle_routing_gate_failed"),
+      message: String(failure && failure.message || "isolated MySQL battle routing gate failed"),
+      databaseDropped,
+      mysqlCleanupVerified,
+      temporaryStateRemoved,
+    }, null, 2)}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  assert.ok(report);
+  assert.equal(databaseDropped, true);
+  assert.equal(mysqlCleanupVerified, true);
+  assert.equal(temporaryStateRemoved, true);
+  process.stdout.write(`${JSON.stringify({
+    ...report,
+    temporaryDatabaseDropped: databaseDropped,
+    mysqlCleanupVerified,
+    temporaryStateRemoved,
+  }, null, 2)}\n`);
+}
+
 async function runValkeyPartitionOldOwnerFenceGate() {
   // The gate owns a disposable initialize-insecure MySQL. Never inherit or
   // inspect player-server credentials while constructing this fault lane.
@@ -2008,6 +2197,346 @@ async function runBattleOwnerFailureSubgate(options) {
   }
 }
 
+async function runBattleCommandRoutingSubgate(options) {
+  let roomOwnerNode = null;
+  let remoteCommandNode = null;
+  let challengerSocket = null;
+  let opponentSocket = null;
+  try {
+    roomOwnerNode = await NodeWorker.start({
+      nodeId: "two-node-battle-route-a",
+      valkeyPort: options.valkeyPort,
+      streamKey: options.streamKey,
+      serviceEventSeq: 0,
+      mysqlConfiguration: options.mysqlConfiguration,
+    });
+    remoteCommandNode = await NodeWorker.start({
+      nodeId: "two-node-battle-route-b",
+      valkeyPort: options.valkeyPort,
+      streamKey: options.streamKey,
+      serviceEventSeq: 0,
+      mysqlConfiguration: options.mysqlConfiguration,
+    });
+    assert.deepEqual(roomOwnerNode.fixtureDigest, remoteCommandNode.fixtureDigest);
+    await Promise.all([
+      waitForClusterReady(roomOwnerNode),
+      waitForClusterReady(remoteCommandNode),
+    ]);
+
+    const challenger = fixtureAccount(roomOwnerNode.accounts, "battle_challenger");
+    const opponent = fixtureAccount(roomOwnerNode.accounts, "battle_opponent");
+    await expectOk(roomOwnerNode, "/players/position", {
+      method: "POST",
+      token: challenger.token,
+      body: positionPayload(20, 20, "east", false),
+    });
+    await expectOk(roomOwnerNode, "/players/position", {
+      method: "POST",
+      token: opponent.token,
+      body: positionPayload(21, 20, "west", false),
+    });
+    const invite = await expectOk(roomOwnerNode, "/battle/invite", {
+      method: "POST",
+      token: challenger.token,
+      body: {username: opponent.username},
+    });
+    const accepted = await expectOk(
+      roomOwnerNode,
+      `/battle/invites/${encodeURIComponent(invite.json.invite.inviteId)}/accept`,
+      {method: "POST", token: opponent.token},
+    );
+    const roomId = String(accepted.json.room && accepted.json.room.roomId || "");
+    assert.notEqual(roomId, "");
+    assert.equal(accepted.json.room.status, "ready");
+    const challengerActor = accepted.json.room.battle.actors.find((actor) => (
+      actor
+      && actor.kind === "player"
+      && actor.accountId === challenger.accountId
+    ));
+    const opponentActor = accepted.json.room.battle.actors.find((actor) => (
+      actor
+      && actor.kind === "player"
+      && actor.accountId === opponent.accountId
+    ));
+    assert.ok(challengerActor);
+    assert.ok(opponentActor);
+
+    const persistedBeforeRouting = await options.loadPersistedAuthority();
+    assert.equal(Object.keys(persistedBeforeRouting.battleRooms || {}).length, 0);
+    assert.equal((persistedBeforeRouting.battleRecords || []).length, 0);
+    assert.equal(battleFailureTicketCount(persistedBeforeRouting, [challenger, opponent]), 2);
+
+    const releasedByOwner = await roomOwnerNode.rpc("release-account-owner", {
+      accountKey: "battle_opponent",
+    });
+    assert.equal(releasedByOwner.accountId, opponent.accountId);
+    assert.equal(releasedByOwner.generation, 1);
+    assert.equal(releasedByOwner.released, true);
+
+    const routedState = await expectOk(remoteCommandNode, "/battle/state", {
+      token: opponent.token,
+    });
+    assert.equal(routedState.json.room.roomId, roomId);
+    assert.equal(routedState.json.room.battle.round, 1);
+    assert.equal(routedState.json.interruption, null);
+
+    const challengerEvents = [];
+    const opponentEvents = [];
+    challengerSocket = eventSocket(
+      roomOwnerNode,
+      challenger,
+      20,
+      0,
+      "",
+      (_index, event) => challengerEvents.push(event),
+    );
+    opponentSocket = eventSocket(
+      remoteCommandNode,
+      opponent,
+      21,
+      0,
+      "",
+      (_index, event) => opponentEvents.push(event),
+    );
+    await Promise.all([challengerSocket.connect(), opponentSocket.connect()]);
+
+    const opponentCommandEventA = challengerSocket.waitFor((event) => (
+      event
+      && event.type === "battle.command_submitted"
+      && event.roomId === roomId
+      && event.round === 1
+      && event.submittedAccountId === opponent.accountId
+    ), EVENT_TIMEOUT_MS);
+    const opponentCommandEventB = opponentSocket.waitFor((event) => (
+      event
+      && event.type === "battle.command_submitted"
+      && event.roomId === roomId
+      && event.round === 1
+      && event.submittedAccountId === opponent.accountId
+    ), EVENT_TIMEOUT_MS);
+    const opponentOperationId = "bbo_cluster_battle_route_opponent_0001";
+    const opponentPayload = {
+      round: 1,
+      actorId: opponentActor.actorId,
+      actionId: "attack",
+      targetActorId: challengerActor.actorId,
+    };
+    const firstRemoteCommand = await expectOk(
+      remoteCommandNode,
+      `/battle/rooms/${encodeURIComponent(roomId)}/commands`,
+      {
+        method: "POST",
+        token: opponent.token,
+        headers: {"Idempotency-Key": opponentOperationId},
+        body: opponentPayload,
+      },
+    );
+    await Promise.all([opponentCommandEventA, opponentCommandEventB]);
+    assert.equal(firstRemoteCommand.json.command.actorId, opponentActor.actorId);
+    assert.equal(firstRemoteCommand.json.turn, null);
+
+    const exactReplay = await expectOk(
+      remoteCommandNode,
+      `/battle/rooms/${encodeURIComponent(roomId)}/commands`,
+      {
+        method: "POST",
+        token: opponent.token,
+        headers: {"Idempotency-Key": opponentOperationId},
+        body: opponentPayload,
+      },
+    );
+    assert.deepEqual(exactReplay.json, firstRemoteCommand.json);
+    const alteredReplay = await request(
+      remoteCommandNode,
+      `/battle/rooms/${encodeURIComponent(roomId)}/commands`,
+      {
+        method: "POST",
+        token: opponent.token,
+        headers: {"Idempotency-Key": opponentOperationId},
+        body: {
+          round: 1,
+          actorId: opponentActor.actorId,
+          actionId: "defend",
+        },
+      },
+    );
+    assert.equal(alteredReplay.status, 409, JSON.stringify(alteredReplay.json));
+    assert.equal(alteredReplay.json.code, "idempotency_key_conflict");
+    await delay(250);
+
+    const opponentCommandEventsOnA = challengerEvents.filter((event) => (
+      event
+      && event.type === "battle.command_submitted"
+      && event.roomId === roomId
+      && event.round === 1
+      && event.submittedAccountId === opponent.accountId
+    ));
+    const opponentCommandEventsOnB = opponentEvents.filter((event) => (
+      event
+      && event.type === "battle.command_submitted"
+      && event.roomId === roomId
+      && event.round === 1
+      && event.submittedAccountId === opponent.accountId
+    ));
+    assert.equal(opponentCommandEventsOnA.length, 1);
+    assert.equal(opponentCommandEventsOnB.length, 1);
+
+    const ownerProbeBeforeResolution = await roomOwnerNode.rpc("probe-battle-routing", {
+      roomId,
+      accountId: opponent.accountId,
+      round: 1,
+    });
+    const remoteProbeBeforeResolution = await remoteCommandNode.rpc("probe-battle-routing", {
+      roomId,
+      accountId: opponent.accountId,
+      round: 1,
+    });
+    assert.equal(ownerProbeBeforeResolution.roomKnown, true);
+    assert.equal(remoteProbeBeforeResolution.roomKnown, false);
+    assert.equal(ownerProbeBeforeResolution.commandTraces.length, 1);
+    assert.equal(ownerProbeBeforeResolution.routerMetrics.duplicateOperations, 1);
+    assert.equal(ownerProbeBeforeResolution.routerMetrics.operationConflicts, 1);
+
+    const turnEventA = challengerSocket.waitFor((event) => (
+      event
+      && event.type === "battle.turn_resolved"
+      && event.roomId === roomId
+      && event.round === 1
+    ), EVENT_TIMEOUT_MS);
+    const turnEventB = opponentSocket.waitFor((event) => (
+      event
+      && event.type === "battle.turn_resolved"
+      && event.roomId === roomId
+      && event.round === 1
+    ), EVENT_TIMEOUT_MS);
+    const challengerCommand = await expectOk(
+      roomOwnerNode,
+      `/battle/rooms/${encodeURIComponent(roomId)}/commands`,
+      {
+        method: "POST",
+        token: challenger.token,
+        headers: {"Idempotency-Key": "bbo_cluster_battle_route_challenger_0001"},
+        body: {
+          round: 1,
+          actorId: challengerActor.actorId,
+          actionId: "attack",
+          targetActorId: opponentActor.actorId,
+        },
+      },
+    );
+    assert.equal(challengerCommand.json.turn.round, 1);
+    await Promise.all([turnEventA, turnEventB]);
+
+    const nextRemoteState = await expectOk(remoteCommandNode, "/battle/state", {
+      token: opponent.token,
+    });
+    assert.equal(nextRemoteState.json.room.roomId, roomId);
+    assert.equal(nextRemoteState.json.room.battle.round, 2);
+    assert.equal(nextRemoteState.json.interruption, null);
+
+    const ownerProbeAfterResolution = await roomOwnerNode.rpc("probe-battle-routing", {
+      roomId,
+      accountId: opponent.accountId,
+      round: 1,
+    });
+    assert.equal(ownerProbeAfterResolution.commandTraces.length, 1);
+    assert.equal(ownerProbeAfterResolution.turnTraceCount, 1);
+    assert.ok(ownerProbeAfterResolution.routerMetrics.remoteExecutions >= 5);
+    assert.equal(
+      [...challengerEvents, ...opponentEvents].some((event) => (
+        String(event && event.type || "").startsWith("cluster.control.")
+      )),
+      false,
+    );
+
+    const persistedAfterRound = await options.loadPersistedAuthority();
+    assert.equal(Object.keys(persistedAfterRound.battleRooms || {}).length, 0);
+    assert.equal((persistedAfterRound.battleRecords || []).length, 0);
+    assert.equal(battleFailureTicketCount(persistedAfterRound, [challenger, opponent]), 2);
+
+    challengerSocket.close();
+    opponentSocket.close();
+    await delay(100);
+    challengerSocket.terminate();
+    opponentSocket.terminate();
+    challengerSocket = null;
+    opponentSocket = null;
+
+    const releasedByRemote = await remoteCommandNode.rpc("release-account-owner", {
+      accountKey: "battle_opponent",
+    });
+    assert.equal(releasedByRemote.generation, 2);
+    assert.equal(releasedByRemote.released, true);
+    const reacquiredOnOwner = await request(roomOwnerNode, "/battle/state", {
+      token: opponent.token,
+    });
+    if (reacquiredOnOwner.status !== 200 || reacquiredOnOwner.json && reacquiredOnOwner.json.ok !== true) {
+      const reacquireDiagnostic = await roomOwnerNode.rpc("probe-battle-routing", {
+        roomId,
+        accountId: opponent.accountId,
+        accountKey: "battle_opponent",
+        round: 1,
+      });
+      throw new Error(
+        `room owner reacquire state failed: ${JSON.stringify({response: reacquiredOnOwner, diagnostic: reacquireDiagnostic})}`,
+      );
+    }
+    assert.equal(reacquiredOnOwner.json.room.roomId, roomId);
+    assert.equal(reacquiredOnOwner.json.room.battle.round, 2);
+
+    const staleControl = await remoteCommandNode.rpc("route-stale-battle-state", {
+      accountKey: "battle_opponent",
+      roomId,
+      ownerGeneration: releasedByRemote.generation,
+    });
+    assert.equal(staleControl.routed, false);
+    assert.equal(staleControl.code, "account_node_switching");
+    assert.equal(staleControl.statusCode, 503);
+    const staleHttp = await request(remoteCommandNode, "/battle/state", {
+      token: opponent.token,
+    });
+    assert.equal(staleHttp.status, 503, JSON.stringify(staleHttp.json));
+    assert.equal(staleHttp.json.code, "account_node_switching");
+
+    const finalOwnerProbe = await roomOwnerNode.rpc("probe-battle-routing", {
+      roomId,
+      accountId: opponent.accountId,
+      round: 1,
+    });
+    assert.equal(finalOwnerProbe.commandTraces.length, 1);
+    assert.equal(finalOwnerProbe.turnTraceCount, 1);
+    assert.equal(finalOwnerProbe.routerMetrics.staleOwnerRejected, 1);
+
+    await Promise.all([roomOwnerNode.stop(), remoteCommandNode.stop()]);
+    roomOwnerNode = null;
+    remoteCommandNode = null;
+    return {
+      independentGameNodeProcesses: 2,
+      crossNodeBattleStateDelegationProven: true,
+      crossNodeNormalBattleCommandRoutingProven: true,
+      remoteCommandExecutedExactlyOnce: true,
+      exactReplayStable: true,
+      alteredReplayRejected: true,
+      roundResolvedExactlyOnce: true,
+      publicBattleEventsReachedBothNodes: true,
+      clusterControlFramesHiddenFromPlayerWebSockets: true,
+      staleOwnerControlRejected: true,
+      staleOwnerHttpRejectedBeforeExecution: true,
+      runtimeOnlyBattleRoomStayedOnOwnerNode: true,
+      persistentFailureTicketsPreserved: true,
+      challengerToken: challenger.token,
+      opponentToken: opponent.token,
+    };
+  } finally {
+    challengerSocket?.terminate();
+    opponentSocket?.terminate();
+    await Promise.allSettled([
+      roomOwnerNode && roomOwnerNode.stop(false),
+      remoteCommandNode && remoteCommandNode.stop(false),
+    ]);
+  }
+}
+
 function battleInterruptionOperationId(ticketIdValue) {
   const ticketId = String(ticketIdValue || "");
   assert.match(ticketId, BATTLE_FAILURE_TICKET_PATTERN);
@@ -2133,7 +2662,7 @@ class NodeWorker {
     }
   }
 
-  rpc(command) {
+  rpc(command, payload = null) {
     if (!childRunning(this.child) || !this.child.connected) {
       return Promise.reject(new Error(`node worker ${this.nodeId} is unavailable`));
     }
@@ -2144,7 +2673,7 @@ class NodeWorker {
         reject(new Error(`node worker ${this.nodeId} ${command} timeout`));
       }, 10000);
       this.pending.set(id, {resolve, reject, timer});
-      this.child.send({id, command});
+      this.child.send({id, command, payload});
     });
   }
 
@@ -2559,6 +3088,138 @@ async function runNodeWorker() {
       }
       return;
     }
+    if (message.command === "release-account-owner") {
+      void (async () => {
+        try {
+          const payload = message.payload && typeof message.payload === "object"
+            ? message.payload
+            : {};
+          const account = fixtureAccount(fixture.accounts, String(payload.accountKey || ""));
+          const admission = await clusterRuntime.accountAdmission.admit(account.accountId);
+          const released = await clusterRuntime.accountAdmission.release(account.accountId, {
+            generation: admission.generation,
+          });
+          send({
+            id: message.id,
+            ok: true,
+            result: {
+              accountId: account.accountId,
+              generation: Number(admission.generation || 0),
+              released,
+            },
+          });
+        } catch (error) {
+          send({id: message.id, ok: false, error: String(error && error.stack || error)});
+        }
+      })();
+      return;
+    }
+    if (message.command === "probe-battle-routing") {
+      try {
+        const payload = message.payload && typeof message.payload === "object"
+          ? message.payload
+          : {};
+        const roomId = String(payload.roomId || "");
+        const accountId = String(payload.accountId || "");
+        const round = Math.max(0, Math.trunc(Number(payload.round || 0)));
+        const snapshot = service.snapshot();
+        const room = snapshot.battleRooms && snapshot.battleRooms[roomId] || null;
+        const account = String(payload.accountKey || "") !== ""
+          ? fixtureAccount(fixture.accounts, String(payload.accountKey || ""))
+          : null;
+        const localBattleState = account ? service.getBattleState(account.token) : null;
+        const commandTraces = (Array.isArray(snapshot.battleTrace) ? snapshot.battleTrace : [])
+          .filter((trace) => (
+            trace
+            && trace.type === "battle_command_submitted"
+            && trace.roomId === roomId
+            && (accountId === "" || String(trace.details && trace.details.accountId || "") === accountId)
+            && (round === 0 || Number(trace.details && trace.details.round || 0) === round)
+          ))
+          .map((trace) => ({
+            traceId: String(trace.traceId || ""),
+            accountId: String(trace.details && trace.details.accountId || ""),
+            actorId: String(trace.details && trace.details.actorId || ""),
+            actionId: String(trace.details && trace.details.actionId || ""),
+            round: Number(trace.details && trace.details.round || 0),
+          }));
+        const turnTraceCount = (Array.isArray(snapshot.battleTrace) ? snapshot.battleTrace : [])
+          .filter((trace) => (
+            trace
+            && trace.type === "battle_turn_resolved"
+            && trace.roomId === roomId
+            && (round === 0 || Number(trace.details && trace.details.round || trace.round || 0) === round)
+          )).length;
+        send({
+          id: message.id,
+          ok: true,
+          result: {
+            roomKnown: Boolean(room),
+            roomStatus: String(room && room.status || ""),
+            participantAccountIds: Array.isArray(room && room.participantAccountIds)
+              ? room.participantAccountIds.slice()
+              : [],
+            battleRound: Number(room && room.battle && room.battle.round || 0),
+            submittedActorIds: Array.isArray(room && room.battle && room.battle.submittedActorIds)
+              ? room.battle.submittedActorIds.slice()
+              : [],
+            commandTraces,
+            turnTraceCount,
+            localBattleState: localBattleState ? {
+              ok: localBattleState.ok === true,
+              code: String(localBattleState.code || ""),
+              roomId: String(localBattleState.room && localBattleState.room.roomId || ""),
+              interruptionRoomId: String(
+                localBattleState.interruption && localBattleState.interruption.roomId || "",
+              ),
+            } : null,
+            routerMetrics: server && server.clusterBattleRouter
+              ? server.clusterBattleRouter.metrics()
+              : null,
+          },
+        });
+      } catch (error) {
+        send({id: message.id, ok: false, error: String(error && error.stack || error)});
+      }
+      return;
+    }
+    if (message.command === "route-stale-battle-state") {
+      void (async () => {
+        try {
+          const payload = message.payload && typeof message.payload === "object"
+            ? message.payload
+            : {};
+          const account = fixtureAccount(fixture.accounts, String(payload.accountKey || ""));
+          const identity = await Promise.resolve(service._clusterIngressIdentity(account.token));
+          assert.equal(identity && identity.ok, true);
+          const localState = service.getBattleState(account.token);
+          assert.equal(localState && localState.ok, true);
+          assert.equal(String(localState.interruption && localState.interruption.roomId || ""), String(payload.roomId || ""));
+          try {
+            const result = await server.clusterBattleRouter.routeState({
+              accountId: identity.accountId,
+              playerId: identity.playerId,
+              selectionEpoch: identity.selectionEpoch,
+              ownerGeneration: Number(payload.ownerGeneration || 0),
+            }, localState);
+            send({id: message.id, ok: true, result: {routed: true, result}});
+          } catch (error) {
+            send({
+              id: message.id,
+              ok: true,
+              result: {
+                routed: false,
+                code: String(error && error.code || ""),
+                statusCode: Number(error && error.statusCode || 0),
+              },
+            });
+          }
+        } catch (error) {
+          send({id: message.id, ok: false, error: String(error && error.stack || error)});
+        }
+      })();
+      return;
+    }
     if (message.command === "shutdown") {
       send({id: message.id, ok: true, result: {closing: true}});
       void shutdown(0);
@@ -2678,7 +3339,7 @@ function fixtureAccount(accounts, key) {
   return account;
 }
 
-function eventSocket(worker, account, index, cursor, eventStreamEpoch = "") {
+function eventSocket(worker, account, index, cursor, eventStreamEpoch = "", onEvent = null) {
   const query = new URLSearchParams({
     clientVersion: SERVER_VERSION,
     clientProtocolVersion: String(PROTOCOL_VERSION),
@@ -2697,6 +3358,7 @@ function eventSocket(worker, account, index, cursor, eventStreamEpoch = "") {
     headers: {
       Authorization: `Bearer ${account.token}`,
     },
+    ...(typeof onEvent === "function" ? {onEvent} : {}),
   });
 }
 
@@ -2979,6 +3641,51 @@ function startValkey(port, directory) {
   return {process: child, output: captureOutput(child, 64 * 1024)};
 }
 
+async function readValkeyStreamText(port, streamKey) {
+  const {GlideClient} = require("../server/node/node_modules/@valkey/valkey-glide");
+  const client = await GlideClient.createClient({
+    addresses: [{host: LOOPBACK_HOST, port}],
+    useTLS: false,
+    requestTimeout: 2000,
+    clientName: "beastbound-battle-routing-gate-inspector",
+  });
+  try {
+    const rows = await client.customCommand(["XRANGE", streamKey, "-", "+"]);
+    return JSON.stringify(textualValkeyValue(rows));
+  } finally {
+    try {
+      client.close();
+    } catch {
+      // The disposable Valkey process is still owned and stopped by the gate.
+    }
+  }
+}
+
+function textualValkeyValue(value) {
+  if (Buffer.isBuffer(value) || value instanceof Uint8Array) {
+    return Buffer.from(value).toString("utf8");
+  }
+  if (typeof value === "bigint") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(textualValkeyValue);
+  }
+  if (value instanceof Map) {
+    return Array.from(value.entries()).map(([key, entry]) => [
+      textualValkeyValue(key),
+      textualValkeyValue(entry),
+    ]);
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [
+      key,
+      textualValkeyValue(entry),
+    ]));
+  }
+  return value;
+}
+
 function resolveValkeyServerBinary() {
   const candidates = [
     String(process.env.BEASTBOUND_VALKEY_SERVER_BIN || "").trim(),
@@ -3090,6 +3797,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === filePath) {
     await runMysqlPartitionCommitRecoveryGate();
   } else if (process.argv.includes("--mysql-battle-only")) {
     await runMysqlBattleOwnerFailureGate();
+  } else if (process.argv.includes("--mysql-battle-routing-only")) {
+    await runMysqlBattleCommandRoutingGate();
   } else {
     await runGate();
   }

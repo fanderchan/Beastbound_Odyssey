@@ -36,6 +36,8 @@ test("cluster ingress identity is read-only and refresh grace is explicit", () =
     ok: true,
     accountId,
     sessionId: registered.session.sessionId,
+    playerId: "",
+    selectionEpoch: 0,
   });
   assert.equal(JSON.stringify(service.snapshot()), before);
   assert.equal(service._clusterIngressIdentity("invalid").ok, false);
@@ -112,6 +114,8 @@ test("a stale node exact-reads a new session and reloads authority before first 
     ok: true,
     accountId: registered.account.accountId,
     sessionId: registered.session.sessionId,
+    playerId: "",
+    selectionEpoch: 0,
   });
   assert.equal(staleNode.getSession(registered.session.token).ok, false);
   assert.equal(staleNode._clusterAccountRecoveryMetrics().pendingAuthorityReloads, 1);

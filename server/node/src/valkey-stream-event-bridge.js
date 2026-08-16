@@ -607,6 +607,58 @@ async function createValkeyStreamEventBridge(options = {}) {
     });
   }
 
+  async function nodeLeaseState(nodeIdValue) {
+    const targetNodeId = canonicalNodeId(nodeIdValue);
+    if (targetNodeId === "") {
+      throw runtimeError(
+        "cluster_valkey_node_lease_target_invalid",
+        "Valkey cluster node lease target is invalid",
+      );
+    }
+    if (targetNodeId === nodeId) {
+      const current = health();
+      return Object.freeze({
+        known: true,
+        alive: current.leaseHeld === true,
+        ttlMs: current.leaseHeld === true
+          ? Math.max(0, leaseMs - (finiteNow(now()) - lastLeaseConfirmedAtMs))
+          : 0,
+      });
+    }
+    if (closed || fatal) {
+      throw runtimeError(
+        "cluster_valkey_node_lease_unavailable",
+        "Valkey cluster node lease lookup is unavailable",
+      );
+    }
+    try {
+      const ttlMs = Number(await clients.control.customCommand([
+        "PTTL",
+        `${leasePrefix}:${targetNodeId}`,
+      ]));
+      if (ttlMs === -2) {
+        return Object.freeze({known: true, alive: false, ttlMs: 0});
+      }
+      if (Number.isFinite(ttlMs) && ttlMs > 0) {
+        return Object.freeze({known: true, alive: true, ttlMs: Math.floor(ttlMs)});
+      }
+      throw runtimeError(
+        "cluster_valkey_node_lease_invalid",
+        "Valkey cluster node lease has no bounded expiry",
+      );
+    } catch (error) {
+      const failure = String(error && error.code || "") === "cluster_valkey_node_lease_invalid"
+        ? error
+        : runtimeError(
+          "cluster_valkey_node_lease_lookup_failed",
+          "Valkey cluster node lease lookup failed",
+          error,
+        );
+      reportError(failure);
+      throw failure;
+    }
+  }
+
   function metrics() {
     return Object.freeze({
       ...health(),
@@ -620,6 +672,7 @@ async function createValkeyStreamEventBridge(options = {}) {
     subscribe,
     close,
     health,
+    nodeLeaseState,
     metrics,
   });
 }

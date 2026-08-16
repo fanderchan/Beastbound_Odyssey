@@ -88,11 +88,29 @@ function createBattleRoomDomain(ctx) {
   } = ctx;
 
   function getBattleState(token) {
-    let data = load();
+    const data = load();
     const resolved = resolveSession(data, token, now);
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    return getBattleStateForResolved(resolved);
+  }
+
+  function getBattleStateForCluster(credential, roomIdValue) {
+    const data = load();
+    const resolved = ctx.resolveClusterBattleCredential(data, credential);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    const roomId = String(roomIdValue || "").trim();
+    if (!battleRoomKnownForAccount(data, resolved.account.accountId, roomId)) {
+      return fail("battle_cluster_room_not_owned", "战斗房间不由当前节点持有。");
+    }
+    return getBattleStateForResolved(resolved, roomId);
+  }
+
+  function getBattleStateForResolved(resolved, expectedRoomId = "") {
+    let data = load();
     expireBattleTimeoutsAndEmit(data);
     data = load();
     if (typeof ctx.applyBattleConnectionState === "function") {
@@ -109,6 +127,13 @@ function createBattleRoomDomain(ctx) {
       data = load();
     }
     const payload = battleStatePayload(data, resolved.account.accountId, now);
+    if (
+      payload.room
+      && String(expectedRoomId || "") !== ""
+      && String(payload.room.roomId || "") !== String(expectedRoomId)
+    ) {
+      return fail("battle_cluster_room_changed", "战斗房间已经变化，请重新同步。");
+    }
     const interruptionState = battleFailureTicketStateForAccount(data, resolved.account.accountId);
     if (!interruptionState.ok) {
       return fail(interruptionState.code, interruptionState.message);
@@ -117,6 +142,35 @@ function createBattleRoomDomain(ctx) {
       ? null
       : publicBattleInterruption(interruptionState.ticket);
     return ok(payload);
+  }
+
+  function clusterBattleRoomKnown(credential, roomIdValue) {
+    const data = load();
+    const resolved = ctx.resolveClusterBattleCredential(data, credential);
+    return Boolean(
+      resolved.ok
+      && battleRoomKnownForAccount(
+        data,
+        resolved.account.accountId,
+        String(roomIdValue || "").trim(),
+      )
+    );
+  }
+
+  function battleRoomKnownForAccount(data, accountIdValue, roomIdValue) {
+    const accountId = String(accountIdValue || "");
+    const roomId = String(roomIdValue || "").trim();
+    if (accountId === "" || roomId === "") {
+      return false;
+    }
+    const active = data.battleRooms && data.battleRooms[roomId];
+    const recovery = data.battleRoomRecoveries && data.battleRoomRecoveries[roomId];
+    const room = active || recovery || null;
+    return Boolean(
+      room
+      && Array.isArray(room.participantAccountIds)
+      && room.participantAccountIds.includes(accountId)
+    );
   }
 
   function recoverBattleInterruption(token) {
@@ -716,6 +770,20 @@ function createBattleRoomDomain(ctx) {
     if (!resolved.ok) {
       return fail(resolved.code, resolved.message);
     }
+    return submitBattleCommandForResolved(resolved, roomId, payload);
+  }
+
+  function submitBattleCommandForCluster(credential, roomId, payload = {}) {
+    const data = load();
+    const resolved = ctx.resolveClusterBattleCredential(data, credential);
+    if (!resolved.ok) {
+      return fail(resolved.code, resolved.message);
+    }
+    return submitBattleCommandForResolved(resolved, roomId, payload);
+  }
+
+  function submitBattleCommandForResolved(resolved, roomId, payload = {}) {
+    const data = load();
     expireBattleTimeoutsAndEmit(data);
     const normalizedRoomId = String(roomId || payload.roomId || "").trim();
     let room = data.battleRooms[normalizedRoomId] || null;
@@ -837,6 +905,8 @@ function createBattleRoomDomain(ctx) {
 
   return {
     getBattleState,
+    getBattleStateForCluster,
+    clusterBattleRoomKnown,
     recoverBattleInterruption,
     getBattleTrace,
     getBattleRecordSummary,
@@ -847,6 +917,7 @@ function createBattleRoomDomain(ctx) {
     cancelBattleInvite,
     leaveBattleRoom,
     submitBattleCommand,
+    submitBattleCommandForCluster,
   };
 }
 

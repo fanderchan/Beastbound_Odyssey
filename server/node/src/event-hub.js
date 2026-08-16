@@ -14,6 +14,9 @@ const {
   createEventClusterRelay,
 } = require("./event-cluster-relay");
 const {
+  isClusterBattleControlEvent,
+} = require("./cluster-battle-router");
+const {
   DEFAULT_EVENT_HUB_WRITER_LIMITS,
   createEventHubWriter,
   encodeEventFrame,
@@ -209,6 +212,11 @@ function createEventHub(service, options = {}) {
   let nextConnectionSerial = 0;
   let closing = false;
   let closePromise = null;
+  let clusterControlHandler = null;
+  let clusterRemoteEventObserver = null;
+  const onClusterEventError = typeof options.onClusterEventError === "function"
+    ? options.onClusterEventError
+    : () => {};
   const clusterRelay = createEventClusterRelay({
     bridge: options.clusterEventBridge,
     required: options.clusterRequired === true,
@@ -219,7 +227,30 @@ function createEventHub(service, options = {}) {
     maxEventBytes: options.maxClusterEventBytes,
     maxDedupEntries: options.maxClusterDedupEntries,
     publishTimeoutMs: options.clusterPublishTimeoutMs,
-    onRemoteEvent(event) {
+    onRemoteEvent(event, metadata) {
+      if (isClusterBattleControlEvent(event)) {
+        if (typeof clusterControlHandler === "function") {
+          Promise.resolve(clusterControlHandler(event, metadata)).catch((error) => {
+            try {
+              onClusterEventError(error);
+            } catch {
+              // Request timeouts and relay metrics retain the failure.
+            }
+          });
+        }
+        return;
+      }
+      if (typeof clusterRemoteEventObserver === "function") {
+        try {
+          clusterRemoteEventObserver(event, metadata);
+        } catch (error) {
+          try {
+            onClusterEventError(error);
+          } catch {
+            // Player projection still proceeds when the observer fails.
+          }
+        }
+      }
       // `eventSeq` is allocated by the source AuthService and is therefore
       // only ordered inside that Node.  Reusing it on this Node can collide
       // with the local reconnect cursor and silently drop an otherwise valid
@@ -229,7 +260,7 @@ function createEventHub(service, options = {}) {
       // window.
       publish(clusterRemoteLiveEvent(event));
     },
-    onError: options.onClusterEventError,
+    onError: onClusterEventError,
   });
   const unsubscribe = service && typeof service.onEvent === "function"
     ? service.onEvent((event) => {
@@ -1715,6 +1746,52 @@ function createEventHub(service, options = {}) {
     }
   }
 
+  function publishClusterControl(event) {
+    if (closing || !isClusterBattleControlEvent(event)) {
+      return false;
+    }
+    return clusterRelay.publishLocal(event);
+  }
+
+  function setClusterControlHandler(handler) {
+    if (closing || typeof handler !== "function" || clusterControlHandler !== null) {
+      throw clusterObserverConfigurationError("cluster control handler");
+    }
+    clusterControlHandler = handler;
+    let installed = true;
+    return () => {
+      if (installed && clusterControlHandler === handler) {
+        clusterControlHandler = null;
+      }
+      installed = false;
+    };
+  }
+
+  function setClusterRemoteEventObserver(observer) {
+    if (closing || typeof observer !== "function" || clusterRemoteEventObserver !== null) {
+      throw clusterObserverConfigurationError("cluster remote event observer");
+    }
+    clusterRemoteEventObserver = observer;
+    let installed = true;
+    return () => {
+      if (installed && clusterRemoteEventObserver === observer) {
+        clusterRemoteEventObserver = null;
+      }
+      installed = false;
+    };
+  }
+
+  function clusterNodeLeaseState(nodeId) {
+    if (!clusterRelay.enabled || typeof options.clusterEventBridge?.nodeLeaseState !== "function") {
+      return Promise.resolve(Object.freeze({known: false, alive: false, ttlMs: 0}));
+    }
+    try {
+      return Promise.resolve(options.clusterEventBridge.nodeLeaseState(nodeId));
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
   function close() {
     if (closePromise !== null) {
       return closePromise;
@@ -1731,6 +1808,8 @@ function createEventHub(service, options = {}) {
     pendingPositionEvents.clear();
     activePositionJob = null;
     initializingSnapshotClients.clear();
+    clusterControlHandler = null;
+    clusterRemoteEventObserver = null;
     try {
       unsubscribe();
     } catch {
@@ -1902,10 +1981,20 @@ function createEventHub(service, options = {}) {
   return {
     handleUpgrade,
     publish,
+    publishClusterControl,
+    setClusterControlHandler,
+    setClusterRemoteEventObserver,
+    clusterNodeLeaseState,
     close,
     clientCount,
     metrics,
   };
+}
+
+function clusterObserverConfigurationError(boundary) {
+  const error = new Error(`${boundary} is unavailable or already configured`);
+  error.code = "cluster_event_observer_invalid";
+  return error;
 }
 
 async function admitClusterEventSession(admission, service, token) {

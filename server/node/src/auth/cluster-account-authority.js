@@ -73,7 +73,7 @@ function canonicalClusterSessionIdentityView(value, expectedTokenHashValue) {
   });
 }
 
-function resetClusterAccountRuntime(dataValue, accountIdValue) {
+function resetClusterAccountRuntime(dataValue, accountIdValue, options = {}) {
   const data = record(dataValue);
   const accountId = String(accountIdValue || "").trim();
   if (!ACCOUNT_ID_PATTERN.test(accountId)) {
@@ -90,20 +90,25 @@ function resetClusterAccountRuntime(dataValue, accountIdValue) {
   data.playerPositions = withoutExactKey(data.playerPositions, accountId, summary, "playerPositions");
   data.partyInvites = withoutAccountRecords(data.partyInvites, accountId, summary, "partyInvites");
   data.battleInvites = withoutAccountRecords(data.battleInvites, accountId, summary, "battleInvites");
-  data.battleRooms = withoutAccountRecords(data.battleRooms, accountId, summary, "battleRooms");
-  data.battleRoomRecoveries = withoutAccountRecords(
-    data.battleRoomRecoveries,
-    accountId,
-    summary,
-    "battleRoomRecoveries",
-  );
+  const preserveBattleAuthority = options.preserveBattleAuthority === true;
+  if (!preserveBattleAuthority) {
+    data.battleRooms = withoutAccountRecords(data.battleRooms, accountId, summary, "battleRooms");
+    data.battleRoomRecoveries = withoutAccountRecords(
+      data.battleRoomRecoveries,
+      accountId,
+      summary,
+      "battleRoomRecoveries",
+    );
+  }
   data.tradeOffers = withoutAccountRecords(data.tradeOffers, accountId, summary, "tradeOffers");
-  const recoveryIds = new Set(Object.keys(record(data.battleRoomRecoveries)));
-  data.battleRoomRecoveryByAccountId = Object.fromEntries(
-    Object.entries(record(data.battleRoomRecoveryByAccountId)).filter(([indexedAccountId, roomId]) => (
-      indexedAccountId !== accountId && recoveryIds.has(String(roomId || ""))
-    )),
-  );
+  if (!preserveBattleAuthority) {
+    const recoveryIds = new Set(Object.keys(record(data.battleRoomRecoveries)));
+    data.battleRoomRecoveryByAccountId = Object.fromEntries(
+      Object.entries(record(data.battleRoomRecoveryByAccountId)).filter(([indexedAccountId, roomId]) => (
+        indexedAccountId !== accountId && recoveryIds.has(String(roomId || ""))
+      )),
+    );
+  }
   return Object.freeze({...summary});
 }
 
