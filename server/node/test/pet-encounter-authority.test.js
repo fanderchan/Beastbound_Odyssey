@@ -75,6 +75,31 @@ test("pet encounter catalog fails startup for unknown forms, bad ranges, stats a
       pattern: /battle appearance overrides require an explicitly non-catchable entry/,
     },
     {
+      name: "catchable battle presentation scale",
+      mutate(zone) {
+        zone.bossMechanicId = "test_boss";
+        zone.wildPetPool[0].battlePresentationScale = 1.2;
+      },
+      pattern: /battle presentation scale requires an explicitly non-catchable entry/,
+    },
+    {
+      name: "non-boss battle presentation scale",
+      mutate(zone) {
+        zone.wildPetPool[0].catchable = false;
+        zone.wildPetPool[0].battlePresentationScale = 1.2;
+      },
+      pattern: /battle presentation scale requires a boss mechanic/,
+    },
+    {
+      name: "out of range battle presentation scale",
+      mutate(zone) {
+        zone.bossMechanicId = "test_boss";
+        zone.wildPetPool[0].catchable = false;
+        zone.wildPetPool[0].battlePresentationScale = 1.66;
+      },
+      pattern: /invalid battlePresentationScale/,
+    },
+    {
       name: "inverted level range",
       mutate(zone) { zone.wildPetPool[0].levelMin = 4; zone.wildPetPool[0].levelMax = 3; },
       pattern: /invalid level range/,
@@ -302,6 +327,27 @@ test("manual guardian zones require the registered nearby interaction and are no
   assert.equal(tide.encounter.selectedWildPets[2].battleAppearanceFormId, "driftfox_evolved_moon_gale_wind7_water3");
   assert.equal(tide.encounter.selectedWildPets[2].battleDisplayName, "潮回守护兽");
   assert.equal(tide.encounter.selectedWildPets[2].catchable, false);
+
+  const ember = authority.resolve({
+    mapId: "ember_core_cave_f4",
+    position: {hasCell: true, cellX: 21, cellY: 7},
+    request: {encounterIntent: {
+      zoneId: "ember_core_guardian_floor",
+      encounterGroupId: "ember_core_guardian_group",
+      sourceInteractionId: "ember_core_guardian_npc",
+    }},
+    participants: soloParticipant(),
+    participantPositions: soloPosition("ember_core_cave_f4", 21, 7),
+    seed: "ember-guardian",
+  });
+  assert.equal(ember.ok, true);
+  assert.equal(ember.encounter.bossMechanicId, "guardian_ember_pressure_v1");
+  assert.equal(ember.encounter.selectedWildPets[2].formId, "bui_normal_red_fire10");
+  assert.equal(ember.encounter.selectedWildPets[2].name, "焰心守护兽");
+  assert.equal(ember.encounter.selectedWildPets[2].catchable, false);
+  assert.equal(Object.hasOwn(ember.encounter.selectedWildPets[2], "battleAppearanceFormId"), false);
+  assert.equal(Object.hasOwn(ember.encounter.selectedWildPets[2], "battleDisplayName"), false);
+  assert.equal(Object.hasOwn(ember.encounter.selectedWildPets[2], "battlePresentationScale"), false);
 });
 
 test("party encounters require every participant to be stopped on the same nearby map", () => {

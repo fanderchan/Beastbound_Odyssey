@@ -4,6 +4,7 @@
     {
       "id": "guardian_targeted_charge_v1",
       "kind": "targeted_charge",
+      "runtimeEnabled": true,
       "label": "守护兽锁定冲撞",
       "encounterGroupId": "earth_vein_guardian_group",
       "bossActorSlot": "enemy.front.3",
@@ -20,6 +21,7 @@
     {
       "id": "guardian_tide_core_v1",
       "kind": "tide_core",
+      "runtimeEnabled": true,
       "label": "守护兽潮核回流",
       "encounterGroupId": "tide_echo_guardian_group",
       "bossActorSlot": "enemy.front.3",
@@ -34,6 +36,33 @@
       "healText": "{target}仍在，潮核回流，{boss}回复18%生命。",
       "brokenText": "{target}被击破，{boss}进入退潮，防御降低一回合。",
       "ebbEndText": "{boss}的潮息恢复，退潮结束。"
+    },
+    {
+      "id": "guardian_ember_pressure_v1",
+      "kind": "ember_pressure",
+      "runtimeEnabled": false,
+      "label": "守护兽焰压阈值",
+      "encounterGroupId": "ember_core_guardian_group",
+      "bossActorSlot": "enemy.front.3",
+      "triggerHpRatio": 0.6,
+      "resolveAfterRounds": 1,
+      "safeHitDivisor": 2,
+      "exposedDefenseMultiplier": 0.7,
+      "overheatAttackMultiplier": 1.3,
+      "outcomeRounds": 1,
+      "intentActionId": "boss_ember_pressure",
+      "openText": "{boss}展开焰压环。下回合主动命中1～{limit}次可破甲；超限会激怒它。",
+      "commandText": "焰压：锁定{boss}\n命中1～{limit}次：破甲\n超过{limit}次：强化攻击",
+      "exposedText": "有效命中{hits}次，未超过{limit}次上限；{boss}焰甲破裂，防御降低一回合。",
+      "overheatText": "有效命中{hits}次，超过{limit}次上限；{boss}焰压失控，攻击强化一回合。",
+      "quietText": "本回合没有有效命中，{boss}的焰压环自行熄灭。",
+      "recoverText": "{boss}的焰压恢复平稳。",
+      "qaPresentation": {
+        "serverFormId": "bui_normal_red_fire10",
+        "battleAppearanceFormId": "emberhorn_red_fire8_earth2",
+        "battleDisplayName": "焰心守护兽",
+        "battlePresentationScale": 1.62
+      }
     }
   ]
 }

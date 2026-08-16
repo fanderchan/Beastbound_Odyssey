@@ -3,6 +3,31 @@ extends RefCounted
 const STATE_GUARD_HIT := "guard_hit"
 const STATE_WOUNDED_RETURN := "wounded_return"
 const MELEE_CONTACT_ACTION_PROGRESS := 0.62
+const BATTLE_PRESENTATION_SCALE_MIN := 1.0
+const BATTLE_PRESENTATION_SCALE_MAX := 1.65
+
+
+static func actor_presentation_scale(actor: Dictionary) -> float:
+	if (
+		str(actor.get("kind", "")) != "wild_pet"
+		or bool(actor.get("catchable", true))
+	):
+		return BATTLE_PRESENTATION_SCALE_MIN
+	var raw_scale := float(actor.get("battlePresentationScale", 1.0))
+	if is_nan(raw_scale) or is_inf(raw_scale):
+		return BATTLE_PRESENTATION_SCALE_MIN
+	return clampf(
+		raw_scale,
+		BATTLE_PRESENTATION_SCALE_MIN,
+		BATTLE_PRESENTATION_SCALE_MAX
+	)
+
+
+static func contact_presentation_scale(attacker: Dictionary, target: Dictionary) -> float:
+	return maxf(
+		actor_presentation_scale(attacker),
+		actor_presentation_scale(target)
+	)
 
 
 static func damage_reaction_state(hp_after: int, dodged: bool, launched: bool, blocked: bool) -> String:
@@ -220,6 +245,24 @@ static func validation_errors() -> Array[String]:
 	var radius := shadow.get("radius", Vector2.ZERO) as Vector2
 	if radius.x <= radius.y * 2.5 or absf(float((shadow.get("centerOffset", Vector2.ZERO) as Vector2).y)) > 4.0:
 		errors.append("宠物阴影必须是贴脚软椭圆")
+	if absf(actor_presentation_scale({
+		"kind": "wild_pet",
+		"catchable": false,
+		"battlePresentationScale": 1.62,
+	}) - 1.62) > 0.001:
+		errors.append("不可捕捉首领的权威展示倍率没有生效")
+	if actor_presentation_scale({
+		"kind": "wild_pet",
+		"catchable": true,
+		"battlePresentationScale": 1.65,
+	}) != 1.0:
+		errors.append("可捕捉宠物不能获得实例展示倍率")
+	if actor_presentation_scale({
+		"kind": "wild_pet",
+		"catchable": false,
+		"battlePresentationScale": 99.0,
+	}) > BATTLE_PRESENTATION_SCALE_MAX:
+		errors.append("首领展示倍率必须在客户端再次限幅")
 	if should_show_actor_label("测试 Lv1", true, false, false):
 		errors.append("10V10 不应常驻显示全部名称")
 	if not should_show_actor_label("测试 Lv1", true, false, true):

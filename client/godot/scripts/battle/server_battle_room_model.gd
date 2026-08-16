@@ -3,6 +3,9 @@ extends RefCounted
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
+const BattleVisualPresentationModel := preload(
+	"res://scripts/battle/battle_visual_presentation_model.gd"
+)
 
 
 static func is_restorable_room(room: Dictionary) -> bool:
@@ -382,6 +385,11 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 		"serverPetId": str(server_actor.get("petId", "")),
 		"formId": _battle_form_id_from_server(server_actor),
 		"serverFormId": str(server_actor.get("formId", "")),
+		"battlePresentationScale": BattleVisualPresentationModel.actor_presentation_scale({
+			"kind": kind,
+			"catchable": bool(server_actor.get("catchable", kind == "wild_pet")),
+			"battlePresentationScale": server_actor.get("battlePresentationScale", 1.0),
+		}),
 		"petId": str(server_actor.get("petId", "")),
 		"serverGuarding": bool(server_actor.get("guarding", false)),
 		"serverDefeated": bool(server_actor.get("defeated", false)),
@@ -525,6 +533,14 @@ static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, se
 		actor["formId"] = _battle_form_id_from_server(server_actor, str(actor.get("formId", "")))
 		actor["serverFormId"] = str(server_actor.get("formId", actor.get("serverFormId", "")))
 		actor["catchable"] = bool(server_actor.get("catchable", actor.get("catchable", false)))
+		actor["battlePresentationScale"] = BattleVisualPresentationModel.actor_presentation_scale({
+			"kind": str(actor.get("kind", "")),
+			"catchable": bool(actor.get("catchable", false)),
+			"battlePresentationScale": server_actor.get(
+				"battlePresentationScale",
+				actor.get("battlePresentationScale", 1.0)
+			),
+		})
 		actor["captureDifficulty"] = maxi(0, int(server_actor.get("captureDifficulty", actor.get("captureDifficulty", 0))))
 		actor["captured"] = bool(server_actor.get("captured", actor.get("captured", false)))
 		actor["capturedByAccountId"] = str(server_actor.get("capturedByAccountId", actor.get("capturedByAccountId", "")))
@@ -622,6 +638,7 @@ static func _apply_boss_intent_to_actors(actors: Array[Dictionary], battle: Dict
 			actor["bossThreatened"] = true
 			actor["bossThreatMechanicId"] = str(intent.get("mechanicId", ""))
 			actor["bossThreatStyle"] = str(intent.get("markerStyle", "charge"))
+			actor["bossThreatLimit"] = maxi(0, int(intent.get("safeHitCap", 0)))
 			return
 
 
@@ -921,7 +938,16 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"serverEventType": event_type,
 			"serverMessage": str(server_event.get("message", "")),
 		}
-	if event_type == "boss_tide_core_open" or event_type == "boss_tide_core_broken" or event_type == "boss_tide_ebb_end":
+	if (
+		event_type == "boss_tide_core_open"
+		or event_type == "boss_tide_core_broken"
+		or event_type == "boss_tide_ebb_end"
+		or event_type == "boss_ember_pressure_open"
+		or event_type == "boss_ember_pressure_exposed"
+		or event_type == "boss_ember_pressure_overheated"
+		or event_type == "boss_ember_pressure_quiet"
+		or event_type == "boss_ember_pressure_end"
+	):
 		var phase_target_id := _local_actor_id_for_server_actor(
 			state,
 			str(server_event.get("targetActorId", "")),
@@ -940,7 +966,7 @@ static func _local_event_from_server_event(state: Dictionary, server_event: Dict
 			"speed": int(actor.get("quick", actor.get("speed", 0))),
 			"sequence": sequence,
 			"actionId": str(server_event.get("actionId", event_type)),
-			"presentationState": "hit" if event_type == "boss_tide_core_broken" else "skill",
+			"presentationState": "hit" if event_type == "boss_tide_core_broken" or event_type == "boss_ember_pressure_exposed" else "skill",
 			"serverResolved": true,
 			"serverEventId": str(server_event.get("eventId", "")),
 			"serverEventType": event_type,

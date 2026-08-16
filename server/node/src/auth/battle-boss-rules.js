@@ -9,7 +9,12 @@ const DEFAULT_CATALOG_PATH = path.join(REPOSITORY_ROOT, "client/godot/data/battl
 const SCHEMA_VERSION = 2;
 const MECHANIC_TARGETED_CHARGE = "targeted_charge";
 const MECHANIC_TIDE_CORE = "tide_core";
-const ALLOWED_MECHANIC_KINDS = new Set([MECHANIC_TARGETED_CHARGE, MECHANIC_TIDE_CORE]);
+const MECHANIC_EMBER_PRESSURE = "ember_pressure";
+const ALLOWED_MECHANIC_KINDS = new Set([
+  MECHANIC_TARGETED_CHARGE,
+  MECHANIC_TIDE_CORE,
+  MECHANIC_EMBER_PRESSURE,
+]);
 const ALLOWED_TARGET_KINDS = new Set(["pet", "player"]);
 
 class BattleBossRulesError extends Error {
@@ -72,6 +77,10 @@ function validateMechanic(raw, index, ids, errors) {
       errors.push(`${fieldPath}.${key} must be non-empty trimmed text`);
     }
   }
+  if (typeof raw.runtimeEnabled !== "boolean") {
+    errors.push(`${fieldPath}.runtimeEnabled must be a boolean`);
+  }
+  validateQaPresentation(raw, fieldPath, errors);
   const kind = strictText(raw.kind);
   if (!ALLOWED_MECHANIC_KINDS.has(kind)) {
     errors.push(`${fieldPath}.kind must be one of ${Array.from(ALLOWED_MECHANIC_KINDS).join(", ")}`);
@@ -81,7 +90,33 @@ function validateMechanic(raw, index, ids, errors) {
     validateTideCoreMechanic(raw, fieldPath, errors);
     return;
   }
+  if (kind === MECHANIC_EMBER_PRESSURE) {
+    validateEmberPressureMechanic(raw, fieldPath, errors);
+    return;
+  }
   validateTargetedChargeMechanic(raw, fieldPath, errors);
+}
+
+function validateQaPresentation(raw, fieldPath, errors) {
+  if (raw.qaPresentation === undefined) {
+    return;
+  }
+  if (!isRecord(raw.qaPresentation)) {
+    errors.push(`${fieldPath}.qaPresentation must be an object`);
+    return;
+  }
+  if (raw.runtimeEnabled !== false) {
+    errors.push(`${fieldPath}.qaPresentation is allowed only while runtimeEnabled is false`);
+  }
+  for (const key of ["serverFormId", "battleAppearanceFormId", "battleDisplayName"]) {
+    if (strictText(raw.qaPresentation[key]) === "") {
+      errors.push(`${fieldPath}.qaPresentation.${key} must be non-empty trimmed text`);
+    }
+  }
+  const scale = Number(raw.qaPresentation.battlePresentationScale);
+  if (!Number.isFinite(scale) || scale < 1 || scale > 1.65) {
+    errors.push(`${fieldPath}.qaPresentation.battlePresentationScale must be between 1 and 1.65`);
+  }
 }
 
 function validateTargetedChargeMechanic(raw, fieldPath, errors) {
@@ -152,7 +187,58 @@ function validateTideCoreMechanic(raw, fieldPath, errors) {
   }
 }
 
-function createBattleBossRules({document} = {}) {
+function validateEmberPressureMechanic(raw, fieldPath, errors) {
+  for (const key of [
+    "intentActionId",
+    "openText",
+    "commandText",
+    "exposedText",
+    "overheatText",
+    "quietText",
+    "recoverText",
+  ]) {
+    if (strictText(raw[key]) === "") {
+      errors.push(`${fieldPath}.${key} must be non-empty trimmed text`);
+    }
+  }
+  if (ratio(raw.triggerHpRatio, {allowOne: false}) === 0) {
+    errors.push(`${fieldPath}.triggerHpRatio must be greater than 0 and less than 1`);
+  }
+  if (positiveInteger(raw.resolveAfterRounds) === 0) {
+    errors.push(`${fieldPath}.resolveAfterRounds must be a positive integer`);
+  }
+  if (positiveInteger(raw.safeHitDivisor) === 0) {
+    errors.push(`${fieldPath}.safeHitDivisor must be a positive integer`);
+  }
+  if (ratio(raw.exposedDefenseMultiplier, {allowOne: false}) === 0) {
+    errors.push(`${fieldPath}.exposedDefenseMultiplier must be greater than 0 and less than 1`);
+  }
+  const overheatAttackMultiplier = Number(raw.overheatAttackMultiplier);
+  if (!Number.isFinite(overheatAttackMultiplier) || overheatAttackMultiplier <= 1) {
+    errors.push(`${fieldPath}.overheatAttackMultiplier must be greater than 1`);
+  }
+  if (positiveInteger(raw.outcomeRounds) === 0) {
+    errors.push(`${fieldPath}.outcomeRounds must be a positive integer`);
+  }
+  for (const key of ["openText", "commandText", "exposedText", "overheatText"]) {
+    const text = String(raw[key] || "");
+    if (!text.includes("{boss}") || !text.includes("{limit}")) {
+      errors.push(`${fieldPath}.${key} must name {boss} and {limit}`);
+    }
+  }
+  for (const key of ["exposedText", "overheatText"]) {
+    if (!String(raw[key] || "").includes("{hits}")) {
+      errors.push(`${fieldPath}.${key} must include {hits}`);
+    }
+  }
+  for (const key of ["quietText", "recoverText"]) {
+    if (!String(raw[key] || "").includes("{boss}")) {
+      errors.push(`${fieldPath}.${key} must name {boss}`);
+    }
+  }
+}
+
+function createBattleBossRules({document, allowPendingMechanics = false} = {}) {
   const errors = [];
   if (!isRecord(document)) {
     throw new BattleBossRulesError(["document must be an object"]);
@@ -174,6 +260,11 @@ function createBattleBossRules({document} = {}) {
   const mechanics = document.mechanics.map((mechanic) => deepFreeze(structuredClone(mechanic)));
   const byId = new Map(mechanics.map((mechanic) => [mechanic.id, mechanic]));
 
+  function operationalMechanicById(mechanicId) {
+    const mechanic = byId.get(String(mechanicId || ""));
+    return mechanic && (mechanic.runtimeEnabled || allowPendingMechanics === true) ? mechanic : null;
+  }
+
   function mechanicForRoom(room) {
     const encounter = isRecord(room && room.encounter) ? room.encounter : {};
     const mechanicId = strictText(encounter.bossMechanicId);
@@ -184,7 +275,7 @@ function createBattleBossRules({document} = {}) {
     if (!mechanic || String(encounter.groupId || "") !== mechanic.encounterGroupId) {
       throw new BattleBossRulesError([`encounter ${String(encounter.groupId || "")} cannot use ${mechanicId}`]);
     }
-    return mechanic;
+    return operationalMechanicById(mechanicId);
   }
 
   function bossForMechanic(actors, mechanic, {requireAlive}) {
@@ -209,6 +300,24 @@ function createBattleBossRules({document} = {}) {
       return null;
     }
     const boss = bossForMechanic(actors, mechanic, {requireAlive: true});
+    if (mechanic.kind === MECHANIC_EMBER_PRESSURE) {
+      return {
+        mechanicId: mechanic.id,
+        kind: mechanic.kind,
+        bossActorId: String(boss.actorId || ""),
+        phase: "waiting",
+        openedRound: 0,
+        resolveRound: 0,
+        eligibleActorIds: [],
+        safeHitCap: 0,
+        outcomeHitCount: 0,
+        baseBossAttack: Math.max(1, Math.trunc(Number(boss.attack || 1))),
+        baseBossDefense: Math.max(1, Math.trunc(Number(boss.defense || 1))),
+        outcomeRestoreRound: 0,
+        completed: false,
+        schemaVersion: 2,
+      };
+    }
     if (mechanic.kind === MECHANIC_TIDE_CORE) {
       return {
         mechanicId: mechanic.id,
@@ -242,6 +351,9 @@ function createBattleBossRules({document} = {}) {
     }
     const boss = bossForMechanic(actors, mechanic, {requireAlive: false});
     const bossActorId = String(boss.actorId || "");
+    if (mechanic.kind === MECHANIC_EMBER_PRESSURE) {
+      return normalizeEmberPressureState(mechanic, boss, bossActorId, actors, state);
+    }
     if (mechanic.kind === MECHANIC_TIDE_CORE) {
       return normalizeTideCoreState(mechanic, boss, bossActorId, actors, state);
     }
@@ -276,6 +388,9 @@ function createBattleBossRules({document} = {}) {
     }
     if (mechanic.kind === MECHANIC_TIDE_CORE) {
       return normalizeTideCoreIntent(room, actors, state, intent, mechanic);
+    }
+    if (mechanic.kind === MECHANIC_EMBER_PRESSURE) {
+      return normalizeEmberPressureIntent(room, actors, state, intent, mechanic);
     }
     if (
       Number(room && room.battle && room.battle.round || 0) !== mechanic.strikeRound
@@ -327,7 +442,7 @@ function createBattleBossRules({document} = {}) {
     if (!state || state.completed || String(actor && actor.actorId || "") !== String(state.bossActorId || "")) {
       return null;
     }
-    const mechanic = byId.get(String(state.mechanicId || ""));
+    const mechanic = operationalMechanicById(state.mechanicId);
     if (!mechanic) {
       return null;
     }
@@ -373,7 +488,7 @@ function createBattleBossRules({document} = {}) {
   }
 
   function telegraphEvent(room, battle, command, actor, target, round, sequence) {
-    const mechanic = byId.get(String(command && command.bossMechanicId || ""));
+    const mechanic = operationalMechanicById(command && command.bossMechanicId);
     if (!mechanic) {
       return null;
     }
@@ -427,13 +542,19 @@ function createBattleBossRules({document} = {}) {
     };
   }
 
-  function resolveRoundEnd(room, battle, round, sequence) {
+  function resolveRoundEnd(room, battle, round, sequence, resolvedEvents = []) {
     const state = isRecord(battle && battle.bossMechanic) ? battle.bossMechanic : null;
     if (!state || state.completed) {
       return [];
     }
-    const mechanic = byId.get(String(state.mechanicId || ""));
-    if (!mechanic || mechanic.kind !== MECHANIC_TIDE_CORE) {
+    const mechanic = operationalMechanicById(state.mechanicId);
+    if (!mechanic) {
+      return [];
+    }
+    if (mechanic.kind === MECHANIC_EMBER_PRESSURE) {
+      return resolveEmberPressureRoundEnd(room, battle, round, sequence, resolvedEvents, mechanic, state);
+    }
+    if (mechanic.kind !== MECHANIC_TIDE_CORE) {
       return [];
     }
     const boss = (Array.isArray(battle && battle.actors) ? battle.actors : []).find((actor) => (
@@ -561,13 +682,13 @@ function createBattleBossRules({document} = {}) {
   }
 
   function interruptionMessage(command, actor) {
-    const mechanic = byId.get(String(command && command.bossMechanicId || ""));
+    const mechanic = operationalMechanicById(command && command.bossMechanicId);
     const actorName = String(actor && (actor.displayName || actor.username) || "守护兽");
     return mechanic ? formatText(mechanic.interruptedText, actorName, "") : `${actorName}的蓄力被打断了。`;
   }
 
   function evadedMessage(command, actor, intent) {
-    const mechanic = byId.get(String(command && command.bossMechanicId || ""));
+    const mechanic = operationalMechanicById(command && command.bossMechanicId);
     const actorName = String(actor && (actor.displayName || actor.username) || "守护兽");
     const targetName = String(intent && intent.targetName || "目标");
     return mechanic ? formatText(mechanic.evadedText, actorName, targetName) : `${targetName}已离场，${actorName}的冲撞落空了。`;
@@ -576,6 +697,7 @@ function createBattleBossRules({document} = {}) {
   return deepFreeze({
     schemaVersion: SCHEMA_VERSION,
     mechanicIds: mechanics.map((mechanic) => mechanic.id),
+    runtimeMechanicIds: mechanics.filter((mechanic) => mechanic.runtimeEnabled).map((mechanic) => mechanic.id),
     mechanicById(mechanicId) {
       return byId.get(String(mechanicId || "")) || null;
     },
@@ -612,6 +734,308 @@ function chooseTarget(room, battle, actor, mechanic, round) {
     return candidates[index];
   }
   return null;
+}
+
+function normalizeEmberPressureState(mechanic, boss, bossActorId, actors, state) {
+  const valid = isRecord(state)
+    && String(state.mechanicId || "") === mechanic.id
+    && String(state.bossActorId || "") === bossActorId
+    && String(state.kind || "") === mechanic.kind
+    && Number(state.schemaVersion || 0) === SCHEMA_VERSION;
+  const requestedPhase = valid && ["waiting", "open", "exposed", "overheated", "completed"].includes(String(state.phase || ""))
+    ? String(state.phase || "")
+    : "waiting";
+  const actorById = new Map((Array.isArray(actors) ? actors : []).map((actor) => [String(actor && actor.actorId || ""), actor]));
+  const eligibleActorIds = valid && ["open", "exposed", "overheated"].includes(requestedPhase)
+    ? Array.from(new Set(Array.isArray(state.eligibleActorIds) ? state.eligibleActorIds.map(String) : []))
+      .filter((actorId) => emberPressureEligibleActor(actorById.get(actorId), boss))
+      .sort()
+    : [];
+  const completed = Boolean(valid && state.completed) || requestedPhase === "completed";
+  const phase = completed
+    ? "completed"
+    : (["open", "exposed", "overheated"].includes(requestedPhase) && eligibleActorIds.length < 1 ? "completed" : requestedPhase);
+  const openedRound = valid ? Math.max(0, Math.trunc(Number(state.openedRound || 0))) : 0;
+  const resolveRound = phase === "open" || phase === "exposed" || phase === "overheated"
+    ? openedRound + mechanic.resolveAfterRounds
+    : 0;
+  const safeHitCap = phase === "open" || phase === "exposed" || phase === "overheated"
+    ? emberPressureSafeHitCap(eligibleActorIds.length, mechanic.safeHitDivisor)
+    : 0;
+  const outcomeRestoreRound = phase === "exposed" || phase === "overheated"
+    ? resolveRound + mechanic.outcomeRounds
+    : 0;
+  const baseBossAttack = valid
+    ? Math.max(1, Math.trunc(Number(state.baseBossAttack || boss.attack || 1)))
+    : Math.max(1, Math.trunc(Number(boss.attack || 1)));
+  const baseBossDefense = valid
+    ? Math.max(1, Math.trunc(Number(state.baseBossDefense || boss.defense || 1)))
+    : Math.max(1, Math.trunc(Number(boss.defense || 1)));
+  boss.attack = phase === "overheated"
+    ? Math.max(1, Math.ceil(baseBossAttack * mechanic.overheatAttackMultiplier))
+    : baseBossAttack;
+  boss.defense = phase === "exposed"
+    ? Math.max(1, Math.floor(baseBossDefense * mechanic.exposedDefenseMultiplier))
+    : baseBossDefense;
+  return {
+    mechanicId: mechanic.id,
+    kind: mechanic.kind,
+    bossActorId,
+    phase,
+    openedRound: phase === "waiting" || phase === "completed" ? 0 : openedRound,
+    resolveRound,
+    eligibleActorIds: phase === "waiting" || phase === "completed" ? [] : eligibleActorIds,
+    safeHitCap,
+    outcomeHitCount: phase === "exposed" || phase === "overheated"
+      ? Math.max(0, Math.trunc(Number(state.outcomeHitCount || 0)))
+      : 0,
+    baseBossAttack,
+    baseBossDefense,
+    outcomeRestoreRound,
+    completed: completed || phase === "completed",
+    schemaVersion: 2,
+  };
+}
+
+function normalizeEmberPressureIntent(room, actors, state, intent, mechanic) {
+  if (
+    String(state.phase || "") !== "open"
+    || Number(state.openedRound || 0) < 1
+    || Number(intent.announcedRound || 0) !== Number(state.openedRound || 0)
+    || Number(intent.resolveRound || 0) !== Number(state.resolveRound || 0)
+    || Number(room && room.battle && room.battle.round || 0) !== Number(state.resolveRound || 0)
+    || String(intent.targetActorId || "") !== String(state.bossActorId || "")
+    || String(intent.actionId || "") !== mechanic.intentActionId
+  ) {
+    return null;
+  }
+  const boss = bossForTideState(actors, state);
+  if (!livingActor(boss) || String(boss.accountId || "") !== "") {
+    return null;
+  }
+  const bossName = actorName(boss, "焰心守护兽");
+  return {
+    mechanicId: mechanic.id,
+    bossActorId: String(boss.actorId || ""),
+    bossName,
+    targetActorId: String(boss.actorId || ""),
+    targetAccountId: "",
+    targetUsername: "",
+    targetName: bossName,
+    announcedRound: Number(state.openedRound || 0),
+    resolveRound: Number(state.resolveRound || 0),
+    actionId: mechanic.intentActionId,
+    intentKind: MECHANIC_EMBER_PRESSURE,
+    markerStyle: "ember_pressure",
+    safeHitCap: Number(state.safeHitCap || 0),
+    message: formatText(mechanic.commandText, bossName, bossName, {
+      limit: state.safeHitCap,
+      hits: 0,
+    }),
+    schemaVersion: 2,
+  };
+}
+
+function resolveEmberPressureRoundEnd(room, battle, round, sequence, resolvedEvents, mechanic, state) {
+  const actors = Array.isArray(battle && battle.actors) ? battle.actors : [];
+  const boss = actors.find((actor) => actor && String(actor.actorId || "") === String(state.bossActorId || ""));
+  if (!livingActor(boss)) {
+    finishEmberPressureMechanic(battle, boss, state);
+    return [];
+  }
+  const bossName = actorName(boss, "焰心守护兽");
+  const phase = String(state.phase || "");
+  if (phase === "exposed" || phase === "overheated") {
+    if (round < Number(state.outcomeRestoreRound || 0)) {
+      return [];
+    }
+    boss.attack = Math.max(1, Math.trunc(Number(state.baseBossAttack || boss.attack || 1)));
+    boss.defense = Math.max(1, Math.trunc(Number(state.baseBossDefense || boss.defense || 1)));
+    state.phase = "completed";
+    state.completed = true;
+    return [bossPhaseEvent(room, boss, boss, mechanic, round, sequence, {
+      eventType: "boss_ember_pressure_end",
+      actionId: "boss_ember_pressure_end",
+      intentKind: MECHANIC_EMBER_PRESSURE,
+      markerStyle: "ember_pressure",
+      message: formatText(mechanic.recoverText, bossName, bossName),
+      attackAfter: boss.attack,
+      defenseAfter: boss.defense,
+    })];
+  }
+  if (phase === "open") {
+    if (round < Number(state.resolveRound || 0)) {
+      return [];
+    }
+    const hitCount = emberPressureHitCount(resolvedEvents, state.bossActorId, state.eligibleActorIds);
+    const safeHitCap = Math.max(1, Math.trunc(Number(state.safeHitCap || 1)));
+    const baseBossAttack = Math.max(1, Math.trunc(Number(state.baseBossAttack || boss.attack || 1)));
+    const baseBossDefense = Math.max(1, Math.trunc(Number(state.baseBossDefense || boss.defense || 1)));
+    battle.bossIntent = null;
+    state.outcomeHitCount = hitCount;
+    if (hitCount === 0) {
+      boss.attack = baseBossAttack;
+      boss.defense = baseBossDefense;
+      state.phase = "completed";
+      state.completed = true;
+      return [bossPhaseEvent(room, boss, boss, mechanic, round, sequence, {
+        eventType: "boss_ember_pressure_quiet",
+        actionId: mechanic.intentActionId,
+        intentKind: MECHANIC_EMBER_PRESSURE,
+        markerStyle: "ember_pressure",
+        message: formatText(mechanic.quietText, bossName, bossName, {limit: safeHitCap, hits: 0}),
+        hitCount,
+        safeHitCap,
+      })];
+    }
+    state.outcomeRestoreRound = round + mechanic.outcomeRounds;
+    if (hitCount <= safeHitCap) {
+      boss.attack = baseBossAttack;
+      boss.defense = Math.max(1, Math.floor(baseBossDefense * mechanic.exposedDefenseMultiplier));
+      state.phase = "exposed";
+      return [bossPhaseEvent(room, boss, boss, mechanic, round, sequence, {
+        eventType: "boss_ember_pressure_exposed",
+        actionId: mechanic.intentActionId,
+        intentKind: MECHANIC_EMBER_PRESSURE,
+        markerStyle: "ember_pressure",
+        message: formatText(mechanic.exposedText, bossName, bossName, {limit: safeHitCap, hits: hitCount}),
+        hitCount,
+        safeHitCap,
+        defenseBefore: baseBossDefense,
+        defenseAfter: boss.defense,
+        outcomeRestoreRound: state.outcomeRestoreRound,
+      })];
+    }
+    boss.attack = Math.max(1, Math.ceil(baseBossAttack * mechanic.overheatAttackMultiplier));
+    boss.defense = baseBossDefense;
+    state.phase = "overheated";
+    return [bossPhaseEvent(room, boss, boss, mechanic, round, sequence, {
+      eventType: "boss_ember_pressure_overheated",
+      actionId: mechanic.intentActionId,
+      intentKind: MECHANIC_EMBER_PRESSURE,
+      markerStyle: "ember_pressure",
+      message: formatText(mechanic.overheatText, bossName, bossName, {limit: safeHitCap, hits: hitCount}),
+      hitCount,
+      safeHitCap,
+      attackBefore: baseBossAttack,
+      attackAfter: boss.attack,
+      outcomeRestoreRound: state.outcomeRestoreRound,
+    })];
+  }
+  const maxHp = Math.max(1, Math.trunc(Number(boss.maxHp || 1)));
+  if (Number(boss.hp || 0) / maxHp > mechanic.triggerHpRatio) {
+    return [];
+  }
+  const eligibleActorIds = actors
+    .filter((actor) => emberPressureEligibleActor(actor, boss) && livingActor(actor))
+    .map((actor) => String(actor.actorId || ""))
+    .sort();
+  if (eligibleActorIds.length < 1) {
+    finishEmberPressureMechanic(battle, boss, state);
+    return [];
+  }
+  const safeHitCap = emberPressureSafeHitCap(eligibleActorIds.length, mechanic.safeHitDivisor);
+  state.phase = "open";
+  state.openedRound = round;
+  state.resolveRound = round + mechanic.resolveAfterRounds;
+  state.eligibleActorIds = eligibleActorIds;
+  state.safeHitCap = safeHitCap;
+  state.outcomeHitCount = 0;
+  battle.bossIntent = {
+    mechanicId: mechanic.id,
+    bossActorId: String(boss.actorId || ""),
+    bossName,
+    targetActorId: String(boss.actorId || ""),
+    targetAccountId: "",
+    targetUsername: "",
+    targetName: bossName,
+    announcedRound: round,
+    resolveRound: state.resolveRound,
+    actionId: mechanic.intentActionId,
+    intentKind: MECHANIC_EMBER_PRESSURE,
+    markerStyle: "ember_pressure",
+    safeHitCap,
+    message: formatText(mechanic.commandText, bossName, bossName, {limit: safeHitCap, hits: 0}),
+    schemaVersion: 2,
+  };
+  return [bossPhaseEvent(room, boss, boss, mechanic, round, sequence, {
+    eventType: "boss_ember_pressure_open",
+    actionId: mechanic.intentActionId,
+    intentKind: MECHANIC_EMBER_PRESSURE,
+    markerStyle: "ember_pressure",
+    message: formatText(mechanic.openText, bossName, bossName, {limit: safeHitCap, hits: 0}),
+    safeHitCap,
+    eligibleActorCount: eligibleActorIds.length,
+    resolveRound: state.resolveRound,
+  })];
+}
+
+function finishEmberPressureMechanic(battle, boss, state) {
+  if (boss) {
+    boss.attack = Math.max(1, Math.trunc(Number(state && state.baseBossAttack || boss.attack || 1)));
+    boss.defense = Math.max(1, Math.trunc(Number(state && state.baseBossDefense || boss.defense || 1)));
+  }
+  if (isRecord(state)) {
+    state.phase = "completed";
+    state.completed = true;
+  }
+  if (battle && typeof battle === "object") {
+    battle.bossIntent = null;
+  }
+}
+
+function emberPressureEligibleActor(actor, boss) {
+  return Boolean(
+    actor
+    && String(actor.actorId || "") !== ""
+    && String(actor.side || "") !== String(boss && boss.side || "")
+    && String(actor.accountId || "") !== ""
+    && ALLOWED_TARGET_KINDS.has(String(actor.kind || ""))
+  );
+}
+
+function emberPressureSafeHitCap(eligibleActorCount, divisor) {
+  return Math.max(1, Math.ceil(Math.max(1, Number(eligibleActorCount || 0)) / Math.max(1, Number(divisor || 1))));
+}
+
+function emberPressureHitCount(events, bossActorId, eligibleActorIds) {
+  const eligible = new Set(Array.isArray(eligibleActorIds) ? eligibleActorIds.map(String) : []);
+  let hits = 0;
+  for (const event of Array.isArray(events) ? events : []) {
+    if (!isRecord(event)) {
+      continue;
+    }
+    const eventType = String(event.eventType || "");
+    if (eventType === "multi_attack") {
+      const actorId = String(event.actorId || "");
+      const hitBoss = (Array.isArray(event.targets) ? event.targets : []).some((target) => (
+        isRecord(target)
+        && String(target.targetActorId || "") === String(bossActorId || "")
+        && Math.max(0, Math.trunc(Number(target.damage || 0))) >= 1
+        && !Boolean(target.dodged)
+      ));
+      if (eligible.has(actorId) && hitBoss) {
+        hits += 1;
+      }
+      continue;
+    }
+    if (
+      String(event.targetActorId || "") !== String(bossActorId || "")
+      || Math.max(0, Math.trunc(Number(event.damage || 0))) < 1
+      || Boolean(event.dodged)
+    ) {
+      continue;
+    }
+    if (eventType === "combo_attack") {
+      const participantActorIds = Array.isArray(event.participantActorIds) ? event.participantActorIds.map(String) : [];
+      hits += new Set(participantActorIds.filter((actorId) => eligible.has(actorId))).size;
+      continue;
+    }
+    if ((eventType === "basic_attack" || eventType === "pet_skill") && eligible.has(String(event.actorId || ""))) {
+      hits += 1;
+    }
+  }
+  return hits;
 }
 
 function normalizeTideCoreState(mechanic, boss, bossActorId, actors, state) {
@@ -793,20 +1217,22 @@ function bossCommand(room, actor, round, options) {
   };
 }
 
-function formatText(template, bossName, targetName) {
+function formatText(template, bossName, targetName, values = {}) {
   return String(template || "")
     .replaceAll("{boss}", bossName)
-    .replaceAll("{target}", targetName);
+    .replaceAll("{target}", targetName)
+    .replaceAll("{limit}", String(values.limit ?? ""))
+    .replaceAll("{hits}", String(values.hits ?? ""));
 }
 
-function loadBattleBossRules({filePath = DEFAULT_CATALOG_PATH} = {}) {
+function loadBattleBossRules({filePath = DEFAULT_CATALOG_PATH, allowPendingMechanics = false} = {}) {
   let document;
   try {
     document = JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch (error) {
     throw new BattleBossRulesError([`failed to load ${filePath}: ${error.message}`]);
   }
-  return createBattleBossRules({document});
+  return createBattleBossRules({document, allowPendingMechanics});
 }
 
 module.exports = {

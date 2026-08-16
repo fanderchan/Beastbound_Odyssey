@@ -12,6 +12,8 @@ const DEFAULT_CAPTURE_DIFFICULTY = 42;
 const DEFAULT_INTERACTION_DISTANCE = 3;
 const DEFAULT_PARTY_DISTANCE = 4;
 const CODEX_CATCHABLE_POOL_SOURCE = "codex_catchable";
+const BATTLE_PRESENTATION_SCALE_MIN = 1;
+const BATTLE_PRESENTATION_SCALE_MAX = 1.65;
 
 function createPetEncounterAuthority(options = {}) {
   const catalog = options.catalog || loadPetEncounterCatalog(options);
@@ -453,6 +455,9 @@ function normalizeSelectedWildPet(catalog, rawEntry, options) {
   if (battleDisplayName !== "") {
     result.battleDisplayName = battleDisplayName;
   }
+  if (entry.battlePresentationScale !== undefined) {
+    result.battlePresentationScale = Number(entry.battlePresentationScale);
+  }
   const chanceOverride = optionalChance(
     entry.captureChanceOverride ?? entry.captureRateOverride ?? configuredCapture.chanceOverride,
   );
@@ -542,6 +547,23 @@ function validateEncounterSource(source, formsById, label, options = {}) {
     }
     if (entry.battleDisplayName !== undefined) {
       requiredText(entry.battleDisplayName, `battleDisplayName in ${label}`);
+    }
+    if (entry.battlePresentationScale !== undefined) {
+      const presentationScale = Number(entry.battlePresentationScale);
+      const appearanceCapture = objectOrEmpty(entry.capture);
+      if (entry.catchable !== false && appearanceCapture.catchable !== false) {
+        throw new Error(`${label}/${formId} battle presentation scale requires an explicitly non-catchable entry`);
+      }
+      if (!String(source.bossMechanicId || "").trim()) {
+        throw new Error(`${label}/${formId} battle presentation scale requires a boss mechanic`);
+      }
+      if (
+        !Number.isFinite(presentationScale)
+        || presentationScale < BATTLE_PRESENTATION_SCALE_MIN
+        || presentationScale > BATTLE_PRESENTATION_SCALE_MAX
+      ) {
+        throw new Error(`${label}/${formId} has invalid battlePresentationScale`);
+      }
     }
     const min = clampInt(entry.levelMin ?? entry.level, 1, MAX_PET_LEVEL, 1);
     const max = clampInt(entry.levelMax ?? entry.level, min, MAX_PET_LEVEL, min);

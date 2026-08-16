@@ -48,10 +48,11 @@
       "enemyCount": 10,
       "formationTemplate": "10v10",
       "encounterGroupId": "ember_core_guardian_group",
+      "bossMechanicId": "guardian_ember_pressure_v1",
       "fixedWildPets": [
         {"formId": "wuli_normal_orange_fire10", "name": "焰心乌力", "level": 98, "battleStats": {"maxHp": 960, "attack": 148, "defense": 78, "agility": 90}},
         {"formId": "wuli_normal_orange_fire10", "name": "焰心乌力", "level": 99, "battleStats": {"maxHp": 980, "attack": 150, "defense": 80, "agility": 92}},
-        {"formId": "bui_normal_red_fire10", "name": "焰心守护兽", "level": 112, "battleStats": {"maxHp": 1580, "attack": 204, "defense": 106, "agility": 108}, "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge", "pet_confuse_cry"], "petSkillSlots": ["pet_attack", "pet_defend", "pet_bui_charge", "", "pet_confuse_cry", "", ""]},
+        {"formId": "bui_normal_red_fire10", "name": "焰心守护兽", "level": 112, "catchable": false, "battleStats": {"maxHp": 1580, "attack": 204, "defense": 106, "agility": 108}, "activeSkillIds": ["pet_attack", "pet_defend", "pet_bui_charge", "pet_confuse_cry"], "petSkillSlots": ["pet_attack", "pet_defend", "pet_bui_charge", "", "pet_confuse_cry", "", ""]},
         {"formId": "wuli_normal_fast_wind10", "name": "焰心乌力", "level": 99, "battleStats": {"maxHp": 930, "attack": 146, "defense": 74, "agility": 124}},
         {"formId": "wuli_normal_orange_fire10", "name": "焰心乌力", "level": 98, "battleStats": {"maxHp": 960, "attack": 148, "defense": 78, "agility": 88}},
         {"formId": "wuli_normal_tough_earth10", "name": "焰心乌力", "level": 100, "battleStats": {"maxHp": 1040, "attack": 140, "defense": 102, "agility": 74}},

@@ -4,6 +4,8 @@ const FORM_ID := "bui_novice_sprout_earth5_wind5"
 const ALLY_ID := "ally_visual_review_pet"
 const ENEMY_ID := "enemy_visual_review_pet"
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const PetTemplateCatalog := preload("res://scripts/battle/pet_template_catalog.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 
@@ -12,6 +14,7 @@ const SUPPORTED_SCENARIOS: Array[String] = [
 	"formation_10v10_mixed",
 	"formation_10v10_boss_charge",
 	"formation_10v10_boss_tide_core",
+	"formation_10v10_boss_ember_pressure",
 	"counter",
 	"counter_ko",
 	"counter_launch",
@@ -29,6 +32,9 @@ const SUPPORTED_SCENARIOS: Array[String] = [
 
 var host
 var scenario: String
+var qa_preview_form_id: String = ""
+var qa_ember_boss_entry: Dictionary = {}
+var qa_ember_mechanic: Dictionary = {}
 
 
 func _init(host_node, requested_scenario: String) -> void:
@@ -39,6 +45,19 @@ func _init(host_node, requested_scenario: String) -> void:
 func run() -> void:
 	host.profile_save_enabled = false
 	host.player_profile = PlayerProgressModel.default_profile()
+	if scenario == "formation_10v10_boss_ember_pressure":
+		var authority := _load_ember_preview_authority()
+		if not bool(authority.get("ok", false)):
+			push_error("battle visual review ember authority mismatch: %s" % str(authority.get("error", "unknown")))
+			host.get_tree().quit(1)
+			return
+		qa_ember_boss_entry = (authority.get("boss", {}) as Dictionary).duplicate(true)
+		qa_ember_mechanic = (authority.get("mechanic", {}) as Dictionary).duplicate(true)
+		qa_preview_form_id = str(qa_ember_boss_entry.get("battleAppearanceFormId", ""))
+		if not PetActionAssetCatalog.enable_qa_preview_form(qa_preview_form_id):
+			push_error("battle visual review could not enable emberhorn QA preview")
+			host.get_tree().quit(1)
+			return
 	host._start_battle(_formation_state() if scenario.begins_with("formation_10v10") else _action_state())
 	await host.get_tree().process_frame
 	host.battle_pet_art_elapsed = 0.0
@@ -47,7 +66,7 @@ func run() -> void:
 	await _wait(1.0)
 
 	match scenario:
-		"formation_10v10", "formation_10v10_mixed", "formation_10v10_boss_charge", "formation_10v10_boss_tide_core":
+		"formation_10v10", "formation_10v10_mixed", "formation_10v10_boss_charge", "formation_10v10_boss_tide_core", "formation_10v10_boss_ember_pressure":
 			await _wait(5.0)
 		"counter":
 			await _play_and_settle(_attack_event(ENEMY_ID, ALLY_ID, BattleModel.SIDE_ALLY, 16, true), 1.25)
@@ -99,6 +118,9 @@ func run() -> void:
 
 	if host.game_audio_manager != null:
 		host.game_audio_manager.stop_all()
+	if qa_preview_form_id != "":
+		PetActionAssetCatalog.disable_qa_preview_form(qa_preview_form_id)
+		qa_preview_form_id = ""
 	# AudioServer releases active playback objects asynchronously. Let the
 	# stopped streams drain before the MovieWriter/QA process exits.
 	await host.get_tree().process_frame
@@ -179,15 +201,20 @@ func _formation_state() -> Dictionary:
 			55 + index
 		)
 	state["actors"] = actors
-	if scenario == "formation_10v10_boss_charge" or scenario == "formation_10v10_boss_tide_core":
+	if (
+		scenario == "formation_10v10_boss_charge"
+		or scenario == "formation_10v10_boss_tide_core"
+		or scenario == "formation_10v10_boss_ember_pressure"
+	):
 		state["reviewLab"] = true
 		state["reviewTopInset"] = 0.0
 		state["reviewArenaId"] = "moss_meadow"
-		state["message"] = (
-			"潮核寄宿于潮回乌力：本回合集火击破，否则潮回守护兽回复18%生命。"
-			if scenario == "formation_10v10_boss_tide_core"
-			else "岩脉守护兽锁定小布伊：防御、换宠，或令其无法行动来打断。"
-		)
+		if scenario == "formation_10v10_boss_tide_core":
+			state["message"] = "潮核寄宿于潮回乌力：本回合集火击破，否则潮回守护兽回复18%生命。"
+		elif scenario == "formation_10v10_boss_ember_pressure":
+			state["message"] = _ember_preview_message(actors)
+		else:
+			state["message"] = "岩脉守护兽锁定小布伊：防御、换宠，或令其无法行动来打断。"
 		for actor in actors:
 			if scenario == "formation_10v10_boss_tide_core" and str(actor.get("slotId", "")) == "enemy.front.3":
 				actor["name"] = "潮回守护兽"
@@ -204,6 +231,15 @@ func _formation_state() -> Dictionary:
 				actor["name"] = "小布伊"
 				actor["bossThreatened"] = true
 				actor["bossThreatMechanicId"] = "guardian_targeted_charge_v1"
+			elif scenario == "formation_10v10_boss_ember_pressure" and str(actor.get("slotId", "")) == "enemy.front.3":
+				actor["name"] = str(qa_ember_boss_entry.get("battleDisplayName", "焰心守护兽"))
+				actor["formId"] = str(qa_ember_boss_entry.get("battleAppearanceFormId", ""))
+				actor["serverFormId"] = str(qa_ember_boss_entry.get("formId", ""))
+				actor["battlePresentationScale"] = float(qa_ember_boss_entry.get("battlePresentationScale", 1.0))
+				actor["bossThreatened"] = true
+				actor["bossThreatMechanicId"] = "guardian_ember_pressure_v1"
+				actor["bossThreatStyle"] = "ember_pressure"
+				actor["bossThreatLimit"] = _ember_safe_hit_cap(actors)
 	return state
 
 
@@ -387,6 +423,8 @@ func _intro_message() -> String:
 			return "岩脉守护兽锁定小布伊：防御、换宠，或令其无法行动来打断。"
 		"formation_10v10_boss_tide_core":
 			return "潮核寄宿于潮回乌力：本回合集火击破，否则潮回守护兽回复18%生命。"
+		"formation_10v10_boss_ember_pressure":
+			return _ember_preview_message(host.battle_state.get("actors", []))
 		"counter":
 			return "受到近身攻击后，芽耳布伊准备反击。"
 		"counter_ko":
@@ -414,3 +452,95 @@ func _intro_message() -> String:
 		"dodge":
 			return "观察近身攻击被闪避时的表达。"
 	return "战斗动作演练。"
+
+
+func _load_ember_preview_authority() -> Dictionary:
+	var map_path := MapDataCatalog.path_for("ember_core_cave_f4")
+	var map_data := _read_json_dictionary(map_path)
+	if map_data.is_empty() or str(map_data.get("id", "")) != "ember_core_cave_f4":
+		return {"ok": false, "error": "ember map missing or invalid"}
+	var boss_entry: Dictionary = {}
+	for zone_value in map_data.get("encounterZones", []):
+		if not (zone_value is Dictionary):
+			continue
+		var zone := zone_value as Dictionary
+		if str(zone.get("id", "")) != "ember_core_guardian_floor":
+			continue
+		if (
+			str(zone.get("encounterGroupId", "")) != "ember_core_guardian_group"
+			or str(zone.get("bossMechanicId", "")) != "guardian_ember_pressure_v1"
+		):
+			return {"ok": false, "error": "ember encounter identity mismatch"}
+		var fixed_pets: Array = zone.get("fixedWildPets", [])
+		if fixed_pets.size() <= 2 or not (fixed_pets[2] is Dictionary):
+			return {"ok": false, "error": "ember boss slot enemy.front.3 missing"}
+		boss_entry = (fixed_pets[2] as Dictionary).duplicate(true)
+		break
+	if (
+		str(boss_entry.get("formId", "")) != "bui_normal_red_fire10"
+		or bool(boss_entry.get("catchable", true))
+		or boss_entry.has("battleAppearanceFormId")
+		or boss_entry.has("battleDisplayName")
+		or boss_entry.has("battlePresentationScale")
+	):
+		return {"ok": false, "error": "ember live boss boundary invalid"}
+	var catalog := _read_json_dictionary("res://data/battle_boss_mechanics.json")
+	var mechanic: Dictionary = {}
+	for mechanic_value in catalog.get("mechanics", []):
+		if mechanic_value is Dictionary and str((mechanic_value as Dictionary).get("id", "")) == "guardian_ember_pressure_v1":
+			mechanic = (mechanic_value as Dictionary).duplicate(true)
+			break
+	if (
+		str(mechanic.get("kind", "")) != "ember_pressure"
+		or str(mechanic.get("encounterGroupId", "")) != "ember_core_guardian_group"
+		or bool(mechanic.get("runtimeEnabled", true))
+		or int(mechanic.get("safeHitDivisor", 0)) <= 0
+		or str(mechanic.get("commandText", "")) == ""
+	):
+		return {"ok": false, "error": "ember mechanic presentation contract invalid"}
+	var presentation_value = mechanic.get("qaPresentation", {})
+	if not (presentation_value is Dictionary):
+		return {"ok": false, "error": "ember QA presentation missing"}
+	var presentation := presentation_value as Dictionary
+	if (
+		str(presentation.get("serverFormId", "")) != str(boss_entry.get("formId", ""))
+		or str(presentation.get("battleAppearanceFormId", "")) == ""
+		or str(presentation.get("battleDisplayName", "")) == ""
+		or float(presentation.get("battlePresentationScale", 0.0)) < 1.0
+		or float(presentation.get("battlePresentationScale", 0.0)) > 1.65
+	):
+		return {"ok": false, "error": "ember QA presentation contract invalid"}
+	var preview_boss := boss_entry.duplicate(true)
+	preview_boss["battleAppearanceFormId"] = str(presentation.get("battleAppearanceFormId", ""))
+	preview_boss["battleDisplayName"] = str(presentation.get("battleDisplayName", ""))
+	preview_boss["battlePresentationScale"] = float(presentation.get("battlePresentationScale", 1.0))
+	return {"ok": true, "boss": preview_boss, "mechanic": mechanic}
+
+
+func _ember_safe_hit_cap(actors: Array) -> int:
+	var eligible_count := 0
+	for actor_value in actors:
+		if not (actor_value is Dictionary):
+			continue
+		var actor := actor_value as Dictionary
+		if (
+			str(actor.get("side", "")) == BattleModel.SIDE_ALLY
+			and ["player", "pet"].has(str(actor.get("kind", "")))
+			and int(actor.get("hp", 0)) > 0
+		):
+			eligible_count += 1
+	var divisor := maxi(1, int(qa_ember_mechanic.get("safeHitDivisor", 1)))
+	return maxi(1, ceili(float(maxi(1, eligible_count)) / float(divisor)))
+
+
+func _ember_preview_message(actors: Array) -> String:
+	var boss_name := str(qa_ember_boss_entry.get("battleDisplayName", "焰心守护兽"))
+	var limit := _ember_safe_hit_cap(actors)
+	return str(qa_ember_mechanic.get("commandText", "")).replace("{boss}", boss_name).replace("{limit}", str(limit)).replace("{hits}", "0")
+
+
+func _read_json_dictionary(path: String) -> Dictionary:
+	if path == "" or not FileAccess.file_exists(path):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return parsed as Dictionary if parsed is Dictionary else {}

@@ -9611,6 +9611,7 @@ function publicBattleBossIntent(value) {
     actionId: String(value.actionId || ""),
     intentKind: String(value.intentKind || "targeted_charge"),
     markerStyle: String(value.markerStyle || "charge"),
+    ...(Number(value.safeHitCap || 0) > 0 ? {safeHitCap: Math.max(1, Math.trunc(Number(value.safeHitCap || 1)))} : {}),
     message: String(value.message || ""),
     schemaVersion: 2,
   };
@@ -9726,6 +9727,7 @@ function publicBattleActor(actor) {
     petId: String(actor.petId || ""),
     formId: String(actor.formId || ""),
     battleAppearanceFormId: String(actor.battleAppearanceFormId || ""),
+    battlePresentationScale: Number(actor.battlePresentationScale || 1),
     speciesId: String(actor.speciesId || ""),
     lineId: String(actor.lineId || ""),
     petState: String(actor.petState || ""),
@@ -13456,6 +13458,7 @@ function partyPveEnemyActors(room) {
       activeInBattle: true,
       formId: String(wildPet.formId || "wuli_normal_orange_fire10"),
       battleAppearanceFormId: String(wildPet.battleAppearanceFormId || ""),
+      battlePresentationScale: battlePresentationScaleForEnemy(wildPet),
       speciesId: String(wildPet.speciesId || wildPet.formId || "wuli_normal_orange_fire10"),
       lineId: String(wildPet.lineId || ""),
       petState: BATTLE_PET_STATE_BATTLE,
@@ -13534,6 +13537,7 @@ function normalizedServerWildPetEntry(value) {
   return {
     formId,
     battleAppearanceFormId: String(value && value.battleAppearanceFormId || ""),
+    battlePresentationScale: battlePresentationScaleForEnemy(value),
     battleDisplayName: String(value && value.battleDisplayName || ""),
     speciesId: String(value && (value.speciesId || value.templateId || value.formId) || formId),
     lineId: String(value && value.lineId || template.lineId || ""),
@@ -13555,6 +13559,17 @@ function normalizedServerWildPetEntry(value) {
     captureDifficulty: Math.max(1, Math.trunc(Number(value && (value.captureDifficulty || value.difficulty) || capture.difficulty || 42))),
     captureChanceOverride: battleOptionalChanceValue(captureChanceOverride),
   };
+}
+
+function battlePresentationScaleForEnemy(value) {
+  if (!value || value.catchable !== false) {
+    return 1;
+  }
+  const scale = Number(value.battlePresentationScale ?? 1);
+  if (!Number.isFinite(scale)) {
+    return 1;
+  }
+  return Math.max(1, Math.min(1.65, scale));
 }
 
 function battleOptionalChanceValue(value) {
@@ -14429,7 +14444,7 @@ function resolveBattleRoomTurn(data, room, battle, now, options = {}) {
     && options.battleBossRules
     && typeof options.battleBossRules.resolveRoundEnd === "function"
   ) {
-    const bossPhaseEvents = options.battleBossRules.resolveRoundEnd(room, battle, round, sequence);
+    const bossPhaseEvents = options.battleBossRules.resolveRoundEnd(room, battle, round, sequence, events);
     for (const event of Array.isArray(bossPhaseEvents) ? bossPhaseEvents : []) {
       event.schemaVersion = BATTLE_EVENT_CONTRACT_VERSION;
       events.push(event);
@@ -14555,6 +14570,7 @@ function battleReplayActorSnapshot(actorValue) {
     petId: String(actor.petId || ""),
     formId: String(actor.formId || ""),
     battleAppearanceFormId: String(actor.battleAppearanceFormId || ""),
+    battlePresentationScale: Number(actor.battlePresentationScale || 1),
     petState: String(actor.petState || ""),
     activeInBattle: Boolean(actor.activeInBattle),
     hp: Number(actor.hp || 0),

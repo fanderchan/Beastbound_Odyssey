@@ -13559,15 +13559,16 @@ func _update_battle_hover_at_screen_point(screen_point: Vector2) -> void:
 func _battle_actor_id_at_screen_point(screen_point: Vector2, side_filter: String = BattleModel.SIDE_ENEMY) -> String:
 	var actors := _battle_actors_sorted_by_depth()
 	var visual_scale := _battle_actor_visual_scale()
-	var hit_radius := maxf(32.0, 48.0 * visual_scale)
 	for index in range(actors.size() - 1, -1, -1):
 		var actor := actors[index] as Dictionary
 		if side_filter != "" and str(actor.get("side", "")) != side_filter:
 			continue
 		if int(actor.get("hp", 0)) <= 0:
 			continue
+		var actor_scale := _battle_actor_presentation_scale(actor)
+		var hit_radius := maxf(32.0, 48.0 * visual_scale * actor_scale)
 		var actor_screen := _world_to_screen(_battle_slot_world_position(str(actor.get("slotId", ""))))
-		var hit_center := actor_screen + Vector2(0, -18.0 * visual_scale)
+		var hit_center := actor_screen + Vector2(0, -18.0 * visual_scale * actor_scale)
 		if screen_point.distance_to(hit_center) <= hit_radius:
 			return str(actor.get("id", ""))
 	return ""
@@ -15861,6 +15862,8 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	if state == "launched" and not launched_active:
 		return
 	var visual_scale := _battle_actor_visual_scale()
+	var presentation_scale := _battle_actor_presentation_scale(actor)
+	var actor_visual_scale := visual_scale * presentation_scale
 	var formal_pet_supported := ["pet", "wild_pet"].has(kind) and PetActionAssetCatalog.supports_form(form_id)
 	var launch_rotation := _battle_launched_actor_rotation(actor_id) if launched_active else 0.0
 	var large_formation := _battle_uses_10v10_formation_template()
@@ -15875,6 +15878,9 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	var hp_offset := (-42.0 if large_formation else (-54.0 if compact_labels else -82.0)) * visual_scale
 	var name_offset := (-62.0 if large_formation else (-70.0 if compact_labels else -94.0)) * visual_scale
 	if formal_pet_supported:
+		# Formal frames keep a fixed 256px canvas with form-specific transparent
+		# padding. Instance presentation scale grows the visible body, shadow and
+		# contact geometry, but must not multiply this canvas-derived HUD gap.
 		hp_offset = -132.0 * visual_scale
 		name_offset = -153.0 * visual_scale
 	elif _battle_actor_uses_integrated_mount_visual(actor):
@@ -15911,13 +15917,18 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		pos += _battle_launched_actor_offset(actor, visual_scale)
 	var alpha := 1.0 if launched_active else (0.26 if state == "captured" else 1.0)
 	if not launched_active:
-		_draw_battle_ground_shadow(actor, pos, visual_scale, alpha)
+		_draw_battle_ground_shadow(actor, pos, actor_visual_scale, alpha)
 	if _battle_target_mode_selects_enemy() and str(actor.get("id", "")) == battle_hover_target_id and str(actor.get("side", "")) == BattleModel.SIDE_ENEMY and int(actor.get("hp", 0)) > 0:
-		_draw_battle_target_ring(pos, visual_scale)
+		_draw_battle_target_ring(pos, actor_visual_scale)
 	if _battle_target_mode_selects_ally() and str(actor.get("id", "")) == battle_hover_ally_target_id and str(actor.get("side", "")) == BattleModel.SIDE_ALLY and int(actor.get("hp", 0)) > 0:
-		_draw_battle_target_ring(pos, visual_scale, Color(0.50, 1.0, 0.58, 0.96))
+		_draw_battle_target_ring(pos, actor_visual_scale, Color(0.50, 1.0, 0.58, 0.96))
 	if bool(actor.get("bossThreatened", false)) and int(actor.get("hp", 0)) > 0:
-		_draw_battle_boss_threat_ring(pos, visual_scale, str(actor.get("bossThreatStyle", "charge")))
+		_draw_battle_boss_threat_ring(
+			pos,
+			actor_visual_scale,
+			str(actor.get("bossThreatStyle", "charge")),
+			maxi(0, int(actor.get("bossThreatLimit", 0)))
+		)
 	var body_color := Color(0.20, 0.53, 0.85, alpha)
 	var trim_color := Color(1.0, 0.86, 0.40, alpha)
 	if kind == "pet":
@@ -15931,7 +15942,7 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		trim_color = Color(1.0, 0.88, 0.32, alpha)
 	var formal_pet_drawn := false
 	if formal_pet_supported:
-		formal_pet_drawn = _draw_formal_battle_pet_actor(actor_id, form_id, side, state, pos, visual_scale, alpha, launch_rotation)
+		formal_pet_drawn = _draw_formal_battle_pet_actor(actor_id, form_id, side, state, pos, actor_visual_scale, alpha, launch_rotation)
 	if formal_pet_drawn:
 		pass
 	elif kind == "player":
@@ -15953,45 +15964,50 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 				launch_rotation
 			)
 	elif kind == "pet":
-		var pet_body_center := pos + Vector2(0, -14) * visual_scale
-		draw_circle(pet_body_center, 25.0 * visual_scale, body_color)
+		var pet_body_center := pos + Vector2(0, -14) * actor_visual_scale
+		draw_circle(pet_body_center, 25.0 * actor_visual_scale, body_color)
 		draw_polygon(PackedVector2Array([
-			pet_body_center + _battle_rotated_visual_offset(Vector2(-16, -21), visual_scale, launch_rotation),
-			pet_body_center + _battle_rotated_visual_offset(Vector2(-4, -44), visual_scale, launch_rotation),
-			pet_body_center + _battle_rotated_visual_offset(Vector2(4, -21), visual_scale, launch_rotation),
+			pet_body_center + _battle_rotated_visual_offset(Vector2(-16, -21), actor_visual_scale, launch_rotation),
+			pet_body_center + _battle_rotated_visual_offset(Vector2(-4, -44), actor_visual_scale, launch_rotation),
+			pet_body_center + _battle_rotated_visual_offset(Vector2(4, -21), actor_visual_scale, launch_rotation),
 		]), PackedColorArray([trim_color, trim_color, trim_color]))
 		var pet_eye := Vector2(-12, -18) if side == BattleModel.SIDE_ALLY else Vector2(12, -18)
-		draw_circle(pet_body_center + _battle_rotated_visual_offset(pet_eye - Vector2(0, -14), visual_scale, launch_rotation), 4.0 * visual_scale, Color(0.10, 0.16, 0.14, alpha))
+		draw_circle(pet_body_center + _battle_rotated_visual_offset(pet_eye - Vector2(0, -14), actor_visual_scale, launch_rotation), 4.0 * actor_visual_scale, Color(0.10, 0.16, 0.14, alpha))
 	else:
-		var wild_body_center := pos + Vector2(0, -18) * visual_scale
-		draw_circle(wild_body_center, 27.0 * visual_scale, body_color)
-		draw_circle(wild_body_center + _battle_rotated_visual_offset(Vector2(-10, -5), visual_scale, launch_rotation), 4.0 * visual_scale, Color(0.10, 0.13, 0.12, alpha))
-		draw_circle(wild_body_center + _battle_rotated_visual_offset(Vector2(10, -5), visual_scale, launch_rotation), 4.0 * visual_scale, Color(0.10, 0.13, 0.12, alpha))
+		var wild_body_center := pos + Vector2(0, -18) * actor_visual_scale
+		draw_circle(wild_body_center, 27.0 * actor_visual_scale, body_color)
+		draw_circle(wild_body_center + _battle_rotated_visual_offset(Vector2(-10, -5), actor_visual_scale, launch_rotation), 4.0 * actor_visual_scale, Color(0.10, 0.13, 0.12, alpha))
+		draw_circle(wild_body_center + _battle_rotated_visual_offset(Vector2(10, -5), actor_visual_scale, launch_rotation), 4.0 * actor_visual_scale, Color(0.10, 0.13, 0.12, alpha))
 		draw_line(
-			wild_body_center + _battle_rotated_visual_offset(Vector2(-20, 18), visual_scale, launch_rotation),
-			wild_body_center + _battle_rotated_visual_offset(Vector2(20, 18), visual_scale, launch_rotation),
+			wild_body_center + _battle_rotated_visual_offset(Vector2(-20, 18), actor_visual_scale, launch_rotation),
+			wild_body_center + _battle_rotated_visual_offset(Vector2(20, 18), actor_visual_scale, launch_rotation),
 			trim_color,
-			4.0 * visual_scale,
+			4.0 * actor_visual_scale,
 			true
 		)
 	_draw_battle_ranged_bow_overlay(actor, pos, visual_scale, alpha)
-	_draw_battle_melee_impact_effect(actor, pos, visual_scale)
+	_draw_battle_melee_impact_effect(actor, pos, actor_visual_scale)
 	if (BattleModel.is_actor_guarding(battle_state, actor_id) or state == BattleVisualPresentationModel.STATE_GUARD_HIT) and int(actor.get("hp", 0)) > 0:
-		_draw_battle_guard_effect(actor, pos, visual_scale, state)
+		_draw_battle_guard_effect(actor, pos, actor_visual_scale, state)
 	if state == "down" and ["pet", "wild_pet"].has(kind):
-		_draw_battle_dizzy_halo(actor, pos, visual_scale)
+		_draw_battle_dizzy_halo(actor, pos, actor_visual_scale)
 	if int(actor.get("hp", 0)) > 0 or launched_active:
 		var hp_actor := actor
 		if launched_active:
 			hp_actor = actor.duplicate(true)
 			hp_actor["hp"] = maxi(1, int(actor.get("launchHpBefore", actor.get("maxHp", 1))))
 		_draw_battle_hp_bar(hp_actor, pos + Vector2(0, hp_offset), alpha, visual_scale)
-		if bool(actor.get("bossThreatened", false)) and not launched_active:
+		var boss_threat_style := str(actor.get("bossThreatStyle", "charge"))
+		if (
+			bool(actor.get("bossThreatened", false))
+			and not launched_active
+			and boss_threat_style != "ember_pressure"
+		):
 			_draw_battle_boss_threat_badge(
-				pos + Vector2(-68.0, hp_offset - 17.0) * visual_scale,
+				pos + Vector2(-68.0 * visual_scale, hp_offset - 17.0 * visual_scale),
 				visual_scale,
 				alpha,
-				str(actor.get("bossThreatStyle", "charge"))
+				boss_threat_style
 			)
 		if _battle_actor_has_active_ride(actor):
 			var ride_hp_actor := {
@@ -16702,12 +16718,43 @@ func _draw_battle_target_ring(pos: Vector2, visual_scale: float, color: Color = 
 	draw_line(center + Vector2(chevron_x + 6.0 * visual_scale, 0.0), center + Vector2(chevron_x, 4.0 * visual_scale), color, maxf(1.5, 2.2 * visual_scale), true)
 
 
-func _draw_battle_boss_threat_ring(pos: Vector2, visual_scale: float, marker_style: String = "charge") -> void:
+func _draw_battle_boss_threat_ring(pos: Vector2, visual_scale: float, marker_style: String = "charge", marker_limit: int = 0) -> void:
 	var center := pos + Vector2(0, 2.0) * visual_scale
 	var radius := Vector2(42.0, 14.0) * visual_scale
 	var outer := _battle_ellipse_points(center, radius, 0.0, 44)
 	var inner := _battle_ellipse_points(center, radius - Vector2(5.0, 2.0) * visual_scale, 0.0, 44)
 	var tide_core := marker_style == "tide_core"
+	var ember_pressure := marker_style == "ember_pressure"
+	if ember_pressure:
+		var ember_shadow := Color(0.20, 0.025, 0.012, 0.86)
+		var ember_red := Color(1.0, 0.22, 0.07, 0.98)
+		var ember_gold := Color(1.0, 0.72, 0.16, 0.98)
+		draw_polyline(outer + PackedVector2Array([outer[0]]), ember_shadow, maxf(4.0, 5.8 * visual_scale), true)
+		var segment_count := clampi(marker_limit, 1, 5)
+		var segment_span := TAU / float(segment_count)
+		var gap := minf(0.18, segment_span * 0.16)
+		for segment_index in range(segment_count):
+			var start_angle := -PI + float(segment_index) * segment_span + gap
+			var end_angle := -PI + float(segment_index + 1) * segment_span - gap
+			var segment_points := _battle_ellipse_arc_points(
+				center,
+				radius - Vector2(4.0, 1.5) * visual_scale,
+				start_angle,
+				end_angle,
+				maxi(5, int(12.0 / float(segment_count)))
+			)
+			draw_polyline(segment_points, ember_gold if segment_index % 2 == 0 else ember_red, maxf(2.0, 2.8 * visual_scale), true)
+		for flame_angle in [-2.45, -0.68, 0.68, 2.45]:
+			var direction := Vector2(cos(flame_angle), sin(flame_angle))
+			var tangent := Vector2(-direction.y, direction.x)
+			var flame_base := center + Vector2(direction.x * radius.x, direction.y * radius.y)
+			var flame := PackedVector2Array([
+				flame_base + tangent * 3.0 * visual_scale,
+				flame_base + direction * 8.0 * visual_scale,
+				flame_base - tangent * 3.0 * visual_scale,
+			])
+			draw_colored_polygon(flame, ember_red)
+		return
 	var warning_color := Color(0.24, 0.90, 1.0, 0.96) if tide_core else Color(1.0, 0.52, 0.16, 0.96)
 	var shadow_color := Color(0.02, 0.16, 0.23, 0.82) if tide_core else Color(0.22, 0.08, 0.03, 0.78)
 	draw_polyline(outer + PackedVector2Array([outer[0]]), shadow_color, maxf(3.6, 5.2 * visual_scale), true)
@@ -16760,6 +16807,16 @@ func _draw_battle_boss_threat_badge(center: Vector2, visual_scale: float, alpha:
 		maxf(1.4, 2.0 * visual_scale),
 		Color(1.0, 0.88, 0.62, 0.98 * alpha)
 	)
+
+
+func _battle_ellipse_arc_points(center: Vector2, radius: Vector2, start_angle: float, end_angle: float, segments: int) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	var safe_segments := maxi(2, segments)
+	for index in range(safe_segments + 1):
+		var progress := float(index) / float(safe_segments)
+		var angle := lerpf(start_angle, end_angle, progress)
+		points.append(center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
+	return points
 
 
 func _battle_actor_is_current_launch_target(actor_id: String) -> bool:
@@ -16836,6 +16893,7 @@ func _battle_actor_event_offset(actor: Dictionary, base_pos: Vector2, visual_sca
 	var target_pos := _battle_slot_world_position(str(target.get("slotId", "")))
 	target_pos += _battle_actor_counter_anchor_offset(target, target_pos, visual_scale)
 	var contact_distance := BATTLE_COUNTER_CONTACT_DISTANCE if event_type == "counter_attack" or bool(battle_current_event.get("counterTriggered", false)) else BATTLE_MELEE_CONTACT_DISTANCE
+	contact_distance *= BattleVisualPresentationModel.contact_presentation_scale(actor, target)
 	if _battle_actor_uses_integrated_mount_visual(actor) or _battle_actor_uses_integrated_mount_visual(target):
 		# 整体骑乘轮廓显著宽于普通人物；保持足够锚点距离，避免两张 256px 整图穿插重叠。
 		contact_distance = maxf(contact_distance, 124.0)
@@ -16913,7 +16971,13 @@ func _battle_actor_counter_anchor_offset(actor: Dictionary, home_pos: Vector2, v
 		if counter_actor.is_empty():
 			return Vector2.ZERO
 		var counter_home := _battle_slot_world_position(str(counter_actor.get("slotId", "")))
-		var full_offset := _battle_melee_contact_offset(home_pos, counter_home, visual_scale, BATTLE_COUNTER_CONTACT_DISTANCE)
+		var full_offset := _battle_melee_contact_offset(
+			home_pos,
+			counter_home,
+			visual_scale,
+			BATTLE_COUNTER_CONTACT_DISTANCE
+			* BattleVisualPresentationModel.contact_presentation_scale(actor, counter_actor)
+		)
 		var factor := BattleVisualPresentationModel.counter_target_anchor_factor(
 			_battle_current_event_progress(),
 			_battle_event_result_reveal_progress(battle_current_event),
@@ -17092,6 +17156,10 @@ func _battle_actor_visual_scale() -> float:
 	if _layout_size().y < 460.0:
 		scale *= 0.84
 	return scale
+
+
+func _battle_actor_presentation_scale(actor: Dictionary) -> float:
+	return BattleVisualPresentationModel.actor_presentation_scale(actor)
 
 
 func _battle_uses_10v10_formation_template() -> bool:

@@ -163,6 +163,111 @@ static func run() -> Dictionary:
 		and str(_actor_by_server_id(applied_tide_broken, "party_pve_enemy_front_3").get("actionState", "")) == "hit"
 		and str(_actor_by_server_id(applied_tide_ebb_end, "party_pve_enemy_front_3").get("actionState", "")) == "skill"
 	)
+
+	var ember_room := _room_with_ember_intent()
+	var ember_state := ServerBattleRoomModel.battle_state_from_room(ember_room, session)
+	var ember_boss_actor := _actor_by_server_id(ember_state, "party_pve_enemy_front_3")
+	checks["ember_pressure_intent_marks_boss_with_trusted_limit"] = (
+		bool(ember_boss_actor.get("bossThreatened", false))
+		and str(ember_boss_actor.get("bossThreatMechanicId", "")) == "guardian_ember_pressure_v1"
+		and str(ember_boss_actor.get("bossThreatStyle", "")) == "ember_pressure"
+		and int(ember_boss_actor.get("bossThreatLimit", 0)) == 1
+		and str(ember_boss_actor.get("formId", "")) == "emberhorn_red_fire8_earth2"
+		and str(ember_boss_actor.get("serverFormId", "")) == "bui_normal_red_fire10"
+		and absf(float(ember_boss_actor.get("battlePresentationScale", 1.0)) - 1.62) < 0.001
+		and str(ember_state.get("message", "")).contains("锁定焰心守护兽\n命中1～1次：破甲")
+		and str(ember_state.get("message", "")).contains("超过1次：强化攻击")
+	)
+	var ember_events := ServerBattleRoomModel.battle_events_from_server_event_list(ember_state, {
+		"kind": "battle_event_list",
+		"roomId": "battle_room_ember_client",
+		"round": 2,
+		"turnSeq": 2,
+		"events": [{
+			"eventId": "ember_open",
+			"eventType": "boss_ember_pressure_open",
+			"round": 1,
+			"sequence": 1,
+			"actorId": "party_pve_enemy_front_3",
+			"actorKind": "wild_pet",
+			"targetActorId": "party_pve_enemy_front_3",
+			"targetKind": "wild_pet",
+			"actionId": "boss_ember_pressure",
+			"safeHitCap": 1,
+			"message": "焰心守护兽展开焰压环。",
+		}, {
+			"eventId": "ember_exposed",
+			"eventType": "boss_ember_pressure_exposed",
+			"round": 2,
+			"sequence": 2,
+			"actorId": "party_pve_enemy_front_3",
+			"actorKind": "wild_pet",
+			"targetActorId": "party_pve_enemy_front_3",
+			"targetKind": "wild_pet",
+			"actionId": "boss_ember_pressure",
+			"hitCount": 1,
+			"safeHitCap": 1,
+			"message": "有效命中1次，焰心守护兽焰甲破裂。",
+		}, {
+			"eventId": "ember_overheated",
+			"eventType": "boss_ember_pressure_overheated",
+			"round": 2,
+			"sequence": 3,
+			"actorId": "party_pve_enemy_front_3",
+			"actorKind": "wild_pet",
+			"targetActorId": "party_pve_enemy_front_3",
+			"targetKind": "wild_pet",
+			"actionId": "boss_ember_pressure",
+			"hitCount": 2,
+			"safeHitCap": 1,
+			"message": "有效命中2次，焰心守护兽焰压失控。",
+		}, {
+			"eventId": "ember_quiet",
+			"eventType": "boss_ember_pressure_quiet",
+			"round": 2,
+			"sequence": 4,
+			"actorId": "party_pve_enemy_front_3",
+			"actorKind": "wild_pet",
+			"targetActorId": "party_pve_enemy_front_3",
+			"targetKind": "wild_pet",
+			"actionId": "boss_ember_pressure",
+			"message": "焰心守护兽的焰压环自行熄灭。",
+		}, {
+			"eventId": "ember_end",
+			"eventType": "boss_ember_pressure_end",
+			"round": 3,
+			"sequence": 5,
+			"actorId": "party_pve_enemy_front_3",
+			"actorKind": "wild_pet",
+			"targetActorId": "party_pve_enemy_front_3",
+			"targetKind": "wild_pet",
+			"actionId": "boss_ember_pressure_end",
+			"message": "焰心守护兽的焰压恢复平稳。",
+		}],
+	})
+	var applied_ember_exposed := BattleModel.apply_battle_event(ember_state.duplicate(true), ember_events[1]) if ember_events.size() == 5 else {}
+	var applied_ember_overheated := BattleModel.apply_battle_event(ember_state.duplicate(true), ember_events[2]) if ember_events.size() == 5 else {}
+	checks["ember_pressure_events_use_semantic_presentations"] = (
+		ember_events.size() == 5
+		and str((ember_events[0] as Dictionary).get("type", "")) == "boss_phase"
+		and str((ember_events[0] as Dictionary).get("presentationState", "")) == "skill"
+		and str((ember_events[1] as Dictionary).get("type", "")) == "boss_phase"
+		and str((ember_events[1] as Dictionary).get("presentationState", "")) == "hit"
+		and str((ember_events[2] as Dictionary).get("presentationState", "")) == "skill"
+		and str((ember_events[3] as Dictionary).get("presentationState", "")) == "skill"
+		and str((ember_events[4] as Dictionary).get("presentationState", "")) == "skill"
+		and str(_actor_by_server_id(applied_ember_exposed, "party_pve_enemy_front_3").get("actionState", "")) == "hit"
+		and str(_actor_by_server_id(applied_ember_overheated, "party_pve_enemy_front_3").get("actionState", "")) == "skill"
+	)
+	var cleared_ember_room := ember_room.duplicate(true)
+	var cleared_ember_battle := (cleared_ember_room.get("battle", {}) as Dictionary).duplicate(true)
+	cleared_ember_battle["bossIntent"] = null
+	cleared_ember_room["battle"] = cleared_ember_battle
+	var cleared_ember_state := ServerBattleRoomModel.battle_state_from_room(cleared_ember_room, session)
+	checks["ember_pressure_marker_clears_with_authority"] = (
+		not bool(_actor_by_server_id(cleared_ember_state, "party_pve_enemy_front_3").get("bossThreatened", false))
+		and not str(cleared_ember_state.get("message", "")).contains("焰压环")
+	)
 	return {"ok": checks.values().all(func(value): return bool(value)), "checks": checks}
 
 
@@ -312,6 +417,75 @@ static func _room_with_tide_intent() -> Dictionary:
 				"hp": 900,
 				"maxHp": 1600,
 				"speed": 110,
+			}],
+		},
+	}
+
+
+static func _room_with_ember_intent() -> Dictionary:
+	return {
+		"roomId": "battle_room_ember_client",
+		"mode": "party_pve",
+		"status": "ready",
+		"seed": "ember-client-seed",
+		"battle": {
+			"round": 2,
+			"phase": "command",
+			"requiredActorIds": ["party_pve_player_1", "party_pve_pet_1_active_pet"],
+			"submittedActorIds": [],
+			"bossIntent": {
+				"mechanicId": "guardian_ember_pressure_v1",
+				"bossActorId": "party_pve_enemy_front_3",
+				"bossName": "焰心守护兽",
+				"targetActorId": "party_pve_enemy_front_3",
+				"targetName": "焰心守护兽",
+				"announcedRound": 1,
+				"resolveRound": 2,
+				"actionId": "boss_ember_pressure",
+				"intentKind": "ember_pressure",
+				"markerStyle": "ember_pressure",
+				"safeHitCap": 1,
+				"message": "焰压：锁定焰心守护兽\n命中1～1次：破甲\n超过1次：强化攻击",
+			},
+			"actors": [{
+				"actorId": "party_pve_player_1",
+				"accountId": "account_ally",
+				"username": "boss_hunter",
+				"displayName": "策略猎人",
+				"side": "ally",
+				"kind": "player",
+				"slotId": "ally.back.3",
+				"hp": 500,
+				"maxHp": 500,
+				"speed": 120,
+			}, {
+				"actorId": "party_pve_pet_1_active_pet",
+				"accountId": "account_ally",
+				"username": "boss_hunter",
+				"displayName": "苔团",
+				"side": "ally",
+				"kind": "pet",
+				"slotId": "ally.front.3",
+				"petId": "active_pet",
+				"formId": "bui_normal_red_fire10",
+				"hp": 420,
+				"maxHp": 420,
+				"speed": 110,
+			}, {
+				"actorId": "party_pve_enemy_front_3",
+				"accountId": "",
+				"username": "",
+				"displayName": "焰心守护兽",
+				"side": "enemy",
+				"kind": "wild_pet",
+				"slotId": "enemy.front.3",
+				"formId": "bui_normal_red_fire10",
+				"battleAppearanceFormId": "emberhorn_red_fire8_earth2",
+				"catchable": false,
+				"battlePresentationScale": 1.62,
+				"hp": 900,
+				"maxHp": 1580,
+				"speed": 108,
 			}],
 		},
 	}

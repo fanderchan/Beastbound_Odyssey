@@ -7,6 +7,7 @@ const {
   createMemoryAuthStore,
   battleProfileWithPets,
 } = require("../test-support/auth-service-test-context");
+const {loadBattleBossRules} = require("../src/auth/battle-boss-rules");
 
 function bossEncounterAuthority({enabled = true, bossHp = 5000} = {}) {
   const wildPets = [{
@@ -106,6 +107,56 @@ function tideEncounterAuthority({bossHp = 1600} = {}) {
   });
 }
 
+function emberEncounterAuthority({bossHp = 8000} = {}) {
+  const wildPets = [{
+    formId: "wuli_normal_orange_fire10",
+    name: "焰心护卫甲",
+    level: 80,
+    catchable: false,
+    battleStats: {maxHp: 900, attack: 20, defense: 40, agility: 70},
+  }, {
+    formId: "wuli_normal_fast_wind10",
+    name: "焰心护卫乙",
+    level: 80,
+    catchable: false,
+    battleStats: {maxHp: 900, attack: 20, defense: 40, agility: 72},
+  }, {
+    formId: "bui_normal_red_fire10",
+    battleAppearanceFormId: "emberhorn_red_fire8_earth2",
+    battleDisplayName: "焰心守护兽",
+    name: "焰心守护兽",
+    level: 112,
+    catchable: false,
+    battlePresentationScale: 1.62,
+    battleStats: {maxHp: bossHp, attack: 40, defense: 106, agility: 74},
+    activeSkillIds: ["pet_attack", "pet_defend"],
+    petSkillSlots: ["pet_attack", "pet_defend", "", "", "", "", ""],
+  }];
+  return Object.freeze({
+    resolve() {
+      return {
+        ok: true,
+        encounter: {
+          zoneId: "ember_core_guardian_floor",
+          groupId: "ember_core_guardian_group",
+          rewardTableId: "ember_core_guardian_group",
+          bossMechanicId: "guardian_ember_pressure_v1",
+          interactionId: "ember_core_guardian_npc",
+          sourceInteractionId: "ember_core_guardian_npc",
+          sourceInteractionName: "焰心守护兽",
+          name: "焰心守护层",
+          formationTemplate: "10v10",
+          enemyCount: wildPets.length,
+          selectedWildPet: wildPets[0],
+          selectedWildPets: wildPets,
+          authority: "boss_mechanic_test_authority",
+          schemaVersion: 1,
+        },
+      };
+    },
+  });
+}
+
 function pet(petId, state, extra = {}) {
   return {
     petId,
@@ -182,6 +233,35 @@ function createTideFixture(suffix, options = {}) {
   return {service, player, room: encounter.room};
 }
 
+function createEmberFixture(suffix, options = {}) {
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    petEncounterAuthority: emberEncounterAuthority(options),
+    battleBossRules: options.battleBossRules || loadBattleBossRules({allowPendingMechanics: true}),
+  });
+  const player = service.register({
+    username: `ember${suffix}`,
+    password: "test1234",
+    displayName: `焰压猎人${suffix}`,
+  });
+  assert.equal(player.ok, true);
+  const profile = battleProfileWithPets(`焰压猎人${suffix}`, {
+    level: 80,
+    hp: 5000,
+    maxHp: 5000,
+    attack: 1800,
+    defense: 300,
+    quick: 500,
+    comboRateOverride: 0,
+  }, [pet("active_pet", "battle", {attack: 1800, comboRateOverride: 0})]);
+  assert.equal(service.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
+  const encounter = service.startPartyEncounter(player.session.token, {
+    encounterZone: {id: "fixture_zone", encounterGroupId: "fixture_group"},
+  });
+  assert.equal(encounter.ok, true, JSON.stringify(encounter));
+  return {service, player, room: encounter.room};
+}
+
 function actorIds(room, accountId) {
   const actors = room.battle.actors;
   return {
@@ -216,6 +296,47 @@ function openTideCore(fixture) {
   assert.equal(Object.hasOwn(resolved.room.battle.bossIntent, "targetAccountId"), false);
   assert.equal(Object.hasOwn(resolved.room.battle.bossIntent, "targetUsername"), false);
   return {...ids, core: opened.targetActorId};
+}
+
+function openEmberPressure(fixture) {
+  const ids = actorIds(fixture.room, fixture.player.account.accountId);
+  const bossAtStart = fixture.room.battle.actors.find((actor) => actor.actorId === ids.boss);
+  assert.equal(bossAtStart.formId, "bui_normal_red_fire10");
+  assert.equal(bossAtStart.battleAppearanceFormId, "emberhorn_red_fire8_earth2");
+  assert.equal(bossAtStart.catchable, false);
+  assert.equal(bossAtStart.battlePresentationScale, 1.62);
+  const resolved = submitRound(fixture, 1, [{
+    actorId: ids.player,
+    actionId: "attack",
+    targetActorId: ids.boss,
+  }, {
+    actorId: ids.pet,
+    actionId: "pet_attack",
+    targetActorId: ids.boss,
+  }]);
+  const opened = resolved.turn.events.find((event) => event.eventType === "boss_ember_pressure_open");
+  assert.ok(opened, JSON.stringify(resolved.turn.events, null, 2));
+  assert.equal(resolved.turn.events.at(-1).eventType, "boss_ember_pressure_open");
+  assert.equal(resolved.room.battle.bossIntent.intentKind, "ember_pressure");
+  assert.equal(resolved.room.battle.bossIntent.markerStyle, "ember_pressure");
+  assert.equal(resolved.room.battle.bossIntent.targetActorId, ids.boss);
+  assert.equal(resolved.room.battle.bossIntent.safeHitCap, 1);
+  assert.equal(
+    resolved.turn.actorsBefore.find((actor) => actor.actorId === ids.boss).battlePresentationScale,
+    1.62,
+  );
+  assert.equal(
+    resolved.turn.actors.find((actor) => actor.actorId === ids.boss).battlePresentationScale,
+    1.62,
+  );
+  assert.equal(
+    resolved.room.battle.lastEventList.actors.find((actor) => actor.actorId === ids.boss).battlePresentationScale,
+    1.62,
+  );
+  assert.match(resolved.room.battle.bossIntent.message, /锁定焰心守护兽\n命中1～1次：破甲\n超过1次：强化攻击/);
+  assert.equal(Object.hasOwn(resolved.room.battle.bossIntent, "targetAccountId"), false);
+  assert.equal(Object.hasOwn(resolved.room.battle.bossIntent, "targetUsername"), false);
+  return ids;
 }
 
 function submitRound(fixture, round, commands) {
@@ -439,4 +560,84 @@ test("breaking tide core lowers boss defense for one full decision round and aut
   assert.equal(restored.defenseAfter, 112);
   assert.equal(restoredRound.room.battle.actors.find((actor) => actor.actorId === ids.boss).defense, 112);
   assert.equal(restoredRound.turn.events.some((event) => event.eventType === "boss_tide_core_open"), false);
+});
+
+test("pending ember pressure stays dormant under the production-default rules", () => {
+  const fixture = createEmberFixture("dormant", {battleBossRules: loadBattleBossRules()});
+  assert.equal(Object.hasOwn(fixture.room.battle, "bossMechanic"), false);
+  assert.equal(fixture.room.battle.bossIntent, null);
+  const ids = actorIds(fixture.room, fixture.player.account.accountId);
+  const resolved = submitRound(fixture, 1, [{
+    actorId: ids.player,
+    actionId: "defend",
+  }, {
+    actorId: ids.pet,
+    actionId: "pet_defend",
+  }]);
+  assert.equal(Object.hasOwn(resolved.room.battle, "bossMechanic"), false);
+  assert.equal(resolved.room.battle.bossIntent, null);
+  assert.equal(resolved.turn.events.some((event) => String(event.eventType || "").startsWith("boss_ember_pressure")), false);
+});
+
+test("ember pressure public intent exposes only the trusted cap and one safe hit breaks armor for one round", () => {
+  const fixture = createEmberFixture("safe");
+  const ids = openEmberPressure(fixture);
+  const resolved = submitRound(fixture, 2, [{
+    actorId: ids.player,
+    actionId: "attack",
+    targetActorId: ids.boss,
+  }, {
+    actorId: ids.pet,
+    actionId: "pet_defend",
+  }]);
+  const exposed = resolved.turn.events.find((event) => event.eventType === "boss_ember_pressure_exposed");
+  assert.ok(exposed, JSON.stringify(resolved.turn.events, null, 2));
+  assert.equal(exposed.hitCount, 1);
+  assert.equal(exposed.safeHitCap, 1);
+  assert.equal(exposed.defenseBefore, 106);
+  assert.equal(exposed.defenseAfter, 74);
+  assert.equal(resolved.room.battle.actors.find((actor) => actor.actorId === ids.boss).defense, 74);
+  assert.equal(resolved.room.battle.bossIntent, null);
+
+  const restored = submitRound(fixture, 3, [{
+    actorId: ids.player,
+    actionId: "defend",
+  }, {
+    actorId: ids.pet,
+    actionId: "pet_defend",
+  }]);
+  const ended = restored.turn.events.find((event) => event.eventType === "boss_ember_pressure_end");
+  assert.ok(ended, JSON.stringify(restored.turn.events, null, 2));
+  assert.equal(restored.room.battle.actors.find((actor) => actor.actorId === ids.boss).defense, 106);
+});
+
+test("ember pressure counts two player-owned active hits as overheat and restores attack after one round", () => {
+  const fixture = createEmberFixture("overheat");
+  const ids = openEmberPressure(fixture);
+  const resolved = submitRound(fixture, 2, [{
+    actorId: ids.player,
+    actionId: "attack",
+    targetActorId: ids.boss,
+  }, {
+    actorId: ids.pet,
+    actionId: "pet_attack",
+    targetActorId: ids.boss,
+  }]);
+  const overheated = resolved.turn.events.find((event) => event.eventType === "boss_ember_pressure_overheated");
+  assert.ok(overheated, JSON.stringify(resolved.turn.events, null, 2));
+  assert.equal(overheated.hitCount, 2);
+  assert.equal(overheated.safeHitCap, 1);
+  assert.equal(overheated.attackBefore, 40);
+  assert.equal(overheated.attackAfter, 52);
+  assert.equal(resolved.room.battle.actors.find((actor) => actor.actorId === ids.boss).attack, 52);
+
+  const restored = submitRound(fixture, 3, [{
+    actorId: ids.player,
+    actionId: "defend",
+  }, {
+    actorId: ids.pet,
+    actionId: "pet_defend",
+  }]);
+  assert.ok(restored.turn.events.find((event) => event.eventType === "boss_ember_pressure_end"));
+  assert.equal(restored.room.battle.actors.find((actor) => actor.actorId === ids.boss).attack, 40);
 });

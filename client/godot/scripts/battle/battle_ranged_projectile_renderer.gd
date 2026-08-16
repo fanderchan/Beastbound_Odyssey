@@ -342,7 +342,7 @@ static func _actor_effect_scale(
 				form_id
 			)
 		)
-	return visual_scale
+	return visual_scale * host._battle_actor_presentation_scale(actor)
 
 
 static func _actor_aim_position(
