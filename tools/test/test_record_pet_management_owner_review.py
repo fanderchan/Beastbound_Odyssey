@@ -1534,7 +1534,7 @@ class PetManagementOfficialLaneTest(unittest.TestCase):
             "_parse_attack_input_json", "_parse_fields",
             "_phase403_capture_contract", "_record", "_record_into",
             "_require_main_flag_wiring", "_strict_json_loads",
-            "_validate_godot_log",
+            "_validate_arena_visual_marker", "_validate_godot_log",
             "_write_failure_summary", "main",
         }
         expected_codex = {
