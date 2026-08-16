@@ -8,6 +8,9 @@ const EncounterModel := preload("res://scripts/world/encounter_model.gd")
 const ServerEncounterPermitModel := preload("res://scripts/world/server_encounter_permit_model.gd")
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleLayoutConstants := preload("res://scripts/battle/battle_layout_constants.gd")
+const BattleLayoutSafeAreaModel := preload(
+	"res://scripts/battle/battle_layout_safe_area_model.gd"
+)
 const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog.gd")
 const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catalog.gd")
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
@@ -30617,6 +30620,22 @@ func _run_auto_battle_passive_hover_check() -> void:
 	await host.get_tree().process_frame
 	var passive_text = host.battle_passive_label.text if host.battle_passive_label != null else ""
 	var passive_visible = host.battle_passive_panel != null and host.battle_passive_panel.visible
+	var layout_size: Vector2 = host._layout_size()
+	var passive_height := BATTLE_PASSIVE_PANEL_HEIGHT if layout_size.y >= 460.0 else BATTLE_PASSIVE_PANEL_COMPACT_HEIGHT
+	var expected_passive_rect := BattleLayoutSafeAreaModel.battle_passive_panel_rect(
+		layout_size,
+		18.0,
+		passive_height
+	)
+	var actual_passive_rect: Rect2 = host.battle_passive_panel.get_global_rect() if host.battle_passive_panel != null else Rect2()
+	var round_rect: Rect2 = host.battle_round_panel.get_global_rect() if host.battle_round_panel != null else Rect2()
+	var timer_rect: Rect2 = host.battle_timer_panel.get_global_rect() if host.battle_timer_panel != null else Rect2()
+	var passive_safe_zone_ok: bool = (
+		actual_passive_rect.position.is_equal_approx(expected_passive_rect.position)
+		and actual_passive_rect.size.is_equal_approx(expected_passive_rect.size)
+		and not actual_passive_rect.intersects(round_rect)
+		and not actual_passive_rect.intersects(timer_rect)
+	)
 	var passive_text_fit_ok = (
 		host.battle_passive_label != null
 		and host.battle_passive_label.clip_text
@@ -30630,6 +30649,7 @@ func _run_auto_battle_passive_hover_check() -> void:
 	var passive_ok = (
 		catalog_errors.is_empty()
 		and passive_visible
+		and passive_safe_zone_ok
 		and passive_text_fit_ok
 		and passive_text.find("被动技能: [抗性皮肤] 根据地水火风属性分别获得石化、中毒、混乱、睡眠抗性。") >= 0
 		and host.battle_passive_panel.z_index < host.battle_command_panel.z_index
@@ -30675,9 +30695,10 @@ func _run_auto_battle_passive_hover_check() -> void:
 		await host.get_tree().process_frame
 	var visible_after_action = host.battle_active and host.battle_command_panel != null and host.battle_command_panel.visible and not host._battle_commands_locked()
 	var status = "ok" if passive_ok and command_visible_before and pet_menu_layout_ok and player_return_layout_ok and pet_command_open and hidden_during_action and visible_after_action else "failed"
-	print("battle passive hover check ready: status=%s passive=%s text_fit=%s before=%s pet_layout=%s player_return=%s pet_menu=%s hidden_action=%s visible_after=%s pet_owner=%s pet_columns=%d pet_size=%s expected_pet_size=%s pet_pos=%s viewport=%s selected=%s label_size=%s text=%s errors=%s" % [
+	print("battle passive hover check ready: status=%s passive=%s safe_zone=%s text_fit=%s before=%s pet_layout=%s player_return=%s pet_menu=%s hidden_action=%s visible_after=%s pet_owner=%s pet_columns=%d pet_size=%s expected_pet_size=%s pet_pos=%s viewport=%s passive_rect=%s expected_passive_rect=%s selected=%s label_size=%s text=%s errors=%s" % [
 		status,
 		str(passive_ok),
+		str(passive_safe_zone_ok),
 		str(passive_text_fit_ok),
 		str(command_visible_before),
 		str(pet_menu_layout_ok),
@@ -30690,7 +30711,9 @@ func _run_auto_battle_passive_hover_check() -> void:
 		str(pet_size_at_menu),
 		str(expected_pet_size_at_menu),
 		str(pet_position_at_menu),
-		str(host._layout_size()),
+		str(layout_size),
+		str(actual_passive_rect),
+		str(expected_passive_rect),
 		str(selected_for_pet_menu),
 		str(host.battle_passive_label.size if host.battle_passive_label != null else Vector2.ZERO),
 		passive_text,

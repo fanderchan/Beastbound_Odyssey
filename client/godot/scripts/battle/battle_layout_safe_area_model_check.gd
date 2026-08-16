@@ -21,6 +21,46 @@ func _run() -> void:
 	_expect(bool(report.get("supported", false)), "1280x720 必须启用正式安全区合同", errors)
 	_expect(bool(report.get("ok", false)), "20 个正式阵位必须避开持续 HUD 和视口边界", errors)
 	_expect(int(report.get("slotCount", 0)) == 20, "阵位合同必须保持双方各两排五格", errors)
+	var passive_rect := BattleLayoutSafeAreaModel.battle_passive_panel_rect(
+		REFERENCE_VIEWPORT,
+		18.0,
+		64.0
+	)
+	_expect(
+		passive_rect.position.is_equal_approx(
+			BattleLayoutSafeAreaModel.BATTLE_PASSIVE_PANEL_RECT.position
+		)
+		and passive_rect.size.is_equal_approx(
+			BattleLayoutSafeAreaModel.BATTLE_PASSIVE_PANEL_RECT.size
+		),
+		"1280x720 被动说明必须落入冻结的右上安全区",
+		errors
+	)
+	_expect(
+		not passive_rect.intersects(BattleLayoutSafeAreaModel.ROUND_PANEL_RECT)
+		and not passive_rect.intersects(BattleLayoutSafeAreaModel.TIMER_PANEL_RECT),
+		"被动说明不得覆盖回合或倒计时",
+		errors
+	)
+	_expect(
+		is_equal_approx(
+			passive_rect.end.x + BattleLayoutSafeAreaModel.BATTLE_PASSIVE_INDICATOR_GAP,
+			REFERENCE_VIEWPORT.x - 18.0 - 86.0
+		),
+		"被动说明必须为自动停止按钮保留稳定间距",
+		errors
+	)
+	var narrow_passive_rect := BattleLayoutSafeAreaModel.battle_passive_panel_rect(
+		Vector2(800.0, 600.0),
+		18.0,
+		64.0
+	)
+	_expect(
+		narrow_passive_rect.position.y >= 114.0
+		and narrow_passive_rect.end.x <= 782.0,
+		"窄视口被动说明必须移到顶部指标栈下方并留在视口内",
+		errors
+	)
 	_expect(
 		not bool(
 			BattleLayoutSafeAreaModel.layout_report(

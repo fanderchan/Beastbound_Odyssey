@@ -8223,7 +8223,7 @@ func _build_hud() -> void:
 	battle_passive_label.clip_text = true
 	battle_passive_label.max_lines_visible = BATTLE_PASSIVE_MAX_LINES
 	battle_passive_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	battle_passive_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	battle_passive_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	battle_passive_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	battle_passive_label.add_theme_font_size_override("font_size", BATTLE_PASSIVE_LABEL_FONT_SIZE)
 	battle_passive_label.add_theme_color_override("font_color", Color(0.96, 0.9, 0.55, 1.0))

@@ -37,6 +37,14 @@ const MESSAGE_EXPANDED_RECT := Rect2(24.0, 350.0, 560.0, 352.0)
 const MESSAGE_EXPANDED_FOOTER_RECT := Rect2(24.0, 703.0, 204.0, 17.0)
 const COMMAND_RIGHT_COLUMN_RECT := Rect2(1186.0, 402.0, 68.0, 300.0)
 const COMMAND_BOTTOM_ROW_RECT := Rect2(776.0, 630.0, 478.0, 72.0)
+const BATTLE_PASSIVE_PANEL_RECT := Rect2(774.0, 18.0, 390.0, 64.0)
+
+const BATTLE_PASSIVE_WIDE_MIN_VIEWPORT_WIDTH := 980.0
+const BATTLE_PASSIVE_WIDE_MAX_WIDTH := 390.0
+const BATTLE_PASSIVE_NARROW_MAX_WIDTH := 560.0
+const BATTLE_PASSIVE_AUTO_STOP_RESERVE := 98.0
+const BATTLE_PASSIVE_INDICATOR_GAP := 12.0
+const BATTLE_PASSIVE_NARROW_TOP_OFFSET := 96.0
 
 # The submenu is intentionally transient. It may cover battlefield pixels while
 # the player is choosing a skill/item, but it closes before target selection;
@@ -148,6 +156,45 @@ static func supports_reference_safe_area_contract(
 	return viewport_size.is_equal_approx(REFERENCE_VIEWPORT) and is_zero_approx(top_inset)
 
 
+static func battle_passive_panel_rect(
+	viewport_size: Vector2,
+	margin: float = 18.0,
+	panel_height: float = 64.0
+) -> Rect2:
+	var safe_viewport := Vector2(
+		maxf(1.0, viewport_size.x),
+		maxf(1.0, viewport_size.y)
+	)
+	var safe_margin := clampf(margin, 0.0, maxf(0.0, safe_viewport.x * 0.5 - 1.0))
+	var safe_height := maxf(1.0, panel_height)
+	var available_width := maxf(1.0, safe_viewport.x - safe_margin * 2.0)
+	if safe_viewport.x >= BATTLE_PASSIVE_WIDE_MIN_VIEWPORT_WIDTH:
+		# Keep the centered round/timer stack and the stable top-right auto-stop
+		# slot readable even when the hover copy wraps to two Chinese lines.
+		var right_edge := maxf(
+			safe_margin + 1.0,
+			safe_viewport.x - safe_margin - BATTLE_PASSIVE_AUTO_STOP_RESERVE
+		)
+		var indicator_right := safe_viewport.x * 0.5 + ROUND_PANEL_RECT.size.x * 0.5
+		var desired_width := minf(available_width, BATTLE_PASSIVE_WIDE_MAX_WIDTH)
+		var left_edge := maxf(
+			indicator_right + BATTLE_PASSIVE_INDICATOR_GAP,
+			right_edge - desired_width
+		)
+		return Rect2(
+			Vector2(left_edge, safe_margin),
+			Vector2(maxf(1.0, right_edge - left_edge), safe_height)
+		)
+	var narrow_width := minf(available_width, BATTLE_PASSIVE_NARROW_MAX_WIDTH)
+	return Rect2(
+		Vector2(
+			(safe_viewport.x - narrow_width) * 0.5,
+			safe_margin + BATTLE_PASSIVE_NARROW_TOP_OFFSET
+		),
+		Vector2(narrow_width, safe_height)
+	)
+
+
 static func reference_actor_envelope_for_slot(value: String) -> Rect2:
 	return reference_actor_envelope_for_anchor(template_slot_anchor(value))
 
@@ -188,6 +235,7 @@ static func reference_persistent_hud_safe_rects() -> Dictionary:
 
 static func reference_transient_overlay_rects() -> Dictionary:
 	return {
+		"passiveHoverInfo": [BATTLE_PASSIVE_PANEL_RECT],
 		"expandedBattleMessage": [
 			MESSAGE_EXPANDED_RECT,
 			MESSAGE_EXPANDED_FOOTER_RECT,

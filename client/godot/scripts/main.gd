@@ -15267,16 +15267,17 @@ func _layout_hud() -> void:
 		battle_auto_stop_button.size = stop_size
 	_sync_battle_auto_button()
 
-	var passive_width: float = minf(viewport_size.x - margin * 2.0, 560.0)
 	var passive_height := BATTLE_PASSIVE_PANEL_HEIGHT if viewport_size.y >= 460.0 else BATTLE_PASSIVE_PANEL_COMPACT_HEIGHT
-	var passive_y := margin
-	if viewport_size.x < 980.0:
-		passive_y = top_panel.position.y + top_panel.size.y + 8.0
-	battle_passive_panel.position = Vector2((viewport_size.x - passive_width) * 0.5, passive_y)
-	battle_passive_panel.size = Vector2(passive_width, passive_height)
+	var passive_rect := BattleLayoutSafeAreaModel.battle_passive_panel_rect(
+		viewport_size,
+		margin,
+		passive_height
+	)
+	battle_passive_panel.position = passive_rect.position
+	battle_passive_panel.size = passive_rect.size
 	battle_passive_label.position = BATTLE_PASSIVE_PANEL_PADDING
 	battle_passive_label.size = Vector2(
-		maxf(0.0, passive_width - BATTLE_PASSIVE_PANEL_PADDING.x * 2.0),
+		maxf(0.0, passive_rect.size.x - BATTLE_PASSIVE_PANEL_PADDING.x * 2.0),
 		maxf(0.0, passive_height - BATTLE_PASSIVE_PANEL_PADDING.y * 2.0)
 	)
 	if battle_passive_panel.visible and battle_passive_label != null and battle_passive_label.text == "":

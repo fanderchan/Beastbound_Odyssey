@@ -366,6 +366,24 @@ class BattleLayoutSafeAreaContractTest(unittest.TestCase):
             _rect_constant(MODEL_PATH, "MESSAGE_EXPANDED_FOOTER_RECT"),
             (24.0, 703.0, 204.0, 17.0),
         )
+        passive_rect = _rect_constant(MODEL_PATH, "BATTLE_PASSIVE_PANEL_RECT")
+        self.assertEqual(passive_rect, (774.0, 18.0, 390.0, 64.0))
+        self.assertEqual(
+            _intersection_area(
+                tuple(round(value) for value in _rect_edges(passive_rect)),
+                tuple(
+                    round(value)
+                    for value in _rect_edges(
+                        _merge_rects(
+                            _rect_constant(MODEL_PATH, "ROUND_PANEL_RECT"),
+                            _rect_constant(MODEL_PATH, "TIMER_PANEL_RECT"),
+                        )
+                    )
+                ),
+            ),
+            0,
+        )
+        self.assertEqual(passive_rect[0] + passive_rect[2] + 12.0, 1176.0)
         self.assertEqual(
             _persistent_safe_zones(),
             {
@@ -387,6 +405,14 @@ class BattleLayoutSafeAreaContractTest(unittest.TestCase):
         self.assertRegex(main_source, r"var round_y := margin")
         self.assertRegex(main_source, r"var timer_size := Vector2\(112\.0, 44\.0\)")
         self.assertRegex(main_source, r"var timer_y := margin \+ 44\.0")
+        self.assertIn(
+            "BattleLayoutSafeAreaModel.battle_passive_panel_rect(",
+            main_source,
+        )
+        self.assertNotIn(
+            "battle_passive_panel.position = Vector2((viewport_size.x - passive_width) * 0.5, passive_y)",
+            main_source,
+        )
 
         world_hud_source = WORLD_HUD_PATH.read_text(encoding="utf-8")
         self.assertRegex(
