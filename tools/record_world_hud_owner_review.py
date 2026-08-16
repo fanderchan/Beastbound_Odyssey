@@ -194,6 +194,8 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         "profile=isolated backend=false profile_save=false",
         "WORLD_HUD_OWNER_REVIEW_LAYERS complete=true top=true "
         "map=true action=true",
+        "WORLD_HUD_OWNER_REVIEW_HIERARCHY compact=true top_primary=1 "
+        "top_secondary=0 left_quick=0 social=1 drawer=2 authority_shelf=6",
         "WORLD_HUD_OWNER_REVIEW_ENTRIES character=true backpack=true "
         "pet=true real_clicks=true",
         "WORLD_HUD_OWNER_REVIEW_TASK_PARTY reviewed=true task=true "
@@ -248,6 +250,7 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         "backendConnected": False,
         "profileSaveEnabled": False,
         "completeHudReviewed": True,
+        "compactHierarchyVerified": True,
         "mapReviewed": True,
         "realEntryClicks": True,
         "taskPartyReviewed": True,

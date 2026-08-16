@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import subprocess
 import tempfile
 import unittest
 from unittest import mock
@@ -45,6 +44,9 @@ def _perf_log(
     press_dispatch_max_usec: int = 1900,
     handler_refresh_p95_usec: int = 2400,
     handler_refresh_max_usec: int = 3600,
+    panel_visible_fps_samples: int = 48,
+    panel_visible_fps_median: float = 59.4,
+    panel_visible_fps_minimum: float = 58.0,
 ) -> str:
     lines = [
         "Godot Engine v4.7.stable.official",
@@ -112,7 +114,10 @@ def _perf_log(
         f"press_dispatch_max_usec={press_dispatch_max_usec} "
         "handler_refresh_samples=60 "
         f"handler_refresh_p95_usec={handler_refresh_p95_usec} "
-        f"handler_refresh_max_usec={handler_refresh_max_usec}"
+        f"handler_refresh_max_usec={handler_refresh_max_usec} "
+        f"panel_visible_fps_samples={panel_visible_fps_samples} "
+        f"panel_visible_fps_median={panel_visible_fps_median:.2f} "
+        f"panel_visible_fps_minimum={panel_visible_fps_minimum:.2f}"
     )
     lines.append(
         "PHASE399_MAP_PERF_END status=passed elapsed_wall=24.600 "
@@ -130,7 +135,10 @@ def _perf_log(
         f"press_dispatch_p95_usec={press_dispatch_p95_usec} "
         f"press_dispatch_max_usec={press_dispatch_max_usec} "
         f"handler_refresh_p95_usec={handler_refresh_p95_usec} "
-        f"handler_refresh_max_usec={handler_refresh_max_usec}"
+        f"handler_refresh_max_usec={handler_refresh_max_usec} "
+        f"panel_visible_fps_samples={panel_visible_fps_samples} "
+        f"panel_visible_fps_median={panel_visible_fps_median:.2f} "
+        f"panel_visible_fps_minimum={panel_visible_fps_minimum:.2f}"
     )
     return "\n".join(lines) + "\n"
 
@@ -253,7 +261,6 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
     def test_command_is_real_main_1280x720_and_has_no_bypass(self) -> None:
         command = TOOL._build_godot_command(
             godot="/opt/godot",
-            user_data_dir=Path("/tmp/phase399-map-perf-user"),
         )
         separator = command.index("--")
         engine = command[:separator]
@@ -271,17 +278,17 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
         self.assertNotIn("--script", engine)
         self.assertNotIn("--headless", engine)
         self.assertNotIn("--write-movie", engine)
+        self.assertNotIn("--user-data-dir", engine)
         self.assertIn("--perf-probe", user)
         self.assertIn(TOOL.PERF_CAPTURE_FLAG, user)
+        self.assertEqual(user.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
         with self.assertRaises(TOOL.Phase399MapPerfError):
             TOOL._build_godot_command(
                 godot="/opt/godot",
-                user_data_dir=Path("/tmp/phase399-map-perf-user"),
                 extra_args=("--auto-auth-server-live-check",),
             )
         diagnostic = TOOL._build_diagnostic_command(
             godot="/opt/godot",
-            user_data_dir=Path("/tmp/phase399-map-diagnostic-user"),
         )
         diagnostic_separator = diagnostic.index("--")
         diagnostic_engine = diagnostic[:diagnostic_separator]
@@ -289,12 +296,6 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
         self.assertEqual(
             diagnostic_engine[diagnostic_engine.index("--scene") + 1],
             TOOL.MAIN_SCENE,
-        )
-        self.assertEqual(
-            diagnostic_engine[
-                diagnostic_engine.index("--user-data-dir") + 1
-            ],
-            "/tmp/phase399-map-diagnostic-user",
         )
         self.assertEqual(
             diagnostic_engine[diagnostic_engine.index("--resolution") + 1],
@@ -305,12 +306,16 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
         self.assertNotIn("--headless", diagnostic_engine)
         self.assertNotIn("--fixed-fps", diagnostic_engine)
         self.assertNotIn("--write-movie", diagnostic_engine)
+        self.assertNotIn("--user-data-dir", diagnostic_engine)
         self.assertIn("--perf-probe", diagnostic_user)
         self.assertIn(TOOL.RENDER_DIAGNOSTIC_FLAG, diagnostic_user)
+        self.assertEqual(
+            diagnostic_user.count(TOOL.CORE.QA_LANE_ARGUMENT),
+            1,
+        )
         with self.assertRaises(TOOL.Phase399MapPerfError):
             TOOL._build_diagnostic_command(
                 godot="/opt/godot",
-                user_data_dir=Path("/tmp/phase399-map-diagnostic-user"),
                 extra_args=("--auto-auth-server-live-check",),
             )
 
@@ -572,9 +577,10 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
         player_progress_source = TOOL.PLAYER_PROGRESS_SCRIPT_PATH.read_text(
             encoding="utf-8"
         )
-        auto_check_source = TOOL.AUTO_CHECK_SCRIPT_PATH.read_text(
-            encoding="utf-8"
-        )
+        # Phase399 owns its real-Main diagnostic contract directly.  The old
+        # Phase398 auto-check coordinator coupling was retired after that
+        # coordinator's map fixture was removed.
+        auto_check_source = ""
         world_hud_view_source = TOOL.WORLD_HUD_VIEW_SCRIPT_PATH.read_text(
             encoding="utf-8"
         )
@@ -628,15 +634,6 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
         )
         for fragment in required_fragments:
             self.assertIn(fragment, capture_source)
-        auto_type_fragments = (
-            "var stale_marker_container_id: int = int(",
-            "var repaired_marker_container_id: int = int(",
-            "var formal_map_panel: PanelContainer = host.map_panel as PanelContainer",
-            "var formal_world_hud: Control = host.world_hud_awakened_view as Control",
-            "var expected_camera_position: Vector2 = (",
-        )
-        for fragment in auto_type_fragments:
-            self.assertIn(fragment, auto_check_source)
         tampered_sources = (
             capture_source.replace(
                 "if not await _diagnostic_prepare_autofill_guard():",
@@ -779,32 +776,6 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
                         with self.assertRaises(TOOL.Phase399MapPerfError):
                             TOOL._require_diagnostic_wiring()
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            auto_path = Path(temp_dir) / "auto_check_coordinator.gd"
-            for index, fragment in enumerate(auto_type_fragments):
-                with self.subTest(auto_type_index=index):
-                    auto_path.write_text(
-                        auto_check_source.replace(
-                            fragment,
-                            fragment.replace(": int", "").replace(
-                                ": PanelContainer",
-                                "",
-                            ).replace(": Control", "").replace(
-                                ": Vector2",
-                                "",
-                            ),
-                            1,
-                        ),
-                        encoding="utf-8",
-                    )
-                    with mock.patch.object(
-                        TOOL,
-                        "AUTO_CHECK_SCRIPT_PATH",
-                        auto_path,
-                    ):
-                        with self.assertRaises(TOOL.Phase399MapPerfError):
-                            TOOL._require_diagnostic_wiring()
-
         formal_contract_tampered_sources = (
             (
                 capture_source.replace(
@@ -860,62 +831,6 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
                     "pass # did not exercise the real preserved signal",
                     1,
                 ),
-            ),
-            (
-                capture_source,
-                panel_flow_source,
-                auto_check_source.replace(
-                    'host._set_world_log_message("地图轻量布局回归消息")',
-                    'host.world_log_message = "地图轻量布局回归消息"',
-                    1,
-                ),
-                world_hud_view_source,
-                world_hud_view_check_source,
-            ),
-            (
-                capture_source,
-                panel_flow_source,
-                auto_check_source.replace(
-                    "prepared_fallback_builds_first == 0",
-                    "prepared_fallback_builds_first >= 0",
-                    1,
-                ),
-                world_hud_view_source,
-                world_hud_view_check_source,
-            ),
-            (
-                capture_source,
-                panel_flow_source,
-                auto_check_source.replace(
-                    "shadow_nonprepared_fallback_builds == 1",
-                    "shadow_nonprepared_fallback_builds >= 0",
-                    1,
-                ),
-                world_hud_view_source,
-                world_hud_view_check_source,
-            ),
-            (
-                capture_source,
-                panel_flow_source,
-                auto_check_source.replace(
-                    "WorldCameraSafeAreaModel.safe_viewport_rect(\n"
-                    "\t\tviewport_size,\n\t\tno_blockers\n\t)",
-                    "Rect2(Vector2.ZERO, viewport_size)",
-                    1,
-                ),
-                world_hud_view_source,
-                world_hud_view_check_source,
-            ),
-            (
-                capture_source,
-                panel_flow_source,
-                auto_check_source.replace(
-                    "PHASE398_MAP_LIGHTWEIGHT_QA_SNAPSHOT stage=%s",
-                    "PHASE398_MAP_LIGHTWEIGHT_QA_SNAPSHOT_MISSING stage=%s",
-                    1,
-                ),
-                world_hud_view_source,
-                world_hud_view_check_source,
             ),
         )
         rollback_panel_declaration = (
@@ -1891,64 +1806,6 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
                     mutation,
                 ),
             )
-        before_reset_snapshot_contracts = (
-            (
-                '_print_map_lightweight_qa_snapshot("initial_before_reset", panel_flow)',
-                "panel_flow.reset_map_minimap_fallback_build_count_for_qa()\n"
-                "\tpanel_flow.reset_map_world_lightweight_layout_for_qa()",
-            ),
-            (
-                '_print_map_lightweight_qa_snapshot("before_hang_reset", panel_flow)',
-                "panel_flow.reset_map_world_lightweight_layout_for_qa()",
-            ),
-            (
-                '_print_map_lightweight_qa_snapshot("before_battle_reset", panel_flow)',
-                "panel_flow.reset_map_world_lightweight_layout_for_qa()",
-            ),
-            (
-                '_print_map_lightweight_qa_snapshot("nonformal_before_reset", panel_flow)',
-                "panel_flow.reset_map_minimap_fallback_build_count_for_qa()\n"
-                "\tpanel_flow.reset_map_world_lightweight_layout_for_qa()",
-            ),
-            (
-                '_print_map_lightweight_qa_snapshot("missing_world_before_reset", panel_flow)',
-                "panel_flow.reset_map_world_lightweight_layout_for_qa()",
-            ),
-        )
-        before_reset_snapshot_mutations = []
-        for snapshot_call, reset_block in before_reset_snapshot_contracts:
-            exact_sequence = f"{snapshot_call}\n\t{reset_block}"
-            deleted = auto_check_source.replace(
-                f"{snapshot_call}\n", "", 1
-            )
-            moved_after_reset = auto_check_source.replace(
-                exact_sequence,
-                f"{reset_block}\n\t{snapshot_call}",
-                1,
-            )
-            self.assertNotEqual(deleted, auto_check_source)
-            self.assertNotEqual(moved_after_reset, auto_check_source)
-            before_reset_snapshot_mutations.extend(
-                (
-                    (
-                        capture_source,
-                        panel_flow_source,
-                        deleted,
-                        world_hud_view_source,
-                        world_hud_view_check_source,
-                    ),
-                    (
-                        capture_source,
-                        panel_flow_source,
-                        moved_after_reset,
-                        world_hud_view_source,
-                        world_hud_view_check_source,
-                    ),
-                )
-            )
-        formal_contract_tampered_sources += tuple(
-            before_reset_snapshot_mutations
-        )
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             paths = {
@@ -1972,7 +1829,10 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
                             paths["panel_flow"],
                         ),
                         mock.patch.object(
-                            TOOL, "AUTO_CHECK_SCRIPT_PATH", paths["auto"]
+                            TOOL,
+                            "AUTO_CHECK_SCRIPT_PATH",
+                            paths["auto"],
+                            create=True,
                         ),
                         mock.patch.object(
                             TOOL,
@@ -2882,18 +2742,45 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
                             TOOL._require_diagnostic_wiring()
 
     def test_diagnostic_runner_freezes_observed_manifest_and_failure(self) -> None:
+        def observed_lane_sequence(**kwargs: object) -> dict[str, object]:
+            run_dir = Path(kwargs["run_dir"])
+            native_log = Path(kwargs["native_log"])
+            native_log.write_text(
+                _diagnostic_log(panel_effective_fps=40.0),
+                encoding="utf-8",
+            )
+            validator = kwargs["native_log_validator"]
+            validation = validator(native_log)
+            lifecycle_path = run_dir / "qa-lane-lifecycle.json"
+            owner_path = run_dir / "qa-lane-owner.json"
+            lifecycle_path.write_text(
+                '{"status":"cleaned_before_media"}\n',
+                encoding="utf-8",
+            )
+            owner_path.write_text(
+                '{"owner":"test-owner"}\n',
+                encoding="utf-8",
+            )
+            return {
+                "sourceCheck": {"status": "source_contract_passed"},
+                "initialVerification": {"status": "passed"},
+                "native": {
+                    "logValidation": validation,
+                    "attestation": {"status": "passed"},
+                },
+                "cleanup": {"status": "cleaned"},
+                "postCleanupInspect": {"status": "absent"},
+                "lifecyclePath": lifecycle_path,
+                "ownerEvidencePath": owner_path,
+            }
+
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            completed = subprocess.CompletedProcess(
-                args=["/opt/godot"],
-                returncode=0,
-                stdout=_diagnostic_log(panel_effective_fps=40.0),
-            )
             with mock.patch.object(
-                TOOL.subprocess,
-                "run",
-                return_value=completed,
-            ) as run_mock:
+                TOOL.CORE,
+                "_run_official_lane_godot_sequence",
+                side_effect=observed_lane_sequence,
+            ) as sequence_mock:
                 result = TOOL._run_diagnostic(
                     godot="/opt/godot",
                     output_root=root,
@@ -2903,7 +2790,13 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
             self.assertEqual(result["status"], "observed")
             self.assertTrue(result["complete"])
             self.assertEqual(result["releaseDecision"], "diagnostic_only")
-            run_mock.assert_called_once()
+            sequence_mock.assert_called_once()
+            native_command = sequence_mock.call_args.kwargs["native_command"]
+            self.assertEqual(
+                native_command.count(TOOL.CORE.QA_LANE_ARGUMENT),
+                1,
+            )
+            self.assertNotIn("--user-data-dir", native_command)
             summary_path = Path(result["summary"])
             summary = json.loads(
                 summary_path.read_text(encoding="utf-8")
@@ -2915,23 +2808,26 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
             manifest_lines = manifest.read_text(
                 encoding="utf-8"
             ).splitlines()
-            self.assertEqual(len(manifest_lines), 2)
+            self.assertEqual(len(manifest_lines), 4)
             self.assertTrue(
                 manifest_lines[0].endswith("  godot-diagnostic.log")
             )
-            self.assertTrue(manifest_lines[1].endswith("  summary.json"))
+            self.assertTrue(
+                manifest_lines[1].endswith("  qa-lane-lifecycle.json")
+            )
+            self.assertTrue(
+                manifest_lines[2].endswith("  qa-lane-owner.json")
+            )
+            self.assertTrue(manifest_lines[3].endswith("  summary.json"))
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            failed = subprocess.CompletedProcess(
-                args=["/opt/godot"],
-                returncode=9,
-                stdout="diagnostic failed before marker\n",
-            )
             with mock.patch.object(
-                TOOL.subprocess,
-                "run",
-                return_value=failed,
+                TOOL.CORE,
+                "_run_official_lane_godot_sequence",
+                side_effect=TOOL.Phase399MapPerfError(
+                    "diagnostic failed before marker"
+                ),
             ):
                 with self.assertRaises(TOOL.Phase399MapPerfError):
                     TOOL._run_diagnostic(
@@ -2964,11 +2860,23 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
         self.assertEqual(result["interaction"]["crossFramePresses"], 68)
         self.assertEqual(result["interaction"]["uiWorldLeaks"], 0)
         self.assertEqual(result["runtimeContract"]["menuFps60Checks"], 48)
+        self.assertEqual(
+            result["runtimeContract"]["panelVisibleFpsSamples"],
+            48,
+        )
+        self.assertEqual(
+            result["runtimeContract"]["panelVisibleFpsMedian"],
+            59.4,
+        )
+        self.assertEqual(
+            result["runtimeContract"]["panelVisibleFpsMinimum"],
+            58.0,
+        )
         self.assertTrue(result["runtimeContract"]["foregroundStart"])
         self.assertTrue(result["runtimeContract"]["foregroundEnd"])
         self.assertEqual(result["panelHandler"]["pressDispatchSamples"], 60)
         self.assertEqual(result["panelHandler"]["handlerRefreshSamples"], 60)
-        self.assertEqual(len(result["gates"]), 17)
+        self.assertEqual(len(result["gates"]), 19)
         self.assertTrue(all(gate["passed"] for gate in result["gates"]))
 
     def test_log_rejects_short_slow_hot_or_same_frame_evidence(self) -> None:
@@ -2977,8 +2885,10 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
             _perf_log(idle_fps=27.0),
             _perf_log(moving_fps=44.0),
             _perf_log(panel_fps=40.0),
-            _perf_log(panel_fps=50.0),
             _perf_log(panel_min_override=44.9),
+            _perf_log(panel_visible_fps_median=54.9),
+            _perf_log(panel_visible_fps_minimum=44.9),
+            _perf_log(panel_visible_fps_samples=47),
             _perf_log(idle_process=15.1),
             _perf_log(moving_process=16.8),
             _perf_log(panel_process=16.8),
@@ -3006,6 +2916,16 @@ class CaptureMapAwakenedPerfTest(unittest.TestCase):
             _perf_log().replace(
                 "handler_refresh_max_usec=3600",
                 "handler_refresh_max_usec=3601",
+                1,
+            ),
+            _perf_log().replace(
+                "panel_visible_fps_median=59.40",
+                "panel_visible_fps_median=59.42",
+                1,
+            ),
+            _perf_log().replace(
+                "panel_visible_fps_minimum=58.00",
+                "panel_visible_fps_minimum=58.02",
                 1,
             ),
             _perf_log().replace("regions=9", "regions=8"),

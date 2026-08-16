@@ -151,6 +151,7 @@ func _run() -> void:
 	_append_portrait_fallback_errors(flattened)
 	_append_player_gate_errors()
 	_append_message_action_errors()
+	_append_entry_hierarchy_errors()
 	await _append_task_entry_bounds_errors()
 
 	var more_button := _named_button("WorldHudMoreButton")
@@ -1266,6 +1267,69 @@ func _append_message_action_errors() -> void:
 			and message_panel != null
 			and message_panel.is_visible_in_tree(),
 		"消息操作验收后没有恢复折叠的正式世界消息面"
+	)
+
+
+func _append_entry_hierarchy_errors() -> void:
+	var top_panel := _legacy_controls.get("topPanel") as Control
+	var top_primary := _named_control("WorldHudTopPrimaryShortcuts")
+	var top_secondary := _named_control("WorldHudTopSecondaryShortcuts")
+	var left_quick := _named_control("WorldHudLeftQuickColumn")
+	var social_row := _named_control("WorldHudSocialShortcuts")
+	var drawer_grid := _named_control("WorldHudMoreGrid")
+	var authority_shelf := _named_control("WorldHudProxyAuthorityShelf")
+	var more_button := _named_button("WorldHudMoreButton")
+	var account_slot := _named_control("WorldHudIconSlotAccount")
+	var account_caption := (
+		account_slot.find_child("WorldHudIconCaption", false, false) as Label
+		if account_slot != null
+		else null
+	)
+	_expect(
+		top_panel != null
+			and top_panel.size.x <= 330.01
+			and top_panel.size.y <= 145.01,
+		"精简 HUD 顶部阻挡区仍超过地图卡与管理入口所需范围"
+	)
+	_expect(
+		top_primary != null and top_primary.get_child_count() == 1,
+		"顶部主入口应只保留一个更多管理入口"
+	)
+	_expect(
+		top_secondary != null
+			and not top_secondary.visible
+			and top_secondary.get_child_count() == 0,
+		"顶部第二排重复入口没有彻底收口"
+	)
+	_expect(
+		left_quick != null
+			and not left_quick.visible
+			and left_quick.get_child_count() == 0,
+		"左侧世界/福利/交易重复入口没有彻底收口"
+	)
+	_expect(
+		social_row != null and social_row.get_child_count() == 1,
+		"消息区应只保留聊天入口"
+	)
+	_expect(
+		drawer_grid != null and drawer_grid.get_child_count() == 2,
+		"更多抽屉只能承载账号与权限管理入口"
+	)
+	_expect(
+		more_button != null
+			and more_button.icon != null
+			and more_button.icon.resource_path.ends_with("/more.png"),
+		"更多入口不应继续使用容易误读为返回的双箭头图标"
+	)
+	_expect(
+		account_caption != null and account_caption.text == "账号",
+		"账号入口必须使用中文玩家文案"
+	)
+	_expect(
+		authority_shelf != null
+			and not authority_shelf.visible
+			and authority_shelf.get_child_count() == 6,
+		"代理入口对应的权威按钮没有完整收纳进隐藏容器"
 	)
 
 

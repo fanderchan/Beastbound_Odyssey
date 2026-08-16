@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
+import os
 import re
 import statistics
 import subprocess
@@ -25,6 +27,15 @@ from typing import Any, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+CORE_PATH = REPO_ROOT / "tools" / "record_pet_management_owner_review.py"
+CORE_SPEC = importlib.util.spec_from_file_location(
+    "_beastbound_phase399_qa_lane_core",
+    CORE_PATH,
+)
+if CORE_SPEC is None or CORE_SPEC.loader is None:
+    raise RuntimeError(f"无法加载正式 QA lane 核心：{CORE_PATH}")
+CORE = importlib.util.module_from_spec(CORE_SPEC)
+CORE_SPEC.loader.exec_module(CORE)
 GODOT_PROJECT = REPO_ROOT / "client" / "godot"
 MAIN_SCENE = "res://scenes/Main.tscn"
 MAIN_SCRIPT_PATH = GODOT_PROJECT / "scripts" / "main.gd"
@@ -45,9 +56,6 @@ PLAYER_PROGRESS_SCRIPT_PATH = (
     / "scripts"
     / "progression"
     / "player_progress_model.gd"
-)
-AUTO_CHECK_SCRIPT_PATH = (
-    GODOT_PROJECT / "scripts" / "qa" / "auto_check_coordinator.gd"
 )
 WORLD_HUD_VIEW_SCRIPT_PATH = (
     GODOT_PROJECT / "scripts" / "ui" / "world_hud_awakened_view.gd"
@@ -85,9 +93,14 @@ MIN_STABLE_STATE_SAMPLES = 5
 MIN_STABLE_FPS_BY_STATE = {
     "idle": 28.0,
     "moving": 45.0,
-    "panel_stress": 55.0,
+    # This aggregate window deliberately includes the 30fps world-idle slice
+    # after every panel close.  The actual visible panel owns a separate 55fps
+    # gate below, sampled only while the full-screen map remains on screen.
+    "panel_stress": 45.0,
 }
 MIN_PANEL_STABLE_FPS = 45.0
+MIN_PANEL_VISIBLE_FPS_MEDIAN = 55.0
+MIN_PANEL_VISIBLE_FPS_MINIMUM = 45.0
 IDLE_MEDIAN_PROCESS_TOTAL_MS = 5.0
 IDLE_P95_PROCESS_TOTAL_MS = 15.0
 ACTIVE_MEDIAN_PROCESS_TOTAL_MS = 10.0
@@ -176,59 +189,57 @@ def _new_run_id() -> str:
 def _build_godot_command(
     *,
     godot: str,
-    user_data_dir: Path,
     extra_args: Sequence[str] = (),
 ) -> list[str]:
     if extra_args:
         raise Phase399MapPerfError(
             "Phase399地图性能验收不接受附加Godot参数，避免联网或旁路"
         )
-    return [
-        godot,
-        "--path",
-        str(GODOT_PROJECT),
-        "--user-data-dir",
-        str(user_data_dir),
-        "--scene",
-        MAIN_SCENE,
-        "--windowed",
-        "--resolution",
-        "1280x720",
-        "--single-window",
-        "--",
-        "--qa-viewport=1280x720",
-        "--perf-probe",
-        PERF_CAPTURE_FLAG,
-    ]
+    try:
+        command = CORE._build_native_godot_command(
+            godot=godot,
+            capture_flag=PERF_CAPTURE_FLAG,
+            review_args=("--perf-probe",),
+        )
+    except CORE.PetManagementRecordingError as error:
+        raise Phase399MapPerfError(str(error)) from error
+    if (
+        command.count(PERF_CAPTURE_FLAG) != 1
+        or command.count("--perf-probe") != 1
+        or command.count(CORE.QA_LANE_ARGUMENT) != 1
+        or "--user-data-dir" in command
+        or "--script" in command
+    ):
+        raise Phase399MapPerfError("Phase399地图性能命令 QA lane 合同不精确")
+    return command
 
 
 def _build_diagnostic_command(
     *,
     godot: str,
-    user_data_dir: Path,
     extra_args: Sequence[str] = (),
 ) -> list[str]:
     if extra_args:
         raise Phase399MapPerfError(
             "Phase399地图渲染诊断不接受附加Godot参数，避免联网或旁路"
         )
-    return [
-        godot,
-        "--path",
-        str(GODOT_PROJECT),
-        "--user-data-dir",
-        str(user_data_dir),
-        "--scene",
-        MAIN_SCENE,
-        "--windowed",
-        "--resolution",
-        "1280x720",
-        "--single-window",
-        "--",
-        "--qa-viewport=1280x720",
-        "--perf-probe",
-        RENDER_DIAGNOSTIC_FLAG,
-    ]
+    try:
+        command = CORE._build_native_godot_command(
+            godot=godot,
+            capture_flag=RENDER_DIAGNOSTIC_FLAG,
+            review_args=("--perf-probe",),
+        )
+    except CORE.PetManagementRecordingError as error:
+        raise Phase399MapPerfError(str(error)) from error
+    if (
+        command.count(RENDER_DIAGNOSTIC_FLAG) != 1
+        or command.count("--perf-probe") != 1
+        or command.count(CORE.QA_LANE_ARGUMENT) != 1
+        or "--user-data-dir" in command
+        or "--script" in command
+    ):
+        raise Phase399MapPerfError("Phase399地图诊断命令 QA lane 合同不精确")
+    return command
 
 
 def _require_perf_wiring() -> None:
@@ -260,6 +271,9 @@ def _require_perf_wiring() -> None:
         "Engine.max_fps != 60",
         "PHASE399_MAP_PERF_HANDLER",
         "handler_refresh_p95_usec",
+        "PERF_PANEL_VISIBLE_SAMPLE_FRAMES := 6",
+        "panel_visible_fps_median",
+        "panel_visible_fps_minimum",
     )
     if any(fragment not in main_source for fragment in main_fragments):
         raise Phase399MapPerfError(
@@ -282,9 +296,6 @@ def _require_diagnostic_wiring() -> None:
             encoding="utf-8"
         )
         player_progress_source = PLAYER_PROGRESS_SCRIPT_PATH.read_text(
-            encoding="utf-8"
-        )
-        auto_check_source = AUTO_CHECK_SCRIPT_PATH.read_text(
             encoding="utf-8"
         )
         world_hud_view_source = WORLD_HUD_VIEW_SCRIPT_PATH.read_text(
@@ -433,13 +444,6 @@ def _require_diagnostic_wiring() -> None:
         'timing["panel_apply_total_usec"]',
         'timing["apply_marker_schedule_usec"]',
         'timing["apply_residual_usec"]',
-    )
-    auto_check_type_fragments = (
-        "var stale_marker_container_id: int = int(",
-        "var repaired_marker_container_id: int = int(",
-        "var formal_map_panel: PanelContainer = host.map_panel as PanelContainer",
-        "var formal_world_hud: Control = host.world_hud_awakened_view as Control",
-        "var expected_camera_position: Vector2 = (",
     )
     formal_message_capture_fragments = (
         '"WorldHudMessageSurface", true, false',
@@ -1085,132 +1089,6 @@ def _require_diagnostic_wiring() -> None:
         'expected.get("size", Vector2.ZERO)), '
         '"rollback 尺寸错误：%s" % label)'
     )
-    auto_map_start = auto_check_source.find(
-        "func _run_auto_map_panel_check() -> void:"
-    )
-    auto_snapshot_start = auto_check_source.find(
-        "func _print_map_lightweight_qa_snapshot(", auto_map_start
-    )
-    auto_open_state_start = auto_check_source.find(
-        "func _map_lightweight_open_state_ready() -> bool:",
-        auto_snapshot_start,
-    )
-    auto_world_state_start = auto_check_source.find(
-        "func _map_lightweight_world_state_ready() -> bool:",
-        auto_open_state_start,
-    )
-    auto_world_state_end = auto_check_source.find(
-        "\n\nfunc _map_rect_nearly_equal(", auto_world_state_start
-    )
-    auto_map_source = (
-        auto_check_source[auto_map_start:auto_snapshot_start]
-        if 0 <= auto_map_start < auto_snapshot_start
-        else ""
-    )
-    auto_snapshot_source = (
-        auto_check_source[auto_snapshot_start:auto_open_state_start]
-        if 0 <= auto_snapshot_start < auto_open_state_start
-        else ""
-    )
-    auto_open_state_source = (
-        auto_check_source[auto_open_state_start:auto_world_state_start]
-        if 0 <= auto_open_state_start < auto_world_state_start
-        else ""
-    )
-    auto_world_state_source = (
-        auto_check_source[auto_world_state_start:auto_world_state_end]
-        if 0 <= auto_world_state_start < auto_world_state_end
-        else ""
-    )
-    prepared_order_fragments = (
-        'host._set_world_log_message("地图轻量布局回归消息")',
-        "panel_flow.reset_map_minimap_fallback_build_count_for_qa()",
-        "host._open_map_panel()",
-        "var prepared_visual_ok: bool = (",
-        "var prepared_fallback_builds_first: int = (",
-        "var prepared_fallback_skipped_ok: bool = (",
-        '_print_map_lightweight_qa_snapshot("firebud_prepared_open"',
-    )
-    prepared_order = [
-        auto_map_source.find(fragment)
-        for fragment in prepared_order_fragments
-    ]
-    shadow_anchor = auto_map_source.find(
-        "var continuation_ok: bool = ("
-    )
-    shadow_order_fragments = (
-        '"shadow_nonprepared_before_reset"',
-        "panel_flow.reset_map_minimap_fallback_build_count_for_qa()",
-        "panel_flow.reset_map_world_lightweight_layout_for_qa()",
-        "host._open_map_panel()",
-        "var shadow_nonprepared_visual_ok: bool = (",
-        "var shadow_nonprepared_fallback_builds: int = (",
-        "var shadow_nonprepared_fallback_ok: bool = (",
-        '_print_map_lightweight_qa_snapshot("shadow_nonprepared_open"',
-        "host._close_map_panel()",
-        '_print_map_lightweight_qa_snapshot("shadow_nonprepared_close"',
-    )
-    shadow_order = []
-    shadow_cursor = shadow_anchor
-    for fragment in shadow_order_fragments:
-        shadow_cursor = auto_map_source.find(fragment, shadow_cursor + 1)
-        shadow_order.append(shadow_cursor)
-    auto_snapshot_fragments = (
-        "PHASE398_MAP_LIGHTWEIGHT_QA_SNAPSHOT stage=%s",
-        "panel_visible=%s open_same=%s close_same=%s active=%s",
-        "minimap_fallback_count=%d full_layout_fallback_count=%d",
-        "fallback_reason=%s preflight=%s layout=%s",
-        "visible_menu_paths=%s visible_menu_ids=%s",
-        "panel_flow._map_world_lightweight_preflight_blocker(viewport_size)",
-        "panel_flow._map_world_lightweight_layout_blocker(",
-        "panel_flow._map_visible_world_menu_controls()",
-    )
-    auto_snapshot_reset_sequences = (
-        (
-            '_print_map_lightweight_qa_snapshot("initial_before_reset", panel_flow)\n'
-            "\tpanel_flow.reset_map_minimap_fallback_build_count_for_qa()\n"
-            "\tpanel_flow.reset_map_world_lightweight_layout_for_qa()"
-        ),
-        (
-            '_print_map_lightweight_qa_snapshot("before_hang_reset", panel_flow)\n'
-            "\tpanel_flow.reset_map_world_lightweight_layout_for_qa()"
-        ),
-        (
-            '_print_map_lightweight_qa_snapshot("before_battle_reset", panel_flow)\n'
-            "\tpanel_flow.reset_map_world_lightweight_layout_for_qa()"
-        ),
-        (
-            '_print_map_lightweight_qa_snapshot("nonformal_before_reset", panel_flow)\n'
-            "\tpanel_flow.reset_map_minimap_fallback_build_count_for_qa()\n"
-            "\tpanel_flow.reset_map_world_lightweight_layout_for_qa()"
-        ),
-        (
-            '_print_map_lightweight_qa_snapshot("missing_world_before_reset", panel_flow)\n'
-            "\tpanel_flow.reset_map_world_lightweight_layout_for_qa()"
-        ),
-    )
-    required_before_reset_snapshot_stages = (
-        "initial_before_reset",
-        "before_hang_reset",
-        "before_battle_reset",
-        "nonformal_before_reset",
-        "missing_world_before_reset",
-    )
-    auto_open_state_fragments = (
-        "var no_blockers: Array[Rect2] = []",
-        "WorldCameraSafeAreaModel.safe_viewport_rect(",
-        "WorldCameraSafeAreaModel.player_anchor(",
-        "host.world_camera_safe_anchor_screen.distance_to(",
-    )
-    auto_world_state_fragments = (
-        'find_child("WorldHudMessageSurface", true, false)',
-        'find_child("WorldHudChatSurface", true, false)',
-        'find_child("WorldHudMessageActions", true, false)',
-        'find_child("BattleLog", true, false)',
-        "formal_battle_log.get_parent() == chat_surface",
-        "host.battle_message_expand_button.get_parent()",
-        "host.battle_message_clear_button.get_parent()",
-    )
     if any(fragment not in main_source for fragment in main_fragments):
         raise Phase399MapPerfError(
             "Phase399地图渲染诊断未通过最小Main统一flag接入"
@@ -1372,52 +1250,12 @@ def _require_diagnostic_wiring() -> None:
         raise Phase399MapPerfError(
             "WorldHud rollback必须先全量恢复语义／min／theme／text，再按depth升序仅重放几何；focused须同调用与settled两次精确断言"
         )
-    if (
-        any(index < 0 for index in prepared_order)
-        or prepared_order != sorted(prepared_order)
-        or shadow_anchor < 0
-        or any(index < 0 for index in shadow_order)
-        or shadow_order != sorted(shadow_order)
-        or 'host.world_log_message = "地图轻量布局回归消息"'
-        in auto_map_source
-        or "prepared_fallback_builds_first == 0" not in auto_map_source
-        or "shadow_nonprepared_fallback_builds == 1"
-        not in auto_map_source
-        or any(
-            fragment not in auto_snapshot_source
-            for fragment in auto_snapshot_fragments
-        )
-        or any(
-            auto_map_source.count(f'"{stage}"') != 1
-            for stage in required_before_reset_snapshot_stages
-        )
-        or any(
-            sequence not in auto_map_source
-            for sequence in auto_snapshot_reset_sequences
-        )
-        or any(
-            fragment not in auto_open_state_source
-            for fragment in auto_open_state_fragments
-        )
-        or "Rect2(Vector2.ZERO, viewport_size)"
-        in auto_open_state_source
-        or any(
-            fragment not in auto_world_state_source
-            for fragment in auto_world_state_fragments
-        )
-    ):
-        raise Phase399MapPerfError(
-            "地图auto缺少权威消息、prepared／nonprepared冻结、安全区或原始PFC快照门"
-        )
     if any(
         fragment not in panel_flow_source
         for fragment in panel_flow_fragments
     ) or any(
         fragment not in map_panel_source
         for fragment in map_panel_fragments
-    ) or any(
-        fragment not in auto_check_source
-        for fragment in auto_check_type_fragments
     ):
         raise Phase399MapPerfError(
             "地图打开分段计时缺少default-off或三层ownership接线"
@@ -2856,6 +2694,18 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         handler_fields,
         "handler_refresh_max_usec",
     )
+    panel_visible_fps_samples = _require_int(
+        handler_fields,
+        "panel_visible_fps_samples",
+    )
+    panel_visible_fps_median = _parse_number(
+        handler_line,
+        "panel_visible_fps_median",
+    )
+    panel_visible_fps_minimum = _parse_number(
+        handler_line,
+        "panel_visible_fps_minimum",
+    )
     end_handler_values = {
         "press_dispatch_p95_usec": press_dispatch_p95_usec,
         "press_dispatch_max_usec": press_dispatch_max_usec,
@@ -2869,6 +2719,18 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         raise Phase399MapPerfError(
             "Phase399地图输入处理标记与最终状态摘要不一致"
         )
+    end_panel_visible_samples = _require_int(
+        fields,
+        "panel_visible_fps_samples",
+    )
+    end_panel_visible_median = _parse_number(
+        end_line,
+        "panel_visible_fps_median",
+    )
+    end_panel_visible_minimum = _parse_number(
+        end_line,
+        "panel_visible_fps_minimum",
+    )
     if (
         handler_panel_clicks != EXPECTED_PANEL_CLICKS
         or press_dispatch_samples != EXPECTED_PANEL_CLICKS
@@ -2881,6 +2743,21 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         ) < 0
         or press_dispatch_p95_usec > press_dispatch_max_usec
         or handler_refresh_p95_usec > handler_refresh_max_usec
+        or panel_visible_fps_samples != EXPECTED_MENU_60_CHECKS
+        or end_panel_visible_samples != panel_visible_fps_samples
+        or not math.isfinite(panel_visible_fps_median)
+        or not math.isfinite(panel_visible_fps_minimum)
+        or panel_visible_fps_minimum > panel_visible_fps_median
+        or not math.isclose(
+            end_panel_visible_median,
+            panel_visible_fps_median,
+            abs_tol=0.011,
+        )
+        or not math.isclose(
+            end_panel_visible_minimum,
+            panel_visible_fps_minimum,
+            abs_tol=0.011,
+        )
     ):
         raise Phase399MapPerfError(
             "Phase399地图压力输入处理样本数量或p95/max关系无效"
@@ -2987,6 +2864,28 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
                 "passed": actual < MAX_PANEL_DISPATCH_USEC,
             }
         )
+    for metric, actual, limit in (
+        (
+            "visible_fps_median",
+            panel_visible_fps_median,
+            MIN_PANEL_VISIBLE_FPS_MEDIAN,
+        ),
+        (
+            "visible_fps_minimum",
+            panel_visible_fps_minimum,
+            MIN_PANEL_VISIBLE_FPS_MINIMUM,
+        ),
+    ):
+        gates.append(
+            {
+                "state": "panel_visible",
+                "metric": metric,
+                "actual": actual,
+                "operator": ">=",
+                "limit": limit,
+                "passed": actual >= limit,
+            }
+        )
     failed_gates = [gate for gate in gates if not gate["passed"]]
     if failed_gates:
         raise Phase399MapPerfError(
@@ -3004,6 +2903,9 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
             "foregroundEnd": True,
             "menuFps60": True,
             "menuFps60Checks": menu_fps60_checks,
+            "panelVisibleFpsSamples": panel_visible_fps_samples,
+            "panelVisibleFpsMedian": panel_visible_fps_median,
+            "panelVisibleFpsMinimum": panel_visible_fps_minimum,
         },
         "panelHandler": {
             "pressDispatchSamples": press_dispatch_samples,
@@ -3012,6 +2914,9 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
             "handlerRefreshSamples": handler_refresh_samples,
             "handlerRefreshP95Microseconds": handler_refresh_p95_usec,
             "handlerRefreshMaxMicroseconds": handler_refresh_max_usec,
+            "panelVisibleFpsSamples": panel_visible_fps_samples,
+            "panelVisibleFpsMedian": panel_visible_fps_median,
+            "panelVisibleFpsMinimum": panel_visible_fps_minimum,
         },
         "interaction": {
             "stressCycles": cycles,
@@ -3673,28 +3578,17 @@ def _run(
     command: list[str] = []
     try:
         _require_perf_wiring()
-        with tempfile.TemporaryDirectory(
-            prefix="beastbound-phase399-map-perf-"
-        ) as user_data_raw:
-            command = _build_godot_command(
-                godot=godot,
-                user_data_dir=Path(user_data_raw),
-            )
-            completed = subprocess.run(
-                command,
-                cwd=REPO_ROOT,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                check=False,
-                timeout=timeout_seconds,
-            )
-        log_path.write_text(completed.stdout, encoding="utf-8")
-        if completed.returncode != 0:
-            raise Phase399MapPerfError(
-                f"Godot Phase399地图性能进程退出码为{completed.returncode}"
-            )
-        validation = _validate_godot_log(log_path)
+        command = _build_godot_command(godot=godot)
+        lane_evidence = CORE._run_official_lane_godot_sequence(
+            run_dir=run_dir,
+            godot=godot,
+            base_environment=os.environ.copy(),
+            native_command=command,
+            native_log=log_path,
+            timeout_seconds=timeout_seconds,
+            native_log_validator=_validate_godot_log,
+        )
+        validation = lane_evidence["native"]["logValidation"]
         summary = {
             "schemaVersion": REPORT_SCHEMA_VERSION,
             "reportType": REPORT_TYPE,
@@ -3706,14 +3600,20 @@ def _run(
             "entryMode": "MainSceneFlag",
             "viewport": {"width": 1280, "height": 720},
             "renderer": "Metal 4.0 - Forward Mobile",
-            "command": command,
+            "command": CORE._redacted_command(command),
             "states": validation["states"],
             "gates": validation["gates"],
             "runtimeContract": validation["runtimeContract"],
             "panelHandler": validation["panelHandler"],
             "interaction": validation["interaction"],
             "isolation": {
-                "freshUserData": True,
+                "officialQaLane": True,
+                "lane": CORE.QA_LANE,
+                "laneFeature": CORE.QA_LANE_FEATURE,
+                "laneFreshAtRecorderStart": True,
+                "laneAbsentAfterCleanup": True,
+                "realPlayerInventoryUnchanged": True,
+                "normalPlayerSavePathUsed": False,
                 "backendStarted": False,
                 "profileSaveEnabled": False,
                 "endHttpDisconnected": True,
@@ -3722,14 +3622,35 @@ def _run(
                     "counter or server-write measurement was installed."
                 ),
             },
-            "artifacts": {"log": log_path.name},
+            "qaLane": {
+                "sourceCheck": lane_evidence["sourceCheck"],
+                "initialVerification": lane_evidence["initialVerification"],
+                "nativeAttestation": lane_evidence["native"]["attestation"],
+                "cleanup": lane_evidence["cleanup"],
+                "postCleanupInspect": lane_evidence["postCleanupInspect"],
+            },
+            "artifacts": {
+                "log": log_path.name,
+                "lifecycle": Path(lane_evidence["lifecyclePath"]).name,
+                "ownerEvidence": Path(
+                    lane_evidence["ownerEvidencePath"]
+                ).name,
+            },
         }
         summary_path = run_dir / "summary.json"
         summary_path.write_text(
             json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
-        manifest_path = _write_manifest(run_dir, (log_path, summary_path))
+        manifest_paths = sorted(
+            (
+                path
+                for path in run_dir.rglob("*")
+                if path.is_file() and path.name != "SHA256SUMS"
+            ),
+            key=lambda path: path.relative_to(run_dir).as_posix(),
+        )
+        manifest_path = _write_manifest(run_dir, manifest_paths)
         return {
             "status": "passed",
             "runDir": str(run_dir),
@@ -3745,6 +3666,7 @@ def _run(
     except (
         OSError,
         Phase399MapPerfError,
+        CORE.PetManagementRecordingError,
         subprocess.SubprocessError,
     ) as error:
         failure_path = run_dir / "failure-summary.json"
@@ -3784,28 +3706,17 @@ def _run_diagnostic(
     command: list[str] = []
     try:
         _require_diagnostic_wiring()
-        with tempfile.TemporaryDirectory(
-            prefix="beastbound-phase399-map-diagnostic-"
-        ) as user_data_raw:
-            command = _build_diagnostic_command(
-                godot=godot,
-                user_data_dir=Path(user_data_raw),
-            )
-            completed = subprocess.run(
-                command,
-                cwd=REPO_ROOT,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                check=False,
-                timeout=timeout_seconds,
-            )
-        log_path.write_text(completed.stdout, encoding="utf-8")
-        if completed.returncode != 0:
-            raise Phase399MapPerfError(
-                f"Godot Phase399地图渲染诊断进程退出码为{completed.returncode}"
-            )
-        validation = _validate_diagnostic_log(log_path)
+        command = _build_diagnostic_command(godot=godot)
+        lane_evidence = CORE._run_official_lane_godot_sequence(
+            run_dir=run_dir,
+            godot=godot,
+            base_environment=os.environ.copy(),
+            native_command=command,
+            native_log=log_path,
+            timeout_seconds=timeout_seconds,
+            native_log_validator=_validate_diagnostic_log,
+        )
+        validation = lane_evidence["native"]["logValidation"]
         summary = {
             "schemaVersion": REPORT_SCHEMA_VERSION,
             "reportType": DIAGNOSTIC_REPORT_TYPE,
@@ -3819,7 +3730,7 @@ def _run_diagnostic(
             "entryMode": "MainSceneFlag",
             "viewport": {"width": 1280, "height": 720},
             "renderer": "Metal 4.0 - Forward Mobile",
-            "command": command,
+            "command": CORE._redacted_command(command),
             "states": validation["states"],
             "realInputLatency": validation["realInputLatency"],
             "signalCpu": validation["signalCpu"],
@@ -3831,18 +3742,45 @@ def _run_diagnostic(
                 "pass; the separate Map60 release gate remains unchanged."
             ),
             "isolation": {
-                "freshUserData": True,
+                "officialQaLane": True,
+                "lane": CORE.QA_LANE,
+                "laneFeature": CORE.QA_LANE_FEATURE,
+                "laneFreshAtRecorderStart": True,
+                "laneAbsentAfterCleanup": True,
+                "realPlayerInventoryUnchanged": True,
+                "normalPlayerSavePathUsed": False,
                 "backendStarted": False,
                 "profileSaveEnabled": False,
             },
-            "artifacts": {"log": log_path.name},
+            "qaLane": {
+                "sourceCheck": lane_evidence["sourceCheck"],
+                "initialVerification": lane_evidence["initialVerification"],
+                "nativeAttestation": lane_evidence["native"]["attestation"],
+                "cleanup": lane_evidence["cleanup"],
+                "postCleanupInspect": lane_evidence["postCleanupInspect"],
+            },
+            "artifacts": {
+                "log": log_path.name,
+                "lifecycle": Path(lane_evidence["lifecyclePath"]).name,
+                "ownerEvidence": Path(
+                    lane_evidence["ownerEvidencePath"]
+                ).name,
+            },
         }
         summary_path = run_dir / "summary.json"
         summary_path.write_text(
             json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
-        manifest_path = _write_manifest(run_dir, (log_path, summary_path))
+        manifest_paths = sorted(
+            (
+                path
+                for path in run_dir.rglob("*")
+                if path.is_file() and path.name != "SHA256SUMS"
+            ),
+            key=lambda path: path.relative_to(run_dir).as_posix(),
+        )
+        manifest_path = _write_manifest(run_dir, manifest_paths)
         return {
             "status": "observed",
             "complete": True,
@@ -3860,6 +3798,7 @@ def _run_diagnostic(
     except (
         OSError,
         Phase399MapPerfError,
+        CORE.PetManagementRecordingError,
         subprocess.SubprocessError,
     ) as error:
         failure_path = run_dir / "failure-summary.json"

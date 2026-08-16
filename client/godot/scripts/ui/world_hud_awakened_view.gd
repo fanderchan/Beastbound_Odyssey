@@ -151,6 +151,7 @@ var _more_drawer: Panel
 var _top_surface: Control
 var _side_surface: Control
 var _dock_surface: Control
+var _proxy_authority_shelf: Control
 var _top_shortcut_row: HBoxContainer
 var _top_secondary_row: HBoxContainer
 var _left_shortcut_column: VBoxContainer
@@ -385,7 +386,7 @@ func apply_layout(viewport_size: Vector2, state: Dictionary) -> void:
 	var scale_y := _viewport_size.y / REFERENCE_SIZE.y
 	var top_rect := Rect2(
 		Vector2(80.0 * scale_x, 0.0),
-		Vector2(752.0 * scale_x, 170.0 * scale_y)
+		Vector2(330.0 * scale_x, 145.0 * scale_y)
 	)
 	var side_rect := Rect2(
 		Vector2(999.0 * scale_x, 13.0 * scale_y),
@@ -1059,40 +1060,10 @@ func _build_top_panel() -> void:
 	_top_shortcut_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_top_shortcut_row.add_theme_constant_override("separation", 2)
 	_top_surface.add_child(_top_shortcut_row)
-	_add_proxy_icon_slot(_top_shortcut_row, "hang", "挂机", Vector2(56.0, 80.0), 52)
-	_add_proxy_icon_slot(
-		_top_shortcut_row,
-		"pet",
-		"抓宠",
-		Vector2(56.0, 80.0),
-		52,
-		false,
-		"capture"
-	)
-	_add_proxy_icon_slot(
-		_top_shortcut_row,
-		"quest",
-		"活动",
-		Vector2(56.0, 80.0),
-		52,
-		false,
-		"activity"
-	)
-	_add_entry_icon_slot(_top_shortcut_row, "codex", "攻略", Vector2(56.0, 80.0), 52)
-	_add_entry_icon_slot(_top_shortcut_row, "equipment", "变强", Vector2(56.0, 80.0), 52)
-	_add_proxy_icon_slot(
-		_top_shortcut_row,
-		"quest",
-		"经典任务",
-		Vector2(64.0, 80.0),
-		52,
-		false,
-		"classic"
-	)
 
 	_more_button = Button.new()
 	_more_button.name = "WorldHudMoreButton"
-	_more_button.tooltip_text = "展开更多真实入口"
+	_more_button.tooltip_text = "展开账号与管理入口"
 	_more_button.pressed.connect(_on_more_button_pressed)
 	var more_slot := _make_icon_slot(
 		_top_shortcut_row,
@@ -1108,46 +1079,14 @@ func _build_top_panel() -> void:
 	_top_secondary_row = HBoxContainer.new()
 	_top_secondary_row.name = "WorldHudTopSecondaryShortcuts"
 	_top_secondary_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_top_secondary_row.add_theme_constant_override("separation", 3)
+	_top_secondary_row.visible = false
 	_top_surface.add_child(_top_secondary_row)
-	for secondary in [
-		["backpack", "背包"],
-		["pet", "育宠"],
-		["character", "形象"],
-		["auto", "内挂"],
-		["family", "家族"],
-		["codex", "图鉴"],
-		["party", "队伍"],
-		["quest", "任务"],
-		["account", "账号"],
-		["map", "世界"],
-	]:
-		_add_proxy_icon_slot(
-			_top_secondary_row,
-			str(secondary[0]),
-			str(secondary[1]),
-			Vector2(56.0, 80.0),
-			50
-		)
 
 	_left_shortcut_column = VBoxContainer.new()
 	_left_shortcut_column.name = "WorldHudLeftQuickColumn"
 	_left_shortcut_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_left_shortcut_column.add_theme_constant_override("separation", 5)
+	_left_shortcut_column.visible = false
 	_top_surface.add_child(_left_shortcut_column)
-	for vertical_entry in [
-		["map", "世界"],
-		["mailbox", "福利"],
-		["market", "交易所"],
-		["market", "商城"],
-	]:
-		_add_proxy_icon_slot(
-			_left_shortcut_column,
-			str(vertical_entry[0]),
-			str(vertical_entry[1]),
-			Vector2(66.0, 76.0),
-			52
-		)
 
 	_more_drawer = Panel.new()
 	_more_drawer.name = "WorldHudMoreDrawer"
@@ -1163,7 +1102,7 @@ func _build_top_panel() -> void:
 	_drawer_grid.add_theme_constant_override("separation", 5)
 	_drawer_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_more_drawer.add_child(_drawer_grid)
-	for entry_id in ["family", "market", "mailbox", "auto", "account", "gm"]:
+	for entry_id in ["account", "gm"]:
 		_add_entry_icon_slot(
 			_drawer_grid,
 			entry_id,
@@ -1288,20 +1227,6 @@ func _build_message_panel() -> void:
 		true
 	)
 	_register_entry_slot("chat", chat_button.get_parent() as Control)
-	for social_entry in [
-		["family", "家族"],
-		["party", "队伍"],
-		["character", "外观"],
-		["codex", "百科"],
-	]:
-		_add_proxy_icon_slot(
-			social_row,
-			str(social_entry[0]),
-			str(social_entry[1]),
-			Vector2(52.0, 66.0),
-			40,
-			true
-		)
 
 	_chat_surface = Panel.new()
 	_chat_surface.name = "WorldHudChatSurface"
@@ -1382,6 +1307,13 @@ func _build_action_bar() -> void:
 	_dock_surface.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_dock_surface.clip_contents = false
 	_action_bar.add_child(_dock_surface)
+	_proxy_authority_shelf = Control.new()
+	_proxy_authority_shelf.name = "WorldHudProxyAuthorityShelf"
+	_proxy_authority_shelf.visible = false
+	_proxy_authority_shelf.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dock_surface.add_child(_proxy_authority_shelf)
+	for entry_id in ["auto", "family", "market", "equipment", "codex", "mailbox"]:
+		_reparent_control(entry_button(entry_id), _proxy_authority_shelf)
 
 	_floating_mailbox_slot = _add_proxy_icon_slot(
 		_dock_surface,
@@ -1495,16 +1427,16 @@ func _layout_top_contents(panel_width: float, panel_height: float) -> void:
 	if _version_label != null:
 		_version_label.visible = false
 	_top_shortcut_row.position = Vector2(130.0, 0.0)
-	_top_shortcut_row.size = Vector2(407.0, 82.0)
-	_top_secondary_row.position = Vector2(131.0, 84.0)
-	_top_secondary_row.size = Vector2(621.0, 82.0)
-	_left_shortcut_column.position = Vector2(0.0, 106.0)
-	_left_shortcut_column.size = Vector2(72.0, 319.0)
+	_top_shortcut_row.size = Vector2(48.0, 82.0)
+	_top_secondary_row.position = Vector2.ZERO
+	_top_secondary_row.size = Vector2.ZERO
+	_left_shortcut_column.position = Vector2.ZERO
+	_left_shortcut_column.size = Vector2.ZERO
 	if _more_drawer != null:
-		_more_drawer.position = Vector2(130.0, 170.0)
-		_more_drawer.size = Vector2(407.0, 72.0)
+		_more_drawer.position = Vector2(184.0, 5.0)
+		_more_drawer.size = Vector2(141.0, 72.0)
 		_drawer_grid.position = Vector2(5.0, 3.0)
-		_drawer_grid.size = Vector2(397.0, 66.0)
+		_drawer_grid.size = Vector2(129.0, 66.0)
 
 
 func _layout_side_contents(panel_width: float, panel_height: float) -> void:
@@ -1934,11 +1866,12 @@ func _on_proxy_entry_pressed(entry_id: String) -> void:
 
 func _entry_caption(entry_id: String) -> String:
 	return {
+		"account": "账号",
 		"family": "家族",
 		"market": "买卖",
 		"mailbox": "信箱",
 		"auto": "内挂",
-		"gm": "GM",
+		"gm": "管理",
 	}.get(entry_id, entry_id)
 
 
@@ -1951,7 +1884,7 @@ func _visual_icon_variant(parent: Node, entry_id: String) -> String:
 			"codex": "top_guide",
 			"equipment": "top_strengthen",
 			"classic": "top_classic",
-			"more": "top_more",
+			"more": "more",
 		}.get(entry_id, entry_id)
 	if parent != null and parent.name == "WorldHudTopSecondaryShortcuts":
 		return {

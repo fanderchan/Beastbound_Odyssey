@@ -32,6 +32,9 @@ const PERF_STATE_SECONDS := 7.2
 const PERF_STRESS_CYCLES := 12
 const PERF_CLICK_PAUSE_SECONDS := 0.12
 const PERF_EXPECTED_MENU_60_CHECKS := PERF_STRESS_CYCLES * 4
+const PERF_PANEL_VISIBLE_SAMPLE_FRAMES := 6
+const PERF_MIN_PANEL_VISIBLE_MEDIAN_FPS := 55.0
+const PERF_MIN_PANEL_VISIBLE_FPS := 45.0
 const PERF_MAX_PANEL_DISPATCH_USEC := 8000
 const DIAGNOSTIC_WARMUP_FRAMES := 60
 const DIAGNOSTIC_SAMPLE_FRAMES := 300
@@ -102,6 +105,7 @@ var _actual_left_clicks := 0
 var _cross_frame_presses := 0
 var _perf_foreground_start := false
 var _perf_menu_60_checks := 0
+var _panel_visible_fps_samples: Array[float] = []
 var _panel_press_dispatch_samples: Array[int] = []
 var _panel_handler_refresh_samples: Array[int] = []
 var _diagnostic_click_latency_usec: Array[int] = []
@@ -1610,6 +1614,7 @@ func _run_perf_capture() -> void:
 	var panel_accept_before := int(_host_property("click_move_input_accept_count"))
 	var completed_cycles := 0
 	_perf_menu_60_checks = 0
+	_panel_visible_fps_samples.clear()
 	_panel_press_dispatch_samples.clear()
 	_panel_handler_refresh_samples.clear()
 	var map_flow = host.call("_panel_flow")
@@ -1627,7 +1632,7 @@ func _run_perf_capture() -> void:
 		await _perf_click_pause()
 		if not _assert_local_map_panel():
 			return
-		if not _assert_panel_60fps("地图压力循环打开当前地图"):
+		if not await _assert_panel_60fps("地图压力循环打开当前地图"):
 			return
 
 		var world_tab = _panel.call("world_tab_button")
@@ -1638,7 +1643,7 @@ func _run_perf_capture() -> void:
 		await _perf_click_pause()
 		if not _assert_world_map_panel():
 			return
-		if not _assert_panel_60fps("地图压力循环世界页签"):
+		if not await _assert_panel_60fps("地图压力循环世界页签"):
 			return
 
 		var region_button = _panel.call(
@@ -1652,7 +1657,7 @@ func _run_perf_capture() -> void:
 		await _perf_click_pause()
 		if not _assert_selected_world_region():
 			return
-		if not _assert_panel_60fps("地图压力循环玄影区域"):
+		if not await _assert_panel_60fps("地图压力循环玄影区域"):
 			return
 
 		var local_tab = _panel.call("local_tab_button")
@@ -1663,7 +1668,7 @@ func _run_perf_capture() -> void:
 		await _perf_click_pause()
 		if not _assert_local_map_panel():
 			return
-		if not _assert_panel_60fps("地图压力循环当前地图页签"):
+		if not await _assert_panel_60fps("地图压力循环当前地图页签"):
 			return
 
 		var close_value = _panel.get("close_button")
@@ -1700,12 +1705,16 @@ func _run_perf_capture() -> void:
 		0.95
 	)
 	var handler_refresh_max_usec := _max_usec(_panel_handler_refresh_samples)
+	var panel_visible_fps_median := _median_float(_panel_visible_fps_samples)
+	var panel_visible_fps_minimum := _minimum_float(_panel_visible_fps_samples)
 	print(
 		(
 			"PHASE399_MAP_PERF_HANDLER panel_clicks=%d "
 			+ "press_dispatch_samples=%d press_dispatch_p95_usec=%d "
 			+ "press_dispatch_max_usec=%d handler_refresh_samples=%d "
-			+ "handler_refresh_p95_usec=%d handler_refresh_max_usec=%d"
+			+ "handler_refresh_p95_usec=%d handler_refresh_max_usec=%d "
+			+ "panel_visible_fps_samples=%d panel_visible_fps_median=%.2f "
+			+ "panel_visible_fps_minimum=%.2f"
 		) % [
 			panel_clicks,
 			_panel_press_dispatch_samples.size(),
@@ -1714,6 +1723,9 @@ func _run_perf_capture() -> void:
 			_panel_handler_refresh_samples.size(),
 			handler_refresh_p95_usec,
 			handler_refresh_max_usec,
+			_panel_visible_fps_samples.size(),
+			panel_visible_fps_median,
+			panel_visible_fps_minimum,
 		]
 	)
 	if (
@@ -1721,6 +1733,7 @@ func _run_perf_capture() -> void:
 		or panel_clicks != PERF_STRESS_CYCLES * 5
 		or ui_world_leaks != 0
 		or _perf_menu_60_checks != PERF_EXPECTED_MENU_60_CHECKS
+		or _panel_visible_fps_samples.size() != PERF_EXPECTED_MENU_60_CHECKS
 		or _panel_press_dispatch_samples.size() != panel_clicks
 		or _panel_handler_refresh_samples.size() != panel_clicks
 	):
@@ -1736,6 +1749,15 @@ func _run_perf_capture() -> void:
 				_panel_press_dispatch_samples.size(),
 				_panel_handler_refresh_samples.size(),
 			]
+		)
+		return
+	if (
+		panel_visible_fps_median < PERF_MIN_PANEL_VISIBLE_MEDIAN_FPS
+		or panel_visible_fps_minimum < PERF_MIN_PANEL_VISIBLE_FPS
+	):
+		_fail_capture(
+			"地图面板真实可见帧率未达标：median=%.2f minimum=%.2f"
+			% [panel_visible_fps_median, panel_visible_fps_minimum]
 		)
 		return
 	if int(map_flow.call("map_world_full_layout_fallback_count_for_qa")) != 0:
@@ -1786,7 +1808,8 @@ func _run_perf_capture() -> void:
 			+ "menu_fps60_checks=%d actual_left_clicks=%d "
 			+ "cross_frame_presses=%d press_dispatch_p95_usec=%d "
 			+ "press_dispatch_max_usec=%d handler_refresh_p95_usec=%d "
-			+ "handler_refresh_max_usec=%d"
+			+ "handler_refresh_max_usec=%d panel_visible_fps_samples=%d "
+			+ "panel_visible_fps_median=%.2f panel_visible_fps_minimum=%.2f"
 		) % [
 			elapsed,
 			completed_cycles,
@@ -1801,6 +1824,9 @@ func _run_perf_capture() -> void:
 			press_dispatch_max_usec,
 			handler_refresh_p95_usec,
 			handler_refresh_max_usec,
+			_panel_visible_fps_samples.size(),
+			panel_visible_fps_median,
+			panel_visible_fps_minimum,
 		]
 	)
 	host.get_tree().call_deferred("quit", 0)
@@ -1870,6 +1896,8 @@ func _prepare_real_main_world() -> bool:
 		return false
 	if host.has_method("_update_hud_text"):
 		host.call("_update_hud_text", true)
+	if host.has_method("_set_world_log_message"):
+		host.call("_set_world_log_message", "火芽村地图已就绪。")
 	if host.has_method("_layout_hud"):
 		host.call("_layout_hud")
 
@@ -2013,6 +2041,16 @@ func _assert_world_hud_restored_after_map_close() -> bool:
 	):
 		_fail_capture("地图轻量关闭没有恢复正式世界消息与操作按钮")
 		return false
+	var world_depth_layer = _host_property("world_depth_layer")
+	var world_overlay_layer = _host_property("world_overlay_layer")
+	if (
+		not (world_depth_layer is CanvasItem)
+		or not (world_depth_layer as CanvasItem).visible
+		or not (world_overlay_layer is CanvasItem)
+		or not (world_overlay_layer as CanvasItem).visible
+	):
+		_fail_capture("全屏地图关闭后没有恢复世界深度层与标记层")
+		return false
 	var blocker_rects: Array[Rect2] = []
 	var blocker_values = _host_property("world_camera_hud_blocker_rects")
 	if blocker_values is Array:
@@ -2097,6 +2135,16 @@ func _assert_world_hud_restored_after_map_close() -> bool:
 func _assert_local_map_panel() -> bool:
 	if _panel == null or not (_panel as CanvasItem).is_visible_in_tree():
 		_fail_capture("真实左键没有打开正式地图页")
+		return false
+	var world_depth_layer = _host_property("world_depth_layer")
+	var world_overlay_layer = _host_property("world_overlay_layer")
+	if (
+		not (world_depth_layer is CanvasItem)
+		or (world_depth_layer as CanvasItem).visible
+		or not (world_overlay_layer is CanvasItem)
+		or (world_overlay_layer as CanvasItem).visible
+	):
+		_fail_capture("全屏地图打开时仍在绘制被完全遮挡的世界层")
 		return false
 	if not bool(_panel.call("is_awakened_map_panel")):
 		_fail_capture("地图页仍不是正式觉醒界面")
@@ -2407,6 +2455,20 @@ func _assert_panel_60fps(label: String) -> bool:
 			% [label, runtime_fps, Engine.max_fps]
 		)
 		return false
+	var sample_started_usec := Time.get_ticks_usec()
+	for _frame in range(PERF_PANEL_VISIBLE_SAMPLE_FRAMES):
+		await host.get_tree().process_frame
+		if not (_panel as CanvasItem).is_visible_in_tree():
+			_fail_capture("%s可见帧率采样期间地图面板提前消失" % label)
+			return false
+	var sample_elapsed_usec := maxi(
+		1,
+		int(Time.get_ticks_usec() - sample_started_usec)
+	)
+	_panel_visible_fps_samples.append(
+		float(PERF_PANEL_VISIBLE_SAMPLE_FRAMES) * 1000000.0
+		/ float(sample_elapsed_usec)
+	)
 	_perf_menu_60_checks += 1
 	return true
 
@@ -2429,6 +2491,26 @@ func _max_usec(samples: Array[int]) -> int:
 	for sample in samples:
 		maximum = maxi(maximum, sample)
 	return maximum
+
+
+func _median_float(samples: Array[float]) -> float:
+	if samples.is_empty():
+		return 0.0
+	var ordered: Array[float] = samples.duplicate()
+	ordered.sort()
+	var middle := ordered.size() / 2
+	if ordered.size() % 2 == 0:
+		return (ordered[middle - 1] + ordered[middle]) * 0.5
+	return ordered[middle]
+
+
+func _minimum_float(samples: Array[float]) -> float:
+	if samples.is_empty():
+		return 0.0
+	var minimum := samples[0]
+	for sample in samples:
+		minimum = minf(minimum, sample)
+	return minimum
 
 
 func _left_click(

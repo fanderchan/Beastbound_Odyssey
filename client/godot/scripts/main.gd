@@ -9089,11 +9089,15 @@ func _invalidate_ground_pet_drop_depth_cache() -> void:
 
 
 func _sync_world_layer_visibility() -> void:
-	var world_visible := not battle_active
+	var world_visible := not battle_active and not _fullscreen_map_occludes_world()
 	if world_depth_layer != null and world_depth_layer.visible != world_visible:
 		world_depth_layer.visible = world_visible
 	if world_overlay_layer != null and world_overlay_layer.visible != world_visible:
 		world_overlay_layer.visible = world_visible
+
+
+func _fullscreen_map_occludes_world() -> bool:
+	return map_panel != null and map_panel.visible
 
 
 func _sync_world_visual_layers(
@@ -9614,6 +9618,9 @@ func _draw() -> void:
 	if battle_active:
 		_draw_battle_scene()
 		_perf_add("draw_battle", draw_start)
+		return
+	if _fullscreen_map_occludes_world():
+		_perf_add("draw_world", draw_start)
 		return
 	_draw_isometric_map()
 	_perf_add("draw_world", draw_start)

@@ -186,8 +186,35 @@ func _configure_isolated_world_profile() -> void:
 	if restore_button.is_visible_in_tree():
 		_fail_capture("展开态不应显示恢复按钮")
 		return
+	var top_primary := _named_control("WorldHudTopPrimaryShortcuts")
+	var top_secondary := _named_control("WorldHudTopSecondaryShortcuts")
+	var left_quick := _named_control("WorldHudLeftQuickColumn")
+	var social_row := _named_control("WorldHudSocialShortcuts")
+	var drawer_grid := _named_control("WorldHudMoreGrid")
+	var authority_shelf := _named_control("WorldHudProxyAuthorityShelf")
+	if (
+		top_primary == null
+		or top_primary.get_child_count() != 1
+		or top_secondary == null
+		or top_secondary.visible
+		or top_secondary.get_child_count() != 0
+		or left_quick == null
+		or left_quick.visible
+		or left_quick.get_child_count() != 0
+		or social_row == null
+		or social_row.get_child_count() != 1
+		or drawer_grid == null
+		or drawer_grid.get_child_count() != 2
+		or authority_shelf == null
+		or authority_shelf.visible
+		or authority_shelf.get_child_count() != 6
+	):
+		_fail_capture("世界 HUD 入口层级没有收口为地图、聊天、底栏与管理抽屉")
+		return
 	if (
 		host.top_panel == null
+		or host.top_panel.size.x > 330.01
+		or host.top_panel.size.y > 145.01
 		or not host.top_panel.is_visible_in_tree()
 		or host.side_panel == null
 		or not host.side_panel.is_visible_in_tree()
@@ -203,6 +230,10 @@ func _configure_isolated_world_profile() -> void:
 	print(
 		"WORLD_HUD_OWNER_REVIEW_LAYERS complete=true top=true "
 		+ "map=true action=true"
+	)
+	print(
+		"WORLD_HUD_OWNER_REVIEW_HIERARCHY compact=true top_primary=1 "
+		+ "top_secondary=0 left_quick=0 social=1 drawer=2 authority_shelf=6"
 	)
 
 

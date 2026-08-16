@@ -88,6 +88,8 @@ def _godot_log() -> str:
         "fresh_user_dir=true",
         "WORLD_HUD_OWNER_REVIEW_LAYERS complete=true top=true "
         "map=true action=true",
+        "WORLD_HUD_OWNER_REVIEW_HIERARCHY compact=true top_primary=1 "
+        "top_secondary=0 left_quick=0 social=1 drawer=2 authority_shelf=6",
         "WORLD_HUD_OWNER_REVIEW_ENTRIES character=true backpack=true "
         "pet=true real_clicks=true",
         "WORLD_HUD_OWNER_REVIEW_TASK_PARTY reviewed=true task=true "
@@ -184,6 +186,7 @@ class RecordWorldHudOwnerReviewTest(unittest.TestCase):
             self.assertFalse(result["backendConnected"])
             self.assertFalse(result["profileSaveEnabled"])
             self.assertTrue(result["completeHudReviewed"])
+            self.assertTrue(result["compactHierarchyVerified"])
             self.assertTrue(result["mapReviewed"])
             self.assertTrue(result["realEntryClicks"])
             self.assertTrue(result["taskPartyReviewed"])
