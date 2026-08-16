@@ -3,6 +3,9 @@ extends RefCounted
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const PetArtCatalog := preload("res://scripts/pet/pet_art_catalog.gd")
 const PetBattleReleaseGate := preload("res://scripts/pet/pet_battle_release_gate.gd")
+const PetBattleSpriteScaleCatalog := preload(
+	"res://scripts/pet/pet_battle_sprite_scale_catalog.gd"
+)
 const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
 const ASSET_MANIFEST_PATH := "res://assets/asset-manifest.json"
 const BUNDLE_META_PATH := "res://assets/pets/novice_sprout_bui/action-bundle-meta.json"
@@ -124,6 +127,7 @@ static func run(requested_form_id: String = "") -> Dictionary:
 		errors.append("普通战斗 supports_form 与 exact-form 发布门结论不一致：%s" % form_id)
 	errors.append_array(PetArtCatalog.validation_errors())
 	errors.append_array(PetBattleReleaseGate.validation_errors())
+	errors.append_array(PetBattleSpriteScaleCatalog.validation_errors())
 	errors.append_array(BattleVisualPresentationModel.validation_errors())
 	if form_id == PetActionAssetCatalog.FORM_ID:
 		_append_contract_errors(errors)
@@ -153,6 +157,22 @@ static func run(requested_form_id: String = "") -> Dictionary:
 		PetActionAssetCatalog.action_for_battle_state("wounded_return", form_id),
 		0.55
 	)
+	var sprite_scale_reports: Array[Dictionary] = []
+	var sprite_scale_report: Dictionary = {}
+	for runtime_record in PetArtCatalog.runtime_form_records():
+		var runtime_form_id := str(
+			runtime_record.get("formId", "")
+		).strip_edges()
+		var runtime_scale_report := (
+			PetBattleSpriteScaleCatalog.idle_bounds_report(
+				runtime_form_id,
+				0.74
+			)
+		)
+		sprite_scale_reports.append(runtime_scale_report)
+		errors.append_array(runtime_scale_report.get("errors", []) as Array)
+		if runtime_form_id == form_id:
+			sprite_scale_report = runtime_scale_report
 	var normal_runtime_warmed := not preview_enabled_here and warmed_battle
 	var normal_runtime_texture_loaded := not preview_enabled_here and battle_texture != null
 	if not warmed_world or world_texture == null:
@@ -235,6 +255,8 @@ static func run(requested_form_id: String = "") -> Dictionary:
 			release_decision.get("runtimeTreeVerificationUsec", 0)
 		),
 		"battleReleaseRegistry": PetBattleReleaseGate.release_summary(),
+		"battleSpriteScale": sprite_scale_report,
+		"battleSpriteScaleProfiles": sprite_scale_reports,
 		"worldFrameCount": 40,
 		"worldDirections": 8,
 		"worldUsesRuntimeMirroring": false,

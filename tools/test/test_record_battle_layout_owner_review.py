@@ -283,6 +283,9 @@ def _godot_log() -> str:
             "character_name_chars=24 pet_name_chars=8 "
             "character_variants=4 pet_variants=3 "
             "representative_runtime_mix=true single_asset_stress=false "
+            "pet_sprite_profiles=3 crystal_wuli_sprite_scale=1.30 "
+            "ordinary_actor_presentation_scale=1.00 contact_scale=1.00 "
+            "boss_sprite_override=false sprite_only=true "
             "maximum_label_stress_preserved=true mounted_player_actors=0 "
             "lifecycle_unchanged=true"
         ),
@@ -401,6 +404,9 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
             "_assert_representative_actor_identity_contract(state)",
             capture_source,
         )
+        self.assertIn("_assert_pet_sprite_scale_contract()", capture_source)
+        self.assertIn("pet_battle_sprite_scale_catalog.gd", capture_source)
+        self.assertIn("crystal_wuli_sprite_scale=1.30", capture_source)
         self.assertIn("single_asset_stress=false", capture_source)
         self.assertNotIn("strict=True", tool_source)
         TOOL._require_frame_size_normalization_contract(capture_source)
@@ -1319,6 +1325,12 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
         self.assertEqual(result["representativeCharacterVariantCount"], 4)
         self.assertEqual(result["representativePetVariantCount"], 3)
         self.assertFalse(result["singleAssetStressFixture"])
+        self.assertEqual(result["petSpriteScaleProfileCount"], 3)
+        self.assertEqual(result["crystalWuliSpriteScale"], 1.3)
+        self.assertEqual(result["ordinaryActorPresentationScale"], 1.0)
+        self.assertEqual(result["contactScale"], 1.0)
+        self.assertFalse(result["bossSpriteOverride"])
+        self.assertTrue(result["spriteOnlyScale"])
         self.assertEqual(result["arenaVisual"]["id"], "moss_meadow")
         self.assertEqual(
             result["arenaVisual"]["sha256"],
@@ -1492,6 +1504,18 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
             ("character_name_chars=24", "character_name_chars=23"),
             ("character_variants=4", "character_variants=1"),
             ("pet_variants=3", "pet_variants=1"),
+            ("pet_sprite_profiles=3", "pet_sprite_profiles=2"),
+            (
+                "crystal_wuli_sprite_scale=1.30",
+                "crystal_wuli_sprite_scale=1.00",
+            ),
+            (
+                "ordinary_actor_presentation_scale=1.00",
+                "ordinary_actor_presentation_scale=1.30",
+            ),
+            ("contact_scale=1.00", "contact_scale=1.30"),
+            ("boss_sprite_override=false", "boss_sprite_override=true"),
+            ("sprite_only=true", "sprite_only=false"),
             (
                 "representative_runtime_mix=true",
                 "representative_runtime_mix=false",
@@ -2196,6 +2220,16 @@ class RecordBattleLayoutOwnerReviewTest(unittest.TestCase):
             ],
         )
         self.assertFalse(contract["singleAssetStressFixture"])
+        self.assertEqual(
+            contract["petSpriteScaleCatalog"],
+            "client/godot/data/pet_battle_sprite_scales.json",
+        )
+        self.assertEqual(
+            contract["petSpriteScaleApplicationMode"],
+            "ordinary_formal_pet_sprite_only",
+        )
+        self.assertEqual(contract["crystalWuliSpriteScale"], 1.3)
+        self.assertFalse(contract["authoritativeGeometryChanged"])
         self.assertEqual(contract["arenaVisual"]["id"], "moss_meadow")
         self.assertEqual(
             contract["arenaVisual"]["ownerReviewStatus"],

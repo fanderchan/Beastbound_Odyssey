@@ -5436,6 +5436,8 @@ func _hang_matchmaking_check_real_left_click(control: Control) -> bool:
 
 
 func _run_auto_battle_formation_check() -> void:
+	host.profile_save_enabled = false
+	host.player_profile = _qa_battle_profile()
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
 	var zone_found: bool = loaded and not zones.is_empty()
@@ -5460,6 +5462,8 @@ func _run_auto_battle_formation_check() -> void:
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_battle_target_check() -> void:
+	host.profile_save_enabled = false
+	host.player_profile = _qa_battle_profile()
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
 	var zones = EncounterModel.encounter_zones(host.map_data)
 	var zone_found: bool = loaded and not zones.is_empty()

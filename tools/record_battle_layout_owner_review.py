@@ -3014,6 +3014,10 @@ def _validate_godot_log(
         "pet_name_chars": "8",
         "character_variants": "4",
         "pet_variants": "3",
+        "pet_sprite_profiles": "3",
+        "crystal_wuli_sprite_scale": "1.30",
+        "ordinary_actor_presentation_scale": "1.00",
+        "contact_scale": "1.00",
         "mounted_player_actors": "0",
     }
     if any(fixture.get(key) != value for key, value in expected_fixture.items()):
@@ -3025,10 +3029,12 @@ def _validate_godot_log(
         "pet_runtime",
         "representative_runtime_mix",
         "maximum_label_stress_preserved",
+        "sprite_only",
         "lifecycle_unchanged",
     ):
         _require_bool(fixture, key, True)
     _require_bool(fixture, "single_asset_stress", False)
+    _require_bool(fixture, "boss_sprite_override", False)
 
     layout = _parse_fields(layout_line)
     if (
@@ -3175,6 +3181,12 @@ def _validate_godot_log(
         "representativeCharacterVariantCount": 4,
         "representativePetVariantCount": 3,
         "singleAssetStressFixture": False,
+        "petSpriteScaleProfileCount": 3,
+        "crystalWuliSpriteScale": 1.3,
+        "ordinaryActorPresentationScale": 1.0,
+        "contactScale": 1.0,
+        "bossSpriteOverride": False,
+        "spriteOnlyScale": True,
         "arenaVisual": arena_visual,
         "attackInput": attack_input,
     }
@@ -3204,6 +3216,10 @@ def _phase403_capture_contract() -> dict[str, Any]:
             "wuli_evolved_crystal_earth8_water2",
         ],
         "singleAssetStressFixture": False,
+        "petSpriteScaleCatalog": "client/godot/data/pet_battle_sprite_scales.json",
+        "petSpriteScaleApplicationMode": "ordinary_formal_pet_sprite_only",
+        "crystalWuliSpriteScale": 1.3,
+        "authoritativeGeometryChanged": False,
         "maximumCharacterNameChars": 24,
         "maximumPetNameChars": 8,
         "realCrossFrameLeftClicks": True,

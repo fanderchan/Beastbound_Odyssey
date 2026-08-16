@@ -41,6 +41,9 @@ const MountedBattlePresentationModel := preload(
 )
 const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
+const PetBattleSpriteScaleCatalog := preload(
+	"res://scripts/pet/pet_battle_sprite_scale_catalog.gd"
+)
 const CharacterActionAssetCatalog := preload("res://scripts/player/character_action_asset_catalog.gd")
 const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
@@ -10385,6 +10388,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	_invalidate_battle_auto_ui_cache()
 	_warm_battle_character_appearance_state(next_battle_state)
 	PetActionAssetCatalog.warm_battle_state(next_battle_state)
+	PetBattleSpriteScaleCatalog.warm_battle_state(next_battle_state)
 	MountedCharacterAssetCatalog.warm_battle_state(next_battle_state)
 	if bool(next_battle_state.get("reviewLab", false)):
 		MountedBattlePresentationModel.warm_battle_state(next_battle_state)
@@ -15913,6 +15917,11 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	var presentation_scale := _battle_actor_presentation_scale(actor)
 	var actor_visual_scale := visual_scale * presentation_scale
 	var formal_pet_supported := ["pet", "wild_pet"].has(kind) and PetActionAssetCatalog.supports_form(form_id)
+	var pet_sprite_visual_scale := (
+		actor_visual_scale * _battle_pet_sprite_scale(actor)
+		if formal_pet_supported
+		else actor_visual_scale
+	)
 	var launch_rotation := _battle_launched_actor_rotation(actor_id) if launched_active else 0.0
 	var large_formation := _battle_uses_10v10_formation_template()
 	var counter_anchor_offset := _battle_actor_counter_anchor_offset(actor, home_pos, visual_scale)
@@ -15997,7 +16006,16 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 		trim_color = Color(1.0, 0.88, 0.32, alpha)
 	var formal_pet_drawn := false
 	if formal_pet_supported:
-		formal_pet_drawn = _draw_formal_battle_pet_actor(actor_id, form_id, side, state, pos, actor_visual_scale, alpha, launch_rotation)
+		formal_pet_drawn = _draw_formal_battle_pet_actor(
+			actor_id,
+			form_id,
+			side,
+			state,
+			pos,
+			pet_sprite_visual_scale,
+			alpha,
+			launch_rotation
+		)
 	if formal_pet_drawn:
 		pass
 	elif kind == "player":
@@ -17298,6 +17316,10 @@ func _battle_actor_visual_scale() -> float:
 
 func _battle_actor_presentation_scale(actor: Dictionary) -> float:
 	return BattleVisualPresentationModel.actor_presentation_scale(actor)
+
+
+func _battle_pet_sprite_scale(actor: Dictionary) -> float:
+	return PetBattleSpriteScaleCatalog.sprite_scale_for_actor(actor)
 
 
 func _battle_uses_10v10_formation_template() -> bool:

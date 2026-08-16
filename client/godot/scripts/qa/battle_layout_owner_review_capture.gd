@@ -24,6 +24,12 @@ const PetActionAssetCatalog := preload(
 	"res://scripts/pet/pet_action_asset_catalog.gd"
 )
 const PetArtCatalog := preload("res://scripts/pet/pet_art_catalog.gd")
+const PetBattleSpriteScaleCatalog := preload(
+	"res://scripts/pet/pet_battle_sprite_scale_catalog.gd"
+)
+const BattleVisualPresentationModel := preload(
+	"res://scripts/battle/battle_visual_presentation_model.gd"
+)
 const MountVisualProfileCatalog := preload(
 	"res://scripts/player/mount_visual_profile_catalog.gd"
 )
@@ -1003,6 +1009,72 @@ func _assert_formal_fixture_assets() -> bool:
 	):
 		_fail_capture("宠物正式动作包元数据与冻结生命周期不符")
 		return false
+	return _assert_pet_sprite_scale_contract()
+
+
+func _assert_pet_sprite_scale_contract() -> bool:
+	var scale_errors := PetBattleSpriteScaleCatalog.validation_errors()
+	if not scale_errors.is_empty():
+		_fail_capture("普通宠物战斗身体比例目录失败：%s" % "；".join(scale_errors))
+		return false
+	var expected_scales := {
+		"bui_novice_sprout_earth5_wind5": 1.0,
+		"driftfox_evolved_moon_gale_wind7_water3": 1.0,
+		"wuli_evolved_crystal_earth8_water2": 1.3,
+	}
+	for form_id in REPRESENTATIVE_PET_FORM_IDS:
+		var report := PetBattleSpriteScaleCatalog.idle_bounds_report(
+			form_id,
+			0.74
+		)
+		if (
+			not bool(report.get("managed", false))
+			or not (report.get("errors", []) as Array).is_empty()
+			or int(report.get("frameCount", 0)) != 12
+			or not is_equal_approx(
+				float(report.get("spriteScale", 0.0)),
+				float(expected_scales.get(form_id, 0.0))
+			)
+			or bool(report.get("authoritativeGeometryChanged", true))
+		):
+			_fail_capture("普通宠物战斗身体比例或透明边界漂移：%s" % form_id)
+			return false
+	var ordinary_wuli := {
+		"kind": "pet",
+		"formId": FORMAL_PET_FORM_ID,
+		"catchable": true,
+		"battlePresentationScale": 1.62,
+	}
+	var noncatchable_wuli := ordinary_wuli.duplicate(true)
+	noncatchable_wuli["kind"] = "wild_pet"
+	noncatchable_wuli["catchable"] = false
+	if (
+		not host.has_method("_battle_pet_sprite_scale")
+		or not host.has_method("_battle_actor_presentation_scale")
+		or not is_equal_approx(
+			float(host.call("_battle_pet_sprite_scale", ordinary_wuli)),
+			1.3
+		)
+		or not is_equal_approx(
+			float(host.call("_battle_actor_presentation_scale", ordinary_wuli)),
+			1.0
+		)
+		or not is_equal_approx(
+			BattleVisualPresentationModel.contact_presentation_scale(
+				ordinary_wuli,
+				ordinary_wuli
+			),
+			1.0
+		)
+		or not is_equal_approx(
+			PetBattleSpriteScaleCatalog.sprite_scale_for_actor(
+				noncatchable_wuli
+			),
+			1.0
+		)
+	):
+		_fail_capture("普通宠物身体比例污染了权威几何或Boss语义")
+		return false
 	return true
 
 
@@ -1307,6 +1379,9 @@ func _print_fixture_marker() -> void:
 		+ "draw_canvas=156x156 visual_scale=0.74 character_name_chars=24 "
 		+ "pet_name_chars=8 character_variants=4 pet_variants=3 "
 		+ "representative_runtime_mix=true single_asset_stress=false "
+		+ "pet_sprite_profiles=3 crystal_wuli_sprite_scale=1.30 "
+		+ "ordinary_actor_presentation_scale=1.00 contact_scale=1.00 "
+		+ "boss_sprite_override=false sprite_only=true "
 		+ "maximum_label_stress_preserved=true mounted_player_actors=0 "
 		+ "lifecycle_unchanged=true"
 	)
