@@ -203,6 +203,10 @@ const IDEMPOTENCY_REQUIRED_BATTLE_COMMAND_HTTP_PATH_PATTERN = /^\/battle\/rooms\
 function createHttpServer(options = {}) {
   const baseService = options.service || createAuthService();
   const clusterAccountAdmission = options.clusterAccountAdmission || null;
+  const onStorageFatal = typeof options.onStorageFatal === "function"
+    ? options.onStorageFatal
+    : null;
+  let storageFatalReported = false;
   installClusterAccountAdmission(clusterAccountAdmission, baseService);
   const requestContexts = new AsyncLocalStorage();
   const service = createDurableHttpServiceProxy(baseService, requestContexts);
@@ -246,6 +250,13 @@ function createHttpServer(options = {}) {
         type: "health.probe_failed",
         errorCode: String(error && error.code || "health_probe_failed"),
       });
+      if (onStorageFatal !== null && !storageFatalReported) {
+        storageFatalReported = true;
+        const fatalError = new Error("权威存储健康检查失败，节点将安全排空。");
+        fatalError.code = "storage_health_unavailable";
+        fatalError.cause = error;
+        onStorageFatal(fatalError);
+      }
     },
   });
   const qaAdvanceClock = typeof options.qaAdvanceClock === "function" ? options.qaAdvanceClock : null;
@@ -1666,6 +1677,7 @@ async function startDefaultHttpServer(options = {}) {
       store,
       eventHubOptions: clusterRuntime.eventHubOptions,
       clusterAccountAdmission: clusterRuntime.accountAdmission,
+      onStorageFatal: onClusterFatal,
     });
     server.clusterEventRuntime = clusterRuntime;
     await new Promise((resolve, reject) => {

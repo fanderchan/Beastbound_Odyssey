@@ -48,6 +48,12 @@ const ACCOUNT_LEASE_MS = 3000;
 const PARTITION_TRANSACTION_TIMEOUT_MS = 15000;
 const PARTITION_ROW_LOCK_WAIT_TIMEOUT_SECONDS = 15;
 const PARTITION_HTTP_TIMEOUT_MS = 10000;
+const MYSQL_COMMIT_RECOVERY_OPERATION_ID = "bbo_mysql_commit_ack_loss_recovery_0001";
+const MYSQL_COMMIT_RECOVERY_RECORD_POINT = Object.freeze({
+  mapId: MAP_ID,
+  spawnName: "mysql_commit_recovery",
+  label: "提交恢复记录点",
+});
 const CAPACITY_GC_KIND_NAMES = new Map([
   [performanceConstants.NODE_PERFORMANCE_GC_MAJOR, "major"],
   [performanceConstants.NODE_PERFORMANCE_GC_MINOR, "minor"],
@@ -1100,6 +1106,522 @@ async function runValkeyPartitionOldOwnerFenceGate() {
   }, null, 2)}\n`);
 }
 
+async function runMysqlPartitionCommitRecoveryGate() {
+  // This lane owns its initialize-insecure loopback instance. It must never
+  // inherit player-server credentials or reach a configured/shared database.
+  process.env.BEASTBOUND_MYSQL_PASSWORD = "";
+  process.env.MYSQL_PWD = "";
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-mysql-partition-gate-"));
+  const database = `beastbound_mysql_partition_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  let mysqlRuntime = null;
+  let admin = null;
+  let observer = null;
+  let lockConnection = null;
+  let lockHeld = false;
+  let bootstrap = null;
+  let valkey = null;
+  let mysqlProxy = null;
+  let ownerNode = null;
+  let successorNode = null;
+  let report = null;
+  let failure = null;
+  let databaseDropped = false;
+  const cleanupErrors = [];
+  try {
+    mysqlRuntime = await startIsolatedMysql({
+      runtimePrefix: "beastbound-mysql-partition-runtime",
+      maxConnections: 50,
+    });
+    assert.notEqual(mysqlRuntime.port, 3306);
+    const mysql = require("../server/node/node_modules/mysql2/promise");
+    const {createMysqlAuthStore} = require("../server/node/src/mysql-store");
+    admin = await mysql.createConnection(mysqlRuntime.connectionOptions);
+    const mysqlVersion = await isolatedMysqlVersion(admin);
+    assert.match(mysqlVersion, /^9\.7\./);
+    const globalsBefore = await isolatedMysqlGlobalValues(admin);
+    const deadlocksBefore = await isolatedMysqlDeadlockCount(admin);
+
+    bootstrap = createMysqlAuthStore(mysqlBattleStoreOptions(mysqlRuntime, database, true));
+    const empty = bootstrap.load();
+    const fixture = clusterFixture(Date.now(), 0);
+    await withTimeout(
+      bootstrap.saveAsync(mysqlBattleAuthorityFixture(empty, fixture.data)),
+      15000,
+      "MySQL partition fixture bootstrap timeout",
+    );
+    await withTimeout(bootstrap.close(), 10000, "MySQL partition bootstrap close timeout");
+    bootstrap = null;
+    const ownerMysqlUser = "mysql_partition_owner_a";
+    const successorMysqlUser = "mysql_partition_successor_b";
+    for (const user of [ownerMysqlUser, successorMysqlUser]) {
+      await admin.query(`CREATE USER '${user}'@'127.0.0.1' IDENTIFIED BY ''`);
+      await admin.query(
+        `GRANT ALL PRIVILEGES ON \`${mysqlDatabaseIdentifier(database)}\`.* TO '${user}'@'127.0.0.1'`,
+      );
+    }
+
+    const databaseConnectionOptions = {
+      ...mysqlRuntime.connectionOptions,
+      database: mysqlDatabaseIdentifier(database),
+    };
+    observer = await mysql.createConnection(databaseConnectionOptions);
+    lockConnection = await mysql.createConnection(databaseConnectionOptions);
+
+    const valkeyPort = await reserveLoopbackPort();
+    valkey = startValkey(valkeyPort, temporaryRoot);
+    await waitForLoopback(valkeyPort, valkey);
+    mysqlProxy = await startMysqlFaultProxy(mysqlRuntime.port);
+    const streamKey = `beastbound:test:mysql-partition:${process.pid}`;
+    const mysqlConfiguration = {
+      database,
+      mysqlPath: mysqlRuntime.mysqlPath,
+      transactionTimeoutMs: PARTITION_TRANSACTION_TIMEOUT_MS,
+      rowLockWaitTimeoutSeconds: PARTITION_ROW_LOCK_WAIT_TIMEOUT_SECONDS,
+    };
+    ownerNode = await NodeWorker.start({
+      nodeId: "mysql-partition-owner-a",
+      valkeyPort,
+      streamKey,
+      serviceEventSeq: 0,
+      mysqlConfiguration: {
+        ...mysqlConfiguration,
+        port: mysqlProxy.port,
+        user: ownerMysqlUser,
+      },
+    });
+    successorNode = await NodeWorker.start({
+      nodeId: "mysql-partition-successor-b",
+      valkeyPort,
+      streamKey,
+      serviceEventSeq: 0,
+      mysqlConfiguration: {
+        ...mysqlConfiguration,
+        port: mysqlRuntime.port,
+        user: successorMysqlUser,
+      },
+    });
+    assert.deepEqual(ownerNode.fixtureDigest, successorNode.fixtureDigest);
+    await Promise.all([
+      waitForClusterReady(ownerNode),
+      waitForClusterReady(successorNode),
+    ]);
+
+    const alice = fixtureAccount(ownerNode.accounts, "alice");
+    const challenger = fixtureAccount(ownerNode.accounts, "battle_challenger");
+    const opponent = fixtureAccount(ownerNode.accounts, "battle_opponent");
+    const recordPointRequest = {
+      action: "record_point_save",
+      payload: {recordPoint: MYSQL_COMMIT_RECOVERY_RECORD_POINT},
+    };
+    const authorityBeforeCommitAckLoss = await loadMysqlBattleAuthority(mysqlRuntime, database);
+    assert.equal(authorityBeforeCommitAckLoss.mutationReceipts[MYSQL_COMMIT_RECOVERY_OPERATION_ID], undefined);
+    const alicePlayerId = String(
+      authorityBeforeCommitAckLoss.profileBindings[alice.accountId]
+      && authorityBeforeCommitAckLoss.profileBindings[alice.accountId].playerId
+      || "",
+    );
+    assert.notEqual(alicePlayerId, "");
+    const profileRevisionBeforeCommitAckLoss = Number(
+      authorityBeforeCommitAckLoss.profiles[alicePlayerId].profileRevision,
+    );
+
+    mysqlProxy.armCommitAckDrop();
+    const commitAckRecovery = await expectOk(ownerNode, "/profile/action", {
+      method: "POST",
+      token: alice.token,
+      headers: {"Idempotency-Key": MYSQL_COMMIT_RECOVERY_OPERATION_ID},
+      body: recordPointRequest,
+      timeoutMs: PARTITION_HTTP_TIMEOUT_MS,
+    });
+    assert.equal(commitAckRecovery.json.durableCommit.operationId, MYSQL_COMMIT_RECOVERY_OPERATION_ID);
+    assert.equal(commitAckRecovery.json.durableCommit.replayed, true);
+    assert.equal(
+      commitAckRecovery.json.profile.recordPoint.label,
+      MYSQL_COMMIT_RECOVERY_RECORD_POINT.label,
+    );
+    await waitFor(
+      () => mysqlProxy.commitAckDrops() === 1,
+      5000,
+      "MySQL proxy did not drop the armed COMMIT acknowledgement",
+    );
+    assert.equal(mysqlProxy.commitPacketsForwarded(), 1);
+    assert.equal(mysqlProxy.commitAckDropArmed(), false);
+    const authorityAfterCommitAckRecovery = await loadMysqlBattleAuthority(mysqlRuntime, database);
+    const committedReceipt = authorityAfterCommitAckRecovery
+      .mutationReceipts[MYSQL_COMMIT_RECOVERY_OPERATION_ID];
+    assert.ok(committedReceipt);
+    assert.equal(committedReceipt.actionId, "POST /profile/action");
+    assert.equal(
+      authorityAfterCommitAckRecovery.profiles[alicePlayerId].profile.recordPoint.label,
+      MYSQL_COMMIT_RECOVERY_RECORD_POINT.label,
+    );
+    assert.equal(
+      Number(authorityAfterCommitAckRecovery.profiles[alicePlayerId].profileRevision),
+      profileRevisionBeforeCommitAckLoss + 1,
+    );
+    const [commitReceiptRows] = await observer.query(
+      "SELECT COUNT(*) AS rowCount FROM mutation_receipts WHERE operation_id = ?",
+      [MYSQL_COMMIT_RECOVERY_OPERATION_ID],
+    );
+    assert.equal(Number(commitReceiptRows[0] && commitReceiptRows[0].rowCount || 0), 1);
+    const ownerMetricsAfterCommitRecovery = await ownerNode.rpc("capacity-metrics");
+    const ownerDurableMetricsAfterCommitRecovery = ownerMetricsAfterCommitRecovery.durableMutations;
+    assert.equal(ownerDurableMetricsAfterCommitRecovery.pending, 0);
+    assert.equal(ownerDurableMetricsAfterCommitRecovery.running, 0);
+    assert.equal(ownerDurableMetricsAfterCommitRecovery.accepted, 1);
+    assert.equal(ownerDurableMetricsAfterCommitRecovery.succeeded, 1);
+    assert.equal(ownerDurableMetricsAfterCommitRecovery.failed, 0);
+
+    await expectOk(ownerNode, "/players/position", {
+      method: "POST",
+      token: challenger.token,
+      body: positionPayload(20, 20, "east", false),
+    });
+    await expectOk(ownerNode, "/players/position", {
+      method: "POST",
+      token: opponent.token,
+      body: positionPayload(21, 20, "west", false),
+    });
+    const invite = await expectOk(ownerNode, "/battle/invite", {
+      method: "POST",
+      token: challenger.token,
+      body: {username: opponent.username},
+    });
+
+    const revisionBeforePartition = await isolatedMysqlAuthRevision(observer);
+    await lockConnection.beginTransaction();
+    lockHeld = true;
+    const [lockedRows] = await lockConnection.query(
+      "SELECT revision FROM auth_store_revisions WHERE scope_key = 'auth' FOR UPDATE",
+    );
+    assert.equal(Number(lockedRows[0] && lockedRows[0].revision), revisionBeforePartition);
+
+    const oldWriteStartedAt = Date.now();
+    const oldAcceptSettlement = request(
+      ownerNode,
+      `/battle/invites/${encodeURIComponent(invite.json.invite.inviteId)}/accept`,
+      {
+        method: "POST",
+        token: opponent.token,
+        timeoutMs: PARTITION_HTTP_TIMEOUT_MS,
+      },
+    ).then((value) => ({ok: true, value}), (error) => ({ok: false, error}));
+    let peakLockWaits = 0;
+    await waitFor(async () => {
+      const activity = await isolatedMysqlActivity(observer);
+      peakLockWaits = Math.max(peakLockWaits, activity.activeLockWaits);
+      return activity.activeLockWaits > 0;
+    }, 5000, "old owner durable write did not enter the injected MySQL lock wait");
+    assert.ok(mysqlProxy.connectedPairs() > 0);
+
+    const partitionStartedAt = Date.now();
+    await mysqlProxy.partition();
+    assert.equal(mysqlProxy.partitioned(), true);
+    const successorHealthDuringPartition = await clusterHealth(successorNode);
+    assert.equal(successorHealthDuringPartition.status, 200);
+    assert.equal(successorHealthDuringPartition.json.ok, true);
+    assert.equal(successorHealthDuringPartition.json.storage.ok, true);
+    const conflictBeforeOwnerDrain = await request(successorNode, "/battle/state", {
+      token: challenger.token,
+    });
+    assert.equal(conflictBeforeOwnerDrain.status, 503, JSON.stringify(conflictBeforeOwnerDrain.json));
+    assert.equal(conflictBeforeOwnerDrain.json.code, "account_node_switching");
+
+    const oldAcceptSettlementResult = await oldAcceptSettlement;
+    if (!oldAcceptSettlementResult.ok) {
+      throw oldAcceptSettlementResult.error;
+    }
+    const oldAccept = oldAcceptSettlementResult.value;
+    assert.equal(oldAccept.status, 503, JSON.stringify(oldAccept.json));
+    assert.equal(oldAccept.json.code, "storage_write_failed");
+    const oldWriteFailedAfterMs = Date.now() - oldWriteStartedAt;
+    assert.ok(oldWriteFailedAfterMs < PARTITION_HTTP_TIMEOUT_MS);
+
+    const ownerExit = await ownerNode.waitForExit(12000);
+    assert.equal(ownerExit.code, 1);
+    assert.equal(ownerExit.signal, null);
+    assert.ok(
+      ownerNode.fatalCodes.includes("storage_health_unavailable"),
+      JSON.stringify(ownerNode.diagnostic()),
+    );
+    const ownerExitedBeforeLockRelease = lockHeld;
+    assert.equal(ownerExitedBeforeLockRelease, true);
+    const lockWaitsAfterOwnerExit = await isolatedMysqlLockWaitDetails(observer);
+    assert.equal(lockWaitsAfterOwnerExit.length, 1);
+    assert.equal(lockWaitsAfterOwnerExit[0].objectName, "auth_store_revisions");
+    assert.equal(lockWaitsAfterOwnerExit[0].lockData, "'auth'");
+    assert.equal(lockWaitsAfterOwnerExit[0].requestingUser, ownerMysqlUser);
+    assert.match(lockWaitsAfterOwnerExit[0].requestingStatement, /FOR UPDATE$/);
+    await lockConnection.rollback();
+    lockHeld = false;
+    await lockConnection.end();
+    lockConnection = null;
+    const liveActivityAfterFence = await isolatedMysqlLiveActivity(observer);
+    assert.equal(liveActivityAfterFence.activeTransactions, 0);
+    assert.equal(liveActivityAfterFence.activeLockWaits, 0);
+
+    const revisionAfterFailedOldWrite = await isolatedMysqlAuthRevision(observer);
+    assert.equal(revisionAfterFailedOldWrite, revisionBeforePartition);
+    const authorityAfterFailedOldWrite = await loadMysqlBattleAuthority(mysqlRuntime, database);
+    assert.equal((authorityAfterFailedOldWrite.battleRecords || []).length, 0);
+    assert.equal(Object.keys(authorityAfterFailedOldWrite.battleRooms || {}).length, 0);
+    assert.equal(battleFailureTicketCount(authorityAfterFailedOldWrite, [challenger, opponent]), 0);
+    assert.ok(authorityAfterFailedOldWrite.mutationReceipts[MYSQL_COMMIT_RECOVERY_OPERATION_ID]);
+    assert.equal(
+      Number(authorityAfterFailedOldWrite.profiles[alicePlayerId].profileRevision),
+      profileRevisionBeforeCommitAckLoss + 1,
+    );
+
+    const remainingLeaseWaitMs = Math.max(
+      0,
+      ACCOUNT_LEASE_MS + 500 - (Date.now() - partitionStartedAt),
+    );
+    if (remainingLeaseWaitMs > 0) {
+      await delay(remainingLeaseWaitMs);
+    }
+    const replayRevisionBefore = await isolatedMysqlAuthRevision(observer);
+    const profileRevisionBeforeReplay = Number(
+      authorityAfterFailedOldWrite.profiles[alicePlayerId].profileRevision,
+    );
+    const successorReplay = await expectOk(successorNode, "/profile/action", {
+      method: "POST",
+      token: alice.token,
+      headers: {"Idempotency-Key": MYSQL_COMMIT_RECOVERY_OPERATION_ID},
+      body: recordPointRequest,
+    });
+    assert.equal(successorReplay.json.durableCommit.operationId, MYSQL_COMMIT_RECOVERY_OPERATION_ID);
+    assert.equal(successorReplay.json.durableCommit.replayed, true);
+    const replayRevisionAfter = await isolatedMysqlAuthRevision(observer);
+    assert.equal(replayRevisionAfter, replayRevisionBefore);
+    const authorityAfterSuccessorReplay = await loadMysqlBattleAuthority(mysqlRuntime, database);
+    assert.equal(
+      Number(authorityAfterSuccessorReplay.profiles[alicePlayerId].profileRevision),
+      profileRevisionBeforeReplay,
+    );
+    const [replayedReceiptRows] = await observer.query(
+      "SELECT COUNT(*) AS rowCount FROM mutation_receipts WHERE operation_id = ?",
+      [MYSQL_COMMIT_RECOVERY_OPERATION_ID],
+    );
+    assert.equal(Number(replayedReceiptRows[0] && replayedReceiptRows[0].rowCount || 0), 1);
+
+    const challengerPosition = await expectOk(successorNode, "/players/position", {
+      method: "POST",
+      token: challenger.token,
+      body: positionPayload(20, 20, "east", false),
+    });
+    const opponentPosition = await expectOk(successorNode, "/players/position", {
+      method: "POST",
+      token: opponent.token,
+      body: positionPayload(21, 20, "west", false),
+    });
+    assert.ok(challengerPosition.json.presenceRevision >= 2_000_000_001);
+    assert.ok(opponentPosition.json.presenceRevision >= 2_000_000_001);
+    const successorInvite = await expectOk(successorNode, "/battle/invite", {
+      method: "POST",
+      token: challenger.token,
+      body: {username: opponent.username},
+    });
+    const successorAccept = await expectOk(
+      successorNode,
+      `/battle/invites/${encodeURIComponent(successorInvite.json.invite.inviteId)}/accept`,
+      {method: "POST", token: opponent.token},
+    );
+    assert.equal(successorAccept.json.room.status, "ready");
+    const successorRevision = await isolatedMysqlAuthRevision(observer);
+    assert.equal(successorRevision, revisionAfterFailedOldWrite + 1);
+    const authorityAfterSuccessorCommit = await loadMysqlBattleAuthority(mysqlRuntime, database);
+    assert.equal(battleFailureTicketCount(authorityAfterSuccessorCommit, [challenger, opponent]), 2);
+    assert.equal((authorityAfterSuccessorCommit.battleRecords || []).length, 0);
+
+    await successorNode.stop();
+    successorNode = null;
+    const ownerDiagnostic = ownerNode.diagnostic();
+    ownerNode = null;
+    let activity = null;
+    await waitFor(async () => {
+      activity = await isolatedMysqlLiveActivity(observer);
+      return activity.activeTransactions === 0 && activity.activeLockWaits === 0;
+    }, 5000, "MySQL partition gate left active transactions or lock waits");
+    const instrumentationActivity = await isolatedMysqlActivity(observer);
+    const deadlocksAfter = await isolatedMysqlDeadlockCount(observer);
+    assert.equal(deadlocksAfter - deadlocksBefore, 0);
+    const globalsAfter = await isolatedMysqlGlobalValues(observer);
+    assert.deepEqual(globalsAfter, globalsBefore);
+    report = {
+      status: "PASS",
+      gate: "mysql_single_node_partition_and_commit_outcome_recovery",
+      engine: "real_cuttable_tcp_mysql_real_valkey_and_isolated_mysql",
+      mysqlVersion,
+      isolatedMysql: true,
+      sharedPlayerDatabaseTouched: false,
+      mysqlPortIsNot3306: mysqlRuntime.port !== 3306,
+      independentGameNodeProcesses: 2,
+      partitionScopedToOldNodeMysqlLink: true,
+      successorMysqlLinkStayedHealthy: true,
+      commitPacketForwardedBeforeAckDrop: mysqlProxy.commitPacketsForwarded() === 1,
+      commitAcknowledgementDropped: mysqlProxy.commitAckDrops() === 1,
+      exactDurableReceiptRecoveryProven: true,
+      commitRecoveryReturnedReplay: commitAckRecovery.json.durableCommit.replayed === true,
+      commitRecoveryReceiptRows: Number(replayedReceiptRows[0] && replayedReceiptRows[0].rowCount || 0),
+      commitRecoveryProfileRevisionDelta: Number(
+        authorityAfterCommitAckRecovery.profiles[alicePlayerId].profileRevision,
+      ) - profileRevisionBeforeCommitAckLoss,
+      crossNodeExactReplayProven: successorReplay.json.durableCommit.replayed === true,
+      crossNodeReplayAuthRevisionDelta: replayRevisionAfter - replayRevisionBefore,
+      crossNodeReplayProfileRevisionDelta: Number(
+        authorityAfterSuccessorReplay.profiles[alicePlayerId].profileRevision,
+      ) - profileRevisionBeforeReplay,
+      ownerDurableMetricsAfterCommitRecovery: {
+        accepted: ownerDurableMetricsAfterCommitRecovery.accepted,
+        succeeded: ownerDurableMetricsAfterCommitRecovery.succeeded,
+        failed: ownerDurableMetricsAfterCommitRecovery.failed,
+        pending: ownerDurableMetricsAfterCommitRecovery.pending,
+        running: ownerDurableMetricsAfterCommitRecovery.running,
+      },
+      oldWriteEnteredMysqlLockWait: peakLockWaits > 0,
+      oldOwnerStorageHealthFatalProven: ownerDiagnostic.fatalCodes.includes("storage_health_unavailable"),
+      oldOwnerPreCommitNoWriteProven: true,
+      serverSideBlockedStatementOutlivedPartitionedClient: lockWaitsAfterOwnerExit.length === 1,
+      oldOwnerExitedBeforeInjectedLockRelease: ownerExitedBeforeLockRelease,
+      oldOwnerFatalExitCode: ownerDiagnostic.exitCode,
+      oldWriteFailedAfterMs,
+      failedOldWriteAuthRevisionDelta: revisionAfterFailedOldWrite - revisionBeforePartition,
+      successorGenerationTwoTakeoverProven: true,
+      successorBattleCommitProven: true,
+      successorAuthRevisionDelta: successorRevision - revisionAfterFailedOldWrite,
+      mysqlGlobalValuesUnchanged: true,
+      mysqlDeadlockDelta: deadlocksAfter - deadlocksBefore,
+      mysqlResidualTransactions: activity.activeTransactions,
+      mysqlResidualLockWaits: activity.activeLockWaits,
+      mysqlDetachedInstrumentationTransactionsBeforeInstanceStop: Math.max(
+        0,
+        instrumentationActivity.activeTransactions - activity.activeTransactions,
+      ),
+      mysqlDetachedInstrumentationLockWaitsBeforeInstanceStop: Math.max(
+        0,
+        instrumentationActivity.activeLockWaits - activity.activeLockWaits,
+      ),
+      mysqlNetworkPartitionRecoveryProven: true,
+      broadNetworkPartitionRecoveryProven: false,
+      crossNodeNormalBattleCommandRoutingProven: false,
+      battleRuntimeReconnectHydrationProven: false,
+      reverseProxyTlsProven: false,
+      persistentServiceStarted: false,
+    };
+  } catch (error) {
+    failure = error;
+  } finally {
+    if (mysqlProxy) {
+      try {
+        await mysqlProxy.close();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    const nodeCleanup = await Promise.allSettled([
+      ownerNode && ownerNode.stop(false),
+      successorNode && successorNode.stop(false),
+    ]);
+    for (const result of nodeCleanup) {
+      if (result.status === "rejected") {
+        cleanupErrors.push(result.reason);
+      }
+    }
+    if (lockHeld && lockConnection) {
+      try {
+        await lockConnection.rollback();
+        lockHeld = false;
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    for (const connection of [lockConnection, observer]) {
+      if (!connection) {
+        continue;
+      }
+      try {
+        await connection.end();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (bootstrap) {
+      try {
+        await withTimeout(bootstrap.close(), 10000, "MySQL partition bootstrap cleanup timeout");
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (admin) {
+      try {
+        await admin.query(`DROP DATABASE IF EXISTS \`${mysqlDatabaseIdentifier(database)}\``);
+        const [rows] = await admin.query(
+          "SELECT COUNT(*) AS rowCount FROM information_schema.schemata WHERE schema_name = ?",
+          [database],
+        );
+        databaseDropped = Number(rows[0] && rows[0].rowCount || 0) === 0;
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+      try {
+        await admin.end();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (valkey) {
+      try {
+        await stopExactChild(valkey.process);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (mysqlRuntime) {
+      try {
+        await stopIsolatedMysql(mysqlRuntime);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    fs.rmSync(temporaryRoot, {recursive: true, force: true});
+  }
+
+  if (!failure && cleanupErrors.length > 0) {
+    failure = cleanupErrors[0];
+  }
+  const mysqlCleanupVerified = Boolean(
+    mysqlRuntime
+    && isolatedMysqlRuntimeStopped(mysqlRuntime)
+    && !fs.existsSync(mysqlRuntime.runtimeDir),
+  );
+  const temporaryStateRemoved = !fs.existsSync(temporaryRoot) && mysqlCleanupVerified;
+  if (failure) {
+    process.stderr.write(`${JSON.stringify({
+      status: "FAIL",
+      gate: "mysql_single_node_partition_and_commit_outcome_recovery",
+      code: String(failure && failure.code || "mysql_partition_gate_failed"),
+      message: String(failure && failure.message || "MySQL partition gate failed"),
+      ownerNode: ownerNode && ownerNode.diagnostic(),
+      successorNode: successorNode && successorNode.diagnostic(),
+      databaseDropped,
+      mysqlCleanupVerified,
+      temporaryStateRemoved,
+    }, null, 2)}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  assert.ok(report);
+  assert.equal(databaseDropped, true);
+  assert.equal(mysqlCleanupVerified, true);
+  assert.equal(temporaryStateRemoved, true);
+  process.stdout.write(`${JSON.stringify({
+    ...report,
+    temporaryDatabaseDropped: databaseDropped,
+    mysqlCleanupVerified,
+    temporaryStateRemoved,
+  }, null, 2)}\n`);
+}
+
 async function isolatedMysqlAuthRevision(connection) {
   const [rows] = await connection.query(
     "SELECT revision FROM auth_store_revisions WHERE scope_key = 'auth'",
@@ -1846,6 +2368,7 @@ async function runNodeWorker() {
         } : {}),
       },
       clusterAccountAdmission: clusterRuntime.accountAdmission,
+      onStorageFatal: fatal,
       logger() {},
     });
     await new Promise((resolve, reject) => {
@@ -2309,6 +2832,135 @@ async function startCuttableTcpProxy(targetPort) {
   });
 }
 
+async function startMysqlFaultProxy(targetPort) {
+  const sockets = new Set();
+  const commitPacket = Buffer.from("COMMIT", "ascii");
+  let partitioned = false;
+  let closed = false;
+  let commitAckDropArmed = false;
+  let commitPacketsForwarded = 0;
+  let commitAckDrops = 0;
+  const server = net.createServer((downstream) => {
+    if (partitioned || closed) {
+      downstream.destroy();
+      return;
+    }
+    const upstream = net.createConnection({host: LOOPBACK_HOST, port: targetPort});
+    const pair = {
+      downstream,
+      upstream,
+      close: null,
+      clientBuffer: Buffer.alloc(0),
+      dropNextUpstreamPacket: false,
+    };
+    sockets.add(pair);
+    let pairClosed = false;
+    const closePair = () => {
+      if (pairClosed) {
+        return;
+      }
+      pairClosed = true;
+      sockets.delete(pair);
+      downstream.destroy();
+      upstream.destroy();
+    };
+    pair.close = closePair;
+    downstream.once("error", closePair);
+    upstream.once("error", closePair);
+    downstream.once("close", closePair);
+    upstream.once("close", closePair);
+    downstream.on("data", (chunk) => {
+      if (pairClosed || partitioned || closed) {
+        closePair();
+        return;
+      }
+      pair.clientBuffer = Buffer.concat([pair.clientBuffer, chunk]);
+      while (pair.clientBuffer.length >= 4) {
+        const payloadLength = pair.clientBuffer[0]
+          | (pair.clientBuffer[1] << 8)
+          | (pair.clientBuffer[2] << 16);
+        if (pair.clientBuffer.length < 4 + payloadLength) {
+          break;
+        }
+        const payload = pair.clientBuffer.subarray(4, 4 + payloadLength);
+        pair.clientBuffer = pair.clientBuffer.subarray(4 + payloadLength);
+        if (
+          commitAckDropArmed
+          && payload.length >= 1 + commitPacket.length
+          && payload[0] === 0x03
+          && payload.subarray(payload.length - commitPacket.length).equals(commitPacket)
+        ) {
+          commitAckDropArmed = false;
+          pair.dropNextUpstreamPacket = true;
+          commitPacketsForwarded += 1;
+        }
+      }
+      upstream.write(chunk);
+    });
+    upstream.on("data", (chunk) => {
+      if (pairClosed) {
+        return;
+      }
+      if (pair.dropNextUpstreamPacket) {
+        pair.dropNextUpstreamPacket = false;
+        commitAckDrops += 1;
+        closePair();
+        return;
+      }
+      downstream.write(chunk);
+    });
+  });
+  server.unref();
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, LOOPBACK_HOST, resolve);
+  });
+  const address = server.address();
+  const port = address && typeof address === "object" ? Number(address.port) : 0;
+  assert.ok(port > 0);
+
+  return Object.freeze({
+    port,
+    armCommitAckDrop() {
+      assert.equal(closed, false);
+      assert.equal(partitioned, false);
+      assert.equal(commitAckDropArmed, false);
+      commitAckDropArmed = true;
+    },
+    async partition() {
+      if (closed || partitioned) {
+        return;
+      }
+      partitioned = true;
+      commitAckDropArmed = false;
+      for (const pair of Array.from(sockets)) {
+        pair.close();
+      }
+      assert.equal(sockets.size, 0);
+    },
+    async close() {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      partitioned = true;
+      commitAckDropArmed = false;
+      for (const pair of Array.from(sockets)) {
+        pair.close();
+      }
+      await new Promise((resolve, reject) => {
+        server.close((error) => error ? reject(error) : resolve());
+      });
+      assert.equal(sockets.size, 0);
+    },
+    connectedPairs: () => sockets.size,
+    commitAckDropArmed: () => commitAckDropArmed,
+    commitAckDrops: () => commitAckDrops,
+    commitPacketsForwarded: () => commitPacketsForwarded,
+    partitioned: () => partitioned,
+  });
+}
+
 function startValkey(port, directory) {
   const binary = resolveValkeyServerBinary();
   const child = spawn(binary, [
@@ -2434,6 +3086,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === filePath) {
     await runNodeWorker();
   } else if (process.argv.includes("--valkey-partition-only")) {
     await runValkeyPartitionOldOwnerFenceGate();
+  } else if (process.argv.includes("--mysql-partition-only")) {
+    await runMysqlPartitionCommitRecoveryGate();
   } else if (process.argv.includes("--mysql-battle-only")) {
     await runMysqlBattleOwnerFailureGate();
   } else {
@@ -2461,6 +3115,7 @@ export {
   request,
   reserveLoopbackPort,
   startValkey,
+  startMysqlFaultProxy,
   stopExactChild,
   waitFor,
   waitForClusterReady,

@@ -139,6 +139,64 @@ test("default HTTP entry fences MySQL transactions before cluster fatal drain", 
   process.exitCode = previousExitCode;
 });
 
+test("default HTTP entry treats authoritative storage health loss as a fatal transaction fence", async (t) => {
+  const previousExitCode = process.exitCode;
+  let transactionSignal = null;
+  let storageReachable = true;
+  const memoryStore = createMemoryAuthStore();
+  const store = {
+    ...memoryStore,
+    async checkHealthAsync() {
+      if (!storageReachable) {
+        const error = new Error("isolated MySQL link unavailable");
+        error.code = "ECONNREFUSED";
+        throw error;
+      }
+      return {ok: true};
+    },
+  };
+  const server = await startDefaultHttpServer({
+    env: {
+      BEASTBOUND_AUTH_HOST: "127.0.0.1",
+      BEASTBOUND_AUTH_PORT: "0",
+    },
+    async createClusterRuntime() {
+      return {
+        eventHubOptions: {},
+        accountAdmission: null,
+        async close() {},
+      };
+    },
+    createStore(options) {
+      transactionSignal = options.transactionSignal;
+      return store;
+    },
+    onClusterError() {},
+  });
+  t.after(() => {
+    process.exitCode = previousExitCode;
+    if (server.listening) {
+      server.close();
+    }
+  });
+  await server.healthMonitor.refresh();
+  assert.equal(transactionSignal.aborted, false);
+
+  storageReachable = false;
+  const closed = once(server, "close");
+  const health = await server.healthMonitor.refresh();
+  assert.equal(health.ok, false);
+  assert.equal(transactionSignal.aborted, true);
+  assert.equal(transactionSignal.reason.code, "storage_health_unavailable");
+  assert.equal(transactionSignal.reason.cause.code, "ECONNREFUSED");
+  await closed;
+  for (let index = 0; index < 20 && process.exitCode !== 1; index += 1) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.equal(process.exitCode, 1);
+  process.exitCode = previousExitCode;
+});
+
 test("HTTP market and inbox reads await authoritative shared projections and surface failures as 503", async (t) => {
   const seed = createAuthService({store: createMemoryAuthStore()});
   const registered = seed.register({
