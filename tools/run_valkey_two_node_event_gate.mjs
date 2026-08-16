@@ -1082,13 +1082,28 @@ async function runMysqlBattleRuntimeHydrationGate() {
   }, null, 2)}\n`);
 }
 
-async function runValkeyPartitionOldOwnerFenceGate() {
+async function runValkeyPartitionOldOwnerFenceGate(options = {}) {
   // The gate owns a disposable initialize-insecure MySQL. Never inherit or
   // inspect player-server credentials while constructing this fault lane.
   process.env.BEASTBOUND_MYSQL_PASSWORD = "";
   process.env.MYSQL_PWD = "";
-  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-valkey-partition-gate-"));
-  const database = `beastbound_partition_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const dualDependencyPartition = options.dualDependencyPartition === true;
+  const gateName = dualDependencyPartition
+    ? "dual_dependency_single_node_partition_old_owner_write_fence"
+    : "valkey_single_node_partition_old_owner_write_fence";
+  const failureCode = dualDependencyPartition
+    ? "dual_dependency_partition_gate_failed"
+    : "valkey_partition_gate_failed";
+  const temporaryRoot = fs.mkdtempSync(path.join(
+    os.tmpdir(),
+    dualDependencyPartition
+      ? "beastbound-dual-dependency-partition-gate-"
+      : "beastbound-valkey-partition-gate-",
+  ));
+  const databasePrefix = dualDependencyPartition
+    ? "beastbound_dual_partition"
+    : "beastbound_partition";
+  const database = `${databasePrefix}_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
   let mysqlRuntime = null;
   let admin = null;
   let observer = null;
@@ -1097,6 +1112,7 @@ async function runValkeyPartitionOldOwnerFenceGate() {
   let bootstrap = null;
   let valkey = null;
   let proxy = null;
+  let mysqlProxy = null;
   let ownerNode = null;
   let successorNode = null;
   let report = null;
@@ -1105,7 +1121,9 @@ async function runValkeyPartitionOldOwnerFenceGate() {
   const cleanupErrors = [];
   try {
     mysqlRuntime = await startIsolatedMysql({
-      runtimePrefix: "beastbound-valkey-partition-mysql",
+      runtimePrefix: dualDependencyPartition
+        ? "bbo-dual-mysql"
+        : "beastbound-valkey-partition-mysql",
       maxConnections: 50,
     });
     assert.notEqual(mysqlRuntime.port, 3306);
@@ -1127,8 +1145,12 @@ async function runValkeyPartitionOldOwnerFenceGate() {
     );
     await withTimeout(bootstrap.close(), 10000, "Valkey partition bootstrap close timeout");
     bootstrap = null;
-    const ownerMysqlUser = "partition_owner_a";
-    const successorMysqlUser = "partition_successor_b";
+    const ownerMysqlUser = dualDependencyPartition
+      ? "dual_partition_owner_a"
+      : "partition_owner_a";
+    const successorMysqlUser = dualDependencyPartition
+      ? "dual_partition_successor_b"
+      : "partition_successor_b";
     for (const user of [ownerMysqlUser, successorMysqlUser]) {
       await admin.query(`CREATE USER '${user}'@'127.0.0.1' IDENTIFIED BY ''`);
       await admin.query(
@@ -1147,7 +1169,12 @@ async function runValkeyPartitionOldOwnerFenceGate() {
     valkey = startValkey(valkeyPort, temporaryRoot);
     await waitForLoopback(valkeyPort, valkey);
     proxy = await startCuttableTcpProxy(valkeyPort);
-    const streamKey = `beastbound:test:valkey-partition:${process.pid}`;
+    if (dualDependencyPartition) {
+      mysqlProxy = await startMysqlFaultProxy(mysqlRuntime.port);
+    }
+    const streamKey = dualDependencyPartition
+      ? `beastbound:test:dual-dependency-partition:${process.pid}`
+      : `beastbound:test:valkey-partition:${process.pid}`;
     const mysqlConfiguration = {
       port: mysqlRuntime.port,
       database,
@@ -1160,7 +1187,11 @@ async function runValkeyPartitionOldOwnerFenceGate() {
       valkeyPort: proxy.port,
       streamKey,
       serviceEventSeq: 0,
-      mysqlConfiguration: {...mysqlConfiguration, user: ownerMysqlUser},
+      mysqlConfiguration: {
+        ...mysqlConfiguration,
+        port: mysqlProxy ? mysqlProxy.port : mysqlConfiguration.port,
+        user: ownerMysqlUser,
+      },
     });
     successorNode = await NodeWorker.start({
       nodeId: "partition-successor-b",
@@ -1218,13 +1249,24 @@ async function runValkeyPartitionOldOwnerFenceGate() {
       return activity.activeLockWaits > 0;
     }, 5000, "old owner durable battle write did not enter the injected MySQL lock wait");
     assert.ok(proxy.connectedPairs() > 0);
+    const mysqlConnectedPairsAtPartition = mysqlProxy ? mysqlProxy.connectedPairs() : 0;
+    if (mysqlProxy) {
+      assert.ok(mysqlConnectedPairsAtPartition > 0);
+    }
 
     const partitionStartedAt = Date.now();
+    if (mysqlProxy) {
+      mysqlProxy.blackhole();
+      assert.equal(mysqlProxy.blackholed(), true);
+    }
     await proxy.cut();
     const successorHealthDuringPartition = await clusterHealth(successorNode);
     assert.equal(successorHealthDuringPartition.status, 200);
     assert.equal(successorHealthDuringPartition.json.ok, true);
     assert.equal(successorHealthDuringPartition.json.eventStream.clusterRelay.runtimeHealthy, true);
+    if (dualDependencyPartition) {
+      assert.equal(successorHealthDuringPartition.json.storage.ok, true);
+    }
     const conflictBeforeExpiry = await request(successorNode, "/battle/state", {
       token: challenger.token,
     });
@@ -1244,10 +1286,25 @@ async function runValkeyPartitionOldOwnerFenceGate() {
     const ownerExit = await ownerNode.waitForExit(10000);
     assert.equal(ownerExit.code, 1);
     assert.equal(ownerExit.signal, null);
-    assert.ok(ownerNode.fatalCodes.some((code) => [
+    const oldOwnerLeaseFatalProven = ownerNode.fatalCodes.some((code) => [
       "cluster_account_owner_lease_expired",
       "cluster_valkey_node_lease_expired",
-    ].includes(code)), JSON.stringify(ownerNode.diagnostic()));
+    ].includes(code));
+    assert.ok(oldOwnerLeaseFatalProven, JSON.stringify(ownerNode.diagnostic()));
+    const firstOldOwnerFatalCode = ownerNode.fatalCodes[0] || "";
+    const firstLeaseFatalIndex = ownerNode.fatalCodes.findIndex((code) => [
+      "cluster_account_owner_lease_expired",
+      "cluster_valkey_node_lease_expired",
+    ].includes(code));
+    const firstStorageFatalIndex = ownerNode.fatalCodes.indexOf("storage_health_unavailable");
+    if (dualDependencyPartition) {
+      assert.ok(
+        firstLeaseFatalIndex >= 0
+        && (firstStorageFatalIndex < 0 || firstLeaseFatalIndex < firstStorageFatalIndex),
+        JSON.stringify(ownerNode.diagnostic()),
+      );
+      assert.equal(mysqlProxy.blackholed(), true);
+    }
     const ownerExitedBeforeLockRelease = lockHeld;
     assert.equal(ownerExitedBeforeLockRelease, true);
     const fencedLockWaitsBeforeRelease = await isolatedMysqlLockWaitDetails(observer);
@@ -1320,19 +1377,41 @@ async function runValkeyPartitionOldOwnerFenceGate() {
     assert.equal(deadlocksAfter - deadlocksBefore, 0);
     const globalsAfter = await isolatedMysqlGlobalValues(observer);
     assert.deepEqual(globalsAfter, globalsBefore);
+    const mysqlBlackholedClientBytes = mysqlProxy ? mysqlProxy.blackholedClientBytes() : 0;
+    const mysqlBlackholedServerBytes = mysqlProxy ? mysqlProxy.blackholedServerBytes() : 0;
+    if (dualDependencyPartition) {
+      assert.ok(mysqlBlackholedClientBytes + mysqlBlackholedServerBytes > 0);
+    }
     report = {
       status: "PASS",
-      gate: "valkey_single_node_partition_old_owner_write_fence",
-      engine: "real_cuttable_tcp_valkey_and_isolated_mysql",
+      gate: gateName,
+      engine: dualDependencyPartition
+        ? "real_cuttable_tcp_valkey_blackholed_tcp_mysql_and_isolated_mysql"
+        : "real_cuttable_tcp_valkey_and_isolated_mysql",
       mysqlVersion,
       isolatedMysql: true,
       sharedPlayerDatabaseTouched: false,
       mysqlPortIsNot3306: mysqlRuntime.port !== 3306,
       independentGameNodeProcesses: 2,
-      partitionScopedToOldNodeValkeyLink: true,
+      ...(dualDependencyPartition ? {
+        partitionScopedToOldNodeValkeyAndMysqlLinks: true,
+        oldNodeValkeyAndMysqlLinksPartitionedTogether: true,
+        mysqlBlackholeConnectedPairsAtStart: mysqlConnectedPairsAtPartition,
+        mysqlBlackholedClientBytes,
+        mysqlBlackholedServerBytes,
+        mysqlBlackholeSpannedLeaseFatal: oldOwnerLeaseFatalProven && mysqlProxy.blackholed(),
+        successorMysqlLinkStayedHealthy: true,
+        oldOwnerValkeyLeaseFatalProven: oldOwnerLeaseFatalProven,
+        oldOwnerFirstFatalCode: firstOldOwnerFatalCode,
+        oldOwnerStorageHealthFatalBeforeLeaseLoss: false,
+        oldOwnerStorageHealthFatalAfterLeaseLoss: firstStorageFatalIndex > firstLeaseFatalIndex,
+        lateOldOwnerSuccessResponse: false,
+      } : {
+        partitionScopedToOldNodeValkeyLink: true,
+      }),
       successorValkeyLinkStayedHealthy: true,
       oldWriteEnteredMysqlLockWait: peakLockWaits > 0,
-      oldWriteSpannedLeaseFatal: ownerDiagnostic.fatalCodes.length > 0,
+      oldWriteSpannedLeaseFatal: oldOwnerLeaseFatalProven,
       oldOwnerTransactionFenceProven: true,
       serverSideBlockedStatementOutlivedClientFence: fencedLockWaitsBeforeRelease.length === 1,
       oldOwnerCommitAfterLeaseLoss: false,
@@ -1357,15 +1436,29 @@ async function runValkeyPartitionOldOwnerFenceGate() {
         instrumentationActivity.activeLockWaits - activity.activeLockWaits,
       ),
       broadNetworkPartitionRecoveryProven: false,
-      mysqlNetworkPartitionRecoveryProven: false,
-      crossNodeNormalBattleCommandRoutingProven: false,
-      battleRuntimeReconnectHydrationProven: false,
-      twoHundredConnectionSoakProven: false,
+      mysqlNetworkPartitionRecoveryProven: dualDependencyPartition,
+      ...(dualDependencyPartition ? {
+        productionIngressPartitionProven: false,
+        crossZonePartitionProven: false,
+        bidirectionalNodeIsolationProven: false,
+        totalDependencyOutageProven: false,
+      } : {
+        crossNodeNormalBattleCommandRoutingProven: false,
+        battleRuntimeReconnectHydrationProven: false,
+        twoHundredConnectionSoakProven: false,
+      }),
       persistentServiceStarted: false,
     };
   } catch (error) {
     failure = error;
   } finally {
+    if (mysqlProxy) {
+      try {
+        await mysqlProxy.close();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
     if (proxy) {
       try {
         await proxy.close();
@@ -1453,9 +1546,14 @@ async function runValkeyPartitionOldOwnerFenceGate() {
   if (failure) {
     process.stderr.write(`${JSON.stringify({
       status: "FAIL",
-      gate: "valkey_single_node_partition_old_owner_write_fence",
-      code: String(failure && failure.code || "valkey_partition_gate_failed"),
-      message: String(failure && failure.message || "Valkey partition gate failed"),
+      gate: gateName,
+      code: String(failure && failure.code || failureCode),
+      message: String(
+        failure && failure.message
+        || (dualDependencyPartition
+          ? "dual dependency partition gate failed"
+          : "Valkey partition gate failed"),
+      ),
       ownerNode: ownerNode && ownerNode.diagnostic(),
       successorNode: successorNode && successorNode.diagnostic(),
       databaseDropped,
@@ -3921,10 +4019,13 @@ async function startMysqlFaultProxy(targetPort) {
   const sockets = new Set();
   const commitPacket = Buffer.from("COMMIT", "ascii");
   let partitioned = false;
+  let blackholed = false;
   let closed = false;
   let commitAckDropArmed = false;
   let commitPacketsForwarded = 0;
   let commitAckDrops = 0;
+  let blackholedClientBytes = 0;
+  let blackholedServerBytes = 0;
   const server = net.createServer((downstream) => {
     if (partitioned || closed) {
       downstream.destroy();
@@ -3959,6 +4060,10 @@ async function startMysqlFaultProxy(targetPort) {
         closePair();
         return;
       }
+      if (blackholed) {
+        blackholedClientBytes += chunk.length;
+        return;
+      }
       pair.clientBuffer = Buffer.concat([pair.clientBuffer, chunk]);
       while (pair.clientBuffer.length >= 4) {
         const payloadLength = pair.clientBuffer[0]
@@ -3986,6 +4091,10 @@ async function startMysqlFaultProxy(targetPort) {
       if (pairClosed) {
         return;
       }
+      if (blackholed) {
+        blackholedServerBytes += chunk.length;
+        return;
+      }
       if (pair.dropNextUpstreamPacket) {
         pair.dropNextUpstreamPacket = false;
         commitAckDrops += 1;
@@ -4009,8 +4118,18 @@ async function startMysqlFaultProxy(targetPort) {
     armCommitAckDrop() {
       assert.equal(closed, false);
       assert.equal(partitioned, false);
+      assert.equal(blackholed, false);
       assert.equal(commitAckDropArmed, false);
       commitAckDropArmed = true;
+    },
+    blackhole() {
+      assert.equal(closed, false);
+      assert.equal(partitioned, false);
+      if (blackholed) {
+        return;
+      }
+      blackholed = true;
+      commitAckDropArmed = false;
     },
     async partition() {
       if (closed || partitioned) {
@@ -4039,6 +4158,9 @@ async function startMysqlFaultProxy(targetPort) {
       assert.equal(sockets.size, 0);
     },
     connectedPairs: () => sockets.size,
+    blackholed: () => blackholed,
+    blackholedClientBytes: () => blackholedClientBytes,
+    blackholedServerBytes: () => blackholedServerBytes,
     commitAckDropArmed: () => commitAckDropArmed,
     commitAckDrops: () => commitAckDrops,
     commitPacketsForwarded: () => commitPacketsForwarded,
@@ -4214,6 +4336,8 @@ function childRunning(child) {
 if (process.argv[1] && path.resolve(process.argv[1]) === filePath) {
   if (process.argv.includes("--node-worker")) {
     await runNodeWorker();
+  } else if (process.argv.includes("--dual-dependency-partition-only")) {
+    await runValkeyPartitionOldOwnerFenceGate({dualDependencyPartition: true});
   } else if (process.argv.includes("--valkey-partition-only")) {
     await runValkeyPartitionOldOwnerFenceGate();
   } else if (process.argv.includes("--mysql-partition-only")) {
