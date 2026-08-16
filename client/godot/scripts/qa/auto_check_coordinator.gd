@@ -16,6 +16,9 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
+const BattleElementTacticsModel := preload(
+	"res://scripts/battle/battle_element_tactics_model.gd"
+)
 const BattleCaptureCapacityModel := preload("res://scripts/battle/battle_capture_capacity_model.gd")
 const ServerBattleCoordinator := preload("res://scripts/battle/server_battle_coordinator.gd")
 const ServerBattleInterruptionModel := preload("res://scripts/battle/server_battle_interruption_model.gd")
@@ -26687,6 +26690,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 			"defense": 8,
 			"quick": 58,
 			"slotNumber": 3,
+			"elements": {"earth": 10, "water": 0, "fire": 0, "wind": 0},
 		},
 		{
 			"actorId": "actor_a_pet",
@@ -26704,6 +26708,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 			"defense": 9,
 			"quick": 72,
 			"slotNumber": 3,
+			"elements": {"earth": 0, "water": 10, "fire": 0, "wind": 0},
 		},
 		{
 			"actorId": "actor_b_player",
@@ -26720,6 +26725,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 			"quick": 61,
 			"slotNumber": 3,
 			"spiritIds": ["spirit_moist_1"],
+			"elements": {"earth": 10, "water": 0, "fire": 0, "wind": 0},
 		},
 		{
 			"actorId": "actor_b_pet",
@@ -26737,9 +26743,11 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 			"defense": 9,
 			"quick": 70,
 			"slotNumber": 3,
+			"elements": {"earth": 0, "water": 10, "fire": 0, "wind": 0},
 		},
 	]
 	var room = {
+		"mode": "duel",
 		"status": "ready",
 		"roomId": "target_mapping_room",
 		"seed": "target_mapping_seed",
@@ -26756,6 +26764,54 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		"username": "attacker_owner",
 	}
 	var state = ServerBattleRoomModel.battle_state_from_room(room, session)
+	var element_matchup := (
+		state.get("elementTacticsMatchup", {}) as Dictionary
+		if state.get("elementTacticsMatchup", {}) is Dictionary
+		else {}
+	)
+	var mapped_self_player := BattleModel.actor_by_id(state, BattleModel.PLAYER_ACTOR_ID)
+	var mapped_self_pet := BattleModel.actor_by_id(state, BattleModel.PLAYER_PET_ID)
+	var mapped_enemy_player := BattleModel.actor_by_id(state, "enemy_player")
+	var mapped_enemy_pet := BattleModel.actor_by_id(state, "enemy_pet")
+	var element_mapping_ok: bool = (
+		(mapped_self_player.get("elements", {}) as Dictionary).get("earth", 0) == 10
+		and (mapped_self_pet.get("elements", {}) as Dictionary).get("water", 0) == 10
+		and (mapped_enemy_player.get("elements", {}) as Dictionary).get("earth", 0) == 10
+		and (mapped_enemy_pet.get("elements", {}) as Dictionary).get("water", 0) == 10
+	)
+	var strong_tactics := BattleElementTacticsModel.presentation_plan(
+		element_matchup,
+		mapped_self_player,
+		mapped_enemy_pet
+	)
+	var weak_tactics := BattleElementTacticsModel.presentation_plan(
+		element_matchup,
+		mapped_self_pet,
+		mapped_enemy_player
+	)
+	var mixed_tactics := BattleElementTacticsModel.presentation_plan(
+		element_matchup,
+		{"elements": {"earth": 5, "water": 5, "fire": 0, "wind": 0}},
+		{"elements": {"earth": 0, "water": 5, "fire": 5, "wind": 0}}
+	)
+	var invalid_tactics := BattleElementTacticsModel.presentation_plan(
+		element_matchup,
+		{"elements": {"earth": 9, "water": 0, "fire": 0, "wind": 0}},
+		mapped_enemy_pet
+	)
+	var element_tactics_ok: bool = (
+		bool(strong_tactics.get("visible", false))
+		and str(strong_tactics.get("disposition", "")) == "advantage"
+		and str(strong_tactics.get("label", "")) == "克制 +35%"
+		and absf(float(strong_tactics.get("multiplier", 0.0)) - 1.35) <= 0.0001
+		and bool(weak_tactics.get("visible", false))
+		and str(weak_tactics.get("disposition", "")) == "disadvantage"
+		and str(weak_tactics.get("label", "")) == "受制 -25%"
+		and absf(float(weak_tactics.get("multiplier", 0.0)) - 0.75) <= 0.0001
+		and str(mixed_tactics.get("label", "")) == "克制 +18%"
+		and absf(float(mixed_tactics.get("multiplier", 0.0)) - 1.175) <= 0.0001
+		and not bool(invalid_tactics.get("visible", true))
+	)
 	var downed_room = room.duplicate(true)
 	downed_room["mode"] = "party_pve"
 	var downed_battle = (downed_room.get("battle", {}) as Dictionary).duplicate(true) if downed_room.get("battle", {}) is Dictionary else {}
@@ -26909,6 +26965,49 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 	host.server_battle_state["room"] = room.duplicate(true)
 	host.server_battle_last_playback_turn_key = ""
 	host._start_battle(state)
+	host.battle_target_mode = "player_attack_target"
+	host.battle_hover_target_id = "enemy_pet"
+	host._set_battle_message("请选择攻击目标。")
+	host._sync_battle_buttons()
+	host.queue_redraw()
+	var element_capture_path := OS.get_environment(
+		"BEASTBOUND_BATTLE_ELEMENT_TACTICS_CAPTURE"
+	).strip_edges()
+	var element_capture_ok := true
+	if element_capture_path != "":
+		var element_capture_directory := element_capture_path.get_base_dir()
+		if element_capture_directory != "":
+			DirAccess.make_dir_recursive_absolute(element_capture_directory)
+		for _element_capture_frame in range(4):
+			await host.get_tree().process_frame
+		var element_capture_image: Image = host.get_viewport().get_texture().get_image()
+		element_capture_ok = (
+			element_capture_image != null
+			and element_capture_image.get_size() == Vector2i(1280, 720)
+			and element_capture_image.save_png(element_capture_path) == OK
+		)
+	var host_player_tactics: Dictionary = host._battle_element_tactics_plan_for_target(
+		BattleModel.actor_by_id(host.battle_state, "enemy_pet")
+	)
+	host.battle_target_mode = "pet_enemy_attack"
+	var host_pet_tactics: Dictionary = host._battle_element_tactics_plan_for_target(
+		BattleModel.actor_by_id(host.battle_state, "enemy_player")
+	)
+	host.battle_state["serverRoomMode"] = "party_pve"
+	var host_pve_hidden_tactics: Dictionary = host._battle_element_tactics_plan_for_target(
+		BattleModel.actor_by_id(host.battle_state, "enemy_player")
+	)
+	host.battle_state["serverRoomMode"] = "duel"
+	host.battle_target_mode = "enemy_item_single"
+	var host_item_hidden_tactics: Dictionary = host._battle_element_tactics_plan_for_target(
+		BattleModel.actor_by_id(host.battle_state, "enemy_player")
+	)
+	var element_ui_gate_ok: bool = (
+		str(host_player_tactics.get("label", "")) == "克制 +35%"
+		and str(host_pet_tactics.get("label", "")) == "受制 -25%"
+		and not bool(host_pve_hidden_tactics.get("visible", true))
+		and not bool(host_item_hidden_tactics.get("visible", true))
+	)
 	host.battle_state["phase"] = "server_waiting"
 	host._apply_polled_server_battle_room(polled_room, "target_mapping_room")
 	var poll_started_ok = host._server_battle_event_playback_active() or str(host.battle_state.get("phase", "")) == "round_events"
@@ -27349,9 +27448,13 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and str(duel_hang_after.get(HangSettingsModel.SESSION_LAST_STOP_REASON_KEY, "")) == "low_hp"
 		and not host.hang_mode_active
 	)
-	var status = "ok" if converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and transport_helper_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_singleflight_guard_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_outcome_overlay_ok and pve_outcome_dedupe_ok and teammate_pve_victory_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
-	print("server battle target mapping check ready: status=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s transport=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_singleflight=%s restore_poll_enabled=%s explicit_restore=%s active_poll=%s pve_overlay=%s pve_dedupe=%s teammate_victory=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_outcome=%s duplicate_outcome=%s teammate_outcome=%s closed_text=%s" % [
+	var status = "ok" if element_mapping_ok and element_tactics_ok and element_ui_gate_ok and element_capture_ok and converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and transport_helper_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_singleflight_guard_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_outcome_overlay_ok and pve_outcome_dedupe_ok and teammate_pve_victory_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
+	print("server battle target mapping check ready: status=%s elements=%s tactics=%s ui_gate=%s capture=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s transport=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_singleflight=%s restore_poll_enabled=%s explicit_restore=%s active_poll=%s pve_overlay=%s pve_dedupe=%s teammate_victory=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_outcome=%s duplicate_outcome=%s teammate_outcome=%s closed_text=%s" % [
 		status,
+		str(element_mapping_ok),
+		str(element_tactics_ok),
+		str(element_ui_gate_ok),
+		str(element_capture_ok),
 		str(converted_target_ok),
 		str(converted_attacker_ok),
 		str(downed_skip_ok),

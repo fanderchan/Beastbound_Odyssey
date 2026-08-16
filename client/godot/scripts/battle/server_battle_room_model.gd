@@ -6,6 +6,9 @@ const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.g
 const BattleVisualPresentationModel := preload(
 	"res://scripts/battle/battle_visual_presentation_model.gd"
 )
+const BattleElementTacticsModel := preload(
+	"res://scripts/battle/battle_element_tactics_model.gd"
+)
 
 
 static func is_restorable_room(room: Dictionary) -> bool:
@@ -95,6 +98,7 @@ static func battle_state_from_room(room: Dictionary, session: Dictionary) -> Dic
 			"serverRoomSeed": str(room.get("seed", "")),
 			"serverRoomMode": str(room.get("mode", "")),
 			"targetSeed": str(room.get("seed", battle_id_for_room(room))),
+			"elementTacticsMatchup": BattleElementTacticsModel.shared_matchup(),
 			"message": _message_for_room(room, battle, session),
 			"itemBag": _item_bag_for_session(room, session),
 			"captureToolBag": _capture_tool_bag_for_session(room, session),
@@ -358,6 +362,7 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 		"quick": maxi(1, int(server_actor.get("speed", server_actor.get("quick", 60)))),
 		"attack": maxi(1, int(server_actor.get("attack", 18))),
 		"defense": maxi(1, int(server_actor.get("defense", 8))),
+		"elements": _dictionary_value(server_actor.get("elements", {})),
 		"catchable": bool(server_actor.get("catchable", kind == "wild_pet")),
 		"captureDifficulty": maxi(0, int(server_actor.get("captureDifficulty", 0))),
 		"captured": bool(server_actor.get("captured", false)),
@@ -464,6 +469,7 @@ static func _pet_party_entry_from_server_pet(server_pet: Dictionary) -> Dictiona
 		"quick": maxi(1, int(server_pet.get("quick", server_pet.get("speed", 50)))),
 		"attack": maxi(1, int(server_pet.get("attack", 12))),
 		"defense": maxi(1, int(server_pet.get("defense", 6))),
+		"elements": _dictionary_value(server_pet.get("elements", {})),
 		"formId": str(server_pet.get("formId", "")),
 		"activeSkillIds": _string_array(server_pet.get("activeSkillIds", [])),
 		"petSkillSlots": _string_array(server_pet.get("petSkillSlots", [])),
@@ -523,6 +529,7 @@ static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, se
 		actor["quick"] = maxi(1, int(server_actor.get("speed", actor.get("quick", 60))))
 		actor["attack"] = maxi(1, int(server_actor.get("attack", actor.get("attack", 18))))
 		actor["defense"] = maxi(1, int(server_actor.get("defense", actor.get("defense", 8))))
+		actor["elements"] = _dictionary_value(server_actor.get("elements", actor.get("elements", {})))
 		actor["serverActorId"] = str(server_actor.get("actorId", actor.get("serverActorId", "")))
 		actor["serverAccountId"] = str(server_actor.get("accountId", actor.get("serverAccountId", "")))
 		actor["serverUsername"] = str(server_actor.get("username", actor.get("serverUsername", "")))

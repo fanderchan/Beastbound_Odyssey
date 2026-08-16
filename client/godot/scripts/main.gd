@@ -18,6 +18,9 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
+const BattleElementTacticsModel := preload(
+	"res://scripts/battle/battle_element_tactics_model.gd"
+)
 const BattleRangedProjectileAssetCatalog := preload(
 	"res://scripts/battle/battle_ranged_projectile_asset_catalog.gd"
 )
@@ -15919,7 +15922,14 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	if not launched_active:
 		_draw_battle_ground_shadow(actor, pos, actor_visual_scale, alpha)
 	if _battle_target_mode_selects_enemy() and str(actor.get("id", "")) == battle_hover_target_id and str(actor.get("side", "")) == BattleModel.SIDE_ENEMY and int(actor.get("hp", 0)) > 0:
-		_draw_battle_target_ring(pos, actor_visual_scale)
+		var element_tactics_plan := _battle_element_tactics_plan_for_target(actor)
+		_draw_battle_target_ring(
+			pos,
+			actor_visual_scale,
+			_battle_element_tactics_accent_color(element_tactics_plan)
+		)
+		if bool(element_tactics_plan.get("visible", false)):
+			_draw_battle_element_tactics_badge(pos, visual_scale, element_tactics_plan)
 	if _battle_target_mode_selects_ally() and str(actor.get("id", "")) == battle_hover_ally_target_id and str(actor.get("side", "")) == BattleModel.SIDE_ALLY and int(actor.get("hp", 0)) > 0:
 		_draw_battle_target_ring(pos, actor_visual_scale, Color(0.50, 1.0, 0.58, 0.96))
 	if bool(actor.get("bossThreatened", false)) and int(actor.get("hp", 0)) > 0:
@@ -16716,6 +16726,89 @@ func _draw_battle_target_ring(pos: Vector2, visual_scale: float, color: Color = 
 	draw_line(center + Vector2(-chevron_x - 6.0 * visual_scale, 0.0), center + Vector2(-chevron_x, 4.0 * visual_scale), color, maxf(1.5, 2.2 * visual_scale), true)
 	draw_line(center + Vector2(chevron_x, -4.0 * visual_scale), center + Vector2(chevron_x + 6.0 * visual_scale, 0.0), color, maxf(1.5, 2.2 * visual_scale), true)
 	draw_line(center + Vector2(chevron_x + 6.0 * visual_scale, 0.0), center + Vector2(chevron_x, 4.0 * visual_scale), color, maxf(1.5, 2.2 * visual_scale), true)
+
+
+func _battle_element_tactics_plan_for_target(target: Dictionary) -> Dictionary:
+	if (
+		not _battle_is_server_authority()
+		or str(battle_state.get("serverRoomMode", "")) != "duel"
+		or not ["player_attack_target", "pet_enemy_attack", "pet_enemy_skill"].has(battle_target_mode)
+	):
+		return {"visible": false, "schemaVersion": 1}
+	var attacker_id := (
+		BattleModel.controlled_pet_id(battle_state)
+		if battle_target_mode in ["pet_enemy_attack", "pet_enemy_skill"]
+		else BattleModel.player_actor_id(battle_state)
+	)
+	var attacker := BattleModel.actor_by_id(battle_state, attacker_id)
+	var matchup := (
+		battle_state.get("elementTacticsMatchup", {}) as Dictionary
+		if battle_state.get("elementTacticsMatchup", {}) is Dictionary
+		else {}
+	)
+	return BattleElementTacticsModel.presentation_plan(matchup, attacker, target)
+
+
+func _battle_element_tactics_accent_color(plan: Dictionary) -> Color:
+	match str(plan.get("disposition", "neutral")):
+		"advantage":
+			return Color(0.74, 0.94, 0.34, 0.98)
+		"disadvantage":
+			return Color(1.0, 0.42, 0.30, 0.98)
+		_:
+			return Color(1.0, 0.78, 0.20, 0.96)
+
+
+func _draw_battle_element_tactics_badge(pos: Vector2, visual_scale: float, plan: Dictionary) -> void:
+	var label := str(plan.get("label", "")).strip_edges()
+	if label == "":
+		return
+	var accent := _battle_element_tactics_accent_color(plan)
+	var background := Color(0.055, 0.085, 0.055, 0.92)
+	if str(plan.get("disposition", "")) == "disadvantage":
+		background = Color(0.16, 0.045, 0.035, 0.93)
+	elif str(plan.get("disposition", "")) == "neutral":
+		background = Color(0.105, 0.095, 0.070, 0.92)
+	var font := _canvas_text_font()
+	var font_size := maxi(10, int(round(12.0 * visual_scale)))
+	var text_width := _font_text_width(font, label, font_size)
+	var badge_height := maxf(19.0, 21.0 * visual_scale)
+	var badge_width := clampf(text_width + 18.0, 54.0, 96.0)
+	var center := pos + Vector2(0.0, 28.0 * visual_scale)
+	var cap_radius := badge_height * 0.5
+	var middle_rect := Rect2(
+		center + Vector2(-badge_width * 0.5 + cap_radius, -cap_radius),
+		Vector2(maxf(1.0, badge_width - badge_height), badge_height)
+	)
+	draw_rect(middle_rect, background, true)
+	draw_circle(center + Vector2(-badge_width * 0.5 + cap_radius, 0.0), cap_radius, background)
+	draw_circle(center + Vector2(badge_width * 0.5 - cap_radius, 0.0), cap_radius, background)
+	draw_line(
+		center + Vector2(-badge_width * 0.5 + cap_radius, -cap_radius + 1.0),
+		center + Vector2(badge_width * 0.5 - cap_radius, -cap_radius + 1.0),
+		accent,
+		maxf(1.2, 1.6 * visual_scale),
+		true
+	)
+	var text_origin := center + Vector2(-badge_width * 0.5, float(font_size) * 0.36)
+	draw_string(
+		font,
+		text_origin + Vector2(1.0, 1.0),
+		label,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		badge_width,
+		font_size,
+		Color(0.02, 0.025, 0.02, 0.92)
+	)
+	draw_string(
+		font,
+		text_origin,
+		label,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		badge_width,
+		font_size,
+		accent
+	)
 
 
 func _draw_battle_boss_threat_ring(pos: Vector2, visual_scale: float, marker_style: String = "charge", marker_limit: int = 0) -> void:
