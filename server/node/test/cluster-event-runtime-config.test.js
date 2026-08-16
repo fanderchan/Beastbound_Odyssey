@@ -15,6 +15,7 @@ test("cluster runtime defaults to single node and rejects unproven or insecure V
   assert.equal(single.enabled, false);
   assert.deepEqual(single.eventHubOptions, {});
   assert.equal(single.accountAdmission, null);
+  assert.equal(single.battleRuntime, null);
 
   await assert.rejects(
     createConfiguredClusterEventRuntime({
@@ -46,6 +47,7 @@ test("cluster runtime passes a bounded loopback Valkey configuration without exp
   const calls = [];
   let closeCalls = 0;
   let accountCloseCalls = 0;
+  let battleRuntimeCloseCalls = 0;
   const bridge = {
     capabilities: {},
     publish() {},
@@ -57,6 +59,13 @@ test("cluster runtime passes a bounded loopback Valkey configuration without exp
     admit() { return Promise.resolve({ok: true}); },
     health() { return {ok: true}; },
     async close() { accountCloseCalls += 1; },
+  };
+  const battleRuntime = {
+    checkpoint() { return Promise.resolve({ok: true}); },
+    claim() { return Promise.resolve({ok: true, found: false}); },
+    remove() { return Promise.resolve(false); },
+    health() { return {ok: true}; },
+    async close() { battleRuntimeCloseCalls += 1; },
   };
   const runtime = await createConfiguredClusterEventRuntime({
     BEASTBOUND_CLUSTER_MODE: "valkey",
@@ -79,12 +88,17 @@ test("cluster runtime passes a bounded loopback Valkey configuration without exp
       calls.push(options);
       return accountAdmission;
     },
+    async battleRuntimeFactory(options) {
+      calls.push(options);
+      return battleRuntime;
+    },
   });
 
   assert.equal(runtime.enabled, true);
   assert.equal(runtime.eventHubOptions.clusterRequired, true);
   assert.equal(runtime.eventHubOptions.clusterNodeId, "node-a");
   assert.equal(runtime.accountAdmission, accountAdmission);
+  assert.equal(runtime.battleRuntime, battleRuntime);
   assert.equal(calls[0].connection.port, 6380);
   assert.equal(calls[0].connection.useTLS, false);
   assert.equal(calls[0].maxStreamLength, 4096);
@@ -93,11 +107,17 @@ test("cluster runtime passes a bounded loopback Valkey configuration without exp
   assert.equal(calls[1].maxOwnedAccounts, 512);
   assert.equal(calls[1].maxPendingAdmissions, 128);
   assert.equal(calls[1].connection.password, "secret-not-for-logs");
+  assert.equal(calls[2].leaseMs, 9000);
+  assert.equal(calls[2].snapshotTtlMs, 6 * 60 * 60 * 1000);
+  assert.equal(calls[2].maxOwnedRooms, 2048);
+  assert.equal(calls[2].maxSnapshotBytes, 8 * 1024 * 1024);
+  assert.equal(calls[2].connection.password, "secret-not-for-logs");
   assert.equal(JSON.stringify(runtime.eventHubOptions).includes("secret-not-for-logs"), false);
   await runtime.close();
   await runtime.close();
   assert.equal(closeCalls, 1);
   assert.equal(accountCloseCalls, 1);
+  assert.equal(battleRuntimeCloseCalls, 1);
 });
 
 test("cluster runtime closes an initialized relay when account ownership fails to initialize", async () => {
@@ -126,6 +146,40 @@ test("cluster runtime closes an initialized relay when account ownership fails t
   assert.equal(bridgeCloseCalls, 1);
 });
 
+test("cluster runtime closes relay and account ownership when battle runtime initialization fails", async () => {
+  let bridgeCloseCalls = 0;
+  let accountCloseCalls = 0;
+  const bridge = {
+    async close() { bridgeCloseCalls += 1; },
+  };
+  const accountAdmission = {
+    async close() { accountCloseCalls += 1; },
+  };
+  await assert.rejects(
+    createConfiguredClusterEventRuntime({
+      BEASTBOUND_CLUSTER_MODE: "valkey",
+      BEASTBOUND_CLUSTER_NODE_ID: "node-a",
+      BEASTBOUND_CLUSTER_VALKEY_HOST: "127.0.0.1",
+      BEASTBOUND_CLUSTER_ACCOUNT_STICKY: "1",
+    }, {
+      async bridgeFactory() {
+        return bridge;
+      },
+      async accountOwnerFactory() {
+        return accountAdmission;
+      },
+      async battleRuntimeFactory() {
+        const error = new Error("battle runtime failed");
+        error.code = "cluster_battle_runtime_connect_failed";
+        throw error;
+      },
+    }),
+    (error) => error.code === "cluster_battle_runtime_connect_failed",
+  );
+  assert.equal(bridgeCloseCalls, 1);
+  assert.equal(accountCloseCalls, 1);
+});
+
 test("ready health fails closed when a required cluster relay is unhealthy", async (t) => {
   const eventHub = {
     handleUpgrade() { return false; },
@@ -148,6 +202,28 @@ test("ready health fails closed when a required cluster relay is unhealthy", asy
   assert.equal(response.statusCode, 503);
   assert.equal(response.body.ok, false);
   assert.equal(response.body.eventStream.clusterRelay.runtimeHealthy, false);
+});
+
+test("ready health fails closed when the battle runtime lease is unhealthy", async (t) => {
+  const battleRuntime = {
+    health() {
+      return {
+        ok: false,
+        runtimeHealthy: false,
+        fatal: true,
+        closed: false,
+        ownedRooms: 1,
+      };
+    },
+  };
+  const server = createHttpServer({service: {}, clusterBattleRuntime: battleRuntime, logger: false});
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const response = await requestJson(server.address().port, "/health/ready");
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.body.ok, false);
+  assert.equal(response.body.battleRuntime.enabled, true);
+  assert.equal(response.body.battleRuntime.fatal, true);
 });
 
 function requestJson(port, path) {

@@ -130,6 +130,56 @@ test("state routing fails closed while the known room owner is live and permits 
   assert.equal(routerB.metrics().timeouts, 2);
 });
 
+test("state routing claims and hydrates a checkpoint after the observed room owner dies", async (t) => {
+  const bus = new FakeControlBus();
+  const hubB = bus.hub("node-b");
+  const runtimeStore = fakeRuntimeStore();
+  const service = fakeHydrationService();
+  const routerB = createRouter(
+    "node-b",
+    hubB,
+    fakeOwner(() => true),
+    service,
+    {requestTimeoutMs: 250, runtimeStore},
+  );
+  t.after(() => routerB.close());
+  hubB.observeRemote({type: "battle.room_ready", roomId: ROOM_ID}, {originNodeId: "node-a"});
+  hubB.leaseStates.set("node-a", {known: true, alive: false, ttlMs: 0});
+
+  const state = await routerB.routeState(ingress(), interruptedState());
+  assert.equal(state.ok, true);
+  assert.equal(state.room.roomId, ROOM_ID);
+  assert.equal(state.interruption, null);
+  assert.equal(service.hydrations, 1);
+  assert.equal(runtimeStore.claims, 1);
+  assert.equal(runtimeStore.checkpoints, 1);
+  assert.equal(routerB.metrics().runtimeTakeovers, 1);
+  assert.equal(routerB.metrics().runtimeTakeoverFallbacks, 0);
+});
+
+test("a stale claimed snapshot is discarded once before neutral owner-failure recovery", async (t) => {
+  const bus = new FakeControlBus();
+  const hubB = bus.hub("node-b");
+  const runtimeStore = fakeRuntimeStore();
+  const service = fakeRejectedHydrationService("cluster_battle_runtime_account_busy");
+  const routerB = createRouter(
+    "node-b",
+    hubB,
+    fakeOwner(() => true),
+    service,
+    {requestTimeoutMs: 250, runtimeStore},
+  );
+  t.after(() => routerB.close());
+  hubB.observeRemote({type: "battle.room_ready", roomId: ROOM_ID}, {originNodeId: "node-a"});
+  hubB.leaseStates.set("node-a", {known: true, alive: false, ttlMs: 0});
+
+  const state = await routerB.routeState(ingress(), interruptedState());
+  assert.deepEqual(state, interruptedState());
+  assert.equal(runtimeStore.claims, 1);
+  assert.equal(runtimeStore.removals, 1);
+  assert.equal(routerB.metrics().runtimeTakeoverFallbacks, 1);
+});
+
 test("a routed response is bound to the observed room owner and exact room", async (t) => {
   const bus = new FakeControlBus();
   const hubB = bus.hub("node-b");
@@ -221,6 +271,106 @@ function fakeService({roomKnown}) {
         room: {roomId: args[1], status: "ready"},
         message: "回合命令已提交。",
       });
+    },
+  };
+}
+
+function fakeHydrationService() {
+  let roomKnown = false;
+  const runtimeCredential = Object.freeze({credentialKind: "cluster_battle_runtime_v1"});
+  return {
+    hydrations: 0,
+    onEvent() {
+      return () => {};
+    },
+    _issueClusterBattleRuntimeCredential() {
+      return runtimeCredential;
+    },
+    _issueClusterBattleCredential(identity) {
+      return Object.freeze({...identity, credentialKind: "cluster_battle_v1"});
+    },
+    _clusterBattleRoomKnown() {
+      return roomKnown;
+    },
+    _clusterExportBattleRuntime(credential, roomId) {
+      assert.equal(credential, runtimeCredential);
+      return {
+        ok: true,
+        active: true,
+        roomId,
+        snapshot: {schemaVersion: 1, roomId, checksum: "f".repeat(64)},
+      };
+    },
+    _clusterHydrateBattleRuntime() {},
+    invokeDurable(methodName, args) {
+      if (methodName === "_clusterHydrateBattleRuntime") {
+        assert.equal(args[0], runtimeCredential);
+        roomKnown = true;
+        this.hydrations += 1;
+        return Promise.resolve({ok: true, hydrated: true, room: {roomId: ROOM_ID}});
+      }
+      assert.equal(methodName, "_clusterGetBattleState");
+      return Promise.resolve({
+        ok: true,
+        room: {roomId: ROOM_ID, status: "ready"},
+        interruption: null,
+      });
+    },
+  };
+}
+
+function fakeRuntimeStore() {
+  return {
+    claims: 0,
+    checkpoints: 0,
+    removals: 0,
+    claim(roomId) {
+      this.claims += 1;
+      return Promise.resolve({
+        ok: true,
+        found: true,
+        acquired: true,
+        roomId,
+        snapshot: {schemaVersion: 1, roomId, checksum: "e".repeat(64)},
+      });
+    },
+    checkpoint(snapshot) {
+      this.checkpoints += 1;
+      assert.equal(snapshot.roomId, ROOM_ID);
+      return Promise.resolve({ok: true, generation: 2});
+    },
+    remove() {
+      this.removals += 1;
+      return Promise.resolve(true);
+    },
+    health() {
+      return {ok: true};
+    },
+  };
+}
+
+function fakeRejectedHydrationService(code) {
+  const runtimeCredential = Object.freeze({credentialKind: "cluster_battle_runtime_v1"});
+  return {
+    onEvent() {
+      return () => {};
+    },
+    _issueClusterBattleRuntimeCredential() {
+      return runtimeCredential;
+    },
+    _issueClusterBattleCredential(identity) {
+      return Object.freeze({...identity, credentialKind: "cluster_battle_v1"});
+    },
+    _clusterBattleRoomKnown() {
+      return false;
+    },
+    _clusterExportBattleRuntime() {
+      return {ok: false, code: "battle_room_missing"};
+    },
+    _clusterHydrateBattleRuntime() {},
+    invokeDurable(methodName) {
+      assert.equal(methodName, "_clusterHydrateBattleRuntime");
+      return Promise.resolve({ok: false, code, message: "stale runtime"});
     },
   };
 }

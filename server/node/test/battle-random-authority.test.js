@@ -32,7 +32,45 @@ test("private battle rolls are deterministic, purpose-separated and never expose
   assert.equal(first, authority.roll("room_a", context));
   assert.notEqual(first, authority.roll("room_a", {...context, purpose: "critical.v1"}));
   assert.equal(first >= 0 && first < 1, true);
-  assert.deepEqual(Object.keys(authority).sort(), ["closeRoom", "hasRoom", "index", "openRoom", "roll"]);
+  assert.deepEqual(Object.keys(authority).sort(), [
+    "canRestoreRoomSecret",
+    "closeRoom",
+    "exportRoomSecret",
+    "hasRoom",
+    "index",
+    "openRoom",
+    "restoreRoomSecret",
+    "roll",
+  ]);
+});
+
+test("private battle secrets restore deterministic continuation without accepting malformed or conflicting state", () => {
+  const source = deterministicAuthority(0x35);
+  const target = deterministicAuthority(0x62);
+  const context = {
+    purpose: "damage_variance.v1",
+    turnSeq: 4,
+    round: 2,
+    sequence: 9,
+    actorId: "ally_pet",
+    targetId: "enemy_pet",
+    actionId: "pet_attack",
+    ordinal: 1,
+  };
+
+  source.openRoom("room_restore");
+  const encoded = source.exportRoomSecret("room_restore");
+  assert.match(encoded, /^[A-Za-z0-9_-]{43}$/);
+  assert.equal(target.canRestoreRoomSecret("room_restore", encoded), true);
+  assert.equal(target.restoreRoomSecret("room_restore", encoded), true);
+  assert.equal(target.roll("room_restore", context), source.roll("room_restore", context));
+  assert.equal(target.restoreRoomSecret("room_restore", encoded), true);
+  assert.equal(target.canRestoreRoomSecret("room_restore", Buffer.alloc(32, 0x77).toString("base64url")), false);
+  assert.equal(target.restoreRoomSecret("room_restore", Buffer.alloc(32, 0x77).toString("base64url")), false);
+  assert.throws(
+    () => target.restoreRoomSecret("room_invalid", "not-a-secret"),
+    {code: "battle_random_secret_invalid"},
+  );
 });
 
 test("missing or closed rooms fail closed instead of falling back to a public seed", () => {

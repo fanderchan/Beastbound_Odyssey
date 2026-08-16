@@ -224,7 +224,7 @@ test("readiness includes only sanitized account ownership health and fails close
   assert.equal(JSON.stringify(body).includes("must-not-leak"), false);
 });
 
-test("graceful drain releases account ownership only after websocket, durable, and store drains", async () => {
+test("graceful drain releases cluster ownership only after websocket, durable, and store drains", async () => {
   const order = [];
   const baseService = createAuthService({store: createMemoryAuthStore()});
   const service = new Proxy(baseService, {
@@ -244,6 +244,13 @@ test("graceful drain releases account ownership only after websocket, durable, a
     admission.closeCalls += 1;
     order.push("account-owner-released");
   };
+  const battleRuntime = {
+    closeCalls: 0,
+    async close() {
+      this.closeCalls += 1;
+      order.push("battle-runtime-released");
+    },
+  };
   const eventHub = eventHubStub();
   eventHub.close = async () => {
     order.push("websocket-drained");
@@ -260,6 +267,7 @@ test("graceful drain releases account ownership only after websocket, durable, a
     store,
     eventHub,
     clusterAccountAdmission: admission,
+    clusterBattleRuntime: battleRuntime,
     logger: false,
   });
   server.listen(0, "127.0.0.1");
@@ -267,10 +275,15 @@ test("graceful drain releases account ownership only after websocket, durable, a
   await drainServerForShutdown(server, store);
 
   const releasedAt = order.indexOf("account-owner-released");
+  const battleReleasedAt = order.indexOf("battle-runtime-released");
   assert.ok(releasedAt > order.indexOf("websocket-drained"));
   assert.ok(releasedAt > order.indexOf("durable-drained"));
   assert.ok(releasedAt > order.indexOf("store-flushed"));
+  assert.ok(battleReleasedAt > order.indexOf("websocket-drained"));
+  assert.ok(battleReleasedAt > order.indexOf("durable-drained"));
+  assert.ok(battleReleasedAt > order.indexOf("store-flushed"));
   assert.equal(admission.closeCalls, 1);
+  assert.equal(battleRuntime.closeCalls, 1);
 });
 
 function fakeAdmission() {

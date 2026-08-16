@@ -37,7 +37,9 @@ function createClusterBattleRouter(options = {}) {
   const eventHub = options.eventHub || null;
   const accountOwner = options.accountOwner || null;
   const service = options.service || null;
+  const runtimeStore = options.runtimeStore || null;
   assertBoundary(eventHub, accountOwner, service);
+  assertRuntimeBoundary(runtimeStore, service);
   const now = typeof options.now === "function" ? options.now : Date.now;
   const randomBytes = typeof options.randomBytes === "function" ? options.randomBytes : crypto.randomBytes;
   const requestTimeoutMs = boundedInteger(options.requestTimeoutMs, DEFAULT_REQUEST_TIMEOUT_MS, 250, 10000);
@@ -58,6 +60,10 @@ function createClusterBattleRouter(options = {}) {
   const pending = new Map();
   const operationCache = new Map();
   const roomOwners = new Map();
+  const checkpointTails = new Map();
+  const runtimeCredential = runtimeStore
+    ? service._issueClusterBattleRuntimeCredential()
+    : null;
   const totals = {
     stateRequests: 0,
     commandRequests: 0,
@@ -67,11 +73,20 @@ function createClusterBattleRouter(options = {}) {
     duplicateOperations: 0,
     operationConflicts: 0,
     remoteExecutions: 0,
+    runtimeCheckpoints: 0,
+    runtimeCheckpointFailures: 0,
+    runtimeTakeovers: 0,
+    runtimeTakeoverMisses: 0,
+    runtimeTakeoverFallbacks: 0,
   };
   let closed = false;
 
   const removeControlHandler = eventHub.setClusterControlHandler(onControlEvent);
   const removeRemoteObserver = eventHub.setClusterRemoteEventObserver(observeRemoteBattleEvent);
+  const removeServiceObserver = runtimeStore && typeof service.onEvent === "function"
+    ? service.onEvent(observeLocalBattleEvent)
+    : () => {};
+  let closePromise = null;
 
   async function routeState(contextValue, localResult) {
     const context = normalizeIngressContext(contextValue);
@@ -96,11 +111,21 @@ function createClusterBattleRouter(options = {}) {
         throw error;
       }
       const owner = activeRoomOwner(roomId);
+      let ownerKnownDead = false;
       if (owner !== "") {
         const lease = await eventHub.clusterNodeLeaseState(owner);
-        if (lease && lease.known === true && lease.alive === false) {
-          return localResult;
+        ownerKnownDead = Boolean(lease && lease.known === true && lease.alive === false);
+        if (lease && lease.known === true && lease.alive === true) {
+          throw publicUnavailable(error);
         }
+      }
+      const takeover = await tryRuntimeTakeover(context, roomId);
+      if (takeover.handled) {
+        return takeover.state;
+      }
+      if (ownerKnownDead) {
+        totals.runtimeTakeoverFallbacks += 1;
+        return localResult;
       }
       throw publicUnavailable(error);
     }
@@ -133,11 +158,27 @@ function createClusterBattleRouter(options = {}) {
         throw error;
       }
       const owner = activeRoomOwner(roomId);
+      let ownerKnownDead = false;
       if (owner !== "") {
         const lease = await eventHub.clusterNodeLeaseState(owner);
-        if (lease && lease.known === true && lease.alive === false) {
-          return localResult;
+        ownerKnownDead = Boolean(lease && lease.known === true && lease.alive === false);
+        if (lease && lease.known === true && lease.alive === true) {
+          throw publicUnavailable(error);
         }
+      }
+      const takeover = await tryRuntimeTakeover(context, roomId);
+      if (takeover.handled) {
+        const result = await service.invokeDurable(
+          "_clusterSubmitBattleCommand",
+          [takeover.accountCredential, roomId, jsonSnapshot(payloadValue)],
+          operation,
+        );
+        await checkpointRoom(roomId);
+        return result;
+      }
+      if (ownerKnownDead) {
+        totals.runtimeTakeoverFallbacks += 1;
+        return localResult;
       }
       throw publicUnavailable(error);
     }
@@ -272,6 +313,9 @@ function createClusterBattleRouter(options = {}) {
         );
       } else {
         result = await executeCommandRequest(event, credential);
+        if (result && result.ok === true) {
+          await checkpointRoom(event.roomId);
+        }
       }
     } catch {
       publishResponse(event, metadata, null, "execution_failed");
@@ -397,6 +441,155 @@ function createClusterBattleRouter(options = {}) {
     rememberRoomOwner(roomId, metadata.originNodeId);
   }
 
+  function observeLocalBattleEvent(eventValue) {
+    const event = plainRecord(eventValue) ? eventValue : {};
+    if (!BATTLE_OWNER_EVENT_TYPES.has(String(event.type || ""))) {
+      return;
+    }
+    const roomId = canonicalText(event.roomId || (event.room && event.room.roomId), 200);
+    if (roomId === "") {
+      return;
+    }
+    void checkpointRoom(roomId).catch(() => undefined);
+  }
+
+  async function checkpointResult(resultValue, roomIdValue = "") {
+    const result = plainRecord(resultValue) ? resultValue : null;
+    if (!runtimeStore || !result || result.ok !== true) {
+      return resultValue;
+    }
+    const roomId = canonicalText(
+      roomIdValue || result.roomId || (result.room && result.room.roomId),
+      200,
+    );
+    if (roomId !== "") {
+      await checkpointRoom(roomId);
+    }
+    return resultValue;
+  }
+
+  function checkpointRoom(roomIdValue) {
+    if (!runtimeStore) {
+      return Promise.resolve(null);
+    }
+    const roomId = canonicalText(roomIdValue, 200);
+    if (roomId === "") {
+      return Promise.resolve(null);
+    }
+    const previous = checkpointTails.get(roomId) || Promise.resolve();
+    const operation = previous.catch(() => undefined).then(() => writeRoomCheckpoint(roomId));
+    checkpointTails.set(roomId, operation);
+    return operation.finally(() => {
+      if (checkpointTails.get(roomId) === operation) {
+        checkpointTails.delete(roomId);
+      }
+    });
+  }
+
+  async function writeRoomCheckpoint(roomId) {
+    const exported = service._clusterExportBattleRuntime(runtimeCredential, roomId);
+    if (!exported || exported.ok !== true) {
+      totals.runtimeCheckpointFailures += 1;
+      throw publicUnavailable(runtimeError(
+        String(exported && exported.code || "cluster_battle_runtime_export_failed"),
+        "Cluster battle runtime export failed",
+      ));
+    }
+    try {
+      if (exported.active !== true) {
+        await runtimeStore.remove(roomId);
+        return null;
+      }
+      const checkpoint = await runtimeStore.checkpoint(exported.snapshot);
+      totals.runtimeCheckpoints += 1;
+      return checkpoint;
+    } catch (error) {
+      totals.runtimeCheckpointFailures += 1;
+      throw publicUnavailable(error);
+    }
+  }
+
+  async function tryRuntimeTakeover(context, roomId) {
+    if (!runtimeStore) {
+      return {handled: false, state: null, accountCredential: null};
+    }
+    let claim;
+    try {
+      claim = await runtimeStore.claim(roomId);
+    } catch (error) {
+      if ([
+        "cluster_battle_runtime_snapshot_invalid",
+        "cluster_battle_runtime_snapshot_too_large",
+      ].includes(String(error && error.code || ""))) {
+        await discardClaimedRuntime(roomId);
+        return {handled: false, state: null, accountCredential: null};
+      }
+      throw publicUnavailable(error);
+    }
+    if (!claim || claim.found !== true) {
+      totals.runtimeTakeoverMisses += 1;
+      return {handled: false, state: null, accountCredential: null};
+    }
+    const hydrated = await service.invokeDurable(
+      "_clusterHydrateBattleRuntime",
+      [runtimeCredential, claim.snapshot],
+      {actionId: "CLUSTER battle runtime hydrate"},
+    );
+    if (!hydrated || hydrated.ok !== true) {
+      const safeFallbackCodes = new Set([
+        "cluster_battle_runtime_ticket_stale",
+        "cluster_battle_runtime_snapshot_invalid",
+        "cluster_battle_runtime_participants_invalid",
+        "cluster_battle_runtime_account_busy",
+      ]);
+      if (safeFallbackCodes.has(String(hydrated && hydrated.code || ""))) {
+        await discardClaimedRuntime(roomId);
+        return {handled: false, state: null, accountCredential: null};
+      }
+      throw publicUnavailable(runtimeError(
+        String(hydrated && hydrated.code || "cluster_battle_runtime_hydrate_failed"),
+        "Cluster battle runtime hydration failed",
+      ));
+    }
+    roomOwners.delete(roomId);
+    totals.runtimeTakeovers += 1;
+    await checkpointRoom(roomId);
+    const accountCredential = service._issueClusterBattleCredential({
+      accountId: context.accountId,
+      playerId: context.playerId,
+      selectionEpoch: context.selectionEpoch,
+    });
+    if (!accountCredential) {
+      throw publicSwitching();
+    }
+    const state = await service.invokeDurable(
+      "_clusterGetBattleState",
+      [accountCredential, roomId],
+      {actionId: "CLUSTER hydrated battle state"},
+    );
+    if (!state || state.ok !== true || !state.room) {
+      throw publicUnavailable(runtimeError(
+        String(state && state.code || "cluster_battle_runtime_state_failed"),
+        "Hydrated battle state is unavailable",
+      ));
+    }
+    return {handled: true, state, accountCredential};
+  }
+
+  async function discardClaimedRuntime(roomId) {
+    try {
+      const removed = await runtimeStore.remove(roomId);
+      if (removed !== true) {
+        throw runtimeError(
+          "cluster_battle_runtime_discard_failed",
+          "Claimed battle runtime could not be discarded",
+        );
+      }
+    } catch (error) {
+      throw publicUnavailable(error);
+    }
+  }
+
   function rememberRoomOwner(roomIdValue, ownerNodeIdValue) {
     const roomId = canonicalText(roomIdValue, 200);
     const ownerNodeId = canonicalNodeId(ownerNodeIdValue);
@@ -446,12 +639,13 @@ function createClusterBattleRouter(options = {}) {
   }
 
   function close() {
-    if (closed) {
-      return;
+    if (closePromise) {
+      return closePromise;
     }
     closed = true;
     removeControlHandler?.();
     removeRemoteObserver?.();
+    removeServiceObserver?.();
     for (const request of pending.values()) {
       clearTimeout(request.timer);
       request.reject(publicUnavailable(runtimeError(
@@ -462,6 +656,11 @@ function createClusterBattleRouter(options = {}) {
     pending.clear();
     operationCache.clear();
     roomOwners.clear();
+    const activeCheckpoints = Array.from(new Set(checkpointTails.values()));
+    closePromise = Promise.allSettled(activeCheckpoints).then(() => {
+      checkpointTails.clear();
+    });
+    return closePromise;
   }
 
   function metrics() {
@@ -476,7 +675,7 @@ function createClusterBattleRouter(options = {}) {
     });
   }
 
-  return Object.freeze({routeState, routeCommand, close, metrics});
+  return Object.freeze({routeState, routeCommand, checkpointResult, close, metrics});
 }
 
 function isClusterBattleControlEvent(eventValue) {
@@ -565,13 +764,45 @@ function assertBoundary(eventHub, accountOwner, service) {
   }
 }
 
+function assertRuntimeBoundary(runtimeStore, service) {
+  if (!runtimeStore) {
+    return;
+  }
+  if (
+    typeof runtimeStore.checkpoint !== "function"
+    || typeof runtimeStore.claim !== "function"
+    || typeof runtimeStore.remove !== "function"
+    || typeof runtimeStore.health !== "function"
+    || !service
+    || typeof service.onEvent !== "function"
+    || typeof service._issueClusterBattleRuntimeCredential !== "function"
+    || typeof service._clusterExportBattleRuntime !== "function"
+    || typeof service._clusterHydrateBattleRuntime !== "function"
+    || typeof service.invokeDurable !== "function"
+  ) {
+    throw configurationError(
+      "cluster_battle_runtime_boundary_invalid",
+      "Cluster battle runtime boundary is incomplete",
+    );
+  }
+  const credential = service._issueClusterBattleRuntimeCredential();
+  if (!credential || String(credential.credentialKind || "") !== "cluster_battle_runtime_v1") {
+    throw configurationError(
+      "cluster_battle_runtime_boundary_invalid",
+      "Cluster battle runtime credential boundary is incomplete",
+    );
+  }
+}
+
 function publicUnavailable(cause) {
   const error = new Error("战斗服务器正在同步，请稍后使用同一操作重试。");
   error.name = "ClusterBattleRoutingError";
   error.code = "battle_route_unavailable";
   error.statusCode = 503;
   error.publicMessage = error.message;
-  error.retryAfterMs = 500;
+  error.retryAfterMs = Number.isFinite(Number(cause && cause.retryAfterMs))
+    ? Math.max(250, Math.min(120000, Math.ceil(Number(cause.retryAfterMs))))
+    : 500;
   error.cause = cause;
   return error;
 }

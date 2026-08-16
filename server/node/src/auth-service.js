@@ -161,6 +161,7 @@ const {createPetServiceAccess} = require("./auth/pet-service-access");
 const {createPartyDomain} = require("./auth/party");
 const {createHangMatchmakingDomain} = require("./auth/hang-matchmaking");
 const {createBattleRoomDomain} = require("./auth/battle-room");
+const {createClusterBattleRuntimeDomain} = require("./auth/cluster-battle-runtime");
 const {battleRoomForMutation} = require("./auth/battle-room-cow");
 const {
   battleFailureTicketAdmission,
@@ -902,6 +903,7 @@ function createAuthService(options = {}) {
   const presenceRevisions = options.presenceRevisionTracker || createPresenceRevisionTracker();
   const clusterCredentialProofs = new WeakSet();
   const clusterBattleCredentialProofs = new WeakSet();
+  const clusterBattleRuntimeCredentialProofs = new WeakSet();
   const clusterAccountsRequiringAuthorityReload = new Set();
   let clusterAuthorityReloads = 0;
   let clusterRuntimeResets = 0;
@@ -1721,6 +1723,24 @@ function createAuthService(options = {}) {
         sessionId: "cluster_battle_route",
       },
     };
+  }
+
+  function issueClusterBattleRuntimeCredential() {
+    const credential = Object.freeze({
+      credentialKind: "cluster_battle_runtime_v1",
+    });
+    clusterBattleRuntimeCredentialProofs.add(credential);
+    return credential;
+  }
+
+  function resolveClusterBattleRuntimeCredential(credential) {
+    return Boolean(
+      credential
+      && typeof credential === "object"
+      && !Array.isArray(credential)
+      && String(credential.credentialKind || "") === "cluster_battle_runtime_v1"
+      && clusterBattleRuntimeCredentialProofs.has(credential)
+    );
   }
 
   function adoptClusterPresenceRevisionFloor(accountId, floor, ceiling) {
@@ -5694,6 +5714,12 @@ function createAuthService(options = {}) {
         return resolvedCredential;
       }
     }
+    if (methodName === "_clusterHydrateBattleRuntime") {
+      const credential = Array.isArray(args) ? args[0] : null;
+      if (!resolveClusterBattleRuntimeCredential(credential)) {
+        return fail("cluster_battle_runtime_identity_invalid", "战斗运行态身份校验失败。");
+      }
+    }
     const operationId = String(operation && operation.operationId || "").trim();
     const requestHash = String(operation && operation.requestHash || "").trim().toLowerCase();
     const actionId = String(operation && operation.actionId || methodName).trim().slice(0, 160) || methodName;
@@ -6952,6 +6978,8 @@ function createAuthService(options = {}) {
     battleRoomEntryCheck,
     battleRoomResultForLeave,
     battleStatePayload,
+    battleCommandTimeoutMs: BATTLE_COMMAND_TIMEOUT_MS,
+    battleReconnectCommandGraceMs: BATTLE_RECONNECT_COMMAND_GRACE_MS,
     battleFailureTicketAdmission: (serviceData, accountIds) => battleFailureTicketAdmission(
       serviceData,
       accountIds,
@@ -7192,6 +7220,7 @@ function createAuthService(options = {}) {
       serverStartedAtMs,
     }),
     resolveClusterBattleCredential,
+    resolveClusterBattleRuntimeCredential,
     rotateCharacterSession,
     save,
     sessionHasConnectedEventStream: (sessionId) => runtimeActiveSessionIds.connectedSessionIds.has(String(sessionId || "")),
@@ -7215,6 +7244,7 @@ function createAuthService(options = {}) {
   const hangMatchmaking = createHangMatchmakingDomain(domainContext);
   domainContext.matchmakingContextForParty = hangMatchmaking.matchmakingContextForParty;
   const battleRoom = createBattleRoomDomain(domainContext);
+  const clusterBattleRuntime = createClusterBattleRuntimeDomain(domainContext);
   const economy = createEconomyDomain(domainContext);
   const familyManor = createFamilyManorDomain(domainContext);
   const gmPets = createGmPetsDomain(domainContext);
@@ -7279,9 +7309,12 @@ function createAuthService(options = {}) {
     _httpLoginPasswordDigest: httpLoginPasswordDigest,
     _clusterIngressIdentity: clusterIngressIdentity,
     _issueClusterBattleCredential: issueClusterBattleCredential,
+    _issueClusterBattleRuntimeCredential: issueClusterBattleRuntimeCredential,
     _clusterBattleRoomKnown: battleRoom.clusterBattleRoomKnown,
     _clusterGetBattleState: battleRoom.getBattleStateForCluster,
     _clusterSubmitBattleCommand: battleRoom.submitBattleCommandForCluster,
+    _clusterExportBattleRuntime: clusterBattleRuntime.exportBattleRuntime,
+    _clusterHydrateBattleRuntime: clusterBattleRuntime.hydrateBattleRuntime,
     _adoptClusterPresenceRevisionFloor: adoptClusterPresenceRevisionFloor,
     _adoptClusterAccountOwner: adoptClusterAccountOwner,
     _clusterAccountRecoveryMetrics: () => Object.freeze({
@@ -7437,9 +7470,12 @@ function createAuthService(options = {}) {
       || name === "_httpClusterPasswordVerificationRecord"
       || name === "_clusterIngressIdentity"
       || name === "_issueClusterBattleCredential"
+      || name === "_issueClusterBattleRuntimeCredential"
       || name === "_clusterBattleRoomKnown"
       || name === "_clusterGetBattleState"
       || name === "_clusterSubmitBattleCommand"
+      || name === "_clusterExportBattleRuntime"
+      || name === "_clusterHydrateBattleRuntime"
       || name === "_adoptClusterAccountOwner"
       || typeof method !== "function"
     ) {

@@ -8,6 +8,7 @@ const {battleRoomForMutation} = require("./battle-room-cow");
 
 const BATTLE_INVITE_MAX_PENDING = 1024;
 const BATTLE_INVITE_MAX_PER_ACCOUNT = 16;
+const BATTLE_RUNTIME_COMMAND_RECEIPT_LIMIT = 32;
 
 function createBattleRoomDomain(ctx) {
   const {
@@ -43,6 +44,7 @@ function createBattleRoomDomain(ctx) {
     closeBattleRoomWithResult,
     createBattleRoomBattleState,
     consumePartyEncounterAuthorization,
+    currentDurableOperation,
     emitServiceEvent,
     encounterRecoveryForAuthorization,
     expireBattleInvite,
@@ -793,6 +795,20 @@ function createBattleRoomDomain(ctx) {
     if (!Array.isArray(room.participantAccountIds) || !room.participantAccountIds.includes(resolved.account.accountId)) {
       return fail("battle_room_forbidden", "你不在这个切磋房间中。");
     }
+    const durableOperation = typeof currentDurableOperation === "function"
+      ? currentDurableOperation()
+      : null;
+    const operationReplay = battleRuntimeCommandOperationReplay(
+      room,
+      durableOperation,
+      resolved.account.accountId,
+    );
+    if (operationReplay) {
+      if (operationReplay.conflict) {
+        return fail("idempotency_key_conflict", "这个操作标识已经用于另一项请求，请重新发起操作。");
+      }
+      return ok(clone(operationReplay.receipt.response));
+    }
     const backpackEntry = battleBackpackEntryCheck(data, requiredBattleCommandAccountIds(room));
     if (!backpackEntry.ok) {
       return backpackEntry;
@@ -855,6 +871,17 @@ function createBattleRoomDomain(ctx) {
     if (readyToResolve) {
       turn = resolveBattleRoomTurn(data, room, battle, now);
     }
+    rememberBattleRuntimeCommandOperation(
+      room,
+      durableOperation,
+      resolved.account.accountId,
+      {
+        room: publicBattleRoom(room, resolved.account.accountId),
+        command: publicBattleCommand(commandResult.command),
+        turn,
+        message: turn ? "本回合已结算。" : "回合命令已提交。",
+      },
+    );
     data.battleRooms[room.roomId] = room;
     save(data);
     emitServiceEvent({
@@ -918,6 +945,92 @@ function createBattleRoomDomain(ctx) {
     leaveBattleRoom,
     submitBattleCommand,
     submitBattleCommandForCluster,
+  };
+}
+
+function battleRuntimeCommandOperationReplay(room, operation, accountIdValue) {
+  const normalized = normalizeRuntimeCommandOperation(operation);
+  if (!normalized) {
+    return null;
+  }
+  const receipts = room && room.clusterCommandReceipts
+    && typeof room.clusterCommandReceipts === "object"
+    && !Array.isArray(room.clusterCommandReceipts)
+    ? room.clusterCommandReceipts
+    : {};
+  const receipt = receipts[normalized.operationId] || null;
+  if (!receipt) {
+    return null;
+  }
+  const exact = (
+    String(receipt.accountId || "") === String(accountIdValue || "")
+    && String(receipt.requestHash || "") === normalized.requestHash
+    && String(receipt.actionId || "") === normalized.actionId
+  );
+  const response = receipt.response && typeof receipt.response === "object"
+    && !Array.isArray(receipt.response)
+    ? receipt.response
+    : null;
+  return exact && response
+    ? {conflict: false, receipt}
+    : {conflict: true, receipt: null};
+}
+
+function rememberBattleRuntimeCommandOperation(room, operation, accountIdValue, responseValue) {
+  const normalized = normalizeRuntimeCommandOperation(operation);
+  if (!normalized || !room || typeof room !== "object" || Array.isArray(room)) {
+    return;
+  }
+  const receipts = room.clusterCommandReceipts
+    && typeof room.clusterCommandReceipts === "object"
+    && !Array.isArray(room.clusterCommandReceipts)
+    ? room.clusterCommandReceipts
+    : {};
+  const order = Array.isArray(room.clusterCommandReceiptOrder)
+    ? room.clusterCommandReceiptOrder
+      .map((value) => String(value || ""))
+      .filter(Boolean)
+    : [];
+  receipts[normalized.operationId] = {
+    schemaVersion: 1,
+    operationId: normalized.operationId,
+    requestHash: normalized.requestHash,
+    actionId: normalized.actionId,
+    accountId: String(accountIdValue || ""),
+    response: cloneRuntimeCommandResponse(responseValue),
+  };
+  const nextOrder = order.filter((operationId) => operationId !== normalized.operationId);
+  nextOrder.push(normalized.operationId);
+  while (nextOrder.length > BATTLE_RUNTIME_COMMAND_RECEIPT_LIMIT) {
+    delete receipts[nextOrder.shift()];
+  }
+  room.clusterCommandReceipts = receipts;
+  room.clusterCommandReceiptOrder = nextOrder;
+}
+
+function normalizeRuntimeCommandOperation(value) {
+  const operation = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+  const operationId = String(operation && operation.operationId || "").trim();
+  const requestHash = String(operation && operation.requestHash || "").trim().toLowerCase();
+  const actionId = String(operation && operation.actionId || "").trim();
+  return operationId !== "" && requestHash !== "" && actionId !== ""
+    ? {operationId, requestHash, actionId}
+    : null;
+}
+
+function cloneRuntimeCommandResponse(value) {
+  const response = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return {
+    room: response.room && typeof response.room === "object" && !Array.isArray(response.room)
+      ? JSON.parse(JSON.stringify(response.room))
+      : null,
+    command: response.command && typeof response.command === "object" && !Array.isArray(response.command)
+      ? JSON.parse(JSON.stringify(response.command))
+      : null,
+    turn: response.turn && typeof response.turn === "object" && !Array.isArray(response.turn)
+      ? JSON.parse(JSON.stringify(response.turn))
+      : null,
+    message: String(response.message || ""),
   };
 }
 

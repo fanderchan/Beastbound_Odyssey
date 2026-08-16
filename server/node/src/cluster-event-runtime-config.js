@@ -7,6 +7,9 @@ const {
 const {
   createValkeyAccountOwner,
 } = require("./valkey-account-owner");
+const {
+  createValkeyBattleRuntimeStore,
+} = require("./valkey-battle-runtime-store");
 
 const CLUSTER_MODE_SINGLE = "single";
 const CLUSTER_MODE_VALKEY = "valkey";
@@ -97,6 +100,34 @@ async function createConfiguredClusterEventRuntime(env = process.env, options = 
     10000,
     "cluster_account_admission_max_pending_invalid",
   );
+  const battleRuntimeLeaseMs = strictInteger(
+    source.BEASTBOUND_CLUSTER_BATTLE_RUNTIME_LEASE_MS,
+    accountLeaseMs,
+    3000,
+    120000,
+    "cluster_battle_runtime_lease_ms_invalid",
+  );
+  const battleRuntimeSnapshotTtlMs = strictInteger(
+    source.BEASTBOUND_CLUSTER_BATTLE_RUNTIME_SNAPSHOT_TTL_MS,
+    6 * 60 * 60 * 1000,
+    battleRuntimeLeaseMs * 2,
+    24 * 60 * 60 * 1000,
+    "cluster_battle_runtime_snapshot_ttl_invalid",
+  );
+  const battleRuntimeMaxOwnedRooms = strictInteger(
+    source.BEASTBOUND_CLUSTER_BATTLE_RUNTIME_MAX_OWNED,
+    2048,
+    1,
+    100000,
+    "cluster_battle_runtime_max_owned_invalid",
+  );
+  const battleRuntimeMaxSnapshotBytes = strictInteger(
+    source.BEASTBOUND_CLUSTER_BATTLE_RUNTIME_MAX_SNAPSHOT_BYTES,
+    8 * 1024 * 1024,
+    64 * 1024,
+    16 * 1024 * 1024,
+    "cluster_battle_runtime_max_snapshot_bytes_invalid",
+  );
   const readBlockMs = strictInteger(
     source.BEASTBOUND_CLUSTER_VALKEY_READ_BLOCK_MS,
     250,
@@ -117,6 +148,9 @@ async function createConfiguredClusterEventRuntime(env = process.env, options = 
   const accountOwnerFactory = typeof options.accountOwnerFactory === "function"
     ? options.accountOwnerFactory
     : createValkeyAccountOwner;
+  const battleRuntimeFactory = typeof options.battleRuntimeFactory === "function"
+    ? options.battleRuntimeFactory
+    : createValkeyBattleRuntimeStore;
   const onError = typeof options.onError === "function" ? options.onError : () => {};
   const onFatal = typeof options.onFatal === "function" ? options.onFatal : () => {};
   const connection = {
@@ -136,6 +170,7 @@ async function createConfiguredClusterEventRuntime(env = process.env, options = 
   };
   let bridge = null;
   let accountAdmission = null;
+  let battleRuntime = null;
   try {
     bridge = await bridgeFactory({
       nodeId,
@@ -157,9 +192,20 @@ async function createConfiguredClusterEventRuntime(env = process.env, options = 
       onFatal,
       connection,
     });
+    battleRuntime = await battleRuntimeFactory({
+      nodeId,
+      keyPrefix: optionalText(source.BEASTBOUND_CLUSTER_BATTLE_RUNTIME_KEY_PREFIX),
+      leaseMs: battleRuntimeLeaseMs,
+      snapshotTtlMs: battleRuntimeSnapshotTtlMs,
+      maxOwnedRooms: battleRuntimeMaxOwnedRooms,
+      maxSnapshotBytes: battleRuntimeMaxSnapshotBytes,
+      onError,
+      onFatal,
+      connection,
+    });
   } catch (error) {
     try {
-      await closeRuntimeParts(accountAdmission, bridge);
+      await closeRuntimeParts(battleRuntime, accountAdmission, bridge);
     } catch (cleanupError) {
       try {
         onError(cleanupError);
@@ -175,6 +221,7 @@ async function createConfiguredClusterEventRuntime(env = process.env, options = 
     enabled: true,
     bridge,
     accountAdmission,
+    battleRuntime,
     eventHubOptions: Object.freeze({
       clusterEventBridge: bridge,
       clusterRequired: true,
@@ -186,7 +233,7 @@ async function createConfiguredClusterEventRuntime(env = process.env, options = 
         return;
       }
       closed = true;
-      await closeRuntimeParts(accountAdmission, bridge);
+      await closeRuntimeParts(battleRuntime, accountAdmission, bridge);
     },
   });
 }
@@ -197,13 +244,15 @@ function disabledRuntime() {
     enabled: false,
     bridge: null,
     accountAdmission: null,
+    battleRuntime: null,
     eventHubOptions: Object.freeze({}),
     close() { return Promise.resolve(); },
   });
 }
 
-async function closeRuntimeParts(accountAdmission, bridge) {
+async function closeRuntimeParts(battleRuntime, accountAdmission, bridge) {
   const results = await Promise.allSettled([
+    closeRuntimePart(battleRuntime),
     closeRuntimePart(accountAdmission),
     closeRuntimePart(bridge),
   ]);

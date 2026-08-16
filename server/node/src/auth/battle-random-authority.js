@@ -69,6 +69,27 @@ function createBattleRandomAuthority({randomBytes = crypto.randomBytes} = {}) {
     return secrets.has(String(value || "").trim());
   }
 
+  function exportRoomSecret(value) {
+    const secret = secrets.get(roomId(value));
+    return secret ? Buffer.from(secret).toString("base64url") : "";
+  }
+
+  function canRestoreRoomSecret(value, encodedValue) {
+    const id = roomId(value);
+    const secret = decodedRoomSecret(encodedValue);
+    const current = secrets.get(id);
+    return !current || (current.length === secret.length && crypto.timingSafeEqual(current, secret));
+  }
+
+  function restoreRoomSecret(value, encodedValue) {
+    const id = roomId(value);
+    const secret = decodedRoomSecret(encodedValue);
+    const current = secrets.get(id);
+    if (current) return current.length === secret.length && crypto.timingSafeEqual(current, secret);
+    secrets.set(id, Buffer.from(secret));
+    return true;
+  }
+
   function roll(value, context) {
     const id = roomId(value);
     const secret = secrets.get(id);
@@ -89,7 +110,32 @@ function createBattleRandomAuthority({randomBytes = crypto.randomBytes} = {}) {
     return Math.min(count - 1, Math.floor(roll(value, context) * count));
   }
 
-  return Object.freeze({openRoom, closeRoom, hasRoom, roll, index});
+  return Object.freeze({
+    openRoom,
+    closeRoom,
+    hasRoom,
+    exportRoomSecret,
+    canRestoreRoomSecret,
+    restoreRoomSecret,
+    roll,
+    index,
+  });
+}
+
+function decodedRoomSecret(encodedValue) {
+  const encoded = String(encodedValue || "").trim();
+  let secret;
+  try {
+    secret = Buffer.from(encoded, "base64url");
+  } catch {
+    secret = Buffer.alloc(0);
+  }
+  if (secret.length !== SECRET_BYTES || secret.toString("base64url") !== encoded) {
+    const error = new TypeError("battle random secret is invalid");
+    error.code = "battle_random_secret_invalid";
+    throw error;
+  }
+  return secret;
 }
 
 module.exports = {createBattleRandomAuthority};

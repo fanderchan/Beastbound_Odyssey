@@ -236,6 +236,7 @@ function createHttpServer(options = {}) {
     eventHub,
     nodeId: eventHubOptions.clusterNodeId,
     required: eventHubOptions.clusterRequired === true,
+    runtimeStore: options.clusterBattleRuntime || null,
     service: baseService,
   });
   const httpAuthOptions = {...(options.httpAuthOptions || {})};
@@ -404,6 +405,7 @@ function createHttpServer(options = {}) {
           networkAdmission,
           httpAuth,
           clusterAccountAdmission,
+          options.clusterBattleRuntime || null,
         );
         return sendJson(res, health.ok ? 200 : 503, health);
       }
@@ -792,7 +794,10 @@ function createHttpServer(options = {}) {
         return sendResult(res, service.challengeManor(bearerToken(req), await readJson(req)));
       }
       if (req.method === "POST" && url.pathname === "/manors/battle-room") {
-        return sendResult(res, service.startManorWarBattleRoom(bearerToken(req), await readJson(req)));
+        return sendResult(res, clusterCheckpointedBattleResult(
+          clusterBattleRouter,
+          service.startManorWarBattleRoom(bearerToken(req), await readJson(req)),
+        ));
       }
       if (req.method === "POST" && url.pathname === "/manors/enter") {
         return sendResult(res, service.enterManorWar(bearerToken(req), await readJson(req)));
@@ -829,11 +834,17 @@ function createHttpServer(options = {}) {
         return sendResult(res, service.inviteToBattle(bearerToken(req), await readJson(req)));
       }
       if (req.method === "POST" && url.pathname === "/battle/party-encounter") {
-        return sendResult(res, service.startPartyEncounter(bearerToken(req), await readJson(req)));
+        return sendResult(res, clusterCheckpointedBattleResult(
+          clusterBattleRouter,
+          service.startPartyEncounter(bearerToken(req), await readJson(req)),
+        ));
       }
       if (req.method === "POST" && url.pathname.startsWith("/battle/invites/") && url.pathname.endsWith("/accept")) {
         const inviteId = decodeURIComponent(url.pathname.slice("/battle/invites/".length, -"/accept".length));
-        return sendResult(res, service.acceptBattleInvite(bearerToken(req), inviteId));
+        return sendResult(res, clusterCheckpointedBattleResult(
+          clusterBattleRouter,
+          service.acceptBattleInvite(bearerToken(req), inviteId),
+        ));
       }
       if (req.method === "POST" && url.pathname.startsWith("/battle/invites/") && url.pathname.endsWith("/decline")) {
         const inviteId = decodeURIComponent(url.pathname.slice("/battle/invites/".length, -"/decline".length));
@@ -850,7 +861,11 @@ function createHttpServer(options = {}) {
         const args = [token, roomId, payload];
         const localResult = await Promise.resolve(service.submitBattleCommand(...args));
         if (!clusterBattleRouter || String(localResult && localResult.code || "") !== "battle_room_missing") {
-          return sendResult(res, localResult);
+          return sendResult(res, clusterCheckpointedBattleResult(
+            clusterBattleRouter,
+            localResult,
+            roomId,
+          ));
         }
         const localState = await Promise.resolve(baseService.invokeDurable(
           "getBattleState",
@@ -868,7 +883,11 @@ function createHttpServer(options = {}) {
       }
       if (req.method === "POST" && url.pathname.startsWith("/battle/rooms/") && url.pathname.endsWith("/leave")) {
         const roomId = decodeURIComponent(url.pathname.slice("/battle/rooms/".length, -"/leave".length));
-        return sendResult(res, service.leaveBattleRoom(bearerToken(req), roomId));
+        return sendResult(res, clusterCheckpointedBattleResult(
+          clusterBattleRouter,
+          service.leaveBattleRoom(bearerToken(req), roomId),
+          roomId,
+        ));
       }
       if (req.method === "GET" && url.pathname === "/party/state") {
         return sendResult(res, service.getPartyState(bearerToken(req)));
@@ -897,7 +916,7 @@ function createHttpServer(options = {}) {
   }
   server.on("close", () => {
     unsubscribeServiceLogger();
-    clusterBattleRouter?.close();
+    void clusterBattleRouter?.close();
     healthMonitor.close();
     void mailArchiveMaintenance.close();
   });
@@ -919,6 +938,7 @@ function createHttpServer(options = {}) {
   server.authService = baseService;
   server.networkAdmission = networkAdmission;
   server.clusterAccountAdmission = clusterAccountAdmission;
+  server.clusterBattleRuntime = options.clusterBattleRuntime || null;
   server.clusterBattleRouter = clusterBattleRouter;
   server.healthMonitor = healthMonitor;
   server.mailArchiveMaintenance = mailArchiveMaintenance;
@@ -1117,6 +1137,14 @@ async function sendResult(res, resultValue) {
   return sendJson(res, status, result, {
     retryAfterSeconds: status === 429 ? Math.max(0, Number(result.retryAfterMs || 0)) / 1000 : 0,
   });
+}
+
+async function clusterCheckpointedBattleResult(router, resultValue, roomIdValue = "") {
+  const result = await Promise.resolve(resultValue);
+  if (router && result && result.ok === true) {
+    await router.checkpointResult(result, roomIdValue);
+  }
+  return result;
 }
 
 function sendServiceError(res, error) {
@@ -1390,6 +1418,7 @@ function healthPayload(
   networkAdmission = null,
   httpAuth = null,
   clusterAccountAdmission = null,
+  clusterBattleRuntime = null,
 ) {
   const storage = healthMonitor.snapshot();
   const eventStreamMetrics = eventHub && typeof eventHub.metrics === "function"
@@ -1400,11 +1429,12 @@ function healthPayload(
     : null;
   const clusterReady = clusterRelay === null || clusterRelay.runtimeHealthy === true;
   const accountOwnership = clusterAccountHealth(clusterAccountAdmission);
+  const battleRuntime = clusterBattleRuntimeHealth(clusterBattleRuntime);
   return {
     // A configured store is not ready until its first background probe has
     // positively completed. Store-less isolated servers report ok=true from
     // the monitor even though no probe is required.
-    ok: storage.ok === true && clusterReady && accountOwnership.ok,
+    ok: storage.ok === true && clusterReady && accountOwnership.ok && battleRuntime.ok,
     service: "beastbound-auth",
     storage,
     eventStream: {
@@ -1424,6 +1454,7 @@ function healthPayload(
       ? service.authSecurityMetrics()
       : {checked: false},
     accountOwnership,
+    battleRuntime,
     healthProbe: healthMonitor.metrics(),
   };
 }
@@ -1435,6 +1466,7 @@ function createHttpClusterBattleRouter(options = {}) {
   }
   const eventHub = options.eventHub || null;
   const service = options.service || null;
+  const runtimeStore = options.runtimeStore || null;
   const nodeId = String(options.nodeId || "").trim();
   const complete = Boolean(
     nodeId
@@ -1461,6 +1493,7 @@ function createHttpClusterBattleRouter(options = {}) {
     nodeId,
     eventHub,
     accountOwner,
+    runtimeStore,
     service,
   });
 }
@@ -1560,6 +1593,34 @@ function clusterAccountHealth(admission) {
       fatal: true,
       ownedAccounts: 0,
       pendingAdmissions: 0,
+    });
+  }
+}
+
+function clusterBattleRuntimeHealth(runtime) {
+  if (!runtime) {
+    return Object.freeze({enabled: false, checked: false, ok: true});
+  }
+  try {
+    const source = runtime.health();
+    return Object.freeze({
+      enabled: true,
+      checked: true,
+      ok: source && source.ok === true,
+      runtimeHealthy: source && source.runtimeHealthy === true,
+      closed: Boolean(source && source.closed),
+      fatal: Boolean(source && source.fatal),
+      ownedRooms: boundedClusterHealthCount(source && source.ownedRooms),
+    });
+  } catch {
+    return Object.freeze({
+      enabled: true,
+      checked: true,
+      ok: false,
+      runtimeHealthy: false,
+      closed: false,
+      fatal: true,
+      ownedRooms: 0,
     });
   }
 }
@@ -1763,6 +1824,7 @@ async function startDefaultHttpServer(options = {}) {
       store,
       eventHubOptions: clusterRuntime.eventHubOptions,
       clusterAccountAdmission: clusterRuntime.accountAdmission,
+      clusterBattleRuntime: clusterRuntime.battleRuntime,
       onStorageFatal: onClusterFatal,
     });
     server.clusterEventRuntime = clusterRuntime;
@@ -1903,6 +1965,17 @@ async function drainServerForShutdown(server, store) {
     eventHubDrained,
     durableDrained,
   ]);
+  let battleRouterDrainError = null;
+  try {
+    if (
+      server.clusterBattleRouter
+      && typeof server.clusterBattleRouter.close === "function"
+    ) {
+      await server.clusterBattleRouter.close();
+    }
+  } catch (error) {
+    battleRouterDrainError = error;
+  }
   let flushError = null;
   try {
     if (store && typeof store.flush === "function") {
@@ -1911,20 +1984,28 @@ async function drainServerForShutdown(server, store) {
   } catch (error) {
     flushError = error;
   }
-  let accountAdmissionError = null;
-  try {
-    if (
+  const clusterOwnershipResults = await Promise.allSettled([
+    shutdownStep(() => (
+      server.clusterBattleRuntime
+      && typeof server.clusterBattleRuntime.close === "function"
+        ? server.clusterBattleRuntime.close()
+        : undefined
+    )),
+    shutdownStep(() => (
       server.clusterAccountAdmission
       && typeof server.clusterAccountAdmission.close === "function"
-    ) {
-      await server.clusterAccountAdmission.close();
-    }
-  } catch (error) {
-    accountAdmissionError = error;
-  }
+        ? server.clusterAccountAdmission.close()
+        : undefined
+    )),
+  ]);
+  const clusterOwnershipFailure = clusterOwnershipResults.find((result) => result.status === "rejected");
   const drainFailure = drainResults.find((result) => result.status === "rejected");
-  if (drainFailure || flushError || accountAdmissionError) {
-    throw (drainFailure ? drainFailure.reason : flushError || accountAdmissionError);
+  if (drainFailure || battleRouterDrainError || flushError || clusterOwnershipFailure) {
+    throw (
+      drainFailure
+        ? drainFailure.reason
+        : battleRouterDrainError || flushError || clusterOwnershipFailure.reason
+    );
   }
 }
 

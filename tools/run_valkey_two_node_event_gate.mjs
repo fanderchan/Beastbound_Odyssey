@@ -900,6 +900,188 @@ async function runMysqlBattleCommandRoutingGate() {
   }, null, 2)}\n`);
 }
 
+async function runMysqlBattleRuntimeHydrationGate() {
+  // This lane owns disposable initialize-insecure infrastructure and never
+  // reads credentials for the normal player database.
+  process.env.BEASTBOUND_MYSQL_PASSWORD = "";
+  process.env.MYSQL_PWD = "";
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-battle-hydration-gate-"));
+  const database = `beastbound_battle_hydrate_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  let mysqlRuntime = null;
+  let admin = null;
+  let bootstrap = null;
+  let valkey = null;
+  let report = null;
+  let failure = null;
+  let databaseDropped = false;
+  const cleanupErrors = [];
+  try {
+    mysqlRuntime = await startIsolatedMysql({
+      runtimePrefix: "beastbound-battle-hydration-mysql",
+      maxConnections: 50,
+    });
+    assert.notEqual(mysqlRuntime.port, 3306);
+    const mysql = require("../server/node/node_modules/mysql2/promise");
+    const {createMysqlAuthStore} = require("../server/node/src/mysql-store");
+    admin = await mysql.createConnection(mysqlRuntime.connectionOptions);
+    const mysqlVersion = await isolatedMysqlVersion(admin);
+    assert.match(mysqlVersion, /^9\.7\./);
+    const globalsBefore = await isolatedMysqlGlobalValues(admin);
+    const deadlocksBefore = await isolatedMysqlDeadlockCount(admin);
+
+    bootstrap = createMysqlAuthStore(mysqlBattleStoreOptions(mysqlRuntime, database, true));
+    const empty = bootstrap.load();
+    const fixture = clusterFixture(Date.now(), 0);
+    await withTimeout(
+      bootstrap.saveAsync(mysqlBattleAuthorityFixture(empty, fixture.data)),
+      15000,
+      "isolated MySQL battle hydration fixture bootstrap timeout",
+    );
+    await withTimeout(bootstrap.close(), 10000, "isolated MySQL battle hydration bootstrap close timeout");
+    bootstrap = null;
+
+    const valkeyPort = await reserveLoopbackPort();
+    const streamKey = `beastbound:test:two-node:battle-hydration:${process.pid}`;
+    valkey = startValkey(valkeyPort, temporaryRoot);
+    await waitForLoopback(valkeyPort, valkey);
+    const hydration = await runBattleRuntimeHydrationSubgate({
+      valkeyPort,
+      streamKey,
+      mysqlConfiguration: {
+        port: mysqlRuntime.port,
+        database,
+        mysqlPath: mysqlRuntime.mysqlPath,
+      },
+      loadPersistedAuthority: () => loadMysqlBattleAuthority(mysqlRuntime, database),
+    });
+
+    const streamText = await readValkeyStreamText(valkeyPort, streamKey);
+    const lowerStreamText = streamText.toLowerCase();
+    assert.equal(streamText.includes(hydration.challengerToken), false);
+    assert.equal(streamText.includes(hydration.opponentToken), false);
+    assert.equal(streamText.includes(FIXTURE_PASSWORD), false);
+    assert.equal(lowerStreamText.includes("authorization"), false);
+    assert.equal(lowerStreamText.includes("bearer "), false);
+    assert.equal(streamText.includes("cluster.control.battle.state.request"), true);
+
+    let activity = null;
+    await waitFor(async () => {
+      activity = await isolatedMysqlActivity(admin);
+      return activity.activeTransactions === 0 && activity.activeLockWaits === 0;
+    }, 5000, "isolated MySQL battle hydration gate left active transactions or lock waits");
+    const deadlocksAfter = await isolatedMysqlDeadlockCount(admin);
+    assert.equal(deadlocksAfter - deadlocksBefore, 0);
+    const globalsAfter = await isolatedMysqlGlobalValues(admin);
+    assert.deepEqual(globalsAfter, globalsBefore);
+    report = {
+      status: "PASS",
+      gate: "valkey_two_node_isolated_mysql_battle_runtime_hydration",
+      engine: "two_independent_node_processes_real_loopback_valkey_and_isolated_mysql",
+      mysqlVersion,
+      isolatedMysql: true,
+      sharedPlayerDatabaseTouched: false,
+      mysqlPortIsNot3306: mysqlRuntime.port !== 3306,
+      independentGameNodeProcesses: hydration.independentGameNodeProcesses,
+      independentHttpAndWebSocketPorts: true,
+      roomOwnerCrashedWithSigkill: hydration.roomOwnerCrashedWithSigkill,
+      halfFinishedRoundHydrated: hydration.halfFinishedRoundHydrated,
+      submittedCommandPreserved: hydration.submittedCommandPreserved,
+      randomAuthorityContinuationHydrated: hydration.randomAuthorityContinuationHydrated,
+      exactNonterminalReplayStable: hydration.exactNonterminalReplayStable,
+      alteredReplayRejected: hydration.alteredReplayRejected,
+      roundResolvedExactlyOnceAfterTakeover: hydration.roundResolvedExactlyOnceAfterTakeover,
+      runtimeOnlyBattleRoomStayedOutOfMysql: hydration.runtimeOnlyBattleRoomStayedOutOfMysql,
+      persistentFailureTicketsPreserved: hydration.persistentFailureTicketsPreserved,
+      runtimeTakeovers: hydration.runtimeTakeovers,
+      runtimeCheckpoints: hydration.runtimeCheckpoints,
+      rawBearerAndPasswordAbsentFromValkeyStream: true,
+      mysqlGlobalValuesUnchanged: true,
+      mysqlDeadlockDelta: deadlocksAfter - deadlocksBefore,
+      mysqlResidualTransactions: activity.activeTransactions,
+      mysqlResidualLockWaits: activity.activeLockWaits,
+      battleRuntimeReconnectHydrationProven: true,
+      networkPartitionRecoveryProven: false,
+      twoHundredConnectionSoakProven: false,
+      persistentServiceStarted: false,
+    };
+  } catch (error) {
+    failure = error;
+  } finally {
+    if (bootstrap) {
+      try {
+        await withTimeout(bootstrap.close(), 10000, "isolated MySQL battle hydration bootstrap cleanup timeout");
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (admin) {
+      try {
+        await admin.query(`DROP DATABASE IF EXISTS \`${mysqlDatabaseIdentifier(database)}\``);
+        const [rows] = await admin.query(
+          "SELECT COUNT(*) AS rowCount FROM information_schema.schemata WHERE schema_name = ?",
+          [database],
+        );
+        databaseDropped = Number(rows[0] && rows[0].rowCount || 0) === 0;
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+      try {
+        await admin.end();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (valkey) {
+      try {
+        await stopExactChild(valkey.process);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (mysqlRuntime) {
+      try {
+        await stopIsolatedMysql(mysqlRuntime);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    fs.rmSync(temporaryRoot, {recursive: true, force: true});
+  }
+
+  if (!failure && cleanupErrors.length > 0) {
+    failure = cleanupErrors[0];
+  }
+  const mysqlCleanupVerified = Boolean(
+    mysqlRuntime
+    && isolatedMysqlRuntimeStopped(mysqlRuntime)
+    && !fs.existsSync(mysqlRuntime.runtimeDir),
+  );
+  const temporaryStateRemoved = !fs.existsSync(temporaryRoot) && mysqlCleanupVerified;
+  if (failure) {
+    process.stderr.write(`${JSON.stringify({
+      status: "FAIL",
+      gate: "valkey_two_node_isolated_mysql_battle_runtime_hydration",
+      code: String(failure && failure.code || "isolated_mysql_battle_hydration_gate_failed"),
+      message: String(failure && failure.message || "isolated MySQL battle hydration gate failed"),
+      databaseDropped,
+      mysqlCleanupVerified,
+      temporaryStateRemoved,
+    }, null, 2)}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  assert.ok(report);
+  assert.equal(databaseDropped, true);
+  assert.equal(mysqlCleanupVerified, true);
+  assert.equal(temporaryStateRemoved, true);
+  process.stdout.write(`${JSON.stringify({
+    ...report,
+    temporaryDatabaseDropped: databaseDropped,
+    mysqlCleanupVerified,
+    temporaryStateRemoved,
+  }, null, 2)}\n`);
+}
+
 async function runValkeyPartitionOldOwnerFenceGate() {
   // The gate owns a disposable initialize-insecure MySQL. Never inherit or
   // inspect player-server credentials while constructing this fault lane.
@@ -2009,6 +2191,8 @@ async function runBattleOwnerFailureSubgate(options) {
       serviceEventSeq: 0,
       sharedStorePath,
       mysqlConfiguration,
+      battleRuntimeEnabled: false,
+      readyTimeoutMs: 30000,
     });
     takeoverNode = await NodeWorker.start({
       nodeId: "two-node-battle-owner-b",
@@ -2017,6 +2201,8 @@ async function runBattleOwnerFailureSubgate(options) {
       serviceEventSeq: 0,
       sharedStorePath,
       mysqlConfiguration,
+      battleRuntimeEnabled: false,
+      readyTimeoutMs: 30000,
     });
     assert.deepEqual(ownerNode.fixtureDigest, takeoverNode.fixtureDigest);
     await Promise.all([
@@ -2209,6 +2395,7 @@ async function runBattleCommandRoutingSubgate(options) {
       streamKey: options.streamKey,
       serviceEventSeq: 0,
       mysqlConfiguration: options.mysqlConfiguration,
+      readyTimeoutMs: 30000,
     });
     remoteCommandNode = await NodeWorker.start({
       nodeId: "two-node-battle-route-b",
@@ -2216,6 +2403,7 @@ async function runBattleCommandRoutingSubgate(options) {
       streamKey: options.streamKey,
       serviceEventSeq: 0,
       mysqlConfiguration: options.mysqlConfiguration,
+      readyTimeoutMs: 30000,
     });
     assert.deepEqual(roomOwnerNode.fixtureDigest, remoteCommandNode.fixtureDigest);
     await Promise.all([
@@ -2537,6 +2725,207 @@ async function runBattleCommandRoutingSubgate(options) {
   }
 }
 
+async function runBattleRuntimeHydrationSubgate(options) {
+  let roomOwnerNode = null;
+  let takeoverNode = null;
+  try {
+    roomOwnerNode = await NodeWorker.start({
+      nodeId: "two-node-battle-hydrate-a",
+      valkeyPort: options.valkeyPort,
+      streamKey: options.streamKey,
+      serviceEventSeq: 0,
+      mysqlConfiguration: options.mysqlConfiguration,
+      readyTimeoutMs: 30000,
+    });
+    takeoverNode = await NodeWorker.start({
+      nodeId: "two-node-battle-hydrate-b",
+      valkeyPort: options.valkeyPort,
+      streamKey: options.streamKey,
+      serviceEventSeq: 0,
+      mysqlConfiguration: options.mysqlConfiguration,
+      readyTimeoutMs: 30000,
+    });
+    assert.deepEqual(roomOwnerNode.fixtureDigest, takeoverNode.fixtureDigest);
+    await Promise.all([
+      waitForClusterReady(roomOwnerNode),
+      waitForClusterReady(takeoverNode),
+    ]);
+
+    const challenger = fixtureAccount(roomOwnerNode.accounts, "battle_challenger");
+    const opponent = fixtureAccount(roomOwnerNode.accounts, "battle_opponent");
+    await expectOk(roomOwnerNode, "/players/position", {
+      method: "POST",
+      token: challenger.token,
+      body: positionPayload(20, 20, "east", false),
+    });
+    await expectOk(roomOwnerNode, "/players/position", {
+      method: "POST",
+      token: opponent.token,
+      body: positionPayload(21, 20, "west", false),
+    });
+    const invite = await expectOk(roomOwnerNode, "/battle/invite", {
+      method: "POST",
+      token: challenger.token,
+      body: {username: opponent.username},
+    });
+    const accepted = await expectOk(
+      roomOwnerNode,
+      `/battle/invites/${encodeURIComponent(invite.json.invite.inviteId)}/accept`,
+      {method: "POST", token: opponent.token},
+    );
+    const roomId = String(accepted.json.room && accepted.json.room.roomId || "");
+    assert.notEqual(roomId, "");
+    const challengerActor = accepted.json.room.battle.actors.find((actor) => (
+      actor && actor.kind === "player" && actor.accountId === challenger.accountId
+    ));
+    const opponentActor = accepted.json.room.battle.actors.find((actor) => (
+      actor && actor.kind === "player" && actor.accountId === opponent.accountId
+    ));
+    assert.ok(challengerActor);
+    assert.ok(opponentActor);
+
+    const challengerOperationId = "bbo_cluster_battle_hydrate_challenger_0001";
+    const challengerPayload = {
+      round: 1,
+      actorId: challengerActor.actorId,
+      actionId: "attack",
+      targetActorId: opponentActor.actorId,
+    };
+    const firstCommand = await expectOk(
+      roomOwnerNode,
+      `/battle/rooms/${encodeURIComponent(roomId)}/commands`,
+      {
+        method: "POST",
+        token: challenger.token,
+        headers: {"Idempotency-Key": challengerOperationId},
+        body: challengerPayload,
+      },
+    );
+    assert.equal(firstCommand.json.turn, null);
+    assert.equal(
+      firstCommand.json.room.battle.submittedAccountIds.includes(challenger.accountId),
+      true,
+    );
+    const ownerRuntimeProbe = await roomOwnerNode.rpc("probe-battle-routing", {roomId});
+    assert.match(ownerRuntimeProbe.runtimeSecretDigest, /^[a-f0-9]{64}$/);
+
+    const persistedBeforeCrash = await options.loadPersistedAuthority();
+    assert.equal(Object.keys(persistedBeforeCrash.battleRooms || {}).length, 0);
+    assert.equal((persistedBeforeCrash.battleRecords || []).length, 0);
+    assert.equal(battleFailureTicketCount(persistedBeforeCrash, [challenger, opponent]), 2);
+
+    await delay(200);
+    await roomOwnerNode.crash();
+    roomOwnerNode = null;
+    await delay(Math.max(NODE_LEASE_MS, ACCOUNT_LEASE_MS) + 400);
+
+    const hydratedState = await expectOk(takeoverNode, "/battle/state", {
+      token: opponent.token,
+      timeoutMs: 10000,
+    });
+    assert.equal(hydratedState.json.room.roomId, roomId);
+    assert.equal(hydratedState.json.room.battle.round, 1);
+    assert.equal(hydratedState.json.interruption, null);
+    assert.equal(
+      hydratedState.json.room.battle.submittedAccountIds.includes(challenger.accountId),
+      true,
+    );
+
+    const exactReplay = await expectOk(
+      takeoverNode,
+      `/battle/rooms/${encodeURIComponent(roomId)}/commands`,
+      {
+        method: "POST",
+        token: challenger.token,
+        headers: {"Idempotency-Key": challengerOperationId},
+        body: challengerPayload,
+        timeoutMs: 10000,
+      },
+    );
+    assert.deepEqual(exactReplay.json, firstCommand.json);
+    const alteredReplay = await request(
+      takeoverNode,
+      `/battle/rooms/${encodeURIComponent(roomId)}/commands`,
+      {
+        method: "POST",
+        token: challenger.token,
+        headers: {"Idempotency-Key": challengerOperationId},
+        body: {
+          round: 1,
+          actorId: challengerActor.actorId,
+          actionId: "defend",
+        },
+        timeoutMs: 10000,
+      },
+    );
+    assert.equal(alteredReplay.status, 409, JSON.stringify(alteredReplay.json));
+    assert.equal(alteredReplay.json.code, "idempotency_key_conflict");
+
+    const resolved = await expectOk(
+      takeoverNode,
+      `/battle/rooms/${encodeURIComponent(roomId)}/commands`,
+      {
+        method: "POST",
+        token: opponent.token,
+        headers: {"Idempotency-Key": "bbo_cluster_battle_hydrate_opponent_0001"},
+        body: {
+          round: 1,
+          actorId: opponentActor.actorId,
+          actionId: "defend",
+        },
+        timeoutMs: 10000,
+      },
+    );
+    assert.equal(resolved.json.turn.round, 1);
+    assert.equal(resolved.json.room.battle.round, 2);
+
+    const probe = await takeoverNode.rpc("probe-battle-routing", {
+      roomId,
+      accountId: challenger.accountId,
+      round: 1,
+    });
+    assert.equal(probe.roomKnown, true);
+    assert.equal(probe.battleRound, 2);
+    assert.equal(probe.turnTraceCount, 1);
+    assert.ok(probe.routerMetrics.runtimeTakeovers >= 1);
+    assert.ok(probe.routerMetrics.runtimeCheckpoints >= 2);
+    assert.ok(probe.battleRuntimeMetrics.takeovers >= 1);
+    assert.equal(probe.battleRuntimeMetrics.fatal, false);
+    assert.equal(probe.runtimeSecretDigest, ownerRuntimeProbe.runtimeSecretDigest);
+
+    const persistedAfterRound = await options.loadPersistedAuthority();
+    assert.equal(Object.keys(persistedAfterRound.battleRooms || {}).length, 0);
+    assert.equal((persistedAfterRound.battleRecords || []).length, 0);
+    assert.equal(battleFailureTicketCount(persistedAfterRound, [challenger, opponent]), 2);
+
+    await takeoverNode.stop();
+    takeoverNode = null;
+    return {
+      independentGameNodeProcesses: 2,
+      roomOwnerCrashedWithSigkill: true,
+      halfFinishedRoundHydrated: true,
+      submittedCommandPreserved: true,
+      randomAuthorityContinuationHydrated: (
+        probe.runtimeSecretDigest === ownerRuntimeProbe.runtimeSecretDigest
+      ),
+      exactNonterminalReplayStable: true,
+      alteredReplayRejected: true,
+      roundResolvedExactlyOnceAfterTakeover: true,
+      runtimeOnlyBattleRoomStayedOutOfMysql: true,
+      persistentFailureTicketsPreserved: true,
+      runtimeTakeovers: probe.routerMetrics.runtimeTakeovers,
+      runtimeCheckpoints: probe.routerMetrics.runtimeCheckpoints,
+      challengerToken: challenger.token,
+      opponentToken: opponent.token,
+    };
+  } finally {
+    await Promise.allSettled([
+      roomOwnerNode && roomOwnerNode.stop(false),
+      takeoverNode && takeoverNode.stop(false),
+    ]);
+  }
+}
+
 function battleInterruptionOperationId(ticketIdValue) {
   const ticketId = String(ticketIdValue || "");
   assert.match(ticketId, BATTLE_FAILURE_TICKET_PATTERN);
@@ -2560,6 +2949,7 @@ class NodeWorker {
         BEASTBOUND_GATE_MYSQL_BIN: String(mysqlConfiguration.mysqlPath || ""),
         BEASTBOUND_GATE_MYSQL_USER: String(mysqlConfiguration.user || "root"),
         BEASTBOUND_GATE_CAPACITY_MODE: configuration.capacityMode === true ? "1" : "0",
+        BEASTBOUND_GATE_BATTLE_RUNTIME_ENABLED: configuration.battleRuntimeEnabled === false ? "0" : "1",
         BEASTBOUND_GATE_FIXTURE_ACCOUNT_COUNT: String(
           configuration.fixtureAccountCount || 5,
         ),
@@ -2575,14 +2965,15 @@ class NodeWorker {
     const worker = new NodeWorker(
       child,
       configuration.nodeId,
-      configuration.capacityMode === true ? 60000 : 10000,
+      Number(configuration.readyTimeoutMs || (configuration.capacityMode === true ? 60000 : 10000)),
     );
     try {
       await worker.ready();
       return worker;
     } catch (error) {
+      const diagnostic = worker.diagnostic();
       await worker.stop(false);
-      throw error;
+      throw new Error(`${error.message}: ${JSON.stringify(diagnostic)}`);
     }
   }
 
@@ -2734,6 +3125,7 @@ class NodeWorker {
       exitCode: this.child.exitCode,
       signalCode: this.child.signalCode,
       fatalCodes: this.fatalCodes.slice(),
+      fatalErrors: this.fatalErrors.slice(),
       schedulingPolicy: this.schedulingPolicy,
       stdout: this.stdout,
       stderr: this.stderr,
@@ -2855,6 +3247,20 @@ async function runNodeWorker() {
   process.on("SIGTERM", () => void shutdown(0));
 
   try {
+    service = createAuthService({
+      store,
+      now: capacityMode ? () => Date.now() : () => nowMs,
+      allowPositionTeleport: false,
+      allowInitialPositionSeedForTests: true,
+    });
+    const fixtureSessionProbe = service.getSession(fixture.accounts[0].token);
+    if (!fixtureSessionProbe || fixtureSessionProbe.ok !== true) {
+      const error = new Error(
+        `cluster fixture session is invalid: ${JSON.stringify(fixtureSessionProbe)}`,
+      );
+      error.code = "cluster_gate_fixture_session_invalid";
+      throw error;
+    }
     clusterRuntime = await createConfiguredClusterEventRuntime({
       BEASTBOUND_CLUSTER_MODE: "valkey",
       BEASTBOUND_CLUSTER_NODE_ID: process.env.BEASTBOUND_GATE_NODE_ID,
@@ -2871,20 +3277,6 @@ async function runNodeWorker() {
       onError() {},
       onFatal: fatal,
     });
-    service = createAuthService({
-      store,
-      now: capacityMode ? () => Date.now() : () => nowMs,
-      allowPositionTeleport: false,
-      allowInitialPositionSeedForTests: true,
-    });
-    const fixtureSessionProbe = service.getSession(fixture.accounts[0].token);
-    if (!fixtureSessionProbe || fixtureSessionProbe.ok !== true) {
-      const error = new Error(
-        `cluster fixture session is invalid: ${JSON.stringify(fixtureSessionProbe)}`,
-      );
-      error.code = "cluster_gate_fixture_session_invalid";
-      throw error;
-    }
     server = createHttpServer({
       service,
       store,
@@ -2897,6 +3289,9 @@ async function runNodeWorker() {
         } : {}),
       },
       clusterAccountAdmission: clusterRuntime.accountAdmission,
+      clusterBattleRuntime: process.env.BEASTBOUND_GATE_BATTLE_RUNTIME_ENABLED === "0"
+        ? null
+        : clusterRuntime.battleRuntime,
       onStorageFatal: fatal,
       logger() {},
     });
@@ -3128,6 +3523,25 @@ async function runNodeWorker() {
           ? fixtureAccount(fixture.accounts, String(payload.accountKey || ""))
           : null;
         const localBattleState = account ? service.getBattleState(account.token) : null;
+        let runtimeSecretDigest = "";
+        if (
+          room
+          && server
+          && server.clusterBattleRuntime
+          && typeof service._issueClusterBattleRuntimeCredential === "function"
+          && typeof service._clusterExportBattleRuntime === "function"
+        ) {
+          const runtimeCredential = service._issueClusterBattleRuntimeCredential();
+          const runtimeExport = service._clusterExportBattleRuntime(runtimeCredential, roomId);
+          const randomSecret = String(
+            runtimeExport && runtimeExport.ok === true && runtimeExport.active === true
+              ? runtimeExport.snapshot && runtimeExport.snapshot.randomSecret
+              : "",
+          );
+          if (randomSecret !== "") {
+            runtimeSecretDigest = crypto.createHash("sha256").update(randomSecret).digest("hex");
+          }
+        }
         const commandTraces = (Array.isArray(snapshot.battleTrace) ? snapshot.battleTrace : [])
           .filter((trace) => (
             trace
@@ -3165,6 +3579,7 @@ async function runNodeWorker() {
               : [],
             commandTraces,
             turnTraceCount,
+            runtimeSecretDigest,
             localBattleState: localBattleState ? {
               ok: localBattleState.ok === true,
               code: String(localBattleState.code || ""),
@@ -3175,6 +3590,10 @@ async function runNodeWorker() {
             } : null,
             routerMetrics: server && server.clusterBattleRouter
               ? server.clusterBattleRouter.metrics()
+              : null,
+            battleRuntimeMetrics: clusterRuntime && clusterRuntime.battleRuntime
+              && typeof clusterRuntime.battleRuntime.metrics === "function"
+              ? clusterRuntime.battleRuntime.metrics()
               : null,
           },
         });
@@ -3406,23 +3825,27 @@ function clusterHealth(worker) {
 
 async function waitForClusterReady(worker) {
   let last = null;
-  await waitFor(async () => {
-    try {
-      last = await clusterHealth(worker);
-      return Boolean(
-        last.status === 200
-        && last.json
-        && last.json.ok === true
-        && last.json.eventStream
-        && last.json.eventStream.clusterRelay
-        && last.json.eventStream.clusterRelay.runtimeHealthy === true
-        && last.json.accountOwnership
-        && last.json.accountOwnership.ok === true
-      );
-    } catch {
-      return false;
-    }
-  }, HTTP_TIMEOUT_MS, `${worker.nodeId} cluster readiness timeout`);
+  try {
+    await waitFor(async () => {
+      try {
+        last = await clusterHealth(worker);
+        return Boolean(
+          last.status === 200
+          && last.json
+          && last.json.ok === true
+          && last.json.eventStream
+          && last.json.eventStream.clusterRelay
+          && last.json.eventStream.clusterRelay.runtimeHealthy === true
+          && last.json.accountOwnership
+          && last.json.accountOwnership.ok === true
+        );
+      } catch {
+        return false;
+      }
+    }, HTTP_TIMEOUT_MS, `${worker.nodeId} cluster readiness timeout`);
+  } catch (error) {
+    throw new Error(`${error.message}: ${JSON.stringify({last, worker: worker.diagnostic()})}`);
+  }
   return last;
 }
 
@@ -3799,6 +4222,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === filePath) {
     await runMysqlBattleOwnerFailureGate();
   } else if (process.argv.includes("--mysql-battle-routing-only")) {
     await runMysqlBattleCommandRoutingGate();
+  } else if (process.argv.includes("--mysql-battle-hydration-only")) {
+    await runMysqlBattleRuntimeHydrationGate();
   } else {
     await runGate();
   }

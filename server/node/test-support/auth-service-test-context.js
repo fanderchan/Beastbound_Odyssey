@@ -174,6 +174,7 @@ function createFixturePetEncounterPermitAuthority() {
 
 function createFixtureBattleRandomAuthority() {
   const rooms = new Set();
+  const secrets = new Map();
   const fixedRoll = (roomId, context = {}) => {
     assert.equal(rooms.has(String(roomId || "")), true);
     return String(context.purpose || "") === "status.v1" ? 0 : 0.9999;
@@ -185,13 +186,49 @@ function createFixtureBattleRandomAuthority() {
         return false;
       }
       rooms.add(id);
+      secrets.set(id, crypto.createHash("sha256").update(`fixture:${id}`).digest());
       return true;
     },
     closeRoom(roomId) {
-      return rooms.delete(String(roomId || ""));
+      const id = String(roomId || "");
+      secrets.delete(id);
+      return rooms.delete(id);
     },
     hasRoom(roomId) {
       return rooms.has(String(roomId || ""));
+    },
+    exportRoomSecret(roomId) {
+      const secret = secrets.get(String(roomId || ""));
+      return secret ? secret.toString("base64url") : "";
+    },
+    canRestoreRoomSecret(roomId, encodedValue) {
+      const id = String(roomId || "");
+      const encoded = String(encodedValue || "");
+      const secret = Buffer.from(encoded, "base64url");
+      if (secret.length !== 32 || secret.toString("base64url") !== encoded) {
+        const error = new TypeError("battle random secret is invalid");
+        error.code = "battle_random_secret_invalid";
+        throw error;
+      }
+      const current = secrets.get(id);
+      return !current || current.equals(secret);
+    },
+    restoreRoomSecret(roomId, encodedValue) {
+      const id = String(roomId || "");
+      const encoded = String(encodedValue || "");
+      const secret = Buffer.from(encoded, "base64url");
+      if (secret.length !== 32 || secret.toString("base64url") !== encoded) {
+        const error = new TypeError("battle random secret is invalid");
+        error.code = "battle_random_secret_invalid";
+        throw error;
+      }
+      const current = secrets.get(id);
+      if (current) {
+        return current.equals(secret);
+      }
+      rooms.add(id);
+      secrets.set(id, Buffer.from(secret));
+      return true;
     },
     roll(roomId, context) {
       return fixedRoll(roomId, context);
