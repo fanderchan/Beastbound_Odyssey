@@ -11,5 +11,9 @@
 - 去色键采用 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`，随后由 `tools/build_pet_art_bundle.py` 共同比例、feet 基线和 512px 透明关键姿势。
 - 透明关键姿势板 SHA-256：`cdc4d8b6dfb9f30b73975f514d9a11d7cb4cf6f5542efec5b6f55fbf8d662b3d`。
 - 生成合同、原图 SHA、无损归档、处理参数和联系表证据均在本目录或 `.run/art_batch_phase320/emberhorn/` 留痕。
+- 双视角正式战斗候选完整覆盖 `idle / walk / attack / skill / hurt / defend / dodge / counter / stagger / knockaway / down / revive`，共 180 张 256px 运行帧；人物与赤角兽始终是单一整图主体，不做运行时镜像或人物／宠物分层拼合。
+- 2026-08-16 的 Phase449 比例返工重制了正面 `attack / skill / hurt / defend` 与背面 `attack / skill / counter / hurt / defend`，共 9 组、64 帧。每组都保留 exact prompt、ImageGen generation ID、原始生成表无损 WebP、实际 pipeline input 无损 WebP、完整切帧参数、逐帧 SHA-256 和 QA 记录。
+- Phase449 来源证明位于 `source/battle/repairs/phase449-mounted-action-scale-source-repair-v1/`；9/9 组从仓库内 pipeline input 重放后，512px 源帧和 256px 运行帧同时与验收构建逐文件、逐 RGBA 一致。当前 180 帧统一 digest 为 `86a400fa0629c7d75a9a1e258c1fa1ceea724fe29d855232ae1413a2dd162136`。
+- `tools/pet_art_batch_audit.py` 对本 mounted 包给出 `errors=[] / pending=[] / sourceReadiness=verified`，并核对 24/24 exact prompt、180/180 来源帧哈希、300 个已安装文件和 506 个完整验证条目。报告中的同名 standalone pet 洋红提示不属于本 mounted 目录。
 - StoneAge 8.0 只作为成熟骑乘构图质量参考，不复制其人物、宠物、鞍具、贴图或动画。
-- 当前为工程自评通过、项目所有者视觉验收 `pending`；不得宣称正式批准或完整骑乘动作完成。
+- 当前完整骑乘战斗动作与来源工程门禁均已通过，但项目所有者视觉验收仍为 `pending`、`runtimeEnabled=false`；不得宣称正式批准、生成 owner decision 或开放普通玩家运行路径。

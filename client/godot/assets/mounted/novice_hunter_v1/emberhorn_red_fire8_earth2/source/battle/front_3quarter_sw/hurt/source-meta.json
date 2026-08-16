@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "generator": "OpenAI built-in image generation",
+  "generationId": "exec-f59b92b3-9419-47c6-9e0f-70f1dbe5a195",
+  "generatorSessionId": "019fe7c8-2fd7-7972-94a7-98382ddfe591",
+  "generatorTranscriptPath": "sessions/2026/08/10/rollout-2026-08-10T02-28-04-019fe7c8-2fd7-7972-94a7-98382ddfe591.jsonl",
+  "formId": "emberhorn_red_fire8_earth2",
+  "kind": "mounted",
+  "characterId": "novice_hunter_v1",
+  "view": "front_3quarter_sw",
+  "action": "hurt",
+  "rawArchive": "source/battle/front_3quarter_sw/hurt/raw-sheet-lossless.webp",
+  "rawArchiveSha256": "300b618c281c5a8107bae09f7443acd1490c7e7325ef2bb53f4a983a3812c947",
+  "rawDecodedRgbaSha256": "fd71a0e7e9ac772bb9341e084439f72bea91afc7c6c9f607ca6b58a6564b6f3d",
+  "originalGeneratedPngSha256": "7a34bc3b72fbbb4095b8052f6bd574adb874a5c99e841c755999ebcd768248e3",
+  "originalGeneratedDecodedRgbaSha256": "fd71a0e7e9ac772bb9341e084439f72bea91afc7c6c9f607ca6b58a6564b6f3d",
+  "generatedCacheByteParityVerified": true,
+  "pipelineInput": "source/battle/front_3quarter_sw/hurt/pipeline-input-lossless.webp",
+  "pipelineInputSha256": "f7e216c05a56b4d008bd8107780ca44330bf38f414220a88c288f3b7843d3b0c",
+  "pipelineInputDecodedRgbaSha256": "4c1ea1c52774d9e2b4395c5293dadb0a7e52e880e2574a972c31662c84c3c4c2",
+  "prompt": "source/battle/front_3quarter_sw/hurt/prompt-used.txt",
+  "promptSha256": "a82c2a26dcaa4bd60d8a927a0c193c0e9d84112a0c0fd6fdad37a83455a8584d",
+  "pipeline": "source/battle/front_3quarter_sw/hurt/pipeline-meta.json",
+  "pipelineSha256": "7722a635d1619d76a9ec4b559f12be0fa2f33403f18d010ad8615f2b1967702b",
+  "qc": "source/battle/front_3quarter_sw/hurt/qa.json",
+  "qcSha256": "d7ae503e64d1bfc4f198c4c517c77b6a3fd918c1bd33eaeb4a5425b8aaea6c8e",
+  "sourceFrameFileSha256": [
+    "0c6b62b9a6b2c5dfecfccc21a2d08ab476c47440f46dd298fdb27f355cf61292",
+    "98883b467f2ab4681eeb247aa00ba59c4ecd185bb4cb6df7cfef9f3d7915a93d",
+    "0cf1d9b5bfda08f420406bd805b032f7beb43b8a7632f579a43cfa1bfa2cef17",
+    "2c78b614c15d068e4ef54a95ea72d465c677d345e30733e8c95ea90a1005ebd1",
+    "612d652cefb976fefbfc5ae078e10ddf4c17d726f83c19d82c63e8f1055db0f9",
+    "4ec353b2b7f90b7903c63b8b1ec7f6ead3ec4aa27b1dd171019910e1b97c3526"
+  ],
+  "sourceFrameRgbaSha256": [
+    "a5984419e424021306959a4ac34658c1a664087c8a309b1dba042608450fc5d1",
+    "951173064619155f61c30cb52de332a353f7716a8b1f17821723e0e11e432455",
+    "53db1ed5f4ed57d4be886025166538bfe0b7e03219b1f1fb3101ae013765cc98",
+    "8884395d95961f703bc4f437d444a3a9d981def3a05783ec7e49e3de1709262c",
+    "6eba06f6f8632a5e87180be0bddd34681790cf0a877efe90ae33720bd38baeb3",
+    "d9d89f6cfbaf1af8d5e91dd4ab41a7b07f0136a3dade79bb2e479c8f7edf3b6b"
+  ],
+  "runtimeFrameFileSha256": [
+    "b5d70eac22014ed3b9801794911370e900ad8e14a9c1b0b1b718e0092cecfe7b",
+    "c201522faf2ed2b768acbded9c2c8c14e860db50dc7e1d1e14433cc2d1442c42",
+    "e745a60f197923ee3a35a7febb82fda6d4cb07f5652b089ea6d229eecddfc2ff",
+    "b29dd304b7f2e1f20bb292a3cab2dd5ec092563da4d7f412441fc4b8522daf93",
+    "3f6645a89c451d8260817b56a56d2c0c90cf4a2695520020f2efe76e7babfc72",
+    "b032f51bab15960dea01d1c7849bf2a385f099b1622a7453645ff8bbca8db1c8"
+  ],
+  "runtimeFrameRgbaSha256": [
+    "b79d3f31b1b921952780482c5a0ef4ae41a24d4f85d9dbef9d4cc46b645dad82",
+    "69451f23c6f90203573382b9d71eb7e232340861b448a69300f7b9900b7aef04",
+    "ac8e46ad8d8a07076c00dd526f2aee3fabaf770c321bfdc574a36cee86a2c6fa",
+    "968f8c7e25250071caa7645a863264812e99146fc859b1909dee96b3d5d752b8",
+    "985d3ae8f94a8e8bc18ba6a46aba4bfc2d207ef3ef0147954ba82608f0e2bfdc",
+    "ab52dd2d45ec8f8a74d6f038ea9933aa51fc9130414afa916a5775f3094297ae"
+  ],
+  "runtimeFrameAlphaSha256": [
+    "a3f275c563dbf478132be85b4b0dd20938021682158dfe3a5ac1ba1cfa83c512",
+    "2395ad1f72e5a3cb8963560d1bcb65d8dd935cc9a7e48915e5b5529c7c5b8638",
+    "ef025d98a4eecf47d0c04367634d84296e6231a7ad246568db39dedf366da9ec",
+    "ce3d62e909adbbef9f71adade7d714ffbc55d001e46cd020edd51aeec6138f94",
+    "88975c152e2ebaf446c95587cace3c0fc8510f513876674e4cc6af7f5af1554c",
+    "7f82995af4f87d2dbf69e8205861f320b03fa5e42b0d4ef483c31bc6ff2235ba"
+  ],
+  "canonicalPipelineReplayExact": true,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "claimLimit": "operational generator-cache, prompt, lossless source, deterministic replay, and installed runtime binding; does not grant owner approval or prove copyright provenance"
+}

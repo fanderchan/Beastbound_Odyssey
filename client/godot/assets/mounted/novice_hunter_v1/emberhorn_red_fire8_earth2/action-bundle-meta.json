@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "mountFormId": "emberhorn_red_fire8_earth2",
   "characterId": "novice_hunter_v1",
-  "artStatus": "owner_review_pending",
-  "productionScope": "mounted_key_pose_gate",
+  "artStatus": "in_production",
+  "productionScope": "formal_battle_two_view_owner_review_pending",
   "runtimeEnabled": false,
   "runtimeFrameSize": [
     256,
@@ -13,6 +13,22 @@
     "front_3quarter_sw",
     "back_3quarter_ne"
   ],
+  "battlePresentationMapping": {
+    "enemy": {
+      "sourceView": "front_3quarter_sw",
+      "flipH": true,
+      "finalDirection": "southeast",
+      "formationSide": "enemy_upper_left",
+      "faces": "battle_center"
+    },
+    "ally": {
+      "sourceView": "back_3quarter_ne",
+      "flipH": true,
+      "finalDirection": "northwest",
+      "formationSide": "ally_lower_right",
+      "faces": "battle_center"
+    }
+  },
   "identity": {
     "status": "self_review_passed_owner_pending",
     "sourceFrameSize": [
@@ -31,51 +47,75 @@
   "actions": {
     "idle": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 8,
+      "loop": true,
+      "status": "owner_review_pending"
     },
     "walk": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": true,
+      "status": "owner_review_pending"
     },
     "attack": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "skill": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "hurt": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "defend": {
       "frameCount": 6,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "dodge": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "counter": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "stagger": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "knockaway": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 12,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "down": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     },
     "revive": {
       "frameCount": 8,
-      "status": "not_produced"
+      "fps": 10,
+      "loop": false,
+      "status": "owner_review_pending"
     }
   },
   "worldVisual": {
@@ -127,14 +167,143 @@
     "raw": "source/mounted-keypose-raw.webp",
     "sourceMetadata": "source/mounted-keypose-source-meta.json",
     "pipelineMetadata": "source/mounted-keypose-pipeline-meta.json",
-    "prompt": "prompts/generation-contract.md"
+    "prompt": "prompts/generation-contract.md",
+    "battleActionScaleRepair": "source/battle/repairs/phase449-mounted-action-scale-source-repair-v1/manifest.json"
+  },
+  "worldSourceArchive": {
+    "policy": "eight_independent_tracked_lossless_webp_with_original_sha256",
+    "rawDirectory": "source/world-raw",
+    "sourceFramesDirectory": "source/world-frames/directions",
+    "sourceMetadata": "source/world-source-meta.json",
+    "pipelineMetadata": "source/world-pipeline-meta.json",
+    "promptPattern": "prompts/world-{direction}-v1.txt",
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "sourceFrameCount": 40,
+    "runtimeFrameCount": 40,
+    "qualityRepairManifests": [
+      "source/world-direction-repair-v2/manifest.json"
+    ]
   },
   "evidence": {
     "contactSheet": ".run/art_batch_phase320/emberhorn/red-mounted-build/contact-sheet.png",
     "contactSheetSha256": "ef5890f2fa5d649cad9034be42edb841b89c3361716f082b707039b638882839",
     "groupContactSheet": ".run/art_batch_phase320/emberhorn/contact-sheet.png",
-    "groupContactSheetSha256": "187fecc32dee9e3e7f7e66873a32d56999b563f684300ff41b5c850d09a91f14"
+    "groupContactSheetSha256": "187fecc32dee9e3e7f7e66873a32d56999b563f684300ff41b5c850d09a91f14",
+    "worldContactSheet": "qa/world/true8-world-contact-8x5.png",
+    "worldContactSheetSha256": "7f7708266dec954c007261dae0ee2357be689100c76d37de6403eb52e352946c",
+    "worldCycleGif": "qa/world/true8-mounted-world-cycle.gif",
+    "worldCycleGifSha256": "1864ff9bab93aecfb0caf6f231b5eace7870295f2deb57248a93305f10f477ac",
+    "worldQc": "qa/world/world-qc.json",
+    "worldQcSha256": "4744a4f98b0b11298ba09321df7ad52c3c17469e5e71163f83b694cb80aa576a",
+    "battlePresentationFacingContact": "qa/battle/presentation-facing-contact.png",
+    "battlePresentationFacingContactSha256": "d5c1e77af4b6dd8af19739395c960a4004ac5233c7a089259312f9a065dff544",
+    "worldDirectionRepairBeforeAfter": "qa/world/direction-repair-v2-before-after.png",
+    "worldDirectionRepairBeforeAfterSha256": "0aa67834de9f0d7d2f88b0e1e36b76f43f010c88cc55f61903644e4b863730db",
+    "battleContactSheet": "qa/battle/contact-sheet.png",
+    "battleContactSheetSha256": "d92b94f0bb4dfa5466acb228f967dd935399c9efd466e13d4fd1f4626c6c8ca8",
+    "battleQc": "qa/battle/qc-summary.json",
+    "battleQcSha256": "00c2e27215cee05ff0c3d9d93a2d99aad2f5926f3af08c118a9fa6047a3ff5fe",
+    "actionScaleRepairContact": "qa/battle/repairs/phase449-mounted-action-scale-source-repair-v1-contact.png",
+    "actionScaleRepairContactSha256": "f5b31c1bc94e225a43cf0223378cf3ab2220d31dfe121633a3a9d18b14d2e596",
+    "actionScaleRepairAudit": "source/battle/repairs/phase449-mounted-action-scale-source-repair-v1/replay-audit.json",
+    "actionScaleRepairAuditSha256": "69b94a8e2290787e28ba2175baf075e26e19794e1c71ec85abd93090c4bcad0b"
   },
   "ownerReviewStatus": "pending",
-  "notes": "Integrated front/back mounted key poses only. World and battle mounted animation matrices are intentionally not produced in this gate."
+  "notes": "Integrated identity, true-eight world idle/walk, and both formal-view twelve-action mounted battle matrices are self-reviewed. Nine previously underscaled core actions now have exact prompts, tracked lossless generation and pipeline inputs, and byte-exact canonical replay evidence. Canonical presentation remains enemy southeast and ally northwest after flipH=true. runtimeEnabled remains false and owner review remains pending.",
+  "battleViewMapping": {
+    "enemy": {
+      "view": "front_3quarter_sw",
+      "flipH": true,
+      "facing": "southeast"
+    },
+    "ally": {
+      "view": "back_3quarter_ne",
+      "flipH": true,
+      "facing": "northwest"
+    }
+  },
+  "battleVisual": {
+    "status": "owner_review_pending",
+    "kind": "mounted",
+    "views": [
+      "front_3quarter_sw",
+      "back_3quarter_ne"
+    ],
+    "battleViewMapping": {
+      "enemy": {
+        "view": "front_3quarter_sw",
+        "flipH": true,
+        "facing": "southeast"
+      },
+      "ally": {
+        "view": "back_3quarter_ne",
+        "flipH": true,
+        "facing": "northwest"
+      }
+    },
+    "actions": [
+      "idle",
+      "walk",
+      "attack",
+      "skill",
+      "hurt",
+      "defend",
+      "dodge",
+      "counter",
+      "stagger",
+      "knockaway",
+      "down",
+      "revive"
+    ],
+    "sourceFrameSize": [
+      512,
+      512
+    ],
+    "runtimeFrameSize": [
+      256,
+      256
+    ],
+    "totalFrameCount": 180,
+    "runtimeMirroring": false,
+    "integratedWholeFrame": true,
+    "runtimeLayeredComposition": false,
+    "runtimeEnabled": false,
+    "bundleDigest": "86a400fa0629c7d75a9a1e258c1fa1ceea724fe29d855232ae1413a2dd162136",
+    "archiveMode": "lean",
+    "sourceFramesTracked": false,
+    "sourceRoot": "source/battle",
+    "sourceLedger": "source/battle/source-ledger.json",
+    "runtimeRoot": "views",
+    "contactSheet": "qa/battle/contact-sheet.png",
+    "qcSummary": "qa/battle/qc-summary.json",
+    "bundleDigestAlgorithm": "sha256-canonical-runtime-file-and-rgba-v1",
+    "actionScaleSourceRepair": {
+      "repairId": "phase449-mounted-action-scale-source-repair-v1",
+      "status": "self_review_passed_owner_pending",
+      "actions": [
+        "back_3quarter_ne/attack",
+        "back_3quarter_ne/skill",
+        "back_3quarter_ne/counter",
+        "back_3quarter_ne/hurt",
+        "back_3quarter_ne/defend",
+        "front_3quarter_sw/attack",
+        "front_3quarter_sw/skill",
+        "front_3quarter_sw/hurt",
+        "front_3quarter_sw/defend"
+      ],
+      "canonicalPipelineReplayExact": true,
+      "runtimeEnabled": false,
+      "ownerReviewStatus": "pending",
+      "sourceManifest": "source/battle/repairs/phase449-mounted-action-scale-source-repair-v1/manifest.json",
+      "replayAudit": "source/battle/repairs/phase449-mounted-action-scale-source-repair-v1/replay-audit.json",
+      "evidence": "qa/battle/repairs/phase449-mounted-action-scale-source-repair-v1-contact.png"
+    }
+  }
 }

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "generator": "OpenAI built-in image generation",
+  "generationId": "exec-c112389f-f129-4a5d-ac32-e6943c3d6579",
+  "generatorSessionId": "019fe7c8-2fd7-7972-94a7-98382ddfe591",
+  "generatorTranscriptPath": "sessions/2026/08/10/rollout-2026-08-10T02-28-04-019fe7c8-2fd7-7972-94a7-98382ddfe591.jsonl",
+  "formId": "emberhorn_red_fire8_earth2",
+  "kind": "mounted",
+  "characterId": "novice_hunter_v1",
+  "view": "back_3quarter_ne",
+  "action": "hurt",
+  "rawArchive": "source/battle/back_3quarter_ne/hurt/raw-sheet-lossless.webp",
+  "rawArchiveSha256": "a3057c79f3efcaac760ad191e2f1c878dc6869f555be1d522eda458196ffd8e4",
+  "rawDecodedRgbaSha256": "01202878dc0815c23c5e23020375a1f631d22393297083e62f181ce7b9ca2d01",
+  "originalGeneratedPngSha256": "92f7e25a9116c1a9b2637ef5da56856e4b97694ccfc7f92d2fd1c4e0347c9020",
+  "originalGeneratedDecodedRgbaSha256": "01202878dc0815c23c5e23020375a1f631d22393297083e62f181ce7b9ca2d01",
+  "generatedCacheByteParityVerified": true,
+  "pipelineInput": "source/battle/back_3quarter_ne/hurt/pipeline-input-lossless.webp",
+  "pipelineInputSha256": "a3057c79f3efcaac760ad191e2f1c878dc6869f555be1d522eda458196ffd8e4",
+  "pipelineInputDecodedRgbaSha256": "01202878dc0815c23c5e23020375a1f631d22393297083e62f181ce7b9ca2d01",
+  "prompt": "source/battle/back_3quarter_ne/hurt/prompt-used.txt",
+  "promptSha256": "40967fa57a67a326251f0d2392505dbbfbb012e9b9cbf33b877b42f7c987160b",
+  "pipeline": "source/battle/back_3quarter_ne/hurt/pipeline-meta.json",
+  "pipelineSha256": "7f47291e81b7df7ea68e4a8b5c0ed7177459db869fdf56a44e9b7831ffbee4e3",
+  "qc": "source/battle/back_3quarter_ne/hurt/qa.json",
+  "qcSha256": "6c9c6f8e3500ec0a23ade5c766be34280e65ace557d2c38d250c99d958f67d74",
+  "sourceFrameFileSha256": [
+    "f85d4719ca965f9a3a6ac05c575ed90a7850499cba55a80430ed03797b36e913",
+    "a4285afb9fdee482317a283e0ba248c824fcb0714ceb8634350e405d56c1fe42",
+    "31eb42482150b193f867d60e9fa0f32b77baf7f2dbe680407022c1a269ab1b5a",
+    "f3404ac48786fc0702f3c083380bf6b46fc91f379e648ee9d55ee11f38d89231",
+    "fa0b661d4fd93508ac69f30432e716aaffbe4a544c6c5bc13083a6d9a7b247bb",
+    "9a87b6ac5beb3c87b63b40ca0bbf5f6df2a98e1187acd9e077972d57560a1712"
+  ],
+  "sourceFrameRgbaSha256": [
+    "66b89135e8ba8768118ab1864e6b63070d26fc5dacec30d73f222b70a944f38a",
+    "ab065408456809c2f7a66e5d975e909d0cacbcab47ae171f0b93adc951bbce1d",
+    "4415b5452c27004c7b9c4476b3f12edf227eb96e16b7c5ff021c67acdf65484c",
+    "890e3cb8ebe749acf7ae3960388371e71eb23165312bea4a0657dc57607dd366",
+    "d467d5f12baf47bf8f11f470d2a6eeeaa077e0d8b5860dfaa7658a45c63d4ea5",
+    "a7f635847a9d410c58a7feef8508f6b251775f82ace9a5825c204ef567022ed2"
+  ],
+  "runtimeFrameFileSha256": [
+    "e20777420d11f0998be613e16c9126f9e9ffbf4cb8760ac4d5f071b58b800d4d",
+    "5570202a75829e386f5dc59f9aee65acdfb5f9db8f84aac5e2f1dfde3bb5ea13",
+    "6f2c643199a546794f332e31150a08285280d80c223a8531bb9beea4d4bd9c06",
+    "0c2b6c0b5e263301f038b2107df6bf5735bb8204309193fbbf19f2316b6685f8",
+    "eefc6fcd73703289818842609e7b71408e662d9c45c375a8df398debbb6ba557",
+    "e6f152cd997b505c7807b4cdce76f341446fb19fd3c1e5201aa08a6d7f388760"
+  ],
+  "runtimeFrameRgbaSha256": [
+    "403201936e4d925a6c9340da968b7f44ede2c98862928f40f9e6dc758d37db01",
+    "3214c4c6a506bbf3591d47f968e3696daa1731de2a87db9f667ded54d72df7ca",
+    "9a536ad8987ecfd51c6d77ca05b035980ab70fa1f6f16cddd21926a8badeca52",
+    "275838bc4b695ef59c153bb387066af0ef5c903dba56951abae20691026adce0",
+    "4f0a471f5f4724ff1c47e75b12fdfe184359ef811c5c53806e70d0acf4ba3036",
+    "51bdfa46f7e6d0f7e5727b080d25a07c8973fff0168e4b2442dfcd53776bcdaa"
+  ],
+  "runtimeFrameAlphaSha256": [
+    "2d0fcdef44e2ab0a80b38331a3fba1a5a99a9d9f47a694a334de83564fc8e15e",
+    "b9a28f2b68b4927bee5342370aeea6a04ca15aec156612c9def2a5dcb139ff75",
+    "13eaf0c92380344ccde0cf5e1f7949d1a827d8bdf1279375f91f769c9f53b130",
+    "2fd45998b3ad1d2a053a87db15446c8b334b95cbb3f1188602eb2aca23eaa18c",
+    "e214f6123393d16a032c62d5a567711eead03774f5c3cfec9897e48d406f2f79",
+    "5427471cee1688ebb86c002e2cb4702495e9aa9eb22ee9bab5648eecaa0e9d8c"
+  ],
+  "canonicalPipelineReplayExact": true,
+  "runtimeEnabled": false,
+  "ownerReviewStatus": "pending",
+  "claimLimit": "operational generator-cache, prompt, lossless source, deterministic replay, and installed runtime binding; does not grant owner approval or prove copyright provenance"
+}
