@@ -12372,16 +12372,20 @@ func _resolve_click_screen_point(screen_point: Vector2) -> void:
 
 	_clear_pending_interaction()
 	host._close_dialog()
-	_close_backpack_panel()
-	_close_equipment_panel()
-	_close_shop_panel()
-	_close_pet_panel()
-	_close_pet_skill_panel()
-	_close_codex_panel()
-	_close_quest_panel()
-	_close_map_panel()
-	_close_chat_panel()
-	_close_player_action_panel(false)
+	# Repeated ground clicks are a hot path. Once no world menu is visible, the
+	# close methods below only clear already-empty state and caches, so skip that
+	# work until a registered world menu actually needs dismissing.
+	if host._world_menu_is_open():
+		_close_backpack_panel()
+		_close_equipment_panel()
+		_close_shop_panel()
+		_close_pet_panel()
+		_close_pet_skill_panel()
+		_close_codex_panel()
+		_close_quest_panel()
+		_close_map_panel()
+		_close_chat_panel()
+		_close_player_action_panel(false)
 	var clicked_cell = IsoMapModel.world_to_grid(map_data, world_point)
 	if not IsoMapModel.is_inside(map_data, clicked_cell):
 		return
@@ -13172,7 +13176,17 @@ func _guardian_zone_for_interaction(item: Dictionary) -> Dictionary:
 	return {}
 
 func _update_encounter_zone_check() -> void:
-	if player == null or map_data.is_empty() or encounter_active or battle_active or server_party_encounter_request_pending or host._dialog_is_open() or has_pending_interaction or host._world_menu_is_open():
+	if player == null or map_data.is_empty():
+		return
+	# The explicit map-art preview lane is for deterministic visual, movement,
+	# collision and layering review. Natural random encounters would interrupt
+	# those real-input checks, while explicit encounter/guardian actions remain
+	# available to their dedicated gameplay checks.
+	if bool(host.map_art_review_preview):
+		last_checked_player_cell = IsoMapModel.world_to_grid(map_data, player.global_position)
+		encounter_zone_step_count = 0
+		return
+	if encounter_active or battle_active or server_party_encounter_request_pending or host._dialog_is_open() or has_pending_interaction or host._world_menu_is_open():
 		return
 	if encounter_grace_remaining > 0.0:
 		return

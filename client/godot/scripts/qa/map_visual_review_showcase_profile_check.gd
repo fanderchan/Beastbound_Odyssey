@@ -40,12 +40,15 @@ static func run() -> Dictionary:
 		"--map-visual-review-output=/tmp/phase383-showcase.png",
 		"--map-visual-review-report=/tmp/phase383-showcase.json",
 		"--map-visual-review-mode=idle",
+		"--map-visual-review-capture-variant=pointer",
 	])
 	var request := MapVisualReviewCapture.request_from_args(capture_args)
 	if not (request.get("parseErrors", []) as Array).is_empty():
 		errors.append("Phase383 显式展示参数没有通过 capture parser")
 	if not bool(request.get("showcaseProfileRequested", false)):
 		errors.append("Phase383 capture parser 没有记录显式展示参数")
+	if str(request.get("captureVariant", "")) != "pointer":
+		errors.append("地图 capture parser 没有记录固定动作变体")
 	var legacy_args := capture_args.duplicate()
 	legacy_args.remove_at(2)
 	var legacy_request := MapVisualReviewCapture.request_from_args(legacy_args)
@@ -56,6 +59,15 @@ static func run() -> Dictionary:
 	var duplicate_request := MapVisualReviewCapture.request_from_args(duplicate_args)
 	if (duplicate_request.get("parseErrors", []) as Array).is_empty():
 		errors.append("重复 Phase383 展示参数没有失败关闭")
+	var invalid_variant_args := capture_args.duplicate()
+	invalid_variant_args[invalid_variant_args.size() - 1] = (
+		"--map-visual-review-capture-variant=freeform"
+	)
+	var invalid_variant_request := MapVisualReviewCapture.request_from_args(
+		invalid_variant_args
+	)
+	if (invalid_variant_request.get("parseErrors", []) as Array).is_empty():
+		errors.append("任意地图 capture variant 没有失败关闭")
 	return {
 		"result": "PASS" if errors.is_empty() else "FAIL",
 		"profileId": ShowcaseProfile.PROFILE_ID,

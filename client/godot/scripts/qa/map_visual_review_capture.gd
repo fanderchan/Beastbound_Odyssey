@@ -15,6 +15,7 @@ const ARG_MAP_ID := "--map-visual-review-map-id"
 const ARG_OUTPUT := "--map-visual-review-output"
 const ARG_REPORT := "--map-visual-review-report"
 const ARG_MODE := "--map-visual-review-mode"
+const ARG_CAPTURE_VARIANT := "--map-visual-review-capture-variant"
 const QA_USER_DATA_LANE_PREFIX := "--beastbound-qa-user-data-lane="
 
 const REPORT_SCHEMA_VERSION := 1
@@ -22,6 +23,14 @@ const REPORT_TYPE := "beastbound_map_visual_main_review_capture"
 const MAIN_SCENE := "res://scenes/Main.tscn"
 const EXPECTED_VIEWPORT := Vector2i(1280, 720)
 const VALID_MODES: Array[String] = ["idle", "moving"]
+const VALID_CAPTURE_VARIANTS: Array[String] = [
+	"default",
+	"pointer",
+	"movement_path",
+	"warp",
+	"collision",
+	"occlusion",
+]
 const SETTLE_FRAMES := 10
 const COMPLETE_FRAME_ATTEMPTS := 10
 const MOVE_FRAME_LIMIT := 240
@@ -31,6 +40,7 @@ const VALUE_FLAGS := {
 	ARG_OUTPUT: "outputPath",
 	ARG_REPORT: "reportPath",
 	ARG_MODE: "mode",
+	ARG_CAPTURE_VARIANT: "captureVariant",
 }
 const REQUIRED_VALUE_FLAGS: Array[String] = [
 	ARG_MAP_ID,
@@ -82,6 +92,7 @@ static func request_from_args(args: PackedStringArray) -> Dictionary:
 		"outputPath": "",
 		"reportPath": "",
 		"mode": "",
+		"captureVariant": "default",
 		"parseErrors": [],
 	}
 	var counts: Dictionary = {}
@@ -150,6 +161,17 @@ static func request_from_args(args: PackedStringArray) -> Dictionary:
 			(request["parseErrors"] as Array).append("%s 必须且只能出现一次" % flag)
 		elif str(request.get(VALUE_FLAGS[flag], "")).strip_edges() == "":
 			(request["parseErrors"] as Array).append("%s 不能为空" % flag)
+	var capture_variant_count := int(counts.get(ARG_CAPTURE_VARIANT, 0))
+	if capture_variant_count > 1:
+		(request["parseErrors"] as Array).append(
+			"%s 最多只能出现一次" % ARG_CAPTURE_VARIANT
+		)
+	elif capture_variant_count == 1:
+		var capture_variant := str(request.get("captureVariant", "")).strip_edges()
+		if not VALID_CAPTURE_VARIANTS.has(capture_variant):
+			(request["parseErrors"] as Array).append(
+				"%s 必须是固定动作变体" % ARG_CAPTURE_VARIANT
+			)
 	return request
 
 
@@ -163,6 +185,19 @@ func run(request: Dictionary) -> Dictionary:
 		return await _finish_capture(report, errors, report_path)
 
 	_validate_runtime_isolation(request, report, errors)
+	var initial_network_state := _network_request_state()
+	report["networkRequestStatuses"] = initial_network_state.get("statuses", {})
+	report["networkRequestsDisconnected"] = bool(
+		initial_network_state.get("allDisconnected", false)
+	)
+	if not bool(initial_network_state.get("allDisconnected", false)):
+		var active_requests: Array[String] = _string_array(
+			initial_network_state.get("active", [])
+		)
+		errors.append(
+			"地图视觉取证运行时存在活动网络请求：%s"
+			% ",".join(active_requests)
+		)
 	var prepared: Dictionary = host.map_visual_render_state
 	var map_id := str(request.get("mapId", ""))
 	var catalog_errors := MapVisualCatalog.errors_for_map(map_id)
@@ -208,7 +243,10 @@ func run(request: Dictionary) -> Dictionary:
 		"screenPoint": [],
 	}
 	if mode == "moving":
-		var target := _find_reachable_visible_target(start_cell)
+		var target := _find_reachable_visible_target(
+			start_cell,
+			str(request.get("captureVariant", "default"))
+		)
 		if target.is_empty():
 			errors.append("找不到可由真实鼠标点击到达且不被 UI 遮挡的目标格")
 		else:
@@ -453,8 +491,23 @@ func _network_request_state() -> Dictionary:
 	}
 
 
-func _find_reachable_visible_target(start_cell: Vector2i) -> Dictionary:
+func _find_reachable_visible_target(
+	start_cell: Vector2i,
+	capture_variant: String = "default"
+) -> Dictionary:
 	var offsets: Array[Vector2i] = [
+		# The training-yard spawn is intentionally framed by NPCs and props. These
+		# central offsets provide several genuinely clickable destinations while
+		# retaining the two-cell visual-collision safety margin below. Keeping the
+		# choices distinct also prevents the formal action matrix from freezing the
+		# same moving frame for movement, warp, collision and occlusion evidence.
+		Vector2i(1, 3),
+		Vector2i(-2, -3),
+		Vector2i(2, 3),
+		Vector2i(-3, -3),
+		Vector2i(3, 3),
+		Vector2i(-4, -1),
+		Vector2i(1, 4),
 		Vector2i(3, -3),
 		Vector2i(4, -2),
 		Vector2i(2, -4),
@@ -471,9 +524,12 @@ func _find_reachable_visible_target(start_cell: Vector2i) -> Dictionary:
 		Vector2i(0, -1),
 	]
 	var viewport_rect := Rect2(Vector2(48, 48), Vector2(EXPECTED_VIEWPORT - Vector2i(96, 96)))
+	var candidates: Array[Dictionary] = []
 	for offset in offsets:
 		var candidate := start_cell + offset
 		if not IsoMapModel.is_walkable(host.map_data, candidate):
+			continue
+		if _near_visual_collision(candidate):
 			continue
 		if _near_interaction_source(candidate):
 			continue
@@ -483,12 +539,45 @@ func _find_reachable_visible_target(start_cell: Vector2i) -> Dictionary:
 		var screen_point: Vector2 = host._world_to_screen(IsoMapModel.grid_to_world(host.map_data, candidate))
 		if not viewport_rect.has_point(screen_point) or host._is_ui_point(screen_point):
 			continue
-		return {
+		candidates.append({
 			"cell": candidate,
 			"screenPoint": screen_point,
 			"pathLength": path.size(),
-		}
-	return {}
+		})
+	if candidates.is_empty():
+		return {}
+	var variant_index := VALID_CAPTURE_VARIANTS.find(capture_variant)
+	if variant_index < 0:
+		variant_index = 0
+	return candidates[variant_index % candidates.size()]
+
+
+func _near_visual_collision(candidate: Vector2i) -> bool:
+	var by_layer := host.map_visual_render_state.get("objectDrawsByLayer", {}) as Dictionary
+	for layer_value in by_layer.values():
+		if not (layer_value is Array):
+			continue
+		for command_value in layer_value as Array:
+			if not (command_value is Dictionary):
+				continue
+			var command := command_value as Dictionary
+			if str(command.get("collisionRole", "")) != "blocking":
+				continue
+			var footprint_value: Variant = command.get("collisionFootprint", [])
+			if not (footprint_value is Array):
+				continue
+			# Tall isometric blockers can stop the capsule before the grid center
+			# even when the requested destination is two cells beyond the frozen
+			# logical footprint. Keep review movement targets clear of that visual
+			# margin so the recorder measures traversal instead of edge contact.
+			for delta_x in range(-2, 3):
+				for delta_y in range(-2, 3):
+					var neighbor_key := IsoMapModel.cell_key(
+						candidate + Vector2i(delta_x, delta_y)
+					)
+					if (footprint_value as Array).has(neighbor_key):
+						return true
+	return false
 
 
 func _near_interaction_source(candidate: Vector2i) -> bool:
@@ -563,6 +652,7 @@ static func _base_report(request: Dictionary) -> Dictionary:
 		"scene": MAIN_SCENE,
 		"mapId": str(request.get("mapId", "")),
 		"mode": str(request.get("mode", "")),
+		"captureVariant": str(request.get("captureVariant", "default")),
 		"qaPreviewFlagPresent": bool(request.get("qaPreviewFlagPresent", false)),
 		"qaPreviewMapId": str(request.get("qaPreviewMapId", "")),
 		"showcaseProfileRequested": bool(
@@ -700,6 +790,9 @@ static func _validate_request(request: Dictionary, errors: Array[String]) -> voi
 	var mode := str(request.get("mode", ""))
 	if not VALID_MODES.has(mode):
 		errors.append("mode 必须为 idle 或 moving")
+	var capture_variant := str(request.get("captureVariant", "default"))
+	if not VALID_CAPTURE_VARIANTS.has(capture_variant):
+		errors.append("captureVariant 必须为固定动作变体")
 	var output_path := str(request.get("outputPath", ""))
 	var report_path := str(request.get("reportPath", ""))
 	if not output_path.is_absolute_path() or output_path.get_extension().to_lower() != "png":

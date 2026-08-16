@@ -1,0 +1,203 @@
+{
+  "alphaMask": {
+    "mode": "expanded_diamond",
+    "overlapPixels": 1,
+    "supersample": 8
+  },
+  "atlas": {
+    "dimensions": [
+      240,
+      80
+    ],
+    "path": "atlas.png",
+    "sha256": "efe1ada759bbffeeae95df124300efb827cd2efdd87c9e393652317fafe8a65a"
+  },
+  "schemaVersion": 1,
+  "semanticBlend": {
+    "primaryTileId": "earth_cave_floor_a",
+    "secondarySourceWeights": {
+      "earth_cave_blocked_a": 0.42,
+      "earth_cave_mineral_a": 0.2,
+      "earth_cave_path_a": 0.3
+    }
+  },
+  "source": {
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "grid": {
+      "columns": 3,
+      "rows": 2
+    },
+    "path": "../../../client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-ground-v4-restraint-alpha.png",
+    "sha256": "583301ec1e2a14668d6b5b2c39f2c74e7e95ec868e1038c3485a8226dc825417"
+  },
+  "tileSize": [
+    80,
+    40
+  ],
+  "tiles": [
+    {
+      "dimensions": [
+        80,
+        40
+      ],
+      "rect": [
+        0,
+        0,
+        80,
+        40
+      ],
+      "sha256": "36021c127d31b48aacdec2c07ed5d1abe495702ebf6ca0ce73b604924ec8fc13",
+      "sourceAlphaBBox": [
+        59,
+        113,
+        443,
+        300
+      ],
+      "sourceCell": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "tileId": "earth_cave_floor_a"
+    },
+    {
+      "dimensions": [
+        80,
+        40
+      ],
+      "rect": [
+        80,
+        0,
+        80,
+        40
+      ],
+      "sha256": "513c4a43b0662936285aa902a96d3e6ff79e61224ac377cdc51e1028c7bc3201",
+      "sourceAlphaBBox": [
+        36,
+        114,
+        443,
+        299
+      ],
+      "sourceCell": [
+        512,
+        0,
+        512,
+        512
+      ],
+      "tileId": "earth_cave_floor_b"
+    },
+    {
+      "dimensions": [
+        80,
+        40
+      ],
+      "rect": [
+        160,
+        0,
+        80,
+        40
+      ],
+      "sha256": "df3104f4ba2a8f1143a5ab0e9c73709f28991857427973e24682248b2bc208f0",
+      "sourceAlphaBBox": [
+        12,
+        114,
+        443,
+        298
+      ],
+      "sourceCell": [
+        1024,
+        0,
+        512,
+        512
+      ],
+      "tileId": "earth_cave_path_a"
+    },
+    {
+      "dimensions": [
+        80,
+        40
+      ],
+      "rect": [
+        0,
+        40,
+        80,
+        40
+      ],
+      "sha256": "fe83ba95498fcb383a37dd0d58e49082f04cb91685491449cec2c226be386893",
+      "sourceAlphaBBox": [
+        52,
+        52,
+        450,
+        309
+      ],
+      "sourceCell": [
+        0,
+        512,
+        512,
+        512
+      ],
+      "tileId": "earth_cave_blocked_a"
+    },
+    {
+      "dimensions": [
+        80,
+        40
+      ],
+      "rect": [
+        80,
+        40,
+        80,
+        40
+      ],
+      "sha256": "f902d9f47b54635a7e33febd6c754ede0bf80620b9bac77ac7f9626f8c55c55c",
+      "sourceAlphaBBox": [
+        31,
+        53,
+        449,
+        308
+      ],
+      "sourceCell": [
+        512,
+        512,
+        512,
+        512
+      ],
+      "tileId": "earth_cave_mineral_a"
+    },
+    {
+      "dimensions": [
+        80,
+        40
+      ],
+      "rect": [
+        160,
+        40,
+        80,
+        40
+      ],
+      "sha256": "ff83e592848dc3790814be4efc7c66409240272070f0ee56508b115a7661a756",
+      "sourceAlphaBBox": [
+        8,
+        54,
+        448,
+        307
+      ],
+      "sourceCell": [
+        1024,
+        512,
+        512,
+        512
+      ],
+      "tileId": "earth_cave_edge_a"
+    }
+  ],
+  "variantBlend": {
+    "primaryTileId": "earth_cave_floor_a",
+    "secondarySourceWeight": 0.1,
+    "tileId": "earth_cave_floor_b"
+  }
+}

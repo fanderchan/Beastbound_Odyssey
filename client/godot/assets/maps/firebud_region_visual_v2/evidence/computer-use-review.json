@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportType": "beastbound_map_computer_use_review",
-  "generatedAtUtc": "2026-08-10T20:47:00Z",
+  "generatedAtUtc": "2026-08-15T23:30:00Z",
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
   "testedMapIds": [
@@ -12,7 +12,10 @@
   "blockers": [],
   "method": "computer_use",
   "scene": "res://scenes/Main.tscn",
-  "viewport": [1280, 720],
+  "viewport": [
+    1280,
+    720
+  ],
   "displayServer": "macOS Metal",
   "actions": [
     {
@@ -22,10 +25,22 @@
       "description": "Left-click the visible main-task navigation target and verify the live trainer interaction opens in the normal client.",
       "result": "PASS",
       "evidence": [
-        {"path": "evidence/runtime-screenshots/firebud_training_yard-pointer-idle.png", "sha256": "76c47a72c16455fc8a735490284f9203fe3daeea1814f40018b541849116051b"},
-        {"path": "evidence/capture-reports/firebud_training_yard-pointer-idle.json", "sha256": "d3975e7f5798394c18f3350991a4c229fa51e05afd9ed3769279d8ceabe3aa40"},
-        {"path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-before.jpeg", "sha256": "7c129c78264fd72d047cf92d8799eb0fdb483dca6f627317d62540c47f987d0d"},
-        {"path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-after.jpeg", "sha256": "91969bfa0c818b5b187221a619548ca5458042a86bd98351ca3fb0884e541019"}
+        {
+          "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
+          "sha256": "76c47a72c16455fc8a735490284f9203fe3daeea1814f40018b541849116051b"
+        },
+        {
+          "path": "evidence/runtime-actions/firebud_training_yard/pointer-capture.json",
+          "sha256": "212127582b83dba9e14b2a00bc89e6263149c5f30727d791ce03bb1328dae81a"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-before.jpeg",
+          "sha256": "7c129c78264fd72d047cf92d8799eb0fdb483dca6f627317d62540c47f987d0d"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-after.jpeg",
+          "sha256": "91969bfa0c818b5b187221a619548ca5458042a86bd98351ca3fb0884e541019"
+        }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_pointer.jsonl",
@@ -39,10 +54,22 @@
       "description": "Left-click walkable meadow and verify the player moves across frames with a readable route and final marker.",
       "result": "PASS",
       "evidence": [
-        {"path": "evidence/runtime-screenshots/firebud_training_yard-movement_path-moving.png", "sha256": "b6158c499f8fb808ee967ce418c3fcad2b0a85c38fb6a32a9639386d8ae15a1a"},
-        {"path": "evidence/capture-reports/firebud_training_yard-movement_path-moving.json", "sha256": "a564005b07d6f51917c48be2aef2bf5bec868c59de59c9dc7e3c70a1c4265fff"},
-        {"path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-before.jpeg", "sha256": "f508e0cc84b0c2ebfaa749aa57795cf70380e68cac23ec285493b79998f832b1"},
-        {"path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-after.jpeg", "sha256": "dd21f94ab12fca5bdc0a2ce69c02c5aab2e6c186a505c2df650dea80d78cef67"}
+        {
+          "path": "evidence/runtime-actions/firebud_training_yard/movement_path.png",
+          "sha256": "ea912ff531460b8de85eb2d5502af0ca145f386384ff6d8a47a9359dbf4a8751"
+        },
+        {
+          "path": "evidence/runtime-actions/firebud_training_yard/movement_path-capture.json",
+          "sha256": "2830dba6a83b3047f19d9e02364b4b1f12468eda86275843058ca15d20dd4657"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-before.jpeg",
+          "sha256": "f508e0cc84b0c2ebfaa749aa57795cf70380e68cac23ec285493b79998f832b1"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-after.jpeg",
+          "sha256": "dd21f94ab12fca5bdc0a2ce69c02c5aab2e6c186a505c2df650dea80d78cef67"
+        }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_movement_path.jsonl",
@@ -56,10 +83,22 @@
       "description": "Select the village gate in the normal map UI, traverse to it, and verify the village spawn after the transition.",
       "result": "PASS",
       "evidence": [
-        {"path": "evidence/runtime-screenshots/firebud_training_yard-warp-moving.png", "sha256": "b6158c499f8fb808ee967ce418c3fcad2b0a85c38fb6a32a9639386d8ae15a1a"},
-        {"path": "evidence/capture-reports/firebud_training_yard-warp-moving.json", "sha256": "a5caba249d21bdc63c1ba7e754ea791cf97bbbad4e9b8943e1a0c4bb740964e6"},
-        {"path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-before.jpeg", "sha256": "7c129c78264fd72d047cf92d8799eb0fdb483dca6f627317d62540c47f987d0d"},
-        {"path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-after.jpeg", "sha256": "de37bef344896149918ffe322820a06a6b0e8baf0fc616ac60d6bcd443070ea1"}
+        {
+          "path": "evidence/runtime-actions/firebud_training_yard/warp.png",
+          "sha256": "c6a4ff50033d14d8fd3ddaa6054fdae78f4c7e63954f7f448b8288cb09fe9124"
+        },
+        {
+          "path": "evidence/runtime-actions/firebud_training_yard/warp-capture.json",
+          "sha256": "180c2c0454a710958ba378f99bd33f38c9c9fd796d4fca7727ac8ab405c78241"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-before.jpeg",
+          "sha256": "7c129c78264fd72d047cf92d8799eb0fdb483dca6f627317d62540c47f987d0d"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-after.jpeg",
+          "sha256": "de37bef344896149918ffe322820a06a6b0e8baf0fc616ac60d6bcd443070ea1"
+        }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_warp.jsonl",
@@ -73,10 +112,22 @@
       "description": "Click the blocking ember shrub and verify the player does not enter or overlap its collision footprint.",
       "result": "PASS",
       "evidence": [
-        {"path": "evidence/runtime-screenshots/firebud_training_yard-collision-moving.png", "sha256": "b6158c499f8fb808ee967ce418c3fcad2b0a85c38fb6a32a9639386d8ae15a1a"},
-        {"path": "evidence/capture-reports/firebud_training_yard-collision-moving.json", "sha256": "1f49e078bcd4c3397c0c74e8d0e023e623089c69cd63a78882ae6d2679b8dc07"},
-        {"path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-before.jpeg", "sha256": "ca1dcf2c376418c97b710e591a1b73dabe27523488729a06b8050c2c619a8dc6"},
-        {"path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-after.jpeg", "sha256": "3d8ccdbc11c716614d02d5d249703e4131bf96bc274ffd183c7abf85bcd8f9a4"}
+        {
+          "path": "evidence/runtime-actions/firebud_training_yard/collision.png",
+          "sha256": "d3218040c65710e4722fd902c90523eeabfe569dfb413298b83fb74c1e098883"
+        },
+        {
+          "path": "evidence/runtime-actions/firebud_training_yard/collision-capture.json",
+          "sha256": "db20ec9fdfae24a299ba0a772bf949f38661d1bb513f78d63a01d877fabc343f"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-before.jpeg",
+          "sha256": "ca1dcf2c376418c97b710e591a1b73dabe27523488729a06b8050c2c619a8dc6"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-after.jpeg",
+          "sha256": "3d8ccdbc11c716614d02d5d249703e4131bf96bc274ffd183c7abf85bcd8f9a4"
+        }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_collision.jsonl",
@@ -90,10 +141,22 @@
       "description": "Walk from behind the tall supply pots to their front and verify the actor changes y-sort layer without changing collision truth.",
       "result": "PASS",
       "evidence": [
-        {"path": "evidence/runtime-screenshots/firebud_training_yard-occlusion-moving.png", "sha256": "b6158c499f8fb808ee967ce418c3fcad2b0a85c38fb6a32a9639386d8ae15a1a"},
-        {"path": "evidence/capture-reports/firebud_training_yard-occlusion-moving.json", "sha256": "1f6698c9b4798f9146916ff00c1b2839373138b1576e5be7a4690ee4150af2ad"},
-        {"path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-before.jpeg", "sha256": "8763bc257cbcc7c360b738d7fbf81b69fa7c6811590c4f478a9d5f95813d6a1a"},
-        {"path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-after.jpeg", "sha256": "f508e0cc84b0c2ebfaa749aa57795cf70380e68cac23ec285493b79998f832b1"}
+        {
+          "path": "evidence/runtime-actions/firebud_training_yard/occlusion.png",
+          "sha256": "468d4e0918c528f957ae79bdaa83ffe245a76d4209c9b79d3cde28a1c317ca4e"
+        },
+        {
+          "path": "evidence/runtime-actions/firebud_training_yard/occlusion-capture.json",
+          "sha256": "062cf0aa6490dff754fd7efbce7c0cc9f3012c83344a229746161be6a89667bb"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-before.jpeg",
+          "sha256": "8763bc257cbcc7c360b738d7fbf81b69fa7c6811590c4f478a9d5f95813d6a1a"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-after.jpeg",
+          "sha256": "f508e0cc84b0c2ebfaa749aa57795cf70380e68cac23ec285493b79998f832b1"
+        }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_occlusion.jsonl",
@@ -107,10 +170,22 @@
       "description": "Point at the live village doctor map target and verify the normal doctor dialogue opens from a reachable approach cell.",
       "result": "PASS",
       "evidence": [
-        {"path": "evidence/runtime-screenshots/firebud_village_gate-pointer-idle.png", "sha256": "a2e81c6048d888e135e26dc37ce38f4876b2ee7f1f025caafb9b384354d57f82"},
-        {"path": "evidence/capture-reports/firebud_village_gate-pointer-idle.json", "sha256": "44cb389e1a829ad1bbb9a030c9609234864c409d7cd5ba2435d84949a2e56ae6"},
-        {"path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-before.jpeg", "sha256": "de37bef344896149918ffe322820a06a6b0e8baf0fc616ac60d6bcd443070ea1"},
-        {"path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-after.jpeg", "sha256": "4fd8a51c53f0c2075a1c57b65faef80b69ea2379a6dca28a291b20f72ba60c59"}
+        {
+          "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
+          "sha256": "a2e81c6048d888e135e26dc37ce38f4876b2ee7f1f025caafb9b384354d57f82"
+        },
+        {
+          "path": "evidence/runtime-actions/firebud_village_gate/pointer-capture.json",
+          "sha256": "b6955c575e951ff37e6d2c960a2854f2b9f94a9cf58e6c2b70e8b0dde125e4cf"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-before.jpeg",
+          "sha256": "de37bef344896149918ffe322820a06a6b0e8baf0fc616ac60d6bcd443070ea1"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-after.jpeg",
+          "sha256": "4fd8a51c53f0c2075a1c57b65faef80b69ea2379a6dca28a291b20f72ba60c59"
+        }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_pointer.jsonl",
@@ -124,10 +199,22 @@
       "description": "Left-click the meadow near the pavilion and verify a readable multi-cell route across the village composition.",
       "result": "PASS",
       "evidence": [
-        {"path": "evidence/runtime-screenshots/firebud_village_gate-movement_path-moving.png", "sha256": "2435974614c68132afffe6ec1922375fc21d5f6f166970f21e34e4970c4d7786"},
-        {"path": "evidence/capture-reports/firebud_village_gate-movement_path-moving.json", "sha256": "542053c879dc54894bc75a4d4629548b2e8ebbf5ba56068d80faa67100d864a1"},
-        {"path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-before.jpeg", "sha256": "f23ecd2d3353bbe4beed144fe70cb718a2f89176f1a7e8e6db14d6eb41086f78"},
-        {"path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-after.jpeg", "sha256": "6354535dad44accf5bbd3cbade00f4a3ada7cb7b9ff642d7df3354887449d3fd"}
+        {
+          "path": "evidence/runtime-actions/firebud_village_gate/movement_path.png",
+          "sha256": "92b54920aec4e1c08002394a8c7c7b3e86f19797a4fc115c5a54dfa8d1d27a33"
+        },
+        {
+          "path": "evidence/runtime-actions/firebud_village_gate/movement_path-capture.json",
+          "sha256": "43f316b04ab31e256621192a713ca6e81ec5755459dc2b78522fec74229db609"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-before.jpeg",
+          "sha256": "f23ecd2d3353bbe4beed144fe70cb718a2f89176f1a7e8e6db14d6eb41086f78"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-after.jpeg",
+          "sha256": "6354535dad44accf5bbd3cbade00f4a3ada7cb7b9ff642d7df3354887449d3fd"
+        }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_movement_path.jsonl",
@@ -141,10 +228,22 @@
       "description": "Use the visible task route from the village, cross the return warp, and verify the training-yard arrival and next interaction.",
       "result": "PASS",
       "evidence": [
-        {"path": "evidence/runtime-screenshots/firebud_village_gate-warp-moving.png", "sha256": "2435974614c68132afffe6ec1922375fc21d5f6f166970f21e34e4970c4d7786"},
-        {"path": "evidence/capture-reports/firebud_village_gate-warp-moving.json", "sha256": "7a7f95bdfa1dfb32ed4c972a18561ce1505c564f5e9f5c492bded09af19f4549"},
-        {"path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-before.jpeg", "sha256": "4e418c9196848130454958a298e6ab40ed2c23d226d999604e54743468b37bbf"},
-        {"path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-after.jpeg", "sha256": "3e38fa5bdd02e8258aa9deec8401c175c5d693a15aead1aeea41e73df557d22f"}
+        {
+          "path": "evidence/runtime-actions/firebud_village_gate/warp.png",
+          "sha256": "a582079188c9ac3fa7538ccdb13c9f010ac2f088be98d2072516751b063264e7"
+        },
+        {
+          "path": "evidence/runtime-actions/firebud_village_gate/warp-capture.json",
+          "sha256": "13887445fb299a8d8ea5ed5c74e1efd6667b576e16d977a3a0a8675856e6d1b9"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-before.jpeg",
+          "sha256": "4e418c9196848130454958a298e6ab40ed2c23d226d999604e54743468b37bbf"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-after.jpeg",
+          "sha256": "3e38fa5bdd02e8258aa9deec8401c175c5d693a15aead1aeea41e73df557d22f"
+        }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_warp.jsonl",
@@ -158,10 +257,22 @@
       "description": "Click the low fence collision edge and verify the actor remains on its walkable side without visual overlap.",
       "result": "PASS",
       "evidence": [
-        {"path": "evidence/runtime-screenshots/firebud_village_gate-collision-moving.png", "sha256": "2435974614c68132afffe6ec1922375fc21d5f6f166970f21e34e4970c4d7786"},
-        {"path": "evidence/capture-reports/firebud_village_gate-collision-moving.json", "sha256": "d7a003555eabc4d5be65bc97aa7ceb4fa29a3d5732a46402a3083172f2d8a3c0"},
-        {"path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-before.jpeg", "sha256": "a302db9aef33f3981d957f236e3bf83f6b73227ca44a8f68ca8e203003e05453"},
-        {"path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-after.jpeg", "sha256": "4e418c9196848130454958a298e6ab40ed2c23d226d999604e54743468b37bbf"}
+        {
+          "path": "evidence/runtime-actions/firebud_village_gate/collision.png",
+          "sha256": "2435974614c68132afffe6ec1922375fc21d5f6f166970f21e34e4970c4d7786"
+        },
+        {
+          "path": "evidence/runtime-actions/firebud_village_gate/collision-capture.json",
+          "sha256": "e86f7a83f345adb45d78d2bf301829c71b3d77badc96567432d7d7f2bde4c03e"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-before.jpeg",
+          "sha256": "a302db9aef33f3981d957f236e3bf83f6b73227ca44a8f68ca8e203003e05453"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-after.jpeg",
+          "sha256": "4e418c9196848130454958a298e6ab40ed2c23d226d999604e54743468b37bbf"
+        }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_collision.jsonl",
@@ -175,10 +286,22 @@
       "description": "Walk from behind the ancient tree to its foreground and verify canopy/trunk y-sort while roots remain blocking.",
       "result": "PASS",
       "evidence": [
-        {"path": "evidence/runtime-screenshots/firebud_village_gate-occlusion-moving.png", "sha256": "2435974614c68132afffe6ec1922375fc21d5f6f166970f21e34e4970c4d7786"},
-        {"path": "evidence/capture-reports/firebud_village_gate-occlusion-moving.json", "sha256": "294354072b7d6fe212083186d88931a6c94e3c43a33f3420e9ed5e9cce7bd6f2"},
-        {"path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-before.jpeg", "sha256": "f605a60397c0026ef16a2715f04396f44be8fff8bac3424dbb12099e51d280ab"},
-        {"path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-after.jpeg", "sha256": "a302db9aef33f3981d957f236e3bf83f6b73227ca44a8f68ca8e203003e05453"}
+        {
+          "path": "evidence/runtime-actions/firebud_village_gate/occlusion.png",
+          "sha256": "566813b170e701cec2e977ef1a1370d2bfe469e78a5a5a2da6710806d87f3cb1"
+        },
+        {
+          "path": "evidence/runtime-actions/firebud_village_gate/occlusion-capture.json",
+          "sha256": "863e92f0b12d1bf1b423e472a3e3e5aee6afb7ae2b4f51813959a442ae329d35"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-before.jpeg",
+          "sha256": "f605a60397c0026ef16a2715f04396f44be8fff8bac3424dbb12099e51d280ab"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-after.jpeg",
+          "sha256": "a302db9aef33f3981d957f236e3bf83f6b73227ca44a8f68ca8e203003e05453"
+        }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_occlusion.jsonl",

@@ -88,6 +88,11 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 	if not review_catalog_load_errors.is_empty():
 		errors.append_array(review_catalog_load_errors)
 	var catalog_ids := MapVisualCatalog.catalog_map_ids()
+	var review_only_map_ids: Array[String] = []
+	for review_map_id in MapVisualCatalog.review_catalog_map_ids():
+		if not catalog_ids.has(review_map_id):
+			review_only_map_ids.append(review_map_id)
+	review_only_map_ids.sort()
 	var catalog_coverage_exact := catalog_ids.size() == EXPECTED_MAP_IDS.size()
 	var catalog_paths_exact := true
 	for map_id in EXPECTED_MAP_IDS:
@@ -300,6 +305,149 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 		elif str(selected_preview.get("catalogSource", "")) != "normal":
 			errors.append("QA preview 未解析到 review 或 normal catalog：%s" % map_id)
 
+	# A first visual bundle has no released primary entry to compare against.
+	# The review catalog already supports that selection contract; freeze these
+	# QA-only maps independently while continuing to require normal runtime to
+	# fall back to the legacy renderer.
+	for map_id in review_only_map_ids:
+		var map_path := MapDataCatalog.path_for(map_id)
+		if map_path == "":
+			errors.append("review-only 地图未注册 MapDataCatalog：%s" % map_id)
+			continue
+		var map_data := IsoMapModel.load_map(map_path)
+		if map_data.is_empty():
+			errors.append("review-only 权威地图加载失败：%s" % map_id)
+			continue
+		var binding_path := MapVisualCatalog.review_catalog_binding_path(map_id)
+		var manifest_path := MapVisualCatalog.review_catalog_manifest_path(map_id)
+		var binding := _read_json(
+			binding_path,
+			errors,
+			"review-only 地图视觉 binding %s" % map_id
+		)
+		var manifest := _read_json(
+			manifest_path,
+			errors,
+			"review-only 地图视觉 manifest %s" % map_id
+		)
+		var binding_manifest_path := (
+			binding_path.get_base_dir().get_base_dir().path_join("map-visual-bundle.json")
+		)
+		if manifest_path != binding_manifest_path:
+			errors.append(
+				"review-only catalog bundleManifest 与 binding 实际 manifest 不一致：%s expected=%s actual=%s"
+				% [map_id, binding_manifest_path, manifest_path]
+			)
+		_validate_authority_contract(map_id, map_data, binding, manifest, errors)
+		var binding_hash := (
+			FileAccess.get_sha256(binding_path)
+			if FileAccess.file_exists(binding_path)
+			else ""
+		)
+		var map_data_hash := (
+			FileAccess.get_sha256(map_path)
+			if FileAccess.file_exists(map_path)
+			else ""
+		)
+		if binding_hash.length() != 64:
+			errors.append("无法冻结 review-only 地图视觉 binding SHA-256：%s" % map_id)
+		if map_data_hash.length() != 64:
+			errors.append("无法冻结 review-only 权威地图数据 SHA-256：%s" % map_id)
+		if validate_frozen_catalog_contract:
+			_validate_frozen_catalog_contract(
+				map_id,
+				manifest_path,
+				manifest,
+				binding_hash,
+				map_data_hash,
+				errors
+			)
+
+		var before := map_data.duplicate(true)
+		var normal := MapVisualCatalog.prepare_map(map_id, map_data, false)
+		if not normal.is_empty():
+			errors.append("review-only 地图绕过 QA 进入普通运行时：%s" % map_id)
+		if map_data != before:
+			errors.append("review-only normal prepare 修改了权威 mapData：%s" % map_id)
+		var selected_preview := MapVisualCatalog.prepare_map(map_id, map_data, true)
+		if selected_preview.is_empty():
+			errors.append("review-only QA preview 地图准备失败：%s" % map_id)
+			errors.append_array(MapVisualCatalog.errors_for_map(map_id))
+			continue
+		if map_data != before:
+			errors.append("review-only QA prepare 修改了权威 mapData：%s" % map_id)
+		if (
+			not bool(selected_preview.get("reviewCandidate", false))
+			or str(selected_preview.get("catalogSource", "")) != "review"
+		):
+			errors.append("review-only QA preview 未解析到 review catalog：%s" % map_id)
+		_validate_prepared_map(map_id, map_data, manifest, selected_preview, errors)
+
+		var review_bundle_id := str(selected_preview.get("bundleId", ""))
+		var review_binding_hash := (
+			FileAccess.get_sha256(binding_path)
+			if FileAccess.file_exists(binding_path)
+			else ""
+		)
+		if review_bundle_id == "":
+			errors.append("review-only candidate 缺少 bundleId：%s" % map_id)
+		if review_binding_hash.length() != 64:
+			errors.append("无法冻结 review-only binding SHA-256：%s" % map_id)
+		var expected_review_map_ids_value: Variant = manifest.get("mapIds", [])
+		if not (expected_review_map_ids_value is Array):
+			errors.append("review-only manifest.mapIds 必须是数组：%s" % map_id)
+		else:
+			var expected_review_map_ids := expected_review_map_ids_value as Array
+			if review_expected_map_ids_by_bundle.has(review_bundle_id):
+				if not _same_string_set(
+					review_expected_map_ids_by_bundle.get(review_bundle_id, []) as Array,
+					expected_review_map_ids
+				):
+					errors.append("同 review-only bundle 的 manifest.mapIds 不一致：%s" % review_bundle_id)
+			else:
+				review_expected_map_ids_by_bundle[review_bundle_id] = expected_review_map_ids.duplicate()
+		var seen_review_map_ids := review_map_ids_by_bundle.get(review_bundle_id, []) as Array
+		if seen_review_map_ids.has(map_id):
+			errors.append("review-only bundle mapId 重复：%s/%s" % [review_bundle_id, map_id])
+		else:
+			seen_review_map_ids.append(map_id)
+		review_map_ids_by_bundle[review_bundle_id] = seen_review_map_ids
+		var prior_manifest_path := str(review_manifest_paths_by_bundle.get(review_bundle_id, ""))
+		if prior_manifest_path != "" and prior_manifest_path != manifest_path:
+			errors.append("同 review-only bundle 的 manifest 路径不一致：%s" % review_bundle_id)
+		review_manifest_paths_by_bundle[review_bundle_id] = manifest_path
+		var review_bundle_binding_hashes := (
+			review_binding_hashes_by_bundle.get(review_bundle_id, {}) as Dictionary
+		)
+		review_bundle_binding_hashes[map_id] = review_binding_hash
+		review_binding_hashes_by_bundle[review_bundle_id] = review_bundle_binding_hashes
+		var review_bundle_map_hashes := (
+			review_map_data_hashes_by_bundle.get(review_bundle_id, {}) as Dictionary
+		)
+		review_bundle_map_hashes[map_id] = map_data_hash
+		review_map_data_hashes_by_bundle[review_bundle_id] = review_bundle_map_hashes
+		var review_summary := {
+			"mapId": map_id,
+			"groundDraws": MapVisualRenderer.ground_draw_count(selected_preview),
+			"objects": MapVisualRenderer.object_draw_count(selected_preview),
+			"protectedCells": (
+				selected_preview.get("protectedLookup", {}) as Dictionary
+			).size(),
+		}
+		review_candidate_summaries.append(review_summary.merged({"bundleId": review_bundle_id}))
+		var review_bundle_summaries := (
+			review_summaries_by_bundle.get(review_bundle_id, []) as Array
+		)
+		review_bundle_summaries.append(review_summary)
+		review_summaries_by_bundle[review_bundle_id] = review_bundle_summaries
+		var path_exact := (
+			manifest_path == MapVisualCatalog.review_catalog_manifest_path(map_id)
+			and binding_path == MapVisualCatalog.review_catalog_binding_path(map_id)
+		)
+		review_paths_exact_by_bundle[review_bundle_id] = (
+			bool(review_paths_exact_by_bundle.get(review_bundle_id, true)) and path_exact
+		)
+
 	for review_bundle_id_value in review_expected_map_ids_by_bundle.keys():
 		var review_bundle_id := str(review_bundle_id_value)
 		var expected_review_map_ids := (
@@ -312,8 +460,10 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 				% [review_bundle_id, str(expected_review_map_ids), str(seen_review_map_ids)]
 			)
 
+	var repeat_prepare_map_ids: Array[String] = EXPECTED_MAP_IDS.duplicate()
+	repeat_prepare_map_ids.append_array(review_only_map_ids)
 	var counts_after_first_pass := MapVisualCatalog.debug_io_counts()
-	for map_id in EXPECTED_MAP_IDS:
+	for map_id in repeat_prepare_map_ids:
 		var map_data := IsoMapModel.load_map(MapDataCatalog.path_for(map_id))
 		MapVisualCatalog.prepare_map(map_id, map_data, true)
 	var counts_after_second_pass := MapVisualCatalog.debug_io_counts()
@@ -463,6 +613,7 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 		"mapDataHashes": map_data_hashes,
 		"bundleReports": bundle_reports,
 		"reviewBundleIds": review_bundle_ids,
+		"reviewOnlyMapIds": review_only_map_ids.duplicate(),
 		"normalPendingDisabled": errors.filter(func(error: String) -> bool: return error.contains("绕过 QA")).is_empty(),
 		"normalLifecycleAccessValid": lifecycle_valid,
 		"qaPreviewEnabled": qa_preview_enabled,
@@ -1109,11 +1260,22 @@ static func _validate_encounter_cell(
 	errors: Array[String]
 ) -> bool:
 	var terrain_blocked := IsoMapModel.blocked_lookup(map_data)
-	if not IsoMapModel.is_inside(map_data, cell) or terrain_blocked.has(IsoMapModel.cell_key(cell)):
+	if not IsoMapModel.is_inside(map_data, cell):
 		errors.append(
-			"独立检查：encounterZone 格子越界或被静态地形阻挡：%s/%s/%s/%s"
+			"独立检查：encounterZone 格子越界：%s/%s/%s/%s"
 			% [map_id, zone_id, source, IsoMapModel.cell_key(cell)]
 		)
+		return false
+	if terrain_blocked.has(IsoMapModel.cell_key(cell)):
+		# Rectangular encounter areas describe broad terrain and the runtime can
+		# never place a player on a static blocker inside that rectangle. Keep
+		# explicit cells strict, but filter incidental blocked rect cells exactly
+		# like EncounterModel.first_walkable_cell and the visual encounter lookup.
+		if source.begins_with("cells["):
+			errors.append(
+				"独立检查：encounterZone 显式格被静态地形阻挡：%s/%s/%s/%s"
+				% [map_id, zone_id, source, IsoMapModel.cell_key(cell)]
+			)
 		return false
 	return true
 

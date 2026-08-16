@@ -18,6 +18,24 @@ static func run(host: Node) -> Dictionary:
 		"bundleId": WorldPresentationProfile.FIREBUD_REVIEW_BUNDLE_ID,
 		"qaPreview": true,
 		"reviewCandidate": true,
+		"status": "owner_review_pending",
+		"groundRenderMode": WorldPresentationProfile.LAYERED_SEMANTIC_OVERLAY,
+	}
+	var earth_review := {
+		"active": true,
+		"bundleId": "earth_vein_cave_visual_v1",
+		"qaPreview": true,
+		"reviewCandidate": true,
+		"status": "owner_review_pending",
+		"groundRenderMode": WorldPresentationProfile.LAYERED_SEMANTIC_OVERLAY,
+	}
+	var released_layered := {
+		"active": true,
+		"bundleId": "future_layered_map_visual_v1",
+		"qaPreview": false,
+		"reviewCandidate": false,
+		"status": "released",
+		"groundRenderMode": WorldPresentationProfile.LAYERED_SEMANTIC_OVERLAY,
 	}
 	var forged_v2 := {"bundleId": WorldPresentationProfile.FIREBUD_REVIEW_BUNDLE_ID}
 
@@ -59,6 +77,12 @@ static func run(host: Node) -> Dictionary:
 		errors.append("仅伪造 v2 bundleId 不得关闭程序化地表反馈")
 	if not WorldPresentationProfile.uses_authored_ground_details(true, v2):
 		errors.append("v2 必须使用 authored encounter/decor 地表细节")
+	if not WorldPresentationProfile.uses_authored_ground_details(true, earth_review):
+		errors.append("分层语义地图候选必须使用 authored encounter/decor 地表细节")
+	if WorldPresentationProfile.uses_authored_ground_details(false, earth_review):
+		errors.append("pending 分层语义地图不得绕过显式审图入口")
+	if not WorldPresentationProfile.uses_authored_ground_details(false, released_layered):
+		errors.append("released 分层语义地图必须在正常玩家路径使用 authored 地表细节")
 	_expect_vector(
 		WorldPresentationProfile.safe_zoom(Vector2.ZERO),
 		Vector2.ONE,

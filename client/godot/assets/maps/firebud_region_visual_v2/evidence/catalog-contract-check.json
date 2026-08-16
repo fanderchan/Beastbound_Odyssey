@@ -4,7 +4,7 @@
 		"firebud_village_gate": "b0c7335a9d40dffc24a7b0c4e7d5a86522d57b7b481cced458ca3374a1747962"
 	},
 	"bundleId": "firebud_region_visual_v2",
-  "catalogSha256": "ba1b5b9d3865cff4227d16b2c9365e65b2f417cac70246be39dc18c409f3b139",
+	"catalogSha256": "662fa235c072f295aed084f2163934cb69a41ec0f8083801649242b1c47dbc3f",
 	"checks": {
 		"allIndependentChecksPassed": true,
 		"catalogCoverageExact": true,
@@ -18,7 +18,7 @@
 		"unknownMapFailedClosed": true
 	},
 	"errors": [],
-  "generatedAtUtc": "2026-08-10T17:06:24Z",
+	"generatedAtUtc": "2026-08-15T17:00:19Z",
 	"mapDataHashes": {
 		"firebud_training_yard": "1c4cd89ec2dd1b7bbcf894afc7f9c5daab26133a82b62a63e3dbbe21ab9719f3",
 		"firebud_village_gate": "9acc9579c17249d3ed4db74faacd57fc21c1a38adc5ab3b7dffa4b82f91a127f"

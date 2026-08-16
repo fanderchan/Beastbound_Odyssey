@@ -184,6 +184,27 @@ class ProjectSettingsIdentityTests(unittest.TestCase):
             }.issubset(set(builder.RUNTIME_IDENTITY_FILES))
         )
 
+    def test_runtime_identity_covers_review_only_earth_candidate(self) -> None:
+        self.assertEqual(
+            builder.MAP_BUNDLES["earth_vein_cave_visual_v1"][1],
+            (
+                "earth_vein_cave",
+                "earth_vein_cave_f2",
+                "earth_vein_cave_f3",
+                "earth_vein_cave_f4",
+            ),
+        )
+        self.assertTrue(
+            {
+                "scripts/world/world_presentation_profile.gd",
+                "data/map_visual_review_catalog.json",
+                "data/earth_vein_cave_map.json",
+                "data/earth_vein_cave_f2_map.json",
+                "data/earth_vein_cave_f3_map.json",
+                "data/earth_vein_cave_f4_map.json",
+            }.issubset(set(builder.RUNTIME_IDENTITY_FILES))
+        )
+
     def test_editor_reformat_and_setting_reorder_are_identity_neutral(self) -> None:
         compact = """\
 config_version=5

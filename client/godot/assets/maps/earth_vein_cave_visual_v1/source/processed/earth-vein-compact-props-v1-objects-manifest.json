@@ -1,0 +1,149 @@
+{
+  "cellEdgePolicy": {
+    "overrideFlag": "",
+    "overrideUsed": false,
+    "visibleAlphaMustBeInsideCell": true
+  },
+  "defaultAnchor": [
+    0.5,
+    1.0
+  ],
+  "maxDimension": 256,
+  "objects": [
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        256,
+        207
+      ],
+      "label": "earth_cave_rock_pile",
+      "path": "earth_cave_rock_pile.png",
+      "sha256": "9d6d76723db0dfc6abb9e151e9c6c99cd5b8c7eb8e8cb1f37f02c95f001af87d",
+      "sourceBbox": [
+        132,
+        160,
+        430,
+        342
+      ],
+      "sourceCell": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        0
+      ]
+    },
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        256,
+        242
+      ],
+      "label": "earth_cave_crystal_cluster",
+      "path": "earth_cave_crystal_cluster.png",
+      "sha256": "a519448c645b86e001861d2141a6cc46a4e4f864e2112732165120c62ae14551",
+      "sourceBbox": [
+        735,
+        180,
+        339,
+        319
+      ],
+      "sourceCell": [
+        627,
+        0,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        1
+      ]
+    },
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        256,
+        217
+      ],
+      "label": "earth_cave_fungus_cluster",
+      "path": "earth_cave_fungus_cluster.png",
+      "sha256": "72129d962f4b2d9a027127731489e3b9e4d941dff1c40e4b6ebe26e7e8eb7350",
+      "sourceBbox": [
+        155,
+        735,
+        372,
+        312
+      ],
+      "sourceCell": [
+        0,
+        627,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        1,
+        0
+      ]
+    },
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        193,
+        256
+      ],
+      "label": "earth_cave_cairn",
+      "path": "earth_cave_cairn.png",
+      "sha256": "f67abaf7dc9019bcf95a74fa55816ef6e6870f8929414939705f9f4051744e99",
+      "sourceBbox": [
+        783,
+        723,
+        247,
+        334
+      ],
+      "sourceCell": [
+        627,
+        627,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        1,
+        1
+      ]
+    }
+  ],
+  "padding": 8,
+  "schemaVersion": 1,
+  "source": {
+    "alphaThreshold": 0,
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "grid": {
+      "columns": 2,
+      "rows": 2
+    },
+    "path": "../../../client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-compact-props-v1-alpha.png",
+    "sha256": "74b17aa1723ed47c620c21211969756217ff7b42ade5ac08d1e32a0e48e9c15a"
+  }
+}

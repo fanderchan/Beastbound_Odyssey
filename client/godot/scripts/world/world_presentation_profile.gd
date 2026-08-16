@@ -2,6 +2,7 @@ class_name WorldPresentationProfile
 extends RefCounted
 
 const FIREBUD_REVIEW_BUNDLE_ID := "firebud_region_visual_v2"
+const LAYERED_SEMANTIC_OVERLAY := "layered_semantic_overlay"
 const NORMAL_CAMERA_ZOOM := Vector2.ONE
 const FIREBUD_REVIEW_CAMERA_ZOOM := Vector2(1.55, 1.55)
 const MIN_ZOOM_COMPONENT := 0.0001
@@ -17,7 +18,19 @@ static func uses_authored_ground_details(
 	map_art_review_preview: bool,
 	prepared_visual: Dictionary
 ) -> bool:
-	return _is_firebud_review_canary(map_art_review_preview, prepared_visual)
+	if (
+		not bool(prepared_visual.get("active", false))
+		or str(prepared_visual.get("groundRenderMode", ""))
+			!= LAYERED_SEMANTIC_OVERLAY
+	):
+		return false
+	if str(prepared_visual.get("status", "")) == "released":
+		return true
+	return (
+		map_art_review_preview
+		and bool(prepared_visual.get("qaPreview", false))
+		and bool(prepared_visual.get("reviewCandidate", false))
+	)
 
 
 static func safe_zoom(value: Vector2) -> Vector2:

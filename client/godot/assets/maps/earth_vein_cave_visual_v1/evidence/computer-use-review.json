@@ -1,0 +1,604 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound_map_computer_use_review",
+  "generatedAtUtc": "2026-08-15T18:40:23Z",
+  "bundleId": "earth_vein_cave_visual_v1",
+  "result": "PASS",
+  "testedMapIds": [
+    "earth_vein_cave",
+    "earth_vein_cave_f2",
+    "earth_vein_cave_f3",
+    "earth_vein_cave_f4"
+  ],
+  "excludedReleaseGate": null,
+  "blockers": [],
+  "method": "computer_use",
+  "scene": "res://scenes/Main.tscn",
+  "viewport": [
+    1280,
+    720
+  ],
+  "displayServer": "macOS Metal",
+  "actions": [
+    {
+      "actionId": "earth_vein_cave_pointer",
+      "actionKind": "pointer",
+      "mapId": "earth_vein_cave",
+      "description": "打开一层真实地图面板，核对当前楼层、坐标与全部导航目标。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave/pointer.png",
+          "sha256": "21fa6cadbb6c8f9723110676269d8cea80254d12c4438ad846a89db248e81497"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave/pointer-capture.json",
+          "sha256": "f356988b7b7a73f37e498bde39454d161121d031dfae86f64a550b59709a595c"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_pointer-before.jpeg",
+          "sha256": "a8922672ed85245ddf77a27e026da78d2680f34c42a267c716dc50e9ef79691f"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_pointer-after.jpeg",
+          "sha256": "1b4e287a54fb78150407e04ff80c5a6bed8868514aa79ebc8bfd2b2de2f2c909"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_pointer.jsonl",
+        "sha256": "04bcf3983a9a5cec6aa33790267b18a4f48275dcfab69c6979eb49072ecea007"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_movement_path",
+      "actionKind": "movement_path",
+      "mapId": "earth_vein_cave",
+      "description": "点击一层可行走石地，核对跨帧移动、连续路线与终点标记。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave/movement_path.png",
+          "sha256": "6c48df633cedb638fdbdd313c36608ed48e50e59e90a3a5ff1b5d0318e2a2922"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave/movement_path-capture.json",
+          "sha256": "bd0c54c9fd6977867f82871abac3e5fbad77fc335a7d472c28e946b096d39491"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_movement_path-before.jpeg",
+          "sha256": "65dd072c40705513afaaf1b23728e60747ffd09c602c3afc3c02226720d07f0b"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_movement_path-after.jpeg",
+          "sha256": "e6541c41e72855ff475dae012f2342a09b4e74560e08250be62c712d603de301"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_movement_path.jsonl",
+        "sha256": "3a956a134ad89364115736d7a40be9dac05a20c74968d53172bd51edd48a1d77"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_warp",
+      "actionKind": "warp",
+      "mapId": "earth_vein_cave",
+      "description": "从一层地图面板选择二层，走到楼梯并核对二层落点。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave/warp.png",
+          "sha256": "b002a293434a1a4b45b3d59341dd425369e3beab6f411e7acab0a0dbbff2a4db"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave/warp-capture.json",
+          "sha256": "e7953e912e4217828e52741996f1a2c615f21c6634ed6c2a9a6d56664fb75915"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_warp-before.jpeg",
+          "sha256": "4f8ea6c25006ffc83df2b3af8490fa51d59ca963752878ec0fc40dd67372f032"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_warp-after.jpeg",
+          "sha256": "80819f14de56a53b8033c0db3e8d849cee0b0a47cd0f544dfce0173c371fcdd4"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_warp.jsonl",
+        "sha256": "58dd0f3f3bfd9c626b9077d69eecf9399ca508b56aecd94fdd4f6c31a103ade3"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_collision",
+      "actionKind": "collision",
+      "mapId": "earth_vein_cave",
+      "description": "点击一层显式阻挡岩石，核对角色停在 footprint 外侧。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave/collision.png",
+          "sha256": "441d1992a0fd29e58fd9b856246a8af423b204be5af08b7e6a74daf80c1df3dc"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave/collision-capture.json",
+          "sha256": "2d1fadc41209dcf046073f1c6fe8f7c159afd7c5492fd4e15951c8e12d2aa1dd"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_collision-before.jpeg",
+          "sha256": "e27aa416621468c8e0b5a07f7943f17f25b5752099e61d878afe16dcffddd86b"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_collision-after.jpeg",
+          "sha256": "9dfb78af4b421cdc08fab60ade7976d70b1f164e7624c306c33b036818a0b3f5"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_collision.jsonl",
+        "sha256": "7bca30cccaa0a592269413c5baa38e2fe5a716269f735fe24c0675ffc4dd0d1c"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_occlusion",
+      "actionKind": "occlusion",
+      "mapId": "earth_vein_cave",
+      "description": "让角色走入一层前景岩脊后方，核对岩脊的前景遮挡层。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave/occlusion.png",
+          "sha256": "8645ea5acd3078a98e8e230ac07c85afa320b1ecb8f03d240008e5a60d65b73d"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave/occlusion-capture.json",
+          "sha256": "2c7c73cf8660bfa91650529f22035b30c70f49eb1ba4438dd0c6f5c8db09c5ca"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_occlusion-before.jpeg",
+          "sha256": "1b814de58cfebaa17e3529317e92ec571d14cc2a2023de52ec538757b9937b92"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_occlusion-after.jpeg",
+          "sha256": "e0aa0ce82016629f0a5b45017087525e03b22b38cd138b68b6949f3b1cb8ede2"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_occlusion.jsonl",
+        "sha256": "57923fd6b485d40e7ea41fb080c0d0975eac9433d40d5318912678807723fa6b"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f2_pointer",
+      "actionKind": "pointer",
+      "mapId": "earth_vein_cave_f2",
+      "description": "打开二层真实地图面板，核对楼层标题与上下层导航。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f2/pointer.png",
+          "sha256": "630c8a91263bc072a6423f77862947b502f1ed24355e7b455c707d8b526da19e"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f2/pointer-capture.json",
+          "sha256": "bc313840eb836c784a978e0984eb9e9e504d743d3ce08127e8028edfac70f94d"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_pointer-before.jpeg",
+          "sha256": "80819f14de56a53b8033c0db3e8d849cee0b0a47cd0f544dfce0173c371fcdd4"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_pointer-after.jpeg",
+          "sha256": "cd12c738a5ceb17f526360b8403b6a87c247643cb139512964b688da65cfc189"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f2_pointer.jsonl",
+        "sha256": "465e019233391f58c9e2fa0ba982f41e17d2053e76264569872450256fec7324"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f2_movement_path",
+      "actionKind": "movement_path",
+      "mapId": "earth_vein_cave_f2",
+      "description": "在二层点击近场石地，核对真实跨帧短路径移动。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f2/movement_path.png",
+          "sha256": "164fb5721e26b71f4637527259854289ad50a4fe16ddc58b107a32b1f953d51b"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f2/movement_path-capture.json",
+          "sha256": "556296a76da8c88d8c92e4731d468e976d8845552b42f0a8d9e7f2e74af86603"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_movement_path-before.jpeg",
+          "sha256": "f59810eda3f7d3933118275f28d5c214eaebabb96dc42601fce186df2f0da858"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_movement_path-after.jpeg",
+          "sha256": "fb2e0a3c5a32c87929fa052bdefbdea604eaa5b82f444ded03f19656fd301ec6"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f2_movement_path.jsonl",
+        "sha256": "2e6364af1e5d7674eea6d329fb02d8952090f063a9df9e2a4334d0f45e79979b"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f2_warp",
+      "actionKind": "warp",
+      "mapId": "earth_vein_cave_f2",
+      "description": "从二层选择三层并核对三层出生点。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f2/warp.png",
+          "sha256": "a655130f90ae3fca8186a725e309516175a2d532d8029bf241d604819afbaae0"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f2/warp-capture.json",
+          "sha256": "1e3f62fa004679a7e765cdc138412014d4ad9bea38ace05fec3f944a12aadfd1"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_warp-before.jpeg",
+          "sha256": "8110fb0a7ecc6c8a398ccd481f006454d915f95c203390075cec638e7dbd4af7"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_warp-after.jpeg",
+          "sha256": "94e2f1421782b7a9b8353c79a5b622ee18c3e53fc399d95c3834915bdd38aa42"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f2_warp.jsonl",
+        "sha256": "5115d905dd30f26ce72f17f52fe1033e7897fddb4762494266cd113d266de46f"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f2_collision",
+      "actionKind": "collision",
+      "mapId": "earth_vein_cave_f2",
+      "description": "点击二层近场阻挡岩石，核对路线止于显式 footprint 外。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f2/collision.png",
+          "sha256": "d1b92e77c64aca6ba117bcd2b2eacc4aa5a885abf1f77e252080b9f68d3fbad4"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f2/collision-capture.json",
+          "sha256": "ce746d314cd7c60ef229501960508e1b44437b024a8ae395e3274bd0b332a1a5"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_collision-before.jpeg",
+          "sha256": "aa3811317f986de3f534c7fb66f122c50970e0f0f35bd6587d6e4b92b2a04a3e"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_collision-after.jpeg",
+          "sha256": "4ff817abede9a9da86c4d98ac6612d1c9f371d3ce5a1e63f8b46aaa6f2dbd6fc"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f2_collision.jsonl",
+        "sha256": "8b56ae8cdb620104918611e9d0dfd3d851ff391cb4bf70032a3b227ef821eafd"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f2_occlusion",
+      "actionKind": "occlusion",
+      "mapId": "earth_vein_cave_f2",
+      "description": "让角色穿到二层前景岩脊后，核对大岩脊遮挡。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f2/occlusion.png",
+          "sha256": "db920166db025051925e52a686b1d1fbc4973d73f3244287fd793c57a94ffc9b"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f2/occlusion-capture.json",
+          "sha256": "92d2e43acf4786ca8b222fa540954e66b3287e2a03b10734a7c7504c274f614b"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_occlusion-before.jpeg",
+          "sha256": "4ff817abede9a9da86c4d98ac6612d1c9f371d3ce5a1e63f8b46aaa6f2dbd6fc"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_occlusion-after.jpeg",
+          "sha256": "f5c2385668428460d2bb61bb1a5176348bb2c80874c771c35f6f71fe06807180"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f2_occlusion.jsonl",
+        "sha256": "a239207c0c688ecfdd9bc464c0de16cbb5fad511cc7e136d6bd31099370b4a17"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f3_pointer",
+      "actionKind": "pointer",
+      "mapId": "earth_vein_cave_f3",
+      "description": "打开三层地图面板，核对三层标题、上下层出口和练级区。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f3/pointer.png",
+          "sha256": "85ca7de23d08bf9e9852fe2c4890282a04814de1e04938b89ba997964be6ed3e"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f3/pointer-capture.json",
+          "sha256": "8e364802d47095e21b8c8acf1154aaa2de0750040a99f360637019ed8334a931"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_pointer-before.jpeg",
+          "sha256": "94e2f1421782b7a9b8353c79a5b622ee18c3e53fc399d95c3834915bdd38aa42"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_pointer-after.jpeg",
+          "sha256": "b03a924908b4b081d9eb11bf10db1c887a933d2fc8ccbeda4c43f4d02ffbad87"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f3_pointer.jsonl",
+        "sha256": "e3a5b096aa1c4246dfa445cb3d66c225023c82aa66b1786bf3d7a760660e102c"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f3_movement_path",
+      "actionKind": "movement_path",
+      "mapId": "earth_vein_cave_f3",
+      "description": "点击三层近场石地，核对真实路径与稳定镜头。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f3/movement_path.png",
+          "sha256": "7c0a087acd21305910bc3aa9f7fc13d7d3b59398967aaac3485cdca8a0a5c6fe"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f3/movement_path-capture.json",
+          "sha256": "d20463851fb09e35172c22a7f62edb1311f868eef48eada48966540804a34f67"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_movement_path-before.jpeg",
+          "sha256": "e5d1dbd40f92a0ec265545c2cb7d7fb62306fe34d156a9d85d51bb723d05dd0b"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_movement_path-after.jpeg",
+          "sha256": "66d24ecaa0a8510417cced49fc4ec2dffde40fa624c73e4f885cd897ef4110f4"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f3_movement_path.jsonl",
+        "sha256": "3ca20cf07d9224ddce1637c8d0c834d134e157af0c5b183aaf7538d0d56eece5"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f3_warp",
+      "actionKind": "warp",
+      "mapId": "earth_vein_cave_f3",
+      "description": "从三层选择顶层并核对顶层出生点。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f3/warp.png",
+          "sha256": "354349c02b945ba113de47a0e77e8cd333827bfba1056831fc25bd18b930cb5d"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f3/warp-capture.json",
+          "sha256": "6e97b3e89e5a815507f66e6c545d526f0b9fa56e4eef09585b6192836778c531"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_warp-before.jpeg",
+          "sha256": "912feaf343b6b8316594a2ed9d9aa5f187e9c10da2f1ba7e6c334f669b560fe3"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_warp-after.jpeg",
+          "sha256": "0d2f5e8a21a324dcf778ebe00261ba7d5690d93ced8c24b04e929625b931a9d9"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f3_warp.jsonl",
+        "sha256": "fbf152995c0ebeac1f3931202113902649349e46a622333484a26a28a6472c68"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f3_collision",
+      "actionKind": "collision",
+      "mapId": "earth_vein_cave_f3",
+      "description": "点击三层显式阻挡岩石，核对人物止步与 footprint。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f3/collision.png",
+          "sha256": "7393231a0ee0a8b77f7bcc3dec7f2ea466a082b63e85d7c5302de011f568510c"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f3/collision-capture.json",
+          "sha256": "c70f22793a5540d7e0f33d4611f0f01e205df4a43fac85c0047c6499dc544bb9"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_collision-before.jpeg",
+          "sha256": "66d24ecaa0a8510417cced49fc4ec2dffde40fa624c73e4f885cd897ef4110f4"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_collision-after.jpeg",
+          "sha256": "ea2634faea19d6ffb1b022145f8e0b3833323ecf69d72fbc1fab4a47c873bd49"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f3_collision.jsonl",
+        "sha256": "49899bbf3b11ff8a435a9fcb9a0b0a7b54723a1d31b48f118e77eace471fcfb2"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f3_occlusion",
+      "actionKind": "occlusion",
+      "mapId": "earth_vein_cave_f3",
+      "description": "从岩脊侧面走入其后方，核对三层前后层级切换。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f3/occlusion.png",
+          "sha256": "0ae3b32cc4b281dde365981b289a3344acc90dd51a7199f6d4b7da763a8ec3c1"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f3/occlusion-capture.json",
+          "sha256": "7aa15e38a3e504e01d6699523bd1dbdf77dcaf686e7cebb9eeff3d4b77897833"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_occlusion-before.jpeg",
+          "sha256": "4bc1f85101d5645b214912803a5810b4077c89d9469649f5d57c6b47900b8b2e"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_occlusion-after.jpeg",
+          "sha256": "ffb683755e20301040f8dafc93a882595e1a990e6f80a675d7b7457ef97afadd"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f3_occlusion.jsonl",
+        "sha256": "4276a6bff089c6de6aaad2f6677f4672679d992402e458ea8044c69c2705df1e"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f4_pointer",
+      "actionKind": "pointer",
+      "mapId": "earth_vein_cave_f4",
+      "description": "打开顶层地图面板，核对两座守护台与返回三层导航。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f4/pointer.png",
+          "sha256": "91d954ecc91a2fade21a59c6b6525ddce445baf72425310983482c21500dc95d"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f4/pointer-capture.json",
+          "sha256": "4b9bf8029bc2a88b77e6a4b9bcca33c9a11f39bfc165e9a4475b4de6d67afd96"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_pointer-before.jpeg",
+          "sha256": "0d2f5e8a21a324dcf778ebe00261ba7d5690d93ced8c24b04e929625b931a9d9"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_pointer-after.jpeg",
+          "sha256": "6afb8910794d6376fb4422b33db09bd6609010340659cd9e6f1d18288e6d7b5f"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f4_pointer.jsonl",
+        "sha256": "cf11e968e46a0c3b48dc5cbef8a36fc103e95a98d529e4056e1e27f919293126"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f4_movement_path",
+      "actionKind": "movement_path",
+      "mapId": "earth_vein_cave_f4",
+      "description": "在顶层点击近场石地，核对真实移动与顶层镜头边界。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f4/movement_path.png",
+          "sha256": "d42b805486fe12d523dbe59367221ffba51f1b65da605b3c091be663cad1f55b"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f4/movement_path-capture.json",
+          "sha256": "639c614a3e9c600ca4fcb2397098130b22ab375e7fe3eaccfb66f6ba8c2ebec5"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_movement_path-before.jpeg",
+          "sha256": "00c0e879a524fae4d1a74431dd36f28ba67d730621a3209bdbdc5fe691d04e80"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_movement_path-after.jpeg",
+          "sha256": "2b6746efbc05c29374125afb1212bd5a3c17d05bea2c47348b540fb24eaded44"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f4_movement_path.jsonl",
+        "sha256": "0fa78ebdff47d055e8bb2557db2a0f4a86b1a7ec07f61981b55f08e814c18d02"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f4_warp",
+      "actionKind": "warp",
+      "mapId": "earth_vein_cave_f4",
+      "description": "从顶层选择三层 / 下层并核对返回落点。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f4/warp.png",
+          "sha256": "f1f39399c25498e5b57bf198b78e20fd2c8fdbf1811d717c87ccd7f055702d82"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f4/warp-capture.json",
+          "sha256": "95c02558c5b7105d06c2be6bc8e6fbdfc87d9fb7cc8157df0d530de6a91823aa"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_warp-before.jpeg",
+          "sha256": "e214c76346348608f6e3ab59768c8a63f766f7ca46d3af15ae176baf2bd47d60"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_warp-after.jpeg",
+          "sha256": "387d319bb6aab5cd5d6a16d249fa1be6838cb0882239582d6143fbdd8f3142d3"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f4_warp.jsonl",
+        "sha256": "7336df758236e698d42248ff639fc559631c1b12a5650b8009c12241da0ae5ad"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f4_collision",
+      "actionKind": "collision",
+      "mapId": "earth_vein_cave_f4",
+      "description": "点击顶层高岩柱基座，核对三格 footprint 与人物止步。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f4/collision.png",
+          "sha256": "ebb5b283bb012d808a6155fc52ffd4ede9ad21d7ef1f21ce5c50dd9353260882"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f4/collision-capture.json",
+          "sha256": "5a6e7eafce4bbe2440f3be28e5217c504d0141cf70858555c7225741a39aa063"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_collision-before.jpeg",
+          "sha256": "123f258001e8b31b99894b43593e335409b370f40edd5a008915ae90565da96f"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_collision-after.jpeg",
+          "sha256": "9386833123150cf5154640df95d83be978b90e6e7a932dd783d71294c5551913"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f4_collision.jsonl",
+        "sha256": "d173487735b1ebb5426740ccc8fd8a7e1a4c3ee866336a7d84d04289250ead83"
+      }
+    },
+    {
+      "actionId": "earth_vein_cave_f4_occlusion",
+      "actionKind": "occlusion",
+      "mapId": "earth_vein_cave_f4",
+      "description": "走到顶层晶簇后侧，核对小型前景物件的局部遮挡。",
+      "result": "PASS",
+      "evidence": [
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f4/occlusion.png",
+          "sha256": "962cc5300d98ece129d04d023fd8ed57f03a6fc16d782420f9f001bc928aa8a4"
+        },
+        {
+          "path": "evidence/runtime-actions/earth_vein_cave_f4/occlusion-capture.json",
+          "sha256": "335885edaee79186ee045e26e319d94b1995e651758d9a0bba1cf41e6d6c638b"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_occlusion-before.jpeg",
+          "sha256": "9386833123150cf5154640df95d83be978b90e6e7a932dd783d71294c5551913"
+        },
+        {
+          "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_occlusion-after.jpeg",
+          "sha256": "c953bf37544e445cb90eaccedfe5540065f127ee1bcbefde00b61f17cfe22a96"
+        }
+      ],
+      "actionReceipt": {
+        "path": "evidence/computer-use-actions/earth_vein_cave_f4_occlusion.jsonl",
+        "sha256": "027fafc336a37396002d8a0c22ab095deabce6a88ca38907b06ec06a1e939722"
+      }
+    }
+  ]
+}

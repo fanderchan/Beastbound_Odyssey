@@ -35,7 +35,7 @@
     }
   ],
   "authoritySnapshot": {
-    "catalogContractSha256": "18e0f53de2ccbcc52e89f6033efbbb41ed41b189afdf9174e1f4426840ef7b23",
+    "catalogContractSha256": "bb62917d0e6fa5bf001b108410ebf561cc071be6e54fdeabff94158c40938460",
     "bindingHashes": {
       "firebud_training_yard": "d1b249a4aa923e07864358fea1bb4bc5a5fa82db4c1eaf7899378ca9312cc14b",
       "firebud_village_gate": "b0c7335a9d40dffc24a7b0c4e7d5a86522d57b7b481cced458ca3374a1747962"

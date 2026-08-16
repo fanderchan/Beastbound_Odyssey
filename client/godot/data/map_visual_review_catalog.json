@@ -15,6 +15,26 @@
       "mapId": "mistcap_marsh",
       "bundleManifest": "res://assets/maps/mistcap_marsh_visual_v1/map-visual-bundle.json",
       "bindingPath": "res://assets/maps/mistcap_marsh_visual_v1/bindings/mistcap_marsh.json"
+    },
+    {
+      "mapId": "earth_vein_cave",
+      "bundleManifest": "res://assets/maps/earth_vein_cave_visual_v1/map-visual-bundle.json",
+      "bindingPath": "res://assets/maps/earth_vein_cave_visual_v1/bindings/earth_vein_cave.json"
+    },
+    {
+      "mapId": "earth_vein_cave_f2",
+      "bundleManifest": "res://assets/maps/earth_vein_cave_visual_v1/map-visual-bundle.json",
+      "bindingPath": "res://assets/maps/earth_vein_cave_visual_v1/bindings/earth_vein_cave_f2.json"
+    },
+    {
+      "mapId": "earth_vein_cave_f3",
+      "bundleManifest": "res://assets/maps/earth_vein_cave_visual_v1/map-visual-bundle.json",
+      "bindingPath": "res://assets/maps/earth_vein_cave_visual_v1/bindings/earth_vein_cave_f3.json"
+    },
+    {
+      "mapId": "earth_vein_cave_f4",
+      "bundleManifest": "res://assets/maps/earth_vein_cave_visual_v1/map-visual-bundle.json",
+      "bindingPath": "res://assets/maps/earth_vein_cave_visual_v1/bindings/earth_vein_cave_f4.json"
     }
   ]
 }

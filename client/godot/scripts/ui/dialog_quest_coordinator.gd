@@ -56,9 +56,15 @@ func _open_quest_panel() -> void:
 	host._close_auto_settings_panel()
 	host.player_profile = PlayerProgressModel.normalize_profile(host.player_profile)
 	if host.quest_panel.has_method("prepare_open"):
-		host.quest_panel.prepare_open(
-			PlayerProgressModel.active_quest_id(host.player_profile, true)
+		var preferred_quest_id := PlayerProgressModel.active_quest_id(
+			host.player_profile,
+			true
 		)
+		if preferred_quest_id == "":
+			preferred_quest_id = str(
+				_quest_panel_special_task(false).get("id", "")
+			)
+		host.quest_panel.prepare_open(preferred_quest_id)
 	host.quest_panel.visible = true
 	_refresh_quest_panel()
 	host._sync_battle_buttons()
@@ -225,9 +231,11 @@ func _refresh_awakened_quest_panel() -> void:
 	var selected_id := ""
 	if host.quest_panel.has_method("selected_quest_id"):
 		selected_id = str(host.quest_panel.selected_quest_id())
+	var special_task := _quest_panel_special_task(true)
 	var view_state := QuestAwakenedPresenter.build_view_state(
 		host.player_profile,
-		selected_id
+		selected_id,
+		special_task
 	)
 	var detail_value = view_state.get("detail", {})
 	var detail := (
@@ -237,7 +245,11 @@ func _refresh_awakened_quest_panel() -> void:
 	)
 	var selected_quest_id := str(view_state.get("selectedQuestId", ""))
 	var selected_quest := QuestModel.quest_for_id(selected_quest_id)
-	var route_target := _navigation_target_for_quest_panel_selection(selected_quest)
+	var route_target := _navigation_target_for_quest_panel_selection_id(
+		selected_quest_id,
+		selected_quest,
+		special_task
+	)
 	detail["routeEnabled"] = (
 		not host.battle_active
 		and bool(detail.get("routeAllowedByState", false))
@@ -264,6 +276,56 @@ func _refresh_awakened_quest_panel() -> void:
 			detail.get("routeButtonText", "立即前往")
 		)
 		host.quest_route_button.disabled = not bool(detail.get("routeEnabled", false))
+
+func _quest_panel_special_task(include_target: bool = false) -> Dictionary:
+	if not PlayerProgressModel.active_quest(host.player_profile).is_empty():
+		return {}
+	if not host._first_available_unfinished_quest_for_tracker().is_empty():
+		return {}
+	if not PlayerProgressModel.first_level_blocked_unfinished_quest(
+		host.player_profile
+	).is_empty():
+		return {}
+	var mm_guide: Dictionary = host._pet_rebirth_mm_guide_task_info(
+		include_target
+	)
+	if not mm_guide.is_empty():
+		var mm_task: Dictionary = mm_guide.duplicate(true)
+		mm_task["id"] = QuestAwakenedPresenter.SPECIAL_TASK_MM_GUIDE_ID
+		mm_task["categoryId"] = "classic"
+		mm_task["categoryLabel"] = "转生"
+		var mm_status := str(mm_task.get("status", ""))
+		if mm_status == PlayerProgressModel.PET_REBIRTH_MM_GUIDE_STATUS_AVAILABLE:
+			mm_task["displayStatusId"] = "available"
+			mm_task["statusText"] = "可开始"
+		else:
+			mm_task["displayStatusId"] = "active"
+			mm_task["statusText"] = "正在进行"
+		return mm_task
+	var trial: Dictionary = host._rebirth_trial_task_info(include_target)
+	if trial.is_empty():
+		return {}
+	var trial_task: Dictionary = trial.duplicate(true)
+	trial_task["id"] = QuestAwakenedPresenter.SPECIAL_TASK_REBIRTH_TRIAL_ID
+	trial_task["categoryId"] = "classic"
+	trial_task["categoryLabel"] = "转生"
+	trial_task["displayStatusId"] = "active"
+	trial_task["statusText"] = "正在进行"
+	return trial_task
+
+func _navigation_target_for_quest_panel_selection_id(
+	quest_id: String,
+	quest: Dictionary,
+	special_task: Dictionary = {}
+) -> Dictionary:
+	if bool(special_task.get("id", "") == quest_id):
+		var target_value = special_task.get("target", {})
+		return (
+			(target_value as Dictionary).duplicate(true)
+			if target_value is Dictionary
+			else {}
+		)
+	return _navigation_target_for_quest_panel_selection(quest)
 
 func _navigation_target_for_quest_panel_selection(quest: Dictionary) -> Dictionary:
 	if quest.is_empty():
@@ -371,10 +433,13 @@ func _on_quest_route_pressed() -> void:
 		return
 	var target: Dictionary = {}
 	if host.quest_panel != null and host.quest_panel.has_method("selected_quest_id"):
-		var selected_quest := QuestModel.quest_for_id(
-			str(host.quest_panel.selected_quest_id())
+		var selected_quest_id := str(host.quest_panel.selected_quest_id())
+		var selected_quest := QuestModel.quest_for_id(selected_quest_id)
+		target = _navigation_target_for_quest_panel_selection_id(
+			selected_quest_id,
+			selected_quest,
+			_quest_panel_special_task(true)
 		)
-		target = _navigation_target_for_quest_panel_selection(selected_quest)
 	else:
 		target = host._current_task_navigation_target()
 	if target.is_empty():

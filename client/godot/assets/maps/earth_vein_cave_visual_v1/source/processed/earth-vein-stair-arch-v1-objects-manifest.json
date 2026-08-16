@@ -1,0 +1,59 @@
+{
+  "cellEdgePolicy": {
+    "overrideFlag": "",
+    "overrideUsed": false,
+    "visibleAlphaMustBeInsideCell": true
+  },
+  "defaultAnchor": [
+    0.5,
+    1.0
+  ],
+  "maxDimension": 320,
+  "objects": [
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        237,
+        320
+      ],
+      "label": "earth_cave_stair_arch",
+      "path": "earth_cave_stair_arch.png",
+      "sha256": "e9f7adf9bf6e9fbb913d9ff37023f50cb6be78865803b7e90600e9567615ab2a",
+      "sourceBbox": [
+        374,
+        36,
+        699,
+        960
+      ],
+      "sourceCell": [
+        0,
+        0,
+        1536,
+        1024
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        0
+      ]
+    }
+  ],
+  "padding": 8,
+  "schemaVersion": 1,
+  "source": {
+    "alphaThreshold": 0,
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "grid": {
+      "columns": 1,
+      "rows": 1
+    },
+    "path": "../../../client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-stair-arch-v1-alpha.png",
+    "sha256": "07e01e8d523dad281a6fbe1e139b30e0b1ef68a73e0d44c2f43eabe811563975"
+  }
+}

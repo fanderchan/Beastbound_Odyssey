@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "earth_vein_cave_visual_v1",
+  "mapId": "earth_vein_cave_f4",
+  "mapGridSize": [30, 26],
+  "ground": {
+    "edgePaddingCells": 16,
+    "edgeTileId": "earth_cave_edge_a",
+    "defaultTileId": "earth_cave_floor_a",
+    "layeredBaseTileId": "earth_cave_floor_a",
+    "blockedVisualMode": "blocked_tile",
+    "blockedTileId": "earth_cave_blocked_a",
+    "encounterTileId": "earth_cave_mineral_a",
+    "warpTileId": "earth_cave_path_a",
+    "pathTileId": "earth_cave_path_a",
+    "plazaTileId": "earth_cave_floor_b",
+    "variantSeed": 44504,
+    "variantClusterSize": 3,
+    "tileVariants": {
+      "earth_cave_floor_a": [
+        "earth_cave_floor_a",
+        "earth_cave_floor_b"
+      ]
+    },
+    "pathDilation": 1,
+    "pathLinks": [
+      {
+        "from": [4, 22],
+        "to": [5, 22]
+      },
+      {
+        "from": [5, 22],
+        "to": [5, 8]
+      },
+      {
+        "from": [5, 8],
+        "to": [21, 8]
+      },
+      {
+        "from": [21, 8],
+        "to": [26, 14]
+      }
+    ],
+    "plazaRects": [],
+    "plazaCells": [
+      [20, 6], [21, 6], [22, 6],
+      [20, 7], [21, 7], [22, 7],
+      [20, 8], [21, 8], [22, 8],
+      [25, 12], [26, 12], [27, 12],
+      [25, 13], [26, 13], [27, 13],
+      [25, 14], [26, 14], [27, 14]
+    ],
+    "overrides": []
+  },
+  "objectPlacements": [
+    {
+      "instanceId": "f4_rock_blocker_01",
+      "objectId": "earth_cave_rock_pile",
+      "grid": [9, 5],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[8, 5], [9, 5], [10, 6]]
+    },
+    {
+      "instanceId": "f4_pillar_blocker_01",
+      "objectId": "earth_cave_vein_pillar",
+      "grid": [16, 12],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[15, 12], [16, 12], [17, 13]]
+    },
+    {
+      "instanceId": "f4_rock_blocker_02",
+      "objectId": "earth_cave_rock_pile",
+      "grid": [25, 19],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[24, 18], [25, 19]]
+    },
+    {
+      "instanceId": "f4_fungus_decor_01",
+      "objectId": "earth_cave_fungus_cluster",
+      "grid": [6, 21],
+      "offset": [-8, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f4_cairn_decor_01",
+      "objectId": "earth_cave_cairn",
+      "grid": [9, 18],
+      "offset": [4, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f4_fungus_decor_02",
+      "objectId": "earth_cave_fungus_cluster",
+      "grid": [13, 14],
+      "offset": [-8, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f4_crystal_decor_01",
+      "objectId": "earth_cave_crystal_cluster",
+      "grid": [18, 10],
+      "offset": [8, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f4_cairn_decor_02",
+      "objectId": "earth_cave_cairn",
+      "grid": [23, 8],
+      "offset": [8, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f4_crystal_decor_02",
+      "objectId": "earth_cave_crystal_cluster",
+      "grid": [28, 14],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f4_lower_arch",
+      "objectId": "earth_cave_stair_arch",
+      "grid": [4, 22],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": "earth_vein_stair_4_to_3",
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f4_guardian_plinth",
+      "objectId": "earth_cave_resonance_plinth",
+      "grid": [21, 7],
+      "offset": [0, 8],
+      "mirrored": false,
+      "interactionLink": "earth_vein_guardian_npc",
+      "collisionFootprint": [[21, 7]]
+    },
+    {
+      "instanceId": "f4_lineage_plinth",
+      "objectId": "earth_cave_resonance_plinth",
+      "grid": [26, 13],
+      "offset": [0, 8],
+      "mirrored": false,
+      "interactionLink": "earth_vein_evolution_lineage_npc",
+      "collisionFootprint": [[26, 13]]
+    },
+    {
+      "instanceId": "f4_edge_ridge_bottom",
+      "objectId": "earth_cave_wall_ridge",
+      "grid": [8, 26],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f4_edge_buttress_left",
+      "objectId": "earth_cave_wall_buttress",
+      "grid": [-1, 15],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f4_edge_ridge_upper",
+      "objectId": "earth_cave_wall_ridge",
+      "grid": [18, -1],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f4_edge_buttress_right",
+      "objectId": "earth_cave_wall_buttress",
+      "grid": [30, 9],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    }
+  ]
+}

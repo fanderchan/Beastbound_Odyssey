@@ -8,18 +8,28 @@ const PlayerProgressModel := preload(
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
 
 const MAX_TRACKER_ENTRIES := 4
+const SPECIAL_TASK_MM_GUIDE_ID := "special_pet_rebirth_mm_guide"
+const SPECIAL_TASK_REBIRTH_TRIAL_ID := "special_player_rebirth_trial"
 
 
 static func build_view_state(
 	profile: Dictionary,
-	selected_quest_id: String = ""
+	selected_quest_id: String = "",
+	special_task: Dictionary = {}
 ) -> Dictionary:
 	var normalized := PlayerProgressModel.normalize_profile(profile)
 	var rows := _catalog_rows(normalized)
+	var special_row := _special_task_row(special_task)
+	if not special_row.is_empty():
+		rows.push_front(special_row)
 	var resolved_selected_id := _resolved_selected_id(rows, selected_quest_id)
 	var selected_row := _row_for_id(rows, resolved_selected_id)
 	var selected_quest := QuestModel.quest_for_id(resolved_selected_id)
-	var detail := _detail_state(normalized, selected_quest, selected_row)
+	var detail := (
+		_special_task_detail(selected_row)
+		if bool(selected_row.get("specialTask", false))
+		else _detail_state(normalized, selected_quest, selected_row)
+	)
 	return {
 		"title": "经典任务",
 		"catalog": rows,
@@ -27,6 +37,90 @@ static func build_view_state(
 		"detail": detail,
 		"trackerEntries": tracker_entries(normalized, MAX_TRACKER_ENTRIES, true),
 	}
+
+
+static func _special_task_row(special_task: Dictionary) -> Dictionary:
+	var task_id := str(special_task.get("id", "")).strip_edges()
+	var title := str(special_task.get("title", "")).strip_edges()
+	if task_id == "" or title == "":
+		return {}
+	var display_status_id := str(
+		special_task.get("displayStatusId", "active")
+	).strip_edges()
+	if not ["active", "available"].has(display_status_id):
+		display_status_id = "active"
+	return {
+		"questId": task_id,
+		"title": title,
+		"formattedTitle": title,
+		"categoryId": str(special_task.get("categoryId", "classic")),
+		"categoryLabel": str(special_task.get("categoryLabel", "转生")),
+		"objectiveText": str(special_task.get("taskText", title)),
+		"statusText": str(
+			special_task.get(
+				"statusText",
+				"可开始" if display_status_id == "available" else "正在进行"
+			)
+		),
+		"displayStatusId": display_status_id,
+		"active": display_status_id == "active",
+		"accepted": display_status_id == "active",
+		"claimed": false,
+		"ready": false,
+		"available": display_status_id == "available",
+		"locked": false,
+		"specialTask": true,
+		"taskText": str(special_task.get("taskText", title)),
+		"detailLines": _string_values(special_task.get("detailLines", [])),
+	}
+
+
+static func _special_task_detail(row: Dictionary) -> Dictionary:
+	var detail_lines := _string_values(row.get("detailLines", []))
+	var objective_text := str(row.get("taskText", row.get("title", "继续试炼")))
+	var progress_text := ""
+	var level_lines: Array[String] = []
+	var description_lines: Array[String] = []
+	for line in detail_lines:
+		if line.begins_with("目标："):
+			objective_text = line.trim_prefix("目标：").strip_edges()
+		elif line.begins_with("进度："):
+			progress_text = line.trim_prefix("进度：").strip_edges()
+		elif line.begins_with("接取等级：") or line.begins_with("推荐等级："):
+			level_lines.append(line)
+		else:
+			description_lines.append(line)
+	if description_lines.is_empty():
+		description_lines.append("完成当前阶段目标后，继续推进人物转生试炼。")
+	return {
+		"questId": str(row.get("questId", "")),
+		"title": str(row.get("title", "转生试炼")),
+		"formattedTitle": str(row.get("formattedTitle", row.get("title", "转生试炼"))),
+		"categoryId": str(row.get("categoryId", "classic")),
+		"categoryLabel": str(row.get("categoryLabel", "转生")),
+		"statusId": str(row.get("displayStatusId", "active")),
+		"statusText": str(row.get("statusText", "正在进行")),
+		"description": "\n".join(description_lines),
+		"objectiveText": objective_text,
+		"levelText": "  ·  ".join(level_lines),
+		"progressText": progress_text,
+		"rewardText": "",
+		"rewardEntries": [],
+		"rewardChoices": [],
+		"routeButtonText": "立即前往",
+		"routeAllowedByState": true,
+		"claimVisible": false,
+		"legacyTitle": str(row.get("title", "转生试炼")),
+		"legacyDetail": "\n".join(detail_lines),
+	}
+
+
+static func _string_values(value) -> Array[String]:
+	var result: Array[String] = []
+	if value is Array:
+		for item in value:
+			result.append(str(item))
+	return result
 
 
 static func tracker_entries(

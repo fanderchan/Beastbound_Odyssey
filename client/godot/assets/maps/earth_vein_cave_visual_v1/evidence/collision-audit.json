@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound_map_collision_audit",
+  "bundleId": "earth_vein_cave_visual_v1",
+  "result": "PASS",
+  "generatedAtUtc": "2026-08-15T18:43:45Z",
+  "scene": "res://scenes/Main.tscn",
+  "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd",
+  "testedMapIds": [
+    "earth_vein_cave",
+    "earth_vein_cave_f2",
+    "earth_vein_cave_f3",
+    "earth_vein_cave_f4"
+  ],
+  "checks": {
+    "authoritativeBlockedCells": "PASS",
+    "objectCollisionFootprints": "PASS",
+    "pathLinkEndpointsAndExactReachability": "PASS",
+    "spawnProtection": "PASS",
+    "warpSourceAndDestinationProtection": "PASS",
+    "npcSourceAndReachableApproachProtection": "PASS",
+    "encounterCellsAndRectsRespectWalkability": "PASS",
+    "bindingAndMapDataHashes": "PASS"
+  },
+  "maps": [
+    {
+      "mapId": "earth_vein_cave",
+      "groundDraws": 672,
+      "objectCount": 15,
+      "protectedCells": 213
+    },
+    {
+      "mapId": "earth_vein_cave_f2",
+      "groundDraws": 672,
+      "objectCount": 15,
+      "protectedCells": 259
+    },
+    {
+      "mapId": "earth_vein_cave_f3",
+      "groundDraws": 672,
+      "objectCount": 15,
+      "protectedCells": 259
+    },
+    {
+      "mapId": "earth_vein_cave_f4",
+      "groundDraws": 780,
+      "objectCount": 16,
+      "protectedCells": 130
+    }
+  ],
+  "authoritySnapshot": {
+    "catalogContractSha256": "cffe0fc435174e95d867061047499d9a2a1c9b36aaaf07f7bbe537dec60788ef",
+    "bindingHashes": {
+      "earth_vein_cave": "9d232379210859586c3475462f09fee0b57c2160796280644ad98bbeffba78a8",
+      "earth_vein_cave_f2": "bb2ea625653a259e94047f556322f6f67c291b8de4eba8ff6c034ee2b29c602c",
+      "earth_vein_cave_f3": "f5f8db9cc8cbc53bc4046dcc82aeb6d0fceccfe708baa84843615af9d135d8f7",
+      "earth_vein_cave_f4": "57da2ee00fefd7c4ff40d9d7a173082efd2a9fdb96407607ccd4bce4d8f29447"
+    },
+    "mapDataHashes": {
+      "earth_vein_cave": "a3bff8c95e4315c409ac818656ee57a4d4ad1e26112bada4b3ab9ed6ce36c8cf",
+      "earth_vein_cave_f2": "9d59b59500b61efe65c17fe40b07729abf113222e1ceb32ab8b8c1d8ed74c314",
+      "earth_vein_cave_f3": "305a787cd8101ec22dc46e50c2ae776a049450c99da62a5731213e62a565a15a",
+      "earth_vein_cave_f4": "c6de465f36cf3c684b632d46d9236be47572421a8e7b79ecfe4c12155900c453"
+    }
+  },
+  "excludedReleaseGate": null,
+  "blockers": [],
+  "runnerIdentity": {
+    "runner": "godot",
+    "runnerVersion": "4.7.stable.official.5b4e0cb0f",
+    "buildIdentity": "git:01d51b8cc73b6f4196bf1311aadb3fff3a6f417e+beastbound-map-runtime-surface-v2:ac560f064e3f050de850e52d9764906c9f36528f91273749b6c878d37b1c9ac8"
+  },
+  "rawRunnerReceipt": {
+    "path": "evidence/collision-runner-receipt.log",
+    "sha256": "b0ca7cffa5ade93d7a60a5f9d8421a20729714c350b9c1f0ac4c4a88a37d5cfd"
+  },
+  "notes": [
+    "This report covers authoritative map, collision, protected-cell and exact-path contracts.",
+    "Tall-object front/behind presentation is independently gated by the formal Computer Use occlusion action."
+  ]
+}

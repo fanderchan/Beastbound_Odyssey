@@ -1,0 +1,59 @@
+{
+  "cellEdgePolicy": {
+    "overrideFlag": "",
+    "overrideUsed": false,
+    "visibleAlphaMustBeInsideCell": true
+  },
+  "defaultAnchor": [
+    0.5,
+    1.0
+  ],
+  "maxDimension": 256,
+  "objects": [
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        256,
+        163
+      ],
+      "label": "earth_cave_resonance_plinth",
+      "path": "earth_cave_resonance_plinth.png",
+      "sha256": "967685e94ea548ca05e5f3393674572f623f1363bdf169e8028058e7fe7477a7",
+      "sourceBbox": [
+        239,
+        193,
+        1052,
+        645
+      ],
+      "sourceCell": [
+        0,
+        0,
+        1536,
+        1024
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        0
+      ]
+    }
+  ],
+  "padding": 8,
+  "schemaVersion": 1,
+  "source": {
+    "alphaThreshold": 0,
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "grid": {
+      "columns": 1,
+      "rows": 1
+    },
+    "path": "../../../client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-resonance-plinth-v1-alpha.png",
+    "sha256": "cf1e60a20c3133eb92e98068a99c93bffaeda912fe4d43f4a54f689290b85194"
+  }
+}

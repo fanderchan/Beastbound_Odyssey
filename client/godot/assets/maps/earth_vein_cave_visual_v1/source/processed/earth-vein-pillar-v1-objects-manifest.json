@@ -1,0 +1,59 @@
+{
+  "cellEdgePolicy": {
+    "overrideFlag": "",
+    "overrideUsed": false,
+    "visibleAlphaMustBeInsideCell": true
+  },
+  "defaultAnchor": [
+    0.5,
+    1.0
+  ],
+  "maxDimension": 256,
+  "objects": [
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        139,
+        256
+      ],
+      "label": "earth_cave_vein_pillar",
+      "path": "earth_cave_vein_pillar.png",
+      "sha256": "1197aecb24d2eae99e5dee6aa86be508e23f7543563d6e8a1c8f1832e9e76a68",
+      "sourceBbox": [
+        172,
+        91,
+        678,
+        1322
+      ],
+      "sourceCell": [
+        0,
+        0,
+        1023,
+        1537
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        0
+      ]
+    }
+  ],
+  "padding": 8,
+  "schemaVersion": 1,
+  "source": {
+    "alphaThreshold": 0,
+    "dimensions": [
+      1023,
+      1537
+    ],
+    "grid": {
+      "columns": 1,
+      "rows": 1
+    },
+    "path": "../../../client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-pillar-v1-alpha.png",
+    "sha256": "bdb5b99bb354ff39ec1f696f1f07482ced63969fb23e40dc80e74a8d250b7986"
+  }
+}

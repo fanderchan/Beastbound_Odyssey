@@ -1,0 +1,106 @@
+{
+	"schemaVersion": 1,
+	"reportType": "beastbound_map_visual_main_review_capture",
+	"scene": "res://scenes/Main.tscn",
+	"mapId": "earth_vein_cave_f4",
+	"mode": "moving",
+	"captureVariant": "collision",
+	"qaPreviewFlagPresent": true,
+	"qaPreviewMapId": "earth_vein_cave_f4",
+	"showcaseProfileRequested": false,
+	"displayServer": "macOS",
+	"debugBuild": true,
+	"profileIsolation": "default_profile_ephemeral_no_save",
+	"defaultProfileIsolation": true,
+	"authAutoBypass": false,
+	"accountAuthenticated": false,
+	"profileSaveEnabled": false,
+	"serverAccountSession": false,
+	"networkRequestAttempted": false,
+	"networkRequestStatuses": {
+		"auth_http_request": 0,
+		"profile_sync_http_request": 0,
+		"chat_http_request": 0,
+		"mailbox_http_request": 0,
+		"market_http_request": 0,
+		"bank_http_request": 0,
+		"party_http_request": 0,
+		"party_invite_http_request": 0,
+		"family_http_request": 0,
+		"online_position_http_request": 0,
+		"player_action_http_request": 0,
+		"battle_invite_http_request": 0
+	},
+	"networkRequestsDisconnected": true,
+	"showcaseProfileInMemory": false,
+	"showcaseProfilePostInjectionIsDefault": true,
+	"showcaseProfileId": "",
+	"showcasePlayerAppearanceId": "",
+	"showcaseActivePetFormId": "",
+	"showcaseProfilePersisted": false,
+	"authPanelVisible": false,
+	"qaMenuVisible": false,
+	"qaPanelVisible": false,
+	"numericWorkbenchVisible": false,
+	"debugUiVisible": false,
+	"normalPlayerHud": true,
+	"viewport": [
+		1280,
+		720
+	],
+	"mapArtActive": true,
+	"mapArtQaPreview": true,
+	"mapArtStatus": "owner_review_pending",
+	"bundleId": "earth_vein_cave_visual_v1",
+	"mapStyleId": "earth_vein_amber_slate_v1",
+	"groundDrawCount": 780,
+	"objectCount": 16,
+	"tileCounts": {
+		"earth_cave_floor_b": 335,
+		"earth_cave_floor_a": 321,
+		"earth_cave_blocked_a": 8,
+		"earth_cave_path_a": 116
+	},
+	"startCell": [
+		5,
+		22
+	],
+	"targetCell": [
+		5,
+		25
+	],
+	"endCell": [
+		5,
+		25
+	],
+	"playerCellChanged": true,
+	"input": {
+		"eventClass": "InputEventMouseButton",
+		"delivery": "Input.parse_input_event",
+		"pressProcessFrame": 9,
+		"releaseProcessFrame": 11,
+		"frameSeparated": true,
+		"screenPoint": [
+			328.0,
+			420.0
+		]
+	},
+	"screenshotPath": "res://assets/maps/earth_vein_cave_visual_v1/evidence/runtime-actions/earth_vein_cave_f4/collision.png",
+	"screenshotSha256": "ebb5b283bb012d808a6155fc52ffd4ede9ad21d7ef1f21ce5c50dd9353260882",
+	"screenshot": {
+		"path": "res://assets/maps/earth_vein_cave_visual_v1/evidence/runtime-actions/earth_vein_cave_f4/collision.png",
+		"sha256": "ebb5b283bb012d808a6155fc52ffd4ede9ad21d7ef1f21ce5c50dd9353260882",
+		"width": 1280,
+		"height": 720
+	},
+	"runtimeCleanup": {
+		"status": "passed",
+		"audioStopped": true,
+		"audioManagerReleased": true,
+		"drainFrames": 4
+	},
+	"errors": [],
+	"result": "PASS",
+	"ok": true,
+	"generatedAtUtc": "2026-08-15T20:14:10Z"
+}

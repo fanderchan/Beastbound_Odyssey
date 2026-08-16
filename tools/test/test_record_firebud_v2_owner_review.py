@@ -92,6 +92,64 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
                     with self.assertRaises(TOOL.FirebudV2RecordingError):
                         TOOL._build_godot_command(**altered)
 
+    def test_earth_vein_bundle_uses_default_isolated_profile_without_showcase_flag(self) -> None:
+        TOOL._activate_bundle("earth_vein_cave_visual_v1")
+        try:
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                command = TOOL._build_godot_command(
+                    godot="/opt/godot",
+                    avi_path=root / "review.avi",
+                    map_id="earth_vein_cave_f4",
+                    mode="moving",
+                    screenshot_path=(root / "frame.png").resolve(),
+                    report_path=(root / "report.json").resolve(),
+                    capture_variant="collision",
+                )
+                self.assertNotIn(TOOL.SHOWCASE_PROFILE_FLAG, command)
+                self.assertIn("--map-art-review-preview=earth_vein_cave_f4", command)
+                self.assertIn(
+                    "--map-visual-review-capture-variant=collision",
+                    command,
+                )
+
+                report = _capture_report(map_id="earth_vein_cave_f4", mode="moving")
+                report.update({
+                    "profileIsolation": "default_profile_ephemeral_no_save",
+                    "showcaseProfileRequested": False,
+                    "showcaseProfileInMemory": False,
+                    "showcaseProfilePostInjectionIsDefault": True,
+                    "showcaseProfileId": "",
+                    "showcasePlayerAppearanceId": "",
+                    "showcaseActivePetFormId": "",
+                    "captureVariant": "collision",
+                })
+                path = root / "capture.json"
+                path.write_text(json.dumps(report), encoding="utf-8")
+                parsed = TOOL._read_capture_report(
+                    path,
+                    map_id="earth_vein_cave_f4",
+                    mode="moving",
+                    capture_variant="collision",
+                )
+                self.assertEqual(parsed["bundleId"], "earth_vein_cave_visual_v1")
+        finally:
+            TOOL._activate_bundle("firebud_region_visual_v2")
+
+    def test_rejects_arbitrary_capture_variant(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            with self.assertRaises(TOOL.FirebudV2RecordingError):
+                TOOL._build_godot_command(
+                    godot="/opt/godot",
+                    avi_path=None,
+                    map_id="firebud_village_gate",
+                    mode="moving",
+                    screenshot_path=(root / "frame.png").resolve(),
+                    report_path=(root / "report.json").resolve(),
+                    capture_variant="freeform",
+                )
+
     def test_capture_report_requires_pending_candidate_isolation_and_real_movement(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "capture.json"
@@ -172,7 +230,7 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
         self.assertNotIn("atempo=", source)
         self.assertIn('"-c",\n            "copy"', source)
         self.assertIn('loginOrServerArgumentsAccepted": False', source)
-        self.assertIn('showcaseProfileInMemoryOnly": True', source)
+        self.assertIn('showcaseProfileInMemoryOnly": USE_SHOWCASE_PROFILE', source)
         self.assertIn('"officialAutomationQaLanePerSegment": True', source)
         self.assertNotIn('"freshUserDataDirectoryPerSegment": True', source)
         self.assertIn('"coversAllRetainedEvidenceFiles": True', source)

@@ -44,6 +44,15 @@ THRESHOLDS = {
     "movingRegressionMaxMs": 0.35,
 }
 MAP_BUNDLES = {
+    "earth_vein_cave_visual_v1": (
+        "assets/maps/earth_vein_cave_visual_v1",
+        (
+            "earth_vein_cave",
+            "earth_vein_cave_f2",
+            "earth_vein_cave_f3",
+            "earth_vein_cave_f4",
+        ),
+    ),
     "firebud_region_visual_v2": (
         "assets/maps/firebud_region_visual_v2",
         ("firebud_training_yard", "firebud_village_gate"),
@@ -78,11 +87,17 @@ RUNTIME_IDENTITY_FILES = (
     "scripts/world/map_data_catalog.gd",
     "scripts/world/map_visual_catalog.gd",
     "scripts/world/map_visual_renderer.gd",
+    "scripts/world/world_presentation_profile.gd",
     "scripts/world/world_depth_layer.gd",
     "scripts/world/world_overlay_layer.gd",
     "scripts/qa/map_visual_runtime_check.gd",
     "scripts/qa/world_depth_layer_check.gd",
     "data/map_visual_catalog.json",
+    "data/map_visual_review_catalog.json",
+    "data/earth_vein_cave_map.json",
+    "data/earth_vein_cave_f2_map.json",
+    "data/earth_vein_cave_f3_map.json",
+    "data/earth_vein_cave_f4_map.json",
     "data/firebud_training_map.json",
     "data/firebud_village_gate_map.json",
     "data/mistcap_marsh_map.json",
@@ -737,7 +752,7 @@ def build_performance_report(
             "sha256": _sha256(receipt),
         },
         "notes": [
-            "All twelve variants ran through the real Main.tscn non-headless Metal path.",
+            f"All {len(records)} variants ran through the real Main.tscn non-headless Metal path.",
             "Moving variants used cross-frame Input.parse_input_event mouse press/release delivery.",
             "All values were parsed from the verbatim Godot stdout/stderr frozen in the raw JSONL receipt.",
         ],

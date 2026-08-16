@@ -70,6 +70,40 @@ SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SAFE_MAP_ID = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 REVIEW_MAPS = ("firebud_village_gate", "firebud_training_yard")
 REVIEW_MODES = ("idle", "moving")
+CAPTURE_VARIANTS = (
+    "pointer",
+    "movement_path",
+    "warp",
+    "collision",
+    "occlusion",
+)
+USE_SHOWCASE_PROFILE = True
+FINAL_VIDEO_FILENAME = "firebud-v2-owner-review-1x.mp4"
+RUN_ID_PREFIX = "phase383"
+
+RECORDER_CONFIGS: dict[str, dict[str, Any]] = {
+    "firebud_region_visual_v2": {
+        "maps": ("firebud_village_gate", "firebud_training_yard"),
+        "outputRoot": Path(".run/evidence/phase383_firebud_v2_owner_review"),
+        "reportType": "beastbound_firebud_v2_main_owner_review_video",
+        "videoFilename": "firebud-v2-owner-review-1x.mp4",
+        "runIdPrefix": "phase383",
+        "useShowcaseProfile": True,
+    },
+    "earth_vein_cave_visual_v1": {
+        "maps": (
+            "earth_vein_cave",
+            "earth_vein_cave_f2",
+            "earth_vein_cave_f3",
+            "earth_vein_cave_f4",
+        ),
+        "outputRoot": Path(".run/evidence/earth_vein_cave_visual_v1_owner_review"),
+        "reportType": "beastbound_map_visual_main_owner_review_video",
+        "videoFilename": "earth-vein-cave-v1-owner-review-1x.mp4",
+        "runIdPrefix": "earth-vein-v1",
+        "useShowcaseProfile": False,
+    },
+}
 
 
 class FirebudV2RecordingError(RuntimeError):
@@ -82,14 +116,37 @@ def _utc_now() -> datetime:
 
 def _new_run_id() -> str:
     timestamp = _utc_now().strftime("%Y%m%dT%H%M%S.%fZ")
-    return f"phase383-{timestamp}-{uuid.uuid4().hex[:8]}"
+    return f"{RUN_ID_PREFIX}-{timestamp}-{uuid.uuid4().hex[:8]}"
+
+
+def _activate_bundle(bundle_id: str) -> None:
+    global EXPECTED_BUNDLE_ID
+    global REVIEW_MAPS
+    global DEFAULT_OUTPUT_ROOT
+    global REPORT_TYPE
+    global USE_SHOWCASE_PROFILE
+    global FINAL_VIDEO_FILENAME
+    global RUN_ID_PREFIX
+
+    config = RECORDER_CONFIGS.get(str(bundle_id).strip())
+    if config is None:
+        raise FirebudV2RecordingError(
+            "不支持的地图审图 bundle：%s" % str(bundle_id)
+        )
+    EXPECTED_BUNDLE_ID = str(bundle_id).strip()
+    REVIEW_MAPS = tuple(str(value) for value in config["maps"])
+    DEFAULT_OUTPUT_ROOT = Path(config["outputRoot"])
+    REPORT_TYPE = str(config["reportType"])
+    USE_SHOWCASE_PROFILE = bool(config["useShowcaseProfile"])
+    FINAL_VIDEO_FILENAME = str(config["videoFilename"])
+    RUN_ID_PREFIX = str(config["runIdPrefix"])
 
 
 def _safe_map_id(map_id: str) -> str:
     normalized = str(map_id).strip()
     if normalized not in REVIEW_MAPS or SAFE_MAP_ID.fullmatch(normalized) is None:
         raise FirebudV2RecordingError(
-            "只允许录制固定的 Firebud v2 审图地图：" + ", ".join(REVIEW_MAPS)
+            "只允许录制当前 bundle 的固定审图地图：" + ", ".join(REVIEW_MAPS)
         )
     return normalized
 
@@ -109,10 +166,14 @@ def _build_godot_command(
     mode: str,
     screenshot_path: Path,
     report_path: Path,
+    capture_variant: str = "",
 ) -> list[str]:
     """Build the one intentionally closed Godot invocation for a segment."""
     safe_map = _safe_map_id(map_id)
     safe_mode = _safe_mode(mode)
+    safe_capture_variant = str(capture_variant).strip()
+    if safe_capture_variant and safe_capture_variant not in CAPTURE_VARIANTS:
+        raise FirebudV2RecordingError("capture variant 不是固定地图动作")
     if not screenshot_path.is_absolute() or not report_path.is_absolute():
         raise FirebudV2RecordingError("截图和报告必须使用绝对路径")
     if screenshot_path.suffix.lower() != ".png" or report_path.suffix.lower() != ".json":
@@ -144,22 +205,34 @@ def _build_godot_command(
         "--",
         f"--map-art-review-preview={safe_map}",
         DEFAULT_CAPTURE_FLAG,
-        SHOWCASE_PROFILE_FLAG,
         f"--map-visual-review-map-id={safe_map}",
         f"--map-visual-review-output={screenshot_path}",
         f"--map-visual-review-report={report_path}",
         f"--map-visual-review-mode={safe_mode}",
         CORE.QA_LANE_ARGUMENT,
     ])
+    if safe_capture_variant:
+        command.insert(
+            command.index(CORE.QA_LANE_ARGUMENT),
+            f"--map-visual-review-capture-variant={safe_capture_variant}",
+        )
+    if USE_SHOWCASE_PROFILE:
+        command.insert(command.index(f"--map-visual-review-map-id={safe_map}"), SHOWCASE_PROFILE_FLAG)
+    expected_showcase_count = 1 if USE_SHOWCASE_PROFILE else 0
     if (
         command.count(DEFAULT_CAPTURE_FLAG) != 1
+        or command.count(SHOWCASE_PROFILE_FLAG) != expected_showcase_count
         or command.count(CORE.QA_LANE_ARGUMENT) != 1
         or "--user-data-dir" in command
         or (avi_path is None and "--write-movie" in command)
         or (avi_path is not None and command.count("--write-movie") != 1)
+        or sum(
+            value.startswith("--map-visual-review-capture-variant=")
+            for value in command
+        ) != (1 if safe_capture_variant else 0)
     ):
         raise FirebudV2RecordingError(
-            "Godot Firebud v2 验收命令的 QA lane 边界不精确"
+            "Godot 地图验收命令的 QA lane 边界不精确"
         )
     return command
 
@@ -198,7 +271,7 @@ def _validate_godot_log(path: Path, *, movie_mode: bool) -> dict[str, Any]:
 
 
 def _read_capture_report(
-    path: Path, *, map_id: str, mode: str
+    path: Path, *, map_id: str, mode: str, capture_variant: str = ""
 ) -> dict[str, Any]:
     if not path.is_file():
         raise FirebudV2RecordingError(f"Godot 没有写出地图 capture 报告：{path}")
@@ -222,13 +295,6 @@ def _read_capture_report(
         "mapArtStatus": "owner_review_pending",
         "bundleId": EXPECTED_BUNDLE_ID,
         "defaultProfileIsolation": True,
-        "profileIsolation": "default_profile_verified_then_showcase_ephemeral_no_save",
-        "showcaseProfileRequested": True,
-        "showcaseProfileInMemory": True,
-        "showcaseProfilePostInjectionIsDefault": False,
-        "showcaseProfileId": "phase383_firebud_v2_owner_review",
-        "showcasePlayerAppearanceId": "ember_spark_v1",
-        "showcaseActivePetFormId": "bui_novice_sprout_earth5_wind5",
         "showcaseProfilePersisted": False,
         "accountAuthenticated": False,
         "profileSaveEnabled": False,
@@ -237,6 +303,28 @@ def _read_capture_report(
         "networkRequestsDisconnected": True,
         "normalPlayerHud": True,
     }
+    if capture_variant:
+        required["captureVariant"] = capture_variant
+    if USE_SHOWCASE_PROFILE:
+        required.update({
+            "profileIsolation": "default_profile_verified_then_showcase_ephemeral_no_save",
+            "showcaseProfileRequested": True,
+            "showcaseProfileInMemory": True,
+            "showcaseProfilePostInjectionIsDefault": False,
+            "showcaseProfileId": "phase383_firebud_v2_owner_review",
+            "showcasePlayerAppearanceId": "ember_spark_v1",
+            "showcaseActivePetFormId": "bui_novice_sprout_earth5_wind5",
+        })
+    else:
+        required.update({
+            "profileIsolation": "default_profile_ephemeral_no_save",
+            "showcaseProfileRequested": False,
+            "showcaseProfileInMemory": False,
+            "showcaseProfilePostInjectionIsDefault": True,
+            "showcaseProfileId": "",
+            "showcasePlayerAppearanceId": "",
+            "showcaseActivePetFormId": "",
+        })
     mismatches = [
         f"{key}={report.get(key)!r}" for key, expected in required.items()
         if report.get(key) != expected
@@ -425,7 +513,7 @@ def _concat_segments(
     environment: dict[str, str],
 ) -> None:
     if len(videos) != len(REVIEW_MAPS) * len(REVIEW_MODES):
-        raise FirebudV2RecordingError("录像片段数量必须覆盖两张地图的 idle/moving")
+        raise FirebudV2RecordingError("录像片段数量必须覆盖全部地图的 idle/moving")
     # All paths are freshly created directly inside the immutable run directory;
     # ffconcat quoting is still explicit so a future safe run id cannot alter it.
     list_path.write_text(
@@ -594,7 +682,7 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
             videos.append(video_path)
 
     concat_list = run_dir / "concat-inputs.txt"
-    final_video_path = run_dir / "firebud-v2-owner-review-1x.mp4"
+    final_video_path = run_dir / FINAL_VIDEO_FILENAME
     concat_log = run_dir / "ffmpeg-concat.log"
     _concat_segments(
         ffmpeg=ffmpeg,
@@ -653,9 +741,13 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
             "officialAutomationQaLanePerSegment": True,
             "qaLaneCleanedAfterEverySegment": True,
             "normalPlayerSavePathUsed": False,
-            "defaultProfileVerifiedBeforeInjection": True,
-            "showcaseProfileId": "phase383_firebud_v2_owner_review",
-            "showcaseProfileInMemoryOnly": True,
+            "defaultProfileVerifiedBeforeInjection": USE_SHOWCASE_PROFILE,
+            "showcaseProfileId": (
+                "phase383_firebud_v2_owner_review"
+                if USE_SHOWCASE_PROFILE
+                else ""
+            ),
+            "showcaseProfileInMemoryOnly": USE_SHOWCASE_PROFILE,
             "showcaseProfilePersisted": False,
             "profileSaveEnabled": False,
             "backendProcessStartedByTool": False,
@@ -753,13 +845,18 @@ def _record(args: argparse.Namespace) -> Path:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "录制 Phase383 火芽 v2 的真实 Main.tscn 1280x720、30fps、1×验收片；"
-            "固定覆盖村口/训练场的 idle 与真实跨帧鼠标移动。此工具拒绝登录、服务器"
-            "和任意附加 Godot 参数。"
+            "录制受支持地图候选的真实 Main.tscn 1280x720、30fps、1×验收片；"
+            "固定覆盖 bundle 全部地图的 idle 与真实跨帧鼠标移动。此工具拒绝登录、"
+            "服务器和任意附加 Godot 参数。"
         )
     )
+    parser.add_argument(
+        "--bundle-id",
+        choices=tuple(RECORDER_CONFIGS),
+        default="firebud_region_visual_v2",
+    )
     parser.add_argument("--run-id", help="可选的唯一安全 runId。")
-    parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    parser.add_argument("--output-root", type=Path)
     parser.add_argument("--sample-count", type=int, default=DEFAULT_SAMPLE_COUNT)
     parser.add_argument("--godot", default=os.environ.get("GODOT_BIN", "godot"))
     parser.add_argument("--ffmpeg", default=os.environ.get("FFMPEG_BIN", "ffmpeg"))
@@ -771,12 +868,15 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        _activate_bundle(args.bundle_id)
+        if args.output_root is None:
+            args.output_root = DEFAULT_OUTPUT_ROOT
         _record(args)
     except KeyboardInterrupt:
-        print("firebud v2 owner review interrupted", file=sys.stderr)
+        print("map visual owner review interrupted", file=sys.stderr)
         return 130
     except (FirebudV2RecordingError, CORE.PetManagementRecordingError, FileExistsError, OSError, ValueError) as error:
-        print(f"firebud v2 owner review recording failed: {error}", file=sys.stderr)
+        print(f"map visual owner review recording failed: {error}", file=sys.stderr)
         return 1
     return 0
 

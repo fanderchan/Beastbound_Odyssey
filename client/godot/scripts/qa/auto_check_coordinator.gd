@@ -113,6 +113,9 @@ const PetPortraitArtCatalog := preload(
 )
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
+const QuestAwakenedPresenter := preload(
+	"res://scripts/ui/quest_awakened_presenter.gd"
+)
 const RebirthModel := preload("res://scripts/progression/rebirth_model.gd")
 const RebirthTrialModel := preload("res://scripts/progression/rebirth_trial_model.gd")
 const ShopCatalogModel := preload("res://scripts/progression/shop_catalog_model.gd")
@@ -3047,8 +3050,29 @@ func _run_auto_encounter_check() -> void:
 	await host.get_tree().process_frame
 	var closed: bool = not host.encounter_active and not host.encounter_panel.visible and not host.battle_active
 	var grace_started = host.encounter_grace_remaining > 0.0 and host.encounter_grace_remaining <= ENCOUNTER_POST_BATTLE_GRACE_SECONDS
-	var status = "ok" if loaded and zone_found and target_in_zone and arrived_zone and no_prompt and movement_stopped and battle_started and closed and grace_started else "failed"
-	print("encounter check ready: status=%s loaded=%s zone_found=%s target_in_zone=%s arrived_zone=%s no_prompt=%s movement_stopped=%s battle_started=%s closed=%s grace=%.2f zone_id=%s final_cell=%s" % [
+	var preview_suppressed := false
+	if zone_found:
+		var original_preview: bool = host.map_art_review_preview
+		var original_rate := float(zone.get("encounterRate", 0.0))
+		host.map_art_review_preview = true
+		zone["encounterRate"] = 1.0
+		host.encounter_grace_remaining = 0.0
+		host.encounter_zone_step_count = ENCOUNTER_SAFE_STEPS + 1
+		host.last_checked_player_cell = target_cell + Vector2i(0, 1)
+		host.player.global_position = IsoMapModel.grid_to_world(host.map_data, target_cell)
+		host._update_encounter_zone_check()
+		await host.get_tree().process_frame
+		preview_suppressed = (
+			not host.encounter_active
+			and not host.battle_active
+			and host.encounter_zone_step_count == 0
+		)
+		zone["encounterRate"] = original_rate
+		host.map_art_review_preview = original_preview
+		if host.battle_active:
+			host._end_battle(true)
+	var status = "ok" if loaded and zone_found and target_in_zone and arrived_zone and no_prompt and movement_stopped and battle_started and closed and grace_started and preview_suppressed else "failed"
+	print("encounter check ready: status=%s loaded=%s zone_found=%s target_in_zone=%s arrived_zone=%s no_prompt=%s movement_stopped=%s battle_started=%s closed=%s grace=%.2f preview_suppressed=%s zone_id=%s final_cell=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -3059,6 +3083,7 @@ func _run_auto_encounter_check() -> void:
 		str(battle_started),
 		str(closed),
 		host.encounter_grace_remaining,
+		str(preview_suppressed),
 		str(zone.get("id", "")),
 		str(player_cell),
 	])
@@ -10312,6 +10337,10 @@ func _run_auto_pet_rebirth_mm_check() -> void:
 	var guide_panel_ok = (
 		host.quest_title_label != null
 		and host.quest_title_label.text == "[80] 宠物转生教学：领取1转小MM"
+		and host.quest_panel.selected_quest_id() == QuestAwakenedPresenter.SPECIAL_TASK_MM_GUIDE_ID
+		and host.quest_panel.catalog_button(
+			QuestAwakenedPresenter.SPECIAL_TASK_MM_GUIDE_ID
+		) != null
 		and host.quest_detail_label != null
 		and host.quest_detail_label.text.find("推荐等级：Lv130") >= 0
 		and str(PlayerProgressModel.first_blocked_unfinished_quest(host.player_profile).get("id", "")) == "quest_rebirth_2_guidance"
@@ -14647,7 +14676,7 @@ func _run_auto_rebirth_cave_guardian_check() -> void:
 		var nav = host._navigation_target_for_encounter_group(group_id)
 		var nav_interaction = nav.get("interaction", {}) as Dictionary if nav.get("interaction", {}) is Dictionary else {}
 		navigation_ok = navigation_ok and str(nav.get("mapId", "")) == top_floor_map_id and str(nav.get("kind", "")) == "interaction" and str(nav_interaction.get("id", "")) == guardian_interaction_id
-		summaries.append("%s:floors=%d entrance=%s return=%s chain=%s top_only=%s npc=%s manual=%s pets=%d enemies=%s center=%s ring=%s" % [
+		summaries.append("%s:floors:%d,entrance:%s,return:%s,chain:%s,top_only:%s,npc:%s,manual:%s,pets:%d,enemies:%s,center:%s,ring:%s" % [
 			cave_id,
 			floor_ids.size(),
 			str(not entrance.is_empty()),
@@ -14681,7 +14710,7 @@ func _run_auto_rebirth_cave_guardian_check() -> void:
 		str(center_ok),
 		str(reward_ok),
 		str(navigation_ok),
-		" ; ".join(summaries),
+		";".join(summaries),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 
@@ -20408,6 +20437,10 @@ func _run_auto_rebirth_task_tracker_check() -> void:
 	var ring_panel_ok = (
 		host.quest_panel != null
 		and host.quest_panel.visible
+		and host.quest_panel.selected_quest_id() == QuestAwakenedPresenter.SPECIAL_TASK_REBIRTH_TRIAL_ID
+		and host.quest_panel.catalog_button(
+			QuestAwakenedPresenter.SPECIAL_TASK_REBIRTH_TRIAL_ID
+		) != null
 		and host.quest_title_label != null
 		and host.quest_title_label.text.find("地之戒") >= 0
 		and ring_panel_text.find("岩脉洞穴") >= 0
@@ -21111,14 +21144,22 @@ func _run_auto_panel_registry_check() -> void:
 	var synthesis_visible_ok = host.equipment_synthesis_panel != null and host.equipment_synthesis_panel.visible
 	var synthesis_menu_ok = host._world_menu_is_open()
 	var synthesis_blocks_ok = host._is_ui_point(synthesis_point)
-	if host.equipment_synthesis_panel != null:
-		host.equipment_synthesis_panel.visible = false
+	var ground_click_cell := IsoMapModel.spawn_cell(host.map_data)
+	host._panel_flow()._resolve_click_screen_point(
+		host._world_to_screen(IsoMapModel.grid_to_world(host.map_data, ground_click_cell))
+	)
+	await host.get_tree().process_frame
+	var synthesis_ground_click_closes_ok = (
+		host.equipment_synthesis_panel != null
+		and not host.equipment_synthesis_panel.visible
+		and not host._world_menu_is_open()
+	)
 	host._layout_hud()
 	await host.get_tree().process_frame
 	var no_menu_after_ok = not host._world_menu_is_open()
 	var synthesis_clear_ok = not host._is_ui_point(synthesis_point)
-	var status = "ok" if loaded and registry_ok and top_blocks_ok and no_menu_before_ok and action_bar_blocks_ok and action_bar_click_blocked_ok and market_button_opens_ok and synthesis_visible_ok and synthesis_menu_ok and synthesis_blocks_ok and no_menu_after_ok and synthesis_clear_ok else "failed"
-	print("panel registry check ready: status=%s loaded=%s registry=%s top_blocks=%s before=%s action_blocks=%s action_click_blocked=%s market_button_opens=%s synthesis_visible=%s synthesis_menu=%s synthesis_blocks=%s after=%s clear=%s" % [
+	var status = "ok" if loaded and registry_ok and top_blocks_ok and no_menu_before_ok and action_bar_blocks_ok and action_bar_click_blocked_ok and market_button_opens_ok and synthesis_visible_ok and synthesis_menu_ok and synthesis_blocks_ok and synthesis_ground_click_closes_ok and no_menu_after_ok and synthesis_clear_ok else "failed"
+	print("panel registry check ready: status=%s loaded=%s registry=%s top_blocks=%s before=%s action_blocks=%s action_click_blocked=%s market_button_opens=%s synthesis_visible=%s synthesis_menu=%s synthesis_blocks=%s ground_click_closes=%s after=%s clear=%s" % [
 		status,
 		str(loaded),
 		str(registry_ok),
@@ -21130,6 +21171,7 @@ func _run_auto_panel_registry_check() -> void:
 		str(synthesis_visible_ok),
 		str(synthesis_menu_ok),
 		str(synthesis_blocks_ok),
+		str(synthesis_ground_click_closes_ok),
 		str(no_menu_after_ok),
 		str(synthesis_clear_ok),
 	])
