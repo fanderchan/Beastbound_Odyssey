@@ -9,6 +9,8 @@ const {
   APPROVED_SCOPES,
   ATTESTATION_ID,
   ATTESTATION_TYPE,
+  BATTLE_ACTIONS,
+  BATTLE_VIEW_MAPPING,
   DEFAULT_ATTESTATION_REPO_PATH,
   DEFAULT_CATALOG_REPO_PATH,
   EXPECTED_LIFECYCLE,
@@ -16,6 +18,8 @@ const {
   OWNER_DECISION_ID,
   OWNER_DECISION_TYPE,
   PRIOR_BODY_VISUAL_DECISION_REPO_PATH,
+  RELEASE_NOTES,
+  RELEASE_PRODUCTION_SCOPE,
   PetFusionReleaseAttestationError,
   RECIPE_IDS,
   VALIDATION_KINDS,
@@ -226,11 +230,23 @@ function buildFixture({
   files.set(path.join(repoRoot, DEFAULT_ATTESTATION_REPO_PATH), attestationBytes);
 
   for (const contract of FORM_CONTRACTS) {
+    const approvedActions = Object.fromEntries(
+      BATTLE_ACTIONS.map((actionId) => [actionId, {status: "approved"}]),
+    );
     put(contract.petMetadataPath, {
       formId: contract.formId,
       artStatus: "approved",
+      productionScope: RELEASE_PRODUCTION_SCOPE,
       ownerReviewStatus: "approved",
+      keyPoseReviewStatus: "approved",
       runtimeEnabled: true,
+      rideableTarget: false,
+      runtimeFrameSize: [256, 256],
+      views: ["front_3quarter_sw", "back_3quarter_ne"],
+      battleViewMapping: structuredClone(BATTLE_VIEW_MAPPING),
+      identity: {status: "approved"},
+      actions: approvedActions,
+      notes: RELEASE_NOTES,
       releaseAttestation: {
         path: DEFAULT_ATTESTATION_REPO_PATH,
         sha256: attestationSha256,
@@ -254,8 +270,8 @@ function buildFixture({
           "southeast",
         ],
         actions: {
-          idle: {frameCount: 1, fps: 4},
-          walk: {frameCount: 4, fps: 10},
+          idle: {frameCount: 1, fps: 4, status: "approved"},
+          walk: {frameCount: 4, fps: 10, status: "approved"},
         },
       },
       battleVisual: {
@@ -263,6 +279,8 @@ function buildFixture({
         runtimeEnabled: true,
         kind: "pet",
         views: ["front_3quarter_sw", "back_3quarter_ne"],
+        actions: [...BATTLE_ACTIONS],
+        battleViewMapping: structuredClone(BATTLE_VIEW_MAPPING),
         totalFrameCount: 180,
         runtimeMirroring: false,
         integratedWholeFrame: false,
@@ -464,6 +482,32 @@ test("P1.4 release attestation fails closed on approval, portrait, catalog or li
       (error) => (
         error instanceof PetFusionReleaseAttestationError
         && /pet bundle is not fully runtime-released/.test(error.message)
+      ),
+    );
+  });
+
+  await t.test("battle facing mapping", () => {
+    const fixture = buildFixture();
+    const metadataPath = FORM_CONTRACTS[0].petMetadataPath;
+    assert.throws(
+      () => loadPetFusionReleaseAttestation({
+        repoRoot: fixture.repoRoot,
+        attestationPath: fixture.attestationPath,
+        expectedCatalogDocument: fixture.catalogDocument,
+        expectedCatalogPath: path.join(fixture.repoRoot, DEFAULT_CATALOG_REPO_PATH),
+        readFile(filePath) {
+          const bytes = fixture.readFile(filePath);
+          if (String(filePath).endsWith(metadataPath)) {
+            const document = JSON.parse(bytes.toString("utf8"));
+            document.battleVisual.battleViewMapping.ally.facing = "southeast";
+            return jsonBytes(document);
+          }
+          return bytes;
+        },
+      }),
+      (error) => (
+        error instanceof PetFusionReleaseAttestationError
+        && /battle bundle is not fully source-closed/.test(error.message)
       ),
     );
   });

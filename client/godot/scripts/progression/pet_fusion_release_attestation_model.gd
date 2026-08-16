@@ -58,7 +58,7 @@ const FORM_CONTRACTS := [
 		"portraitDecisionPath": (
 			"client/godot/assets/pets/"
 			+ "emberhorn_fusion_solar_crown_fire7_wind3/"
-			+ "qa/portrait/owner-decision.json"
+			+ "portrait/owner-decision.json"
 		),
 		"battleBundleDigest": (
 			"5a4896f64614b4eceaad220071fdd80fe85909bfa78d67ffb0637090a71da2fc"
@@ -95,7 +95,7 @@ const FORM_CONTRACTS := [
 		"portraitDecisionPath": (
 			"client/godot/assets/pets/"
 			+ "emberhorn_fusion_moss_rampart_fire4_earth6/"
-			+ "qa/portrait/owner-decision.json"
+			+ "portrait/owner-decision.json"
 		),
 		"battleBundleDigest": (
 			"27c3a0784ab6a2e55a3f3acc6624a722a8b4240bbb04bcd0ffbc53a52d524107"
@@ -128,6 +128,38 @@ const BATTLE_VIEWS: Array[String] = [
 	"front_3quarter_sw",
 	"back_3quarter_ne",
 ]
+const BATTLE_ACTIONS: Array[String] = [
+	"idle",
+	"walk",
+	"attack",
+	"skill",
+	"hurt",
+	"defend",
+	"dodge",
+	"counter",
+	"stagger",
+	"knockaway",
+	"down",
+	"revive",
+]
+const BATTLE_VIEW_MAPPING := {
+	"enemy": {
+		"view": "front_3quarter_sw",
+		"flipH": true,
+		"facing": "southeast",
+	},
+	"ally": {
+		"view": "back_3quarter_ne",
+		"flipH": true,
+		"facing": "northwest",
+	},
+}
+const RELEASE_PRODUCTION_SCOPE := "formal_nonrideable_runtime_release"
+const RELEASE_NOTES := (
+	"Identity, true-eight-direction world art, dedicated portrait, and the "
+	+ "complete two-view battle matrix are owner-approved for the first "
+	+ "non-rideable fusion runtime release."
+)
 const PRIOR_APPROVED_SCOPES: Array[String] = [
 	"standalone_pet_identity_visual_only",
 	"standalone_pet_world_true8_visual_only",
@@ -523,8 +555,10 @@ static func _validate_portrait_metadata(
 		)
 	)
 	var assets := _dict(document.get("assets", {}))
+	var master_asset := _dict(assets.get("master", {}))
 	var runtime_asset := _dict(assets.get("runtime", {}))
 	var eligibility_mask := _dict(assets.get("eligibilityMask", {}))
+	var ownership_asset := _dict(document.get("ownership", {}))
 	_validate_exact_keys(
 		owner_review,
 		["required", "status", "evidence", "decision"],
@@ -573,10 +607,25 @@ static func _validate_portrait_metadata(
 		!= str(contract.get("portraitDecisionPath", ""))
 	):
 		errors.append("%s 专用画像 owner decision 路径未冻结" % form_id)
+	var master_reference := {
+		"path": master_asset.get("path", ""),
+		"sha256": master_asset.get("sha256", ""),
+	}
+	var runtime_reference := {
+		"path": runtime_asset.get("path", ""),
+		"sha256": runtime_asset.get("sha256", ""),
+	}
+	var ownership_reference := {
+		"path": ownership_asset.get("path", ""),
+		"sha256": ownership_asset.get("sha256", ""),
+	}
 	_validate_portrait_owner_decision(
 		contract,
 		_dict(portrait_decision_reference.get("document", {})),
 		accepted_evidence,
+		master_reference,
+		runtime_reference,
+		ownership_reference,
 		fixture_files,
 		fixture_mode,
 		errors
@@ -591,11 +640,15 @@ static func _validate_portrait_metadata(
 		errors.append("%s 专用画像越过精确蒙版去色边界" % form_id)
 	if str(runtime_asset.get("path", "")) != str(contract.get("portraitRuntimePath", "")):
 		errors.append("%s 专用画像运行资源路径未冻结" % form_id)
+	_validate_evidence_reference(
+		master_reference,
+		"%s 专用画像 master 证据" % form_id,
+		errors
+	)
+	if str(master_reference.get("path", "")) != str(contract.get("portraitMasterPath", "")):
+		errors.append("%s 专用画像 master 路径未冻结" % form_id)
 	_validated_reference(
-		{
-			"path": runtime_asset.get("path", ""),
-			"sha256": runtime_asset.get("sha256", ""),
-		},
+		runtime_reference,
 		"%s 专用画像运行资源" % form_id,
 		fixture_files,
 		fixture_mode,
@@ -608,23 +661,33 @@ static func _validate_portrait_metadata(
 		or int(eligibility_mask.get("nonzeroPixels", 0)) <= 0
 	):
 		errors.append("%s 专用画像资格蒙版引用无效" % form_id)
-	_validated_reference(
+	_validate_evidence_reference(
 		{
 			"path": eligibility_mask.get("path", ""),
 			"sha256": eligibility_mask.get("sha256", ""),
 		},
 		"%s 专用画像资格蒙版" % form_id,
-		fixture_files,
-		fixture_mode,
-		errors,
-		false
+		errors
 	)
+	_validate_evidence_reference(
+		ownership_reference,
+		"%s 专用画像 ownership 证据" % form_id,
+		errors
+	)
+	if (
+		str(ownership_reference.get("path", ""))
+		!= str(contract.get("portraitOwnershipPath", ""))
+	):
+		errors.append("%s 专用画像 ownership 路径未冻结" % form_id)
 
 
 static func _validate_portrait_owner_decision(
 	contract: Dictionary,
 	document: Dictionary,
 	accepted_evidence: Array[Dictionary],
+	expected_master_reference: Dictionary,
+	expected_runtime_reference: Dictionary,
+	expected_ownership_reference: Dictionary,
 	fixture_files: Dictionary,
 	fixture_mode: bool,
 	errors: Array[String]
@@ -660,13 +723,11 @@ static func _validate_portrait_owner_decision(
 		"%s 专用画像 owner decision.subject" % form_id,
 		errors
 	)
-	var master_reference := _validated_reference(
-		subject.get("master", {}),
+	var master_reference := _dict(subject.get("master", {}))
+	_validate_evidence_reference(
+		master_reference,
 		"%s 专用画像 owner decision.master" % form_id,
-		fixture_files,
-		fixture_mode,
-		errors,
-		false
+		errors
 	)
 	var runtime_reference := _validated_reference(
 		subject.get("runtime", {}),
@@ -676,13 +737,11 @@ static func _validate_portrait_owner_decision(
 		errors,
 		false
 	)
-	var ownership_reference := _validated_reference(
-		subject.get("ownership", {}),
+	var ownership_reference := _dict(subject.get("ownership", {}))
+	_validate_evidence_reference(
+		ownership_reference,
 		"%s 专用画像 owner decision.ownership" % form_id,
-		fixture_files,
-		fixture_mode,
-		errors,
-		false
+		errors
 	)
 	if (
 		str(subject.get("kind", "")) != "shared_dedicated_headshot_v1"
@@ -694,6 +753,15 @@ static func _validate_portrait_owner_decision(
 			!= str(contract.get("portraitRuntimePath", ""))
 		or str(ownership_reference.get("path", ""))
 			!= str(contract.get("portraitOwnershipPath", ""))
+		or not _deep_equal(master_reference, expected_master_reference)
+		or not _deep_equal(
+			{
+				"path": runtime_reference.get("path", ""),
+				"sha256": runtime_reference.get("sha256", ""),
+			},
+			expected_runtime_reference
+		)
+		or not _deep_equal(ownership_reference, expected_ownership_reference)
 	):
 		errors.append("%s 专用画像 owner decision subject 漂移" % form_id)
 
@@ -720,13 +788,42 @@ static func _validate_pet_metadata(
 	var world := _dict(metadata.get("worldVisual", {}))
 	var world_actions := _dict(world.get("actions", {}))
 	var battle := _dict(metadata.get("battleVisual", {}))
+	var identity := _dict(metadata.get("identity", {}))
+	var actions := _dict(metadata.get("actions", {}))
+	var runtime_frame_size_value = metadata.get("runtimeFrameSize", [])
+	var runtime_frame_size_valid := (
+		runtime_frame_size_value is Array
+		and (runtime_frame_size_value as Array).size() == 2
+		and int((runtime_frame_size_value as Array)[0]) == 256
+		and int((runtime_frame_size_value as Array)[1]) == 256
+	)
+	var actions_approved := actions.size() == BATTLE_ACTIONS.size()
+	for action_id in BATTLE_ACTIONS:
+		actions_approved = (
+			actions_approved
+			and str(_dict(actions.get(action_id, {})).get("status", ""))
+				== "approved"
+		)
 	if (
 		str(metadata.get("formId", "")) != form_id
 		or str(metadata.get("artStatus", "")) != "approved"
+		or str(metadata.get("productionScope", ""))
+			!= RELEASE_PRODUCTION_SCOPE
 		or str(metadata.get("ownerReviewStatus", "")) != "approved"
+		or str(metadata.get("keyPoseReviewStatus", "")) != "approved"
 		or metadata.get("runtimeEnabled", null) != true
 		or not _deep_equal(metadata.get("releaseAttestation", {}), expected_reference)
 		or metadata.get("riding", "missing") != null
+		or metadata.get("rideableTarget", null) != false
+		or not _same_string_array(metadata.get("views", []), BATTLE_VIEWS)
+		or not runtime_frame_size_valid
+		or not _deep_equal(
+			metadata.get("battleViewMapping", {}),
+			BATTLE_VIEW_MAPPING
+		)
+		or str(identity.get("status", "")) != "approved"
+		or str(metadata.get("notes", "")) != RELEASE_NOTES
+		or not actions_approved
 	):
 		errors.append("%s 宠物整包未完整批准、开放或保持不可骑乘" % form_id)
 	if (
@@ -738,8 +835,12 @@ static func _validate_pet_metadata(
 		or int(world.get("totalFrameCount", 0)) != 40
 		or not _same_string_array(world.get("directions", []), WORLD_DIRECTIONS)
 		or int(_dict(world_actions.get("idle", {})).get("frameCount", 0)) != 1
+		or str(_dict(world_actions.get("idle", {})).get("status", ""))
+			!= "approved"
 		or int(_dict(world_actions.get("walk", {})).get("frameCount", 0)) != 4
 		or int(_dict(world_actions.get("walk", {})).get("fps", 0)) != 10
+		or str(_dict(world_actions.get("walk", {})).get("status", ""))
+			!= "approved"
 	):
 		errors.append("%s 世界整包不是批准的真八向四帧步行资源" % form_id)
 	if (
@@ -747,6 +848,11 @@ static func _validate_pet_metadata(
 		or battle.get("runtimeEnabled", null) != true
 		or str(battle.get("kind", "")) != "pet"
 		or not _same_string_array(battle.get("views", []), BATTLE_VIEWS)
+		or not _same_string_array(battle.get("actions", []), BATTLE_ACTIONS)
+		or not _deep_equal(
+			battle.get("battleViewMapping", {}),
+			BATTLE_VIEW_MAPPING
+		)
 		or int(battle.get("totalFrameCount", 0)) != 180
 		or battle.get("runtimeMirroring", null) != false
 		or battle.get("integratedWholeFrame", null) != false

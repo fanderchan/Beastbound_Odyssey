@@ -39,7 +39,7 @@ const FORM_CONTRACTS = Object.freeze([
     portraitOwnershipPath:
       "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/portrait/source-and-ownership.md",
     portraitDecisionPath:
-      "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/qa/portrait/owner-decision.json",
+      "client/godot/assets/pets/emberhorn_fusion_solar_crown_fire7_wind3/portrait/owner-decision.json",
     battleBundleDigest: "5a4896f64614b4eceaad220071fdd80fe85909bfa78d67ffb0637090a71da2fc",
   }),
   Object.freeze({
@@ -57,7 +57,7 @@ const FORM_CONTRACTS = Object.freeze([
     portraitOwnershipPath:
       "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/portrait/source-and-ownership.md",
     portraitDecisionPath:
-      "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/qa/portrait/owner-decision.json",
+      "client/godot/assets/pets/emberhorn_fusion_moss_rampart_fire4_earth6/portrait/owner-decision.json",
     battleBundleDigest: "27c3a0784ab6a2e55a3f3acc6624a722a8b4240bbb04bcd0ffbc53a52d524107",
   }),
 ]);
@@ -87,6 +87,37 @@ const BATTLE_VIEWS = Object.freeze([
   "front_3quarter_sw",
   "back_3quarter_ne",
 ]);
+const BATTLE_ACTIONS = Object.freeze([
+  "idle",
+  "walk",
+  "attack",
+  "skill",
+  "hurt",
+  "defend",
+  "dodge",
+  "counter",
+  "stagger",
+  "knockaway",
+  "down",
+  "revive",
+]);
+const BATTLE_VIEW_MAPPING = Object.freeze({
+  enemy: Object.freeze({
+    view: "front_3quarter_sw",
+    flipH: true,
+    facing: "southeast",
+  }),
+  ally: Object.freeze({
+    view: "back_3quarter_ne",
+    flipH: true,
+    facing: "northwest",
+  }),
+});
+const RELEASE_PRODUCTION_SCOPE = "formal_nonrideable_runtime_release";
+const RELEASE_NOTES =
+  "Identity, true-eight-direction world art, dedicated portrait, and the "
+  + "complete two-view battle matrix are owner-approved for the first "
+  + "non-rideable fusion runtime release.";
 const EXPECTED_LIFECYCLE = Object.freeze({
   artStatus: "approved",
   ownerReviewStatus: "approved",
@@ -526,6 +557,8 @@ function validatePetMetadata(contract, repoRoot, readFile, attestationSha256, er
   const world = record(metadata.worldVisual);
   const worldActions = record(world.actions);
   const battle = record(metadata.battleVisual);
+  const identity = record(metadata.identity);
+  const actions = record(metadata.actions);
   const expectedReference = {
     path: DEFAULT_ATTESTATION_REPO_PATH,
     sha256: attestationSha256,
@@ -533,10 +566,20 @@ function validatePetMetadata(contract, repoRoot, readFile, attestationSha256, er
   if (
     text(metadata.formId) !== contract.formId
     || text(metadata.artStatus) !== "approved"
+    || text(metadata.productionScope) !== RELEASE_PRODUCTION_SCOPE
     || text(metadata.ownerReviewStatus) !== "approved"
+    || text(metadata.keyPoseReviewStatus) !== "approved"
     || metadata.runtimeEnabled !== true
     || !isDeepStrictEqual(record(metadata.releaseAttestation), expectedReference)
     || metadata.riding !== null
+    || metadata.rideableTarget !== false
+    || !isDeepStrictEqual(array(metadata.runtimeFrameSize), [256, 256])
+    || !isDeepStrictEqual(array(metadata.views), BATTLE_VIEWS)
+    || !isDeepStrictEqual(record(metadata.battleViewMapping), BATTLE_VIEW_MAPPING)
+    || text(identity.status) !== "approved"
+    || text(metadata.notes) !== RELEASE_NOTES
+    || !isDeepStrictEqual(Object.keys(actions), BATTLE_ACTIONS)
+    || BATTLE_ACTIONS.some((actionId) => text(record(actions[actionId]).status) !== "approved")
   ) {
     errors.push(`${contract.formId} pet bundle is not fully runtime-released and non-rideable`);
   }
@@ -549,8 +592,10 @@ function validatePetMetadata(contract, repoRoot, readFile, attestationSha256, er
     || world.totalFrameCount !== 40
     || !isDeepStrictEqual(array(world.directions), WORLD_DIRECTIONS)
     || record(worldActions.idle).frameCount !== 1
+    || text(record(worldActions.idle).status) !== "approved"
     || record(worldActions.walk).frameCount !== 4
     || record(worldActions.walk).fps !== 10
+    || text(record(worldActions.walk).status) !== "approved"
   ) {
     errors.push(`${contract.formId} world bundle is not an approved runtime true-eight walk set`);
   }
@@ -559,6 +604,8 @@ function validatePetMetadata(contract, repoRoot, readFile, attestationSha256, er
     || battle.runtimeEnabled !== true
     || text(battle.kind) !== "pet"
     || !isDeepStrictEqual(array(battle.views), BATTLE_VIEWS)
+    || !isDeepStrictEqual(array(battle.actions), BATTLE_ACTIONS)
+    || !isDeepStrictEqual(record(battle.battleViewMapping), BATTLE_VIEW_MAPPING)
     || battle.totalFrameCount !== 180
     || battle.runtimeMirroring !== false
     || battle.integratedWholeFrame !== false
@@ -848,6 +895,8 @@ module.exports = {
   APPROVED_SCOPES,
   ATTESTATION_ID,
   ATTESTATION_TYPE,
+  BATTLE_ACTIONS,
+  BATTLE_VIEW_MAPPING,
   DEFAULT_ATTESTATION_PATH,
   DEFAULT_ATTESTATION_REPO_PATH,
   DEFAULT_CATALOG_REPO_PATH,
@@ -856,6 +905,8 @@ module.exports = {
   OWNER_DECISION_ID,
   OWNER_DECISION_TYPE,
   PRIOR_BODY_VISUAL_DECISION_REPO_PATH,
+  RELEASE_NOTES,
+  RELEASE_PRODUCTION_SCOPE,
   PetFusionReleaseAttestationError,
   RECIPE_IDS,
   VALIDATION_KINDS,

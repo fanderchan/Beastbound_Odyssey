@@ -129,6 +129,31 @@ func _initialize() -> void:
 			release_fixture_files
 		)
 	)
+	var export_fixture_files := release_fixture_files.duplicate(true)
+	for contract_value in PetFusionReleaseAttestationModel.FORM_CONTRACTS:
+		var export_contract := contract_value as Dictionary
+		export_fixture_files.erase(
+			str(export_contract.get("portraitMasterPath", ""))
+		)
+		export_fixture_files.erase(
+			str(export_contract.get("portraitOwnershipPath", ""))
+		)
+		var export_runtime_path := str(
+			export_contract.get("portraitRuntimePath", "")
+		)
+		export_fixture_files.erase(
+			export_runtime_path.replace(
+				"/portrait/default.png",
+				"/source/portrait/headshot-chroma-eligibility-mask.png"
+			)
+		)
+	var export_fixture_errors := (
+		PetFusionReleaseAttestationModel.fixture_validation_errors(
+			release_fixture_content,
+			enabled_catalog,
+			export_fixture_files
+		)
+	)
 	var runtime_owner_identity_fixture := _release_attestation_fixture(
 		enabled_catalog,
 		"project-owner:attacker"
@@ -222,6 +247,32 @@ func _initialize() -> void:
 			metadata_drift_files
 		)
 	)
+	var facing_drift_files := release_fixture_files.duplicate(true)
+	var facing_document = JSON.parse_string(
+		str(facing_drift_files.get(metadata_path, ""))
+	)
+	if facing_document is Dictionary:
+		var facing_battle := (
+			(facing_document as Dictionary).get("battleVisual", {}) as Dictionary
+		).duplicate(true)
+		var facing_mapping := (
+			facing_battle.get("battleViewMapping", {}) as Dictionary
+		).duplicate(true)
+		var ally_mapping := (
+			facing_mapping.get("ally", {}) as Dictionary
+		).duplicate(true)
+		ally_mapping["facing"] = "southeast"
+		facing_mapping["ally"] = ally_mapping
+		facing_battle["battleViewMapping"] = facing_mapping
+		(facing_document as Dictionary)["battleVisual"] = facing_battle
+		facing_drift_files[metadata_path] = _fixture_json(facing_document)
+	var facing_drift_errors := (
+		PetFusionReleaseAttestationModel.fixture_validation_errors(
+			release_fixture_content,
+			enabled_catalog,
+			facing_drift_files
+		)
+	)
 	var evidence_document = JSON.parse_string(release_fixture_content)
 	var evidence_drift_content := release_fixture_content
 	if evidence_document is Dictionary:
@@ -243,6 +294,7 @@ func _initialize() -> void:
 	)
 	var release_gate_contract_ok := (
 		release_errors.is_empty()
+		and export_fixture_errors.is_empty()
 		and not runtime_owner_identity_errors.is_empty()
 		and not portrait_owner_identity_errors.is_empty()
 		and not missing_release_errors.is_empty()
@@ -256,6 +308,7 @@ func _initialize() -> void:
 		and not owner_drift_errors.is_empty()
 		and not portrait_drift_errors.is_empty()
 		and not metadata_drift_errors.is_empty()
+		and not facing_drift_errors.is_empty()
 		and not evidence_drift_errors.is_empty()
 	)
 	_expect(
@@ -263,11 +316,13 @@ func _initialize() -> void:
 		(
 			(
 				"融合客户端发布证明未对目录、owner、画像、整包或证据漂移失败关闭："
-				+ "fixture=%d runtimeIdentity=%d portraitIdentity=%d missing=%d "
-				+ "catalog=%d owner=%d portrait=%d metadata=%d evidence=%d fixtureErrors=%s"
+					+ "fixture=%d export=%d runtimeIdentity=%d portraitIdentity=%d missing=%d "
+					+ "catalog=%d owner=%d portrait=%d metadata=%d facing=%d "
+					+ "evidence=%d fixtureErrors=%s"
 			)
 			% [
 				release_errors.size(),
+				export_fixture_errors.size(),
 				runtime_owner_identity_errors.size(),
 				portrait_owner_identity_errors.size(),
 				missing_release_errors.size(),
@@ -275,6 +330,7 @@ func _initialize() -> void:
 				owner_drift_errors.size(),
 				portrait_drift_errors.size(),
 				metadata_drift_errors.size(),
+				facing_drift_errors.size(),
 				evidence_drift_errors.size(),
 				str(release_errors),
 			]
@@ -931,6 +987,7 @@ static func _release_attestation_fixture(
 					},
 				},
 				"assets": {
+					"master": master_reference,
 					"runtime": runtime_reference,
 					"eligibilityMask": {
 						"path": str(mask_reference.get("path", "")),
@@ -938,6 +995,7 @@ static func _release_attestation_fixture(
 						"nonzeroPixels": 42,
 					},
 				},
+				"ownership": ownership_reference,
 				"ownerReview": {
 					"required": true,
 					"status": "approved",
@@ -1001,14 +1059,30 @@ static func _release_attestation_fixture(
 	for contract_value in PetFusionReleaseAttestationModel.FORM_CONTRACTS:
 		var contract := contract_value as Dictionary
 		var form_id := str(contract.get("formId", ""))
+		var approved_actions := {}
+		for action_id in PetFusionReleaseAttestationModel.BATTLE_ACTIONS:
+			approved_actions[action_id] = {"status": "approved"}
 		_put_fixture_json(
 			files,
 			str(contract.get("petMetadataPath", "")),
 			{
 				"formId": form_id,
 				"artStatus": "approved",
+				"productionScope": (
+					PetFusionReleaseAttestationModel.RELEASE_PRODUCTION_SCOPE
+				),
 				"ownerReviewStatus": "approved",
+				"keyPoseReviewStatus": "approved",
 				"runtimeEnabled": true,
+				"rideableTarget": false,
+				"runtimeFrameSize": [256, 256],
+				"views": PetFusionReleaseAttestationModel.BATTLE_VIEWS.duplicate(),
+				"battleViewMapping": (
+					PetFusionReleaseAttestationModel.BATTLE_VIEW_MAPPING.duplicate(true)
+				),
+				"identity": {"status": "approved"},
+				"actions": approved_actions,
+				"notes": PetFusionReleaseAttestationModel.RELEASE_NOTES,
 				"releaseAttestation": {
 					"path": PetFusionReleaseAttestationModel.REPO_DATA_PATH,
 					"sha256": attestation_sha,
@@ -1025,8 +1099,16 @@ static func _release_attestation_fixture(
 						PetFusionReleaseAttestationModel.WORLD_DIRECTIONS.duplicate()
 					),
 					"actions": {
-						"idle": {"frameCount": 1, "fps": 4},
-						"walk": {"frameCount": 4, "fps": 10},
+						"idle": {
+							"frameCount": 1,
+							"fps": 4,
+							"status": "approved",
+						},
+						"walk": {
+							"frameCount": 4,
+							"fps": 10,
+							"status": "approved",
+						},
 					},
 				},
 				"battleVisual": {
@@ -1034,6 +1116,12 @@ static func _release_attestation_fixture(
 					"runtimeEnabled": true,
 					"kind": "pet",
 					"views": PetFusionReleaseAttestationModel.BATTLE_VIEWS.duplicate(),
+					"actions": (
+						PetFusionReleaseAttestationModel.BATTLE_ACTIONS.duplicate()
+					),
+					"battleViewMapping": (
+						PetFusionReleaseAttestationModel.BATTLE_VIEW_MAPPING.duplicate(true)
+					),
 					"totalFrameCount": 180,
 					"runtimeMirroring": false,
 					"integratedWholeFrame": false,

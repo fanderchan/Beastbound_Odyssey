@@ -205,7 +205,11 @@ QA_GODOT_IGNORE_PATH = Path("qa/portrait/.gdignore")
 QA_GODOT_IGNORE_BYTES = (
     b"# Portrait QA evidence; excluded from Godot runtime import.\n"
 )
-OWNER_DECISION_PATH = Path("qa/portrait/owner-decision.json")
+# The approval decision is part of the runtime release chain.  Keep it beside
+# the runtime portrait metadata, outside ``qa/portrait/.gdignore``, so an
+# exported client can verify the exact signed JSON instead of passing only in
+# the editor source tree.
+OWNER_DECISION_PATH = Path("portrait/owner-decision.json")
 INSTALL_TRANSACTION_PATH = Path(".portrait-install-v1.json")
 OUTPUT_PATHS = (
     # Preserve the exact built-in ImageGen PNG bytes before any decode or
