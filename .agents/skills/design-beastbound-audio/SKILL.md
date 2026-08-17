@@ -96,7 +96,7 @@ python3 .agents/skills/design-beastbound-audio/tests/test_audio_pipeline.py -v
 1. Put playback, bus setup, crossfades, pooling, settings, and caching in a focused audio manager under `client/godot/scripts/audio/`.
 2. Put event-to-cue decisions in a pure cue model/catalog. Keep `main.gd` changes to lifecycle wiring and explicit animation-timing notifications.
 3. Load and validate the cue catalog once. Never scan directories, parse JSON, import resources, or allocate an unbounded number of players in `_process`, `_draw`, input, or battle signatures.
-4. Use separate music and effects buses. Bound simultaneous one-shots, apply cue cooldowns, and choose a deterministic voice-stealing rule.
+4. Use separate music and effects buses. Long environment beds use a dedicated `Ambience` child bus routed into effects unless the product explicitly exposes another player-facing control. Bound simultaneous one-shots, apply cue cooldowns, and choose a deterministic voice-stealing rule.
 5. Do not play every battle sound when a network packet arrives. The authoritative event decides *what happened*; the client animation marker decides *when it is heard*.
 6. A dodge keeps its motion sound but replaces contact with a short evade cue. A block replaces ordinary contact. A counter is its own action sequence. A launch/knockback/down cue follows the hit rather than masking it.
 7. A multi-participant combo uses one quiet start cue, staggered low-gain contact markers for visible participants, and exactly one dominant convergence impact. Do not stack one full-volume hit per participant on the final frame.

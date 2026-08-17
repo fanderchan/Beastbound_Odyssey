@@ -28,4 +28,24 @@ Courtesy credits for public-domain music used by the same bundle:
   [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
   Source: <https://opengameart.org/content/cave-theme>.
 
+Courtesy credits for the public-domain environment layers:
+
+- `ambience.town` — **Ambient Bird Sounds**, recorded and prepared by
+  **isaiah658**, released under
+  [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+  Source: <https://opengameart.org/content/ambient-bird-sounds>.
+- `ambience.wilderness` — **Birds and Wind - Ambient**, prepared by
+  **Spring Spring** from public-domain wind and bird material, released under
+  [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+  Source:
+  <https://opengameart.org/content/birds-and-wind-ambient-birds-wind-and-synth>.
+- `ambience.cave` — **Loopable Dungeon Ambience**, created by
+  **JaggedStone**, released under
+  [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+  Source: <https://opengameart.org/content/loopable-dungeon-ambience>.
+
+Beastbound freezes each original file by SHA-256, makes a reviewed circular
+crossfade, resamples to 48 kHz stereo, applies static gain, and encodes the
+runtime Ogg. The environment layer remains independently routed below BGM.
+
 No music or audio was copied from StoneAge or another commercial game.

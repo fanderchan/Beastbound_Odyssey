@@ -2,17 +2,22 @@ class_name GameAudioManager
 extends Node
 
 signal music_context_changed(context: String, cue_id: String)
+signal ambience_context_changed(context: String, cue_id: String)
 signal settings_changed(settings: Dictionary)
 
 const DEFAULT_CATALOG_PATH := "res://assets/audio/beastbound_audio_v2/audio-cues.json"
 const DEFAULT_SETTINGS_PATH := "user://beastbound_audio_settings.json"
 const MUSIC_CROSSFADE_SECONDS := 0.75
+const AMBIENCE_CROSSFADE_SECONDS := 0.75
+const AMBIENCE_BATTLE_DUCK_DB := -12.0
+const AMBIENCE_DUCK_SECONDS := 0.40
 const SFX_VOICE_COUNT := 12
 const MASTER_LIMITER_CEILING_DB := -2.0
 const SILENCE_DB := -80.0
 
 const BUS_MUSIC := "Music"
 const BUS_SFX := "SFX"
+const BUS_AMBIENCE := "Ambience"
 const BUS_COMBAT := "Combat"
 const BUS_PET := "Pet"
 const BUS_UI := "UI"
@@ -28,6 +33,7 @@ var _catalog_path := DEFAULT_CATALOG_PATH
 var _settings_path := DEFAULT_SETTINGS_PATH
 var _catalog: Dictionary = {}
 var _contexts: Dictionary = {}
+var _ambience_contexts: Dictionary = {}
 var _cues: Dictionary = {}
 var _catalog_loaded := false
 var _catalog_error := ""
@@ -36,6 +42,7 @@ var _settings: Dictionary = DEFAULT_SETTINGS.duplicate(true)
 var _stream_cache: Dictionary = {}
 var _missing_stream_paths: Dictionary = {}
 var _warmed_music_paths: Dictionary = {}
+var _warmed_ambience_paths: Dictionary = {}
 var _stream_loader: Callable
 var _clock_msec: Callable
 var _playback_enabled := true
@@ -47,6 +54,15 @@ var _active_music_cue := ""
 var _active_music_context := ""
 var _music_tween: Tween
 var _music_transition_serial := 0
+
+var _ambience_players: Array[AudioStreamPlayer] = []
+var _active_ambience_player_index := -1
+var _active_ambience_cue := ""
+var _active_ambience_context := ""
+var _ambience_tween: Tween
+var _ambience_transition_serial := 0
+var _ambience_duck_tween: Tween
+var _ambience_ducked := false
 
 var _sfx_voices: Array[Dictionary] = []
 var _voice_serial := 0
@@ -63,13 +79,15 @@ func configure_catalog_path(path: String) -> void:
 	_catalog_error = ""
 	_catalog.clear()
 	_contexts.clear()
+	_ambience_contexts.clear()
 	_cues.clear()
 	_stream_cache.clear()
 	_missing_stream_paths.clear()
 	_warmed_music_paths.clear()
+	_warmed_ambience_paths.clear()
 	if is_inside_tree():
 		_load_catalog_once()
-		_sync_effective_music()
+		_sync_effective_audio()
 
 
 func configure_settings_path(path: String) -> void:
@@ -84,8 +102,9 @@ func configure_stream_loader(loader: Callable) -> void:
 	_stream_cache.clear()
 	_missing_stream_paths.clear()
 	_warmed_music_paths.clear()
+	_warmed_ambience_paths.clear()
 	if is_inside_tree() and _catalog_loaded:
-		_warm_context_music_streams()
+		_warm_context_streams()
 
 
 func configure_clock_msec(clock: Callable) -> void:
@@ -101,8 +120,8 @@ func configure_playback_enabled(value: bool) -> void:
 	if not _playback_enabled:
 		stop_all()
 	else:
-		_warm_context_music_streams()
-		_sync_effective_music()
+		_warm_context_streams()
+		_sync_effective_audio()
 
 
 func _ready() -> void:
@@ -112,7 +131,9 @@ func _ready() -> void:
 		# SceneTree.quit() tears the process down immediately.
 		_playback_enabled = DisplayServer.get_name() != "headless"
 	_ensure_audio_buses()
+	_apply_ambience_bus_gain_db(0.0)
 	_build_music_players()
+	_build_ambience_players()
 	_build_sfx_voice_pool()
 	_load_settings()
 	_load_catalog_once()
@@ -123,14 +144,24 @@ func _exit_tree() -> void:
 	if _music_tween != null and _music_tween.is_valid():
 		_music_tween.kill()
 	_music_tween = null
+	if _ambience_tween != null and _ambience_tween.is_valid():
+		_ambience_tween.kill()
+	_ambience_tween = null
+	if _ambience_duck_tween != null and _ambience_duck_tween.is_valid():
+		_ambience_duck_tween.kill()
+	_ambience_duck_tween = null
 	_release_player_streams()
 	_stream_cache.clear()
 	_missing_stream_paths.clear()
 	_warmed_music_paths.clear()
+	_warmed_ambience_paths.clear()
 
 
 func _release_player_streams() -> void:
 	for player in _music_players:
+		player.stop()
+		player.stream = null
+	for player in _ambience_players:
 		player.stop()
 		player.stream = null
 	for record in _sfx_voices:
@@ -147,7 +178,9 @@ func sync_map_context(map_id: String, context_hint: String = "") -> bool:
 	_world_context = next_context
 	if _battle_active:
 		return true
-	return _switch_music_context(_world_context)
+	var music_ok := _switch_music_context(_world_context)
+	var ambience_ok := _switch_ambience_context(_world_context)
+	return music_ok and ambience_ok
 
 
 func sync_music_context(context: String) -> bool:
@@ -160,19 +193,34 @@ func sync_music_context(context: String) -> bool:
 	return _switch_music_context(_world_context)
 
 
+func sync_ambience_context(context: String) -> bool:
+	var next_context := _normalize_world_context(context)
+	if next_context == "":
+		return false
+	_world_context = next_context
+	if _battle_active:
+		return true
+	return _switch_ambience_context(_world_context)
+
+
 func enter_battle(is_boss: bool = false) -> bool:
 	_battle_active = true
 	_boss_battle_active = is_boss
+	_set_ambience_ducked(true)
 	return _switch_music_context(_battle_music_context())
 
 
 func exit_battle() -> bool:
 	_battle_active = false
 	_boss_battle_active = false
+	_set_ambience_ducked(false)
 	if _world_context == "":
 		_silence_music_players()
+		_silence_ambience_players()
 		return true
-	return _switch_music_context(_world_context)
+	var music_ok := _switch_music_context(_world_context)
+	var ambience_ok := _switch_ambience_context(_world_context)
+	return music_ok and ambience_ok
 
 
 func sync_battle_context(active: bool, is_boss: bool = false) -> bool:
@@ -183,6 +231,7 @@ func silence_world_context() -> void:
 	_world_context = ""
 	if not _battle_active:
 		_silence_music_players()
+		_silence_ambience_players()
 
 
 func play_cue(cue_id: String, options: Dictionary = {}) -> bool:
@@ -192,6 +241,11 @@ func play_cue(cue_id: String, options: Dictionary = {}) -> bool:
 	var role := str(info.get("role", "")).strip_edges().to_lower()
 	if role == "music":
 		return _switch_music_cue(cue_id, _context_for_music_cue(cue_id))
+	if role == "ambience":
+		return _switch_ambience_cue(
+			cue_id,
+			_context_for_ambience_cue(cue_id)
+		)
 	var path := str(info.get("path", "")).strip_edges()
 	if not _source_path_exists(path):
 		return false
@@ -312,6 +366,13 @@ func context_cue(context: String) -> String:
 	return str(value)
 
 
+func ambience_context_cue(context: String) -> String:
+	var value = _ambience_contexts.get(context, "")
+	if value is Dictionary:
+		return str((value as Dictionary).get("cueId", ""))
+	return str(value)
+
+
 func catalog_loaded() -> bool:
 	return _catalog_loaded
 
@@ -328,6 +389,18 @@ func current_music_context() -> String:
 	return _active_music_context
 
 
+func current_ambience_cue() -> String:
+	return _active_ambience_cue
+
+
+func current_ambience_context() -> String:
+	return _active_ambience_context
+
+
+func is_ambience_ducked() -> bool:
+	return _ambience_ducked
+
+
 func world_context() -> String:
 	return _world_context
 
@@ -340,10 +413,21 @@ func stop_all() -> void:
 	if _music_tween != null and _music_tween.is_valid():
 		_music_tween.kill()
 	_music_tween = null
+	if _ambience_tween != null and _ambience_tween.is_valid():
+		_ambience_tween.kill()
+	_ambience_tween = null
+	if _ambience_duck_tween != null and _ambience_duck_tween.is_valid():
+		_ambience_duck_tween.kill()
+	_ambience_duck_tween = null
 	_release_player_streams()
 	_active_music_player_index = -1
 	_active_music_cue = ""
 	_active_music_context = ""
+	_active_ambience_player_index = -1
+	_active_ambience_cue = ""
+	_active_ambience_context = ""
+	_ambience_ducked = false
+	_apply_ambience_bus_gain_db(0.0)
 
 
 func _silence_music_players() -> void:
@@ -356,6 +440,18 @@ func _silence_music_players() -> void:
 	_active_music_player_index = -1
 	_active_music_cue = ""
 	_active_music_context = ""
+
+
+func _silence_ambience_players() -> void:
+	if _ambience_tween != null and _ambience_tween.is_valid():
+		_ambience_tween.kill()
+	_ambience_tween = null
+	for player in _ambience_players:
+		player.stop()
+		player.stream = null
+	_active_ambience_player_index = -1
+	_active_ambience_cue = ""
+	_active_ambience_context = ""
 
 
 func debug_snapshot() -> Dictionary:
@@ -377,9 +473,17 @@ func debug_snapshot() -> Dictionary:
 		"activeMusicPlayerIndex": _active_music_player_index,
 		"combinedMusicPowerLinear": _combined_playing_music_power_linear(),
 		"musicTransitionSerial": _music_transition_serial,
+		"activeAmbienceContext": _active_ambience_context,
+		"activeAmbienceCue": _active_ambience_cue,
+		"activeAmbiencePlayerIndex": _active_ambience_player_index,
+		"combinedAmbiencePowerLinear": _combined_playing_ambience_power_linear(),
+		"ambienceTransitionSerial": _ambience_transition_serial,
+		"ambienceDucked": _ambience_ducked,
+		"ambienceBusGainDb": _ambience_bus_gain_db(),
 		"playbackEnabled": _playback_enabled,
 		"streamCacheCount": _stream_cache.size(),
 		"warmedMusicStreamCount": _warmed_music_paths.size(),
+		"warmedAmbienceStreamCount": _warmed_ambience_paths.size(),
 		"missingStreamCount": _missing_stream_paths.size(),
 		"voicePoolSize": _sfx_voices.size(),
 		"activeVoiceCount": active_voice_count,
@@ -415,15 +519,23 @@ func _load_catalog_once() -> void:
 		return
 	var raw := parsed as Dictionary
 	var raw_contexts = raw.get("contexts", {})
+	var raw_ambience_contexts = raw.get("ambienceContexts", {})
 	var raw_cues = raw.get("cues", {})
-	if not raw_contexts is Dictionary or not raw_cues is Dictionary:
+	if (
+		not raw_contexts is Dictionary
+		or not raw_ambience_contexts is Dictionary
+		or not raw_cues is Dictionary
+	):
 		_catalog_error = "catalog_invalid_shape"
 		return
 	_catalog = raw.duplicate(true)
 	_contexts = (raw_contexts as Dictionary).duplicate(true)
+	_ambience_contexts = (
+		raw_ambience_contexts as Dictionary
+	).duplicate(true)
 	_cues = (raw_cues as Dictionary).duplicate(true)
 	_catalog_loaded = true
-	_warm_context_music_streams()
+	_warm_context_streams()
 
 
 func _load_settings() -> void:
@@ -450,6 +562,7 @@ func _normalized_settings(value: Dictionary) -> Dictionary:
 func _ensure_audio_buses() -> void:
 	_ensure_bus(BUS_MUSIC, "Master")
 	_ensure_bus(BUS_SFX, "Master")
+	_ensure_bus(BUS_AMBIENCE, BUS_SFX)
 	_ensure_bus(BUS_COMBAT, BUS_SFX)
 	_ensure_bus(BUS_PET, BUS_SFX)
 	_ensure_bus(BUS_UI, BUS_SFX)
@@ -503,6 +616,18 @@ func _build_music_players() -> void:
 		_music_players.append(player)
 
 
+func _build_ambience_players() -> void:
+	if not _ambience_players.is_empty():
+		return
+	for index in 2:
+		var player := AudioStreamPlayer.new()
+		player.name = "AmbiencePlayer%d" % (index + 1)
+		player.bus = BUS_AMBIENCE
+		player.volume_db = SILENCE_DB
+		add_child(player)
+		_ambience_players.append(player)
+
+
 func _build_sfx_voice_pool() -> void:
 	if not _sfx_voices.is_empty():
 		return
@@ -520,8 +645,15 @@ func _build_sfx_voice_pool() -> void:
 		})
 
 
-func _sync_effective_music() -> bool:
-	return _switch_music_context(_battle_music_context() if _battle_active else _world_context)
+func _sync_effective_audio() -> bool:
+	var music_ok := _switch_music_context(
+		_battle_music_context() if _battle_active else _world_context
+	)
+	var ambience_ok := true
+	if not _battle_active:
+		ambience_ok = _switch_ambience_context(_world_context)
+	_set_ambience_ducked(_battle_active)
+	return music_ok and ambience_ok
 
 
 func _switch_music_context(context: String) -> bool:
@@ -613,6 +745,182 @@ func _finish_music_crossfade(previous: AudioStreamPlayer, transition_serial: int
 		previous.stream = null
 
 
+func _switch_ambience_context(context: String) -> bool:
+	var cue_id := ambience_context_cue(context)
+	if cue_id == "":
+		return false
+	return _switch_ambience_cue(cue_id, context)
+
+
+func _switch_ambience_cue(cue_id: String, context: String) -> bool:
+	if cue_id == _active_ambience_cue:
+		_active_ambience_context = context
+		if not _playback_enabled or _active_ambience_playback_is_valid():
+			return true
+	var info := cue_info(cue_id)
+	if info.is_empty():
+		_silence_ambience_players()
+		return false
+	var path := str(info.get("path", "")).strip_edges()
+	if not _source_path_exists(path):
+		_silence_ambience_players()
+		return false
+	if not _playback_enabled:
+		_ambience_transition_serial += 1
+		_active_ambience_player_index = -1
+		_active_ambience_cue = cue_id
+		_active_ambience_context = context
+		ambience_context_changed.emit(context, cue_id)
+		return true
+	var stream := _stream_for_path(path)
+	if stream == null:
+		_silence_ambience_players()
+		return false
+	_configure_music_loop(stream, bool(info.get("loop", true)))
+	if _ambience_players.size() < 2:
+		return false
+	var previous_index := _loudest_playing_ambience_player_index()
+	var previous: AudioStreamPlayer = null
+	if previous_index >= 0:
+		previous = _ambience_players[previous_index]
+	var previous_gain_linear := _combined_playing_ambience_power_linear()
+	var target_index := 0 if previous_index != 0 else 1
+	var target := _ambience_players[target_index]
+	if _ambience_tween != null and _ambience_tween.is_valid():
+		_ambience_tween.kill()
+	target.stop()
+	target.stream = stream
+	target.bus = BUS_AMBIENCE
+	target.volume_db = SILENCE_DB
+	target.play()
+	var target_gain_linear := db_to_linear(float(info.get("gainDb", 0.0)))
+	if previous != null and previous != target:
+		_set_music_player_linear_gain(previous, previous_gain_linear)
+	_ambience_transition_serial += 1
+	var transition_serial := _ambience_transition_serial
+	_ambience_tween = create_tween()
+	_ambience_tween.tween_method(
+		Callable(self, "_apply_ambience_crossfade_progress").bind(
+			target,
+			previous,
+			target_gain_linear,
+			previous_gain_linear
+		),
+		0.0,
+		1.0,
+		AMBIENCE_CROSSFADE_SECONDS
+	)
+	_ambience_tween.tween_callback(
+		_finish_ambience_crossfade.bind(previous, transition_serial)
+	)
+	_active_ambience_player_index = target_index
+	_active_ambience_cue = cue_id
+	_active_ambience_context = context
+	ambience_context_changed.emit(context, cue_id)
+	return true
+
+
+func _finish_ambience_crossfade(
+	previous: AudioStreamPlayer,
+	transition_serial: int
+) -> void:
+	if transition_serial != _ambience_transition_serial:
+		return
+	if (
+		previous != null
+		and previous != _ambience_players[_active_ambience_player_index]
+	):
+		previous.stop()
+		previous.stream = null
+
+
+func _apply_ambience_crossfade_progress(
+	progress: float,
+	target: AudioStreamPlayer,
+	previous: AudioStreamPlayer,
+	target_gain_linear: float,
+	previous_gain_linear: float
+) -> void:
+	var gains := music_crossfade_linear_gains(
+		progress,
+		target_gain_linear,
+		previous_gain_linear
+	)
+	if target != null and is_instance_valid(target):
+		_set_music_player_linear_gain(target, gains.x)
+	if previous != null and previous != target and is_instance_valid(previous):
+		_set_music_player_linear_gain(previous, gains.y)
+
+
+func _active_ambience_playback_is_valid() -> bool:
+	if (
+		_active_ambience_player_index < 0
+		or _active_ambience_player_index >= _ambience_players.size()
+	):
+		return false
+	var player := _ambience_players[_active_ambience_player_index]
+	return player != null and player.stream != null and player.playing
+
+
+func _loudest_playing_ambience_player_index() -> int:
+	var result := -1
+	var loudest_linear := -1.0
+	for index in _ambience_players.size():
+		var player := _ambience_players[index]
+		if player == null or player.stream == null or not player.playing:
+			continue
+		var linear_gain := db_to_linear(player.volume_db)
+		if linear_gain > loudest_linear:
+			result = index
+			loudest_linear = linear_gain
+	return result
+
+
+func _combined_playing_ambience_power_linear() -> float:
+	var power_squared := 0.0
+	for player in _ambience_players:
+		if player == null or player.stream == null or not player.playing:
+			continue
+		var linear_gain := db_to_linear(player.volume_db)
+		power_squared += linear_gain * linear_gain
+	return sqrt(power_squared)
+
+
+func _set_ambience_ducked(value: bool) -> void:
+	var target_db := AMBIENCE_BATTLE_DUCK_DB if value else 0.0
+	if (
+		_ambience_ducked == value
+		and is_equal_approx(_ambience_bus_gain_db(), target_db)
+	):
+		return
+	_ambience_ducked = value
+	if _ambience_duck_tween != null and _ambience_duck_tween.is_valid():
+		_ambience_duck_tween.kill()
+	_ambience_duck_tween = null
+	var current_db := _ambience_bus_gain_db()
+	if not _playback_enabled or not is_inside_tree():
+		_apply_ambience_bus_gain_db(target_db)
+		return
+	_ambience_duck_tween = create_tween()
+	_ambience_duck_tween.tween_method(
+		Callable(self, "_apply_ambience_bus_gain_db"),
+		current_db,
+		target_db,
+		AMBIENCE_DUCK_SECONDS
+	)
+
+
+func _apply_ambience_bus_gain_db(value: float) -> void:
+	var index := AudioServer.get_bus_index(BUS_AMBIENCE)
+	if index >= 0:
+		AudioServer.set_bus_volume_db(index, value)
+
+
+func _ambience_bus_gain_db() -> float:
+	var index := AudioServer.get_bus_index(BUS_AMBIENCE)
+	return AudioServer.get_bus_volume_db(index) if index >= 0 else 0.0
+
+
 static func music_crossfade_linear_gains(
 	progress: float,
 	incoming_final_linear: float,
@@ -685,6 +993,11 @@ func _combined_playing_music_power_linear() -> float:
 	return sqrt(power_squared)
 
 
+func _warm_context_streams() -> void:
+	_warm_context_music_streams()
+	_warm_context_ambience_streams()
+
+
 func _warm_context_music_streams() -> void:
 	if not _catalog_loaded or not _playback_enabled:
 		return
@@ -702,6 +1015,25 @@ func _warm_context_music_streams() -> void:
 			continue
 		if _stream_for_path(path) != null:
 			_warmed_music_paths[path] = true
+
+
+func _warm_context_ambience_streams() -> void:
+	if not _catalog_loaded or not _playback_enabled:
+		return
+	var context_names: Array[String] = []
+	for context_value in _ambience_contexts.keys():
+		context_names.append(str(context_value))
+	context_names.sort()
+	for context in context_names:
+		var cue_id := ambience_context_cue(context)
+		var info := cue_info(cue_id)
+		if str(info.get("role", "")).strip_edges().to_lower() != "ambience":
+			continue
+		var path := str(info.get("path", "")).strip_edges()
+		if path == "" or _warmed_ambience_paths.has(path):
+			continue
+		if _stream_for_path(path) != null:
+			_warmed_ambience_paths[path] = true
 
 
 func _stream_for_path(path: String) -> AudioStream:
@@ -769,7 +1101,7 @@ func _voice_index_for(request_priority: int) -> int:
 
 func _normalized_sfx_bus(value: String) -> String:
 	var requested := value.strip_edges()
-	if [BUS_SFX, BUS_COMBAT, BUS_PET, BUS_UI].has(requested):
+	if [BUS_SFX, BUS_AMBIENCE, BUS_COMBAT, BUS_PET, BUS_UI].has(requested):
 		return requested
 	return BUS_SFX
 
@@ -789,6 +1121,14 @@ func _context_for_music_cue(cue_id: String) -> String:
 	for context_value in _contexts.keys():
 		var context := str(context_value)
 		if context_cue(context) == cue_id:
+			return context
+	return ""
+
+
+func _context_for_ambience_cue(cue_id: String) -> String:
+	for context_value in _ambience_contexts.keys():
+		var context := str(context_value)
+		if ambience_context_cue(context) == cue_id:
 			return context
 	return ""
 

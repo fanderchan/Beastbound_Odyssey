@@ -6,6 +6,11 @@ const REQUIRED_CONTEXTS: Array[String] = [
 	"cave",
 	"battle_normal",
 ]
+const REQUIRED_AMBIENCE_CONTEXTS: Array[String] = [
+	"town",
+	"wilderness",
+	"cave",
+]
 const REQUIRED_ACTION_CUES: Array[String] = [
 	"combat.motion_character",
 	"combat.motion_pet",
@@ -43,6 +48,9 @@ static func run(host) -> Dictionary:
 	for context in REQUIRED_CONTEXTS:
 		if manager.context_cue(context) == "":
 			errors.append("Main 音频目录缺少语境：%s" % context)
+	for context in REQUIRED_AMBIENCE_CONTEXTS:
+		if manager.ambience_context_cue(context) == "":
+			errors.append("Main 音频目录缺少环境语境：%s" % context)
 	for cue_id in REQUIRED_ACTION_CUES:
 		if manager.cue_info(cue_id).is_empty():
 			errors.append("Main 音频目录缺少动作 cue：%s" % cue_id)
@@ -100,20 +108,38 @@ static func run(host) -> Dictionary:
 	var before: Dictionary = manager.debug_snapshot()
 	var world_context := str(before.get("worldContext", ""))
 	var expected_world_cue: String = manager.context_cue(world_context)
+	var expected_ambience_cue: String = manager.ambience_context_cue(
+		world_context
+	)
 	if world_context == "" or expected_world_cue == "":
 		errors.append("当前地图没有稳定音频语境")
 	elif manager.current_music_cue() != expected_world_cue:
 		errors.append("当前地图音乐与语境不一致")
+	if expected_ambience_cue == "":
+		errors.append("当前地图没有稳定环境语境")
+	elif manager.current_ambience_cue() != expected_ambience_cue:
+		errors.append("当前地图环境声与语境不一致")
 
 	host._audio_enter_battle({})
 	if manager.current_music_cue() != "music.battle_normal":
 		errors.append("Main 进入战斗后未切换普通战斗音乐")
+	if manager.current_ambience_cue() != expected_ambience_cue:
+		errors.append("Main 进入战斗后错误移除了地图环境声")
+	if not manager.is_ambience_ducked():
+		errors.append("Main 进入战斗后未压低地图环境声")
 	for cue_id in REQUIRED_ACTION_CUES:
 		if not host._audio_play_cue(cue_id):
 			errors.append("Main 无法分发动作 cue：%s" % cue_id)
 	host._audio_exit_battle()
 	if expected_world_cue != "" and manager.current_music_cue() != expected_world_cue:
 		errors.append("Main 退出战斗后未恢复当前地图音乐")
+	if (
+		expected_ambience_cue != ""
+		and manager.current_ambience_cue() != expected_ambience_cue
+	):
+		errors.append("Main 退出战斗后未恢复当前地图环境声")
+	if manager.is_ambience_ducked():
+		errors.append("Main 退出战斗后未恢复环境声电平")
 
 	if host.audio_settings_panel == null:
 		errors.append("账号面板没有挂载声音设置")
@@ -142,6 +168,8 @@ static func _report(host, errors: Array[String], snapshot: Dictionary) -> Dictio
 		"catalogCueCount": int(snapshot.get("cueCount", 0)),
 		"worldContext": str(snapshot.get("worldContext", "")),
 		"restoredMusicCue": str(snapshot.get("activeMusicCue", "")),
+		"restoredAmbienceCue": str(snapshot.get("activeAmbienceCue", "")),
+		"ambienceDucked": bool(snapshot.get("ambienceDucked", false)),
 		"voicePoolSize": int(snapshot.get("voicePoolSize", 0)),
 		"playbackEnabled": bool(snapshot.get("playbackEnabled", false)),
 		"errors": errors,

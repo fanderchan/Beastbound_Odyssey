@@ -1,6 +1,147 @@
 {
-  "assetCount": 31,
+  "assetCount": 34,
   "assets": {
+    "ambience.cave": {
+      "channels": 2,
+      "compression": "NONE",
+      "crestFactorDb": 26.823,
+      "dcOffset": -1.869e-05,
+      "durationSeconds": 91.809333,
+      "frameCount": 4406848,
+      "loop": {
+        "boundarySampleDelta": 0.00021362,
+        "checkedBoundaryCount": 3,
+        "repeatedFrameCount": 17627392,
+        "threeBoundaryDeltas": [
+          0.00021362,
+          0.00021362,
+          0.00021362
+        ],
+        "threeBoundaryMaxDelta": 0.00021362,
+        "windowMilliseconds": 20,
+        "windowRmsDeltaDb": 0.469
+      },
+      "peakDbfs": -3.478,
+      "rmsDbfs": -30.301,
+      "runtimeCodec": "vorbis",
+      "sampleRate": 48000,
+      "sampleWidthBits": 16,
+      "sha256": "f30c8e32f517d0c2426aea75d569f2e943f213054212e526a31c22702208f283",
+      "stereoSideRatioDb": -7.16,
+      "temporalRmsProfile": [
+        0.788447,
+        1.400187,
+        1.034207,
+        0.918274,
+        1.044464,
+        0.96687,
+        0.978725,
+        0.851184,
+        0.830731,
+        1.113775,
+        1.083978,
+        1.017043,
+        1.115824,
+        0.957507,
+        0.925957,
+        0.798489
+      ],
+      "zeroCrossingsPerSecond": 548.67
+    },
+    "ambience.town": {
+      "channels": 2,
+      "compression": "NONE",
+      "crestFactorDb": 24.478,
+      "dcOffset": -3.02e-05,
+      "durationSeconds": 29.188,
+      "frameCount": 1401024,
+      "loop": {
+        "boundarySampleDelta": 3.052e-05,
+        "checkedBoundaryCount": 3,
+        "repeatedFrameCount": 5604096,
+        "threeBoundaryDeltas": [
+          3.052e-05,
+          3.052e-05,
+          3.052e-05
+        ],
+        "threeBoundaryMaxDelta": 3.052e-05,
+        "windowMilliseconds": 20,
+        "windowRmsDeltaDb": 0.071
+      },
+      "peakDbfs": -11.08,
+      "rmsDbfs": -35.557,
+      "runtimeCodec": "vorbis",
+      "sampleRate": 48000,
+      "sampleWidthBits": 16,
+      "sha256": "755dc0e18b20d9be0b0bf2ebe6b6de9dad44cf99f1b00bbace6d6fa9de6ec8e3",
+      "stereoSideRatioDb": -5.939,
+      "temporalRmsProfile": [
+        0.119707,
+        1.639726,
+        1.191131,
+        0.355079,
+        0.803111,
+        1.2226,
+        0.939068,
+        0.915297,
+        1.036624,
+        0.862271,
+        1.20207,
+        0.915325,
+        1.255963,
+        0.411473,
+        0.952214,
+        1.066949
+      ],
+      "zeroCrossingsPerSecond": 8638.139
+    },
+    "ambience.wilderness": {
+      "channels": 2,
+      "compression": "NONE",
+      "crestFactorDb": 21.372,
+      "dcOffset": -3.2e-07,
+      "durationSeconds": 81.281333,
+      "frameCount": 3901504,
+      "loop": {
+        "boundarySampleDelta": 0.00024414,
+        "checkedBoundaryCount": 3,
+        "repeatedFrameCount": 15606016,
+        "threeBoundaryDeltas": [
+          0.00024414,
+          0.00024414,
+          0.00024414
+        ],
+        "threeBoundaryMaxDelta": 0.00024414,
+        "windowMilliseconds": 20,
+        "windowRmsDeltaDb": 0.361
+      },
+      "peakDbfs": -10.632,
+      "rmsDbfs": -32.004,
+      "runtimeCodec": "vorbis",
+      "sampleRate": 48000,
+      "sampleWidthBits": 16,
+      "sha256": "a3388bca77d9b620d48661fd363e72d2850dfc6909ff12f1dd0086bb6bd9f3f2",
+      "stereoSideRatioDb": -9.875,
+      "temporalRmsProfile": [
+        0.727334,
+        0.791426,
+        0.768306,
+        0.751118,
+        1.126393,
+        0.78472,
+        0.555616,
+        0.532493,
+        0.761181,
+        1.093906,
+        1.759001,
+        1.963462,
+        0.723104,
+        0.713561,
+        0.866794,
+        0.83945
+      ],
+      "zeroCrossingsPerSecond": 1256.389
+    },
     "combat.block": {
       "channels": 1,
       "compression": "NONE",
@@ -1114,11 +1255,11 @@
       "versionLine": "ffmpeg version 8.1.1 Copyright (c) 2000-2026 the FFmpeg developers"
     },
     "implementation": ".agents/skills/design-beastbound-audio/scripts/audit_audio_bundle.py",
-    "version": "3.0.0"
+    "version": "4.0.0"
   },
   "bundleId": "beastbound_audio_v2",
   "failures": [],
-  "freezeTimestampUtc": "2026-07-24T18:05:31Z",
+  "freezeTimestampUtc": "2026-08-17T04:11:42Z",
   "gates": {
     "dcAbsoluteLimit": 0.001,
     "loopBoundaryDeltaLimit": 0.002,

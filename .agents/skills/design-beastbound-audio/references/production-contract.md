@@ -90,6 +90,7 @@ source/provenance.json
 source/.gdignore
 source/third_party/* (when the license permits redistribution)
 runtime/music/*
+runtime/ambience/*
 runtime/sfx/*
 audio-cues.json
 audit-report.json
@@ -105,6 +106,10 @@ in the focused runtime catalog/manager and prove it through Godot.
 ## Required first-pass evidence
 
 - town, wilderness, cave, and normal battle music are non-silent and distinguishable;
+- town, wilderness, and cave ambience are non-silent, distinguishable, and
+  remain subordinate to their matching BGM;
+- map ambience uses an independent equal-power transition, routes through the
+  effects control, ducks during battle, and restores the current map bed;
 - battle entry and exit crossfade without stacking or abrupt volume jumps;
 - deferred playback starts the selected context when enabled, and an
   interrupted three-context crossfade preserves intermediate total power;

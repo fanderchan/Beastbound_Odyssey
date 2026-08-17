@@ -146,6 +146,58 @@ class AudioPipelineTest(unittest.TestCase):
                 music_assets[-1]["highpassHz"] = 10.0
                 music_assets[-1]["loopRotationSeconds"] = 0.101146
 
+        ambience_sources: list[dict] = []
+        ambience_assets: list[dict] = []
+        ambience_contexts: dict[str, str] = {}
+        for context, frequency in (
+            ("town", 135.0),
+            ("wilderness", 275.0),
+            ("cave", 515.0),
+        ):
+            source_id = f"test_ambience_{context}"
+            path = vendor / f"{source_id}.wav"
+            _write_sine_wav(
+                path,
+                frequency=frequency,
+                duration_seconds=1.2,
+                channels=2,
+                amplitude=0.012,
+                close_loop=True,
+            )
+            cue_id = f"ambience.{context}"
+            ambience_contexts[context] = cue_id
+            ambience_sources.append(
+                {
+                    "author": "Beastbound test fixture",
+                    "expectedSha256": _sha256_file(path),
+                    "licenseName": "CC0-1.0",
+                    "licenseUrl": (
+                        "https://creativecommons.org/publicdomain/zero/1.0/"
+                    ),
+                    "sourceId": source_id,
+                    "sourcePath": f"source/vendor/{path.name}",
+                    "sourceType": "licensed_cc0",
+                }
+            )
+            ambience_assets.append(
+                {
+                    "assetId": f"{source_id}_asset",
+                    "bus": "Ambience",
+                    "cooldownMs": 0,
+                    "cueId": cue_id,
+                    "filename": f"{context}_loop.ogg",
+                    "gainDb": -6.0,
+                    "loop": True,
+                    "loopCrossfadeSeconds": 0.08,
+                    "masterGainDb": 0.0,
+                    "priority": 90,
+                    "projectCopy": {"sourceId": source_id},
+                    "role": "ambience",
+                    "trimEndSeconds": 1.15,
+                    "trimStartSeconds": 0.05,
+                }
+            )
+
         layer_sources: list[dict] = []
         for index, frequency in enumerate((96.0, 720.0)):
             source_id = f"test_impact_{index}"
@@ -175,8 +227,13 @@ class AudioPipelineTest(unittest.TestCase):
 
         spec = {
             "bundleId": bundle.name,
+            "ambience": ambience_assets,
+            "ambienceContexts": ambience_contexts,
             "contexts": contexts,
             "format": {
+                "ambienceRuntimeFormatDecision": (
+                    "Test fixture ambience is 48 kHz stereo Ogg Vorbis quality 5."
+                ),
                 "musicRuntimeFormatDecision": (
                     "Test fixture music is 48 kHz stereo Ogg Vorbis quality 5."
                 ),
@@ -197,6 +254,7 @@ class AudioPipelineTest(unittest.TestCase):
             },
             "requiredCanonicalCues": [
                 *(asset["cueId"] for asset in music_assets),
+                *(asset["cueId"] for asset in ambience_assets),
                 "combat.hit_light",
             ],
             "reviewState": "owner_listening_pending",
@@ -237,7 +295,11 @@ class AudioPipelineTest(unittest.TestCase):
                     "role": "contact",
                 }
             ],
-            "sources": [*music_sources, *layer_sources],
+            "sources": [
+                *music_sources,
+                *ambience_sources,
+                *layer_sources,
+            ],
         }
         spec_path = bundle / "source/spec.json"
         spec_path.write_text(
@@ -319,6 +381,12 @@ class AudioPipelineTest(unittest.TestCase):
                 AUDIT._probe_audio_codec(town_music, ffmpeg="ffmpeg"),
                 "vorbis",
             )
+            town_ambience = bundle / "runtime/ambience/town_loop.ogg"
+            self.assertTrue(town_ambience.is_file())
+            self.assertEqual(
+                AUDIT._probe_audio_codec(town_ambience, ffmpeg="ffmpeg"),
+                "vorbis",
+            )
 
             catalog = json.loads(
                 (bundle / "audio-cues.json").read_text(encoding="utf-8")
@@ -328,6 +396,14 @@ class AudioPipelineTest(unittest.TestCase):
                 cue["path"].startswith(
                     f"res://assets/audio/{spec['bundleId']}/"
                 )
+            )
+            self.assertEqual(
+                catalog["ambienceContexts"]["town"],
+                "ambience.town",
+            )
+            self.assertEqual(
+                catalog["cues"]["ambience.town"]["bus"],
+                "Ambience",
             )
             provenance = json.loads(
                 (bundle / "source/provenance.json").read_text(
@@ -340,7 +416,7 @@ class AudioPipelineTest(unittest.TestCase):
                 {"libvorbis", "vorbis"},
             )
             self.assertEqual(provenance["generator"]["vorbisQuality"], 5)
-            self.assertEqual(len(provenance["sourceRecords"]), 6)
+            self.assertEqual(len(provenance["sourceRecords"]), 9)
             self.assertTrue(
                 all(
                     record["licenseUrl"].startswith("https://")
@@ -417,6 +493,15 @@ class AudioPipelineTest(unittest.TestCase):
                 f"atrim=start_sample={rotation['rotationFrames']}",
                 town_ledger["processingCommand"],
             )
+            ambience_ledger = ledger["test_ambience_town_asset"]
+            self.assertEqual(
+                ambience_ledger["runtimePath"],
+                (
+                    "res://assets/audio/beastbound_audio_test/"
+                    "runtime/ambience/town_loop.ogg"
+                ),
+            )
+            self.assertIn("ambienceProcessing", ambience_ledger)
             report = AUDIT.audit_bundle(
                 bundle,
                 write_report=False,
@@ -439,6 +524,9 @@ class AudioPipelineTest(unittest.TestCase):
                 town_metrics["loop"]["repeatedFrameCount"],
                 town_metrics["frameCount"] * 3,
             )
+            ambience_metrics = report["assets"]["ambience.town"]
+            self.assertEqual(ambience_metrics["runtimeCodec"], "vorbis")
+            self.assertEqual(ambience_metrics["channels"], 2)
             expected_hashes = {
                 item["runtimePath"]: item["runtimeSha256"]
                 for item in provenance["ledger"]

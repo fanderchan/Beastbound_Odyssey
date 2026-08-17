@@ -73,6 +73,36 @@ license, required attribution, hashes, edits and replacement path are frozen in
 `ATTRIBUTION.md`, `OpenGameArt-BGM-sources.md`, `spec.json`, and
 `provenance.json`. The two CC BY credits must remain in distributions.
 
+## Phase 475 formal map ambience
+
+The music-only world sounded staged rather than inhabited, so the formal
+bundle now carries one independent environmental bed for each map family:
+
+- town: isaiah658's sparse outdoor bird recording, kept dry enough that the
+  village BGM remains the emotional foreground;
+- wilderness: Spring Spring's broader wind-and-bird soundscape, with more
+  lateral air and longer natural variation;
+- cave: JaggedStone's low wind pressure and intermittent water drips, with an
+  18 Hz high-pass to remove non-musical subsonic energy.
+
+All three sources are author-published CC0 files from OpenGameArt. Their bytes,
+source pages, authors, licenses and hashes are frozen in `spec.json` and
+`provenance.json`; courtesy credits are retained in `ATTRIBUTION.md` even
+though CC0 does not require them. No StoneAge or other commercial-game audio
+is used.
+
+The runtime masters are 29.188, 81.281 and 91.809 seconds of 48 kHz stereo Ogg
+Vorbis. They pass decoded signal, DC, peak, three-boundary seam and
+distinguishability audits. Existing music and SFX runtime hashes remain
+unchanged.
+
+`Ambience` sends into `SFX`, so the existing Chinese “音效” control remains the
+single understandable player control. Map changes use an independent 0.75 s
+equal-power crossfade. Entering battle retains spatial continuity at -12 dB;
+leaving battle restores the exact current map bed over 0.40 s. The environment
+layer is deliberately mixed roughly 9–11 dB below the matching BGM family so
+it reads as place rather than a competing second soundtrack.
+
 ## Phase 334 readability correction
 
 Owner listening found that the first v2 `combat.down` master communicated only

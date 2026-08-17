@@ -12,6 +12,19 @@ Keep stable semantic cue IDs independent from filenames. One asset may serve sev
 | Ordinary battle | `music.battle_normal` | overrides map context until battle ends |
 | Boss battle | `music.battle_boss` | only with authoritative boss classification |
 
+## Environment contexts
+
+| Context | Cue | Rule |
+|---|---|---|
+| Town/village | `ambience.town` | sparse settlement exterior bed below BGM |
+| Wilderness/route | `ambience.wilderness` | open-air wind, wildlife, or biome bed |
+| Cave/dungeon | `ambience.cave` | enclosed air, water, stone, or underground bed |
+
+Environment cues use an independent stereo loop and crossfade. They route
+through `Ambience -> SFX`, remain controlled by the player-facing effects
+volume, keep the current map context during battle at a reviewed duck level,
+and restore after battle. They never consume a one-shot SFX pool voice.
+
 ## Action phases
 
 | Phase | Meaning | Typical cues |
@@ -74,14 +87,14 @@ world.warp
 Default priority, high to low:
 
 ```text
-outcome > counter/launch/down/revive > critical/block > contact > motion/cast > creature voice > UI ambience
+outcome > counter/launch/down/revive > critical/block > contact > motion/cast > creature voice > UI
 ```
 
 - A pool at capacity steals the oldest lowest-priority voice, never a higher-priority voice for a lower one.
 - Identical cue requests inside their cooldown collapse to one.
 - Separate events in a combo may repeat after cooldown; same-frame fan-out should share a bounded representative contact sound rather than emit one full-volume hit per target.
 - Staggered combo contacts use deterministic gain/pitch variation and distinct cooldown keys, but only the final convergence cue may dominate the mix.
-- Music does not consume an SFX pool voice.
+- Music and long ambience do not consume an SFX pool voice.
 
 ## Acoustic profiles
 

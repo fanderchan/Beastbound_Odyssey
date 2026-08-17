@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Build a provenance-locked Beastbound audio bundle with FFmpeg 8.
 
-The source specification lives at ``<bundle>/source/spec.json``. Music is
-trimmed from one declared source, circularly crossfaded, and emitted as
-48 kHz stereo Ogg Vorbis. Short effects are built from one or more declared
-layers, mixed without automatic normalization, edge-faded, and emitted as
-48 kHz mono PCM16 WAV.
+The source specification lives at ``<bundle>/source/spec.json``. Long-form
+music and ambience are trimmed from one declared source, circularly
+crossfaded, and emitted as 48 kHz stereo Ogg Vorbis. Short effects are built
+from one or more declared layers, mixed without automatic normalization,
+edge-faded, and emitted as 48 kHz mono PCM16 WAV.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import tempfile
 import wave
 
 
-GENERATOR_VERSION = "3.0.0"
+GENERATOR_VERSION = "4.0.0"
 REQUIRED_FFMPEG_MAJOR = 8
 SAMPLE_RATE = 48000
 VORBIS_QUALITY = 5
@@ -739,6 +739,7 @@ def _render_music(
     *,
     ffmpeg: str,
     vorbis_encoder: dict,
+    runtime_group: str = "music",
 ) -> tuple[dict, str, dict]:
     source_path = Path(source["_resolvedPath"])
     source_metadata = _probe_audio(ffmpeg, source_path)
@@ -772,7 +773,7 @@ def _render_music(
     should_loop = bool(asset.get("loop", False))
     if should_loop and requested_crossfade <= 0.0:
         raise ValueError(
-            f"{asset['assetId']}: looping Ogg music requires a positive "
+            f"{asset['assetId']}: looping long-form Ogg requires a positive "
             "loopCrossfadeSeconds"
         )
     if requested_crossfade * 2.0 >= trimmed_duration:
@@ -782,7 +783,7 @@ def _render_music(
         )
     if not should_loop and requested_crossfade > 0.0:
         raise ValueError(
-            f"{asset['assetId']}: non-looping music cannot declare "
+            f"{asset['assetId']}: non-looping long-form audio cannot declare "
             "loopCrossfadeSeconds"
         )
     crossfade = requested_crossfade
@@ -817,7 +818,7 @@ def _render_music(
     if "loopRotationSeconds" in asset:
         if not should_loop:
             raise ValueError(
-                f"{asset['assetId']}: non-looping music cannot declare "
+                f"{asset['assetId']}: non-looping long-form audio cannot declare "
                 "loopRotationSeconds"
             )
         preferred_rotation_seconds = _safe_number(
@@ -1021,7 +1022,9 @@ def _render_music(
             channels=2,
         )
         if metadata["channels"] != 2 or metadata["sampleRate"] != SAMPLE_RATE:
-            raise ValueError(f"{asset['assetId']}: music must be 48 kHz stereo")
+            raise ValueError(
+                f"{asset['assetId']}: long-form audio must be 48 kHz stereo"
+            )
         if metadata["durationFrames"] != prepared_metadata["durationFrames"]:
             raise ValueError(
                 f"{asset['assetId']}: rotation/encoding changed loop duration "
@@ -1044,7 +1047,7 @@ def _render_music(
         actual_inputs=[prepared_pcm],
         logical_inputs=[f"prepared-pcm:{asset['assetId']}"],
         actual_output=temporary,
-        logical_output=f"runtime/music/{asset['filename']}",
+        logical_output=f"runtime/{runtime_group}/{asset['filename']}",
     )
     logical = render_logical + " && " + encode_logical
     processing = {
@@ -1272,7 +1275,13 @@ def build_bundle(
         project_root=project_root,
     )
 
-    for group_name in ("music", "sfx"):
+    long_form_groups = {"music", "ambience"}
+    ambience_assets = spec.get("ambience", [])
+    if not isinstance(ambience_assets, list):
+        raise ValueError("spec.ambience must be an array")
+    schema_version = 4 if ambience_assets else 3
+
+    for group_name in ("music", "ambience", "sfx"):
         assets = spec.get(group_name, [])
         if not isinstance(assets, list):
             raise ValueError(f"spec.{group_name} must be an array")
@@ -1289,7 +1298,9 @@ def build_bundle(
                 or Path(filename).name != filename
             ):
                 raise ValueError(f"{asset_id}: filename must be a basename")
-            expected_suffix = ".ogg" if group_name == "music" else ".wav"
+            expected_suffix = (
+                ".ogg" if group_name in long_form_groups else ".wav"
+            )
             if Path(filename).suffix.lower() != expected_suffix:
                 raise ValueError(
                     f"{asset_id}: {group_name} filename must end in "
@@ -1300,21 +1311,24 @@ def build_bundle(
             target = bundle_root / relative_path
             layers = _asset_layers(asset)
             source_ids = [str(layer.get("sourceId", "")) for layer in layers]
-            music_processing: dict | None = None
-            if group_name == "music":
+            long_form_processing: dict | None = None
+            if group_name in long_form_groups:
                 if len(layers) != 1:
-                    raise ValueError(f"{asset_id}: music requires one source")
+                    raise ValueError(
+                        f"{asset_id}: {group_name} requires one source"
+                    )
                 source_id = source_ids[0]
                 if source_id not in registry:
                     raise ValueError(
                         f"{asset_id}: unknown sourceId {source_id!r}"
                     )
-                metadata, command, music_processing = _render_music(
+                metadata, command, long_form_processing = _render_music(
                     asset,
                     registry[source_id],
                     target,
                     ffmpeg=ffmpeg,
                     vorbis_encoder=vorbis_encoder,
+                    runtime_group=group_name,
                 )
             else:
                 metadata, command = _render_sfx(
@@ -1344,10 +1358,10 @@ def build_bundle(
                     "license": "See sourceRecords by sourceIds",
                     "ownershipBasis": spec["ownership"]["basis"],
                     "processing": (
-                        "FFmpeg 8 deterministic processing; music is trimmed, "
-                        "circularly crossfaded, gain staged, and encoded as "
-                        "48 kHz stereo Ogg Vorbis; SFX uses mono amix "
-                        "normalize=0 plus 3 ms fade-in and 40 ms fade-out"
+                        "FFmpeg 8 deterministic processing; music and ambience "
+                        "are trimmed, circularly crossfaded, gain staged, and "
+                        "encoded as 48 kHz stereo Ogg Vorbis; SFX uses mono "
+                        "amix normalize=0 plus 3 ms fade-in and 40 ms fade-out"
                     ),
                     "processingCommand": command,
                     "replacementPath": spec["ownership"]["replacementPath"],
@@ -1367,8 +1381,13 @@ def build_bundle(
                         else "mixed:" + ",".join(source_types)
                     ),
                 }
-            if music_processing is not None:
-                ledger_entry["musicProcessing"] = music_processing
+            if long_form_processing is not None:
+                processing_key = (
+                    "musicProcessing"
+                    if group_name == "music"
+                    else "ambienceProcessing"
+                )
+                ledger_entry[processing_key] = long_form_processing
             ledger.append(ledger_entry)
             runtime_files.append(relative_path.as_posix())
 
@@ -1382,10 +1401,15 @@ def build_bundle(
 
     catalog = {
         "bundleId": bundle_id,
+        "ambienceContexts": spec.get("ambienceContexts", {}),
         "contexts": spec["contexts"],
         "cues": dict(sorted(cue_catalog.items())),
         "format": {
             "music": (
+                "48 kHz stereo Ogg Vorbis quality "
+                f"{VORBIS_QUALITY}"
+            ),
+            "ambience": (
                 "48 kHz stereo Ogg Vorbis quality "
                 f"{VORBIS_QUALITY}"
             ),
@@ -1394,7 +1418,7 @@ def build_bundle(
         },
         "mixDefaults": spec["mixDefaults"],
         "reviewState": spec["reviewState"],
-        "schemaVersion": 3,
+        "schemaVersion": schema_version,
     }
     catalog_path = bundle_root / "audio-cues.json"
     _write_json(catalog_path, catalog)
@@ -1419,8 +1443,12 @@ def build_bundle(
         "musicRuntimeFormatDecision": audio_format[
             "musicRuntimeFormatDecision"
         ],
+        "ambienceRuntimeFormatDecision": audio_format.get(
+            "ambienceRuntimeFormatDecision",
+            "No independent ambience layer is declared.",
+        ),
         "reviewState": spec["reviewState"],
-        "schemaVersion": 3,
+        "schemaVersion": schema_version,
         "sourceRecords": source_records,
         "sourceSpecificationSha256": spec_hash,
     }

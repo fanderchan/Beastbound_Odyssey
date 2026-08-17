@@ -1,4 +1,9 @@
 {
+  "ambienceContexts": {
+    "cave": "ambience.cave",
+    "town": "ambience.town",
+    "wilderness": "ambience.wilderness"
+  },
   "bundleId": "beastbound_audio_v2",
   "contexts": {
     "battle_normal": "music.battle_normal",
@@ -7,6 +12,36 @@
     "wilderness": "music.wilderness"
   },
   "cues": {
+    "ambience.cave": {
+      "assetId": "ambience_cave_v2",
+      "bus": "Ambience",
+      "cooldownMs": 0,
+      "gainDb": -5.0,
+      "loop": true,
+      "path": "res://assets/audio/beastbound_audio_v2/runtime/ambience/cave_loop.ogg",
+      "priority": 90,
+      "role": "ambience"
+    },
+    "ambience.town": {
+      "assetId": "ambience_town_v2",
+      "bus": "Ambience",
+      "cooldownMs": 0,
+      "gainDb": -5.5,
+      "loop": true,
+      "path": "res://assets/audio/beastbound_audio_v2/runtime/ambience/town_loop.ogg",
+      "priority": 90,
+      "role": "ambience"
+    },
+    "ambience.wilderness": {
+      "assetId": "ambience_wilderness_v2",
+      "bus": "Ambience",
+      "cooldownMs": 0,
+      "gainDb": -4.5,
+      "loop": true,
+      "path": "res://assets/audio/beastbound_audio_v2/runtime/ambience/wilderness_loop.ogg",
+      "priority": 90,
+      "role": "ambience"
+    },
     "combat.block": {
       "assetId": "combat_block_v2",
       "bus": "Combat",
@@ -319,16 +354,19 @@
     }
   },
   "format": {
+    "ambience": "48 kHz stereo Ogg Vorbis quality 5",
     "music": "48 kHz stereo Ogg Vorbis quality 5",
     "sampleRate": 48000,
     "sfx": "48 kHz mono PCM16 WAV"
   },
   "mixDefaults": {
+    "ambienceBattleDuckDb": -12.0,
+    "ambienceCrossfadeSeconds": 0.75,
     "crossfadeSeconds": 0.75,
     "musicGainDb": -4.0,
     "sfxGainDb": -1.5,
     "sfxVoiceCap": 12
   },
   "reviewState": "owner_listening_pending",
-  "schemaVersion": 3
+  "schemaVersion": 4
 }

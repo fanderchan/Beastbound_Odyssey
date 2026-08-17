@@ -1,15 +1,22 @@
 {
+  "schemaVersion": 4,
   "bundleId": "beastbound_audio_v2",
   "format": {
     "musicRuntimeFormatDecision": "Four author-released, license-clear long-form music sources are trimmed, seam-crossfaded, gain-matched and deterministically encoded as 48 kHz stereo Ogg Vorbis. Combat, creature, outcome, UI and world SFX remain 48 kHz mono PCM16 WAV. The auditor decodes runtime Ogg before signal, loudness-family and three-loop seam checks.",
+    "ambienceRuntimeFormatDecision": "Three author-released CC0 environmental recordings are trimmed, seam-crossfaded, gain-matched and deterministically encoded as 48 kHz stereo Ogg Vorbis. They remain independently routed below BGM through Ambience to SFX, with equal-power context crossfades and a reversible battle duck.",
     "sampleRate": 48000,
     "sampleWidthBits": 16
   },
   "reviewState": "owner_listening_pending",
-  "freezeTimestampUtc": "2026-07-24T18:05:31Z",
+  "freezeTimestampUtc": "2026-08-17T04:11:42Z",
   "ownership": {
-    "basis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution is frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
-    "replacementPath": "Preserve stable semantic cue IDs while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, and owner listening review."
+    "basis": "Mixed-source Beastbound production bundle: four author-released OpenGameArt background tracks under CC0 1.0, CC BY 4.0, or CC BY 3.0; three author-released OpenGameArt environment recordings under CC0 1.0; project-owned UI and world masters; and creator-authored CC0 1.0 Foley from Kenney, artisticdude, and rubberduck. Required music attribution and courtesy environment credits are frozen in ATTRIBUTION.md. No StoneAge or other commercial-game audio is copied.",
+    "replacementPath": "Preserve stable semantic cue IDs and independent music, ambience, and SFX routing while replacing individual source records or layers with commissioned, recorded-original, or newly reviewed license-clear masters; update expected hashes and attribution, then rerun the deterministic builder, decoded Ogg auditor, runtime checks, performance probes, and owner listening review."
+  },
+  "ambienceContexts": {
+    "cave": "ambience.cave",
+    "town": "ambience.town",
+    "wilderness": "ambience.wilderness"
   },
   "contexts": {
     "battle_normal": "music.battle_normal",
@@ -18,6 +25,8 @@
     "wilderness": "music.wilderness"
   },
   "mixDefaults": {
+    "ambienceBattleDuckDb": -12.0,
+    "ambienceCrossfadeSeconds": 0.75,
     "crossfadeSeconds": 0.75,
     "musicGainDb": -4.0,
     "sfxGainDb": -1.5,
@@ -63,6 +72,36 @@
       "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
       "sourcePageUrl": "https://opengameart.org/content/a-regular-battle",
       "expectedSha256": "fd7b2d4658628cff2aaf1a6596a0126ad1557fb8fc3bcab440843889dfbb135c"
+    },
+    {
+      "sourceId": "isaiah658_ambient_birds",
+      "sourcePath": "source/third_party/isaiah658_ambient_birds/birds-isaiah658.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "isaiah658",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/ambient-bird-sounds",
+      "expectedSha256": "359e4e3f9da9d75aac64cede511c7e3ef8b461f9d9f8c230f8f80e44c4b3e35f"
+    },
+    {
+      "sourceId": "spring_spring_birds_wind",
+      "sourcePath": "source/third_party/spring_spring_birds_wind/birds_and_wind_ambient.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "Spring Spring",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/birds-and-wind-ambient-birds-wind-and-synth",
+      "expectedSha256": "28f99f536a0772d80052f03bcb22c9ed8fd7c6e4db7f2e8356efcf26a8e24f01"
+    },
+    {
+      "sourceId": "jaggedstone_dungeon_ambience",
+      "sourcePath": "source/third_party/jaggedstone_dungeon_ambience/dungeon_ambient_1.ogg",
+      "sourceType": "licensed_cc0",
+      "author": "JaggedStone",
+      "licenseName": "CC0 1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourcePageUrl": "https://opengameart.org/content/loopable-dungeon-ambience",
+      "expectedSha256": "df491823e4877371c34dbda4e9321cd83a4a14fa7573cee0ebca1ae423b70e6e"
     },
     {
       "sourceId": "v1_ui_confirm",
@@ -436,6 +475,57 @@
       "loop": true,
       "priority": 100,
       "role": "music"
+    }
+  ],
+  "ambience": [
+    {
+      "assetId": "ambience_town_v2",
+      "cueId": "ambience.town",
+      "filename": "town_loop.ogg",
+      "projectCopy": "isaiah658_ambient_birds",
+      "trimStartSeconds": 0.0,
+      "trimEndSeconds": 30.68825,
+      "loopCrossfadeSeconds": 1.5,
+      "masterGainDb": -5.0,
+      "bus": "Ambience",
+      "cooldownMs": 0,
+      "gainDb": -5.5,
+      "loop": true,
+      "priority": 90,
+      "role": "ambience"
+    },
+    {
+      "assetId": "ambience_wilderness_v2",
+      "cueId": "ambience.wilderness",
+      "filename": "wilderness_loop.ogg",
+      "projectCopy": "spring_spring_birds_wind",
+      "trimStartSeconds": 0.0,
+      "trimEndSeconds": 83.781814,
+      "loopCrossfadeSeconds": 2.5,
+      "masterGainDb": 2.5,
+      "bus": "Ambience",
+      "cooldownMs": 0,
+      "gainDb": -4.5,
+      "loop": true,
+      "priority": 90,
+      "role": "ambience"
+    },
+    {
+      "assetId": "ambience_cave_v2",
+      "cueId": "ambience.cave",
+      "filename": "cave_loop.ogg",
+      "projectCopy": "jaggedstone_dungeon_ambience",
+      "trimStartSeconds": 0.0,
+      "trimEndSeconds": 94.30975,
+      "loopCrossfadeSeconds": 2.5,
+      "highpassHz": 18.0,
+      "masterGainDb": -0.5,
+      "bus": "Ambience",
+      "cooldownMs": 0,
+      "gainDb": -5.0,
+      "loop": true,
+      "priority": 90,
+      "role": "ambience"
     }
   ],
   "sfx": [
@@ -1184,6 +1274,9 @@
     }
   ],
   "requiredCanonicalCues": [
+    "ambience.cave",
+    "ambience.town",
+    "ambience.wilderness",
     "combat.block",
     "combat.bounce_edge",
     "combat.cast_skill",

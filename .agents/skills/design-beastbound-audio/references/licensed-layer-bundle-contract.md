@@ -49,6 +49,11 @@ form to disguise a third-party source.
 
 ## Asset modes
 
+Put long-form soundtrack assets in top-level `music`, environmental beds in
+top-level `ambience`, and one-shots in top-level `sfx`. When ambience exists,
+declare `ambienceContexts` for `town`, `wilderness`, and `cave`; the generated
+schema uses `runtime/ambience/*.ogg` and keeps those cues separate from music.
+
 Use `projectCopy` for one declared source:
 
 ```json
@@ -66,8 +71,9 @@ Use `projectCopy` for one declared source:
 }
 ```
 
-`projectCopy` may also be the source ID string. Music must use exactly one
-source. The builder keeps the immutable input unchanged, renders a reviewed
+`projectCopy` may also be the source ID string. Long-form music and ambience
+must use exactly one source. The builder keeps the immutable input unchanged,
+renders a reviewed
 trim and tail-to-head crossfade to a lossless 48 kHz stereo intermediate,
 selects a deterministic natural low-discontinuity rotation point without
 adding an edge fade, and emits Ogg Vorbis quality 5. The rotation changes only
@@ -118,7 +124,7 @@ The builder:
 - mixes with `amix normalize=0`;
 - applies optional master gain, a 3 ms fade-in, and a 40 ms fade-out;
 - writes 48 kHz mono PCM16 WAV for SFX and 48 kHz stereo Ogg Vorbis quality 5
-  for music;
+  for music and long ambience;
 - records the actual Vorbis encoder used (`libvorbis`, or FFmpeg 8 native
   `vorbis -strict experimental` when libvorbis is unavailable), all trim,
   crossfade and gain fields, plus the deterministic rotation search result.

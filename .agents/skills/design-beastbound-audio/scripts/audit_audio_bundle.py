@@ -16,7 +16,7 @@ import tempfile
 import wave
 
 
-AUDITOR_VERSION = "3.0.0"
+AUDITOR_VERSION = "4.0.0"
 REQUIRED_FFMPEG_MAJOR = 8
 PEAK_LIMIT_DBFS = -1.0
 SILENCE_FLOOR_DBFS = -60.0
@@ -32,7 +32,7 @@ def _repo_root() -> Path:
 
 
 def _default_bundle_root() -> Path:
-    return _repo_root() / "client/godot/assets/audio/beastbound_audio_v1"
+    return _repo_root() / "client/godot/assets/audio/beastbound_audio_v2"
 
 
 def _read_json(path: Path) -> dict:
@@ -576,7 +576,11 @@ def _spec_sources(spec: dict) -> dict[str, dict]:
 
 def _referenced_source_ids(spec: dict) -> set[str]:
     result: set[str] = set()
-    for asset in [*spec.get("music", []), *spec.get("sfx", [])]:
+    for asset in [
+        *spec.get("music", []),
+        *spec.get("ambience", []),
+        *spec.get("sfx", []),
+    ]:
         project_copy = asset.get("projectCopy", {})
         if isinstance(project_copy, str):
             source_id = project_copy.strip()
@@ -892,6 +896,25 @@ def audit_bundle(
             "context_coverage",
             f"expected {sorted(expected_contexts)}, got {sorted(present_contexts)}",
         )
+    ambience_assets = spec.get("ambience", [])
+    has_ambience = isinstance(ambience_assets, list) and bool(ambience_assets)
+    expected_ambience_contexts = {"town", "wilderness", "cave"}
+    present_ambience_contexts = set(catalog.get("ambienceContexts", {}))
+    if has_ambience and present_ambience_contexts != expected_ambience_contexts:
+        _failure(
+            failures,
+            "ambience_context_coverage",
+            (
+                f"expected {sorted(expected_ambience_contexts)}, got "
+                f"{sorted(present_ambience_contexts)}"
+            ),
+        )
+    if not has_ambience and present_ambience_contexts:
+        _failure(
+            failures,
+            "unexpected_ambience_contexts",
+            f"bundle has no ambience assets: {sorted(present_ambience_contexts)}",
+        )
 
     required_cues = set(spec["requiredCanonicalCues"])
     catalog_cues = set(catalog.get("cues", {}))
@@ -907,15 +930,25 @@ def audit_bundle(
     }
     source_by_cue = {
         asset["cueId"]: asset
-        for asset in [*spec.get("music", []), *spec.get("sfx", [])]
+        for asset in [
+            *spec.get("music", []),
+            *spec.get("ambience", []),
+            *spec.get("sfx", []),
+        ]
     }
     expected_runtime_paths: set[Path] = set()
-    music_features: dict[str, dict] = {}
+    loop_features_by_role: dict[str, dict[str, dict]] = {
+        "music": {},
+        "ambience": {},
+    }
     peak_limit = 10.0 ** (PEAK_LIMIT_DBFS / 20.0)
 
     for cue_id, cue in sorted(catalog.get("cues", {}).items()):
-        if cue_id.startswith("music."):
+        role = str(cue.get("role", ""))
+        if role == "music" or cue_id.startswith("music."):
             expected_bus = "Music"
+        elif role == "ambience" or cue_id.startswith("ambience."):
+            expected_bus = "Ambience"
         elif cue_id.startswith("combat."):
             expected_bus = "Combat"
         elif cue_id.startswith("creature."):
@@ -943,7 +976,7 @@ def audit_bundle(
             continue
         expected_suffix = (
             ".ogg"
-            if cue.get("role") == "music" and is_ogg_music_bundle
+            if role in {"music", "ambience"} and is_ogg_music_bundle
             else ".wav"
         )
         if absolute_path.suffix.lower() != expected_suffix:
@@ -989,7 +1022,7 @@ def audit_bundle(
         metrics["sha256"] = _sha256_file(absolute_path)
         asset_metrics[cue_id] = metrics
 
-        expected_channels = 2 if cue["role"] == "music" else 1
+        expected_channels = 2 if role in {"music", "ambience"} else 1
         if metadata["sampleRate"] != 48000:
             _failure(
                 failures,
@@ -1075,7 +1108,8 @@ def audit_bundle(
                         f"{loop_metrics['windowRmsDeltaDb']} dB"
                     ),
                 )
-            music_features[cue_id] = metrics
+            if role in loop_features_by_role:
+                loop_features_by_role[role][cue_id] = metrics
 
         asset_id = cue["assetId"]
         ledger = ledger_by_asset.get(asset_id)
@@ -1132,7 +1166,7 @@ def audit_bundle(
             if source_asset is None:
                 _failure(failures, "source_asset", f"{cue_id}: missing from spec")
             else:
-                if cue.get("role") == "music" and is_ogg_music_bundle:
+                if role in {"music", "ambience"} and is_ogg_music_bundle:
                     required_music_fields = (
                         "filename",
                         "projectCopy",
@@ -1149,7 +1183,7 @@ def audit_bundle(
                     if missing_music_fields:
                         _failure(
                             failures,
-                            "music_spec_fields",
+                            "long_form_spec_fields",
                             (
                                 f"{cue_id}: missing "
                                 + ", ".join(missing_music_fields)
@@ -1190,21 +1224,22 @@ def audit_bundle(
             f"ledger={len(ledger_by_asset)} cues={len(catalog_cues)}",
         )
 
-    music_cues = sorted(music_features)
-    for left_index, left_id in enumerate(music_cues):
-        for right_id in music_cues[left_index + 1 :]:
-            left = music_features[left_id]
-            right = music_features[right_id]
-            feature_distance = _music_feature_distance(left, right)
-            if feature_distance < MUSIC_FINGERPRINT_DISTANCE_LIMIT:
-                _failure(
-                    failures,
-                    "music_distinguishability",
-                    (
-                        f"{left_id} and {right_id} duration-independent "
-                        f"feature distance {feature_distance:.3f}"
-                    ),
-                )
+    for role, role_features in loop_features_by_role.items():
+        role_cues = sorted(role_features)
+        for left_index, left_id in enumerate(role_cues):
+            for right_id in role_cues[left_index + 1 :]:
+                left = role_features[left_id]
+                right = role_features[right_id]
+                feature_distance = _music_feature_distance(left, right)
+                if feature_distance < MUSIC_FINGERPRINT_DISTANCE_LIMIT:
+                    _failure(
+                        failures,
+                        f"{role}_distinguishability",
+                        (
+                            f"{left_id} and {right_id} duration-independent "
+                            f"feature distance {feature_distance:.3f}"
+                        ),
+                    )
 
     context_cues = set(catalog.get("contexts", {}).values())
     if context_cues != {
@@ -1217,6 +1252,22 @@ def audit_bundle(
             failures,
             "context_binding",
             f"unexpected context cue set: {sorted(context_cues)}",
+        )
+    ambience_context_cues = set(
+        catalog.get("ambienceContexts", {}).values()
+    )
+    if has_ambience and ambience_context_cues != {
+        "ambience.town",
+        "ambience.wilderness",
+        "ambience.cave",
+    }:
+        _failure(
+            failures,
+            "ambience_context_binding",
+            (
+                "unexpected ambience context cue set: "
+                f"{sorted(ambience_context_cues)}"
+            ),
         )
 
     report = {

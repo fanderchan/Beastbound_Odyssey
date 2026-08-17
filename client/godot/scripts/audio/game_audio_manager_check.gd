@@ -10,8 +10,16 @@ func _initialize() -> void:
 func _run() -> void:
 	var failures: Array[String] = []
 	var nonce := "%d_%d" % [OS.get_process_id(), Time.get_ticks_msec()]
-	var catalog_path := "user://audio_manager_check_%s.json" % nonce
-	var settings_path := "user://audio_manager_settings_check_%s.json" % nonce
+	var temp_root := "res://.run/qa/game_audio_manager_check"
+	var temp_root_error := DirAccess.make_dir_recursive_absolute(
+		ProjectSettings.globalize_path(temp_root)
+	)
+	if temp_root_error != OK:
+		failures.append("无法创建隔离的音频检查临时目录")
+		_finish(failures, [])
+		return
+	var catalog_path := "%s/catalog_%s.json" % [temp_root, nonce]
+	var settings_path := "%s/settings_%s.json" % [temp_root, nonce]
 	if not _write_catalog(catalog_path):
 		failures.append("无法写入临时音频 catalog")
 		_finish(failures, [catalog_path, settings_path])
@@ -44,8 +52,13 @@ func _run() -> void:
 		failures
 	)
 	_expect(
-		int(prewarm_snapshot.get("streamCacheCount", 0)) == 4,
-		"音乐预热没有填充四个唯一 stream cache",
+		int(prewarm_snapshot.get("warmedAmbienceStreamCount", 0)) == 3,
+		"三个地图环境语境没有在 catalog 加载后全部预热",
+		failures
+	)
+	_expect(
+		int(prewarm_snapshot.get("streamCacheCount", 0)) == 7,
+		"长音频预热没有填充七个唯一 stream cache",
 		failures
 	)
 	for music_path in _music_paths():
@@ -54,7 +67,13 @@ func _run() -> void:
 			"音乐预热没有且仅加载一次：%s" % music_path,
 			failures
 		)
-	for bus_name in ["Music", "SFX", "Combat", "Pet", "UI"]:
+	for ambience_path in _ambience_paths():
+		_expect(
+			int(loader_calls.get(ambience_path, 0)) == 1,
+			"环境声预热没有且仅加载一次：%s" % ambience_path,
+			failures
+		)
+	for bus_name in ["Music", "SFX", "Ambience", "Combat", "Pet", "UI"]:
 		_expect(AudioServer.get_bus_index(bus_name) >= 0, "缺少音频总线 %s" % bus_name, failures)
 	var limiter_count := _master_limiter_count()
 	_expect(limiter_count == 1, "Master 必须且只能有一个 HardLimiter", failures)
@@ -71,29 +90,70 @@ func _run() -> void:
 		"Combat 总线未汇入 SFX",
 		failures
 	)
+	_expect(
+		AudioServer.get_bus_send(AudioServer.get_bus_index("Ambience")) == "SFX",
+		"Ambience 总线未汇入 SFX",
+		failures
+	)
 
 	_expect(manager.sync_map_context("firebud_village_gate"), "城镇音乐未切入", failures)
 	_expect(manager.current_music_context() == "town", "村庄地图未归类 town", failures)
 	_expect(manager.current_music_cue() == "music.town", "城镇 cue 错误", failures)
+	_expect(manager.current_ambience_context() == "town", "村庄环境声未归类 town", failures)
+	_expect(manager.current_ambience_cue() == "ambience.town", "城镇环境 cue 错误", failures)
 	var town_transition_serial := int(manager.debug_snapshot().get("musicTransitionSerial", -1))
+	var town_ambience_transition_serial := int(
+		manager.debug_snapshot().get("ambienceTransitionSerial", -1)
+	)
 	_expect(manager.sync_map_context("firebud_village_gate"), "重复同步同一城镇 cue 失败", failures)
 	_expect(
 		int(manager.debug_snapshot().get("musicTransitionSerial", -1)) == town_transition_serial,
 		"同一音乐上下文被重复重启",
 		failures
 	)
+	_expect(
+		int(manager.debug_snapshot().get("ambienceTransitionSerial", -1))
+		== town_ambience_transition_serial,
+		"同一环境上下文被重复重启",
+		failures
+	)
 	_expect(int(loader_calls.get("res://fake/music_town.wav", 0)) == 1, "城镇资源未单次缓存", failures)
+	_expect(int(loader_calls.get("res://fake/ambience_town.wav", 0)) == 1, "城镇环境资源未单次缓存", failures)
 	manager.silence_world_context()
 	_expect(manager.current_music_cue() == "", "未知地图静音没有停止旧地图音乐", failures)
+	_expect(manager.current_ambience_cue() == "", "未知地图静音没有停止旧地图环境声", failures)
 	_expect(manager.sync_map_context("firebud_village_gate"), "静音后未恢复城镇音乐", failures)
 
 	_expect(manager.enter_battle(), "战斗音乐未切入", failures)
 	_expect(manager.current_music_cue() == "music.battle_normal", "战斗未覆盖地图音乐", failures)
+	_expect(manager.current_ambience_cue() == "ambience.town", "战斗错误移除了当前地图环境声", failures)
+	_expect(manager.is_ambience_ducked(), "战斗没有标记环境声 duck", failures)
+	await create_timer(GameAudioManager.AMBIENCE_DUCK_SECONDS + 0.05).timeout
+	_expect(
+		is_equal_approx(
+			float(manager.debug_snapshot().get("ambienceBusGainDb", 0.0)),
+			GameAudioManager.AMBIENCE_BATTLE_DUCK_DB
+		),
+		"战斗环境声没有平滑压到目标电平",
+		failures
+	)
 	_expect(manager.sync_map_context("mistcap_marsh"), "战斗中地图上下文同步失败", failures)
 	_expect(manager.world_context() == "wilderness", "战斗中未记录新地图上下文", failures)
 	_expect(manager.current_music_cue() == "music.battle_normal", "战斗中错误切回地图音乐", failures)
+	_expect(manager.current_ambience_cue() == "ambience.town", "战斗中错误切换环境床", failures)
 	_expect(manager.exit_battle(), "退出战斗未恢复地图音乐", failures)
 	_expect(manager.current_music_cue() == "music.wilderness", "退出战斗未恢复当前野外音乐", failures)
+	_expect(manager.current_ambience_cue() == "ambience.wilderness", "退出战斗未恢复当前野外环境声", failures)
+	_expect(not manager.is_ambience_ducked(), "退出战斗后环境声仍标记为 duck", failures)
+	await create_timer(GameAudioManager.AMBIENCE_DUCK_SECONDS + 0.05).timeout
+	_expect(
+		is_equal_approx(
+			float(manager.debug_snapshot().get("ambienceBusGainDb", -99.0)),
+			0.0
+		),
+		"退出战斗后环境声电平没有恢复",
+		failures
+	)
 	_expect(manager.sync_music_context("cave"), "快速切换准备未进入洞窟音乐", failures)
 	await create_timer(GameAudioManager.MUSIC_CROSSFADE_SECONDS + 0.10).timeout
 	await process_frame
@@ -159,6 +219,12 @@ func _run() -> void:
 			"快速切换重新同步加载了已预热音乐：%s" % music_path,
 			failures
 		)
+	for ambience_path in _ambience_paths():
+		_expect(
+			int(loader_calls.get(ambience_path, 0)) == 1,
+			"地图往返重新加载了已预热环境声：%s" % ambience_path,
+			failures
+		)
 
 	for cue_index in 12:
 		var cue_id := "combat.pool_%02d" % cue_index
@@ -211,8 +277,10 @@ func _run() -> void:
 	_expect(restored.sync_music_context("town"), "播放开关测试未切入城镇音乐", failures)
 	restored.configure_playback_enabled(false)
 	_expect(restored.current_music_cue() == "", "关闭真实播放后未清理活动音乐", failures)
+	_expect(restored.current_ambience_cue() == "", "关闭真实播放后未清理活动环境声", failures)
 	restored.configure_playback_enabled(true)
 	_expect(restored.current_music_cue() == "music.town", "重新开启真实播放后未恢复音乐", failures)
+	_expect(restored.current_ambience_cue() == "ambience.town", "重新开启真实播放后未恢复环境声", failures)
 	await _stop_drain_and_free(restored)
 
 	var deferred_loader_calls := [0]
@@ -229,6 +297,11 @@ func _run() -> void:
 	_expect(
 		int(deferred_manager.debug_snapshot().get("warmedMusicStreamCount", -1)) == 0,
 		"关闭真实播放的 headless manager 不应预热音乐",
+		failures
+	)
+	_expect(
+		int(deferred_manager.debug_snapshot().get("warmedAmbienceStreamCount", -1)) == 0,
+		"关闭真实播放的 headless manager 不应预热环境声",
 		failures
 	)
 	_expect(deferred_loader_calls[0] == 0, "关闭真实播放时仍同步加载了音乐", failures)
@@ -249,16 +322,32 @@ func _run() -> void:
 		"重新开启真实播放后没有补齐四首音乐预热",
 		failures
 	)
-	_expect(deferred_loader_calls[0] == 4, "重新开启真实播放没有且仅预热四首音乐", failures)
+	_expect(
+		int(deferred_manager.debug_snapshot().get("warmedAmbienceStreamCount", 0)) == 3,
+		"重新开启真实播放后没有补齐三条环境声预热",
+		failures
+	)
+	_expect(deferred_loader_calls[0] == 7, "重新开启真实播放没有且仅预热七条长音频", failures)
 	_expect(
 		deferred_manager.current_music_cue() == "music.town",
 		"重新开启真实播放后没有恢复已记录的城镇 cue",
 		failures
 	)
 	_expect(
+		deferred_manager.current_ambience_cue() == "ambience.town",
+		"重新开启真实播放后没有恢复已记录的城镇环境 cue",
+		failures
+	)
+	_expect(
 		_assigned_music_stream_count(deferred_manager) == 1
 		and _playing_music_player_count(deferred_manager) == 1,
 		"重新开启真实播放后已记录的城镇 cue 没有实际加载并播放",
+		failures
+	)
+	_expect(
+		_assigned_ambience_stream_count(deferred_manager) == 1
+		and _playing_ambience_player_count(deferred_manager) == 1,
+		"重新开启真实播放后已记录的城镇环境 cue 没有实际加载并播放",
 		failures
 	)
 	await _stop_drain_and_free(deferred_manager)
@@ -270,6 +359,7 @@ func _run() -> void:
 	get_root().add_child(silent_manager)
 	await process_frame
 	_expect(not silent_manager.sync_music_context("town"), "缺失资源时未安全静音", failures)
+	_expect(not silent_manager.sync_ambience_context("town"), "缺失环境资源时未安全静音", failures)
 	_expect(not silent_manager.play_cue("combat.pool_00"), "缺失 SFX 资源时未安全静音", failures)
 	await _stop_drain_and_free(silent_manager)
 
@@ -282,6 +372,9 @@ func _write_catalog(path: String) -> bool:
 		"music.wilderness": _cue("res://fake/music_wilderness.wav", "Music", "music", 0, 0),
 		"music.cave": _cue("res://fake/music_cave.wav", "Music", "music", 0, 0),
 		"music.battle_normal": _cue("res://fake/music_battle.wav", "Music", "music", 0, 0),
+		"ambience.town": _cue("res://fake/ambience_town.wav", "Ambience", "ambience", 0, 0),
+		"ambience.wilderness": _cue("res://fake/ambience_wilderness.wav", "Ambience", "ambience", 0, 0),
+		"ambience.cave": _cue("res://fake/ambience_cave.wav", "Ambience", "ambience", 0, 0),
 		"combat.low_priority": _cue("res://fake/shared_sfx.wav", "Combat", "contact", 0, 0),
 		"outcome.high_priority": _cue("res://fake/shared_sfx.wav", "Combat", "outcome", 10, 0),
 		"ui.cooldown": _cue("res://fake/shared_sfx.wav", "UI", "ui", 10, 200),
@@ -298,6 +391,11 @@ func _write_catalog(path: String) -> bool:
 		"schemaVersion": 1,
 		"bundleId": "audio_manager_check",
 		"reviewState": "qa_only",
+		"ambienceContexts": {
+			"town": "ambience.town",
+			"wilderness": "ambience.wilderness",
+			"cave": "ambience.cave",
+		},
 		"contexts": {
 			"town": "music.town",
 			"wilderness": "music.wilderness",
@@ -319,7 +417,7 @@ func _cue(path: String, bus: String, role: String, priority: int, cooldown_msec:
 		"path": path,
 		"bus": bus,
 		"role": role,
-		"loop": role == "music",
+		"loop": role in ["music", "ambience"],
 		"gainDb": 0.0,
 		"priority": priority,
 		"cooldownMs": cooldown_msec,
@@ -384,6 +482,14 @@ func _music_paths() -> Array[String]:
 	]
 
 
+func _ambience_paths() -> Array[String]:
+	return [
+		"res://fake/ambience_town.wav",
+		"res://fake/ambience_wilderness.wav",
+		"res://fake/ambience_cave.wav",
+	]
+
+
 func _playing_music_player_count(manager: Node) -> int:
 	var count := 0
 	for child in manager.get_children():
@@ -402,6 +508,30 @@ func _assigned_music_stream_count(manager: Node) -> int:
 		if (
 			child is AudioStreamPlayer
 			and str(child.name).begins_with("MusicPlayer")
+			and (child as AudioStreamPlayer).stream != null
+		):
+			count += 1
+	return count
+
+
+func _playing_ambience_player_count(manager: Node) -> int:
+	var count := 0
+	for child in manager.get_children():
+		if (
+			child is AudioStreamPlayer
+			and str(child.name).begins_with("AmbiencePlayer")
+			and (child as AudioStreamPlayer).playing
+		):
+			count += 1
+	return count
+
+
+func _assigned_ambience_stream_count(manager: Node) -> int:
+	var count := 0
+	for child in manager.get_children():
+		if (
+			child is AudioStreamPlayer
+			and str(child.name).begins_with("AmbiencePlayer")
 			and (child as AudioStreamPlayer).stream != null
 		):
 			count += 1
@@ -475,7 +605,7 @@ func _finish(failures: Array[String], cleanup_paths: Array[String]) -> void:
 		if FileAccess.file_exists(temp_path):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
 	if failures.is_empty():
-		print("game audio manager check ready: status=ok buses=5 music_crossfade=equal_power_0.75 music_prewarm=4 voices=12 persistence=true")
+		print("game audio manager check ready: status=ok buses=6 music_crossfade=equal_power_0.75 ambience_crossfade=equal_power_0.75 ambience_prewarm=3 battle_duck_db=-12 voices=12 persistence=true")
 		quit(0)
 		return
 	for failure in failures:
