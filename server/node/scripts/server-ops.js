@@ -9,6 +9,10 @@ const {
   createMysqlBackupManifest,
   writeMysqlBackupManifest,
 } = require("../src/mysql-backup-artifact");
+const {
+  inspectMysqlBackupHealth,
+  parseMysqlBackupHealthArgs,
+} = require("../src/mysql-backup-health");
 
 const repoRoot = path.resolve(__dirname, "../../..");
 const serverRoot = path.resolve(repoRoot, "server/node");
@@ -28,8 +32,12 @@ async function main() {
     runRestoreDrill(process.argv.slice(3));
     return;
   }
+  if (command === "backup-status") {
+    runBackupStatus(process.argv.slice(3));
+    return;
+  }
   if (!["start", "stop", "restart", "backup", "status"].includes(command)) {
-    throw new Error("Usage: node scripts/server-ops.js start|stop|restart|status|backup|restore-drill [backup.sql]");
+    throw new Error("Usage: node scripts/server-ops.js start|stop|restart|status|backup|restore-drill [backup.sql]|backup-status --max-backup-age-hours N --max-restore-age-hours N");
   }
   const env = loadRuntimeEnv();
   if (command === "start") {
@@ -43,7 +51,7 @@ async function main() {
   } else if (command === "status") {
     await printStatus(env);
   } else {
-    throw new Error("Usage: node scripts/server-ops.js start|stop|restart|status|backup|restore-drill [backup.sql]");
+    throw new Error("Usage: node scripts/server-ops.js start|stop|restart|status|backup|restore-drill [backup.sql]|backup-status --max-backup-age-hours N --max-restore-age-hours N");
   }
 }
 
@@ -435,6 +443,19 @@ function runRestoreDrill(args) {
   }
   if (result.status !== 0) {
     throw new Error(`MySQL backup restore drill exited with status ${result.status}.`);
+  }
+}
+
+function runBackupStatus(args) {
+  const policy = parseMysqlBackupHealthArgs(args);
+  const report = inspectMysqlBackupHealth({
+    backupDirectory: backupDir,
+    maxBackupAgeHours: policy.maxBackupAgeHours,
+    maxRestoreAgeHours: policy.maxRestoreAgeHours,
+  });
+  console.log(JSON.stringify(report, null, 2));
+  if (!report.ok) {
+    process.exitCode = 1;
   }
 }
 

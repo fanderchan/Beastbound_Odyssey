@@ -11,6 +11,7 @@ const test = require("node:test");
 
 const SOURCE_OPS_PATH = path.resolve(__dirname, "../scripts/server-ops.js");
 const SOURCE_BACKUP_ARTIFACT_PATH = path.resolve(__dirname, "../src/mysql-backup-artifact.js");
+const SOURCE_BACKUP_HEALTH_PATH = path.resolve(__dirname, "../src/mysql-backup-health.js");
 
 test("restart never signals an unrelated listener even when its health endpoint reports ok", {timeout: 20_000}, async (t) => {
   const fixture = await createFixture(t);
@@ -196,6 +197,69 @@ test("restore drill does not read configured player database credentials", {time
   assert.equal(result.code, 0, result.stdout + result.stderr);
 });
 
+test("backup status uses explicit freshness policy without reading player database credentials", {timeout: 20_000}, async (t) => {
+  const fixture = await createFixture(t);
+  const fakeDump = path.resolve(fixture.root, "fake-mysqldump.js");
+  fs.writeFileSync(fakeDump, [
+    "#!/usr/bin/env node",
+    'process.stdout.write("CREATE TABLE sample (id INT PRIMARY KEY);\\n");',
+    "",
+  ].join("\n"), {encoding: "utf8", mode: 0o700});
+  fs.chmodSync(fakeDump, 0o700);
+  const backupResult = await runOps(fixture, "backup", {
+    env: {BEASTBOUND_MYSQLDUMP_BIN: fakeDump},
+  });
+  assert.equal(backupResult.code, 0, backupResult.stdout + backupResult.stderr);
+  const backupReport = JSON.parse(backupResult.stdout);
+  const {verifyMysqlBackupArtifact} = require(SOURCE_BACKUP_ARTIFACT_PATH);
+  const {writeMysqlRestoreReceipt} = require(SOURCE_BACKUP_HEALTH_PATH);
+  const artifact = verifyMysqlBackupArtifact(backupReport.backupPath);
+  writeMysqlRestoreReceipt(successfulRestoreReport(artifact), artifact, {
+    completedAt: new Date().toISOString(),
+  });
+
+  const envPath = path.resolve(fixture.serverRoot, ".local/mysql.env");
+  fs.rmSync(envPath);
+  fs.mkdirSync(envPath);
+  const status = await runOps(fixture, "backup-status", {
+    args: ["--max-backup-age-hours", "26", "--max-restore-age-hours", "168"],
+  });
+  assert.equal(status.code, 0, status.stdout + status.stderr);
+  const report = JSON.parse(status.stdout);
+  assert.equal(report.ok, true);
+  assert.equal(report.claims.latestArtifactDigestVerified, true);
+  assert.equal(report.claims.latestArtifactHasMatchingRestoreReceipt, true);
+  assert.equal(JSON.stringify(report).includes(backupReport.backupPath), false);
+
+  const fixedFutureDate = path.resolve(fixture.root, "fixed-future-date.js");
+  fs.writeFileSync(fixedFutureDate, [
+    '"use strict";',
+    "const NativeDate = Date;",
+    "global.Date = class FixedFutureDate extends NativeDate {",
+    "  constructor(...args) { super(...(args.length === 0 ? ['2030-08-17T03:30:00.000Z'] : args)); }",
+    "  static now() { return NativeDate.parse('2030-08-17T03:30:00.000Z'); }",
+    "};",
+    "",
+  ].join("\n"), "utf8");
+  const stale = await runOps(fixture, "backup-status", {
+    args: ["--max-backup-age-hours", "26", "--max-restore-age-hours", "168"],
+    env: {NODE_OPTIONS: `--require=${fixedFutureDate}`},
+  });
+  assert.equal(stale.code, 1, stale.stdout + stale.stderr);
+  const staleReport = JSON.parse(stale.stdout);
+  assert.equal(staleReport.ok, false);
+  assert.deepEqual(staleReport.failures, [
+    {code: "mysql_backup_stale"},
+    {code: "mysql_restore_receipt_stale"},
+  ]);
+
+  const missingPolicy = await runOps(fixture, "backup-status", {
+    args: ["--max-backup-age-hours", "26"],
+  });
+  assert.equal(missingPolicy.code, 1, missingPolicy.stdout + missingPolicy.stderr);
+  assert.match(missingPolicy.stderr, /必须显式提供/);
+});
+
 async function createFixture(t, options = {}) {
   const root = fs.mkdtempSync(path.resolve(os.tmpdir(), "beastbound-server-ops-"));
   const serverRoot = path.resolve(root, "server/node");
@@ -207,6 +271,7 @@ async function createFixture(t, options = {}) {
   fs.mkdirSync(localDir, {recursive: true});
   fs.copyFileSync(SOURCE_OPS_PATH, path.resolve(scriptsDir, "server-ops.js"));
   fs.copyFileSync(SOURCE_BACKUP_ARTIFACT_PATH, path.resolve(srcDir, "mysql-backup-artifact.js"));
+  fs.copyFileSync(SOURCE_BACKUP_HEALTH_PATH, path.resolve(srcDir, "mysql-backup-health.js"));
   fs.writeFileSync(path.resolve(srcDir, "http-server.js"), fakeBackendSource(), "utf8");
 
   const port = await reservePort();
@@ -289,7 +354,7 @@ function fakeExternalHealthSource() {
 
 function runOps(fixture, command, options = {}) {
   return new Promise((resolve, reject) => {
-    const child = execFile(process.execPath, [fixture.opsPath, command], {
+    const child = execFile(process.execPath, [fixture.opsPath, command, ...(options.args || [])], {
       cwd: fixture.root,
       env: {...process.env, ...(options.env || {})},
       encoding: "utf8",
@@ -304,6 +369,65 @@ function runOps(fixture, command, options = {}) {
     });
     child.on("error", reject);
   });
+}
+
+function successfulRestoreReport(artifact) {
+  return {
+    status: "PASS",
+    kind: "beastbound_mysql_backup_restore_drill",
+    schemaVersion: 1,
+    backup: {
+      database: artifact.manifest.database,
+      dumpFile: artifact.manifest.dumpFile,
+      bytes: artifact.manifest.bytes,
+      sha256: artifact.manifest.sha256,
+      consistency: artifact.manifest.consistency.contract,
+    },
+    restore: {
+      engine: "isolated_mysql_logical_restore_and_real_service_smoke",
+      mysqlVersion: "9.7.0-test",
+      nonDefaultLoopbackPort: true,
+      tableCount: 1,
+      checkedTableCount: 1,
+      schemaDigest: "a".repeat(64),
+      persistentAuthorityDigest: "b".repeat(64),
+      authorityCounts: {
+        accounts: 0,
+        sessions: 0,
+        profiles: 0,
+        characterSlots: 0,
+        mutationReceipts: 0,
+        activeMail: 0,
+        marketListings: 0,
+        consumedEquipmentEnvelopes: 0,
+        parties: 0,
+        families: 0,
+        battleRecords: 0,
+        serviceEvents: 0,
+        storeRevision: 0,
+      },
+      importElapsedMs: 1,
+      totalElapsedMs: 2,
+    },
+    application: {
+      strictStoreLoadPassed: true,
+      realHttpServerReadyPassed: true,
+      schemaUnchangedAfterStartup: true,
+      persistentAuthorityUnchangedAfterStartup: true,
+    },
+    claims: {
+      backupRestorableInIsolatedMysql: true,
+      restoreDrillConnectedToSourceDatabase: false,
+      sourceDatabaseWritten: false,
+      productionRpoRtoProven: false,
+    },
+    cleanup: {
+      restoredServerStopped: true,
+      temporaryMysqlStopped: true,
+      temporaryStateRemoved: true,
+      temporaryPortClosed: true,
+    },
+  };
 }
 
 function spawnDetached(command, args, options) {

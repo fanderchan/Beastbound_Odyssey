@@ -19,6 +19,9 @@ const {
   verifyMysqlBackupArtifact,
 } = require("../server/node/src/mysql-backup-artifact");
 const {
+  writeMysqlRestoreReceipt,
+} = require("../server/node/src/mysql-backup-health");
+const {
   createMysqlAuthStore,
   mysqlAuthStoreRootContract,
 } = require("../server/node/src/mysql-store");
@@ -110,7 +113,7 @@ export async function runMysqlBackupRestoreDrill(options = {}) {
     if (!cleanupVerified) {
       throw restoreDrillError("restore_drill_cleanup_failed", "一次性 MySQL 未完成清理。");
     }
-    return Object.freeze({
+    const report = Object.freeze({
       status: "PASS",
       kind: "beastbound_mysql_backup_restore_drill",
       schemaVersion: 1,
@@ -152,6 +155,10 @@ export async function runMysqlBackupRestoreDrill(options = {}) {
         temporaryPortClosed: true,
       }),
     });
+    if (typeof options.onPass === "function") {
+      await options.onPass(report, artifact);
+    }
+    return report;
   } finally {
     if (serverProcess !== null) {
       await forceStopChild(serverProcess);
@@ -651,8 +658,23 @@ function delay(ms) {
 
 async function main() {
   const args = parseRestoreDrillArgs(process.argv.slice(2));
-  const report = await runMysqlBackupRestoreDrill(args);
-  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  let receiptResult = null;
+  const report = await runMysqlBackupRestoreDrill({
+    ...args,
+    onPass(passedReport, artifact) {
+      receiptResult = writeMysqlRestoreReceipt(passedReport, artifact);
+    },
+  });
+  process.stdout.write(`${JSON.stringify({
+    ...report,
+    receipt: Object.freeze({
+      kind: receiptResult.receipt.kind,
+      schemaVersion: receiptResult.receipt.schemaVersion,
+      file: path.basename(receiptResult.receiptPath),
+      completedAt: receiptResult.receipt.completedAt,
+      backupSha256: receiptResult.receipt.backup.sha256,
+    }),
+  }, null, 2)}\n`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {

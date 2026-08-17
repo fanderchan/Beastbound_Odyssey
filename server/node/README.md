@@ -144,6 +144,7 @@ Useful local operations:
 npm run ops -- status
 npm run ops -- backup
 npm run ops -- restore-drill
+npm run ops -- backup-status --max-backup-age-hours 26 --max-restore-age-hours 168
 npm run ops -- stop
 npm run ops -- restart
 ```
@@ -153,9 +154,18 @@ file and publishes a create-once SHA-256 manifest beside it. `restore-drill`
 verifies the newest manifested dump, imports it into a random non-3306 isolated
 MySQL instance, performs a strict store load and real HTTP ready smoke, proves
 that startup did not repair the schema or change persistent authority data, and
-then removes the temporary instance. To verify a specific artifact, run
-`npm run ops -- restore-drill -- /absolute/path/to/backup.sql`. The drill never
+then removes the temporary instance. A successful drill publishes an owner-only,
+create-once local restore receipt whose filename binds both the exact backup SHA
+and the receipt content digest. To verify a specific artifact, run
+`npm run ops -- restore-drill /absolute/path/to/backup.sql`. The drill never
 imports into the configured player database.
+
+`backup-status` re-hashes the newest formal dump, validates the newest matching
+restore receipt, checks both ages against the two explicitly supplied hour
+limits, and exits non-zero for missing, corrupt, future-dated, or stale evidence.
+The `26` and `168` values above are command examples, not project RPO/RTO
+defaults; production operators must choose and monitor their own policy. This
+local gate does not prove off-host copies, retention, PITR, or production RPO/RTO.
 
 See `../../docs/phase_182_mysql_live_server.md` for the architecture and LAN playtest boundary.
 
