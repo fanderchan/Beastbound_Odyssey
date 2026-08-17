@@ -143,9 +143,19 @@ Useful local operations:
 ```sh
 npm run ops -- status
 npm run ops -- backup
+npm run ops -- restore-drill
 npm run ops -- stop
 npm run ops -- restart
 ```
+
+`backup` streams a `--single-transaction --quick` logical dump into an owner-only
+file and publishes a create-once SHA-256 manifest beside it. `restore-drill`
+verifies the newest manifested dump, imports it into a random non-3306 isolated
+MySQL instance, performs a strict store load and real HTTP ready smoke, proves
+that startup did not repair the schema or change persistent authority data, and
+then removes the temporary instance. To verify a specific artifact, run
+`npm run ops -- restore-drill -- /absolute/path/to/backup.sql`. The drill never
+imports into the configured player database.
 
 See `../../docs/phase_182_mysql_live_server.md` for the architecture and LAN playtest boundary.
 

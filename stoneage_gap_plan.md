@@ -615,6 +615,8 @@
 
 - [ ] **P3.1 支付、发货、退款、补单与资产审计**
 - [ ] **P3.2 生产部署、监控、备份恢复和长时压测**
+  - [x] **P3.2a MySQL 单事务备份与隔离恢复演练**：正式 `ops backup` 生成 owner-only 单事务 dump 与 create-once SHA-256 manifest；`ops restore-drill` 只在随机非 3306 的一次性 MySQL 中流式恢复，严格读取当前权威根、启动真实 HTTP 服务到 ready，并证明启动前后 schema 与持久权威摘要不变后清理全部临时状态。
+    - 证据（2026-08-17）：当前本地玩家库只读导出 `14,973,952` bytes，SHA-256 `871184ac…`，一致性合同 `mysql_innodb_single_transaction_v1`；同一产物在隔离 MySQL `9.7.0-er2` 中恢复，`33/33` InnoDB 表通过 `CHECK TABLE`，当前 store strict load、真实 `/health/ready`/`live`、含完整 `SHOW CREATE TABLE` 的 schema digest `cfc7f5f9…` 与 persistent authority digest `24158ee5…` 前后不变，多次正式复跑 SQL import `366–402ms`、完整报告 `5,564–5,621ms`、shell `5.72–5.79s`。导入显式关闭 MySQL 本地/named/system commands；临时服务、端口、mysqld 与 datadir 全清理，恢复演练未读取来源凭据、连接或写回来源库。定向 manifest/CLI/isolated helper/生命周期 `16/16`，扩大存储与邮箱 schema 相邻组合 `70/70`。这只证明当前逻辑备份在同机隔离 MySQL 可恢复，不外推异机副本、PITR、生产 RPO/RTO 或完整灾备，父项保持未完成。详见 `docs/phase_473_mysql_backup_restore_drill.md`。
 - [ ] **P3.3 封测、长线经济验证与不删档迁移演练**
 - [ ] **P3.4 正式运营统一 release gate 与用户验收**
 

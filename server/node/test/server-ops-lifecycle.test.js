@@ -10,6 +10,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const SOURCE_OPS_PATH = path.resolve(__dirname, "../scripts/server-ops.js");
+const SOURCE_BACKUP_ARTIFACT_PATH = path.resolve(__dirname, "../src/mysql-backup-artifact.js");
 
 test("restart never signals an unrelated listener even when its health endpoint reports ok", {timeout: 20_000}, async (t) => {
   const fixture = await createFixture(t);
@@ -109,6 +110,92 @@ test("start recovers a missing pid for the verified service and restart waits fo
   assert.equal(processAlive(secondPid), true);
 });
 
+test("backup creates a private single-transaction artifact and digest manifest", {timeout: 20_000}, async (t) => {
+  const fixture = await createFixture(t);
+  const fakeDump = path.resolve(fixture.root, "fake-mysqldump.js");
+  const argsPath = path.resolve(fixture.root, "mysqldump-args.json");
+  fs.writeFileSync(fakeDump, [
+    "#!/usr/bin/env node",
+    '"use strict";',
+    'const fs = require("node:fs");',
+    'fs.writeFileSync(process.env.TEST_DUMP_ARGS_PATH, JSON.stringify(process.argv.slice(2)));',
+    'process.stdout.write("CREATE TABLE sample (id INT PRIMARY KEY);\\nINSERT INTO sample VALUES (1);\\n");',
+    "",
+  ].join("\n"), {encoding: "utf8", mode: 0o700});
+  fs.chmodSync(fakeDump, 0o700);
+
+  const result = await runOps(fixture, "backup", {
+    env: {
+      BEASTBOUND_MYSQLDUMP_BIN: fakeDump,
+      TEST_DUMP_ARGS_PATH: argsPath,
+    },
+  });
+  assert.equal(result.code, 0, result.stdout + result.stderr);
+  const report = JSON.parse(result.stdout);
+  const args = JSON.parse(fs.readFileSync(argsPath, "utf8"));
+  assert.equal(report.ok, true);
+  assert.match(report.sha256, /^[a-f0-9]{64}$/);
+  assert.equal(report.consistency, "mysql_innodb_single_transaction_v1");
+  assert.equal(args.includes("--single-transaction"), true);
+  assert.equal(args.includes("--quick"), true);
+  assert.equal(args.includes("--skip-lock-tables"), true);
+  assert.equal(args.includes("--default-character-set=utf8mb4"), true);
+  assert.equal(fs.statSync(report.backupPath).mode & 0o777, 0o600);
+  assert.equal(fs.statSync(report.manifestPath).mode & 0o777, 0o600);
+  assert.equal(fs.existsSync(path.resolve(fixture.serverRoot, ".local", path.basename(args[0].split("=")[1]))), false);
+});
+
+test("backup never overwrites an artifact created in the same timestamp bucket", {timeout: 20_000}, async (t) => {
+  const fixture = await createFixture(t);
+  const fixedDate = path.resolve(fixture.root, "fixed-date.js");
+  const fakeDump = path.resolve(fixture.root, "fake-mysqldump.js");
+  fs.writeFileSync(fixedDate, [
+    '"use strict";',
+    "const NativeDate = Date;",
+    "global.Date = class FixedDate extends NativeDate {",
+    "  constructor(...args) { super(...(args.length === 0 ? ['2026-08-17T01:02:03.456Z'] : args)); }",
+    "  static now() { return NativeDate.parse('2026-08-17T01:02:03.456Z'); }",
+    "};",
+    "",
+  ].join("\n"), "utf8");
+  fs.writeFileSync(fakeDump, [
+    "#!/usr/bin/env node",
+    '"use strict";',
+    'process.stdout.write(`${process.env.TEST_DUMP_BODY}\\n`);',
+    "",
+  ].join("\n"), {encoding: "utf8", mode: 0o700});
+  fs.chmodSync(fakeDump, 0o700);
+  const commonEnv = {
+    BEASTBOUND_MYSQLDUMP_BIN: fakeDump,
+    NODE_OPTIONS: `--require=${fixedDate}`,
+  };
+
+  const first = await runOps(fixture, "backup", {env: {...commonEnv, TEST_DUMP_BODY: "first"}});
+  assert.equal(first.code, 0, first.stdout + first.stderr);
+  const firstReport = JSON.parse(first.stdout);
+  const beforeDump = fs.readFileSync(firstReport.backupPath);
+  const beforeManifest = fs.readFileSync(firstReport.manifestPath);
+
+  const second = await runOps(fixture, "backup", {env: {...commonEnv, TEST_DUMP_BODY: "second"}});
+  assert.equal(second.code, 1, second.stdout + second.stderr);
+  assert.match(second.stderr, /EEXIST/);
+  assert.deepEqual(fs.readFileSync(firstReport.backupPath), beforeDump);
+  assert.deepEqual(fs.readFileSync(firstReport.manifestPath), beforeManifest);
+});
+
+test("restore drill does not read configured player database credentials", {timeout: 20_000}, async (t) => {
+  const fixture = await createFixture(t);
+  const envPath = path.resolve(fixture.serverRoot, ".local/mysql.env");
+  fs.rmSync(envPath);
+  fs.mkdirSync(envPath);
+  const toolsDir = path.resolve(fixture.root, "tools");
+  fs.mkdirSync(toolsDir, {recursive: true});
+  fs.writeFileSync(path.resolve(toolsDir, "run_mysql_backup_restore_drill.mjs"), "process.exit(0);\n", "utf8");
+
+  const result = await runOps(fixture, "restore-drill");
+  assert.equal(result.code, 0, result.stdout + result.stderr);
+});
+
 async function createFixture(t, options = {}) {
   const root = fs.mkdtempSync(path.resolve(os.tmpdir(), "beastbound-server-ops-"));
   const serverRoot = path.resolve(root, "server/node");
@@ -119,6 +206,7 @@ async function createFixture(t, options = {}) {
   fs.mkdirSync(srcDir, {recursive: true});
   fs.mkdirSync(localDir, {recursive: true});
   fs.copyFileSync(SOURCE_OPS_PATH, path.resolve(scriptsDir, "server-ops.js"));
+  fs.copyFileSync(SOURCE_BACKUP_ARTIFACT_PATH, path.resolve(srcDir, "mysql-backup-artifact.js"));
   fs.writeFileSync(path.resolve(srcDir, "http-server.js"), fakeBackendSource(), "utf8");
 
   const port = await reservePort();
@@ -203,7 +291,7 @@ function runOps(fixture, command, options = {}) {
   return new Promise((resolve, reject) => {
     const child = execFile(process.execPath, [fixture.opsPath, command], {
       cwd: fixture.root,
-      env: {...process.env},
+      env: {...process.env, ...(options.env || {})},
       encoding: "utf8",
       timeout: options.timeout || 20_000,
       maxBuffer: 1024 * 1024,

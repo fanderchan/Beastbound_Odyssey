@@ -267,10 +267,19 @@ async function waitForProcessExit(runtime, timeoutMs) {
   if (isolatedMysqlRuntimeStopped(runtime)) {
     return true;
   }
-  await Promise.race([
-    Promise.resolve(runtime.exited).catch(() => null),
-    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
-  ]);
+  await new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(finish, timeoutMs);
+    Promise.resolve(runtime.exited).then(finish, finish);
+  });
   return isolatedMysqlRuntimeStopped(runtime);
 }
 

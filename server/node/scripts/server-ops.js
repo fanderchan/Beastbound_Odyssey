@@ -5,6 +5,10 @@ const http = require("node:http");
 const os = require("node:os");
 const path = require("node:path");
 const {spawn, spawnSync, execFileSync} = require("node:child_process");
+const {
+  createMysqlBackupManifest,
+  writeMysqlBackupManifest,
+} = require("../src/mysql-backup-artifact");
 
 const repoRoot = path.resolve(__dirname, "../../..");
 const serverRoot = path.resolve(repoRoot, "server/node");
@@ -20,6 +24,13 @@ const STOP_POLL_MS = 200;
 
 async function main() {
   const command = String(process.argv[2] || "status").trim().toLowerCase();
+  if (command === "restore-drill") {
+    runRestoreDrill(process.argv.slice(3));
+    return;
+  }
+  if (!["start", "stop", "restart", "backup", "status"].includes(command)) {
+    throw new Error("Usage: node scripts/server-ops.js start|stop|restart|status|backup|restore-drill [backup.sql]");
+  }
   const env = loadRuntimeEnv();
   if (command === "start") {
     await startServer(env);
@@ -32,7 +43,7 @@ async function main() {
   } else if (command === "status") {
     await printStatus(env);
   } else {
-    throw new Error("Usage: node scripts/server-ops.js start|stop|restart|status|backup");
+    throw new Error("Usage: node scripts/server-ops.js start|stop|restart|status|backup|restore-drill [backup.sql]");
   }
 }
 
@@ -327,7 +338,8 @@ async function printStatus(env) {
 
 function backupMysql(env) {
   fs.mkdirSync(backupDir, {"recursive": true});
-  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  const createdAt = new Date().toISOString();
+  const stamp = createdAt.replace(/[-:.]/g, "");
   const database = env.BEASTBOUND_MYSQL_DATABASE || "beastbound_odyssey";
   const filePath = path.resolve(backupDir, `${database}-${stamp}.sql`);
   const partialPath = `${filePath}.partial-${process.pid}`;
@@ -353,6 +365,9 @@ function backupMysql(env) {
       `--defaults-extra-file=${authOptionPath}`,
       "--skip-lock-tables",
       "--skip-add-locks",
+      "--single-transaction",
+      "--quick",
+      "--default-character-set=utf8mb4",
       "--no-tablespaces",
       "--skip-masking-policies",
       "--skip-add-drop-masking-policy",
@@ -373,11 +388,22 @@ function backupMysql(env) {
     if (result.status !== 0) {
       throw new Error(String(result.stderr || `mysqldump exited with status ${result.status}`).trim());
     }
-    fs.renameSync(partialPath, filePath);
+    // Publish create-once. A second backup in the same timestamp bucket must
+    // fail rather than replace an earlier recovery artifact.
+    fs.linkSync(partialPath, filePath);
+    fs.unlinkSync(partialPath);
     fs.chmodSync(filePath, 0o600);
+    const manifest = createMysqlBackupManifest(filePath, {database, createdAt});
+    const manifestPath = writeMysqlBackupManifest(manifest, filePath);
     fs.rmSync(authOptionPath, {"force": true});
-    const bytes = fs.statSync(filePath).size;
-    console.log(JSON.stringify({"ok": true, "backupPath": filePath, bytes}, null, 2));
+    console.log(JSON.stringify({
+      "ok": true,
+      "backupPath": filePath,
+      manifestPath,
+      "bytes": manifest.bytes,
+      "sha256": manifest.sha256,
+      "consistency": manifest.consistency.contract,
+    }, null, 2));
   } catch (error) {
     if (outputFd !== null) {
       try { fs.closeSync(outputFd); } catch {}
@@ -385,6 +411,30 @@ function backupMysql(env) {
     fs.rmSync(partialPath, {"force": true});
     fs.rmSync(authOptionPath, {"force": true});
     throw error;
+  }
+}
+
+function runRestoreDrill(args) {
+  if (!Array.isArray(args) || args.length > 1 || (args.length === 1 && String(args[0] || "").trim() === "")) {
+    throw new Error("Usage: node scripts/server-ops.js restore-drill [backup.sql]");
+  }
+  const toolPath = path.resolve(repoRoot, "tools/run_mysql_backup_restore_drill.mjs");
+  const commandArgs = [toolPath];
+  if (args.length === 1) {
+    commandArgs.push("--backup", path.resolve(String(args[0])));
+  } else {
+    commandArgs.push("--backup-dir", backupDir);
+  }
+  const result = spawnSync(process.execPath, commandArgs, {
+    cwd: repoRoot,
+    env: process.env,
+    stdio: "inherit",
+  });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`MySQL backup restore drill exited with status ${result.status}.`);
   }
 }
 
