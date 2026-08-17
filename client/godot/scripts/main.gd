@@ -369,6 +369,8 @@ const QUEST_MARKER_READY := "ready"
 const QUEST_MARKER_REBIRTH_AVAILABLE := "rebirth_available"
 const QUEST_MARKER_REBIRTH_READY := "rebirth_ready"
 const QUEST_MARKER_REPEATABLE := "repeatable"
+const QUEST_MARKER_PRIMARY_VISUAL_SCALE := 0.72
+const QUEST_MARKER_SECONDARY_VISUAL_SCALE := 0.62
 const HANG_WALK_DIRECTIONS: Array[Vector2i] = [
 	Vector2i(1, -1),
 	Vector2i(-1, 1),
@@ -9352,6 +9354,7 @@ func _world_overlay_commands() -> Array[Dictionary]:
 				"kind": "npc_quest",
 				"position": marker + Vector2(0, -86),
 				"glyph": str(marker_visual.get("glyph", "!")),
+				"scale": float(marker_visual.get("scale", 1.0)),
 				"fill": marker_visual.get("fill", Color(1.0, 0.82, 0.18, 0.98)),
 				"border": marker_visual.get("border", Color(1.0, 0.95, 0.54, 0.98)),
 				"textColor": marker_visual.get("textColor", Color(0.16, 0.12, 0.04, 0.98)),
@@ -17568,12 +17571,34 @@ func _draw_npc_quest_marker(item: Dictionary, marker: Vector2) -> void:
 	var border: Color = visual.get("border", Color(1.0, 0.95, 0.54, 0.98))
 	var text_color: Color = visual.get("textColor", Color(0.16, 0.12, 0.04, 0.98))
 	var glyph := str(visual.get("glyph", "!"))
+	var marker_scale := clampf(float(visual.get("scale", 1.0)), 0.5, 1.0)
 	var center := marker + Vector2(0, -86)
-	draw_circle(center + Vector2(1, 2), 12.5, Color(0.03, 0.04, 0.03, 0.58))
-	draw_circle(center, 12.0, fill)
-	draw_arc(center, 13.0, 0.0, TAU, 28, border, 2.2, true)
+	draw_circle(
+		center + Vector2(1, 2) * marker_scale,
+		12.5 * marker_scale,
+		Color(0.03, 0.04, 0.03, 0.58)
+	)
+	draw_circle(center, 12.0 * marker_scale, fill)
+	draw_arc(
+		center,
+		13.0 * marker_scale,
+		0.0,
+		TAU,
+		28,
+		border,
+		maxf(1.35, 2.2 * marker_scale),
+		true
+	)
 	var font := _canvas_text_font()
-	draw_string(font, center + Vector2(-9, 7), glyph, HORIZONTAL_ALIGNMENT_CENTER, 18.0, 22, text_color)
+	draw_string(
+		font,
+		center + Vector2(-9, 7) * marker_scale,
+		glyph,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		18.0 * marker_scale,
+		maxi(13, roundi(22.0 * marker_scale)),
+		text_color
+	)
 
 
 func _quest_marker_visual_for_state(state: String) -> Dictionary:
@@ -17582,6 +17607,7 @@ func _quest_marker_visual_for_state(state: String) -> Dictionary:
 			return {
 				"glyph": "!",
 				"tone": "yellow",
+				"scale": QUEST_MARKER_PRIMARY_VISUAL_SCALE,
 				"fill": Color(1.0, 0.82, 0.18, 0.98),
 				"border": Color(1.0, 0.95, 0.54, 0.98),
 				"textColor": Color(0.16, 0.12, 0.04, 0.98),
@@ -17590,6 +17616,7 @@ func _quest_marker_visual_for_state(state: String) -> Dictionary:
 			return {
 				"glyph": "!",
 				"tone": "red",
+				"scale": QUEST_MARKER_SECONDARY_VISUAL_SCALE,
 				"fill": Color(0.88, 0.18, 0.13, 0.98),
 				"border": Color(1.0, 0.48, 0.40, 0.98),
 				"textColor": Color(1.0, 0.94, 0.86, 0.98),
@@ -17598,6 +17625,7 @@ func _quest_marker_visual_for_state(state: String) -> Dictionary:
 			return {
 				"glyph": "?",
 				"tone": "gray",
+				"scale": QUEST_MARKER_SECONDARY_VISUAL_SCALE,
 				"fill": Color(0.84, 0.84, 0.78, 0.94),
 				"border": Color(1.0, 1.0, 0.94, 0.92),
 				"textColor": Color(0.18, 0.19, 0.17, 0.96),
@@ -17606,6 +17634,7 @@ func _quest_marker_visual_for_state(state: String) -> Dictionary:
 			return {
 				"glyph": "?",
 				"tone": "yellow",
+				"scale": QUEST_MARKER_PRIMARY_VISUAL_SCALE,
 				"fill": Color(1.0, 0.82, 0.18, 0.98),
 				"border": Color(1.0, 0.95, 0.54, 0.98),
 				"textColor": Color(0.16, 0.12, 0.04, 0.98),
@@ -17614,6 +17643,7 @@ func _quest_marker_visual_for_state(state: String) -> Dictionary:
 			return {
 				"glyph": "!",
 				"tone": "gray",
+				"scale": QUEST_MARKER_SECONDARY_VISUAL_SCALE,
 				"fill": Color(0.84, 0.84, 0.78, 0.94),
 				"border": Color(1.0, 1.0, 0.94, 0.92),
 				"textColor": Color(0.18, 0.19, 0.17, 0.96),
@@ -17622,6 +17652,7 @@ func _quest_marker_visual_for_state(state: String) -> Dictionary:
 			return {
 				"glyph": "!",
 				"tone": "yellow",
+				"scale": QUEST_MARKER_PRIMARY_VISUAL_SCALE,
 				"fill": Color(1.0, 0.82, 0.18, 0.98),
 				"border": Color(1.0, 0.95, 0.54, 0.98),
 				"textColor": Color(0.16, 0.12, 0.04, 0.98),
@@ -17630,6 +17661,7 @@ func _quest_marker_visual_for_state(state: String) -> Dictionary:
 			return {
 				"glyph": "!",
 				"tone": "blue",
+				"scale": QUEST_MARKER_PRIMARY_VISUAL_SCALE,
 				"fill": Color(0.20, 0.62, 1.0, 0.98),
 				"border": Color(0.62, 0.86, 1.0, 0.98),
 				"textColor": Color(0.04, 0.10, 0.18, 0.98),

@@ -75,6 +75,7 @@ const MapRoutePlanner := preload("res://scripts/world/map_route_planner.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
+const WorldOverlayLayer := preload("res://scripts/world/world_overlay_layer.gd")
 const MailCenterModel := preload("res://scripts/progression/mail_center_model.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
 const NumericBalanceGateModel := preload("res://scripts/progression/numeric_balance_gate_model.gd")
@@ -21108,19 +21109,45 @@ func _run_auto_npc_quest_marker_check() -> void:
 		and rebirth_after_marker_ok
 	)
 	var signature_ok = completed_signature.find("abilities:remoteStable") >= 0
+	var available_visual: Dictionary = host._quest_marker_visual_for_state(QUEST_MARKER_AVAILABLE)
+	var blocked_visual: Dictionary = host._quest_marker_visual_for_state(QUEST_MARKER_BLOCKED)
+	var progress_visual: Dictionary = host._quest_marker_visual_for_state(QUEST_MARKER_IN_PROGRESS)
+	var ready_visual: Dictionary = host._quest_marker_visual_for_state(QUEST_MARKER_READY)
+	var rebirth_available_visual: Dictionary = host._quest_marker_visual_for_state(
+		QUEST_MARKER_REBIRTH_AVAILABLE
+	)
+	var rebirth_ready_visual: Dictionary = host._quest_marker_visual_for_state(
+		QUEST_MARKER_REBIRTH_READY
+	)
+	var repeatable_visual: Dictionary = host._quest_marker_visual_for_state(QUEST_MARKER_REPEATABLE)
+	var available_geometry: Dictionary = WorldOverlayLayer.quest_marker_geometry(available_visual)
+	var blocked_geometry: Dictionary = WorldOverlayLayer.quest_marker_geometry(blocked_visual)
 	var visual_ok = (
-		str(host._quest_marker_visual_for_state(QUEST_MARKER_AVAILABLE).get("glyph", "")) == "!"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_AVAILABLE).get("tone", "")) == "yellow"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_BLOCKED).get("glyph", "")) == "!"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_BLOCKED).get("tone", "")) == "red"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_IN_PROGRESS).get("glyph", "")) == "?"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_IN_PROGRESS).get("tone", "")) == "gray"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_READY).get("glyph", "")) == "?"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_READY).get("tone", "")) == "yellow"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_REBIRTH_AVAILABLE).get("glyph", "")) == "!"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_REBIRTH_AVAILABLE).get("tone", "")) == "gray"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_REBIRTH_READY).get("glyph", "")) == "!"
-		and str(host._quest_marker_visual_for_state(QUEST_MARKER_REBIRTH_READY).get("tone", "")) == "yellow"
+		str(available_visual.get("glyph", "")) == "!"
+		and str(available_visual.get("tone", "")) == "yellow"
+		and is_equal_approx(float(available_visual.get("scale", 0.0)), 0.72)
+		and str(blocked_visual.get("glyph", "")) == "!"
+		and str(blocked_visual.get("tone", "")) == "red"
+		and is_equal_approx(float(blocked_visual.get("scale", 0.0)), 0.62)
+		and str(progress_visual.get("glyph", "")) == "?"
+		and str(progress_visual.get("tone", "")) == "gray"
+		and is_equal_approx(float(progress_visual.get("scale", 0.0)), 0.62)
+		and str(ready_visual.get("glyph", "")) == "?"
+		and str(ready_visual.get("tone", "")) == "yellow"
+		and is_equal_approx(float(ready_visual.get("scale", 0.0)), 0.72)
+		and str(rebirth_available_visual.get("glyph", "")) == "!"
+		and str(rebirth_available_visual.get("tone", "")) == "gray"
+		and is_equal_approx(float(rebirth_available_visual.get("scale", 0.0)), 0.62)
+		and str(rebirth_ready_visual.get("glyph", "")) == "!"
+		and str(rebirth_ready_visual.get("tone", "")) == "yellow"
+		and is_equal_approx(float(rebirth_ready_visual.get("scale", 0.0)), 0.72)
+		and str(repeatable_visual.get("glyph", "")) == "!"
+		and str(repeatable_visual.get("tone", "")) == "blue"
+		and is_equal_approx(float(repeatable_visual.get("scale", 0.0)), 0.72)
+		and is_equal_approx(float(available_geometry.get("bodyRadius", 0.0)), 8.64)
+		and is_equal_approx(float(blocked_geometry.get("bodyRadius", 0.0)), 7.44)
+		and int(available_geometry.get("fontSize", 0)) == 16
+		and int(blocked_geometry.get("fontSize", 0)) == 14
 	)
 
 	var status = "ok" if available_ok and accepted_talk_ok and in_progress_ok and ready_ok and blocked_ok and completed_hidden_ok and rebirth_marker_ok and signature_ok and visual_ok else "failed"

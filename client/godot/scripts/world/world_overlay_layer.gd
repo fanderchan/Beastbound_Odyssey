@@ -131,22 +131,49 @@ func _add_quest_marker(root: Node2D, command: Dictionary) -> void:
 	var text_color: Variant = command.get("textColor")
 	if not (fill is Color) or not (border is Color) or not (text_color is Color):
 		return
-	_add_ellipse(root, Vector2(1, 2), Vector2(12.5, 12.5), Color(0.03, 0.04, 0.03, 0.58), 28)
-	_add_ellipse(root, Vector2.ZERO, Vector2(12, 12), fill as Color, 28)
-	_add_ring(root, 13.0, border as Color, 2.2)
+	var geometry := quest_marker_geometry(command)
+	var marker_scale := float(geometry.get("scale", 1.0))
+	var shadow_radius := float(geometry.get("shadowRadius", 12.5))
+	var body_radius := float(geometry.get("bodyRadius", 12.0))
+	var border_radius := float(geometry.get("borderRadius", 13.0))
+	var border_width := float(geometry.get("borderWidth", 2.2))
+	_add_ellipse(
+		root,
+		Vector2(1, 2) * marker_scale,
+		Vector2(shadow_radius, shadow_radius),
+		Color(0.03, 0.04, 0.03, 0.58),
+		28
+	)
+	_add_ellipse(root, Vector2.ZERO, Vector2(body_radius, body_radius), fill as Color, 28)
+	_add_ring(root, border_radius, border as Color, border_width)
 	var label := Label.new()
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.text = str(command.get("glyph", "!"))
-	label.position = Vector2(-11, -14)
-	label.size = Vector2(22, 28)
+	label.position = Vector2(-11, -14) * marker_scale
+	label.size = Vector2(22, 28) * marker_scale
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 22)
+	label.add_theme_font_size_override(
+		"font_size",
+		int(geometry.get("fontSize", 22))
+	)
 	label.add_theme_color_override("font_color", text_color as Color)
 	var font_value: Variant = command.get("font")
 	if font_value is Font:
 		label.add_theme_font_override("font", font_value as Font)
 	root.add_child(label)
+
+
+static func quest_marker_geometry(command: Dictionary) -> Dictionary:
+	var marker_scale := clampf(float(command.get("scale", 1.0)), 0.5, 1.0)
+	return {
+		"scale": marker_scale,
+		"shadowRadius": 12.5 * marker_scale,
+		"bodyRadius": 12.0 * marker_scale,
+		"borderRadius": 13.0 * marker_scale,
+		"borderWidth": maxf(1.35, 2.2 * marker_scale),
+		"fontSize": maxi(13, roundi(22.0 * marker_scale)),
+	}
 
 
 func _add_facility_label(root: Node2D, command: Dictionary) -> void:
