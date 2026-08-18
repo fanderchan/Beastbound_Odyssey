@@ -21,6 +21,29 @@ const RELEASE_ATTESTATION_TYPE := "beastbound_map_runtime_release_attestation"
 const RELEASE_ATTESTATION_STATUS := "passed"
 const RENDER_LAYERS: Array[String] = ["ground_decal", "world", "foreground"]
 const COLLISION_ROLES: Array[String] = ["none", "decorative", "blocking", "interaction"]
+const SURFACE_TRANSITION_KEYS: Array[String] = [
+	"nw",
+	"ne",
+	"nw_ne",
+	"sw",
+	"nw_sw",
+	"ne_sw",
+	"nw_ne_sw",
+	"se",
+	"nw_se",
+	"ne_se",
+	"nw_ne_se",
+	"sw_se",
+	"nw_sw_se",
+	"ne_sw_se",
+	"nw_ne_sw_se",
+]
+const SURFACE_TRANSITION_DIRECTIONS := [
+	{"key": "nw", "offset": Vector2i(-1, 0)},
+	{"key": "ne", "offset": Vector2i(0, -1)},
+	{"key": "sw", "offset": Vector2i(0, 1)},
+	{"key": "se", "offset": Vector2i(1, 0)},
+]
 
 static var _catalog_loaded := false
 static var _catalog_errors: Array[String] = []
@@ -223,6 +246,20 @@ static func _prepare_map(
 		tile_variant_config,
 		errors
 	)
+	ground_state = _apply_path_transition_tiles(
+		map_data,
+		ground_rules,
+		ground_state,
+		tile_rects,
+		errors
+	)
+	ground_state = _apply_plaza_transition_tiles(
+		map_data,
+		ground_rules,
+		ground_state,
+		tile_rects,
+		errors
+	)
 	var layered_ground_state := _build_layered_ground_draws(
 		map_id,
 		map_data,
@@ -305,6 +342,8 @@ static func _prepare_map(
 		"semanticTileCounts": ground_state.get("semanticTileCounts", {}),
 		"variantSeed": int(tile_variant_config.get("seed", 0)),
 		"variantClusterSize": int(tile_variant_config.get("clusterSize", 1)),
+		"pathTransitionCount": int(ground_state.get("pathTransitionCount", 0)),
+		"plazaTransitionCount": int(ground_state.get("plazaTransitionCount", 0)),
 		"tileVariantConfig": tile_variant_config.duplicate(true),
 		"pathLookup": ground_state.get("pathLookup", {}),
 		"plazaLookup": ground_state.get("plazaLookup", {}),
@@ -933,11 +972,124 @@ static func _validate_ground_tile_ids(
 			)
 		elif layered_base_tile_id != str(ground.get("defaultTileId", "")):
 			errors.append("地图视觉 layeredBaseTileId 必须等于 defaultTileId")
+	_validate_surface_transition_tile_ids(
+		ground,
+		tile_rects,
+		"pathTransitionTileIds",
+		"pathTileId",
+		errors
+	)
+	_validate_surface_transition_tile_ids(
+		ground,
+		tile_rects,
+		"plazaTransitionTileIds",
+		"plazaTileId",
+		errors
+	)
+	_validate_surface_transition_cross_field_reuse(ground, errors)
 	var blocked_visual_mode := str(
 		ground.get("blockedVisualMode", BLOCKED_VISUAL_MODE_TILE)
 	)
 	if not [BLOCKED_VISUAL_MODE_TILE, BLOCKED_VISUAL_MODE_INHERIT].has(blocked_visual_mode):
 		errors.append("地图视觉 ground.blockedVisualMode 只接受 blocked_tile/inherit_surface")
+
+
+static func _validate_surface_transition_tile_ids(
+	ground: Dictionary,
+	tile_rects: Dictionary,
+	transition_field: String,
+	semantic_field: String,
+	errors: Array[String]
+) -> void:
+	if not ground.has(transition_field):
+		return
+	var semantic_tile_id := str(ground.get(semantic_field, ""))
+	if (
+		semantic_tile_id == ""
+		or not _is_stable_id(semantic_tile_id)
+		or not tile_rects.has(semantic_tile_id)
+	):
+		errors.append(
+			"地图视觉 %s 要求有效的 ground.%s" % [transition_field, semantic_field]
+		)
+	var transitions_value: Variant = ground.get(transition_field)
+	if not (transitions_value is Dictionary):
+		errors.append("地图视觉 ground.%s 必须是对象" % transition_field)
+		return
+	var transitions := transitions_value as Dictionary
+	var actual_keys: Array[String] = []
+	for key_value in transitions.keys():
+		actual_keys.append(str(key_value))
+	actual_keys.sort()
+	var expected_keys := SURFACE_TRANSITION_KEYS.duplicate()
+	expected_keys.sort()
+	if actual_keys != expected_keys:
+		errors.append("地图视觉 %s 必须精确声明 15 种暴露边组合" % transition_field)
+	var reserved_tile_ids := _ground_non_transition_tile_ids(ground)
+	var seen_tile_ids: Dictionary = {}
+	for signature in SURFACE_TRANSITION_KEYS:
+		var tile_id := str(transitions.get(signature, ""))
+		if tile_id == "" or not _is_stable_id(tile_id) or not tile_rects.has(tile_id):
+			errors.append(
+				"地图视觉 %s 未解析到 tile：%s/%s"
+				% [transition_field, signature, tile_id]
+			)
+			continue
+		if reserved_tile_ids.has(tile_id):
+			errors.append("地图视觉 %s 不得复用语义或变体 tile：%s" % [transition_field, tile_id])
+			continue
+		if seen_tile_ids.has(tile_id):
+			errors.append("地图视觉 %s 不得复用 tile：%s" % [transition_field, tile_id])
+			continue
+		seen_tile_ids[tile_id] = true
+
+
+static func _ground_non_transition_tile_ids(ground: Dictionary) -> Dictionary:
+	var result: Dictionary = {}
+	for field in [
+		"defaultTileId",
+		"blockedTileId",
+		"encounterTileId",
+		"warpTileId",
+		"pathTileId",
+		"plazaTileId",
+		"edgeTileId",
+		"layeredBaseTileId",
+	]:
+		var tile_id := str(ground.get(field, ""))
+		if tile_id != "":
+			result[tile_id] = true
+	var variants_value: Variant = ground.get("tileVariants")
+	if variants_value is Dictionary:
+		for base_value in (variants_value as Dictionary).keys():
+			var base_tile_id := str(base_value)
+			if base_tile_id != "":
+				result[base_tile_id] = true
+			var candidates_value: Variant = (variants_value as Dictionary).get(base_value)
+			if not (candidates_value is Array):
+				continue
+			for candidate_value in candidates_value as Array:
+				var candidate_tile_id := str(candidate_value)
+				if candidate_tile_id != "":
+					result[candidate_tile_id] = true
+	return result
+
+
+static func _validate_surface_transition_cross_field_reuse(
+	ground: Dictionary,
+	errors: Array[String]
+) -> void:
+	var path_value: Variant = ground.get("pathTransitionTileIds")
+	var plaza_value: Variant = ground.get("plazaTransitionTileIds")
+	if not (path_value is Dictionary) or not (plaza_value is Dictionary):
+		return
+	var path_tile_ids: Dictionary = {}
+	for tile_id_value in (path_value as Dictionary).values():
+		path_tile_ids[str(tile_id_value)] = true
+	for tile_id_value in (plaza_value as Dictionary).values():
+		var tile_id := str(tile_id_value)
+		if path_tile_ids.has(tile_id):
+			errors.append("地图视觉道路与广场过渡 tile 不得复用：%s" % tile_id)
 
 
 static func _build_layered_ground_draws(
@@ -1308,6 +1460,124 @@ static func _build_ground_state(
 		"warpLookup": warp_lookup,
 		"blockedLookup": blocked_lookup,
 	}
+
+
+static func _apply_path_transition_tiles(
+	map_data: Dictionary,
+	ground: Dictionary,
+	ground_state: Dictionary,
+	tile_rects: Dictionary,
+	errors: Array[String]
+) -> Dictionary:
+	return _apply_surface_transition_tiles(
+		map_data,
+		ground,
+		ground_state,
+		tile_rects,
+		"pathTransitionTileIds",
+		"pathTileId",
+		"pathTransitionCount",
+		"道路",
+		errors
+	)
+
+
+static func _apply_plaza_transition_tiles(
+	map_data: Dictionary,
+	ground: Dictionary,
+	ground_state: Dictionary,
+	tile_rects: Dictionary,
+	errors: Array[String]
+) -> Dictionary:
+	return _apply_surface_transition_tiles(
+		map_data,
+		ground,
+		ground_state,
+		tile_rects,
+		"plazaTransitionTileIds",
+		"plazaTileId",
+		"plazaTransitionCount",
+		"广场",
+		errors
+	)
+
+
+static func _apply_surface_transition_tiles(
+	map_data: Dictionary,
+	ground: Dictionary,
+	ground_state: Dictionary,
+	tile_rects: Dictionary,
+	transition_field: String,
+	semantic_field: String,
+	count_field: String,
+	error_label: String,
+	errors: Array[String]
+) -> Dictionary:
+	if not ground.has(transition_field):
+		return ground_state
+	var transitions_value: Variant = ground.get(transition_field)
+	if not (transitions_value is Dictionary):
+		return ground_state
+	var transitions := transitions_value as Dictionary
+	var result := ground_state.duplicate(true)
+	var tile_ids := result.get("tileIdsByCell", {}) as Dictionary
+	var semantic_ids := result.get("semanticTileIdsByCell", {}) as Dictionary
+	var tile_counts := result.get("tileCounts", {}) as Dictionary
+	var path_lookup := result.get("pathLookup", {}) as Dictionary
+	var plaza_lookup := result.get("plazaLookup", {}) as Dictionary
+	var warp_lookup := result.get("warpLookup", {}) as Dictionary
+	var connected_lookup: Dictionary = {}
+	for lookup in [path_lookup, plaza_lookup, warp_lookup]:
+		for connected_key in (lookup as Dictionary).keys():
+			connected_lookup[connected_key] = true
+	var grid_size := IsoMapModel.grid_size(map_data)
+	var semantic_tile_id := str(ground.get(semantic_field, ""))
+	var transition_count := 0
+	for y in range(grid_size.y):
+		for x in range(grid_size.x):
+			var cell := Vector2i(x, y)
+			var key := IsoMapModel.cell_key(cell)
+			if str(semantic_ids.get(key, "")) != semantic_tile_id:
+				continue
+			var signature := _surface_transition_signature(cell, connected_lookup)
+			if signature == "":
+				continue
+			var transition_tile_id := str(transitions.get(signature, ""))
+			if not tile_rects.has(transition_tile_id):
+				errors.append(
+					"地图视觉%s过渡 tile 未解析：%s/%s/%s"
+					% [error_label, key, signature, transition_tile_id]
+				)
+				continue
+			var previous_tile_id := str(tile_ids.get(key, ""))
+			if previous_tile_id == transition_tile_id:
+				continue
+			tile_ids[key] = transition_tile_id
+			var previous_count := int(tile_counts.get(previous_tile_id, 0))
+			if previous_count <= 1:
+				tile_counts.erase(previous_tile_id)
+			else:
+				tile_counts[previous_tile_id] = previous_count - 1
+			tile_counts[transition_tile_id] = int(tile_counts.get(transition_tile_id, 0)) + 1
+			transition_count += 1
+	result["tileIdsByCell"] = tile_ids
+	result["tileCounts"] = tile_counts
+	result[count_field] = transition_count
+	return result
+
+
+static func _surface_transition_signature(
+	cell: Vector2i,
+	connected_lookup: Dictionary
+) -> String:
+	var exposed_keys: Array[String] = []
+	for direction_value in SURFACE_TRANSITION_DIRECTIONS:
+		var direction := direction_value as Dictionary
+		var neighbor := cell + (direction.get("offset", Vector2i.ZERO) as Vector2i)
+		if connected_lookup.has(IsoMapModel.cell_key(neighbor)):
+			continue
+		exposed_keys.append(str(direction.get("key", "")))
+	return "_".join(exposed_keys)
 
 
 static func _build_path_lookup(

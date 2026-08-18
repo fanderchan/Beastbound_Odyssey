@@ -275,13 +275,35 @@ class GroundVisualContractTests(unittest.TestCase):
         self.assertEqual([], audit.errors)
 
     def test_valid_deterministic_visual_variants_pass(self) -> None:
-        tiles = {"grass", "grass_b", "path", "path_b", "edge", "edge_b"}
+        path_transitions = {
+            signature: f"path_edge_{signature}"
+            for signature in AUDITOR.SURFACE_TRANSITION_KEYS
+        }
+        plaza_transitions = {
+            signature: f"plaza_edge_{signature}"
+            for signature in AUDITOR.SURFACE_TRANSITION_KEYS
+        }
+        tiles = {
+            "grass",
+            "grass_b",
+            "path",
+            "path_b",
+            "plaza",
+            "edge",
+            "edge_b",
+            *path_transitions.values(),
+            *plaza_transitions.values(),
+        }
         ground = {
             "defaultTileId": "grass",
             "edgeTileId": "edge",
             "edgePaddingCells": 8,
             "variantSeed": -2147483648,
             "variantClusterSize": 3,
+            "pathTileId": "path",
+            "pathTransitionTileIds": path_transitions,
+            "plazaTileId": "plaza",
+            "plazaTransitionTileIds": plaza_transitions,
             "tileVariants": {
                 "grass": ["grass", "grass_b"],
                 "path": ["path", "path_b"],
@@ -295,7 +317,33 @@ class GroundVisualContractTests(unittest.TestCase):
         self.assertEqual([], audit.errors)
 
     def test_invalid_optional_ground_fields_fail_closed(self) -> None:
-        tiles = {"grass", "grass_b", "path", "path_b", "shared"}
+        path_transitions = {
+            signature: f"path_edge_{signature}"
+            for signature in AUDITOR.SURFACE_TRANSITION_KEYS
+        }
+        plaza_transitions = {
+            signature: f"plaza_edge_{signature}"
+            for signature in AUDITOR.SURFACE_TRANSITION_KEYS
+        }
+        missing_direction = dict(path_transitions)
+        missing_direction.pop("nw_ne_sw_se")
+        unknown_transition = dict(path_transitions)
+        unknown_transition["nw"] = "missing"
+        duplicate_transition = dict(path_transitions)
+        duplicate_transition["ne"] = duplicate_transition["nw"]
+        reserved_transition = dict(path_transitions)
+        reserved_transition["nw"] = "grass"
+        reused_plaza_transition = dict(plaza_transitions)
+        reused_plaza_transition["nw"] = path_transitions["nw"]
+        tiles = {
+            "grass",
+            "grass_b",
+            "path",
+            "path_b",
+            "shared",
+            *path_transitions.values(),
+            *plaza_transitions.values(),
+        }
         fixtures = {
             "unknown edge": {
                 "defaultTileId": "grass",
@@ -342,6 +390,46 @@ class GroundVisualContractTests(unittest.TestCase):
                     "grass": ["grass", "shared"],
                     "path": ["path", "shared"],
                 },
+            },
+            "path transitions without path semantic": {
+                "defaultTileId": "grass",
+                "pathTransitionTileIds": path_transitions,
+            },
+            "plaza transitions without plaza semantic": {
+                "defaultTileId": "grass",
+                "plazaTransitionTileIds": plaza_transitions,
+            },
+            "path transitions is not an object": {
+                "defaultTileId": "grass",
+                "pathTileId": "path",
+                "pathTransitionTileIds": [],
+            },
+            "path transitions missing direction": {
+                "defaultTileId": "grass",
+                "pathTileId": "path",
+                "pathTransitionTileIds": missing_direction,
+            },
+            "path transitions unknown tile": {
+                "defaultTileId": "grass",
+                "pathTileId": "path",
+                "pathTransitionTileIds": unknown_transition,
+            },
+            "path transitions duplicate tile": {
+                "defaultTileId": "grass",
+                "pathTileId": "path",
+                "pathTransitionTileIds": duplicate_transition,
+            },
+            "path transitions reuse semantic tile": {
+                "defaultTileId": "grass",
+                "pathTileId": "path",
+                "pathTransitionTileIds": reserved_transition,
+            },
+            "surface transition tile reused across fields": {
+                "defaultTileId": "grass",
+                "pathTileId": "path",
+                "plazaTileId": "path_b",
+                "pathTransitionTileIds": path_transitions,
+                "plazaTransitionTileIds": reused_plaza_transition,
             },
         }
         for label, ground in fixtures.items():

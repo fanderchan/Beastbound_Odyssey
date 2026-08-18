@@ -44,6 +44,23 @@ VALID_COLLISION_ROLES = {"none", "decorative", "blocking", "interaction"}
 VALID_SCREENSHOT_MODES = {"idle", "moving", "transition", "occlusion"}
 MIN_VARIANT_SEED = -(2**31)
 MAX_VARIANT_SEED = 2**31 - 1
+SURFACE_TRANSITION_KEYS = {
+    "nw",
+    "ne",
+    "nw_ne",
+    "sw",
+    "nw_sw",
+    "ne_sw",
+    "nw_ne_sw",
+    "se",
+    "nw_se",
+    "ne_se",
+    "nw_ne_se",
+    "sw_se",
+    "nw_sw_se",
+    "ne_sw_se",
+    "nw_ne_sw_se",
+}
 MAX_PNG_PIXELS = 64 * 1024 * 1024
 MAIN_SCENE = "res://scenes/Main.tscn"
 MAIN_VIEWPORT = [1280, 720]
@@ -1472,6 +1489,79 @@ def validate_ground_visual_contract(
                 f"{field_name}.variantClusterSize",
                 "must be an integer in the inclusive range 1..8",
             )
+
+    reserved_transition_tiles: set[str] = set()
+    for tile_field in (
+        "defaultTileId",
+        "blockedTileId",
+        "encounterTileId",
+        "warpTileId",
+        "pathTileId",
+        "plazaTileId",
+        "edgeTileId",
+        "layeredBaseTileId",
+    ):
+        tile_id = ground.get(tile_field)
+        if isinstance(tile_id, str) and tile_id:
+            reserved_transition_tiles.add(tile_id)
+    variants_for_transition = ground.get("tileVariants")
+    if isinstance(variants_for_transition, dict):
+        for base_tile_id, candidates in variants_for_transition.items():
+            if isinstance(base_tile_id, str) and base_tile_id:
+                reserved_transition_tiles.add(base_tile_id)
+            if isinstance(candidates, list):
+                reserved_transition_tiles.update(
+                    candidate for candidate in candidates if isinstance(candidate, str) and candidate
+                )
+
+    all_transition_tiles: dict[str, str] = {}
+    for transition_name, semantic_name in (
+        ("pathTransitionTileIds", "pathTileId"),
+        ("plazaTransitionTileIds", "plazaTileId"),
+    ):
+        transitions = ground.get(transition_name)
+        if transitions is None:
+            continue
+        transition_field = f"{field_name}.{transition_name}"
+        semantic_tile_id = ground.get(semantic_name)
+        if not is_id(semantic_tile_id) or semantic_tile_id not in tile_ids:
+            audit.error(
+                f"{field_name}.{semantic_name}",
+                f"{transition_name} requires a registered semantic tile ID",
+            )
+        if not isinstance(transitions, dict):
+            audit.error(transition_field, "expected an object")
+            continue
+        actual_keys = set(transitions)
+        if actual_keys != SURFACE_TRANSITION_KEYS:
+            audit.error(
+                transition_field,
+                "must declare all 15 canonical exposed-edge signatures",
+            )
+        seen_transition_tiles: set[str] = set()
+        for direction in sorted(SURFACE_TRANSITION_KEYS):
+            tile_id = transitions.get(direction)
+            direction_field = f"{transition_field}.{direction}"
+            if not is_id(tile_id):
+                audit.error(direction_field, "expected a lowercase stable tile ID")
+                continue
+            if tile_id not in tile_ids:
+                audit.error(direction_field, f"unknown tileId {tile_id!r}")
+            if tile_id in reserved_transition_tiles:
+                audit.error(
+                    direction_field,
+                    "must not reuse a semantic or visual-variant tile",
+                )
+            if tile_id in seen_transition_tiles:
+                audit.error(direction_field, "duplicates another surface transition tile")
+            seen_transition_tiles.add(tile_id)
+            previous_owner = all_transition_tiles.get(tile_id)
+            if previous_owner is not None and previous_owner != transition_name:
+                audit.error(
+                    direction_field,
+                    f"reuses transition tile from {previous_owner}",
+                )
+            all_transition_tiles[tile_id] = transition_name
 
     variants = ground.get("tileVariants")
     if variants is None:

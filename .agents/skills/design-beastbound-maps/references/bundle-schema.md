@@ -370,6 +370,30 @@ visual tile IDs/counts may change, but path/plaza/blocked/encounter/warp meaning
 collision, protected cells and authoritative map JSON never do. Draw-time
 randomness is prohibited.
 
+`ground.pathTransitionTileIds` is optional. When present it requires a registered
+`ground.pathTileId` and one independently authored full-diamond tile for every
+non-empty combination of the four exposed isometric edges. Direction abbreviations
+`nw`, `ne`, `sw`, and `se` inspect neighbor offsets `[-1,0]`, `[0,-1]`, `[0,1]`,
+and `[1,0]`. The object must declare exactly these 15 canonical signatures:
+`nw`, `ne`, `nw_ne`, `sw`, `nw_sw`, `ne_sw`, `nw_ne_sw`, `se`, `nw_se`,
+`ne_se`, `nw_ne_se`, `sw_se`, `nw_sw_se`, `ne_sw_se`, and `nw_ne_sw_se`.
+Runtime derives the exact signature from neighbors that are not path, plaza, or
+warp and selects that tile during preparation; it never discards one side of a
+multi-edge corner and performs no draw-time selection. This post-process changes
+only final visual tile IDs/counts and `pathTransitionCount`. Semantic tile IDs,
+path/plaza/warp lookups, collision, pathfinding, encounters, protected cells,
+and authoritative map JSON remain unchanged. Missing semantic base, signatures,
+duplicate IDs, unresolved IDs, or reuse of semantic/variant tiles fail closed.
+
+`ground.plazaTransitionTileIds` is the equivalent optional 15-signature visual
+autotile contract for a registered `ground.plazaTileId`. Its tiles must be unique,
+registered, distinct from semantic/variant tiles, and must not reuse any tile
+declared by `pathTransitionTileIds`. It may change only final visual tile IDs/counts
+and `plazaTransitionCount`; semantic path/plaza/warp lookup, collision, pathfinding,
+encounters, protected cells, and authoritative map JSON remain unchanged. A
+four-single-edge sheet is evidence or an intermediate asset, not a releasable
+transition set, because it cannot represent corners or narrow paths without seams.
+
 Every override `grid` is a non-negative integer pair and remains inside the
 authoritative map. A placement `grid` is an integer pair and normally follows
 the same rule. The only exception is an object whose manifest definition uses

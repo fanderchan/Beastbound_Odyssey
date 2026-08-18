@@ -12,6 +12,8 @@ func _initialize() -> void:
 	_validate_review_lifecycle(errors)
 	_validate_edge_tile_contract(errors)
 	_validate_deterministic_tile_variants(errors)
+	_validate_path_transition_contract(errors)
+	_validate_plaza_transition_contract(errors)
 	_validate_edge_scenery_anchor_contract(errors)
 	var report := {
 		"schemaVersion": 1,
@@ -29,6 +31,12 @@ func _initialize() -> void:
 			),
 			"tileVariantsDeterministic": not errors.any(
 				func(error: String) -> bool: return error.begins_with("tile variants")
+			),
+			"pathTransitionsComplete": not errors.any(
+				func(error: String) -> bool: return error.begins_with("path transitions")
+			),
+			"plazaTransitionsComplete": not errors.any(
+				func(error: String) -> bool: return error.begins_with("plaza transitions")
 			),
 			"edgeSceneryAnchorsBounded": not errors.any(
 				func(error: String) -> bool: return error.begins_with("edge scenery")
@@ -439,6 +447,279 @@ static func _validate_deterministic_tile_variants(errors: Array[String]) -> void
 	)
 	if invalid_cluster_errors.is_empty():
 		errors.append("tile variants invalid cluster size did not fail strict validation")
+
+
+static func _validate_path_transition_contract(errors: Array[String]) -> void:
+	var fixture := _surface_transition_fixture(errors, "path transitions")
+	if fixture.is_empty():
+		return
+	var map_data := fixture.get("mapData", {}) as Dictionary
+	var ground := fixture.get("ground", {}) as Dictionary
+	var tile_rects := fixture.get("tileRects", {}) as Dictionary
+	var baseline := fixture.get("baseline", {}) as Dictionary
+	var fixture_errors: Array[String] = []
+	var first := MapVisualCatalog._apply_path_transition_tiles(
+		map_data,
+		ground,
+		baseline,
+		tile_rects,
+		fixture_errors
+	)
+	var repeated := MapVisualCatalog._apply_path_transition_tiles(
+		map_data,
+		ground,
+		baseline,
+		tile_rects,
+		fixture_errors
+	)
+	if not fixture_errors.is_empty():
+		errors.append("path transitions valid contract failed: %s" % "; ".join(fixture_errors))
+		return
+	if int(first.get("pathTransitionCount", 0)) <= 0:
+		errors.append("path transitions did not select any exposed path edge")
+	if (
+		first.get("tileIdsByCell") != repeated.get("tileIdsByCell")
+		or first.get("tileCounts") != repeated.get("tileCounts")
+	):
+		errors.append("path transitions repeated preparation drifted")
+	_validate_transition_authority_unchanged(
+		"path transitions",
+		baseline,
+		first,
+		errors
+	)
+	_validate_transition_cells(
+		"path transitions",
+		map_data,
+		"pathTileId",
+		"pathTransitionTileIds",
+		"pathTransitionCount",
+		ground,
+		first,
+		errors
+	)
+
+	var invalid_ground := ground.duplicate(true)
+	var invalid_mapping := (
+		invalid_ground.get("pathTransitionTileIds", {}) as Dictionary
+	).duplicate(true)
+	invalid_mapping.erase("nw_ne_sw_se")
+	invalid_ground["pathTransitionTileIds"] = invalid_mapping
+	var invalid_errors: Array[String] = []
+	MapVisualCatalog._validate_ground_tile_ids(invalid_ground, tile_rects, invalid_errors)
+	if invalid_errors.is_empty():
+		errors.append("path transitions incomplete direction map did not fail closed")
+
+	var reused_ground := ground.duplicate(true)
+	var reused_plaza := (
+		reused_ground.get("plazaTransitionTileIds", {}) as Dictionary
+	).duplicate(true)
+	reused_plaza["nw"] = str(
+		(reused_ground.get("pathTransitionTileIds", {}) as Dictionary).get("nw", "")
+	)
+	reused_ground["plazaTransitionTileIds"] = reused_plaza
+	var reused_errors: Array[String] = []
+	MapVisualCatalog._validate_ground_tile_ids(reused_ground, tile_rects, reused_errors)
+	if reused_errors.is_empty():
+		errors.append("path transitions cross-surface tile reuse did not fail closed")
+
+
+static func _validate_plaza_transition_contract(errors: Array[String]) -> void:
+	var fixture := _surface_transition_fixture(errors, "plaza transitions")
+	if fixture.is_empty():
+		return
+	var map_data := fixture.get("mapData", {}) as Dictionary
+	var ground := fixture.get("ground", {}) as Dictionary
+	var tile_rects := fixture.get("tileRects", {}) as Dictionary
+	var baseline := fixture.get("baseline", {}) as Dictionary
+	var fixture_errors: Array[String] = []
+	var first := MapVisualCatalog._apply_plaza_transition_tiles(
+		map_data,
+		ground,
+		baseline,
+		tile_rects,
+		fixture_errors
+	)
+	var repeated := MapVisualCatalog._apply_plaza_transition_tiles(
+		map_data,
+		ground,
+		baseline,
+		tile_rects,
+		fixture_errors
+	)
+	if not fixture_errors.is_empty():
+		errors.append("plaza transitions valid contract failed: %s" % "; ".join(fixture_errors))
+		return
+	if int(first.get("plazaTransitionCount", 0)) <= 0:
+		errors.append("plaza transitions did not select any exposed plaza edge")
+	if (
+		first.get("tileIdsByCell") != repeated.get("tileIdsByCell")
+		or first.get("tileCounts") != repeated.get("tileCounts")
+	):
+		errors.append("plaza transitions repeated preparation drifted")
+	_validate_transition_authority_unchanged(
+		"plaza transitions",
+		baseline,
+		first,
+		errors
+	)
+	_validate_transition_cells(
+		"plaza transitions",
+		map_data,
+		"plazaTileId",
+		"plazaTransitionTileIds",
+		"plazaTransitionCount",
+		ground,
+		first,
+		errors
+	)
+
+	var invalid_ground := ground.duplicate(true)
+	invalid_ground.erase("plazaTileId")
+	var invalid_errors: Array[String] = []
+	MapVisualCatalog._validate_ground_tile_ids(invalid_ground, tile_rects, invalid_errors)
+	if invalid_errors.is_empty():
+		errors.append("plaza transitions missing semantic base did not fail closed")
+
+
+static func _surface_transition_fixture(
+	errors: Array[String],
+	error_prefix: String
+) -> Dictionary:
+	var map_id := "firebud_village_gate"
+	var map_data := IsoMapModel.load_map(MapDataCatalog.path_for(map_id))
+	var binding := _read_json(
+		"res://assets/maps/firebud_region_visual_v1/bindings/firebud_village_gate.json"
+	)
+	if map_data.is_empty() or binding.is_empty():
+		errors.append("%s released v1 fixture failed to load" % error_prefix)
+		return {}
+	var ground := (binding.get("ground", {}) as Dictionary).duplicate(true)
+	var path_transitions: Dictionary = {}
+	var plaza_transitions: Dictionary = {}
+	for signature in MapVisualCatalog.SURFACE_TRANSITION_KEYS:
+		path_transitions[signature] = "path_edge_%s" % signature
+		plaza_transitions[signature] = "plaza_edge_%s" % signature
+	ground["pathTransitionTileIds"] = path_transitions
+	ground["plazaTransitionTileIds"] = plaza_transitions
+	var tile_rects: Dictionary = {}
+	for key in [
+		"defaultTileId",
+		"blockedTileId",
+		"encounterTileId",
+		"warpTileId",
+		"pathTileId",
+		"plazaTileId",
+		"edgeTileId",
+	]:
+		var tile_id := str(ground.get(key, ""))
+		if tile_id != "":
+			tile_rects[tile_id] = Rect2(0, 0, 80, 40)
+	var tile_variants_value: Variant = ground.get("tileVariants", {})
+	if tile_variants_value is Dictionary:
+		for candidates_value in (tile_variants_value as Dictionary).values():
+			if not (candidates_value is Array):
+				continue
+			for candidate_value in candidates_value as Array:
+				tile_rects[str(candidate_value)] = Rect2(0, 0, 80, 40)
+	for transition_field in ["pathTransitionTileIds", "plazaTransitionTileIds"]:
+		for tile_id_value in (ground.get(transition_field, {}) as Dictionary).values():
+			tile_rects[str(tile_id_value)] = Rect2(0, 0, 80, 40)
+	var fixture_errors: Array[String] = []
+	MapVisualCatalog._validate_ground_tile_ids(ground, tile_rects, fixture_errors)
+	var config := MapVisualCatalog._compile_ground_tile_variants(
+		map_id,
+		ground,
+		tile_rects,
+		fixture_errors
+	)
+	var baseline := MapVisualCatalog._build_ground_state(
+		map_data,
+		ground,
+		tile_rects,
+		config,
+		fixture_errors
+	)
+	if not fixture_errors.is_empty():
+		errors.append("%s fixture failed: %s" % [error_prefix, "; ".join(fixture_errors)])
+		return {}
+	return {
+		"mapData": map_data,
+		"ground": ground,
+		"tileRects": tile_rects,
+		"baseline": baseline,
+	}
+
+
+static func _validate_transition_authority_unchanged(
+	error_prefix: String,
+	baseline: Dictionary,
+	result: Dictionary,
+	errors: Array[String]
+) -> void:
+	for key in [
+		"semanticTileIdsByCell",
+		"semanticTileCounts",
+		"pathLookup",
+		"plazaLookup",
+		"encounterLookup",
+		"warpLookup",
+		"blockedLookup",
+	]:
+		if baseline.get(key) != result.get(key):
+			errors.append("%s changed authoritative field %s" % [error_prefix, key])
+
+
+static func _validate_transition_cells(
+	error_prefix: String,
+	map_data: Dictionary,
+	semantic_field: String,
+	transition_field: String,
+	count_field: String,
+	ground: Dictionary,
+	result: Dictionary,
+	errors: Array[String]
+) -> void:
+	var transition_mapping := ground.get(transition_field, {}) as Dictionary
+	var semantic_tile_id := str(ground.get(semantic_field, ""))
+	var connected_lookup: Dictionary = {}
+	for lookup_field in ["pathLookup", "plazaLookup", "warpLookup"]:
+		for connected_key in (result.get(lookup_field, {}) as Dictionary).keys():
+			connected_lookup[connected_key] = true
+	var transition_cells := 0
+	var multi_edge_cells := 0
+	var grid_size := IsoMapModel.grid_size(map_data)
+	for y in range(grid_size.y):
+		for x in range(grid_size.x):
+			var cell := Vector2i(x, y)
+			var key := IsoMapModel.cell_key(cell)
+			if str((result.get("semanticTileIdsByCell", {}) as Dictionary).get(key, "")) != semantic_tile_id:
+				continue
+			var signature := MapVisualCatalog._surface_transition_signature(cell, connected_lookup)
+			if signature == "":
+				continue
+			transition_cells += 1
+			if signature.contains("_"):
+				multi_edge_cells += 1
+			var expected_tile_id := str(transition_mapping.get(signature, ""))
+			var actual_tile_id := str(
+				(result.get("tileIdsByCell", {}) as Dictionary).get(key, "")
+			)
+			if actual_tile_id != expected_tile_id:
+				errors.append(
+					"%s exposure signature mismatch: %s/%s/%s"
+					% [error_prefix, key, signature, actual_tile_id]
+				)
+				return
+	if transition_cells != int(result.get(count_field, -1)):
+		errors.append("%s count does not match selected visual cells" % error_prefix)
+	if multi_edge_cells <= 0:
+		errors.append("%s fixture did not prove a multi-edge corner" % error_prefix)
+	var total_visual_cells := 0
+	for count_value in (result.get("tileCounts", {}) as Dictionary).values():
+		total_visual_cells += int(count_value)
+	if total_visual_cells != (result.get("tileIdsByCell", {}) as Dictionary).size():
+		errors.append("%s tileCounts lost or duplicated cells" % error_prefix)
 
 
 static func _required_ground(tile_id: String) -> Dictionary:
