@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "contract": "beastbound_pet_portrait_identity_evidence_metadata_transition_v1",
+  "evidenceScope": "bundle_metadata_file_hash_only",
+  "formId": "rebirth_beast_earth_lv50",
+  "bundleMetadata": {
+    "path": "client/godot/assets/pets/rebirth_beast_earth_lv50/action-bundle-meta.json",
+    "attestedSha256": "50b4050913c37b96bdd6ba0c0cb627792938595cf4cb6fc771dfbbf0222c5a72",
+    "currentSha256": "6c42ba9a34bc28b61da1d4d6bfe2579f69529270293714ef59677db9e4fec554",
+    "historicalBytesProvidedByLedger": false,
+    "historicalReplayClaimed": false
+  },
+  "identityEvidence": {
+    "attestedSha256": "8ec0f9b82f57c5affcd14f1e5de4ea87f5b900c5ca595ab3f031b6ab357d6768",
+    "currentReplaySha256": "2d48385c86515a440656f3361206668bbdca9afb67a6e0218a92e1ddd266e1a1",
+    "invariantWithoutBundleMetadataHashSha256": "93a320e304e30c624954a0355bb7aa0006628928c212614de070a6a6c2ea0207",
+    "exactMatchExceptBundleMetadataSha256": true
+  },
+  "claims": {
+    "currentIdentityBundleReplayVerified": true,
+    "portraitPixelsChangedByLedger": false,
+    "ownerApprovalGrantedByLedger": false,
+    "runtimeReleaseGrantedByLedger": false
+  }
+}

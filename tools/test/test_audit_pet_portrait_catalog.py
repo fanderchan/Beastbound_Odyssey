@@ -663,6 +663,111 @@ class PetPortraitCatalogAuditTests(unittest.TestCase):
             self.assertTrue(cli_result["ownerDecisionRequired"])
             self.assertEqual(cli_result["audited"], 1)
 
+    def test_catalog_metadata_transition_requires_exact_honest_ledger(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo_root = Path(temporary) / "repo"
+            form_id = "transition_pet"
+            pet_root = self.pet_root(repo_root, form_id)
+            catalog = self.write_catalog(
+                repo_root,
+                [(form_id, pet_root)],
+            )
+            self.build_pet(
+                repo_root,
+                form_id,
+                isolated=False,
+            )
+            attestation_path = pet_root / portrait.ATTESTATION_PATH
+            attestation = json.loads(
+                attestation_path.read_text(encoding="utf-8")
+            )
+            action_path = pet_root / "action-bundle-meta.json"
+            action = json.loads(action_path.read_text(encoding="utf-8"))
+            action["postPortraitMotionAudit"] = {
+                "scope": "world_motion_only",
+                "identityChanged": False,
+            }
+            action_path.write_text(
+                json.dumps(action, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            replayed = portrait._validate_identity_evidence(
+                repo_root=repo_root.resolve(),
+                pet_root=pet_root.resolve(),
+                form_id=form_id,
+                identity_reference=(
+                    pet_root / "identity/front_3quarter_sw.png"
+                ).resolve(),
+                catalog_path=catalog.resolve(),
+                isolated=False,
+            )
+            transition = (
+                attestation["identityEvidence"][
+                    "bundleMetadataSha256"
+                ],
+                replayed["bundleMetadataSha256"],
+            )
+            with mock.patch.dict(
+                portrait.PORTRAIT_IDENTITY_EVIDENCE_BUNDLE_METADATA_TRANSITIONS,
+                {form_id: transition},
+            ):
+                ledger = (
+                    portrait._expected_identity_evidence_transition_ledger(
+                        form_id=form_id,
+                        attested_identity_evidence=(
+                            attestation["identityEvidence"]
+                        ),
+                        replayed_identity_evidence=replayed,
+                    )
+                )
+                ledger_path = (
+                    pet_root
+                    / portrait.IDENTITY_EVIDENCE_TRANSITION_LEDGER_PATH
+                )
+                ledger_path.write_text(
+                    json.dumps(ledger, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                result = self.audit_catalog(repo_root, catalog)
+                self.assertEqual(
+                    result["status"],
+                    "ok",
+                    result["errors"],
+                )
+                self.assertFalse(result["releaseGate"])
+                transition_record = result["entries"][0][
+                    "identityEvidenceTransition"
+                ]
+                self.assertEqual(
+                    transition_record["contract"],
+                    (
+                        "beastbound_pet_portrait_identity_evidence_"
+                        "metadata_transition_v1"
+                    ),
+                )
+                self.assertEqual(
+                    transition_record["path"],
+                    ledger_path.relative_to(repo_root).as_posix(),
+                )
+
+                tampered = copy.deepcopy(ledger)
+                tampered["claims"]["ownerApprovalGrantedByLedger"] = True
+                ledger_path.write_text(
+                    json.dumps(tampered, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                failed = self.audit_catalog(repo_root, catalog)
+                self.assertEqual(failed["status"], "failed")
+                self.assertTrue(
+                    any(
+                        "transition ledger" in error
+                        for error in failed["errors"]
+                    ),
+                    failed["errors"],
+                )
+
     def test_portrait_metadata_rejects_top_level_approval_claim_injection(
         self,
     ) -> None:

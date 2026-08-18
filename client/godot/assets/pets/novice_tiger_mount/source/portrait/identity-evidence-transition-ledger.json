@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "contract": "beastbound_pet_portrait_identity_evidence_metadata_transition_v1",
+  "evidenceScope": "bundle_metadata_file_hash_only",
+  "formId": "novice_tiger_mount",
+  "bundleMetadata": {
+    "path": "client/godot/assets/pets/novice_tiger_mount/action-bundle-meta.json",
+    "attestedSha256": "2fc56f40831368b0672ef9cf845003122fa9a511d03b1c8de47e3f452c296dc5",
+    "currentSha256": "dd77fb7b674b443cc05566b617f8c267a2da96493e9abc7e2b30e04ca450af79",
+    "historicalBytesProvidedByLedger": false,
+    "historicalReplayClaimed": false
+  },
+  "identityEvidence": {
+    "attestedSha256": "96ba1b97ec4c9336c18bf36da9fab49168bb7bebaf4bf0cc919ad261756d9c6b",
+    "currentReplaySha256": "98efe8af71194b1c3ca3ef901637ab9b8b679f6e64cf2cd6531f23c7710d9cfa",
+    "invariantWithoutBundleMetadataHashSha256": "41f01a5c744683f1dca39d1396df9c4f3e0dc435f735774c84284d9e05f5aea7",
+    "exactMatchExceptBundleMetadataSha256": true
+  },
+  "claims": {
+    "currentIdentityBundleReplayVerified": true,
+    "portraitPixelsChangedByLedger": false,
+    "ownerApprovalGrantedByLedger": false,
+    "runtimeReleaseGrantedByLedger": false
+  }
+}

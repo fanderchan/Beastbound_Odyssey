@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "contract": "beastbound_pet_portrait_identity_evidence_metadata_transition_v1",
+  "evidenceScope": "bundle_metadata_file_hash_only",
+  "formId": "blue_man_dragon_water10",
+  "bundleMetadata": {
+    "path": "client/godot/assets/pets/blue_man_dragon_water10/action-bundle-meta.json",
+    "attestedSha256": "cfa8c533846e891ba8abaf8443e1a377cf2f7935d78a428b6330ff9f0bde8396",
+    "currentSha256": "f9839c29fe47c387ab19e3fcad2e95b06dd205ee85cfc3ee5f7915e75704038d",
+    "historicalBytesProvidedByLedger": false,
+    "historicalReplayClaimed": false
+  },
+  "identityEvidence": {
+    "attestedSha256": "b0b688db6beeb0ba3e5c86ce0c51c82c60e2f66929529c1a212345b3fc75d7c9",
+    "currentReplaySha256": "f186c1c345804f1c88018e127d97b8a9bb12ea8cbf72722b32d33f38808f2d8c",
+    "invariantWithoutBundleMetadataHashSha256": "c0fcb47746075edc2e599f00ae7bf132c2a6a7862d47429cb67daa193e2aef8e",
+    "exactMatchExceptBundleMetadataSha256": true
+  },
+  "claims": {
+    "currentIdentityBundleReplayVerified": true,
+    "portraitPixelsChangedByLedger": false,
+    "ownerApprovalGrantedByLedger": false,
+    "runtimeReleaseGrantedByLedger": false
+  }
+}

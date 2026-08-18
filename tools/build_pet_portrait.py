@@ -51,6 +51,9 @@ from build_pet_art_bundle import (
     resize_rgba_premultiplied,
     rgba_hash,
 )
+from pet_identity_replay_contract import (
+    PORTRAIT_IDENTITY_EVIDENCE_BUNDLE_METADATA_TRANSITIONS,
+)
 from sprite_alpha_despill import despill_transparent_alpha
 
 
@@ -58,6 +61,7 @@ TOOL_NAME = "build_pet_portrait.py"
 SCHEMA_VERSION = 1
 GENERATION_ATTESTATION_SCHEMA_VERSION = 3
 IDENTITY_FREEZE_LEDGER_SCHEMA_VERSION = 1
+IDENTITY_EVIDENCE_TRANSITION_LEDGER_SCHEMA_VERSION = 1
 EDGE_CONTRACT_VERSION = 1
 MASTER_SIZE = 1024
 RUNTIME_SIZE = 512
@@ -90,6 +94,9 @@ SELECTED_SOURCES_PATH = Path(
 )
 IDENTITY_FREEZE_LEDGER_PATH = Path(
     "source/portrait/identity-reference-compatibility-ledger.json"
+)
+IDENTITY_EVIDENCE_TRANSITION_LEDGER_PATH = Path(
+    "source/portrait/identity-evidence-transition-ledger.json"
 )
 CLOSED_REGISTRATION_MANIFEST_PATH = Path(
     "qa/release/closed-registration-manifest-v1.json"
@@ -4725,6 +4732,161 @@ def _validate_identity_evidence(
     }
 
 
+def _identity_evidence_without_bundle_metadata_hash(
+    value: Any,
+    *,
+    label: str,
+) -> tuple[dict[str, Any], str]:
+    if not isinstance(value, dict):
+        raise PortraitBuildError(f"{label} 必须是对象")
+    normalized = copy.deepcopy(value)
+    digest = normalized.pop("bundleMetadataSha256", None)
+    if not isinstance(digest, str) or not SHA256_PATTERN.fullmatch(digest):
+        raise PortraitBuildError(
+            f"{label}.bundleMetadataSha256 非法"
+        )
+    return normalized, digest
+
+
+def _expected_identity_evidence_transition_ledger(
+    *,
+    form_id: str,
+    attested_identity_evidence: Any,
+    replayed_identity_evidence: Any,
+) -> dict[str, Any]:
+    transition = (
+        PORTRAIT_IDENTITY_EVIDENCE_BUNDLE_METADATA_TRANSITIONS.get(
+            form_id
+        )
+    )
+    if (
+        not isinstance(transition, tuple)
+        or len(transition) != 2
+        or not all(
+            isinstance(value, str)
+            and SHA256_PATTERN.fullmatch(value)
+            for value in transition
+        )
+    ):
+        raise PortraitBuildError(
+            "identityEvidence metadata transition 未进入精确 allowlist："
+            f"{form_id}"
+        )
+    attested_without_hash, attested_metadata_hash = (
+        _identity_evidence_without_bundle_metadata_hash(
+            attested_identity_evidence,
+            label="attested identityEvidence",
+        )
+    )
+    replayed_without_hash, current_metadata_hash = (
+        _identity_evidence_without_bundle_metadata_hash(
+            replayed_identity_evidence,
+            label="replayed identityEvidence",
+        )
+    )
+    if (attested_metadata_hash, current_metadata_hash) != transition:
+        raise PortraitBuildError(
+            "identityEvidence metadata transition 哈希不在精确合同内："
+            f"attested={attested_metadata_hash}, "
+            f"current={current_metadata_hash}"
+        )
+    if attested_without_hash != replayed_without_hash:
+        raise PortraitBuildError(
+            "identityEvidence 除 bundleMetadataSha256 外仍有漂移，"
+            "compatibility ledger 不得放行"
+        )
+    bundle_metadata_path = replayed_without_hash.get(
+        "bundleMetadataPath"
+    )
+    if (
+        not isinstance(bundle_metadata_path, str)
+        or not bundle_metadata_path
+        or attested_without_hash.get("bundleMetadataPath")
+        != bundle_metadata_path
+    ):
+        raise PortraitBuildError(
+            "identityEvidence bundleMetadataPath 未保持精确一致"
+        )
+    invariant_sha256 = _canonical_json_sha256(replayed_without_hash)
+    return {
+        "schemaVersion": (
+            IDENTITY_EVIDENCE_TRANSITION_LEDGER_SCHEMA_VERSION
+        ),
+        "contract": (
+            "beastbound_pet_portrait_identity_evidence_"
+            "metadata_transition_v1"
+        ),
+        "evidenceScope": "bundle_metadata_file_hash_only",
+        "formId": form_id,
+        "bundleMetadata": {
+            "path": bundle_metadata_path,
+            "attestedSha256": attested_metadata_hash,
+            "currentSha256": current_metadata_hash,
+            "historicalBytesProvidedByLedger": False,
+            "historicalReplayClaimed": False,
+        },
+        "identityEvidence": {
+            "attestedSha256": _canonical_json_sha256(
+                attested_identity_evidence
+            ),
+            "currentReplaySha256": _canonical_json_sha256(
+                replayed_identity_evidence
+            ),
+            "invariantWithoutBundleMetadataHashSha256": (
+                invariant_sha256
+            ),
+            "exactMatchExceptBundleMetadataSha256": True,
+        },
+        "claims": {
+            "currentIdentityBundleReplayVerified": True,
+            "portraitPixelsChangedByLedger": False,
+            "ownerApprovalGrantedByLedger": False,
+            "runtimeReleaseGrantedByLedger": False,
+        },
+    }
+
+
+def _validate_identity_evidence_transition(
+    *,
+    repo_root: Path,
+    pet_root: Path,
+    form_id: str,
+    attested_identity_evidence: Any,
+    replayed_identity_evidence: Any,
+) -> dict[str, Any] | None:
+    if attested_identity_evidence == replayed_identity_evidence:
+        return None
+    expected = _expected_identity_evidence_transition_ledger(
+        form_id=form_id,
+        attested_identity_evidence=attested_identity_evidence,
+        replayed_identity_evidence=replayed_identity_evidence,
+    )
+    ledger_path = _resolve_inside(
+        pet_root,
+        pet_root / IDENTITY_EVIDENCE_TRANSITION_LEDGER_PATH,
+        "portrait identityEvidence transition ledger",
+    )
+    if not ledger_path.is_file():
+        raise PortraitBuildError(
+            "identityEvidence metadata transition 缺少固定路径账本："
+            f"{ledger_path}"
+        )
+    actual = _read_json_object(
+        ledger_path,
+        "portrait identityEvidence transition ledger",
+    )
+    if actual != expected:
+        raise PortraitBuildError(
+            "portrait identityEvidence transition ledger "
+            "与精确旧/新身份合同不一致"
+        )
+    return {
+        "path": repo_relative(ledger_path, repo_root),
+        "sha256": sha256_file(ledger_path),
+        "contract": expected["contract"],
+    }
+
+
 def _prompt_declares_dedicated_no_crop(prompt_text: str) -> bool:
     lowered = prompt_text.casefold()
     identifies_headshot = any(
@@ -5158,6 +5320,19 @@ def _validate_generation_attestation(
         catalog_path=catalog_path,
         isolated=isolated,
     )
+    attested_identity_evidence = attestation.get("identityEvidence")
+    identity_transition = _validate_identity_evidence_transition(
+        repo_root=repo_root,
+        pet_root=pet_root,
+        form_id=form_id,
+        attested_identity_evidence=attested_identity_evidence,
+        replayed_identity_evidence=identity_evidence,
+    )
+    expected_identity_evidence = (
+        attested_identity_evidence
+        if identity_transition is not None
+        else identity_evidence
+    )
     expected = {
         "schemaVersion": GENERATION_ATTESTATION_SCHEMA_VERSION,
         "generator": "built_in_imagegen",
@@ -5180,7 +5355,7 @@ def _validate_generation_attestation(
         "promptSha256": sha256_bytes(prompt_bytes),
         "promptContract": "dedicated_headshot_not_full_body_crop_v1",
         "generationResultEvidence": generation_result_evidence,
-        "identityEvidence": identity_evidence,
+        "identityEvidence": expected_identity_evidence,
     }
     if set(attestation) != set(expected):
         missing = sorted(set(expected) - set(attestation))

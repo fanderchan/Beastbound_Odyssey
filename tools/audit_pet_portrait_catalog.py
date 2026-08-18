@@ -3727,6 +3727,7 @@ def _audit_target(
     target: PortraitTarget,
 ) -> tuple[dict[str, Any], list[str], PortraitFingerprint]:
     errors: list[str] = []
+    identity_transition_record: dict[str, Any] | None = None
     prefix = target.form_id
     empty_fingerprint = PortraitFingerprint(
         form_id=prefix,
@@ -4151,15 +4152,33 @@ def _audit_target(
                     f"{prefix} identityEvidence "
                     f"无法从权威 identity bundle 重放：{exc}"
                 )
-        if (
-            replayed_identity_evidence is not None
-            and attestation_value.get("identityEvidence")
-            != replayed_identity_evidence
-        ):
-            errors.append(
-                f"{prefix} identityEvidence "
-                "与权威 identity bundle 重放不一致"
-            )
+        expected_identity_evidence = replayed_identity_evidence
+        if replayed_identity_evidence is not None:
+            try:
+                identity_transition_record = (
+                    builder._validate_identity_evidence_transition(
+                        repo_root=repo_root,
+                        pet_root=target.pet_root,
+                        form_id=prefix,
+                        attested_identity_evidence=(
+                            attestation_value.get("identityEvidence")
+                        ),
+                        replayed_identity_evidence=(
+                            replayed_identity_evidence
+                        ),
+                    )
+                )
+            except builder.PortraitBuildError as exc:
+                errors.append(
+                    f"{prefix} identityEvidence "
+                    "与权威 identity bundle 重放不一致："
+                    f"{exc}"
+                )
+            else:
+                if identity_transition_record is not None:
+                    expected_identity_evidence = (
+                        attestation_value.get("identityEvidence")
+                    )
 
         expected_attestation = {
             "schemaVersion": builder.GENERATION_ATTESTATION_SCHEMA_VERSION,
@@ -4197,7 +4216,7 @@ def _audit_target(
             ),
             "promptContract": "dedicated_headshot_not_full_body_crop_v1",
             "generationResultEvidence": validated_generation_result,
-            "identityEvidence": replayed_identity_evidence,
+            "identityEvidence": expected_identity_evidence,
         }
         expected_attestation_keys = set(expected_attestation)
         legacy_attestation_keys = expected_attestation_keys - {
@@ -4573,6 +4592,10 @@ def _audit_target(
         "comparedIdentityWorldBattleImages": compared,
         "ownerReviewStatus": owner_review_status,
     }
+    if identity_transition_record is not None:
+        result["identityEvidenceTransition"] = (
+            identity_transition_record
+        )
     fingerprint = PortraitFingerprint(
         form_id=prefix,
         generation_id=source.get("generationId")

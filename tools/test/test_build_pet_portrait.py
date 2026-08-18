@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import io
 import base64
+import copy
 import hashlib
 import json
 import os
@@ -29,8 +30,10 @@ import build_pet_portrait as portrait  # noqa: E402
 
 class PetPortraitBuilderTests(unittest.TestCase):
     def setUp(self) -> None:
-        self._codex_state = tempfile.TemporaryDirectory(dir=Path.home())
-        self.codex_home = Path(self._codex_state.name) / ".codex"
+        self._codex_state = tempfile.TemporaryDirectory()
+        self.codex_home = (
+            Path(self._codex_state.name).resolve() / ".codex"
+        )
         self.codex_home.mkdir(parents=True)
         patcher = mock.patch.object(
             portrait,
@@ -2891,7 +2894,9 @@ class PetPortraitBuilderTests(unittest.TestCase):
                 portrait.build_portrait(options)
 
     def test_fake_generated_images_root_and_superseded_result_fail(self) -> None:
-        with tempfile.TemporaryDirectory(dir=Path.home()) as temporary:
+        with tempfile.TemporaryDirectory(
+            dir=Path(tempfile.gettempdir()).resolve()
+        ) as temporary:
             options = self.fixture(Path(temporary))
             attestation = options.generation_attestation
             attestation.unlink()
@@ -3640,6 +3645,160 @@ class PetPortraitBuilderTests(unittest.TestCase):
                 identity["compatibilityLedger"]["trustLevel"],
                 "catalog_bound_legacy_freeze",
             )
+
+    def test_identity_evidence_metadata_transition_is_exact_and_honest(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            options = self.fixture(Path(temporary))
+            attestation = json.loads(
+                options.generation_attestation.read_text(
+                    encoding="utf-8"
+                )
+            )
+            action_path = (
+                options.pet_root / "action-bundle-meta.json"
+            )
+            action = json.loads(action_path.read_text(encoding="utf-8"))
+            action["postPortraitMotionAudit"] = {
+                "scope": "world_motion_only",
+                "identityChanged": False,
+            }
+            action_path.write_text(
+                json.dumps(action, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            replayed = portrait._validate_identity_evidence(
+                repo_root=options.repo_root.resolve(),
+                pet_root=options.pet_root.resolve(),
+                form_id=options.form_id,
+                identity_reference=options.identity_reference.resolve(),
+                catalog_path=options.catalog_path.resolve(),
+                isolated=False,
+            )
+            transition = (
+                attestation["identityEvidence"][
+                    "bundleMetadataSha256"
+                ],
+                replayed["bundleMetadataSha256"],
+            )
+            with mock.patch.dict(
+                portrait.PORTRAIT_IDENTITY_EVIDENCE_BUNDLE_METADATA_TRANSITIONS,
+                {options.form_id: transition},
+            ):
+                ledger = (
+                    portrait._expected_identity_evidence_transition_ledger(
+                        form_id=options.form_id,
+                        attested_identity_evidence=(
+                            attestation["identityEvidence"]
+                        ),
+                        replayed_identity_evidence=replayed,
+                    )
+                )
+                ledger_path = (
+                    options.pet_root
+                    / portrait.IDENTITY_EVIDENCE_TRANSITION_LEDGER_PATH
+                )
+                ledger_path.parent.mkdir(parents=True, exist_ok=True)
+                ledger_path.write_text(
+                    json.dumps(ledger, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                metadata = portrait.build_portrait(options)
+                self.assertEqual(metadata["formId"], options.form_id)
+                self.assertFalse(
+                    ledger["claims"]["portraitPixelsChangedByLedger"]
+                )
+                self.assertFalse(
+                    ledger["claims"]["ownerApprovalGrantedByLedger"]
+                )
+                self.assertFalse(
+                    ledger["claims"]["runtimeReleaseGrantedByLedger"]
+                )
+
+                tampered = copy.deepcopy(ledger)
+                tampered["claims"]["runtimeReleaseGrantedByLedger"] = True
+                ledger_path.write_text(
+                    json.dumps(tampered, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(
+                    portrait.PortraitBuildError,
+                    "transition ledger.*精确旧/新身份合同不一致",
+                ):
+                    portrait.build_portrait(options)
+
+    def test_identity_evidence_transition_rejects_non_metadata_drift(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            options = self.fixture(Path(temporary))
+            attestation = json.loads(
+                options.generation_attestation.read_text(
+                    encoding="utf-8"
+                )
+            )
+            action_path = (
+                options.pet_root / "action-bundle-meta.json"
+            )
+            action = json.loads(action_path.read_text(encoding="utf-8"))
+            action["postPortraitMotionAudit"] = {
+                "scope": "battle_motion_only",
+                "identityChanged": False,
+            }
+            action_path.write_text(
+                json.dumps(action, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            replayed = portrait._validate_identity_evidence(
+                repo_root=options.repo_root.resolve(),
+                pet_root=options.pet_root.resolve(),
+                form_id=options.form_id,
+                identity_reference=options.identity_reference.resolve(),
+                catalog_path=options.catalog_path.resolve(),
+                isolated=False,
+            )
+            transition = (
+                attestation["identityEvidence"][
+                    "bundleMetadataSha256"
+                ],
+                replayed["bundleMetadataSha256"],
+            )
+            with mock.patch.dict(
+                portrait.PORTRAIT_IDENTITY_EVIDENCE_BUNDLE_METADATA_TRANSITIONS,
+                {options.form_id: transition},
+            ):
+                ledger = (
+                    portrait._expected_identity_evidence_transition_ledger(
+                        form_id=options.form_id,
+                        attested_identity_evidence=(
+                            attestation["identityEvidence"]
+                        ),
+                        replayed_identity_evidence=replayed,
+                    )
+                )
+                ledger_path = (
+                    options.pet_root
+                    / portrait.IDENTITY_EVIDENCE_TRANSITION_LEDGER_PATH
+                )
+                ledger_path.parent.mkdir(parents=True, exist_ok=True)
+                ledger_path.write_text(
+                    json.dumps(ledger, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                identity_lock = (
+                    options.pet_root / "identity/identity-lock.md"
+                )
+                identity_lock.write_text(
+                    identity_lock.read_text(encoding="utf-8")
+                    + "\nUnexpected identity contract drift.\n",
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(
+                    portrait.PortraitBuildError,
+                    "除 bundleMetadataSha256 外仍有漂移",
+                ):
+                    portrait.build_portrait(options)
 
     def test_fixed_composition_alpha_threshold_and_prompt_contradiction(self) -> None:
         image = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
