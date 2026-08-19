@@ -16,6 +16,7 @@ import os
 import posixpath
 import re
 import stat
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,7 +27,7 @@ OWNER_CANARY_NAME = ".beastbound_qa_lane_owner.json"
 LOCK_CANARY_PREFIX = ".beastbound_qa_lane_lock_"
 EDITOR_CUSTOM_FEATURES_ENV = "GODOT_EDITOR_CUSTOM_FEATURES"
 REAL_PROJECT_DIR_NAME = "Beastbound Odyssey - 万兽纪元"
-RECOVERY_NO_PROCESS_CONFIRMATION = "I_CONFIRMED_NO_GODOT_OR_QA_PROCESSES"
+RECOVERY_NO_PROCESS_CONFIRMATION = "I_CONFIRMED_NO_MATCHING_QA_AUTOMATION_RUNNER_PROCESS"
 FEATURE_TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
 POSIX_DIR_FD_FUNCTIONS = (
     ("open", os.open),
@@ -53,7 +54,7 @@ LANES = {
     },
 }
 RESERVED_FEATURES = frozenset(record["feature"] for record in LANES.values())
-RUNNER_SOURCE_SHA256 = "88af3f9c2e66820bb4a51ab8311a113c2a7fd410055dad7e9fd27881bb5181bc"
+RUNNER_SOURCE_SHA256 = "545801f8ae61787be95d76b95fd6ae0c96954ca39c1bf6245e5b83b641653372"
 HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_absent_inventory": "98f816ee9fc7b7c8eb2f1b8506a805995ad5972c8e06888a05e6f2e845e9940c",
     "_assert_no_symlink_components": "eab6e07e0cee299d46589930d37318184b88b83bd7080d02d24429d89c29b993",
@@ -61,6 +62,7 @@ HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_current_environment_anchor": "217f314af66649439acbfa29fee134c4b49cfd25af16359411b232eb008ff9ce",
     "_directory_has_identity": "a31584102b25cef6575688c910c5b67d484466a58ca1e233a95dc2fa6aa1a549",
     "_directory_open_flags": "2a1e5670e00901c88b6f694f476ce2d869c17a38ad43d1148d9f6df6988653c4",
+    "_discover_lock_record": "e3a5e41a582b1a9b03988c09f84efc87e978b6dbdcd0e068c65c34d76ac57cf2",
     "_file_open_flags": "280c476e9bd59bcbda64020ad6f12abe1b8dceeaa9ee2a64d860fc7f76f195a5",
     "_file_sha256_no_follow": "78e7bb6fdc1febf9f534120ece23c2359872452f7ca041c71c3922e23f8de417",
     "_inspection_sha256": "fd277277036380e925602de35db4fb9b3c35e626060a99aebb97949f674466d9",
@@ -70,8 +72,9 @@ HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_is_link_or_reparse": "dd2dea917aea468968402549b20199df56bd65491638bca41b7ca2ead6a97850",
     "_lane_record": "aca5ef5924c17be49a4e71888912626c261e0f9b8dd6ad70be979ffe2aa5623e",
     "_lock_name": "e47d67aca0a5eb5e41e99bca6d0088b67bd7a020f2c6aaea353d55d4eb6e262f",
-    "_lock_payload": "ea6182f1ddb7c2219a4bc3ef9e84a82239328bd9e3007efbe3edf4529a9182fb",
-    "_lock_real_inventory_sha256": "371b17e5b3b7069912943965d058cd31289d7edf03a919a1298049af29eb438a",
+    "_lock_payload": "ba75bc4ffc099a2cd467d5389697d4013fb1a565d8505af926aa086ba26542bd",
+    "_lock_real_inventory_sha256": "24fff254be4538d6310814d6ecabc87b8dde86d912c9908346cca50edc3f1361",
+    "_lock_record": "323ba2b07d8bd5b6d9664faf9a62334f59e5ab7364fb4776376d52b6220f717b",
     "_lock_temp_name": "dc56fbf7674d243c18488a4201230068b9a8aa6fb41b2720812560ce10a55603",
     "_open_current_data_base": "ed9a62e3ac9a0ba10a8c2737c14858923cbedab313f1bc1326f527b827de4c6f",
     "_open_descendant_directory": "ee6cb497f8cc5b55db32c34393afda189b964968f44cf8edfbbaca07e345a4d4",
@@ -79,7 +82,7 @@ HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_owner_payload": "875f2794a4dcacd0a061dcc397082c43387815917086a55f0a89f073cc3a944e",
     "_owner_record": "b0f124853af3f1bc205dc6461d4988fcad8bcc08ae4caaae5620714f9e880884",
     "_owner_temp_name": "b4b528379437ac630c0679d28dbda342ea6c0079f64f64423881fd4e79d064d2",
-    "_parser": "ac418c8a59b4c6c88644ccccc7856819a680d810ecf62c8e6a87300757b098a2",
+    "_parser": "a35e480f80f8aa32ba5f88928e66635698909f1daa8babd96ae5b8f51c3fdfed",
     "_path_is_link_or_reparse": "47004ec24a0be5a18dc2210c2278956339e1287bd3e93dc049263ac156b43d29",
     "_project_contract_lines": "e28b8415d96f92622190f191a1df88e2935ffa103d354cccbffe4fbdaf1ebaa1",
     "_publish_regular_file_exclusive": "c5c953814f1ada57804f6edc2269b718d829e6cff6b3cfa599b838011aa60ec8",
@@ -96,7 +99,8 @@ HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_remove_directory_contents_posix": "4b9d3b8c243668c2631cb9ba20b81e42e794b6759663bcf37d610d91c5f9f9f3",
     "_remove_empty_directory_posix": "f0270eb6b2c2d0c944fd7bc735da5984721d81c39417bacd6fd4126fbc7dacad",
     "_remove_incomplete_lane_for_recovery": "20b5700ebd402877dd006463040b41dbd2548821a459b7d87815a9c22e8a956c",
-    "_remove_lock_exact": "e7fee7194a6442c778962d6624039613c0d96d60637eb81a39b2d88f12a12462",
+    "_recover_lane_from_inspection": "13451905a1228e2e826a1432c1d63c94623eb92cb216dc498499ed3c7bd7fe22",
+    "_remove_lock_exact": "b62466b7b250c7de4b8414e47cce913b9c272dd86a92954baf81ac2bab89aa98",
     "_remove_owner_canary_exact": "27910efa5b1bfb7a99017b0a024cb7847454f18e0d89f956d38158dbe261839b",
     "_remove_pending_lock": "9a7b5eb38cbfe041e996339715ea1a4a3ae6d39e79132c4e2f0982ddd661de65",
     "_remove_pending_owner": "29eb734d1e68d6211cc58f568234dce51779f0d638fc009ad44707ec7c19ea0b",
@@ -105,27 +109,33 @@ HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_remove_tree_path": "15a6c2dddca9db228220a71fc7f62e137fdb1eb108f6a7724a5424ed7ddf0ecc",
     "_remove_tree_posix": "c7b7e46ad94b20e5d89bbe412e88f5da8254206959acdc1fb856404b0bb379f0",
     "_require_posix_lane_lifecycle": "cc0ab50ed260224334dfb83ad683f84f91da06d5c3a290b5c2a2e44050090c76",
+    "_runner_process_identity": "67a5afb7e0b3f76afba50ad6e89c329d8fbb087c50b705ed30096c760a3d049b",
+    "_runner_process_record": "b863a3512e5aff41b7a6b401a2328f1438f24eafc3e1c20554e1b0fa801f7761",
+    "_runner_process_state": "ad16a66c22bda5076e2e3627575edb21b4ceb87714c0c5c2098565eb09d69c5a",
     "_same_identity": "eb2baf327e1f2c18d9a49057b05a1bca53ff7b484dc5716751d4fe11105bee96",
     "_sha256_from_descriptor": "2ad426766dd214d2c1e55cac6d1cfe31872c3df7673ef7296fd7c6e21c368b40",
     "_stable_stat_tuple": "3945f10854ad36d3ff0918caa6fcc3a3ad01553934838afe54ccd451b1310110",
     "_top_level_assignment_sources": "f5c7b66dfefb5f6553a33e599e54e631ef99306ee31fc90f7c2340d080d17ad2",
-    "_validate_helper_constant_contract": "e45a17ab843bcc82812426b2d76dbb80f99ddb8c689fb2fb92c9636994b0cb33",
-    "_validate_helper_function_contract": "103ba59e94d733d49e86c5774d76a39589fc6c5e86b0727763833595906c7f08",
+    "_validate_helper_constant_contract": "473adf439bd7371c48b02a47af9fdf6cacf1e2b0df229b953dbcb55dbdc2eac1",
+    "_validate_helper_function_contract": "8536c2d474585b026827b36807ba6e34c8e5460a36c4b957707314c9dbcdb129",
     "_validate_named_function_contract": "babc90c421bc13a6716f008593999d7c444a3abb926c439d415e78a34647fcf5",
     "_validated_owner_token": "a8af7ed3f13ade53c4a5113b01cfd336040787c2f2fcfb703dda502a5eab5690",
+    "_validated_runner_record": "01f984d4f7273819b0f738c2081b24d75c70cdefbaacce23db92ae74a3246d3b",
     "_write_all": "c981c7438b750d851532cc93114757449cc6fd2877e40a783b8878dd8786baa6",
-    "_write_lock_exclusive": "d8363a4e5a385a670b9771babca9ce57d0e0eafe37d6e6ee29c8c7cb6806f6ca",
+    "_write_lock_exclusive": "ad51653752b061ccaf518e2594035e9d92a1b60f9a9dd0b15ab1ff7e282458c2",
     "_write_owner_exclusive": "0db65d41eeb00551abf16181ee85c7ec63050e54988e2221010b260b9136721a",
     "cleanup_lane": "2f25a50ae08030838144a5df7a09aec37535e6b07e60ef4c5e01b41e3373cd3d",
     "inspect_lane": "3adbc6452996ca0fb8441fe77924777306e17e0fb90c401cc7f8c108f1a5b16b",
+    "inspect_stale_lane": "2bb3ce02dd815302f82f1e3d26abdefe76beef93cbf35f61edb86ef28500b21f",
     "inventory_tree": "6c38a340de5849a7fc30dcb0c3781052d9015529500f3681d45b5f40796d36ef",
-    "main": "22ca52aa4d6f292b67bc5d150c52b8f625f7fdb5b26125a5eadd8ed01184d52c",
+    "main": "7643b29c573c9648a8f99bff123846c0cdb24f026e6a24ac3f555b8c0fbc2ea3",
     "merge_editor_custom_features": "34704d0f3188304cdfa432ae2f71c397e685901d8a11b2ec15ddb54b03293275",
     "platform_lane_paths": "dcb80ffe85bef75fca88d21ca80c196c1bce2e93b78ceef0683676464ee766ce",
-    "prepare_lane": "72ab5ded5432c49d2e850d274009fdb4997698e7a91352b6b1377ab5e79baa01",
-    "recover_lane": "56fd5945432331f12fadc25eb9607391bb282ce9df323cec66d1d004a82de364",
+    "prepare_lane": "686d5b90851b7a25d83b7d7f35c1e0d3358ba6ee6e41d95a71f520f29ba24104",
+    "recover_lane": "af5ef6a199f4b2f3f3644cf4329deb4bf5d90cfc571f663881454cd6e1d55f47",
+    "recover_stale_lane": "c24fcccf3bf31910ec2c84e3d56222104c2d780dea9b50dd024c68d1af8946f9",
     "validate_repository_contract": "4ba4866c16485a47b930ab8ebb485c6106482da13f7705d10ed56f9737b4c746",
-    "validate_repository_sources": "bcb50ec0dcbd298e4ec275d701558cc6e91ce7770c403909b545715e5b8fcee3",
+    "validate_repository_sources": "966b7fb8e4c0f9e2992c24fe50aad2e55291444c0bee1afdb5d870766b36bf4e",
     "verify_lane": "daed73b13c70c4557a058a55440e10f2d7ea0c770efa8b8dec88cfdfb2e94313",
 }
 MAIN_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
@@ -152,7 +162,7 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "autoCheckCompletionContract": "3ea236319b6d85c1332737c1c37722afb93a9bf9e7e09d2d7226a700940ac17d",
     "buildCheck": "532e6de122e82e6404e9f8251597034aa818e7f5fc10418f9850b825de193a1d",
     "buildGodotLaneEnvironment": "78b2a1f70a897f79ad94c4753ff0ab68092b13b95465e5163a9fd10d98169a60",
-    "buildQaLaneSummary": "817e63b40bc17d4548a009691f3aec95bea28af008dbddbdfe71c7dc059ecbdb",
+    "buildQaLaneSummary": "ff63ef28b280b36f6458e97aec6aad8dacdc153596ad15a71559ce0dee869a3c",
     "buildRunSummary": "096cacb8771f6a5d635e03bba44460239e6c8f419c262b4323290b5d2edae191",
     "cleanupQaLane": "8ca126d697ca11068f7a616133b8b682d7487d8620ccc6235f413094faa0cdd5",
     "createLanePreservationError": "e828861b7c3adaa6b28de1c5ee6f05bef127b4222b8b02ab52d1085df0f69d12",
@@ -171,7 +181,7 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "godotHelpHasOption": "bbb81b32286181c0962f9f29f3eea2199bd336e79f7ccb9f6557b8afccc64f79",
     "inferQuitAfter": "d9aaa6ce8f5e685714ad27246a39f5ae0a1b31f781bad62ca589199df3c62c71",
     "isEqualOrDescendantPath": "192525d84f93ce40f74eac7e5f4b8307006ec3cef16fd861601fa680334b693c",
-    "main": "653ebd67bc85364ee0a4a7d879ad42f71e6e30a8590bf1704d086a7330d41cc4",
+    "main": "6d426a08bc2807772cb9cb5d9c05d52d36695078a84436421552f512011c3b82",
     "makeResult": "23e7154257138f853c39ad56d3823ca44606091111fbcc17adef2fbe4eba66f4",
     "markLaneVerificationFailure": "1e8eb47178c1e2afba24cb46f9a091b0dff07a7543b58f91c4f3985dce4d4d5f",
     "markProcessGroupResidual": "bc2022a77fca3fcac9f8ee6d022efa9f73a31fe5bed858cb742ad218cef6a1f9",
@@ -186,11 +196,12 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "postAuthJson": "53fb4e56010ee2a0b87c3238f6739fc5d86ce0b8900f7d41b7c63237753b70ff",
     "preflightGodotEditorBinary": "d0e4d1c65c9fe00157fa1d9a6c0d6b9b62930c7080cae6cfa5ffc1e262591a50",
     "prepareCheck": "b632d0dd5a6b6c7611f17c43af5a1406ca1f8549b6ed6ea630290df476f3985f",
-    "prepareQaLane": "6a6e2f2ac62e979677e8be0ce613624c508d9a47db5ebcaed94452654c0b3307",
+    "prepareQaLane": "757a634869cc9f28e00f8ff89706e270c3cf0331582d631f590ba7d3346fffaf",
     "printSummary": "b5f37321b527170f2776a6aff8aee3ab85d851c9c532c446a321e32fe8901e2e",
     "processGroupClosureEvidence": "7860602778ab11380a3c05f2495b7b158c558426994c04f168a797f85b0312de",
     "processGroupExists": "ff091e9919f5e0eb377d7c499f6130192dd11f63d0b9b3148d5d71061013dd81",
     "requestGracefulShutdown": "9263a976917340655dbd39a2dbc28c148266eda3c4fa385cfaa61e7ad513da91",
+    "reclaimStaleQaLane": "26756cbd01a15569701eb0447fc5a0df5f6ead62269963d6c3d0f747368e4246",
     "runCheck": "638b36c8c339e97de2cb3b76ddb39b42555ef119393875ce02b981ce51902ff8",
     "runGodotPreflightProbe": "0fa2e620c20c397f918f3fe44344ea167686d03d02d2893fc6507368be0f1e96",
     "runQaLaneHelper": "af773cd1567d9bf3b2e5645d79d649b5f3030f3069b92ceab1b62a04bc072fae",
@@ -201,10 +212,12 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "terminateWindowsProcessIds": "9485dd3d699bbaf3a915fd44027fab4d616889afa4062b94128969a172f015bc",
     "usage": "8e4183877b1ab3221a6ab734fd883b2b0402d4070a25e3df96db39a30d162668",
     "validateCleanedLanePayload": "96beef139205206e7f14ecfcfd385cfb9028498a502f2d62fe7f50123e285575",
-    "validatePreparedLanePayload": "6b1c8bb83374054623376c65be5e105f47bbaf618206c0c46e26728bf48a0fae",
+    "validatePreparedLanePayload": "0ecf77e4913c5757b75f9ca140b2d7859c44098c9c3a9aa598a68bc47f4db12b",
     "validateQaOutputDirectory": "304cc9eed032830fe046dcb9a311cef80f990847f20521140ddccb2f64d25c23",
     "validateQaLaneSourceContract": "163ae880521cb98388310ab80080edfe5b3f7fdc1ab721ee12a6d7315f8b08cb",
     "validateRecoveredLanePayload": "20131525612302611ed85ed412d09665825eb8e401640d24243123d4872ce6c6",
+    "validateStaleLaneInspectionPayload": "ef74b727d5ed5f5ffba3f098b426b8d903c01c9f0f4667e23ae49d5121e975f9",
+    "validateStaleLaneRecoveryPayload": "40f24e0813df982237e56c6d8213c4c5fad5675b855605848772981773bf1b57",
     "validateVerifiedLanePayload": "3735fdb3d062a324859c37d6b20ea44cd2def05c48f8785c223ab5c62851d9ba",
     "verifyQaLane": "3a4e57f849f2603097c0e1a853df3a9a3aa535e0cb676f79a539c1180e23083c",
     "verifyQaLaneOrPreserve": "21ed3851423033b5fd61c037af5b331ce6a925a73b992a1fbd54712428300f2b",
@@ -856,17 +869,97 @@ def _owner_temp_name(owner: str) -> str:
     return f"{OWNER_CANARY_NAME}.{_validated_owner_token(owner)}.pending"
 
 
-def _lock_payload(lane: str, owner: str, real_inventory_sha256: str) -> bytes:
+def _validated_runner_record(runner: Mapping[str, object]) -> dict[str, object]:
+    runner_pid = runner.get("pid")
+    runner_identity = runner.get("startIdentitySha256")
+    if (
+        not isinstance(runner_pid, int)
+        or isinstance(runner_pid, bool)
+        or runner_pid <= 0
+        or runner_pid > 2147483647
+        or not isinstance(runner_identity, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", runner_identity)
+        or set(runner) != {"pid", "startIdentitySha256"}
+    ):
+        raise LaneSafetyError("QA lane runner identity record is invalid")
+    return {"pid": runner_pid, "startIdentitySha256": runner_identity}
+
+
+def _lock_payload(
+    lane: str,
+    owner: str,
+    real_inventory_sha256: str,
+    runner: Mapping[str, object] | None = None,
+) -> bytes:
+    _lane_record(lane)
+    owner_token = _validated_owner_token(owner)
+    if not re.fullmatch(r"[0-9a-f]{64}", str(real_inventory_sha256)):
+        raise LaneSafetyError("QA lane real inventory identity must be 64 lowercase hex characters")
+    record: dict[str, object] = {
+        "lane": lane,
+        "owner": owner_token,
+        "realInventorySha256": str(real_inventory_sha256),
+    }
+    if runner is not None:
+        record["runner"] = _validated_runner_record(runner)
+        record["schemaVersion"] = 2
     return json.dumps(
-        {
-            "lane": lane,
-            "owner": owner,
-            "realInventorySha256": real_inventory_sha256,
-        },
+        record,
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
+
+
+def _lock_record(
+    payload: bytes,
+    lane: str,
+    owner: str | None = None,
+) -> dict[str, object]:
+    try:
+        record = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise LaneSafetyError("QA lane external owner lock is invalid JSON") from error
+    if not isinstance(record, dict):
+        raise LaneSafetyError("QA lane external owner lock must be an object")
+    record_owner = record.get("owner")
+    if not isinstance(record_owner, str):
+        raise LaneSafetyError("QA lane external owner lock has no canonical owner")
+    owner_token = _validated_owner_token(record_owner)
+    if owner is not None and owner_token != _validated_owner_token(owner):
+        raise LaneSafetyError("QA lane external owner lock does not match the requested owner")
+    real_inventory_sha256 = record.get("realInventorySha256")
+    if (
+        record.get("lane") != lane
+        or not isinstance(real_inventory_sha256, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", real_inventory_sha256)
+    ):
+        raise LaneSafetyError("QA lane external owner lock has an invalid lane or real-root identity")
+    if set(record) == {"lane", "owner", "realInventorySha256"}:
+        runner: Mapping[str, object] | None = None
+        schema_version = 1
+    elif set(record) == {"lane", "owner", "realInventorySha256", "runner", "schemaVersion"}:
+        if record.get("schemaVersion") != 2 or not isinstance(record.get("runner"), dict):
+            raise LaneSafetyError("QA lane external owner lock schema is invalid")
+        runner = record["runner"]
+        schema_version = 2
+    else:
+        raise LaneSafetyError("QA lane external owner lock fields are not canonical")
+    expected = _lock_payload(
+        lane,
+        owner_token,
+        real_inventory_sha256,
+        runner,
+    )
+    if payload != expected:
+        raise LaneSafetyError("QA lane external owner lock is not the exact canonical owner record")
+    return {
+        "lane": lane,
+        "owner": owner_token,
+        "realInventorySha256": real_inventory_sha256,
+        "runner": dict(runner) if runner is not None else None,
+        "schemaVersion": schema_version,
+    }
 
 
 def _owner_payload(lane: str, owner: str) -> bytes:
@@ -876,6 +969,63 @@ def _owner_payload(lane: str, owner: str) -> bytes:
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
+
+
+def _runner_process_identity(runner_pid: int) -> str:
+    if (
+        not isinstance(runner_pid, int)
+        or isinstance(runner_pid, bool)
+        or runner_pid <= 0
+        or runner_pid > 2147483647
+    ):
+        raise LaneSafetyError("QA lane runner PID is invalid")
+    try:
+        completed = subprocess.run(
+            ["/bin/ps", "-p", str(runner_pid), "-o", "pid=", "-o", "lstart="],
+            check=False,
+            capture_output=True,
+            env={"LC_ALL": "C", "PATH": "/usr/bin:/bin"},
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise LaneSafetyError(f"cannot inspect QA lane runner process identity: {error}") from error
+    stdout = bytes(completed.stdout).strip()
+    stderr = bytes(completed.stderr).strip()
+    if completed.returncode == 1 and not stdout and not stderr:
+        return ""
+    if completed.returncode != 0 or stderr:
+        raise LaneSafetyError("QA lane runner process identity inspection failed closed")
+    lines = [line.strip() for line in stdout.splitlines() if line.strip()]
+    if len(lines) != 1:
+        raise LaneSafetyError("QA lane runner process identity is ambiguous")
+    fields = lines[0].split(maxsplit=1)
+    if len(fields) != 2 or fields[0] != str(runner_pid).encode("ascii") or not fields[1]:
+        raise LaneSafetyError("QA lane runner process identity output is invalid")
+    return hashlib.sha256(
+        b"beastbound-qa-runner-process-v1\0" + lines[0]
+    ).hexdigest()
+
+
+def _runner_process_record(runner_pid: int, *, require_parent: bool) -> dict[str, object]:
+    if require_parent and runner_pid != os.getppid():
+        raise LaneSafetyError("QA lane runner PID must be the direct parent of prepare")
+    identity = _runner_process_identity(runner_pid)
+    if not identity:
+        raise LaneSafetyError("QA lane runner process disappeared before prepare")
+    return {"pid": runner_pid, "startIdentitySha256": identity}
+
+
+def _runner_process_state(runner: Mapping[str, object] | None) -> str:
+    if runner is None:
+        return "legacy_unverifiable"
+    validated = _validated_runner_record(runner)
+    runner_pid = int(validated["pid"])
+    current_identity = _runner_process_identity(runner_pid)
+    if not current_identity:
+        return "stale"
+    if current_identity == validated["startIdentitySha256"]:
+        return "active"
+    return "stale"
 
 
 def _read_descriptor_payload(descriptor: int, label: str) -> bytes:
@@ -1193,6 +1343,7 @@ def _write_lock_exclusive(
     real_inventory_sha256: str,
     *,
     data_base_fd: int | None,
+    runner: Mapping[str, object] | None = None,
 ) -> None:
     if data_base_fd is None:
         raise LaneSafetyError("lock creation requires a POSIX data-base authority")
@@ -1200,7 +1351,7 @@ def _write_lock_exclusive(
         data_base_fd,
         _lock_temp_name(lane, owner),
         _lock_name(lane),
-        _lock_payload(lane, owner, real_inventory_sha256),
+        _lock_payload(lane, owner, real_inventory_sha256, runner),
         "QA lane external owner lock",
     )
 
@@ -1243,17 +1394,8 @@ def _read_recoverable_lock(
 
 
 def _lock_real_inventory_sha256(payload: bytes, lane: str, owner: str) -> str:
-    try:
-        record = json.loads(payload.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise LaneSafetyError("QA lane external owner lock is invalid JSON") from error
-    if not isinstance(record, dict):
-        raise LaneSafetyError("QA lane external owner lock must be an object")
-    real_inventory_sha256 = str(record.get("realInventorySha256", ""))
-    expected = _lock_payload(lane, owner, real_inventory_sha256)
-    if payload != expected or not re.fullmatch(r"[0-9a-f]{64}", real_inventory_sha256):
-        raise LaneSafetyError("QA lane external owner lock is not the exact canonical owner record")
-    return real_inventory_sha256
+    record = _lock_record(payload, lane, owner)
+    return str(record["realInventorySha256"])
 
 
 def _remove_lock_exact(
@@ -1264,8 +1406,15 @@ def _remove_lock_exact(
     data_base_fd: int | None,
 ) -> None:
     name: str | Path = _lock_name(lane) if data_base_fd is not None else data_base / _lock_name(lane)
-    expected_real_sha256 = _read_lock(data_base, lane, owner, data_base_fd=data_base_fd)
-    expected_payload = _lock_payload(lane, owner, expected_real_sha256)
+    if data_base_fd is None:
+        raise LaneSafetyError("lock removal requires a POSIX data-base authority")
+    expected_payload = _read_published_authority_payload(
+        data_base_fd,
+        _lock_name(lane),
+        _lock_temp_name(lane, owner),
+        "QA lane external owner lock",
+    )
+    _lock_record(expected_payload, lane, owner)
     before_stat = os.stat(name, dir_fd=data_base_fd, follow_symlinks=False)
     if (
         _is_link_or_reparse(before_stat)
@@ -1430,11 +1579,17 @@ def _remove_owner_canary_exact(lane_root_fd: int, lane: str, owner: str) -> None
         os.close(descriptor)
 
 
-def prepare_lane(lane: str, existing_features: str = "", owner: str = "") -> dict[str, object]:
+def prepare_lane(
+    lane: str,
+    existing_features: str = "",
+    owner: str = "",
+    runner_pid: int = 0,
+) -> dict[str, object]:
     _require_posix_lane_lifecycle()
     paths, data_base, lane_root, real_root = _canonical_current_paths(lane)
     editor_custom_features = merge_editor_custom_features(existing_features, paths.feature)
     owner_token = _validated_owner_token(owner)
+    runner = _runner_process_record(runner_pid, require_parent=True) if runner_pid else None
     data_base_fd: int | None = None
     created_lane_fd: int | None = None
     created_lane_stat: os.stat_result | None = None
@@ -1456,6 +1611,7 @@ def prepare_lane(lane: str, existing_features: str = "", owner: str = "") -> dic
                 owner_token,
                 str(real_inventory["sha256"]),
                 data_base_fd=data_base_fd,
+                runner=runner,
             )
             lock_created = True
         except FileExistsError as error:
@@ -1504,6 +1660,11 @@ def prepare_lane(lane: str, existing_features: str = "", owner: str = "") -> dic
             "laneInventorySha256": lane_inventory["sha256"],
             "laneEntryCount": lane_inventory["entryCount"],
             "editorCustomFeatures": editor_custom_features,
+            "lockSchemaVersion": 2 if runner is not None else 1,
+            "runnerPid": int(runner["pid"]) if runner is not None else 0,
+            "runnerStartIdentitySha256": (
+                str(runner["startIdentitySha256"]) if runner is not None else ""
+            ),
         }
     except BaseException as prepare_error:
         if lane_created:
@@ -2004,6 +2165,44 @@ def _inspection_sha256(report: Mapping[str, object]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _discover_lock_record(
+    data_base_fd: int,
+    lane: str,
+) -> tuple[dict[str, object] | None, str]:
+    published_name = _lock_name(lane)
+    pending_name = _lock_temp_name(lane, "0" * 32)
+    try:
+        payload = _read_published_authority_payload(
+            data_base_fd,
+            published_name,
+            pending_name,
+            "QA lane external owner lock",
+            allow_pending_link=True,
+        )
+    except FileNotFoundError:
+        try:
+            pending_stat = os.stat(pending_name, dir_fd=data_base_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return None, "absent"
+        if (
+            _is_link_or_reparse(pending_stat)
+            or not stat.S_ISREG(pending_stat.st_mode)
+            or stat.S_IMODE(pending_stat.st_mode) & 0o111
+            or pending_stat.st_nlink != 1
+        ):
+            raise LaneSafetyError("QA lane unpublished pending lock is not one safe regular-file authority")
+        payload = _read_bounded_regular_payload(
+            pending_name,
+            dir_fd=data_base_fd,
+            label="QA lane unpublished pending owner lock",
+        )
+        pending_after = os.stat(pending_name, dir_fd=data_base_fd, follow_symlinks=False)
+        if _stable_stat_tuple(pending_stat) != _stable_stat_tuple(pending_after):
+            raise LaneSafetyError("QA lane unpublished pending lock changed during discovery")
+        return _lock_record(payload, lane), "pending"
+    return _lock_record(payload, lane), "published"
+
+
 def inspect_lane(lane: str, owner: str) -> dict[str, object]:
     """Read-only evidence for an original owner before a manual recover decision."""
 
@@ -2168,26 +2367,124 @@ def inspect_lane(lane: str, owner: str) -> dict[str, object]:
         os.close(data_base_fd)
 
 
-def recover_lane(
+def inspect_stale_lane(lane: str) -> dict[str, object]:
+    """Classify a fixed lane without exposing the owner token or mutating any data."""
+
+    _require_posix_lane_lifecycle()
+    _paths, data_base, lane_root, real_root = _canonical_current_paths(lane)
+    data_base_fd, _data_base_stat = _open_current_data_base(data_base)
+    try:
+        record, authority_state = _discover_lock_record(data_base_fd, lane)
+        if record is None:
+            try:
+                lane_stat = os.stat(lane_root.name, dir_fd=data_base_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                lane_root_state = "absent"
+            else:
+                lane_root_state = (
+                    "directory"
+                    if not _is_link_or_reparse(lane_stat) and stat.S_ISDIR(lane_stat.st_mode)
+                    else "unsafe"
+                )
+            real_inventory = inventory_tree(
+                real_root,
+                authority_root=data_base,
+                authority_fd=data_base_fd,
+            )
+            report = {
+                "status": "absent" if lane_root_state == "absent" else "unsafe",
+                "lane": lane,
+                "laneAbsent": lane_root_state == "absent",
+                "laneRoot": str(lane_root),
+                "realRoot": str(real_root),
+                "authorityState": authority_state,
+                "lockSchemaVersion": 0,
+                "ownerSha256": "",
+                "runnerPid": 0,
+                "runnerStartIdentitySha256": "",
+                "runnerState": "absent",
+                "publishedLockState": "absent",
+                "pendingLockState": "absent",
+                "laneRootState": lane_root_state,
+                "ownerCanaryState": "not_applicable",
+                "pendingOwnerState": "not_applicable",
+                "laneInventorySha256": "",
+                "laneEntryCount": 0 if lane_root_state == "absent" else -1,
+                "lockedRealInventorySha256": "",
+                "realInventorySha256": real_inventory["sha256"],
+                "realEntryCount": real_inventory["entryCount"],
+            }
+            return {**report, "inspectionSha256": _inspection_sha256(report)}
+    finally:
+        os.close(data_base_fd)
+
+    owner = str(record["owner"])
+    inspected = inspect_lane(lane, owner)
+    runner = record["runner"]
+    runner_state = _runner_process_state(runner if isinstance(runner, dict) else None)
+    structurally_recoverable = (
+        inspected["publishedLockState"] in ("absent", "canonical")
+        and inspected["pendingLockState"] in ("absent", "canonical")
+        and (
+            inspected["publishedLockState"] == "canonical"
+            or inspected["pendingLockState"] == "canonical"
+        )
+        and inspected["laneRootState"] in ("absent", "directory")
+        and (
+            inspected["laneRootState"] == "absent"
+            or inspected["ownerCanaryState"] == "canonical"
+            or (
+                inspected["ownerCanaryState"] == "absent"
+                and inspected["pendingOwnerState"] in ("absent", "regular")
+            )
+        )
+    )
+    status = "unsafe"
+    if structurally_recoverable:
+        status = "legacy" if runner_state == "legacy_unverifiable" else runner_state
+    runner_record = _validated_runner_record(runner) if isinstance(runner, dict) else None
+    report = {
+        "status": status,
+        "lane": lane,
+        "laneAbsent": False,
+        "laneRoot": str(inspected["laneRoot"]),
+        "realRoot": str(inspected["realRoot"]),
+        "authorityState": authority_state,
+        "lockSchemaVersion": int(record["schemaVersion"]),
+        "ownerSha256": hashlib.sha256(owner.encode("ascii")).hexdigest(),
+        "runnerPid": int(runner_record["pid"]) if runner_record is not None else 0,
+        "runnerStartIdentitySha256": (
+            str(runner_record["startIdentitySha256"]) if runner_record is not None else ""
+        ),
+        "runnerState": runner_state,
+        "publishedLockState": str(inspected["publishedLockState"]),
+        "pendingLockState": str(inspected["pendingLockState"]),
+        "laneRootState": str(inspected["laneRootState"]),
+        "ownerCanaryState": str(inspected["ownerCanaryState"]),
+        "pendingOwnerState": str(inspected["pendingOwnerState"]),
+        "laneInventorySha256": str(inspected["laneInventorySha256"]),
+        "laneEntryCount": int(inspected["laneEntryCount"]),
+        "lockedRealInventorySha256": str(inspected["lockedRealInventorySha256"]),
+        "realInventorySha256": str(inspected["realInventorySha256"]),
+        "realEntryCount": int(inspected["realEntryCount"]),
+    }
+    return {**report, "inspectionSha256": _inspection_sha256(report)}
+
+
+def _recover_lane_from_inspection(
     lane: str,
     owner: str,
-    inspection_sha256: str,
-    confirm_no_processes: str,
+    inspected: Mapping[str, object],
 ) -> dict[str, object]:
-    _require_posix_lane_lifecycle()
-    if confirm_no_processes != RECOVERY_NO_PROCESS_CONFIRMATION:
-        raise LaneSafetyError("manual recovery requires an explicit external no-runner/Godot process confirmation")
-    if not re.fullmatch(r"[0-9a-f]{64}", str(inspection_sha256)):
-        raise LaneSafetyError("manual recovery requires the exact prior inspection SHA-256")
-    inspected = inspect_lane(lane, owner)
-    if inspected["inspectionSha256"] != inspection_sha256:
-        raise LaneSafetyError("QA lane state changed after inspection; recovery refused")
     paths, data_base, lane_root, real_root = _canonical_current_paths(lane)
     owner_token = _validated_owner_token(owner)
+    guard_real_sha256 = str(inspected["realInventorySha256"])
+    if not re.fullmatch(r"[0-9a-f]{64}", guard_real_sha256):
+        raise LaneSafetyError("recovery inspection has no canonical current real-root identity")
     data_base_fd, _data_base_stat = _open_current_data_base(data_base)
     try:
         try:
-            expected_real_sha256 = _read_recoverable_lock(
+            locked_real_sha256 = _read_recoverable_lock(
                 data_base,
                 lane,
                 owner_token,
@@ -2204,19 +2501,13 @@ def recover_lane(
                 raise LaneSafetyError("QA lane exists without its external owner lock; recovery refused")
             if inspected["pendingLockState"] in ("unsafe", "invalid"):
                 raise LaneSafetyError("unsafe or foreign pending lock residue requires manual filesystem inspection")
-            if inspected["pendingLockState"] == "canonical":
-                pending_real_inventory = inventory_tree(
-                    real_root,
-                    authority_root=data_base,
-                    authority_fd=data_base_fd,
-                )
-                if (
-                    pending_real_inventory["sha256"]
-                    != inspected["pendingLockedRealInventorySha256"]
-                ):
-                    raise LaneSafetyError(
-                        "real Godot user-data root changed before pending-lock recovery"
-                    )
+            real_before_pending_removal = inventory_tree(
+                real_root,
+                authority_root=data_base,
+                authority_fd=data_base_fd,
+            )
+            if real_before_pending_removal["sha256"] != guard_real_sha256:
+                raise LaneSafetyError("real Godot user-data root changed after inspection")
             _remove_pending_lock(
                 data_base,
                 lane,
@@ -2224,21 +2515,38 @@ def recover_lane(
                 data_base_fd=data_base_fd,
                 expected_payload_sha256=str(inspected["pendingLockPayloadSha256"]),
             )
+            real_after_pending_removal = inventory_tree(
+                real_root,
+                authority_root=data_base,
+                authority_fd=data_base_fd,
+            )
+            if real_after_pending_removal["sha256"] != guard_real_sha256:
+                raise LaneSafetyError("real Godot user-data root changed during pending-lock recovery")
             return {
                 "status": "absent",
                 "lane": lane,
                 "owner": owner_token,
                 "laneAbsent": True,
             }
-        if expected_real_sha256 != inspected["lockedRealInventorySha256"]:
+        if locked_real_sha256 != inspected["lockedRealInventorySha256"]:
             raise LaneSafetyError("published lock authority changed after inspection; recovery refused")
+        lane_before_recovery = inventory_tree(
+            lane_root,
+            authority_root=data_base,
+            authority_fd=data_base_fd,
+        )
+        if (
+            lane_before_recovery["sha256"] != inspected["laneInventorySha256"]
+            or lane_before_recovery["entryCount"] != inspected["laneEntryCount"]
+        ):
+            raise LaneSafetyError("QA lane inventory changed after inspection; recovery refused")
         real_before_recovery = inventory_tree(
             real_root,
             authority_root=data_base,
             authority_fd=data_base_fd,
         )
-        if real_before_recovery["sha256"] != expected_real_sha256:
-            raise LaneSafetyError("real Godot user-data root changed before manual recovery; authority preserved")
+        if real_before_recovery["sha256"] != guard_real_sha256:
+            raise LaneSafetyError("real Godot user-data root changed after inspection; authority preserved")
         _remove_pending_lock(
             data_base,
             lane,
@@ -2292,8 +2600,8 @@ def recover_lane(
             authority_root=data_base,
             authority_fd=data_base_fd,
         )
-        if real_before_lock_removal["sha256"] != expected_real_sha256:
-            raise LaneSafetyError("real Godot user-data root changed during manual recovery; external lock preserved")
+        if real_before_lock_removal["sha256"] != guard_real_sha256:
+            raise LaneSafetyError("real Godot user-data root changed during recovery; external lock preserved")
         _remove_lock_exact(
             data_base,
             lane,
@@ -2305,9 +2613,8 @@ def recover_lane(
             authority_root=data_base,
             authority_fd=data_base_fd,
         )
-        real_unchanged = real_inventory["sha256"] == expected_real_sha256
-        if not real_unchanged:
-            raise LaneSafetyError("real Godot user-data root changed during ambiguous prepare recovery")
+        if real_inventory["sha256"] != guard_real_sha256:
+            raise LaneSafetyError("real Godot user-data root changed during recovery")
         return {
             "status": "recovered",
             "lane": lane,
@@ -2319,6 +2626,95 @@ def recover_lane(
         }
     finally:
         os.close(data_base_fd)
+
+
+def recover_lane(
+    lane: str,
+    owner: str,
+    inspection_sha256: str,
+    confirm_no_processes: str,
+) -> dict[str, object]:
+    _require_posix_lane_lifecycle()
+    if confirm_no_processes != RECOVERY_NO_PROCESS_CONFIRMATION:
+        raise LaneSafetyError("manual recovery requires an explicit no-matching-runner process confirmation")
+    if not re.fullmatch(r"[0-9a-f]{64}", str(inspection_sha256)):
+        raise LaneSafetyError("manual recovery requires the exact prior inspection SHA-256")
+    inspected = inspect_lane(lane, owner)
+    if inspected["inspectionSha256"] != inspection_sha256:
+        raise LaneSafetyError("QA lane state changed after inspection; recovery refused")
+    record: dict[str, object] | None = None
+    if (
+        inspected["publishedLockState"] == "canonical"
+        or inspected["pendingLockState"] == "canonical"
+    ):
+        _paths, data_base, _lane_root, _real_root = _canonical_current_paths(lane)
+        data_base_fd, _data_base_stat = _open_current_data_base(data_base)
+        try:
+            record, _authority_state = _discover_lock_record(data_base_fd, lane)
+        finally:
+            os.close(data_base_fd)
+    if record is not None and record["owner"] == _validated_owner_token(owner):
+        runner = record["runner"]
+        if _runner_process_state(runner if isinstance(runner, dict) else None) == "active":
+            raise LaneSafetyError("active QA lane runner cannot be recovered")
+    return _recover_lane_from_inspection(lane, owner, inspected)
+
+
+def recover_stale_lane(
+    lane: str,
+    inspection_sha256: str,
+    confirm_legacy: str = "",
+) -> dict[str, object]:
+    _require_posix_lane_lifecycle()
+    if not re.fullmatch(r"[0-9a-f]{64}", str(inspection_sha256)):
+        raise LaneSafetyError("stale recovery requires the exact prior inspection SHA-256")
+    stale_inspection = inspect_stale_lane(lane)
+    if stale_inspection["inspectionSha256"] != inspection_sha256:
+        raise LaneSafetyError("QA lane stale state changed after inspection; recovery refused")
+    prior_status = str(stale_inspection["status"])
+    if prior_status == "absent":
+        return {
+            "status": "absent",
+            "lane": lane,
+            "laneAbsent": True,
+            "realInventorySha256": stale_inspection["realInventorySha256"],
+        }
+    if prior_status == "active":
+        raise LaneSafetyError("active QA lane runner cannot be reclaimed")
+    if prior_status == "legacy" and confirm_legacy != RECOVERY_NO_PROCESS_CONFIRMATION:
+        raise LaneSafetyError("legacy QA lane requires explicit no-matching-runner confirmation")
+    if prior_status not in ("stale", "legacy"):
+        raise LaneSafetyError("unsafe or ambiguous QA lane cannot be reclaimed")
+    _paths, data_base, _lane_root, _real_root = _canonical_current_paths(lane)
+    data_base_fd, _data_base_stat = _open_current_data_base(data_base)
+    try:
+        record, _authority_state = _discover_lock_record(data_base_fd, lane)
+    finally:
+        os.close(data_base_fd)
+    if record is None:
+        raise LaneSafetyError("QA lane owner authority disappeared after stale inspection")
+    owner = str(record["owner"])
+    if hashlib.sha256(owner.encode("ascii")).hexdigest() != stale_inspection["ownerSha256"]:
+        raise LaneSafetyError("QA lane owner authority changed after stale inspection")
+    owner_inspection = inspect_lane(lane, owner)
+    confirmed_inspection = inspect_stale_lane(lane)
+    if confirmed_inspection["inspectionSha256"] != inspection_sha256:
+        raise LaneSafetyError("QA lane stale state changed after owner inspection; recovery refused")
+    recovered = _recover_lane_from_inspection(lane, owner, owner_inspection)
+    return {
+        "status": "recovered",
+        "priorStatus": prior_status,
+        "lane": lane,
+        "laneAbsent": bool(recovered["laneAbsent"]),
+        "lockSchemaVersion": int(stale_inspection["lockSchemaVersion"]),
+        "ownerSha256": str(stale_inspection["ownerSha256"]),
+        "runnerPid": int(stale_inspection["runnerPid"]),
+        "runnerStartIdentitySha256": str(stale_inspection["runnerStartIdentitySha256"]),
+        "runnerState": str(stale_inspection["runnerState"]),
+        "realRoot": str(stale_inspection["realRoot"]),
+        "realInventorySha256": str(stale_inspection["realInventorySha256"]),
+        "realUnchanged": True,
+    }
 
 
 def _project_contract_lines() -> list[str]:
@@ -2357,6 +2753,7 @@ def _validate_helper_function_contract(helper_text: str) -> None:
         "import posixpath\n",
         "import re\n",
         "import stat\n",
+        "import subprocess\n",
         "import sys\n",
         "from dataclasses import dataclass\n",
         "from pathlib import Path\n",
@@ -2502,7 +2899,8 @@ def _validate_helper_constant_contract(helper_text: str) -> None:
         "EDITOR_CUSTOM_FEATURES_ENV": 'EDITOR_CUSTOM_FEATURES_ENV = "GODOT_EDITOR_CUSTOM_FEATURES"\n',
         "REAL_PROJECT_DIR_NAME": 'REAL_PROJECT_DIR_NAME = "Beastbound Odyssey - 万兽纪元"\n',
         "RECOVERY_NO_PROCESS_CONFIRMATION": (
-            'RECOVERY_NO_PROCESS_CONFIRMATION = "I_CONFIRMED_NO_GODOT_OR_QA_PROCESSES"\n'
+            'RECOVERY_NO_PROCESS_CONFIRMATION = '
+            '"I_CONFIRMED_NO_MATCHING_QA_AUTOMATION_RUNNER_PROCESS"\n'
         ),
         "FEATURE_TOKEN_PATTERN": 'FEATURE_TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")\n',
         "POSIX_DIR_FD_FUNCTIONS": (
@@ -2538,7 +2936,7 @@ def _validate_helper_constant_contract(helper_text: str) -> None:
             'RESERVED_FEATURES = frozenset(record["feature"] for record in LANES.values())\n'
         ),
         "RUNNER_SOURCE_SHA256": (
-            'RUNNER_SOURCE_SHA256 = "88af3f9c2e66820bb4a51ab8311a113c2a7fd410055dad7e9fd27881bb5181bc"\n'
+            'RUNNER_SOURCE_SHA256 = "545801f8ae61787be95d76b95fd6ae0c96954ca39c1bf6245e5b83b641653372"\n'
         ),
     }
     for name, expected_source in expected.items():
@@ -3176,6 +3574,8 @@ def validate_repository_sources(
         '"prepare"',
         '"verify"',
         '"cleanup"',
+        '"inspect-stale"',
+        '"recover-stale"',
         "GODOT_EDITOR_CUSTOM_FEATURES",
         "BEASTBOUND_QA_USER_DATA_LANE",
         "BEASTBOUND_QA_EXPECTED_USER_DATA_ROOT",
@@ -3185,6 +3585,10 @@ def validate_repository_sources(
         "verification = verifyQaLaneOrPreserve(qaLane, `post_check_${check.name}`);",
         "function cleanupQaLane(qaLane) {",
         "qaLaneCleanup = cleanupQaLane(qaLane);",
+        "function reclaimStaleQaLane(dependencies = {}) {",
+        'return validateStaleLaneRecoveryPayload(runHelper("recover-stale", [',
+        '"--runner-pid",',
+        "String(runnerPid),",
         "function terminateProcessGroup(child, signal, timeoutMs = PROCESS_GROUP_CLOSE_TIMEOUT_MS) {",
         "function processGroupClosureEvidence(value) {",
         'status: "process_group_residual_reaped"',
@@ -3203,8 +3607,8 @@ def validate_repository_sources(
     for fragment in runner_required:
         if fragment not in runner_text:
             raise LaneSafetyError(f"Godot runner QA lane contract missing: {fragment}")
-    if 'runQaLaneHelper("recover"' in runner_text:
-        raise LaneSafetyError("Godot runner must never auto-adopt or auto-recover an ambiguous lane")
+    if 'runQaLaneHelper("recover",' in runner_text:
+        raise LaneSafetyError("Godot runner must never use owner-token recovery")
     if runner_text.count("if (result.processGroupClosed === false || result.processGroupResidualObserved === true) {") != 1:
         raise LaneSafetyError("Godot runner must preserve any observed or uncontained process group")
     if runner_text.count("if (result.containmentBreached === true) {") != 2:
@@ -3215,8 +3619,10 @@ def validate_repository_sources(
     main_runner_slice = runner_text[main_runner_start:]
     runner_order = (
         'const qaLaneOwner = randomBytes(16).toString("hex");',
-        "writeProcessEvidence(`qa_lane_prepare_owner=${qaLaneOwner}\\n`);",
+        'const qaLaneOwnerSha256 = createHash("sha256").update(qaLaneOwner, "ascii").digest("hex");',
+        "writeProcessEvidence(`qa_lane_prepare_owner_sha256=${qaLaneOwnerSha256}\\n`);",
         "validateQaLaneSourceContract();",
+        "qaLaneReclaim = reclaimStaleQaLane();",
         "qaLane = prepareQaLane(process.env, qaLaneOwner);",
         "options.outputDir = validateQaOutputDirectory(options.outputDir, qaLane);",
         "logStream = createSynchronousLog(logPath);",
@@ -3245,6 +3651,7 @@ def _parser() -> argparse.ArgumentParser:
     prepare.add_argument("--lane", required=True)
     prepare.add_argument("--owner", required=True)
     prepare.add_argument("--existing-features", default="")
+    prepare.add_argument("--runner-pid", type=int, default=0)
     for name in ("verify", "cleanup"):
         command = subparsers.add_parser(name)
         command.add_argument("--lane", required=True)
@@ -3258,6 +3665,12 @@ def _parser() -> argparse.ArgumentParser:
     inspect = subparsers.add_parser("inspect")
     inspect.add_argument("--lane", required=True)
     inspect.add_argument("--owner", required=True)
+    inspect_stale = subparsers.add_parser("inspect-stale")
+    inspect_stale.add_argument("--lane", required=True)
+    recover_stale = subparsers.add_parser("recover-stale")
+    recover_stale.add_argument("--lane", required=True)
+    recover_stale.add_argument("--inspection-sha256", required=True)
+    recover_stale.add_argument("--confirm-legacy", default="")
     source_check = subparsers.add_parser("source-check")
     source_check.add_argument("--repo-root", default=str(Path(__file__).resolve().parents[1]))
     return parser
@@ -3267,7 +3680,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     args = _parser().parse_args(list(argv) if argv is not None else None)
     try:
         if args.command == "prepare":
-            result = prepare_lane(args.lane, args.existing_features, args.owner)
+            result = prepare_lane(args.lane, args.existing_features, args.owner, args.runner_pid)
         elif args.command == "verify":
             result = verify_lane(args.lane, args.owner, args.expected_real_sha256)
         elif args.command == "cleanup":
@@ -3281,6 +3694,14 @@ def main(argv: Iterable[str] | None = None) -> int:
             )
         elif args.command == "inspect":
             result = inspect_lane(args.lane, args.owner)
+        elif args.command == "inspect-stale":
+            result = inspect_stale_lane(args.lane)
+        elif args.command == "recover-stale":
+            result = recover_stale_lane(
+                args.lane,
+                args.inspection_sha256,
+                args.confirm_legacy,
+            )
         else:
             validate_repository_contract(Path(args.repo_root))
             result = {"status": "source_contract_passed"}

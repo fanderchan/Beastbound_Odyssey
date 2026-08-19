@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R0.03
+> 当前游标：R0.04
 > 当前发布结论：BLOCKED，不是可发布候选版
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -86,7 +86,7 @@
 - [x] **R0.02 AUTO｜安全吸收远端基线并隔离候选批次**
   依赖：R0.01。采用独立干净 worktree 或等价安全方法获取最新 origin/main；逐批重放明确候选，不 reset、不覆盖当前脏工作区。证明每批可独立审查、测试和回退。
 
-- [ ] **R0.03 AUTO｜修复 QA 自动化车道所有权与残留恢复**
+- [x] **R0.03 AUTO｜修复 QA 自动化车道所有权与残留恢复**
   依赖：R0.01。复现并诊断无 Godot 进程时仍有 owner 文件的情况；实现安全的过期判定、恢复与收尾合同，不触碰真实玩家资料。证明连续两次运行均无假占用和孤儿进程。
 
 - [ ] **R0.04 AUTO｜重跑并分类完整服务端失败**
@@ -552,7 +552,7 @@
 
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
-| R0 干净候选基线 | 进行中（R0.01–R0.02 已完成） | R0.09 完成 |
+| R0 干净候选基线 | 进行中（R0.01–R0.03 已完成） | R0.09 完成 |
 | R1 历史候选验收 | 未开始 | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
@@ -569,6 +569,7 @@
 - YYYY-MM-DD｜任务 ID｜提交 SHA 或外部证据引用｜验证摘要｜剩余风险
 - 2026-08-20｜R0.01｜docs/phase_489_production_release_r0_01_repository_baseline.md + docs/release_baselines/2026-08-20_r0_01_worktree_inventory.tsv｜204 条路径逐 blob/mode 对账，204 个唯一路径，分组与 relation 合计一致，远端 47 条严格拆为 37 + 9 + 1，行尾与补丁检查通过｜主工作树仍落后 origin/main 4 个提交；Firebud、Bui 与 3 个共享文件等待 R0.02 在干净 worktree 分批重放
 - 2026-08-20｜R0.02｜406bb5f1e + 06becae71 + docs/phase_490_production_release_r0_02_candidate_isolation.md｜基于 ddcb4ff77 的独立候选分支完成 Firebud 128 路径与 Bui 33 路径分批重放；目标 Python 63/63、Node 68/68、Godot 解析及隔离 lane 目标检查通过，两个反向补丁均重建父 tree｜automation lane 旧 owner 残留留给 R0.03；两批资产仍为 OWNER pending，完整服务端套件留给 R0.04
+- 2026-08-20｜R0.03｜docs/phase_491_production_release_r0_03_qa_lane_recovery.md + 本机连续运行 summary `2026-08-19T19-49-46-310Z` / `2026-08-19T19-49-58-946Z`｜schema-v2 锁绑定 runner PID 与启动身份；仅自动回收精确 stale，active/legacy/unsafe 均 fail closed；Python 78/78、Node 48/48、源码合同、两次 Godot parse 与目标检查通过，第二次确认无残留，玩家资料哈希前后不变｜Windows lane 生命周期仍按既有边界 fail closed；完整服务端失败分类进入 R0.04
 
 ## 7. 正式上线硬门槛
 

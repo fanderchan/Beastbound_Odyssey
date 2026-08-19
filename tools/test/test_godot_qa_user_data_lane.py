@@ -32,14 +32,18 @@ from tools.godot_qa_user_data_lane import (
     _is_link_or_reparse,
     _open_current_data_base,
     _require_posix_lane_lifecycle,
+    _runner_process_identity,
+    _runner_process_state,
     _write_all,
     _write_owner_exclusive,
     cleanup_lane,
     inspect_lane,
+    inspect_stale_lane,
     merge_editor_custom_features,
     platform_lane_paths,
     prepare_lane,
     recover_lane,
+    recover_stale_lane,
     validate_repository_sources,
     verify_lane,
 )
@@ -50,23 +54,26 @@ _absent_inventory _assert_no_symlink_components _canonical_current_paths
 _current_environment_anchor _directory_has_identity _directory_open_flags
 _file_open_flags _file_sha256_no_follow _inspection_sha256 _inventory_result
 _inventory_tree_path _inventory_tree_posix _is_link_or_reparse _lane_record
-_lock_name _lock_payload _lock_real_inventory_sha256 _lock_temp_name
+_lock_name _lock_payload _lock_real_inventory_sha256 _lock_record _lock_temp_name
 _open_current_data_base _open_descendant_directory _open_directory_no_follow
 _owner_payload _owner_record _owner_temp_name _parser _path_is_link_or_reparse
 _project_contract_lines _publish_regular_file_exclusive _raw_named_function_sources
 _read_bounded_regular_payload _read_descriptor_payload _read_lock _read_owner
 _read_owner_payload _read_published_authority_payload _read_recoverable_lock
+_discover_lock_record
 _relative_directory_components _remove_created_regular_file
 _remove_directory_contents_posix _remove_empty_directory_posix
 _remove_incomplete_lane_for_recovery
 _remove_lock_exact _remove_owner_canary_exact _remove_pending_lock
 _remove_pending_owner _remove_regular_file_posix _remove_tree_no_follow _remove_tree_path _remove_tree_posix
 _require_posix_lane_lifecycle _same_identity _sha256_from_descriptor
+_recover_lane_from_inspection _runner_process_identity _runner_process_record
+_runner_process_state
 _stable_stat_tuple _top_level_assignment_sources _validate_helper_constant_contract
 _validate_helper_function_contract _validate_named_function_contract
-_validated_owner_token _write_all _write_lock_exclusive _write_owner_exclusive
-cleanup_lane inspect_lane inventory_tree main merge_editor_custom_features
-platform_lane_paths prepare_lane recover_lane validate_repository_contract
+_validated_owner_token _validated_runner_record _write_all _write_lock_exclusive _write_owner_exclusive
+cleanup_lane inspect_lane inspect_stale_lane inventory_tree main merge_editor_custom_features
+platform_lane_paths prepare_lane recover_lane recover_stale_lane validate_repository_contract
 validate_repository_sources verify_lane
 """.split())
 
@@ -92,9 +99,10 @@ nowStamp parseArgs parseAutoCheckCompletion parseLaneHelperOutput parseQaLaneAtt
 parseTextAutoCompletionFields
 pathsIntersect postAuthJson preflightGodotEditorBinary prepareCheck prepareQaLane
 printSummary processGroupClosureEvidence processGroupExists requestGracefulShutdown
-runCheck runGodotPreflightProbe runQaLaneHelper safeErrorText safeThrowableProperty splitFlags terminateProcessGroup
+reclaimStaleQaLane runCheck runGodotPreflightProbe runQaLaneHelper safeErrorText safeThrowableProperty splitFlags terminateProcessGroup
 terminateWindowsProcessIds usage validateCleanedLanePayload validatePreparedLanePayload
 validateQaOutputDirectory validateRecoveredLanePayload validateVerifiedLanePayload
+validateStaleLaneInspectionPayload validateStaleLaneRecoveryPayload
 validateQaLaneSourceContract verifyQaLane verifyQaLaneOrPreserve windowsProcessRecords writeExclusiveFile
 writeLogOrThrow writeProcessEvidence
 """.split())
@@ -401,6 +409,147 @@ class GodotQaLaneLifecycleTests(unittest.TestCase):
             prepare_lane("automation")
         self.assertFalse(lane_root.exists())
         self.assertFalse((self.data_base / ".beastbound_qa_lane_lock_automation.json").exists())
+
+    def test_schema_v2_lock_binds_live_runner_and_refuses_active_recovery(self) -> None:
+        from tools import godot_qa_user_data_lane as helper
+
+        runner_pid = os.getpid()
+        runner_identity = _runner_process_identity(runner_pid)
+        self.assertEqual(
+            _runner_process_state({"pid": runner_pid, "startIdentitySha256": runner_identity}),
+            "active",
+        )
+        with mock.patch.object(helper.os, "getppid", return_value=runner_pid):
+            prepared = prepare_lane(
+                "automation",
+                owner="7" * 32,
+                runner_pid=runner_pid,
+            )
+        self.assertEqual(prepared["lockSchemaVersion"], 2)
+        self.assertEqual(prepared["runnerPid"], runner_pid)
+        self.assertEqual(prepared["runnerStartIdentitySha256"], runner_identity)
+        inspected = inspect_stale_lane("automation")
+        self.assertEqual(inspected["status"], "active")
+        with self.assertRaisesRegex(LaneSafetyError, "active"):
+            recover_stale_lane("automation", str(inspected["inspectionSha256"]))
+        with self.assertRaisesRegex(LaneSafetyError, "active"):
+            recover_lane(
+                "automation",
+                str(prepared["owner"]),
+                str(inspect_lane("automation", str(prepared["owner"]))["inspectionSha256"]),
+                RECOVERY_NO_PROCESS_CONFIRMATION,
+            )
+        cleanup_lane(
+            "automation",
+            str(prepared["owner"]),
+            str(prepared["realInventorySha256"]),
+        )
+
+    def test_schema_v2_dead_or_reused_runner_is_stale_and_reclaims_after_real_root_drift(self) -> None:
+        from tools import godot_qa_user_data_lane as helper
+
+        runner_pid = os.getpid()
+        fake_start_identity = "a" * 64
+        with (
+            mock.patch.object(helper.os, "getppid", return_value=runner_pid),
+            mock.patch.object(helper, "_runner_process_identity", return_value=fake_start_identity),
+        ):
+            prepared = prepare_lane(
+                "automation",
+                owner="8" * 32,
+                runner_pid=runner_pid,
+            )
+        self.real_root.mkdir(parents=True)
+        player_change = self.real_root / "unrelated-player-change.bin"
+        player_change.write_bytes(b"preserve-me")
+        inspected = inspect_stale_lane("automation")
+        real_before_sha256 = str(inspected["realInventorySha256"])
+        self.assertEqual(inspected["status"], "stale")
+        self.assertNotEqual(
+            inspected["realInventorySha256"],
+            prepared["realInventorySha256"],
+        )
+        recovered = recover_stale_lane(
+            "automation",
+            str(inspected["inspectionSha256"]),
+        )
+        self.assertEqual(recovered["status"], "recovered")
+        self.assertEqual(recovered["priorStatus"], "stale")
+        self.assertEqual(
+            inspect_stale_lane("automation")["realInventorySha256"],
+            real_before_sha256,
+        )
+        self.assertEqual(player_change.read_bytes(), b"preserve-me")
+        self.assertFalse(Path(str(prepared["laneRoot"])).exists())
+
+    def test_stale_recovery_is_bound_to_exact_inspection(self) -> None:
+        from tools import godot_qa_user_data_lane as helper
+
+        runner_pid = os.getpid()
+        with (
+            mock.patch.object(helper.os, "getppid", return_value=runner_pid),
+            mock.patch.object(helper, "_runner_process_identity", return_value="b" * 64),
+        ):
+            prepared = prepare_lane(
+                "automation",
+                owner="9" * 32,
+                runner_pid=runner_pid,
+            )
+        inspected = inspect_stale_lane("automation")
+        residual = Path(str(prepared["laneRoot"])) / "changed-after-stale-inspection.bin"
+        residual.write_bytes(b"changed")
+        with self.assertRaisesRegex(LaneSafetyError, "changed after inspection"):
+            recover_stale_lane("automation", str(inspected["inspectionSha256"]))
+        residual.unlink()
+        cleanup_lane(
+            "automation",
+            str(prepared["owner"]),
+            str(prepared["realInventorySha256"]),
+        )
+
+    def test_legacy_recovery_requires_explicit_confirmation_but_allows_prior_real_drift(self) -> None:
+        prepared = prepare_lane("automation", owner="a" * 32)
+        self.real_root.mkdir(parents=True)
+        player_change = self.real_root / "post-lock-player-change.bin"
+        player_change.write_bytes(b"preserve-me")
+        inspected = inspect_stale_lane("automation")
+        real_before_sha256 = str(inspected["realInventorySha256"])
+        self.assertEqual(inspected["status"], "legacy")
+        with self.assertRaisesRegex(LaneSafetyError, "explicit no-matching-runner"):
+            recover_stale_lane("automation", str(inspected["inspectionSha256"]))
+        recovered = recover_stale_lane(
+            "automation",
+            str(inspected["inspectionSha256"]),
+            RECOVERY_NO_PROCESS_CONFIRMATION,
+        )
+        self.assertEqual(recovered["priorStatus"], "legacy")
+        self.assertEqual(
+            inspect_stale_lane("automation")["realInventorySha256"],
+            real_before_sha256,
+        )
+        self.assertEqual(player_change.read_bytes(), b"preserve-me")
+        self.assertFalse(Path(str(prepared["laneRoot"])).exists())
+
+    def test_runner_identity_mismatch_and_absence_are_stale(self) -> None:
+        from tools import godot_qa_user_data_lane as helper
+
+        runner = {"pid": 12345, "startIdentitySha256": "c" * 64}
+        with mock.patch.object(helper, "_runner_process_identity", return_value="c" * 64):
+            self.assertEqual(_runner_process_state(runner), "active")
+        with mock.patch.object(helper, "_runner_process_identity", return_value="d" * 64):
+            self.assertEqual(_runner_process_state(runner), "stale")
+        with mock.patch.object(helper, "_runner_process_identity", return_value=""):
+            self.assertEqual(_runner_process_state(runner), "stale")
+
+    def test_lane_without_lock_is_unsafe_and_preserved(self) -> None:
+        lane_root = self.data_base / "BeastboundOdysseyQA_Automation"
+        lane_root.mkdir(mode=0o700)
+        inspected = inspect_stale_lane("automation")
+        self.assertEqual(inspected["status"], "unsafe")
+        with self.assertRaisesRegex(LaneSafetyError, "unsafe or ambiguous"):
+            recover_stale_lane("automation", str(inspected["inspectionSha256"]))
+        self.assertTrue(lane_root.is_dir())
+        lane_root.rmdir()
 
     def test_owner_canary_itself_uses_exclusive_creation(self) -> None:
         lane_root = self.data_base / "BeastboundOdysseyQA_Automation"
@@ -981,7 +1130,7 @@ class GodotQaLaneLifecycleTests(unittest.TestCase):
         prepared = self._prepare()
         owner = str(prepared["owner"])
         inspected = inspect_lane("automation", owner)
-        with self.assertRaisesRegex(LaneSafetyError, "external no-runner"):
+        with self.assertRaisesRegex(LaneSafetyError, "no-matching-runner"):
             recover_lane("automation", owner, str(inspected["inspectionSha256"]), "not-confirmed")
         residual = Path(str(prepared["laneRoot"])) / "changed-after-inspection.txt"
         residual.write_text("changed", encoding="utf-8")
@@ -1356,7 +1505,7 @@ class GodotQaLaneSourceContractTests(unittest.TestCase):
         self.assertEqual(REAL_PROJECT_DIR_NAME, "Beastbound Odyssey - 万兽纪元")
         self.assertEqual(
             RECOVERY_NO_PROCESS_CONFIRMATION,
-            "I_CONFIRMED_NO_GODOT_OR_QA_PROCESSES",
+            "I_CONFIRMED_NO_MATCHING_QA_AUTOMATION_RUNNER_PROCESS",
         )
         self.assertEqual(LANES, {
             "automation": {
@@ -1379,7 +1528,7 @@ class GodotQaLaneSourceContractTests(unittest.TestCase):
         }))
         self.assertEqual(
             RUNNER_SOURCE_SHA256,
-            "88af3f9c2e66820bb4a51ab8311a113c2a7fd410055dad7e9fd27881bb5181bc",
+            "545801f8ae61787be95d76b95fd6ae0c96954ca39c1bf6245e5b83b641653372",
         )
 
     def test_lane_paths_class_and_helper_entrypoint_bindings_are_exact(self) -> None:
@@ -1417,7 +1566,7 @@ class GodotQaLaneSourceContractTests(unittest.TestCase):
                 1,
             ))
 
-        function_line = "def prepare_lane(lane: str, existing_features: str = \"\", owner: str = \"\") -> dict[str, object]:"
+        function_line = "def prepare_lane(\n    lane: str,"
         self.assertIn(function_line, self.helper_text)
         decorated = self.helper_text.replace(
             function_line,
@@ -1948,8 +2097,9 @@ class GodotQaLaneSourceContractTests(unittest.TestCase):
 
     def test_runner_owner_order_preservation_and_summary_contracts_are_required(self) -> None:
         for fragment in (
-            'writeProcessEvidence(`qa_lane_prepare_owner=${qaLaneOwner}\\n`);',
+            'writeProcessEvidence(`qa_lane_prepare_owner_sha256=${qaLaneOwnerSha256}\\n`);',
             "validateQaLaneSourceContract();",
+            "qaLaneReclaim = reclaimStaleQaLane();",
             "qaLane = prepareQaLane(process.env, qaLaneOwner);",
             'qaLane.initialVerification = verifyQaLaneOrPreserve(qaLane, "initial_lane_verification");',
             "assertPreflightProbeContained(preflight.versionProbe, \"version\");",
@@ -1964,7 +2114,7 @@ class GodotQaLaneSourceContractTests(unittest.TestCase):
                 with self.assertRaises(LaneSafetyError):
                     self._validate(runner=mutated)
 
-        owner_line = 'writeProcessEvidence(`qa_lane_prepare_owner=${qaLaneOwner}\\n`);'
+        owner_line = 'writeProcessEvidence(`qa_lane_prepare_owner_sha256=${qaLaneOwnerSha256}\\n`);'
         prepare_line = "qaLane = prepareQaLane(process.env, qaLaneOwner);"
         moved = self.runner_text.replace(owner_line, "", 1).replace(
             prepare_line,

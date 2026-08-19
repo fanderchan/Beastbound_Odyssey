@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import {EventEmitter} from "node:events";
 import fs from "node:fs";
 import path from "node:path";
@@ -27,6 +28,7 @@ import {
   prepareCheck,
   processGroupClosureEvidence,
   requestGracefulShutdown,
+  reclaimStaleQaLane,
   runCheck,
   runGodotPreflightProbe,
   safeErrorText,
@@ -35,6 +37,8 @@ import {
   validatePreparedLanePayload,
   validateQaOutputDirectory,
   validateRecoveredLanePayload,
+  validateStaleLaneInspectionPayload,
+  validateStaleLaneRecoveryPayload,
   validateQaLaneSourceContract,
   validateVerifiedLanePayload,
   verifyQaLaneOrPreserve,
@@ -207,6 +211,59 @@ const preparedLane = Object.freeze({
   editorCustomFeatures: "existing_feature,beastbound_qa_automation",
 });
 
+function staleLaneInspection(status = "absent") {
+  const occupied = status !== "absent";
+  const legacy = status === "legacy";
+  const runnerState = legacy
+    ? "legacy_unverifiable"
+    : status === "active"
+      ? "active"
+      : occupied
+        ? "stale"
+        : "absent";
+  return {
+    authorityState: occupied ? "published" : "absent",
+    inspectionSha256: "a".repeat(64),
+    lane: "automation",
+    laneAbsent: !occupied,
+    laneEntryCount: occupied ? 2 : 0,
+    laneInventorySha256: occupied ? "b".repeat(64) : "",
+    laneRoot: "/Users/qa/Library/Application Support/BeastboundOdysseyQA_Automation",
+    laneRootState: occupied ? "directory" : "absent",
+    lockSchemaVersion: occupied ? (legacy ? 1 : 2) : 0,
+    lockedRealInventorySha256: occupied ? "c".repeat(64) : "",
+    ownerCanaryState: occupied ? "canonical" : "not_applicable",
+    ownerSha256: occupied ? "d".repeat(64) : "",
+    pendingLockState: "absent",
+    pendingOwnerState: occupied ? "absent" : "not_applicable",
+    publishedLockState: occupied ? "canonical" : "absent",
+    realEntryCount: 3,
+    realInventorySha256: "e".repeat(64),
+    realRoot: "/Users/qa/Library/Application Support/Godot/app_userdata/Beastbound Odyssey - 万兽纪元",
+    runnerPid: occupied && !legacy ? 4321 : 0,
+    runnerStartIdentitySha256: occupied && !legacy ? "f".repeat(64) : "",
+    runnerState,
+    status,
+  };
+}
+
+function staleLaneRecovery(inspected) {
+  return {
+    lane: "automation",
+    laneAbsent: true,
+    lockSchemaVersion: 2,
+    ownerSha256: inspected.ownerSha256,
+    priorStatus: "stale",
+    realInventorySha256: inspected.realInventorySha256,
+    realRoot: inspected.realRoot,
+    realUnchanged: true,
+    runnerPid: inspected.runnerPid,
+    runnerStartIdentitySha256: inspected.runnerStartIdentitySha256,
+    runnerState: "stale",
+    status: "recovered",
+  };
+}
+
 function qaAttestationMarker() {
   return `BEASTBOUND_QA_USER_DATA_ATTESTATION: ${JSON.stringify({
     customUserDirName: preparedLane.customUserDirName,
@@ -334,7 +391,10 @@ test("lane owner evidence is synchronously complete before prepare can run", () 
       writeCount += 1;
       return originalWriteSync(fd, buffer, offset, Math.min(3, length));
     };
-    writeProcessEvidence("qa_lane_prepare_owner=0123456789abcdef0123456789abcdef\n", descriptor);
+    const ownerHash = createHash("sha256")
+      .update("0123456789abcdef0123456789abcdef", "ascii")
+      .digest("hex");
+    writeProcessEvidence(`qa_lane_prepare_owner_sha256=${ownerHash}\n`, descriptor);
   } finally {
     fs.writeSync = originalWriteSync;
     fs.closeSync(descriptor);
@@ -342,20 +402,32 @@ test("lane owner evidence is synchronously complete before prepare can run", () 
   assert.ok(writeCount > 1);
   assert.equal(
     fs.readFileSync(evidencePath, "utf8"),
-    "qa_lane_prepare_owner=0123456789abcdef0123456789abcdef\n",
+    `qa_lane_prepare_owner_sha256=${createHash("sha256")
+      .update("0123456789abcdef0123456789abcdef", "ascii")
+      .digest("hex")}\n`,
   );
   const runnerSource = fs.readFileSync(path.join(repoRoot, "tools/run_godot_auto_checks.mjs"), "utf8");
   const mainStart = runnerSource.indexOf("async function main() {");
   const ownerIndex = runnerSource.indexOf('const qaLaneOwner = randomBytes(16).toString("hex");', mainStart);
-  const evidenceIndex = runnerSource.indexOf("writeProcessEvidence(`qa_lane_prepare_owner=${qaLaneOwner}\\n`);", ownerIndex);
+  const ownerHashIndex = runnerSource.indexOf(
+    'const qaLaneOwnerSha256 = createHash("sha256").update(qaLaneOwner, "ascii").digest("hex");',
+    ownerIndex,
+  );
+  const evidenceIndex = runnerSource.indexOf(
+    "writeProcessEvidence(`qa_lane_prepare_owner_sha256=${qaLaneOwnerSha256}\\n`);",
+    ownerHashIndex,
+  );
   const sourceCheckIndex = runnerSource.indexOf("validateQaLaneSourceContract();", evidenceIndex);
-  const prepareIndex = runnerSource.indexOf("qaLane = prepareQaLane(process.env, qaLaneOwner);", sourceCheckIndex);
+  const reclaimIndex = runnerSource.indexOf("qaLaneReclaim = reclaimStaleQaLane();", sourceCheckIndex);
+  const prepareIndex = runnerSource.indexOf("qaLane = prepareQaLane(process.env, qaLaneOwner);", reclaimIndex);
   assert.ok(
     mainStart >= 0
     && ownerIndex > mainStart
-    && evidenceIndex > ownerIndex
+    && ownerHashIndex > ownerIndex
+    && evidenceIndex > ownerHashIndex
     && sourceCheckIndex > evidenceIndex
-    && prepareIndex > sourceCheckIndex,
+    && reclaimIndex > sourceCheckIndex
+    && prepareIndex > reclaimIndex,
   );
   fs.rmSync(directory, {recursive: true, force: true});
 });
@@ -377,6 +449,74 @@ test("lane source-check is exact and runs before any prepare mutation", () => {
     {extra: true, status: "source_contract_passed"},
   ]) {
     assert.throws(() => validateQaLaneSourceContract({runQaLaneHelper: () => payload}));
+  }
+});
+
+test("stale lane inspection payload distinguishes absent active legacy stale and unsafe", () => {
+  for (const status of ["absent", "active", "legacy", "stale", "unsafe"]) {
+    const inspected = staleLaneInspection(status);
+    assert.equal(validateStaleLaneInspectionPayload(inspected).status, status);
+  }
+  assert.throws(() => validateStaleLaneInspectionPayload({...staleLaneInspection(), extra: true}));
+  assert.throws(() => validateStaleLaneInspectionPayload({
+    ...staleLaneInspection("stale"),
+    runnerState: "active",
+  }));
+  const locklessUnsafe = {
+    ...staleLaneInspection("absent"),
+    laneAbsent: false,
+    laneEntryCount: -1,
+    laneRootState: "directory",
+    status: "unsafe",
+  };
+  assert.equal(validateStaleLaneInspectionPayload(locklessUnsafe).status, "unsafe");
+});
+
+test("stale lane reclaim is a no-op when the fixed lane is absent", () => {
+  const calls = [];
+  const inspected = staleLaneInspection("absent");
+  const result = reclaimStaleQaLane({
+    runQaLaneHelper: (command, args) => {
+      calls.push([command, args]);
+      return inspected;
+    },
+  });
+  assert.equal(result.status, "absent");
+  assert.deepEqual(calls, [["inspect-stale", ["--lane", "automation"]]]);
+});
+
+test("only schema-v2 stale lane residue is automatically reclaimed with exact inspection binding", () => {
+  const calls = [];
+  const inspected = staleLaneInspection("stale");
+  const recovered = staleLaneRecovery(inspected);
+  const result = reclaimStaleQaLane({
+    runQaLaneHelper: (command, args) => {
+      calls.push([command, args]);
+      return command === "inspect-stale" ? inspected : recovered;
+    },
+  });
+  assert.equal(validateStaleLaneRecoveryPayload(recovered, inspected).status, "recovered");
+  assert.equal(result.status, "recovered");
+  assert.deepEqual(calls, [
+    ["inspect-stale", ["--lane", "automation"]],
+    ["recover-stale", ["--lane", "automation", "--inspection-sha256", inspected.inspectionSha256]],
+  ]);
+  assert.throws(() => validateStaleLaneRecoveryPayload({...recovered, runnerPid: 9999}, inspected));
+});
+
+test("active legacy and unsafe lane states are preserved by automatic reclaim", () => {
+  for (const status of ["active", "legacy", "unsafe"]) {
+    const calls = [];
+    assert.throws(
+      () => reclaimStaleQaLane({
+        runQaLaneHelper: (command, args) => {
+          calls.push([command, args]);
+          return staleLaneInspection(status);
+        },
+      }),
+      new RegExp(status),
+    );
+    assert.deepEqual(calls, [["inspect-stale", ["--lane", "automation"]]]);
   }
 });
 
@@ -1044,7 +1184,7 @@ test("auth server client success evidence does not reuse a reserved failure fiel
 test("every discovered auto flag has one unique source-backed completion contract", () => {
   const source = scriptSourceTree(path.join(repoRoot, "client/godot/scripts"));
   const flags = discoverAutoCheckFlags();
-  assert.equal(flags.length, 222);
+  assert.equal(flags.length, 223);
   const prefixes = new Set();
   for (const flag of flags) {
     const contract = autoCheckCompletionContract(flag);
@@ -1087,10 +1227,13 @@ test("lane helper output is one JSON line with exact phase contracts", () => {
     laneEntryCount: 2,
     laneInventorySha256: sha,
     laneRoot,
+    lockSchemaVersion: 2,
     owner,
     realEntryCount: 0,
     realInventorySha256: sha,
     realRoot,
+    runnerPid: process.pid,
+    runnerStartIdentitySha256: "c".repeat(64),
     status: "prepared",
   };
   assert.equal(validatePreparedLanePayload(prepared).owner, owner);

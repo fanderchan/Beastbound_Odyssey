@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import {spawn, spawnSync} from "node:child_process";
-import {randomBytes} from "node:crypto";
+import {createHash, randomBytes} from "node:crypto";
 import {createRequire} from "node:module";
 import {fileURLToPath} from "node:url";
 
@@ -2166,16 +2166,161 @@ function assertHex(payload, field, length, command) {
   }
 }
 
+function validateStaleLaneInspectionPayload(inspected) {
+  const command = "inspect-stale";
+  assertExactPayloadKeys(inspected, command, [
+    "authorityState", "inspectionSha256", "lane", "laneAbsent", "laneEntryCount",
+    "laneInventorySha256", "laneRoot", "laneRootState", "lockSchemaVersion",
+    "lockedRealInventorySha256", "ownerCanaryState", "ownerSha256", "pendingLockState",
+    "pendingOwnerState", "publishedLockState", "realEntryCount", "realInventorySha256",
+    "realRoot", "runnerPid", "runnerStartIdentitySha256", "runnerState", "status",
+  ]);
+  for (const field of [
+    "authorityState", "inspectionSha256", "lane", "laneInventorySha256", "laneRoot",
+    "laneRootState", "lockedRealInventorySha256", "ownerCanaryState", "ownerSha256",
+    "pendingLockState", "pendingOwnerState", "publishedLockState", "realInventorySha256",
+    "realRoot", "runnerStartIdentitySha256", "runnerState", "status",
+  ]) {
+    if (typeof inspected[field] !== "string") {
+      throw new Error(`QA lane helper ${command} field must be a string: ${field}`);
+    }
+  }
+  if (
+    inspected.lane !== QA_LANE
+    || typeof inspected.laneAbsent !== "boolean"
+    || !["absent", "active", "legacy", "stale", "unsafe"].includes(inspected.status)
+    || pathsIntersect(inspected.laneRoot, inspected.realRoot)
+  ) {
+    throw new Error("QA lane helper stale inspection identity contract is invalid");
+  }
+  assertHex(inspected, "inspectionSha256", 64, command);
+  assertHex(inspected, "realInventorySha256", 64, command);
+  assertNonNegativeInteger(inspected, "realEntryCount", command);
+  if (!Number.isSafeInteger(inspected.lockSchemaVersion) || ![0, 1, 2].includes(inspected.lockSchemaVersion)) {
+    throw new Error("QA lane helper stale inspection schema is invalid");
+  }
+  if (!Number.isSafeInteger(inspected.runnerPid) || inspected.runnerPid < 0) {
+    throw new Error("QA lane helper stale inspection runner PID is invalid");
+  }
+  if (inspected.status === "absent") {
+    if (
+      inspected.laneAbsent !== true
+      || inspected.lockSchemaVersion !== 0
+      || inspected.ownerSha256 !== ""
+      || inspected.runnerPid !== 0
+      || inspected.runnerStartIdentitySha256 !== ""
+      || inspected.runnerState !== "absent"
+      || inspected.authorityState !== "absent"
+    ) {
+      throw new Error("QA lane helper absent stale inspection contract is invalid");
+    }
+    return inspected;
+  }
+  if (inspected.laneAbsent !== false) {
+    throw new Error("QA lane helper occupied stale inspection must not claim lane absence");
+  }
+  if (inspected.lockSchemaVersion === 0) {
+    if (
+      inspected.status !== "unsafe"
+      || inspected.authorityState !== "absent"
+      || inspected.ownerSha256 !== ""
+      || inspected.lockedRealInventorySha256 !== ""
+      || inspected.runnerPid !== 0
+      || inspected.runnerStartIdentitySha256 !== ""
+      || inspected.runnerState !== "absent"
+    ) {
+      throw new Error("QA lane helper lockless unsafe inspection contract is invalid");
+    }
+    return inspected;
+  }
+  assertHex(inspected, "ownerSha256", 64, command);
+  assertHex(inspected, "lockedRealInventorySha256", 64, command);
+  if (inspected.laneInventorySha256 !== "") {
+    assertHex(inspected, "laneInventorySha256", 64, command);
+  }
+  if (inspected.lockSchemaVersion === 1) {
+    if (
+      inspected.runnerPid !== 0
+      || inspected.runnerStartIdentitySha256 !== ""
+      || inspected.runnerState !== "legacy_unverifiable"
+      || !["legacy", "unsafe"].includes(inspected.status)
+    ) {
+      throw new Error("QA lane helper legacy stale inspection contract is invalid");
+    }
+  } else if (inspected.lockSchemaVersion === 2) {
+    assertHex(inspected, "runnerStartIdentitySha256", 64, command);
+    if (
+      inspected.runnerPid <= 0
+      || !["active", "stale"].includes(inspected.runnerState)
+      || (inspected.status !== "unsafe" && inspected.status !== inspected.runnerState)
+    ) {
+      throw new Error("QA lane helper v2 stale inspection contract is invalid");
+    }
+  }
+  return inspected;
+}
+
+function validateStaleLaneRecoveryPayload(recovered, inspected) {
+  const command = "recover-stale";
+  assertExactPayloadKeys(recovered, command, [
+    "lane", "laneAbsent", "lockSchemaVersion", "ownerSha256", "priorStatus",
+    "realInventorySha256", "realRoot", "realUnchanged", "runnerPid",
+    "runnerStartIdentitySha256", "runnerState", "status",
+  ]);
+  if (
+    recovered.status !== "recovered"
+    || recovered.priorStatus !== "stale"
+    || recovered.lane !== QA_LANE
+    || recovered.laneAbsent !== true
+    || recovered.realUnchanged !== true
+    || recovered.lockSchemaVersion !== 2
+    || recovered.ownerSha256 !== inspected.ownerSha256
+    || recovered.runnerPid !== inspected.runnerPid
+    || recovered.runnerStartIdentitySha256 !== inspected.runnerStartIdentitySha256
+    || recovered.runnerState !== "stale"
+    || recovered.realRoot !== inspected.realRoot
+    || recovered.realInventorySha256 !== inspected.realInventorySha256
+  ) {
+    throw new Error("QA lane helper stale recovery identity contract is invalid");
+  }
+  assertHex(recovered, "ownerSha256", 64, command);
+  assertHex(recovered, "runnerStartIdentitySha256", 64, command);
+  assertHex(recovered, "realInventorySha256", 64, command);
+  return recovered;
+}
+
+function reclaimStaleQaLane(dependencies = {}) {
+  const runHelper = dependencies.runQaLaneHelper || runQaLaneHelper;
+  const inspected = validateStaleLaneInspectionPayload(runHelper("inspect-stale", [
+    "--lane",
+    QA_LANE,
+  ]));
+  if (inspected.status === "absent") {
+    return inspected;
+  }
+  if (inspected.status !== "stale") {
+    throw new Error(`QA lane residue is ${inspected.status}; automatic reclamation refused`);
+  }
+  return validateStaleLaneRecoveryPayload(runHelper("recover-stale", [
+    "--lane",
+    QA_LANE,
+    "--inspection-sha256",
+    inspected.inspectionSha256,
+  ]), inspected);
+}
+
 function validatePreparedLanePayload(prepared, expectedOwner = "") {
   const command = "prepare";
   assertExactPayloadKeys(prepared, command, [
     "customUserDirName", "editorCustomFeatures", "feature", "godotLaneRoot", "godotRealRoot",
     "lane", "laneEntryCount", "laneInventorySha256", "laneRoot", "owner", "realEntryCount",
-    "realInventorySha256", "realRoot", "status",
+    "realInventorySha256", "realRoot", "lockSchemaVersion", "runnerPid",
+    "runnerStartIdentitySha256", "status",
   ]);
   for (const field of [
     "customUserDirName", "editorCustomFeatures", "feature", "godotLaneRoot", "godotRealRoot",
     "lane", "laneInventorySha256", "laneRoot", "owner", "realInventorySha256", "realRoot", "status",
+    "runnerStartIdentitySha256",
   ]) {
     if (typeof prepared[field] !== "string") {
       throw new Error(`QA lane helper prepare field must be a string: ${field}`);
@@ -2198,6 +2343,17 @@ function validatePreparedLanePayload(prepared, expectedOwner = "") {
   assertHex(prepared, "laneInventorySha256", 64, command);
   assertNonNegativeInteger(prepared, "realEntryCount", command);
   assertNonNegativeInteger(prepared, "laneEntryCount", command);
+  assertNonNegativeInteger(prepared, "runnerPid", command);
+  if (
+    ![1, 2].includes(prepared.lockSchemaVersion)
+    || (prepared.lockSchemaVersion === 1 && (prepared.runnerPid !== 0 || prepared.runnerStartIdentitySha256 !== ""))
+    || (prepared.lockSchemaVersion === 2 && prepared.runnerPid <= 0)
+  ) {
+    throw new Error("QA lane helper prepare runner identity contract is invalid");
+  }
+  if (prepared.lockSchemaVersion === 2) {
+    assertHex(prepared, "runnerStartIdentitySha256", 64, command);
+  }
   const featureTokens = prepared.editorCustomFeatures.split(",").map((value) => value.trim()).filter(Boolean);
   if (
     featureTokens.filter((value) => value === QA_LANE_FEATURE).length !== 1
@@ -2315,7 +2471,7 @@ function buildGodotLaneEnvironment(baseEnvironment, prepared) {
   return environment;
 }
 
-function prepareQaLane(baseEnvironment = process.env, owner = "") {
+function prepareQaLane(baseEnvironment = process.env, owner = "", runnerPid = process.pid) {
   if (!/^[0-9a-f]{32}$/.test(owner)) {
     throw new Error("runner must provide one explicit 32-hex QA lane owner token");
   }
@@ -2326,7 +2482,12 @@ function prepareQaLane(baseEnvironment = process.env, owner = "") {
     owner,
     "--existing-features",
     String(baseEnvironment.GODOT_EDITOR_CUSTOM_FEATURES || ""),
+    "--runner-pid",
+    String(runnerPid),
   ]), owner);
+  if (prepared.lockSchemaVersion !== 2 || prepared.runnerPid !== runnerPid) {
+    throw new Error("runner prepare must bind the exact live runner PID in a schema-v2 lock");
+  }
   return {
     ...prepared,
     lastLaneInventorySha256: prepared.laneInventorySha256,
@@ -2407,6 +2568,10 @@ function buildQaLaneSummary(qaLane, lanePreservationReason = "") {
     laneRoot: qaLane.godotLaneRoot,
     realRoot: qaLane.godotRealRoot,
     realBeforeSha256: qaLane.realInventorySha256,
+    reclaimStatus: qaLane.reclaim?.status || null,
+    reclaimPriorStatus: qaLane.reclaim?.priorStatus || null,
+    reclaimSchemaVersion: qaLane.reclaim?.lockSchemaVersion ?? null,
+    reclaimRunnerPid: qaLane.reclaim?.runnerPid ?? null,
     lanePreservationReason: lanePreservationReason || null,
     initialVerifiedRealSha256: qaLane.initialVerification?.realInventorySha256 || null,
     initialVerifiedLaneSha256: qaLane.initialVerification?.laneInventorySha256 || null,
@@ -2539,6 +2704,7 @@ async function main() {
   let logStream = null;
   const results = [];
   let qaLane = null;
+  let qaLaneReclaim = null;
   let qaLaneCleanup = null;
   let fatalDiagnostic = "";
   let laneCleanupSafe = true;
@@ -2563,9 +2729,12 @@ async function main() {
   }
   try {
     const qaLaneOwner = randomBytes(16).toString("hex");
-    writeProcessEvidence(`qa_lane_prepare_owner=${qaLaneOwner}\n`);
+    const qaLaneOwnerSha256 = createHash("sha256").update(qaLaneOwner, "ascii").digest("hex");
+    writeProcessEvidence(`qa_lane_prepare_owner_sha256=${qaLaneOwnerSha256}\n`);
     validateQaLaneSourceContract();
+    qaLaneReclaim = reclaimStaleQaLane();
     qaLane = prepareQaLane(process.env, qaLaneOwner);
+    qaLane.reclaim = qaLaneReclaim;
     options.qaLane = qaLane;
     options.outputDir = validateQaOutputDirectory(options.outputDir, qaLane);
     fs.mkdirSync(options.outputDir, {recursive: true});
@@ -2581,6 +2750,10 @@ async function main() {
     writeLogOrThrow(logStream, `qa_lane_feature=${qaLane.feature}\n`);
     writeLogOrThrow(logStream, `real_user_data_root=${qaLane.godotRealRoot}\n`);
     writeLogOrThrow(logStream, `real_user_data_before_sha256=${qaLane.realInventorySha256}\n`);
+    writeLogOrThrow(
+      logStream,
+      `qa_lane_reclaim_status=${qaLaneReclaim.status} prior_status=${qaLaneReclaim.priorStatus || "absent"} schema=${qaLaneReclaim.lockSchemaVersion ?? 0}\n`,
+    );
     qaLane.initialVerification = verifyQaLaneOrPreserve(qaLane, "initial_lane_verification");
     writeLogOrThrow(logStream, `qa_lane_initial_verified real_sha256=${qaLane.initialVerification.realInventorySha256} lane_sha256=${qaLane.initialVerification.laneInventorySha256}\n`);
     qaLane.godotPreflight = await preflightGodotEditorBinary(options.godot, qaLane);
@@ -2759,6 +2932,7 @@ export {
   prepareCheck,
   processGroupClosureEvidence,
   requestGracefulShutdown,
+  reclaimStaleQaLane,
   runCheck,
   runGodotPreflightProbe,
   safeErrorText,
@@ -2768,6 +2942,8 @@ export {
   validatePreparedLanePayload,
   validateQaOutputDirectory,
   validateRecoveredLanePayload,
+  validateStaleLaneInspectionPayload,
+  validateStaleLaneRecoveryPayload,
   validateQaLaneSourceContract,
   validateVerifiedLanePayload,
   verifyQaLaneOrPreserve,
