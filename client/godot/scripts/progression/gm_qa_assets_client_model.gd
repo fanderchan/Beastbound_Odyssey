@@ -1,11 +1,11 @@
 extends RefCounted
 
 const COMMAND_ID := "gm_prepare_qa_assets"
-const MANIFEST_ID := "qa_assets_v1"
-const CATALOG_ITEM_KINDS := 76
-const ORDINARY_ITEM_KINDS := 45
+const MANIFEST_ID := "qa_assets_v2"
+const CATALOG_ITEM_KINDS := 81
+const ORDINARY_ITEM_KINDS := 50
 const EQUIPMENT_ITEM_KINDS := 31
-const ORDINARY_TARGET_QUANTITY := 83
+const ORDINARY_TARGET_QUANTITY := 88
 const EQUIPMENT_SAMPLE_COUNT := 31
 const BANK_UNLOCKED_TABS := 6
 const BANK_SLOT_CAPACITY := 90
@@ -110,13 +110,9 @@ static func _summary_is_valid(summary: Dictionary) -> bool:
 	):
 		return false
 	if changed:
-		return (
-			ordinary_present == ORDINARY_ITEM_KINDS
-			and ordinary_missing == 0
-			and equipment_present == EQUIPMENT_SAMPLE_COUNT
-			and equipment_missing == 0
-			and bank_free >= RESERVED_BANK_SLOTS
-		)
+		# A valid v1 -> v2 upgrade only adds the five new ordinary items. Samples
+		# already moved or consumed under v1 remain missing and are never reissued.
+		return bank_free >= RESERVED_BANK_SLOTS
 	return true
 
 
@@ -132,7 +128,7 @@ static func _is_nonnegative_integer(value: Variant) -> bool:
 static func status_text(state: Dictionary) -> String:
 	var lines: Array[String] = [
 		"[color=#d7c36a]装备与全物品测试档[/color]",
-		"准备当前 76 种正式物品：45 种普通物品与 31 件正式装备样本。",
+		"准备当前 81 种正式物品：50 种普通物品与 31 件正式装备样本。",
 		"这是高价值 GM 测试资产；不会清空现有资产，也不会在使用或转移后补发。",
 	]
 	if state.is_empty():
@@ -147,8 +143,11 @@ static func status_text(state: Dictionary) -> String:
 		return "\n".join(lines)
 	var ordinary_missing := int(state.get("ordinaryItemKindsMissing", 0))
 	var equipment_missing := int(state.get("bankEquipmentSamplesMissing", 0))
-	if bool(state.get("changed", false)):
+	if bool(state.get("changed", false)) and ordinary_missing == 0 and equipment_missing == 0:
 		lines.append("[color=#9fd7a0]结果：全物品与 31 件正式装备样本已写入银行。[/color]")
+	elif bool(state.get("changed", false)):
+		lines.append("[color=#9fd7a0]结果：测试档已升级到当前目录。[/color]")
+		lines.append("旧版已移出或消耗的 %d 种普通物品 / %d 件装备不会自动补发。" % [ordinary_missing, equipment_missing])
 	elif ordinary_missing > 0 or equipment_missing > 0:
 		lines.append("[color=#e6c77a]结果：此测试档曾经准备过；当前银行缺少 %d 种普通物品 / %d 件装备。[/color]" % [ordinary_missing, equipment_missing])
 		lines.append("样本可能已移到背包、交易所或邮件，或已被使用；不会自动补发。")

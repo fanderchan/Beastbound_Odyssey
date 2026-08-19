@@ -136,8 +136,10 @@ test("init preserves profile and password while replacing grants and plugin with
   assert.equal(state.ready, true);
   assert.equal(state.qaProfile.petSamples.ready, true);
   assert.equal(state.qaProfile.assets.ready, true);
+  assert.equal(state.qaProfile.assets.worstCaseBankFreeSlots, 9);
   assert.equal(state.qaProfile.manifests.petSamplesPrepared, false);
   assert.equal(state.qaProfile.manifests.assetsPrepared, false);
+  assert.equal(state.qaProfile.manifests.legacyAssetsPrepared, false);
 
   const badEnabledType = structuredClone(change.data);
   badEnabledType.gmUserGrants[account.accountId].enabled = 1;

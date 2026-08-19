@@ -8,7 +8,7 @@ static func entry_definitions(speed_multiplier: int) -> Array[Dictionary]:
 	entries.append({"section": "核心测试档"})
 	entries.append({"id": "gm_prepare_qa_profile", "label": "补齐核心测试档", "description": "只补齐缺少的货币与物资，不会清空现有进度"})
 	entries.append({"id": "gm_prepare_qa_pet_samples", "label": "准备宠物样本档", "description": "10只Lv1蓝人龙 + 3只Lv20对照；需13空位"})
-	entries.append({"id": "gm_prepare_qa_assets", "label": "准备装备与全物品档", "description": "76种物品（含31件正式装备）；银行至少保留1格"})
+	entries.append({"id": "gm_prepare_qa_assets", "label": "准备装备与全物品档", "description": "81种物品（含31件正式装备）；银行至少保留1格"})
 	entries.append({"id": "gm_pet_paid_reset_config", "label": "重置验收档与审计", "description": "一转可重置 + 二转终局拒绝、双钱包、当前价格与最近审计"})
 	entries.append({"id": "gm_pet_evolution_qa", "label": "进化验收档", "description": "乌力/风狐各一对P90样本、两次材料与生产门禁"})
 	entries.append({"section": "GM地图"})

@@ -639,13 +639,13 @@ func _gm_qa_assets_summary(
 		"manifestId": GmQaAssetsClientModel.MANIFEST_ID,
 		"changed": changed,
 		"alreadyPrepared": already_prepared,
-		"catalogItemKinds": 76,
-		"ordinaryItemKinds": 45,
+		"catalogItemKinds": 81,
+		"ordinaryItemKinds": 50,
 		"equipmentItemKinds": 31,
-		"ordinaryTargetQuantity": 83,
+		"ordinaryTargetQuantity": 88,
 		"equipmentSampleCount": 31,
 		"ordinaryItemKindsPresent": ordinary_present,
-		"ordinaryItemKindsMissing": 45 - ordinary_present,
+		"ordinaryItemKindsMissing": 50 - ordinary_present,
 		"bankEquipmentSamplesPresent": equipment_present,
 		"bankEquipmentSamplesMissing": 31 - equipment_present,
 		"bankUnlockedTabs": 6,
@@ -674,13 +674,19 @@ func _gm_qa_assets_client_contract_ok() -> bool:
 	var changed_state := GmQaAssetsClientModel.status_state_from_parsed({
 		"ok": true,
 		"profileApplied": true,
-		"result": {"summary": _gm_qa_assets_summary(true, false, 45, 31, 76, 14, 30, 31)},
+		"result": {"summary": _gm_qa_assets_summary(true, false, 50, 31, 81, 9, 30, 31)},
 	})
 	var changed_status := GmQaAssetsClientModel.status_text(changed_state)
+	var upgraded_state := GmQaAssetsClientModel.status_state_from_parsed({
+		"ok": true,
+		"profileApplied": true,
+		"result": {"summary": _gm_qa_assets_summary(true, false, 49, 30, 79, 11, 40, 41)},
+	})
+	var upgraded_status := GmQaAssetsClientModel.status_text(upgraded_state)
 	var missing_state := GmQaAssetsClientModel.status_state_from_parsed({
 		"ok": true,
 		"profileApplied": true,
-		"result": {"summary": _gm_qa_assets_summary(false, true, 43, 30, 70, 20, 31, 31)},
+		"result": {"summary": _gm_qa_assets_summary(false, true, 48, 30, 75, 15, 31, 31)},
 	})
 	var missing_status := GmQaAssetsClientModel.status_text(missing_state)
 	var unapplied_state := GmQaAssetsClientModel.status_state_from_parsed({
@@ -688,14 +694,14 @@ func _gm_qa_assets_client_contract_ok() -> bool:
 		"profileApplied": false,
 		"result": {},
 	})
-	var wrong_manifest_summary := _gm_qa_assets_summary(true, false, 45, 31, 76, 14, 1, 2)
-	wrong_manifest_summary["manifestId"] = "qa_assets_v2"
+	var wrong_manifest_summary := _gm_qa_assets_summary(true, false, 50, 31, 81, 9, 1, 2)
+	wrong_manifest_summary["manifestId"] = "qa_assets_v1"
 	var wrong_manifest_state := GmQaAssetsClientModel.status_state_from_parsed({
 		"ok": true,
 		"profileApplied": true,
 		"result": {"summary": wrong_manifest_summary},
 	})
-	var no_reserved_slot_summary := _gm_qa_assets_summary(true, false, 45, 31, 90, 0, 1, 2)
+	var no_reserved_slot_summary := _gm_qa_assets_summary(true, false, 50, 31, 90, 0, 1, 2)
 	var no_reserved_slot_state := GmQaAssetsClientModel.status_state_from_parsed({
 		"ok": true,
 		"profileApplied": true,
@@ -719,8 +725,12 @@ func _gm_qa_assets_client_contract_ok() -> bool:
 		and bool(changed_state.get("changed", false))
 		and not bool(changed_state.get("alreadyPrepared", true))
 		and changed_status.find("31 件正式装备样本") >= 0
-		and changed_status.find("76/90 格已用") >= 0
+		and changed_status.find("81/90 格已用") >= 0
 		and changed_status.find("eqx_asset_contract_secret") < 0
+		and bool(upgraded_state.get("ok", false))
+		and bool(upgraded_state.get("changed", false))
+		and upgraded_status.find("已升级到当前目录") >= 0
+		and upgraded_status.find("1 种普通物品 / 1 件装备不会自动补发") >= 0
 		and not bool(missing_state.get("changed", true))
 		and bool(missing_state.get("alreadyPrepared", false))
 		and missing_status.find("当前银行缺少 2 种普通物品 / 1 件装备") >= 0
@@ -30501,6 +30511,7 @@ func _run_auto_qa_panel_check() -> void:
 		var original_screenshot_session: Dictionary = host.current_account_session.duplicate(true)
 		var original_event_state: String = host.server_event_state
 		var original_event_reconnect_remaining: float = host.server_event_reconnect_remaining
+		var original_active_status_command_id: String = host._panel_flow().qa_active_status_command_id
 		host._stop_server_event_stream()
 		# The screenshot uses a fake server-shaped session only to prove that
 		# player-facing text stays redacted.  Never let that fixture dial the live
@@ -30512,7 +30523,11 @@ func _run_auto_qa_panel_check() -> void:
 		qa_screenshot_session["serverSessionToken"] = "qa_screenshot_token_must_not_display"
 		qa_screenshot_session["serverProfileSummary"] = {"profileRevision": 42}
 		host.current_account_session = qa_screenshot_session
+		host._panel_flow().qa_active_status_command_id = GmQaAssetsClientModel.COMMAND_ID
 		host._refresh_qa_panel()
+		var qa_assets_screenshot_button := host.qa_entry_buttons.get(GmQaAssetsClientModel.COMMAND_ID, null) as Button
+		if qa_assets_screenshot_button != null:
+			qa_assets_screenshot_button.grab_focus()
 		DirAccess.make_dir_recursive_absolute(qa_panel_screenshot_path.get_base_dir())
 		await host.get_tree().process_frame
 		await host.get_tree().process_frame
@@ -30525,6 +30540,7 @@ func _run_auto_qa_panel_check() -> void:
 		host._stop_server_event_stream()
 		host.server_event_state = original_event_state
 		host.server_event_reconnect_remaining = original_event_reconnect_remaining
+		host._panel_flow().qa_active_status_command_id = original_active_status_command_id
 		host._refresh_qa_panel()
 	var command_text = host.qa_detail_label.text if host.qa_detail_label != null else ""
 	var first_layout_ok = host._qa_panel_layout_is_usable()
@@ -30549,7 +30565,7 @@ func _run_auto_qa_panel_check() -> void:
 		and command_text.find("不会清空") >= 0
 		and command_text.find("10 只 Lv1 蓝人龙") >= 0
 		and command_text.find("13 个空位") >= 0
-		and command_text.find("当前 76 种正式物品") >= 0
+		and command_text.find("当前 81 种正式物品") >= 0
 		and command_text.find("高价值 GM 测试资产") >= 0
 		and command_text.find("付费重置验收档与审计") >= 0
 		and command_text.find("1只普通一转可重置样本 + 1只普通二转终局拒绝样本") >= 0

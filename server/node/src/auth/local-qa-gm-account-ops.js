@@ -14,8 +14,16 @@ const {
   pluginDocumentForLocalQaLease,
 } = require("./local-qa-gm-policy");
 const {QA_CORE_ITEMS} = require("./gm-qa-profile");
+const {
+  QA_ASSETS_LEGACY_MANIFEST_ID,
+  QA_ASSETS_MANIFEST_ID,
+  QA_ASSET_EQUIPMENT_PLAN,
+  QA_ASSET_ORDINARY_TARGETS,
+  QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS,
+} = require("./gm-qa-assets");
 
-const QA_ASSET_WORST_CASE_BANK_SLOTS = 76;
+const QA_ASSET_WORST_CASE_BANK_SLOTS = QA_ASSET_ORDINARY_TARGETS.length + QA_ASSET_EQUIPMENT_PLAN.length;
+const QA_ASSET_LEGACY_UPGRADE_BANK_SLOTS = QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS.length;
 const QA_ASSET_BANK_CAPACITY = 90;
 const QA_PET_SAMPLE_COUNT = 13;
 const QA_PET_TOTAL_CAPACITY = 25;
@@ -607,13 +615,24 @@ function profileReadiness(data, account) {
     && Math.max(0, Math.trunc(Number(profile.diamonds || 0))) >= 100000
     && Math.max(0, Math.trunc(Number(profile.backpackExtraSlots || 0))) >= 5
     && QA_CORE_ITEMS.every((entry) => (backpackCounts.get(entry.itemId) || 0) >= entry.count);
+  const assetManifests = objectOrEmpty(profile.gmQaAssetManifests);
+  const assetsPrepared = Boolean(assetManifests[QA_ASSETS_MANIFEST_ID]);
+  const legacyAssetsPrepared = Boolean(assetManifests[QA_ASSETS_LEGACY_MANIFEST_ID]);
+  const requiredAssetBankSlots = assetsPrepared
+    ? 0
+    : (legacyAssetsPrepared ? QA_ASSET_LEGACY_UPGRADE_BANK_SLOTS : QA_ASSET_WORST_CASE_BANK_SLOTS);
+  const worstCaseBankFreeSlots = Math.max(
+    0,
+    QA_ASSET_BANK_CAPACITY - bankUsedSlots - requiredAssetBankSlots,
+  );
   return {
     exists: Object.keys(profile).length > 0,
     profileRevision: Math.max(0, Math.trunc(Number(binding.profileRevision || profileDoc.profileRevision || 0))),
     manifests: {
       coreTargetsSatisfied,
       petSamplesPrepared: Boolean(objectOrEmpty(profile.gmQaPetSampleManifests).qa_pet_samples_v1),
-      assetsPrepared: Boolean(objectOrEmpty(profile.gmQaAssetManifests).qa_assets_v1),
+      assetsPrepared,
+      legacyAssetsPrepared,
     },
     petSamples: {
       currentPets: pets.length,
@@ -625,9 +644,11 @@ function profileReadiness(data, account) {
       backpackEmptySlots: emptyBackpackSlots,
       bankSchemaVersion: Math.max(0, Math.trunc(Number(bank.schemaVersion || 0))),
       bankUsedSlots,
-      worstCaseBankFreeSlots: Math.max(0, QA_ASSET_BANK_CAPACITY - bankUsedSlots - QA_ASSET_WORST_CASE_BANK_SLOTS),
-      ready: emptyBackpackSlots >= 1
-        && QA_ASSET_BANK_CAPACITY - bankUsedSlots - QA_ASSET_WORST_CASE_BANK_SLOTS >= 1,
+      worstCaseBankFreeSlots,
+      ready: assetsPrepared || (
+        (legacyAssetsPrepared || emptyBackpackSlots >= 1)
+        && QA_ASSET_BANK_CAPACITY - bankUsedSlots - requiredAssetBankSlots >= 1
+      ),
     },
   };
 }

@@ -22,7 +22,8 @@ const {
 } = require("./authority-root-clone");
 
 const GM_PREPARE_QA_ASSETS_COMMAND_ID = "gm_prepare_qa_assets";
-const QA_ASSETS_MANIFEST_ID = "qa_assets_v1";
+const QA_ASSETS_LEGACY_MANIFEST_ID = "qa_assets_v1";
+const QA_ASSETS_MANIFEST_ID = "qa_assets_v2";
 const QA_ASSET_MANIFESTS_PROFILE_KEY = "gmQaAssetManifests";
 const QA_ASSET_SAMPLE_MARKER_KEY = "qaAssetSample";
 const QA_ASSET_SOURCE = "gm_qa_asset_manifest";
@@ -33,7 +34,7 @@ const QA_ASSET_RESERVED_BANK_SLOTS = 1;
 
 // This list is deliberately explicit. A catalog addition must create a new
 // manifest version instead of silently widening a privileged GM grant.
-const QA_ASSET_ORDINARY_TARGETS = Object.freeze([
+const QA_ASSET_V1_ORDINARY_TARGETS = Object.freeze([
   Object.freeze({itemId: "item_meat_small", count: 1}),
   Object.freeze({itemId: "tutorial_worn_hide", count: 1}),
   Object.freeze({itemId: "item_heal_all_5", count: 1}),
@@ -79,6 +80,19 @@ const QA_ASSET_ORDINARY_TARGETS = Object.freeze([
   Object.freeze({itemId: "ring_water_trial", count: 1}),
   Object.freeze({itemId: "ring_fire_trial", count: 1}),
   Object.freeze({itemId: "ring_wind_trial", count: 1}),
+]);
+
+const QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS = Object.freeze([
+  Object.freeze({itemId: "pet_evolution_resonance_core", count: 1}),
+  Object.freeze({itemId: "pet_evolution_wuli_crystal_scale", count: 1}),
+  Object.freeze({itemId: "pet_evolution_driftfox_moon_plume", count: 1}),
+  Object.freeze({itemId: "bui_novice_sprout_taming_certificate", count: 1}),
+  Object.freeze({itemId: "bui_novice_sprout_riding_certificate", count: 1}),
+]);
+
+const QA_ASSET_ORDINARY_TARGETS = Object.freeze([
+  ...QA_ASSET_V1_ORDINARY_TARGETS,
+  ...QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS,
 ]);
 
 const QA_ASSET_EQUIPMENT_PLAN = Object.freeze([
@@ -209,7 +223,16 @@ function createGmQaAssetsDomain(ctx) {
     }
     const accountId = String(access.resolved.account.accountId || "");
     const playerId = String(existing.binding.playerId || "");
-    manifest.equipmentSamples = withInitialEnvelopeIds(accountId, manifest.equipmentSamples);
+    const activeEquipmentSamples = withInitialEnvelopeIds(
+      accountId,
+      manifest.equipmentSamples,
+      QA_ASSETS_MANIFEST_ID,
+    );
+    const legacyEquipmentSamples = withInitialEnvelopeIds(
+      accountId,
+      manifest.equipmentSamples,
+      QA_ASSETS_LEGACY_MANIFEST_ID,
+    );
     const sourceProfile = existing.profileDoc.profile;
     const beforeRevision = strictRevision(existing.binding.profileRevision);
     const profileState = inspectSourceProfile(sourceProfile, {
@@ -236,13 +259,83 @@ function createGmQaAssetsDomain(ctx) {
       );
     }
 
-    const ledger = readLedger(sourceProfile, accountId, manifest.equipmentSamples);
+    const legacyLedger = readLedger(sourceProfile, accountId, {
+      manifestId: QA_ASSETS_LEGACY_MANIFEST_ID,
+      ordinaryTargets: QA_ASSET_V1_ORDINARY_TARGETS,
+      equipmentSampleOptions: [{
+        manifestId: QA_ASSETS_LEGACY_MANIFEST_ID,
+        samples: legacyEquipmentSamples,
+      }],
+    });
+    if (!legacyLedger.ok) {
+      return auditedFailure(data, access, legacyLedger.code, legacyLedger.message, revisionDetails(beforeRevision));
+    }
+    const activeEquipmentOptions = [{
+      manifestId: QA_ASSETS_MANIFEST_ID,
+      samples: activeEquipmentSamples,
+    }];
+    if (legacyLedger.present) {
+      activeEquipmentOptions.push({
+        manifestId: QA_ASSETS_LEGACY_MANIFEST_ID,
+        samples: legacyEquipmentSamples,
+      });
+    }
+    const ledger = readLedger(sourceProfile, accountId, {
+      manifestId: QA_ASSETS_MANIFEST_ID,
+      ordinaryTargets: QA_ASSET_ORDINARY_TARGETS,
+      equipmentSampleOptions: activeEquipmentOptions,
+    });
     if (!ledger.ok) {
       return auditedFailure(data, access, ledger.code, ledger.message, revisionDetails(beforeRevision));
     }
-    const markerInspection = inspectQaAssetMarkers(data, accountId, playerId, manifest.equipmentSamples);
-    if (!markerInspection.ok) {
-      return auditedFailure(data, access, markerInspection.code, markerInspection.message, revisionDetails(beforeRevision));
+    const upgradingLegacy = !ledger.present && legacyLedger.present;
+    manifest.equipmentManifestId = ledger.present
+      ? ledger.equipmentManifestId
+      : (upgradingLegacy ? QA_ASSETS_LEGACY_MANIFEST_ID : QA_ASSETS_MANIFEST_ID);
+    manifest.equipmentSamples = manifest.equipmentManifestId === QA_ASSETS_LEGACY_MANIFEST_ID
+      ? legacyEquipmentSamples
+      : activeEquipmentSamples;
+    const activeMarkerInspection = inspectQaAssetMarkers(
+      data,
+      accountId,
+      playerId,
+      activeEquipmentSamples,
+      QA_ASSETS_MANIFEST_ID,
+    );
+    const legacyMarkerInspection = inspectQaAssetMarkers(
+      data,
+      accountId,
+      playerId,
+      legacyEquipmentSamples,
+      QA_ASSETS_LEGACY_MANIFEST_ID,
+    );
+    if (!activeMarkerInspection.ok || !legacyMarkerInspection.ok) {
+      const failedInspection = !activeMarkerInspection.ok ? activeMarkerInspection : legacyMarkerInspection;
+      return auditedFailure(
+        data,
+        access,
+        failedInspection.code,
+        failedInspection.message,
+        revisionDetails(beforeRevision),
+      );
+    }
+    const markerInspection = manifest.equipmentManifestId === QA_ASSETS_LEGACY_MANIFEST_ID
+      ? legacyMarkerInspection
+      : activeMarkerInspection;
+    const unexpectedMarkerInspection = manifest.equipmentManifestId === QA_ASSETS_LEGACY_MANIFEST_ID
+      ? activeMarkerInspection
+      : legacyMarkerInspection;
+    if (
+      unexpectedMarkerInspection.accountEntries.length > 0
+      || (!legacyLedger.present && legacyMarkerInspection.accountEntries.length > 0)
+    ) {
+      return auditedFailure(
+        data,
+        access,
+        "gm_qa_assets_provenance_conflict",
+        "发现跨版本重复或缺少永久账本的GM装备样本，本次操作已取消。",
+        revisionDetails(beforeRevision),
+      );
     }
     const envelopeRegistry = createEquipmentEnvelopeOwnershipRegistry(data);
     if (envelopeRegistry.conflicts.length > 0) {
@@ -289,7 +382,7 @@ function createGmQaAssetsDomain(ctx) {
       });
     }
 
-    if (markerInspection.accountEntries.length > 0) {
+    if (!upgradingLegacy && markerInspection.accountEntries.length > 0) {
       return auditedFailure(
         data,
         access,
@@ -298,15 +391,17 @@ function createGmQaAssetsDomain(ctx) {
         revisionDetails(beforeRevision),
       );
     }
-    for (const sample of manifest.equipmentSamples) {
-      if (!envelopeRegistry.isAvailable(sample.initialEnvelopeId)) {
-        return auditedFailure(
-          data,
-          access,
-          "gm_qa_assets_provenance_conflict",
-          "发现已经使用过的GM装备样本身份，本次操作已取消。",
-          revisionDetails(beforeRevision),
-        );
+    if (!upgradingLegacy) {
+      for (const sample of manifest.equipmentSamples) {
+        if (!envelopeRegistry.isAvailable(sample.initialEnvelopeId)) {
+          return auditedFailure(
+            data,
+            access,
+            "gm_qa_assets_provenance_conflict",
+            "发现已经使用过的GM装备样本身份，本次操作已取消。",
+            revisionDetails(beforeRevision),
+          );
+        }
       }
     }
 
@@ -325,7 +420,10 @@ function createGmQaAssetsDomain(ctx) {
     }
     bank = canonicalUnlockedBank.bank;
 
-    for (const target of QA_ASSET_ORDINARY_TARGETS) {
+    const ordinaryTargetsToGrant = upgradingLegacy
+      ? QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS
+      : QA_ASSET_ORDINARY_TARGETS;
+    for (const target of ordinaryTargetsToGrant) {
       const missing = Math.max(0, target.count - bankItemCount(bank, target.itemId));
       if (missing <= 0) {
         continue;
@@ -355,7 +453,8 @@ function createGmQaAssetsDomain(ctx) {
     const originalEquipmentInstances = cloneOptional(sourceProfile.equipmentInstances, clone);
     const originalEquipmentSlotInstanceIds = cloneOptional(sourceProfile.equipmentSlotInstanceIds, clone);
     const originalSerial = sourceProfile.nextEquipmentInstanceSerial;
-    for (const sample of manifest.equipmentSamples) {
+    const equipmentSamplesToCreate = upgradingLegacy ? [] : manifest.equipmentSamples;
+    for (const sample of equipmentSamplesToCreate) {
       const beforeStagingSlots = clone(profile.backpackSlots);
       const stagingSlotIndex = beforeStagingSlots.findIndex((slot) => (
         isPlainRecord(slot) && Object.keys(slot).length === 0
@@ -388,7 +487,11 @@ function createGmQaAssetsDomain(ctx) {
         );
       }
       const instanceId = granted.instanceIds[0];
-      profile.equipmentInstances[instanceId][QA_ASSET_SAMPLE_MARKER_KEY] = markerForSample(sample, accountId);
+      profile.equipmentInstances[instanceId][QA_ASSET_SAMPLE_MARKER_KEY] = markerForSample(
+        sample,
+        accountId,
+        manifest.equipmentManifestId,
+      );
       const exported = exportBackpackEquipmentEnvelope(
         profile,
         battleEquipmentCatalog,
@@ -455,7 +558,7 @@ function createGmQaAssetsDomain(ctx) {
       || !sameDocument(profile.captureTools, originalCaptureTools)
       || !sameDocument(profile.equipmentInstances, originalEquipmentInstances)
       || !sameDocument(profile.equipmentSlotInstanceIds, originalEquipmentSlotInstanceIds)
-      || profile.nextEquipmentInstanceSerial !== originalSerial + QA_ASSET_EQUIPMENT_PLAN.length
+      || profile.nextEquipmentInstanceSerial !== originalSerial + equipmentSamplesToCreate.length
     ) {
       return auditedFailure(
         data,
@@ -503,11 +606,27 @@ function createGmQaAssetsDomain(ctx) {
       ...clone(existing.profileDoc),
       profile: clone(profile),
     });
-    const finalMarkers = inspectQaAssetMarkers(candidateData, accountId, playerId, manifest.equipmentSamples);
+    const finalMarkers = inspectQaAssetMarkers(
+      candidateData,
+      accountId,
+      playerId,
+      manifest.equipmentSamples,
+      manifest.equipmentManifestId,
+    );
     const finalRegistry = createEquipmentEnvelopeOwnershipRegistry(candidateData);
     if (
       !finalMarkers.ok
-      || finalMarkers.currentBankSlotIds.size !== QA_ASSET_EQUIPMENT_PLAN.length
+      || (
+        equipmentSamplesToCreate.length > 0
+        && finalMarkers.currentBankSlotIds.size !== QA_ASSET_EQUIPMENT_PLAN.length
+      )
+      || (
+        upgradingLegacy
+        && (
+          finalMarkers.accountEntries.length !== markerInspection.accountEntries.length
+          || !sameStringSet(finalMarkers.currentBankSlotIds, markerInspection.currentBankSlotIds)
+        )
+      )
       || finalRegistry.conflicts.length > 0
     ) {
       return auditedFailure(
@@ -535,7 +654,11 @@ function createGmQaAssetsDomain(ctx) {
       profileRevisionBefore: beforeRevision,
       profileRevisionAfter: afterRevision,
     });
-    const message = "GM装备与银行档已准备：45类物资和31件正式装备已存入银行。";
+    const message = upgradingLegacy
+      ? (missingAssetCount(result.summary) > 0
+        ? "GM装备与银行档已升级并补入5类新物资；旧版已移出或消耗的样本不会补发。"
+        : "GM装备与银行档已升级：新增5类目录物资，原31件装备样本继续沿用。")
+      : "GM装备与银行档已准备：50类物资和31件正式装备已存入银行。";
     const audit = recordGmCommandAudit(data, access, true, message, auditDetails(result.summary, accountId));
     save(data);
     return ok({
@@ -694,7 +817,10 @@ function existingProfileForAccount(data, account) {
   return {ok: true, binding, profileDoc};
 }
 
-function readLedger(profile, accountId, equipmentSamples) {
+function readLedger(profile, accountId, options) {
+  const manifestId = options.manifestId;
+  const ordinaryTargets = options.ordinaryTargets;
+  const equipmentSampleOptions = options.equipmentSampleOptions;
   if (!hasOwn(profile, QA_ASSET_MANIFESTS_PROFILE_KEY)) {
     return {ok: true, present: false};
   }
@@ -702,37 +828,58 @@ function readLedger(profile, accountId, equipmentSamples) {
   if (!isPlainRecord(ledgers)) {
     return ledgerFailure();
   }
-  if (!hasOwn(ledgers, QA_ASSETS_MANIFEST_ID)) {
+  if (!hasOwn(ledgers, manifestId)) {
     return {ok: true, present: false};
   }
-  const ledger = ledgers[QA_ASSETS_MANIFEST_ID];
+  const ledger = ledgers[manifestId];
   if (
     !hasExactKeys(ledger, LEDGER_KEYS)
     || ledger.schemaVersion !== 1
-    || ledger.manifestId !== QA_ASSETS_MANIFEST_ID
+    || ledger.manifestId !== manifestId
     || ledger.originalAccountId !== accountId
     || !canonicalIsoTimestamp(ledger.preparedAt)
     || !Array.isArray(ledger.ordinaryTargets)
     || !Array.isArray(ledger.equipmentSamples)
-    || ledger.ordinaryTargets.length !== QA_ASSET_ORDINARY_TARGETS.length
-    || ledger.equipmentSamples.length !== equipmentSamples.length
+    || ledger.ordinaryTargets.length !== ordinaryTargets.length
+    || !Array.isArray(equipmentSampleOptions)
+    || equipmentSampleOptions.length < 1
     || !Number.isSafeInteger(ledger.bankFreeSlotsAfterPrepare)
     || ledger.bankFreeSlotsAfterPrepare < QA_ASSET_RESERVED_BANK_SLOTS
     || ledger.bankFreeSlotsAfterPrepare > QA_ASSET_BANK_SLOT_CAPACITY
   ) {
     return ledgerFailure();
   }
-  for (let index = 0; index < QA_ASSET_ORDINARY_TARGETS.length; index += 1) {
+  for (let index = 0; index < ordinaryTargets.length; index += 1) {
     const entry = ledger.ordinaryTargets[index];
-    const expected = QA_ASSET_ORDINARY_TARGETS[index];
+    const expected = ordinaryTargets[index];
     if (!hasExactKeys(entry, LEDGER_ORDINARY_KEYS) || !sameDocument(entry, expected)) {
       return ledgerFailure();
     }
   }
+  const matchedEquipmentOption = equipmentSampleOptions.find((option) => (
+    strictIdentity(option && option.manifestId) !== ""
+    && ledgerEquipmentSamplesMatch(ledger.equipmentSamples, option.samples)
+  ));
+  if (!matchedEquipmentOption) {
+    return ledgerFailure();
+  }
+  return {
+    ok: true,
+    present: true,
+    ledger,
+    equipmentManifestId: matchedEquipmentOption.manifestId,
+    equipmentSamples: matchedEquipmentOption.samples,
+  };
+}
+
+function ledgerEquipmentSamplesMatch(entries, equipmentSamples) {
+  if (!Array.isArray(entries) || !Array.isArray(equipmentSamples) || entries.length !== equipmentSamples.length) {
+    return false;
+  }
   const seenSlots = new Set();
   const seenEnvelopes = new Set();
   for (let index = 0; index < equipmentSamples.length; index += 1) {
-    const entry = ledger.equipmentSamples[index];
+    const entry = entries[index];
     const expected = equipmentSamples[index];
     if (
       !hasExactKeys(entry, LEDGER_EQUIPMENT_KEYS)
@@ -742,19 +889,19 @@ function readLedger(profile, accountId, equipmentSamples) {
       || seenSlots.has(entry.slotId)
       || seenEnvelopes.has(entry.initialEnvelopeId)
     ) {
-      return ledgerFailure();
+      return false;
     }
     seenSlots.add(entry.slotId);
     seenEnvelopes.add(entry.initialEnvelopeId);
   }
-  return {ok: true, present: true, ledger};
+  return true;
 }
 
 function ledgerFailure() {
   return profileFailure("gm_qa_assets_ledger_invalid", "GM装备与银行档永久账本异常，本次操作已取消。");
 }
 
-function inspectQaAssetMarkers(data, accountId, playerId, equipmentSamples) {
+function inspectQaAssetMarkers(data, accountId, playerId, equipmentSamples, manifestId) {
   const expectedBySlot = new Map(equipmentSamples.map((sample) => [sample.slotId, sample]));
   const entries = collectQaAssetMarkerEntries(data);
   const seen = new Set();
@@ -765,7 +912,7 @@ function inspectQaAssetMarkers(data, accountId, playerId, equipmentSamples) {
     if (!marker.ok) {
       return markerFailure("GM装备样本来源标记异常，本次操作已取消。");
     }
-    if (marker.manifestId !== QA_ASSETS_MANIFEST_ID) {
+    if (marker.manifestId !== manifestId) {
       continue;
     }
     const expected = expectedBySlot.get(marker.slotId);
@@ -843,10 +990,10 @@ function normalizeMarker(value) {
   return {ok: true, ...value};
 }
 
-function markerForSample(sample, accountId) {
+function markerForSample(sample, accountId, manifestId = QA_ASSETS_MANIFEST_ID) {
   return {
     schemaVersion: 1,
-    manifestId: QA_ASSETS_MANIFEST_ID,
+    manifestId,
     slotId: sample.slotId,
     originItemId: sample.itemId,
     originalAccountId: accountId,
@@ -857,18 +1004,18 @@ function markerFailure(message) {
   return profileFailure("gm_qa_assets_provenance_conflict", message);
 }
 
-function initialEnvelopeId(accountId, slotId) {
+function initialEnvelopeId(accountId, slotId, manifestId = QA_ASSETS_MANIFEST_ID) {
   const digest = crypto.createHash("sha256")
-    .update(`${accountId}:${QA_ASSETS_MANIFEST_ID}:${slotId}`)
+    .update(`${accountId}:${manifestId}:${slotId}`)
     .digest("hex")
     .slice(0, 40);
   return `eqx_${digest}`;
 }
 
-function withInitialEnvelopeIds(accountId, samples) {
+function withInitialEnvelopeIds(accountId, samples, manifestId = QA_ASSETS_MANIFEST_ID) {
   return samples.map((sample) => ({
     ...sample,
-    initialEnvelopeId: initialEnvelopeId(accountId, sample.slotId),
+    initialEnvelopeId: initialEnvelopeId(accountId, sample.slotId, manifestId),
   }));
 }
 
@@ -1004,8 +1151,16 @@ function sameDocument(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function sameStringSet(left, right) {
+  return left instanceof Set
+    && right instanceof Set
+    && left.size === right.size
+    && Array.from(left).every((value) => right.has(value));
+}
+
 module.exports = {
   GM_PREPARE_QA_ASSETS_COMMAND_ID,
+  QA_ASSETS_LEGACY_MANIFEST_ID,
   QA_ASSETS_MANIFEST_ID,
   QA_ASSET_BANK_SLOT_CAPACITY,
   QA_ASSET_EQUIPMENT_PLAN,
@@ -1014,6 +1169,8 @@ module.exports = {
   QA_ASSET_ORDINARY_TARGET_QUANTITY,
   QA_ASSET_SAMPLE_MARKER_KEY,
   QA_ASSET_SOURCE,
+  QA_ASSET_V1_ORDINARY_TARGETS,
+  QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS,
   createGmQaAssetsDomain,
   initialEnvelopeId,
   withInitialEnvelopeIds,

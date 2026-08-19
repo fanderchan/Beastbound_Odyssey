@@ -13,6 +13,7 @@ const {
 } = require("../test-support/auth-service-test-context");
 const {
   GM_PREPARE_QA_ASSETS_COMMAND_ID,
+  QA_ASSETS_LEGACY_MANIFEST_ID,
   QA_ASSETS_MANIFEST_ID,
   QA_ASSET_EQUIPMENT_PLAN,
   QA_ASSET_MANIFESTS_PROFILE_KEY,
@@ -20,11 +21,16 @@ const {
   QA_ASSET_ORDINARY_TARGET_QUANTITY,
   QA_ASSET_SAMPLE_MARKER_KEY,
   QA_ASSET_SOURCE,
+  QA_ASSET_V1_ORDINARY_TARGETS,
+  QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS,
   initialEnvelopeId,
 } = require("../src/auth/gm-qa-assets");
 const {loadBattleEquipmentCatalog} = require("../src/auth/battle-equipment-rules");
 const {MAX_EQUIPMENT_INSTANCE_SERIAL} = require("../src/auth/equipment-profile-state");
-const {validateEquipmentTransferEnvelope} = require("../src/auth/equipment-transfer-envelope");
+const {
+  equipmentTransferStateFingerprint,
+  validateEquipmentTransferEnvelope,
+} = require("../src/auth/equipment-transfer-envelope");
 const {publicProfile} = require("../src/auth/profile-visibility");
 
 const COMMAND_ID = GM_PREPARE_QA_ASSETS_COMMAND_ID;
@@ -136,6 +142,47 @@ function seedOccupiedBank(service, gm, occupiedSlots) {
   return saved;
 }
 
+function legacyV1SnapshotFromPreparedService(service, accountId) {
+  const snapshot = structuredClone(service.snapshot());
+  const profile = accountProfile(snapshot, accountId);
+  const activeLedger = profile[QA_ASSET_MANIFESTS_PROFILE_KEY][MANIFEST_ID];
+  const additionalItemIds = new Set(QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS.map((entry) => entry.itemId));
+  const legacyEquipmentSamples = QA_ASSET_EQUIPMENT_PLAN.map((sample) => ({
+    slotId: sample.slotId,
+    itemId: sample.itemId,
+    initialEnvelopeId: initialEnvelopeId(accountId, sample.slotId, QA_ASSETS_LEGACY_MANIFEST_ID),
+  }));
+  const legacyEnvelopeIds = new Map(legacyEquipmentSamples.map((sample) => [sample.slotId, sample.initialEnvelopeId]));
+
+  profile.bank.slots = profile.bank.slots.map((slot) => {
+    if (additionalItemIds.has(String(slot && slot.itemId || ""))) {
+      return {};
+    }
+    const nextSlot = structuredClone(slot);
+    for (const envelope of Array.isArray(nextSlot.equipmentEnvelopes) ? nextSlot.equipmentEnvelopes : []) {
+      const marker = envelope.instanceState && envelope.instanceState[QA_ASSET_SAMPLE_MARKER_KEY];
+      if (!marker || marker.manifestId !== MANIFEST_ID) {
+        continue;
+      }
+      marker.manifestId = QA_ASSETS_LEGACY_MANIFEST_ID;
+      envelope.envelopeId = legacyEnvelopeIds.get(marker.slotId);
+      envelope.stateFingerprint = equipmentTransferStateFingerprint(envelope.instanceState);
+    }
+    return nextSlot;
+  });
+  profile.bank.items = profile.bank.items.filter((entry) => !additionalItemIds.has(String(entry && entry.itemId || "")));
+  profile[QA_ASSET_MANIFESTS_PROFILE_KEY] = {
+    [QA_ASSETS_LEGACY_MANIFEST_ID]: {
+      ...structuredClone(activeLedger),
+      manifestId: QA_ASSETS_LEGACY_MANIFEST_ID,
+      ordinaryTargets: QA_ASSET_V1_ORDINARY_TARGETS.map((entry) => ({...entry})),
+      equipmentSamples: legacyEquipmentSamples,
+      bankFreeSlotsAfterPrepare: 90 - bankUsedSlots(profile.bank),
+    },
+  };
+  return snapshot;
+}
+
 test("GM QA asset command requires current-account authorization and exact fixed payload", () => {
   const service = createAuthService({store: createMemoryAuthStore()});
   const player = service.register({username: "qaassetplayer", password: "test1234"});
@@ -160,7 +207,8 @@ test("GM QA asset command requires current-account authorization and exact fixed
 
   for (const payload of [
     {},
-    {manifestId: "qa_assets_v2"},
+    {manifestId: QA_ASSETS_LEGACY_MANIFEST_ID},
+    {manifestId: "qa_assets_v3"},
     {manifestId: MANIFEST_ID, targetUsername: "other"},
     {manifestId: MANIFEST_ID, itemId: "weapon_shadow_group_bow"},
     {manifestId: MANIFEST_ID, quantity: 999},
@@ -176,7 +224,7 @@ test("GM QA asset command requires current-account authorization and exact fixed
   assert.deepEqual(after.profile, before.profile);
 });
 
-test("fixed manifest uses all 76 catalog ids, formal equipment instances, and restores staging state", () => {
+test("fixed v2 manifest uses all 81 catalog ids, formal equipment instances, and restores staging state", () => {
   const service = createAuthService({store: createMemoryAuthStore()});
   const gm = registerGm(service, "qaassetmanifest", [COMMAND_ID, "gm_prepare_qa_profile"]);
   assert.equal(service.prepareGmQaProfile(gm.session.token, {manifestId: "qa_core_v1"}).ok, true);
@@ -208,19 +256,19 @@ test("fixed manifest uses all 76 catalog ids, formal equipment instances, and re
     manifestId: MANIFEST_ID,
     changed: true,
     alreadyPrepared: false,
-    catalogItemKinds: 76,
-    ordinaryItemKinds: 45,
+    catalogItemKinds: 81,
+    ordinaryItemKinds: 50,
     equipmentItemKinds: 31,
-    ordinaryTargetQuantity: 83,
+    ordinaryTargetQuantity: 88,
     equipmentSampleCount: 31,
-    ordinaryItemKindsPresent: 45,
+    ordinaryItemKindsPresent: 50,
     ordinaryItemKindsMissing: 0,
     bankEquipmentSamplesPresent: 31,
     bankEquipmentSamplesMissing: 0,
     bankUnlockedTabs: 6,
     bankSlotCapacity: 90,
-    bankUsedSlots: 76,
-    bankFreeSlots: 14,
+    bankUsedSlots: 81,
+    bankFreeSlots: 9,
     reservedBankSlots: 1,
     profileRevisionBefore: beforeRevision,
     profileRevisionAfter: beforeRevision + 1,
@@ -233,7 +281,7 @@ test("fixed manifest uses all 76 catalog ids, formal equipment instances, and re
   assert.equal(internal.bank.schemaVersion, 2);
   assert.equal(internal.bank.unlockedTabs, 6);
   assert.equal(internal.bank.slots.length, 90);
-  assert.equal(bankUsedSlots(internal.bank), 76);
+  assert.equal(bankUsedSlots(internal.bank), 81);
   assert.equal(internal.nextEquipmentInstanceSerial, before.nextEquipmentInstanceSerial + 31);
   assert.deepEqual(internal.backpackSlots, before.backpackSlots);
   assert.deepEqual(internal.captureTools, before.captureTools);
@@ -273,26 +321,36 @@ test("fixed manifest uses all 76 catalog ids, formal equipment instances, and re
     new Set([...QA_ASSET_ORDINARY_TARGETS.map((entry) => entry.itemId), ...QA_ASSET_EQUIPMENT_PLAN.map((entry) => entry.itemId)]),
     catalogIds,
   );
-  assert.equal(QA_ASSET_ORDINARY_TARGET_QUANTITY, 83);
+  assert.deepEqual(
+    new Set(QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS.map((entry) => entry.itemId)),
+    new Set([
+      "pet_evolution_resonance_core",
+      "pet_evolution_wuli_crystal_scale",
+      "pet_evolution_driftfox_moon_plume",
+      "bui_novice_sprout_taming_certificate",
+      "bui_novice_sprout_riding_certificate",
+    ]),
+  );
+  assert.equal(QA_ASSET_ORDINARY_TARGET_QUANTITY, 88);
 });
 
 test("existing bank assets pass with one reserved slot and fail atomically when the reserve is exhausted", () => {
   const passService = createAuthService({store: createMemoryAuthStore()});
   const passGm = registerGm(passService, "qaassetreservepass");
-  seedOccupiedBank(passService, passGm, 14);
+  seedOccupiedBank(passService, passGm, 9);
   const passBefore = structuredClone(internalProfileForAccount(passService, passGm.account.accountId));
   const passed = passService.prepareGmQaAssets(passGm.session.token, {manifestId: MANIFEST_ID});
   assert.equal(passed.ok, true);
   assert.equal(passed.result.summary.bankUsedSlots, 89);
   assert.equal(passed.result.summary.bankFreeSlots, 1);
   assert.deepEqual(
-    internalProfileForAccount(passService, passGm.account.accountId).bank.slots.slice(0, 14),
-    passBefore.bank.slots.slice(0, 14),
+    internalProfileForAccount(passService, passGm.account.accountId).bank.slots.slice(0, 9),
+    passBefore.bank.slots.slice(0, 9),
   );
 
   const blockedService = createAuthService({store: createMemoryAuthStore()});
   const blockedGm = registerGm(blockedService, "qaassetreservefull");
-  seedOccupiedBank(blockedService, blockedGm, 15);
+  seedOccupiedBank(blockedService, blockedGm, 10);
   const beforeProfile = structuredClone(internalProfileForAccount(blockedService, blockedGm.account.accountId));
   const beforeRevision = currentProfile(blockedService, blockedGm.session.token).profileSummary.profileRevision;
   const blocked = blockedService.prepareGmQaAssets(blockedGm.session.token, {manifestId: MANIFEST_ID});
@@ -370,7 +428,7 @@ test("permanent ledger reports current bank gaps and never reissues moved sample
   assert.equal(next.ok, true);
   assert.equal(next.result.summary.changed, false);
   assert.equal(next.result.summary.alreadyPrepared, true);
-  assert.equal(next.result.summary.ordinaryItemKindsPresent, 44);
+  assert.equal(next.result.summary.ordinaryItemKindsPresent, 49);
   assert.equal(next.result.summary.ordinaryItemKindsMissing, 1);
   assert.equal(next.result.summary.bankEquipmentSamplesPresent, 30);
   assert.equal(next.result.summary.bankEquipmentSamplesMissing, 1);
@@ -383,6 +441,110 @@ test("permanent ledger reports current bank gaps and never reissues moved sample
   assert.equal(afterRestart.result.summary.changed, false);
   assert.equal(afterRestart.result.summary.ordinaryItemKindsMissing, 1);
   assert.equal(afterRestart.result.summary.bankEquipmentSamplesMissing, 1);
+});
+
+test("a valid v1 ledger upgrades by adding only five new items without reissuing moved assets", () => {
+  const seed = createAuthService({store: createMemoryAuthStore()});
+  const gm = registerGm(seed, "qaassetlegacy");
+  assert.equal(seed.prepareGmQaAssets(gm.session.token, {manifestId: MANIFEST_ID}).ok, true);
+  const legacySnapshot = legacyV1SnapshotFromPreparedService(seed, gm.account.accountId);
+  const legacyProfile = accountProfile(legacySnapshot, gm.account.accountId);
+  assert.equal(bankUsedSlots(legacyProfile.bank), 76);
+  assert.equal(Object.hasOwn(legacyProfile[QA_ASSET_MANIFESTS_PROFILE_KEY], MANIFEST_ID), false);
+  assert.equal(Object.hasOwn(legacyProfile[QA_ASSET_MANIFESTS_PROFILE_KEY], QA_ASSETS_LEGACY_MANIFEST_ID), true);
+  for (const target of QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS) {
+    assert.equal(bankItemCount(legacyProfile.bank, target.itemId), 0, target.itemId);
+  }
+
+  const service = createAuthService({store: createMemoryAuthStore(legacySnapshot)});
+  const beforeMove = internalProfileForAccount(service, gm.account.accountId);
+  const equipmentEntry = internalQaEnvelopes(beforeMove)
+    .find(({envelope}) => envelope.itemId === "weapon_wooden_club");
+  const ordinarySlotIndex = beforeMove.bank.slots.findIndex((slot) => slot.itemId === "ring_earth_trial");
+  assert.ok(equipmentEntry);
+  assert.ok(ordinarySlotIndex >= 0);
+  const moved = service.bankWithdraw(gm.session.token, {
+    items: [
+      {itemId: "ring_earth_trial", count: 1, bankSlotIndex: ordinarySlotIndex},
+      {
+        itemId: "weapon_wooden_club",
+        count: 1,
+        envelopeId: equipmentEntry.envelope.envelopeId,
+        bankSlotIndex: equipmentEntry.bankSlotIndex,
+      },
+    ],
+  });
+  assert.equal(moved.ok, true, JSON.stringify(moved));
+  const beforeUpgrade = structuredClone(internalProfileForAccount(service, gm.account.accountId));
+  const legacyLedgerBefore = structuredClone(
+    beforeUpgrade[QA_ASSET_MANIFESTS_PROFILE_KEY][QA_ASSETS_LEGACY_MANIFEST_ID],
+  );
+  const serialBeforeUpgrade = beforeUpgrade.nextEquipmentInstanceSerial;
+  const revisionBeforeUpgrade = currentProfile(service, gm.session.token).profileSummary.profileRevision;
+
+  const upgraded = service.prepareGmQaAssets(gm.session.token, {manifestId: MANIFEST_ID});
+  assert.equal(upgraded.ok, true, JSON.stringify(upgraded));
+  assert.equal(upgraded.result.summary.manifestId, MANIFEST_ID);
+  assert.equal(upgraded.result.summary.changed, true);
+  assert.equal(upgraded.result.summary.alreadyPrepared, false);
+  assert.equal(upgraded.result.summary.ordinaryItemKindsPresent, 49);
+  assert.equal(upgraded.result.summary.ordinaryItemKindsMissing, 1);
+  assert.equal(upgraded.result.summary.bankEquipmentSamplesPresent, 30);
+  assert.equal(upgraded.result.summary.bankEquipmentSamplesMissing, 1);
+  assert.equal(upgraded.result.summary.bankUsedSlots, 79);
+  assert.equal(upgraded.result.summary.bankFreeSlots, 11);
+  assert.equal(upgraded.profileSummary.profileRevision, revisionBeforeUpgrade + 1);
+  assertNoPrivateQaAssetFields(upgraded);
+
+  const afterUpgrade = internalProfileForAccount(service, gm.account.accountId);
+  assert.equal(afterUpgrade.nextEquipmentInstanceSerial, serialBeforeUpgrade);
+  assert.deepEqual(
+    afterUpgrade[QA_ASSET_MANIFESTS_PROFILE_KEY][QA_ASSETS_LEGACY_MANIFEST_ID],
+    legacyLedgerBefore,
+  );
+  assert.deepEqual(
+    afterUpgrade[QA_ASSET_MANIFESTS_PROFILE_KEY][MANIFEST_ID].equipmentSamples,
+    legacyLedgerBefore.equipmentSamples,
+  );
+  assert.equal(bankItemCount(afterUpgrade.bank, "ring_earth_trial"), 0);
+  for (const target of QA_ASSET_V2_ADDITIONAL_ORDINARY_TARGETS) {
+    assert.equal(bankItemCount(afterUpgrade.bank, target.itemId), target.count, target.itemId);
+  }
+  const markers = [
+    ...Object.values(afterUpgrade.equipmentInstances || {}),
+    ...afterUpgrade.bank.slots.flatMap((slot) => (
+      Array.isArray(slot && slot.equipmentEnvelopes)
+        ? slot.equipmentEnvelopes.map((envelope) => envelope.instanceState)
+        : []
+    )),
+  ].filter((state) => state && state[QA_ASSET_SAMPLE_MARKER_KEY]);
+  assert.equal(markers.length, 31);
+  assert.equal(markers.every((state) => (
+    state[QA_ASSET_SAMPLE_MARKER_KEY].manifestId === QA_ASSETS_LEGACY_MANIFEST_ID
+  )), true);
+
+  const revisionAfterUpgrade = upgraded.profileSummary.profileRevision;
+  const retried = service.prepareGmQaAssets(gm.session.token, {manifestId: MANIFEST_ID});
+  assert.equal(retried.ok, true);
+  assert.equal(retried.result.summary.changed, false);
+  assert.equal(retried.result.summary.alreadyPrepared, true);
+  assert.equal(retried.result.summary.ordinaryItemKindsMissing, 1);
+  assert.equal(retried.result.summary.bankEquipmentSamplesMissing, 1);
+  assert.equal(retried.profileSummary.profileRevision, revisionAfterUpgrade);
+  assert.equal(internalProfileForAccount(service, gm.account.accountId).nextEquipmentInstanceSerial, serialBeforeUpgrade);
+
+  const damagedLegacySnapshot = structuredClone(legacySnapshot);
+  const damagedLegacyProfile = accountProfile(damagedLegacySnapshot, gm.account.accountId);
+  damagedLegacyProfile[QA_ASSET_MANIFESTS_PROFILE_KEY]
+    [QA_ASSETS_LEGACY_MANIFEST_ID].ordinaryTargets[0].count += 1;
+  const damagedBefore = structuredClone(damagedLegacyProfile);
+  const damagedRevision = damagedLegacySnapshot.profileBindings[gm.account.accountId].profileRevision;
+  const damagedService = createAuthService({store: createMemoryAuthStore(damagedLegacySnapshot)});
+  const blockedUpgrade = damagedService.prepareGmQaAssets(gm.session.token, {manifestId: MANIFEST_ID});
+  assert.equal(blockedUpgrade.ok, false);
+  assert.equal(blockedUpgrade.code, "gm_qa_assets_ledger_invalid");
+  assert.equal(damagedService.snapshot().profileBindings[gm.account.accountId].profileRevision, damagedRevision);
+  assert.deepEqual(internalProfileForAccount(damagedService, gm.account.accountId), damagedBefore);
 });
 
 test("market and mail transfers keep QA identity private and never reissue samples across accounts", () => {
@@ -617,7 +779,7 @@ test("HTTP asset preparation requires a durable key, replays once, and converges
   const changedIntent = await fetchJson(endpoint, {
     method: "POST",
     headers,
-    body: JSON.stringify({manifestId: "qa_assets_v2"}),
+    body: JSON.stringify({manifestId: QA_ASSETS_LEGACY_MANIFEST_ID}),
   });
   assert.equal(changedIntent.code, "idempotency_key_conflict");
   const crossAccount = await fetchJson(endpoint, {
