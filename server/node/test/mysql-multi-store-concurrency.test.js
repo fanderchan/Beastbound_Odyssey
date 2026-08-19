@@ -341,6 +341,15 @@ process.stdin.on("end", () => {
     const rows = [
       ["server_state", "auth", JSON.stringify({schemaVersion: 2, storage: "mysql_entity_tables"})],
       ["profile_bindings", "acc_multi_store", JSON.stringify({accountId: "acc_multi_store", playerId: "player_multi_store", profileRevision: profile.profileRevision, updatedAt: "2026-07-13T15:00:00.000Z"})],
+      ["account_character_slots", "acc_multi_store/0", JSON.stringify({
+        schemaVersion: 1,
+        accountId: "acc_multi_store",
+        slotIndex: 0,
+        playerId: "player_multi_store",
+        createdAt: "2026-07-13T15:00:00.000Z",
+        updatedAt: "2026-07-13T15:00:00.000Z",
+        lastSelectedAt: null,
+      })],
       ["profiles", "player_multi_store", JSON.stringify({playerId: "player_multi_store", accountId: "acc_multi_store", profileRevision: profile.profileRevision, updatedAt: "2026-07-13T15:00:00.000Z", profile: {displayName: profile.displayName, stoneCoins: profile.stoneCoins}})],
     ];
     if (stdin.includes("SELECT 'store_revision'")) {
@@ -348,7 +357,11 @@ process.stdin.on("end", () => {
     }
     process.stdout.write(rows.map((row) => row.join("\\t")).join("\\n") + "\\n");
   } else if (stdin.includes("information_schema.tables")) {
-    process.stdout.write(stdin.includes("auth_store_revisions") ? "1\\n" : "0\\n");
+    process.stdout.write(
+      stdin.includes("auth_store_revisions") || stdin.includes("account_character_slots")
+        ? "1\\n"
+        : "0\\n",
+    );
   } else if (stdin.includes("UPDATE auth_store_revisions SET revision = revision + 1")) {
     const state = JSON.parse(fs.readFileSync(${JSON.stringify(statePath)}, "utf8"));
     state.storeRevision += 1;
@@ -386,12 +399,19 @@ process.stdin.on("end", () => {
   let maintenanceStore = null;
   try {
     const loadedA = storeA.load();
-    storeB.load();
+    const loadedB = storeB.load();
     const loadSql = fs.readFileSync(loadSqlPath, "utf8");
     assert.match(loadSql, /SET TRANSACTION ISOLATION LEVEL REPEATABLE READ/);
     assert.match(loadSql, /SET autocommit = 0/);
     assert.ok(loadSql.indexOf("SELECT 'store_revision'") < loadSql.indexOf("SELECT 'profiles'"));
+    assert.match(loadSql, /SELECT 'account_character_slots'/);
     assert.match(loadSql, /COMMIT\s*$/);
+    for (const loaded of [loadedA, loadedB]) {
+      assert.deepEqual(
+        loaded.accountCharacterSlots.acc_multi_store.map((slot) => slot && slot.playerId),
+        ["player_multi_store", null, null, null],
+      );
+    }
 
     await storeA.saveAsync(loadedA);
     assert.equal(shared.events.length, 0);

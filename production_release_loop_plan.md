@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R0.F008
+> 当前游标：R0.F009
 > 当前发布结论：BLOCKED，不是可发布候选版
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -93,7 +93,7 @@
   依赖：R0.02。以当前干净候选重跑完整服务端套件，将每个失败按共同根因归类为真实回归、测试夹具漂移、环境前置缺失或已废弃预期；在动态子任务区生成一个根因一个 R0.Fxxx 任务，禁止只改断言迎合错误行为。
 
 - [ ] **R0.05 GATE｜服务端零失败门禁**
-  依赖：所有 R0.Fxxx。完整服务端测试必须 0 failure；允许明确、已有理由的 skip，但必须在 phase 文档说明。R0.F007 完成后的当前稳定快照为 1978 项、15 failure、1 个有理由的 Valkey 环境 skip，另有 R0.F013 记录的 1 个间歇性测试夹具失败；继续完成 R0.F008–R0.F013，再刷新最终门禁。
+  依赖：所有 R0.Fxxx。完整服务端测试必须 0 failure；允许明确、已有理由的 skip，但必须在 phase 文档说明。R0.F008 完成后的当前稳定快照为 1978 项、14 failure、1 个有理由的 Valkey 环境 skip，另有 R0.F013 记录的 1 个间歇性测试夹具失败；继续完成 R0.F009–R0.F013，再刷新最终门禁。
 
 - [ ] **R0.06 AUTO｜恢复并跑通客户端目标自动检查**
   依赖：R0.03、R0.05。通过 Godot 解析，跑通地图、音频、融合、宠物、战斗、世界交互与当前变更相关的自动检查；所有 live 检查只连本地 QA 后端。
@@ -533,7 +533,7 @@
 - [x] **R0.F007 AUTO｜补齐 MySQL 精确回执夹具的角色作用域字段**
   依赖：R0.04。分类：测试夹具漂移，1 failure。`mysql-large-collection-journal` 提交后的本地回执已有 `scopeKind/playerId/selectionEpoch`，fake exact-row 却丢失三字段，重放被正确判为本地/MySQL 不一致；补齐精确行与列投影，继续证明过期替换、原 key 重放和不一致 fail closed。
 
-- [ ] **R0.F008 AUTO｜补齐 multi-store no-op 夹具的角色槽基线**
+- [x] **R0.F008 AUTO｜补齐 multi-store no-op 夹具的角色槽基线**
   依赖：R0.04。分类：测试夹具漂移，1 failure。`mysql-multi-store-concurrency` 的 loader 没有返回 `accountCharacterSlots`，首个所谓 no-op save 实际执行兼容桥接 INSERT 并推进 revision；让夹具从当前完整基线开始，另保留明确的 legacy bridge 覆盖，恢复真正的零查询 no-op 与陈旧 Node CAS 断言。
 
 - [ ] **R0.F009 AUTO｜重建三项战斗测试的服务端权威遭遇夹具**
@@ -591,7 +591,7 @@
 
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
-| R0 干净候选基线 | 进行中（R0.01–R0.04、R0.F001–R0.F007 已完成；当前 R0.F008） | R0.09 完成 |
+| R0 干净候选基线 | 进行中（R0.01–R0.04、R0.F001–R0.F008 已完成；当前 R0.F009） | R0.09 完成 |
 | R1 历史候选验收 | 未开始 | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
@@ -617,6 +617,7 @@
 - 2026-08-20｜R0.F005｜docs/phase_497_production_release_r0_f005_account_character_slots_migration.md｜批量迁移按精确四槽 MySQL 合同审计账号、角色槽、活动 binding 与多角色档案，候选/摘要/应用核验覆盖 `accountCharacterSlots`，回滚只恢复目标档案并保留合法并发槽写入；目标 `19/19`、相邻 `82/82`，完整服务端 `1977` 项为 `1928 pass / 48 fail / 1 skip`，精确移除 13 项且无新增失败｜其余稳定 `47 个夹具漂移 + 1 个已废弃预期` 由 R0.F006–R0.F012 阻塞；R0.F013 间歇夹具仍待修，Valkey 真集成继续因未配置隔离端口而有理由 skip
 - 2026-08-20｜R0.F006｜docs/phase_498_production_release_r0_f006_shared_transaction_harness.md｜shared transaction fixture 使用当前四角色槽物理基线，精确建模邮箱代次共享锁、角色槽/legacy 邮件原始 INSERT 和整单回滚；目标 `33/33`、相邻 `277/277`，一次性 MySQL 9.7 完整门禁 `qualified=true / cleanupVerified=true`，完整服务端 `1978` 项为 `1961 pass / 16 fail / 1 skip`，精确移除 32 项且无新增失败｜其余稳定 `15 个夹具漂移 + 1 个已废弃预期` 由 R0.F007–R0.F012 阻塞；R0.F013 间歇夹具仍待修，Valkey 真集成继续因未配置隔离端口而有理由 skip
 - 2026-08-20｜R0.F007｜docs/phase_499_production_release_r0_f007_character_scoped_exact_receipt_fixture.md｜fake exact-row 直接复用真实发布回执的完整 `document_json`，显式锁定 `scopeKind/playerId/selectionEpoch`，不虚构物理列且保持镜像漂移 fail closed；目标 `4/4`、相邻 `160/160`，完整服务端 `1978` 项为 `1962 pass / 15 fail / 1 skip`，精确移除目标失败且无新增失败｜其余稳定 `14 个夹具漂移 + 1 个已废弃预期` 由 R0.F008–R0.F012 阻塞；R0.F013 间歇夹具仍待修，Valkey 真集成继续因未配置隔离端口而有理由 skip
+- 2026-08-20｜R0.F008｜docs/phase_500_production_release_r0_f008_multi_store_character_slot_baseline.md｜multi-store fake loader 读取当前槽位表与规范槽 0 行，两个 store 从同一完整根开始；首存零连接/零查询/revision 不变，陈旧 Node 在业务 SQL 前 CAS 回滚，独立 legacy bridge once 覆盖继续通过；目标 `10/10`、相邻 `184/184`，完整服务端 `1978` 项为 `1963 pass / 14 fail / 1 skip`，精确移除目标失败且无新增失败｜其余稳定 `13 个夹具漂移 + 1 个已废弃预期` 由 R0.F009–R0.F012 阻塞；R0.F013 间歇夹具仍待修，Valkey 真集成继续因未配置隔离端口而有理由 skip
 
 ## 7. 正式上线硬门槛
 
