@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R0.04
+> 当前游标：R0.F001
 > 当前发布结论：BLOCKED，不是可发布候选版
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -89,11 +89,11 @@
 - [x] **R0.03 AUTO｜修复 QA 自动化车道所有权与残留恢复**
   依赖：R0.01。复现并诊断无 Godot 进程时仍有 owner 文件的情况；实现安全的过期判定、恢复与收尾合同，不触碰真实玩家资料。证明连续两次运行均无假占用和孤儿进程。
 
-- [ ] **R0.04 AUTO｜重跑并分类完整服务端失败**
+- [x] **R0.04 AUTO｜重跑并分类完整服务端失败**
   依赖：R0.02。以当前干净候选重跑完整服务端套件，将每个失败按共同根因归类为真实回归、测试夹具漂移、环境前置缺失或已废弃预期；在动态子任务区生成一个根因一个 R0.Fxxx 任务，禁止只改断言迎合错误行为。
 
 - [ ] **R0.05 GATE｜服务端零失败门禁**
-  依赖：所有 R0.Fxxx。完整服务端测试必须 0 failure；允许明确、已有理由的 skip，但必须在 phase 文档说明。当前 2026-08-20 快照为 1975 项、89 failure，只作为待刷新起点。
+  依赖：所有 R0.Fxxx。完整服务端测试必须 0 failure；允许明确、已有理由的 skip，但必须在 phase 文档说明。R0.04 当前快照为 1975 项、87 failure、1 个有理由的 Valkey 环境 skip；先完成 R0.F001–R0.F012，再刷新最终门禁。
 
 - [ ] **R0.06 AUTO｜恢复并跑通客户端目标自动检查**
   依赖：R0.03、R0.05。通过 Godot 解析，跑通地图、音频、融合、宠物、战斗、世界交互与当前变更相关的自动检查；所有 live 检查只连本地 QA 后端。
@@ -510,7 +510,43 @@
 
 ### R0.Fxxx — 服务端失败根因
 
-由 R0.04 生成。一个共同根因一个任务；修完先跑目标测试，再跑完整服务端套件。
+由 R0.04 生成。一个共同根因一个任务；修完先跑目标测试，再跑完整服务端套件。完整分类与逐文件对账见 `docs/phase_492_production_release_r0_04_server_failure_classification.md`。
+
+- [ ] **R0.F001 AUTO｜迁移 demo seed 到显式建角与选角合同**
+  依赖：R0.04。分类：真实回归，2 failure。`seed-demo-data.js` 仍假定注册即产生 revision-zero 档案，实际命令在四空槽合同下直接退出；必须用隔离 memory/JSON 流程显式建角、选角和造数，保留一次性输出、拒绝 MySQL、私密成长不泄露与不可覆盖合同。目标 `demo-seed-script.test.js` 全绿后重跑完整服务端套件。
+
+- [ ] **R0.F002 AUTO｜迁移严格注册测试夹具到四角色槽合同**
+  依赖：R0.04。分类：测试夹具漂移，12 failure。修复 `auth-gm-pet-paid-reset-config`、`local-qa-gm-account`、`progression-leveling-soak`、`runtime-hot-collections-integration` 中仍把直接注册当作已有活动角色的夹具；显式建角/选角或只在合理处使用测试包装器，禁止恢复生产隐式建角。目标四文件全绿后重跑完整服务端套件。
+
+- [ ] **R0.F003 AUTO｜消除骑宠离线夹具的派生 ID 截断碰撞**
+  依赖：R0.04。分类：测试夹具漂移，1 failure。`auth-battle-riding-authority` 的递增 `ride_depart_*` 随机夹具在当前派生 player ID 截断后碰撞，第二个账号注册失败；改成经过派生/截断仍唯一的固定夹具，并继续验证离线队员骑宠受伤事实与写回，不得跳过原战斗断言。
+
+- [ ] **R0.F004 AUTO｜发布与当前 81 项目录一致的新 GM QA 资产清单**
+  依赖：R0.04。分类：真实回归，11 failure。生产 `qa_assets_v1` 只有 76 项，当前目录新增 5 项后整个 GM 资产准备命令 fail closed；按既有特权边界创建显式新 manifest 版本，覆盖进化材料与芽耳布伊证书，保留旧版本兼容/拒绝策略、账本、幂等、回滚和公开投影私密字段清理。禁止只把测试中的 76 改成 81。
+
+- [ ] **R0.F005 AUTO｜让批量档案迁移工具理解 accountCharacterSlots**
+  依赖：R0.04。分类：真实回归，13 failure。当前 MySQL 根合同包含 `accountCharacterSlots`，但批量迁移根字段分类、身份图、候选验证与回滚投影没有覆盖，真实 dry-run 因 `batch_root_contract_field_unclassified` 停止；补齐只读审计与不变性合同，保持只迁移目标 profile、备份先行、歧义提交核验、并发非目标保留和冲突 fail closed。两个迁移测试文件全绿后重跑完整服务端套件。
+
+- [ ] **R0.F006 AUTO｜升级 shared transaction fake harness 到当前 MySQL 合同**
+  依赖：R0.04。分类：测试夹具漂移，32 failure。`mysql-shared-transaction-integration` 的 fake harness 未建模角色槽 INSERT 与 generation 邮件控制读，全部场景落入 `shared_mysql_unknown_operation`；精确模拟现行 SQL、锁序、返回行和回滚，不得放宽未知 SQL 的 fail-closed 保护。恢复 32/32 后跑相邻 planner/真实隔离 MySQL 门禁与完整服务端套件。
+
+- [ ] **R0.F007 AUTO｜补齐 MySQL 精确回执夹具的角色作用域字段**
+  依赖：R0.04。分类：测试夹具漂移，1 failure。`mysql-large-collection-journal` 提交后的本地回执已有 `scopeKind/playerId/selectionEpoch`，fake exact-row 却丢失三字段，重放被正确判为本地/MySQL 不一致；补齐精确行与列投影，继续证明过期替换、原 key 重放和不一致 fail closed。
+
+- [ ] **R0.F008 AUTO｜补齐 multi-store no-op 夹具的角色槽基线**
+  依赖：R0.04。分类：测试夹具漂移，1 failure。`mysql-multi-store-concurrency` 的 loader 没有返回 `accountCharacterSlots`，首个所谓 no-op save 实际执行兼容桥接 INSERT 并推进 revision；让夹具从当前完整基线开始，另保留明确的 legacy bridge 覆盖，恢复真正的零查询 no-op 与陈旧 Node CAS 断言。
+
+- [ ] **R0.F009 AUTO｜重建三项战斗测试的服务端权威遭遇夹具**
+  依赖：R0.04。分类：测试夹具漂移，3 failure。群弓、骑宠提前倒地经验和毒杀经验测试仍用请求里的 `selectedWildPet.battleStats` 假设可覆盖敌宠属性；现行运行时按权威成长物化，实际 HP/防御不再等于该请求。用显式注入且不可进入生产的权威测试目录/actor 夹具恢复确定性，保留十目标、最后一击、冻结骑宠归属等原产品合同，禁止重新信任客户端战斗属性。
+
+- [ ] **R0.F010 AUTO｜让世界与宠物服务测试跟随 Firebud v2 权威坐标**
+  依赖：R0.04。分类：测试夹具漂移，4 failure。候选地图已把兽栏、宠技训练师和阻挡格移动，`auth-social-world` 与 `pet-service-access` 仍硬编码旧坐标；从权威地图解析服务点并选取稳定的近/远/移动/阻挡样本，继续证明传送、碰撞和 NPC 服务距离权限，禁止为旧断言改回地图。
+
+- [ ] **R0.F011 AUTO｜更新通用 GM 回执的 selectionEpoch 预期**
+  依赖：R0.04。分类：已废弃预期，1 failure。旧测试期待重新登录后重放同一 character-scoped GM receipt；Phase 378 已明确重新登录产生新 `selectionEpoch` 并返回 `idempotency_key_conflict`。改为同选角 refresh 可重放、重新登录/重选角拒绝，并保持一次提交与审计不重复；禁止削弱跨角色幂等隔离。
+
+- [ ] **R0.F012 AUTO｜补齐启动器隔离夹具的新运维模块依赖**
+  依赖：R0.04。分类：测试夹具漂移，6 failure。真实仓库存在 `src/mysql-backup-artifact.js`，但 `start-backend-launcher` 临时仓只复制 `server-ops.js`，导致模块缺失并让五项控制器测试超时；让隔离夹具复制/注入完整最小依赖，恢复 6/6，并证明临时 backend、锁、PID 与控制器全部收尾。
 
 ### R1.Wxxx — 已有候选返工
 
@@ -552,7 +588,7 @@
 
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
-| R0 干净候选基线 | 进行中（R0.01–R0.03 已完成） | R0.09 完成 |
+| R0 干净候选基线 | 进行中（R0.01–R0.04 已完成；当前 R0.F001） | R0.09 完成 |
 | R1 历史候选验收 | 未开始 | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
@@ -570,6 +606,7 @@
 - 2026-08-20｜R0.01｜docs/phase_489_production_release_r0_01_repository_baseline.md + docs/release_baselines/2026-08-20_r0_01_worktree_inventory.tsv｜204 条路径逐 blob/mode 对账，204 个唯一路径，分组与 relation 合计一致，远端 47 条严格拆为 37 + 9 + 1，行尾与补丁检查通过｜主工作树仍落后 origin/main 4 个提交；Firebud、Bui 与 3 个共享文件等待 R0.02 在干净 worktree 分批重放
 - 2026-08-20｜R0.02｜406bb5f1e + 06becae71 + docs/phase_490_production_release_r0_02_candidate_isolation.md｜基于 ddcb4ff77 的独立候选分支完成 Firebud 128 路径与 Bui 33 路径分批重放；目标 Python 63/63、Node 68/68、Godot 解析及隔离 lane 目标检查通过，两个反向补丁均重建父 tree｜automation lane 旧 owner 残留留给 R0.03；两批资产仍为 OWNER pending，完整服务端套件留给 R0.04
 - 2026-08-20｜R0.03｜docs/phase_491_production_release_r0_03_qa_lane_recovery.md + 本机连续运行 summary `2026-08-19T19-49-46-310Z` / `2026-08-19T19-49-58-946Z`｜schema-v2 锁绑定 runner PID 与启动身份；仅自动回收精确 stale，active/legacy/unsafe 均 fail closed；Python 78/78、Node 48/48、源码合同、两次 Godot parse 与目标检查通过，第二次确认无残留，玩家资料哈希前后不变｜Windows lane 生命周期仍按既有边界 fail closed；完整服务端失败分类进入 R0.04
+- 2026-08-20｜R0.04｜docs/phase_492_production_release_r0_04_server_failure_classification.md｜干净候选完整服务端 `1975` 项：`1887 pass / 87 fail / 1 skip`；18 个失败文件均独立复现，87 项按 12 个共同根因闭合为 `26 真实回归 + 60 夹具漂移 + 1 已废弃预期 + 0 环境前置失败`，已生成 R0.F001–R0.F012｜本轮只分类不修复；Valkey 真集成因本机未配置端口有理由 skip，服务端零失败门禁仍阻塞
 
 ## 7. 正式上线硬门槛
 
