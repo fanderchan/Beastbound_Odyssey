@@ -11,6 +11,10 @@ const test = require("node:test");
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 const SOURCE_LAUNCHER = path.resolve(REPO_ROOT, "start-backend.command");
 const SOURCE_OPS = path.resolve(REPO_ROOT, "server/node/scripts/server-ops.js");
+const SOURCE_OPS_DEPENDENCIES = Object.freeze([
+  "mysql-backup-artifact.js",
+  "mysql-backup-health.js",
+]);
 
 test("interactive launcher owns one backend and waits for graceful shutdown", async (t) => {
   const fixture = await createFixture({shutdownDelayMs: 1200});
@@ -182,6 +186,9 @@ async function createFixture(options = {}) {
   fs.copyFileSync(SOURCE_LAUNCHER, launcher);
   fs.chmodSync(launcher, 0o755);
   fs.copyFileSync(SOURCE_OPS, opsPath);
+  for (const fileName of SOURCE_OPS_DEPENDENCIES) {
+    fs.copyFileSync(path.join(REPO_ROOT, "server/node/src", fileName), path.join(srcDir, fileName));
+  }
   fs.writeFileSync(path.join(serverRoot, "package.json"), JSON.stringify({
     name: "beastbound-launcher-fixture",
     private: true,
