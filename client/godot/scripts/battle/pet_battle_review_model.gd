@@ -466,6 +466,8 @@ static func director_steps(focus_form_id: String, mount_form_id: String = "") ->
 		{"id": "counter_ko", "label": "致死反击·负伤归位", "settle": 1.00, "events": [_attack_event(ALLY_FOCUS_ID, ENEMY_FOCUS_ID, BattleModel.SIDE_ENEMY, 16, true)]},
 		{"id": "counter_launch", "label": "高伤反击·直接击飞", "settle": 0.95, "events": [_attack_event(ALLY_FOCUS_ID, ENEMY_FOCUS_ID, BattleModel.SIDE_ENEMY, 16, true)]},
 		{"id": "skill", "label": "主动技能", "settle": 0.75, "events": [_skill_event(skill_id, skill_name)]},
+		{"id": "skill_dodge", "label": "主动技能·闪避", "settle": 0.75, "events": [_skill_event(skill_id, skill_name, true, false)]},
+		{"id": "skill_critical", "label": "主动技能·暴击", "settle": 0.80, "events": [_skill_event(skill_id, skill_name, false, true)]},
 		{"id": "combo", "label": "三宠合击", "settle": 1.05, "events": [_combo_event()]},
 		{"id": "knockaway_straight", "label": "直线击飞", "settle": 0.90, "events": [_knockaway_event("straight")]},
 		{"id": "knockaway_bounce", "label": "场边弹飞", "settle": 1.00, "events": [_knockaway_event("bounce")]},
@@ -487,14 +489,16 @@ static func director_steps(focus_form_id: String, mount_form_id: String = "") ->
 		standard_steps[5],
 		standard_steps[6],
 		standard_steps[7],
-		{"id": "mounted_combo", "label": "三骑乘人物合击", "settle": 1.15, "events": [_mounted_combo_event()]},
 		standard_steps[8],
 		standard_steps[9],
+		{"id": "mounted_combo", "label": "三骑乘人物合击", "settle": 1.15, "events": [_mounted_combo_event()]},
 		standard_steps[10],
-		{"id": "mounted_dodge", "label": "骑宠人物回避", "settle": 0.80, "events": [_forced_dodge_event(ENEMY_FOCUS_ID, ALLY_MOUNT_FOCUS_ID, BattleModel.SIDE_ALLY, false, 9)]},
 		standard_steps[11],
-		{"id": "mounted_dodge_counter", "label": "骑宠人物回避后反击", "settle": 0.95, "events": [_forced_dodge_event(ENEMY_FOCUS_ID, ALLY_MOUNT_FOCUS_ID, BattleModel.SIDE_ALLY, true, 10)]},
 		standard_steps[12],
+		{"id": "mounted_dodge", "label": "骑宠人物回避", "settle": 0.80, "events": [_forced_dodge_event(ENEMY_FOCUS_ID, ALLY_MOUNT_FOCUS_ID, BattleModel.SIDE_ALLY, false, 9)]},
+		standard_steps[13],
+		{"id": "mounted_dodge_counter", "label": "骑宠人物回避后反击", "settle": 0.95, "events": [_forced_dodge_event(ENEMY_FOCUS_ID, ALLY_MOUNT_FOCUS_ID, BattleModel.SIDE_ALLY, true, 10)]},
+		standard_steps[14],
 	]
 
 
@@ -859,20 +863,42 @@ static func validation_errors() -> Array[String]:
 	if not bool(mounted_first.get("reviewMountAllPlayers", false)):
 		errors.append("骑乘验收状态缺少全员骑乘标记")
 	var seen_steps: Array[String] = []
+	var step_by_id := {}
 	for step in director_steps(form_id):
 		var step_id := str(step.get("id", ""))
 		if step_id == "" or seen_steps.has(step_id):
 			errors.append("动作必现步骤ID为空或重复")
 			continue
 		seen_steps.append(step_id)
+		step_by_id[step_id] = step
 		if not (step.get("events", []) is Array) or (step.get("events", []) as Array).is_empty():
 			errors.append("动作必现步骤没有真实事件：%s" % step_id)
-	for required_id in ["attack", "defend_hit", "hurt", "counter", "counter_ko", "counter_launch", "skill", "combo", "knockaway_straight", "knockaway_bounce", "dodge", "dodge_counter", "down"]:
+	for required_id in ["attack", "defend_hit", "hurt", "counter", "counter_ko", "counter_launch", "skill", "skill_dodge", "skill_critical", "combo", "knockaway_straight", "knockaway_bounce", "dodge", "dodge_counter", "down"]:
 		if not seen_steps.has(required_id):
 			errors.append("缺少动作必现步骤：%s" % required_id)
+	var expected_director_skill_id := _director_skill_id(form_id)
+	for skill_step_id in ["skill", "skill_dodge", "skill_critical"]:
+		var skill_step = step_by_id.get(skill_step_id, {}) as Dictionary
+		var skill_events = skill_step.get("events", []) as Array
+		var skill_event := skill_events[0] as Dictionary if not skill_events.is_empty() else {}
+		if (
+			str(skill_event.get("type", "")) != "skill_attack"
+			or str(skill_event.get("skillId", "")) != expected_director_skill_id
+		):
+			errors.append("主动技能必现步骤没有使用正式技能：%s" % skill_step_id)
+	var skill_dodge_step := step_by_id.get("skill_dodge", {}) as Dictionary
+	var skill_dodge_events := skill_dodge_step.get("events", []) as Array
+	var skill_dodge_event := skill_dodge_events[0] as Dictionary if not skill_dodge_events.is_empty() else {}
+	if not bool(skill_dodge_event.get("forceDodge", false)):
+		errors.append("主动技能闪避步骤没有强制权威闪避结果")
+	var skill_critical_step := step_by_id.get("skill_critical", {}) as Dictionary
+	var skill_critical_events := skill_critical_step.get("events", []) as Array
+	var skill_critical_event := skill_critical_events[0] as Dictionary if not skill_critical_events.is_empty() else {}
+	if not bool(skill_critical_event.get("forceCritical", false)):
+		errors.append("主动技能暴击步骤没有强制权威暴击结果")
 	var mounted_steps := director_steps(form_id, REVIEW_MOUNT_FORM_ID)
-	if mounted_steps.size() != 19:
-		errors.append("骑乘动作必现清单必须包含19个场景")
+	if mounted_steps.size() != 21:
+		errors.append("骑乘动作必现清单必须包含21个场景")
 	var mounted_step_ids: Array[String] = []
 	for step in mounted_steps:
 		mounted_step_ids.append(str(step.get("id", "")))
@@ -1198,6 +1224,11 @@ static func _apply_dodge_counter_probe(
 
 static func _director_skill_id(form_id: String) -> String:
 	var skill_ids := PetTemplateCatalog.active_skill_ids_for_form(normalized_form_id(form_id))
+	if skill_ids.has(BattleModel.PET_SKILL_BUI_CHARGE):
+		return BattleModel.PET_SKILL_BUI_CHARGE
+	for skill_id in skill_ids:
+		if not [BattleModel.PET_SKILL_ATTACK, BattleModel.PET_SKILL_DEFEND].has(skill_id):
+			return skill_id
 	if not skill_ids.is_empty():
 		return skill_ids[0]
 	return BattleModel.PET_SKILL_BUI_CHARGE
@@ -1224,7 +1255,12 @@ static func _defend_event(actor_id: String) -> Dictionary:
 	return {"type": "defend", "attackerId": actor_id, "speed": 90, "sequence": 2}
 
 
-static func _skill_event(skill_id: String, skill_name: String) -> Dictionary:
+static func _skill_event(
+	skill_id: String,
+	skill_name: String,
+	force_dodge: bool = false,
+	force_critical: bool = false
+) -> Dictionary:
 	return {
 		"type": "skill_attack",
 		"attackerId": ALLY_FOCUS_ID,
@@ -1238,8 +1274,8 @@ static func _skill_event(skill_id: String, skill_name: String) -> Dictionary:
 		"movementStyle": "melee",
 		"canLaunch": false,
 		"canCounter": false,
-		"forceDodge": false,
-		"forceCritical": false,
+		"forceDodge": force_dodge,
+		"forceCritical": force_critical,
 	}
 
 

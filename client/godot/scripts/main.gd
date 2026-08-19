@@ -33,6 +33,9 @@ const BattleRangedProjectilePresentationModel := preload(
 const BattleRangedProjectileRenderer := preload(
 	"res://scripts/battle/battle_ranged_projectile_renderer.gd"
 )
+const BattleSkillFeedbackRenderer := preload(
+	"res://scripts/battle/battle_skill_feedback_renderer.gd"
+)
 const BattleArenaVisualCatalog := preload(
 	"res://scripts/battle/battle_arena_visual_catalog.gd"
 )
@@ -7504,7 +7507,9 @@ func _open_battle_launch_preview(mode: String) -> void:
 	battle_state["lastEventLedger"] = ledger
 	battle_last_round_applied_events = 1
 	_record_battle_event(event, ledger)
-	battle_current_event = BattleEventLedger.playback_event(event, ledger)
+	battle_current_event = BattleSkillFeedbackRenderer.prepare_event(
+		BattleEventLedger.playback_event(event, ledger)
+	)
 	_audio_begin_battle_event(battle_current_event, ledger)
 	battle_current_event_actor_snapshots = actor_snapshots
 	_add_battle_event_feedback(battle_current_event, ledger)
@@ -12832,7 +12837,9 @@ func _play_next_battle_event() -> void:
 		var counter_event = battle_state.get("lastCounterEvent", {})
 		if not bool(event.get("serverResolved", false)) and counter_event is Dictionary and not (counter_event as Dictionary).is_empty():
 			battle_event_queue.push_front((counter_event as Dictionary).duplicate(true))
-		battle_current_event = BattleEventLedger.playback_event(event, ledger)
+		battle_current_event = BattleSkillFeedbackRenderer.prepare_event(
+			BattleEventLedger.playback_event(event, ledger)
+		)
 		_audio_begin_battle_event(battle_current_event, ledger)
 		_add_battle_event_feedback(battle_current_event, ledger)
 		_set_battle_message(str(battle_state.get("message", "")))
@@ -16030,6 +16037,12 @@ func _draw_battle_actor(actor: Dictionary) -> void:
 	if state == "launched":
 		pos += _battle_launched_actor_offset(actor, visual_scale)
 	var alpha := 1.0 if launched_active else (0.26 if state == "captured" else 1.0)
+	BattleSkillFeedbackRenderer.draw_actor_ground_effect(
+		self,
+		actor,
+		pos,
+		actor_visual_scale
+	)
 	if not launched_active:
 		_draw_battle_ground_shadow(actor, pos, actor_visual_scale, alpha)
 	if _battle_target_mode_selects_enemy() and str(actor.get("id", "")) == battle_hover_target_id and str(actor.get("side", "")) == BattleModel.SIDE_ENEMY and int(actor.get("hp", 0)) > 0:
@@ -17107,6 +17120,9 @@ func _battle_actor_event_offset(actor: Dictionary, base_pos: Vector2, visual_sca
 	target_pos += _battle_actor_counter_anchor_offset(target, target_pos, visual_scale)
 	var contact_distance := BATTLE_COUNTER_CONTACT_DISTANCE if event_type == "counter_attack" or bool(battle_current_event.get("counterTriggered", false)) else BATTLE_MELEE_CONTACT_DISTANCE
 	contact_distance *= BattleVisualPresentationModel.contact_presentation_scale(actor, target)
+	contact_distance *= BattleSkillFeedbackRenderer.melee_contact_distance_scale(
+		battle_current_event
+	)
 	if _battle_actor_uses_integrated_mount_visual(actor) or _battle_actor_uses_integrated_mount_visual(target):
 		# 整体骑乘轮廓显著宽于普通人物；保持足够锚点距离，避免两张 256px 整图穿插重叠。
 		contact_distance = maxf(contact_distance, 124.0)
@@ -17145,6 +17161,13 @@ func _battle_actor_melee_impact_strength(actor_id: String) -> float:
 
 
 func _draw_battle_melee_impact_effect(actor: Dictionary, pos: Vector2, visual_scale: float) -> void:
+	if BattleSkillFeedbackRenderer.draw_actor_overlay_effect(
+		self,
+		actor,
+		pos,
+		visual_scale
+	):
+		return
 	var strength := _battle_actor_melee_impact_strength(str(actor.get("id", "")))
 	if strength <= 0.01:
 		return

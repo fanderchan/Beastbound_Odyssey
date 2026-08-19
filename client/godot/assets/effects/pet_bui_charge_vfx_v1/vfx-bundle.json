@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "pet_bui_charge_vfx_v1",
+  "actionId": "pet_bui_charge",
+  "style": "leaf_earth_charge",
+  "deliveryStatus": "owner_review_pending",
+  "runtime": {
+    "frameSize": [256, 256],
+    "chargeFrames": [
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-1.png",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-2.png",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-3.png",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-4.png"
+    ],
+    "impactFrames": [
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-1.png",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-2.png",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-3.png",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-4.png"
+    ],
+    "chargeFrameThresholds": [0.22, 0.5, 0.78],
+    "impactFrameThresholds": [0.06, 0.28, 0.72],
+    "chargeDrawScale": 0.76,
+    "impactDrawScale": 0.78,
+    "criticalDrawScale": 0.94,
+    "chargeAnchor": [0.5, 0.5],
+    "impactAnchor": [0.5, 0.82],
+    "drawOrder": {
+      "charge": "below_actor_body",
+      "hit": "target_overlay",
+      "dodge": "empty_target_slot_overlay"
+    }
+  },
+  "source": {
+    "provenancePath": "res://assets/effects/pet_bui_charge_vfx_v1/source/provenance.json",
+    "replacementPath": "Regenerate the two 2x2 action-family sheets from the recorded prompts, then run the recorded generate2dsprite processor settings."
+  },
+  "ownerReviewRequired": true,
+  "ownerReviewStatus": "pending",
+  "playerFacingDebugAllowed": false
+}

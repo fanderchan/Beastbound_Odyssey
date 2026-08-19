@@ -190,8 +190,8 @@ func run() -> void:
 		errors.append("动作必现没有使用真实验收战斗状态")
 	if not bool(host.battle_state.get("reviewMountAllPlayers", false)):
 		errors.append("骑乘动作必现没有声明10名人物全员骑乘")
-	if PetBattleReviewModel.director_steps(form_id, PetBattleReviewModel.REVIEW_MOUNT_FORM_ID).size() != 19:
-		errors.append("骑乘动作必现清单不是19个标准场景")
+	if PetBattleReviewModel.director_steps(form_id, PetBattleReviewModel.REVIEW_MOUNT_FORM_ID).size() != 21:
+		errors.append("骑乘动作必现清单不是21个标准场景")
 	var actor_counts := _actor_counts(host.battle_state)
 	if int(actor_counts.get("ally", 0)) != 10 or int(actor_counts.get("enemy", 0)) != 10:
 		errors.append("动作必现没有保留双方10人阵型")

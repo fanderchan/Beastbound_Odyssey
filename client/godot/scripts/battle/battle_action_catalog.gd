@@ -1,5 +1,11 @@
 extends RefCounted
 
+const BattleSkillFeedbackPresentationModel := preload(
+	"res://scripts/battle/battle_skill_feedback_presentation_model.gd"
+)
+const BattleSkillFeedbackAssetCatalog := preload(
+	"res://scripts/battle/battle_skill_feedback_asset_catalog.gd"
+)
 const ACTIONS_PATH := "res://data/battle_actions.json"
 const ACTION_CATALOG_SCHEMA_VERSION := 2
 const MAX_PET_SKILL_SLOTS_FALLBACK := 7
@@ -92,6 +98,11 @@ static func source_for(action_id: String, fallback: String = "") -> String:
 static func icon_path_for(action_id: String, fallback: String = "") -> String:
 	var icon_path := str(presentation_for(action_id).get("iconPath", "")).strip_edges()
 	return icon_path if icon_path != "" else fallback
+
+
+static func feedback_for(action_id: String) -> Dictionary:
+	var feedback = presentation_for(action_id).get("feedback", {})
+	return feedback as Dictionary if feedback is Dictionary else {}
 
 
 static func mechanics_implemented_for(action_id: String, fallback: bool = false) -> bool:
@@ -492,6 +503,25 @@ static func _validate_pet_skill_presentation(action: Dictionary, errors: Array[S
 		errors.append("%s.presentation.iconPath 必须以 res:// 开头" % action_name)
 	if presentation.has("mechanicsImplemented") and typeof(presentation.get("mechanicsImplemented")) != TYPE_BOOL:
 		errors.append("%s.presentation.mechanicsImplemented 必须是布尔值" % action_name)
+	if presentation.has("feedback"):
+		var raw_feedback = presentation.get("feedback")
+		if not (raw_feedback is Dictionary):
+			errors.append("%s.presentation.feedback 必须是对象" % action_name)
+		else:
+			var feedback := raw_feedback as Dictionary
+			errors.append_array(
+				BattleSkillFeedbackPresentationModel.validation_errors(
+					feedback,
+					"%s.presentation.feedback" % action_name
+				)
+			)
+			errors.append_array(
+				BattleSkillFeedbackAssetCatalog.validation_errors(
+					str(feedback.get("assetBundlePath", "")),
+					str(action.get("id", "")),
+					str(feedback.get("style", ""))
+				)
+			)
 
 
 static func _validate_required_actions(seen_ids: Dictionary, errors: Array[String]) -> void:

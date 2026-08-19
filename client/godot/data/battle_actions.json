@@ -378,7 +378,34 @@
         "role": "物理伤害",
         "source": "种族固有",
         "iconPath": "res://assets/skills/pet_skill_icons_v1/runtime/active/pet_bui_charge.png",
-        "mechanicsImplemented": true
+        "mechanicsImplemented": true,
+        "feedback": {
+          "schemaVersion": 1,
+          "style": "leaf_earth_charge",
+          "assetBundlePath": "res://assets/effects/pet_bui_charge_vfx_v1/vfx-bundle.json",
+          "cast": {
+            "startProgress": 0.08,
+            "peakProgress": 0.32,
+            "endProgress": 0.58,
+            "ringRadius": 72.0,
+            "leafCount": 5
+          },
+          "impact": {
+            "preContactSeconds": 0.035,
+            "fadeSeconds": 0.34,
+            "radius": 68.0,
+            "leafCount": 7,
+            "earthChunkCount": 5,
+            "contactDistanceScale": 3.2
+          },
+          "palette": {
+            "leaf": [0.12, 0.38, 0.22, 1.0],
+            "leafGlow": [0.92, 0.86, 0.26, 1.0],
+            "earth": [0.38, 0.17, 0.08, 1.0],
+            "dust": [0.95, 0.6, 0.2, 1.0],
+            "core": [1.0, 0.96, 0.72, 1.0]
+          }
+        }
       },
       "target": {
         "isAll": false,

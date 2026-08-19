@@ -16,6 +16,15 @@ const BattlePassiveCatalog := preload("res://scripts/battle/battle_passive_catal
 const BattleEventLedger := preload("res://scripts/battle/battle_event_ledger.gd")
 const BattleStatusModel := preload("res://scripts/battle/battle_status_model.gd")
 const BattleVisualPresentationModel := preload("res://scripts/battle/battle_visual_presentation_model.gd")
+const BattleSkillFeedbackPresentationModel := preload(
+	"res://scripts/battle/battle_skill_feedback_presentation_model.gd"
+)
+const BattleSkillFeedbackAssetCatalog := preload(
+	"res://scripts/battle/battle_skill_feedback_asset_catalog.gd"
+)
+const BattleSkillFeedbackRenderer := preload(
+	"res://scripts/battle/battle_skill_feedback_renderer.gd"
+)
 const BattleElementTacticsModel := preload(
 	"res://scripts/battle/battle_element_tactics_model.gd"
 )
@@ -7957,6 +7966,185 @@ func _run_auto_battle_action_catalog_check() -> void:
 	errors.append_array(BattlePassiveCatalog.validation_errors())
 	errors.append_array(PetSkillTrainingModel.validation_errors())
 	errors.append_array(PetTemplateCatalog.validation_errors())
+	var bui_feedback := BattleActionCatalog.feedback_for(
+		BattleModel.PET_SKILL_BUI_CHARGE
+	)
+	errors.append_array(
+		BattleSkillFeedbackPresentationModel.validation_errors(
+			bui_feedback,
+			"pet_bui_charge.presentation.feedback"
+		)
+	)
+	var bui_feedback_plan := BattleSkillFeedbackPresentationModel.plan_for(
+		BattleModel.PET_SKILL_BUI_CHARGE,
+		bui_feedback
+	)
+	var bui_bundle_path := str(
+		bui_feedback_plan.get("assetBundlePath", "")
+	).strip_edges()
+	var bui_bundle_errors := BattleSkillFeedbackAssetCatalog.validation_errors(
+		bui_bundle_path,
+		BattleModel.PET_SKILL_BUI_CHARGE,
+		BattleSkillFeedbackPresentationModel.STYLE_LEAF_EARTH_CHARGE
+	)
+	var bui_bundle_prepared := BattleSkillFeedbackAssetCatalog.prepare(
+		bui_bundle_path,
+		BattleModel.PET_SKILL_BUI_CHARGE,
+		BattleSkillFeedbackPresentationModel.STYLE_LEAF_EARTH_CHARGE
+	)
+	var malformed_feedback := bui_feedback.duplicate(true)
+	var malformed_cast := malformed_feedback.get("cast", {}) as Dictionary
+	malformed_cast["peakProgress"] = 0.72
+	malformed_cast["endProgress"] = 0.50
+	malformed_feedback["cast"] = malformed_cast
+	var malformed_feedback_rejected := not BattleSkillFeedbackPresentationModel.validation_errors(
+		malformed_feedback,
+		"malformed_feedback"
+	).is_empty()
+	var prepared_bui_event := BattleSkillFeedbackRenderer.prepare_event({
+		"type": "skill_attack",
+		"attackerId": "ally_pet",
+		"targetId": "enemy_pet",
+		"skillId": BattleModel.PET_SKILL_BUI_CHARGE,
+		"dodged": false,
+		"critical": false,
+	})
+	var prepared_plain_event := BattleSkillFeedbackRenderer.prepare_event({
+		"type": "attack",
+		"attackerId": "ally_player",
+		"targetId": "enemy_pet",
+	})
+	var feedback_asset_bundle_ok := (
+		bui_bundle_path
+		== "res://assets/effects/pet_bui_charge_vfx_v1/vfx-bundle.json"
+		and bui_bundle_errors.is_empty()
+		and bui_bundle_prepared
+		and bool(prepared_bui_event.get("skillFeedbackAssetReady", false))
+		and BattleSkillFeedbackAssetCatalog.texture_for(
+			bui_bundle_path,
+			"charge",
+			0
+		) != null
+		and BattleSkillFeedbackAssetCatalog.texture_for(
+			bui_bundle_path,
+			"impact",
+			3
+		) != null
+		and BattleSkillFeedbackAssetCatalog.frame_index_for(
+			bui_bundle_path,
+			"charge",
+			0.10
+		) == 0
+		and BattleSkillFeedbackAssetCatalog.frame_index_for(
+			bui_bundle_path,
+			"charge",
+			0.60
+		) == 2
+		and BattleSkillFeedbackAssetCatalog.frame_index_for(
+			bui_bundle_path,
+			"impact",
+			0.90
+		) == 3
+		and is_equal_approx(
+			BattleSkillFeedbackAssetCatalog.draw_scale_for(
+				bui_bundle_path,
+				"chargeDrawScale",
+				0.0
+			),
+			0.76
+		)
+		and is_equal_approx(
+			BattleSkillFeedbackAssetCatalog.draw_scale_for(
+				bui_bundle_path,
+				"impactDrawScale",
+				0.0
+			),
+			0.78
+		)
+		and is_equal_approx(
+			BattleSkillFeedbackAssetCatalog.draw_scale_for(
+				bui_bundle_path,
+				"criticalDrawScale",
+				0.0
+			),
+			0.94
+		)
+		and BattleSkillFeedbackAssetCatalog.anchor_for(
+			bui_bundle_path,
+			"chargeAnchor",
+			Vector2.ZERO
+		).is_equal_approx(Vector2(0.5, 0.5))
+		and BattleSkillFeedbackAssetCatalog.anchor_for(
+			bui_bundle_path,
+			"impactAnchor",
+			Vector2.ZERO
+		).is_equal_approx(Vector2(0.5, 0.82))
+	)
+	var feedback_contract_ok := (
+		not bui_feedback_plan.is_empty()
+		and malformed_feedback_rejected
+		and str(bui_feedback_plan.get("style", ""))
+		== BattleSkillFeedbackPresentationModel.STYLE_LEAF_EARTH_CHARGE
+		and BattleSkillFeedbackPresentationModel.cast_strength(
+			bui_feedback_plan,
+			0.32
+		) >= 0.99
+		and BattleSkillFeedbackPresentationModel.cast_strength(
+			bui_feedback_plan,
+			0.62
+		) <= 0.01
+		and BattleSkillFeedbackPresentationModel.impact_strength(
+			bui_feedback_plan,
+			0.50,
+			0.50,
+			0.74
+		) >= 0.99
+		and BattleSkillFeedbackPresentationModel.impact_strength(
+			bui_feedback_plan,
+			1.00,
+			0.50,
+			0.74
+		) <= 0.01
+		and BattleSkillFeedbackPresentationModel.impact_burst_progress(
+			bui_feedback_plan,
+			0.50,
+			0.50,
+			0.74
+		) <= 0.01
+		and BattleSkillFeedbackPresentationModel.impact_burst_progress(
+			bui_feedback_plan,
+			0.75,
+			0.50,
+			0.74
+		) > 0.45
+		and BattleSkillFeedbackPresentationModel.impact_burst_progress(
+			bui_feedback_plan,
+			1.00,
+			0.50,
+			0.74
+		) >= 0.99
+		and is_equal_approx(
+			float(
+				(bui_feedback_plan.get("impact", {}) as Dictionary).get(
+					"contactDistanceScale",
+					0.0
+				)
+			),
+			3.2
+		)
+		and BattleSkillFeedbackPresentationModel.result_mode({"dodged": true})
+		== "dodge"
+		and BattleSkillFeedbackPresentationModel.result_mode({"critical": true})
+		== "critical"
+		and prepared_bui_event.has("skillFeedbackPlan")
+		and is_equal_approx(
+			BattleSkillFeedbackRenderer.melee_contact_distance_scale(
+				prepared_bui_event
+			),
+			3.2
+		)
+		and not prepared_plain_event.has("skillFeedbackPlan")
+	)
 	var grace_rule = BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_GRACE_1)
 	var moist_rule = BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_MOIST_1)
 	var poison_rule = BattleActionCatalog.target_rule_for(BattleModel.SPIRIT_POISON_1)
@@ -7994,10 +8182,12 @@ func _run_auto_battle_action_catalog_check() -> void:
 		and BattleActionCatalog.effect_type_for(BattleModel.SPIRIT_WIND_FIELD_1) == "field_effect"
 		and BattleActionCatalog.effect_element_for(BattleModel.SPIRIT_WIND_FIELD_1, "") == "wind"
 	)
-	var status = "ok" if errors.is_empty() and spirit_rules_ok and pet_rules_ok and item_rules_ok and pet_slot_ok and weapon_rule_ok and field_rule_ok else "failed"
-	print("battle action catalog check ready: status=%s errors=%d spirit_rules=%s pet_rules=%s item_rules=%s pet_slot=%s weapon=%s field=%s" % [
+	var status = "ok" if errors.is_empty() and feedback_contract_ok and feedback_asset_bundle_ok and spirit_rules_ok and pet_rules_ok and item_rules_ok and pet_slot_ok and weapon_rule_ok and field_rule_ok else "failed"
+	print("battle action catalog check ready: status=%s errors=%d feedback=%s feedback_assets=%s spirit_rules=%s pet_rules=%s item_rules=%s pet_slot=%s weapon=%s field=%s" % [
 		status,
 		errors.size(),
+		str(feedback_contract_ok),
+		str(feedback_asset_bundle_ok),
 		str(spirit_rules_ok),
 		str(pet_rules_ok),
 		str(item_rules_ok),

@@ -1,0 +1,155 @@
+{
+  "target": "asset",
+  "mode": "impact",
+  "prompt": "",
+  "role": "",
+  "input": "client/godot/assets/effects/pet_bui_charge_vfx_v1/source/raw/impact-2x2-magenta.png",
+  "threshold": 130,
+  "edge_threshold": 250,
+  "duration": 200,
+  "rows": 2,
+  "cols": 2,
+  "cell_size": 256,
+  "fit_scale": 0.86,
+  "trim_border": 4,
+  "edge_clean_depth": 5,
+  "align": "center",
+  "shared_scale": true,
+  "component_mode": "all",
+  "component_padding": 10,
+  "min_component_area": 4,
+  "edge_touch_margin": 4,
+  "frame_labels": [
+    "impact-1",
+    "impact-2",
+    "impact-3",
+    "impact-4"
+  ],
+  "frames": [
+    {
+      "grid": [
+        0,
+        0
+      ],
+      "source_box": [
+        0,
+        0,
+        768,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 26,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        238,
+        202,
+        547,
+        403
+      ],
+      "edge_touch": false,
+      "output_size": [
+        146,
+        95
+      ],
+      "paste_position": [
+        55,
+        80
+      ]
+    },
+    {
+      "grid": [
+        0,
+        1
+      ],
+      "source_box": [
+        768,
+        0,
+        1536,
+        512
+      ],
+      "component_mode": "all",
+      "component_count": 76,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        149,
+        154,
+        520,
+        428
+      ],
+      "edge_touch": false,
+      "output_size": [
+        176,
+        130
+      ],
+      "paste_position": [
+        40,
+        63
+      ]
+    },
+    {
+      "grid": [
+        1,
+        0
+      ],
+      "source_box": [
+        0,
+        512,
+        768,
+        1024
+      ],
+      "component_mode": "all",
+      "component_count": 87,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        181,
+        60,
+        644,
+        393
+      ],
+      "edge_touch": false,
+      "output_size": [
+        220,
+        158
+      ],
+      "paste_position": [
+        18,
+        49
+      ]
+    },
+    {
+      "grid": [
+        1,
+        1
+      ],
+      "source_box": [
+        768,
+        512,
+        1536,
+        1024
+      ],
+      "component_mode": "all",
+      "component_count": 62,
+      "selected_component_area": null,
+      "selected_component_bbox": null,
+      "crop_bbox": [
+        114,
+        96,
+        564,
+        377
+      ],
+      "edge_touch": false,
+      "output_size": [
+        213,
+        133
+      ],
+      "paste_position": [
+        21,
+        61
+      ]
+    }
+  ],
+  "edge_touch_frames": []
+}

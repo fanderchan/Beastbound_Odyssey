@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -10,6 +11,7 @@ const repoRoot = path.resolve(scriptDir, "..");
 const catalogPath = path.join(repoRoot, "client/godot/data/battle_actions.json");
 const passiveCatalogPath = path.join(repoRoot, "client/godot/data/battle_passive_skills.json");
 const petTemplateCatalogPath = path.join(repoRoot, "client/godot/data/pet_templates.json");
+const godotRoot = path.join(repoRoot, "client/godot");
 const maxPetSkillSlots = 7;
 const battleActionSchemaVersion = 2;
 const validOwners = new Set(["player", "spirit", "pet_skill", "item", "equipment_action"]);
@@ -57,6 +59,43 @@ function readPetTemplateCatalog() {
   return readJson(petTemplateCatalogPath);
 }
 
+function godotResourcePath(resourcePath) {
+  if (typeof resourcePath !== "string" || !resourcePath.startsWith("res://")) {
+    return null;
+  }
+  const resolved = path.resolve(godotRoot, resourcePath.slice("res://".length));
+  if (resolved !== godotRoot && !resolved.startsWith(`${godotRoot}${path.sep}`)) {
+    return null;
+  }
+  return resolved;
+}
+
+function sha256File(filePath) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function validateNoLocalMachinePaths(value, context, errors) {
+  if (typeof value === "string") {
+    if (
+      /^\/(?:Users|home|tmp|private\/tmp|var\/folders)\//.test(value)
+      || /^[A-Za-z]:[\\/]/.test(value)
+      || value.includes(".codex/generated_images")
+    ) {
+      errors.push(`${context} 不得包含本机或临时绝对路径`);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => validateNoLocalMachinePaths(item, `${context}[${index}]`, errors));
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const [key, item] of Object.entries(value)) {
+      validateNoLocalMachinePaths(item, `${context}.${key}`, errors);
+    }
+  }
+}
+
 function actionName(action, index) {
   return action?.id || `actions[${index}]`;
 }
@@ -100,6 +139,7 @@ function validateCatalog(catalog) {
     validateEffect(name, action.effect, errors);
     if (action.owner === "pet_skill") {
       validatePetSkillPreferredSlot(name, action, errors);
+      validatePetSkillFeedback(name, action, errors);
     }
   });
 
@@ -241,6 +281,246 @@ function validatePetSkillPreferredSlot(name, action, errors) {
   const slot = action.preferredSlot;
   if (!Number.isInteger(slot) || slot < 1 || slot > maxPetSkillSlots) {
     errors.push(`${name}.preferredSlot 必须在 1-${maxPetSkillSlots} 之间`);
+  }
+}
+
+function validatePetSkillFeedback(name, action, errors) {
+  const feedback = action?.presentation?.feedback;
+  if (action?.id === "pet_bui_charge" && (!feedback || typeof feedback !== "object" || Array.isArray(feedback))) {
+    errors.push(`${name}.presentation.feedback 必须提供正式技能反馈对象`);
+    return;
+  }
+  if (feedback === undefined) {
+    return;
+  }
+  if (!feedback || typeof feedback !== "object" || Array.isArray(feedback)) {
+    errors.push(`${name}.presentation.feedback 必须是对象`);
+    return;
+  }
+  if (feedback.schemaVersion !== 1) {
+    errors.push(`${name}.presentation.feedback.schemaVersion 当前必须是 1`);
+  }
+  if (feedback.style !== "leaf_earth_charge") {
+    errors.push(`${name}.presentation.feedback.style 不支持: ${feedback.style}`);
+  }
+  validatePetSkillFeedbackAssetBundle(name, action, feedback, errors);
+  const cast = feedback.cast;
+  if (!cast || typeof cast !== "object" || Array.isArray(cast)) {
+    errors.push(`${name}.presentation.feedback.cast 必须是对象`);
+  } else {
+    const {startProgress, peakProgress, endProgress, ringRadius, leafCount} = cast;
+    if (![startProgress, peakProgress, endProgress, ringRadius].every(Number.isFinite)) {
+      errors.push(`${name}.presentation.feedback.cast 时序和半径必须是数字`);
+    } else {
+      if (!(startProgress >= 0 && startProgress < peakProgress && peakProgress < endProgress && endProgress <= 1)) {
+        errors.push(`${name}.presentation.feedback.cast 必须满足 0 <= start < peak < end <= 1`);
+      }
+      if (ringRadius < 12 || ringRadius > 80) {
+        errors.push(`${name}.presentation.feedback.cast.ringRadius 必须在 12-80`);
+      }
+    }
+    if (!Number.isInteger(leafCount) || leafCount < 1 || leafCount > 8) {
+      errors.push(`${name}.presentation.feedback.cast.leafCount 必须是 1-8 的整数`);
+    }
+  }
+  const impact = feedback.impact;
+  if (!impact || typeof impact !== "object" || Array.isArray(impact)) {
+    errors.push(`${name}.presentation.feedback.impact 必须是对象`);
+  } else {
+    const {preContactSeconds, fadeSeconds, radius, leafCount, earthChunkCount, contactDistanceScale} = impact;
+    if (!Number.isFinite(preContactSeconds) || preContactSeconds < 0 || preContactSeconds > 0.1) {
+      errors.push(`${name}.presentation.feedback.impact.preContactSeconds 必须在 0-0.1`);
+    }
+    if (!Number.isFinite(fadeSeconds) || fadeSeconds < 0.08 || fadeSeconds > 0.4) {
+      errors.push(`${name}.presentation.feedback.impact.fadeSeconds 必须在 0.08-0.4`);
+    }
+    if (!Number.isFinite(radius) || radius < 16 || radius > 72) {
+      errors.push(`${name}.presentation.feedback.impact.radius 必须在 16-72`);
+    }
+    if (!Number.isInteger(leafCount) || leafCount < 2 || leafCount > 10) {
+      errors.push(`${name}.presentation.feedback.impact.leafCount 必须是 2-10 的整数`);
+    }
+    if (!Number.isInteger(earthChunkCount) || earthChunkCount < 1 || earthChunkCount > 6) {
+      errors.push(`${name}.presentation.feedback.impact.earthChunkCount 必须是 1-6 的整数`);
+    }
+    if (!Number.isFinite(contactDistanceScale) || contactDistanceScale < 1 || contactDistanceScale > 4) {
+      errors.push(`${name}.presentation.feedback.impact.contactDistanceScale 必须在 1-4`);
+    }
+  }
+  const palette = feedback.palette;
+  if (!palette || typeof palette !== "object" || Array.isArray(palette)) {
+    errors.push(`${name}.presentation.feedback.palette 必须是对象`);
+  } else {
+    for (const key of ["leaf", "leafGlow", "earth", "dust", "core"]) {
+      const rgba = palette[key];
+      if (!Array.isArray(rgba) || rgba.length !== 4 || !rgba.every((value) => Number.isFinite(value) && value >= 0 && value <= 1)) {
+        errors.push(`${name}.presentation.feedback.palette.${key} 必须是 4 项 0-1 RGBA 数组`);
+      }
+    }
+  }
+}
+
+function validatePetSkillFeedbackAssetBundle(name, action, feedback, errors) {
+  const context = `${name}.presentation.feedback.assetBundle`;
+  const resourcePath = feedback.assetBundlePath;
+  if (typeof resourcePath !== "string" || !resourcePath.startsWith("res://") || !resourcePath.endsWith(".json")) {
+    errors.push(`${name}.presentation.feedback.assetBundlePath 必须是 res:// JSON 路径`);
+    return;
+  }
+  if (
+    action.id === "pet_bui_charge"
+    && resourcePath !== "res://assets/effects/pet_bui_charge_vfx_v1/vfx-bundle.json"
+  ) {
+    errors.push(`${name}.presentation.feedback.assetBundlePath 必须指向布伊冲撞正式资源包`);
+  }
+  const bundlePath = godotResourcePath(resourcePath);
+  if (!bundlePath || !fs.existsSync(bundlePath)) {
+    errors.push(`${context} 不存在: ${resourcePath}`);
+    return;
+  }
+
+  let bundle;
+  try {
+    bundle = readJson(bundlePath);
+  } catch (error) {
+    errors.push(`${context} 无法解析: ${error.message}`);
+    return;
+  }
+  validateNoLocalMachinePaths(bundle, context, errors);
+  if (bundle.schemaVersion !== 1) {
+    errors.push(`${context}.schemaVersion 当前必须是 1`);
+  }
+  if (bundle.actionId !== action.id) {
+    errors.push(`${context}.actionId 必须是 ${action.id}`);
+  }
+  if (bundle.style !== feedback.style) {
+    errors.push(`${context}.style 必须与反馈样式一致`);
+  }
+  if (!["in_production", "owner_review_pending", "approved"].includes(bundle.deliveryStatus)) {
+    errors.push(`${context}.deliveryStatus 无效`);
+  }
+  if (bundle.ownerReviewRequired !== true || bundle.playerFacingDebugAllowed !== false) {
+    errors.push(`${context} 必须保留人工审美验收且禁止玩家界面调试内容`);
+  }
+
+  const runtime = bundle.runtime;
+  if (!runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
+    errors.push(`${context}.runtime 必须是对象`);
+    return;
+  }
+  if (!Array.isArray(runtime.frameSize) || runtime.frameSize.length !== 2 || runtime.frameSize[0] !== 256 || runtime.frameSize[1] !== 256) {
+    errors.push(`${context}.runtime.frameSize 当前必须是 256x256`);
+  }
+  const runtimeGroups = {};
+  for (const [group, key] of [["charge", "chargeFrames"], ["impact", "impactFrames"]]) {
+    const frames = runtime[key];
+    runtimeGroups[group] = Array.isArray(frames) ? frames : [];
+    if (!Array.isArray(frames) || frames.length !== 4) {
+      errors.push(`${context}.runtime.${key} 必须恰好包含 4 帧`);
+      continue;
+    }
+    if (new Set(frames).size !== frames.length) {
+      errors.push(`${context}.runtime.${key} 不允许重复帧`);
+    }
+    frames.forEach((framePath, index) => {
+      const absolutePath = godotResourcePath(framePath);
+      if (typeof framePath !== "string" || !framePath.endsWith(".png") || !absolutePath || !fs.existsSync(absolutePath)) {
+        errors.push(`${context}.runtime.${key}[${index}] 必须是存在的 res:// PNG`);
+      }
+    });
+  }
+  for (const key of ["chargeFrameThresholds", "impactFrameThresholds"]) {
+    const thresholds = runtime[key];
+    if (
+      !Array.isArray(thresholds)
+      || thresholds.length !== 3
+      || !thresholds.every((value) => Number.isFinite(value) && value > 0 && value < 1)
+      || !(thresholds[0] < thresholds[1] && thresholds[1] < thresholds[2])
+    ) {
+      errors.push(`${context}.runtime.${key} 必须是三项 0-1 严格递增阈值`);
+    }
+  }
+  for (const key of ["chargeDrawScale", "impactDrawScale", "criticalDrawScale"]) {
+    if (!Number.isFinite(runtime[key]) || runtime[key] < 0.25 || runtime[key] > 1.5) {
+      errors.push(`${context}.runtime.${key} 必须在 0.25-1.5`);
+    }
+  }
+  for (const key of ["chargeAnchor", "impactAnchor"]) {
+    if (!Array.isArray(runtime[key]) || runtime[key].length !== 2 || !runtime[key].every((value) => Number.isFinite(value) && value >= 0 && value <= 1)) {
+      errors.push(`${context}.runtime.${key} 必须是两项 0-1 锚点`);
+    }
+  }
+
+  const provenanceResourcePath = bundle?.source?.provenancePath;
+  const provenancePath = godotResourcePath(provenanceResourcePath);
+  if (typeof provenanceResourcePath !== "string" || !provenancePath || !fs.existsSync(provenancePath)) {
+    errors.push(`${context}.source.provenancePath 必须指向存在的 res:// JSON`);
+    return;
+  }
+  let provenance;
+  try {
+    provenance = readJson(provenancePath);
+  } catch (error) {
+    errors.push(`${context}.source.provenancePath 无法解析: ${error.message}`);
+    return;
+  }
+  const provenanceContext = `${context}.provenance`;
+  validateNoLocalMachinePaths(provenance, provenanceContext, errors);
+  if (provenance.schemaVersion !== 1 || provenance.assetId !== bundle.bundleId) {
+    errors.push(`${provenanceContext} 必须匹配资源包 id 与 schema`);
+  }
+  const ownership = provenance.ownership;
+  if (
+    !ownership
+    || ownership.sourceType !== "project_original_generated"
+    || typeof ownership.generator !== "string"
+    || ownership.generator.trim() === ""
+    || typeof ownership.rightsHolder !== "string"
+    || ownership.rightsHolder.trim() === ""
+    || ownership.thirdPartyArtCopied !== false
+    || ownership.commercialGameReferenceCopied !== false
+  ) {
+    errors.push(`${provenanceContext}.ownership 必须证明项目原创生成且未复制第三方或商业游戏美术`);
+  }
+
+  for (const group of ["charge", "impact"]) {
+    const generated = provenance?.generation?.[group];
+    const rawPath = godotResourcePath(generated?.rawPath);
+    const promptPath = godotResourcePath(generated?.promptPath);
+    if (!rawPath || !fs.existsSync(rawPath) || !/^[0-9a-f]{64}$/.test(generated?.rawSha256 || "")) {
+      errors.push(`${provenanceContext}.generation.${group} 必须提供存在的原图与 SHA-256`);
+    } else if (sha256File(rawPath) !== generated.rawSha256) {
+      errors.push(`${provenanceContext}.generation.${group}.rawSha256 与文件不符`);
+    }
+    if (!promptPath || !fs.existsSync(promptPath)) {
+      errors.push(`${provenanceContext}.generation.${group}.promptPath 不存在`);
+    }
+
+    const frameRecords = provenance?.runtimeFrames?.[group];
+    if (!Array.isArray(frameRecords) || frameRecords.length !== 4) {
+      errors.push(`${provenanceContext}.runtimeFrames.${group} 必须恰好记录 4 帧`);
+      continue;
+    }
+    frameRecords.forEach((record, index) => {
+      const framePath = godotResourcePath(record?.path);
+      if (record?.path !== runtimeGroups[group]?.[index]) {
+        errors.push(`${provenanceContext}.runtimeFrames.${group}[${index}].path 必须与资源包顺序一致`);
+      }
+      if (!framePath || !fs.existsSync(framePath) || !/^[0-9a-f]{64}$/.test(record?.sha256 || "")) {
+        errors.push(`${provenanceContext}.runtimeFrames.${group}[${index}] 必须提供存在的帧与 SHA-256`);
+      } else if (sha256File(framePath) !== record.sha256) {
+        errors.push(`${provenanceContext}.runtimeFrames.${group}[${index}].sha256 与文件不符`);
+      }
+    });
+  }
+  if (
+    !Array.isArray(provenance?.quality?.chargeEdgeTouchFrames)
+    || provenance.quality.chargeEdgeTouchFrames.length !== 0
+    || !Array.isArray(provenance?.quality?.impactEdgeTouchFrames)
+    || provenance.quality.impactEdgeTouchFrames.length !== 0
+    || provenance?.quality?.deliveryStatus !== bundle.deliveryStatus
+  ) {
+    errors.push(`${provenanceContext}.quality 必须证明无触边帧且交付状态与资源包一致`);
   }
 }
 

@@ -141,7 +141,7 @@ test("players can invite and accept duel battle rooms", () => {
   service.updatePlayerPosition(challenger.session.token, {
     "mapId": "firebud_training_yard",
     "cellX": 10,
-    "cellY": 10,
+    "cellY": 9,
     "facing": "east",
     "moving": false,
   });
@@ -5585,7 +5585,7 @@ test("duel battle rooms require nearby settled positions", () => {
   service.updatePlayerPosition(opponent.session.token, {
     "mapId": "firebud_training_yard",
     "cellX": 16,
-    "cellY": 10,
+    "cellY": 9,
     "facing": "west",
     "moving": false,
   });
@@ -5593,15 +5593,15 @@ test("duel battle rooms require nearby settled positions", () => {
   assert.equal(far.ok, false);
   assert.equal(far.code, "battle_distance_too_far");
 
-  // 对手通过权威单步移动走近挑战者，位置快照不允许直接跳格。
+  // 对手沿正式地图 y=9 畅通走廊权威单步走近；位置快照不允许直接跳格。
   for (let cellX = 16; cellX > 11; cellX -= 1) {
     nowMs += 100;
     const step = service.movePlayerStep(opponent.session.token, {
       "mapId": "firebud_training_yard",
       "fromCellX": cellX,
-      "fromCellY": 10,
+      "fromCellY": 9,
       "toCellX": cellX - 1,
-      "toCellY": 10,
+      "toCellY": 9,
       "moving": false,
     });
     assert.equal(step.ok, true);
@@ -5610,7 +5610,7 @@ test("duel battle rooms require nearby settled positions", () => {
   service.updatePlayerPosition(opponent.session.token, {
     "mapId": "firebud_training_yard",
     "cellX": 11,
-    "cellY": 10,
+    "cellY": 9,
     "facing": "west",
     "moving": true,
   });
@@ -5621,7 +5621,7 @@ test("duel battle rooms require nearby settled positions", () => {
   service.updatePlayerPosition(opponent.session.token, {
     "mapId": "firebud_training_yard",
     "cellX": 11,
-    "cellY": 10,
+    "cellY": 9,
     "facing": "west",
     "moving": false,
   });

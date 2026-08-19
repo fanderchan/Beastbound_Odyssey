@@ -18,6 +18,7 @@ const StandalonePetArtReviewGate := preload(
 
 const SPEED_STEPS: Array[float] = [0.25, 0.5, 1.0, 1.25, 1.5, 2.0]
 const DEFAULT_SEED := 309001
+const CAPTURE_RECEIPT_PREFIX := "pet battle review capture: "
 
 var host
 var root: PanelContainer
@@ -59,6 +60,8 @@ var _scaled_delta_frame: int = -1
 var _scaled_delta_cache: float = 0.0
 var _last_revive_sequence: Dictionary = {}
 var _last_ai_intent: String = ""
+var _observed_skill_feedback_events: Array[Dictionary] = []
+var _director_perf_snapshots: Array[Dictionary] = []
 var _preview_pet_form_ids: Array[String] = []
 var _preview_mount_form_ids: Array[String] = []
 var _random_mount_form_ids: Array[String] = []
@@ -198,6 +201,8 @@ func open(
 		)
 	)
 	_last_revive_sequence.clear()
+	_observed_skill_feedback_events.clear()
+	_director_perf_snapshots.clear()
 	coverage.clear()
 	for coverage_id in PetBattleReviewModel.coverage_ids():
 		coverage[coverage_id] = 0
@@ -570,6 +575,8 @@ func _run_director(token: int) -> void:
 			_refresh_status()
 			if not await _wait_scaled(0.55, token):
 				return
+			if bool(host.perf_probe_enabled):
+				host._reset_perf_probe_frame_max_for_qa()
 			if str(step.get("visualSequence", "")) == PetBattleReviewModel.REVIVE_REVIEW_STEP_ID:
 				if not await _play_revive_review_sequence(step, token):
 					return
@@ -577,6 +584,10 @@ func _run_director(token: int) -> void:
 				_queue_director_events(step.get("events", []))
 				if not await _wait_until_director_events_finish(token):
 					return
+			if bool(host.perf_probe_enabled):
+				var perf_snapshot := host._perf_probe_frame_snapshot_for_qa() as Dictionary
+				perf_snapshot["stepId"] = director_step_id
+				_director_perf_snapshots.append(perf_snapshot)
 			if not await _wait_scaled(float(step.get("settle", 0.75)), token):
 				return
 		if _director_is_current(token):
@@ -615,7 +626,30 @@ func _finish_single_loop_recording(token: int) -> void:
 		PetActionAssetCatalog.disable_standalone_review_overlay(
 			focus_form_id
 		)
+	print(CAPTURE_RECEIPT_PREFIX + JSON.stringify(_single_loop_capture_receipt()))
 	tree.quit()
+
+
+func _single_loop_capture_receipt() -> Dictionary:
+	var viewport_size := host._layout_size() as Vector2
+	return {
+		"result": "PASS",
+		"scene": "res://scenes/Main.tscn",
+		"mode": mode,
+		"focusFormId": focus_form_id,
+		"mountFormId": mount_form_id,
+		"directorStepIds": director_step_filter.duplicate(),
+		"completedDirectorLoops": completed_director_loops,
+		"coverage": coverage.duplicate(true),
+		"skillFeedbackEvents": _observed_skill_feedback_events.duplicate(true),
+		"perfProbeEnabled": bool(host.perf_probe_enabled),
+		"directorPerfSnapshots": _director_perf_snapshots.duplicate(true),
+		"speedScale": speed_scale,
+		"collapsed": collapsed,
+		"singleLoop": quit_after_director_loop,
+		"standalonePetOnly": standalone_pet_only_review,
+		"viewport": [int(round(viewport_size.x)), int(round(viewport_size.y))],
+	}
 
 
 func _queue_director_events(raw_events) -> void:
@@ -771,6 +805,24 @@ func _record_latest_event() -> void:
 				intent,
 			]
 	var event_type := str(ledger.get("type", host.battle_last_event_type))
+	if event_type == "skill_attack" and host.battle_current_event is Dictionary:
+		var skill_event := host.battle_current_event as Dictionary
+		var feedback_plan = skill_event.get("skillFeedbackPlan", {})
+		_observed_skill_feedback_events.append({
+			"stepId": director_step_id,
+			"actionId": str(
+				skill_event.get("actionId", skill_event.get("skillId", ""))
+			),
+			"style": (
+				str((feedback_plan as Dictionary).get("style", ""))
+				if feedback_plan is Dictionary
+				else ""
+				),
+				"planAttached": feedback_plan is Dictionary and not (feedback_plan as Dictionary).is_empty(),
+				"assetReady": bool(skill_event.get("skillFeedbackAssetReady", false)),
+				"dodged": bool(ledger.get("dodged", false)),
+			"critical": bool(ledger.get("critical", false)),
+		})
 	var target_id := str(ledger.get("resolvedTargetId", host.battle_last_event_target_id))
 	var target := BattleModel.actor_by_id(host.battle_state, target_id)
 	var target_hp_after := _ledger_target_hp_after(ledger, target_id, target)

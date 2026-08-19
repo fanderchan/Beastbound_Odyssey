@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "assetId": "pet_bui_charge_vfx_v1",
+  "createdDate": "2026-08-19",
+  "ownership": {
+    "sourceType": "project_original_generated",
+    "generator": "OpenAI built-in image generation",
+    "rightsHolder": "Beastbound Odyssey project owner",
+    "thirdPartyArtCopied": false,
+    "commercialGameReferenceCopied": false
+  },
+  "generation": {
+    "impact": {
+      "rawPath": "res://assets/effects/pet_bui_charge_vfx_v1/source/raw/impact-2x2-magenta.png",
+      "rawSha256": "dfe9251161e9756d002d7931edc0816e2d100a5895213844097b7166fe5c524b",
+      "promptPath": "res://assets/effects/pet_bui_charge_vfx_v1/source/prompts/impact.md"
+    },
+    "charge": {
+      "rawPath": "res://assets/effects/pet_bui_charge_vfx_v1/source/raw/charge-2x2-magenta.png",
+      "rawSha256": "0a8dcd3add4d0ead958579a36ee122574e480af21868ce0fe714293c37f99bc6",
+      "promptPath": "res://assets/effects/pet_bui_charge_vfx_v1/source/prompts/charge.md"
+    }
+  },
+  "processing": {
+    "tool": "generate2dsprite.py",
+    "rows": 2,
+    "cols": 2,
+    "cellSize": 256,
+    "fitScale": 0.86,
+    "align": "center",
+    "sharedScale": true,
+    "componentMode": "all",
+    "componentPadding": 10,
+    "minComponentArea": 4,
+    "edgeTouchMargin": 4,
+    "rejectEdgeTouch": true,
+    "threshold": 130,
+    "edgeThreshold": 250,
+    "edgeCleanDepth": 5,
+    "chargePipelineMetaPath": "res://assets/effects/pet_bui_charge_vfx_v1/source/processed/charge/pipeline-meta.json",
+    "impactPipelineMetaPath": "res://assets/effects/pet_bui_charge_vfx_v1/source/processed/impact/pipeline-meta.json",
+    "chargeTransparentSheetSha256": "52943939cef4d56a3dd53224af2d4ae320998068898c8b1d8a1c725b590f3f53",
+    "impactTransparentSheetSha256": "a49ad7b4fcf734cae5701b9df2556ffd406244526d2a8b005a9f3d1a5e044d02"
+  },
+  "runtimeFrames": {
+    "charge": [
+      {"path": "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-1.png", "sha256": "b974a173498c2cde36e567c7e417545a63e4f10a359f809bd1b66ee7e7c4a9cc"},
+      {"path": "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-2.png", "sha256": "1c3d560f77caf9534b760c602caf901ed6e8f76e910dc22f3a8ece0adf9807a7"},
+      {"path": "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-3.png", "sha256": "d8f083ffb399a43422223a8b24f8b45220280ebb49f7496985746db82279561d"},
+      {"path": "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-4.png", "sha256": "98ce33c55a4c19b3dd625e6354a82bb12c54433f1e8890368c9e2c0ee3c314c3"}
+    ],
+    "impact": [
+      {"path": "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-1.png", "sha256": "2cf18defcf8268c6b8db0a6427e028d214c7a72e12987d136d8a493b37cc6248"},
+      {"path": "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-2.png", "sha256": "91e10f3cef3bee29cdbfa006ec06e23e45aebd9b59fd46221f49c5fdbe771127"},
+      {"path": "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-3.png", "sha256": "b0e89d6d0a20f138658d5b41ee81d7387b070d975bdeb1483be645ff26125093"},
+      {"path": "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-4.png", "sha256": "c10dca6c1fb47f621290ad0901520f90707e9bcc8dbcb387b4206679db95310f"}
+    ]
+  },
+  "quality": {
+    "chargeEdgeTouchFrames": [],
+    "impactEdgeTouchFrames": [],
+    "backgroundExtraction": "same-source magenta eligibility mask through generate2dsprite",
+    "deliveryStatus": "owner_review_pending",
+    "ownerReviewStatus": "pending"
+  }
+}
