@@ -120,7 +120,44 @@ function profileWithPet(displayName, pet) {
   };
 }
 
-function seededProductionService(username, displayName, profile) {
+// Keep the server-owned PVE target choice intact while making reaction rolls
+// incapable of removing a required command actor before EXP settlement.
+function petExpBattleRandomAuthority() {
+  const roomIds = new Set();
+  return Object.freeze({
+    openRoom(roomId) {
+      const id = String(roomId || "");
+      if (roomIds.has(id)) return false;
+      roomIds.add(id);
+      return true;
+    },
+    closeRoom(roomId) {
+      return roomIds.delete(String(roomId || ""));
+    },
+    hasRoom(roomId) {
+      return roomIds.has(String(roomId || ""));
+    },
+    roll(roomId, context = {}) {
+      assert.equal(roomIds.has(String(roomId || "")), true);
+      const targetActorId = String(context.targetId || "");
+      const enemyAttacksRequiredAlly = (
+        String(context.purpose || "") === "dodge.v1"
+        && String(context.actorId || "").startsWith("party_pve_enemy_")
+        && (
+          targetActorId.startsWith("party_pve_player_")
+          || targetActorId.startsWith("party_pve_pet_")
+        )
+      );
+      return enemyAttacksRequiredAlly ? 0 : 0.9999;
+    },
+    index(roomId, context, size) {
+      const count = Math.max(1, Math.trunc(Number(size || 1)));
+      return Math.min(count - 1, Math.floor(this.roll(roomId, context) * count));
+    },
+  });
+}
+
+function seededProductionService(username, displayName, profile, serviceOptions = {}) {
   const store = createMemoryAuthStore();
   const bootstrap = createAuthService({store});
   const account = bootstrap.register({username, password: "test1234", displayName});
@@ -129,7 +166,7 @@ function seededProductionService(username, displayName, profile) {
   assert.equal(saved.ok, true);
   return {
     account,
-    service: createAuthService({store, allowFullProfileSave: false}),
+    service: createAuthService({...serviceOptions, store, allowFullProfileSave: false}),
   };
 }
 
@@ -224,6 +261,7 @@ test("a solo authority-v1 battle pet receives deterministic server growth withou
     "petexpsolovone",
     "单人新版成长",
     profileWithPet("单人新版成长", pet),
+    {battleRandomAuthority: petExpBattleRandomAuthority()},
   );
   assert.equal(service.updatePlayerPosition(account.session.token, {
     mapId: "firebud_training_yard",
@@ -369,7 +407,11 @@ test("authority-v1 and legacy battle pets settle while retired partners stay fro
     profile: memberProfile,
   }).ok, true);
 
-  const service = createAuthService({store, allowFullProfileSave: false});
+  const service = createAuthService({
+    store,
+    allowFullProfileSave: false,
+    battleRandomAuthority: petExpBattleRandomAuthority(),
+  });
   assert.equal(service.updatePlayerPosition(leader.session.token, {
     mapId: "firebud_training_yard",
     cellX: 18,
@@ -434,7 +476,7 @@ test("authority-v1 and legacy battle pets settle while retired partners stay fro
         command.targetActorId = target.actorId;
       }
       resolved = service.submitBattleCommand(token, encounter.room.roomId, command);
-      assert.equal(resolved.ok, true);
+      assert.equal(resolved.ok, true, `${String(resolved.code || "")}: ${String(resolved.message || "")}`);
     }
     currentRoom = resolved.room;
   }
