@@ -4,6 +4,7 @@ const {
   assert,
   test,
   createAuthService,
+  createAuthoritativePetEncounterFixture,
   createMemoryAuthStore,
   battleProfile,
   internalProfileForAccount,
@@ -467,6 +468,21 @@ test("battle writeback persists sub-threshold wear counters without reducing dur
 test("authoritative shadow bow selects and resolves ten unique targets as one weapon use", () => {
   const service = createAuthService({
     store: createMemoryAuthStore(),
+    petEncounterAuthority: createAuthoritativePetEncounterFixture({
+      shadow_bow_authority_fixture: {
+        id: "shadow_bow_authority_fixture",
+        name: "玄影弓靶场",
+        formationTemplate: "10v10",
+        enemyCount: 10,
+        selectedWildPet: {
+          formId: "wuli_normal_orange_fire10",
+          name: "玄影木桩",
+          level: 140,
+          catchable: false,
+          battleStats: {maxHp: 500, attack: 1, defense: 20, quick: 10},
+        },
+      },
+    }),
     battleRandomAuthority: deterministicBattleRandomAuthority((context) => {
       if (String(context.purpose || "") === "dodge.v1" && Number(context.ordinal || 0) === 0) {
         return 0;
@@ -544,18 +560,7 @@ test("authoritative shadow bow selects and resolves ten unique targets as one we
   assert.equal(partyInvite.ok, true);
   assert.equal(service.acceptPartyInvite(member.session.token, partyInvite.invite.inviteId).ok, true);
   const encounter = service.startPartyEncounter(player.session.token, {
-    enemyCount: 10,
-    encounterZone: {
-      id: "shadow_bow_authority_fixture",
-      name: "玄影弓靶场",
-      formationTemplate: "10v10",
-      selectedWildPet: {
-        formId: "wuli_normal_orange_fire10",
-        name: "玄影木桩",
-        level: 140,
-        battleStats: {maxHp: 500, attack: 1, defense: 20, quick: 10},
-      },
-    },
+    encounterZone: {id: "shadow_bow_authority_fixture"},
   });
   assert.equal(encounter.ok, true);
   assert.equal(encounter.room.battle.actors.filter((entry) => entry.side === "enemy").length, 10);
@@ -564,6 +569,10 @@ test("authoritative shadow bow selects and resolves ten unique targets as one we
   const memberActor = encounter.room.battle.actors.find((entry) => entry.accountId === member.account.accountId && entry.kind === "player");
   const memberPet = encounter.room.battle.actors.find((entry) => entry.accountId === member.account.accountId && entry.kind === "pet");
   const target = encounter.room.battle.actors.find((entry) => entry.side === "enemy");
+  assert.deepEqual(
+    {maxHp: target.maxHp, attack: target.attack, defense: target.defense, speed: target.speed},
+    {maxHp: 500, attack: 1, defense: 20, speed: 10},
+  );
   const waiting = service.submitBattleCommand(player.session.token, encounter.room.roomId, {
     round: 1,
     actorId: actor.actorId,

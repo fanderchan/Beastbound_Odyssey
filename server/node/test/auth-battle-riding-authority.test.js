@@ -4,6 +4,7 @@ const {
   assert,
   test,
   createAuthService,
+  createAuthoritativePetEncounterFixture,
   createMemoryAuthStore,
   battleProfile,
 } = require("../test-support/auth-service-test-context");
@@ -468,6 +469,21 @@ test("poison immediate damage and poison ticks explicitly bypass an active mount
 test("a mount knocked before its rider's PVE last hit receives no later kill experience", () => {
   const service = createAuthService({
     store: createMemoryAuthStore(),
+    petEncounterAuthority: createAuthoritativePetEncounterFixture({
+      ride_exp_fixture: {
+        id: "ride_exp_fixture",
+        name: "倒骑经验草丛",
+        enemyCount: 1,
+        selectedWildPet: {
+          formId: "wuli_normal_orange_fire10",
+          name: "倒骑经验乌力",
+          level: 20,
+          expReward: 200,
+          catchable: false,
+          battleStats: {maxHp: 1, attack: 40, defense: 1, quick: 300},
+        },
+      },
+    }),
     battleRandomAuthority: deterministicBattleRandomAuthority(),
   });
   const player = service.register({username: "ridepvpexp", password: "test1234", displayName: "倒骑经验号"});
@@ -486,22 +502,15 @@ test("a mount knocked before its rider's PVE last hit receives no later kill exp
   });
   assert.equal(service.saveProfile(player.session.token, {expectedRevision: 0, profile}).ok, true);
   const encounter = service.startPartyEncounter(player.session.token, {
-    enemyCount: 1,
-    encounterZone: {
-      id: "ride_exp_fixture",
-      name: "倒骑经验草丛",
-      selectedWildPet: {
-        formId: "wuli_normal_orange_fire10",
-        name: "倒骑经验乌力",
-        level: 20,
-        expReward: 200,
-        battleStats: {maxHp: 1, attack: 40, defense: 1, quick: 300},
-      },
-    },
+    encounterZone: {id: "ride_exp_fixture"},
   });
   assert.equal(encounter.ok, true);
   const rider = encounter.room.battle.actors.find((actor) => actor.accountId === player.account.accountId && actor.kind === "player");
   const enemy = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.deepEqual(
+    {maxHp: enemy.maxHp, attack: enemy.attack, defense: enemy.defense, speed: enemy.speed},
+    {maxHp: 1, attack: 40, defense: 1, speed: 300},
+  );
   const resolved = service.submitBattleCommand(player.session.token, encounter.room.roomId, {
     round: 1, actorId: rider.actorId, actionId: "attack", targetActorId: enemy.actorId,
   });

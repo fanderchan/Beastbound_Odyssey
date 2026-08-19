@@ -120,42 +120,102 @@ function createFixturePetEncounterAuthority() {
       const zone = payload.encounterZone && typeof payload.encounterZone === "object" && !Array.isArray(payload.encounterZone)
         ? JSON.parse(JSON.stringify(payload.encounterZone))
         : {};
-      const formationTemplate = String(zone.formationTemplate || "");
-      const fallback = fixtureEncounterCharacterCount(input.participants) > 1 ? 10 : 1;
-      const selectedWildPets = Array.isArray(zone.selectedWildPets)
-        ? zone.selectedWildPets
-        : (Array.isArray(zone.fixedWildPets) ? zone.fixedWildPets : []);
-      const fixedWildPets = Array.isArray(zone.fixedWildPets) ? zone.fixedWildPets : [];
-      const clientSelectedOnly = Object.prototype.hasOwnProperty.call(zone, "selectedEnemyCount")
-        && !Object.prototype.hasOwnProperty.call(zone, "enemyCount")
-        && !Object.prototype.hasOwnProperty.call(zone, "enemyCountMin")
-        && !Object.prototype.hasOwnProperty.call(zone, "enemyCountMax")
-        && fixedWildPets.length < 1
-        && formationTemplate !== "10v10";
-      const rawEnemyCount = clientSelectedOnly
-        ? fallback
-        : payload.enemyCount || zone.enemyCount || zone.selectedEnemyCount || selectedWildPets.length;
-      const enemyCount = Math.max(1, Math.min(10, Math.trunc(Number(rawEnemyCount || (formationTemplate === "10v10" ? 10 : fallback)))));
-      return {
-        ok: true,
-        encounter: {
-          zoneId: String(zone.id || ""),
-          groupId: String(zone.encounterGroupId || ""),
-          interactionId: String(zone.interactionId || zone.sourceInteractionId || ""),
-          sourceInteractionId: String(zone.sourceInteractionId || zone.interactionId || ""),
-          sourceInteractionName: String(zone.sourceInteractionName || ""),
-          name: String(zone.name || "测试野外"),
-          formationTemplate: String(formationTemplate || (enemyCount > 1 ? "10v10" : "")),
-          enemyCount,
-          selectedWildPet: zone.selectedWildPet && typeof zone.selectedWildPet === "object" ? JSON.parse(JSON.stringify(zone.selectedWildPet)) : null,
-          selectedWildPets: selectedWildPets.filter((item) => item && typeof item === "object" && !Array.isArray(item)).map((item) => JSON.parse(JSON.stringify(item))),
-          wildPetPool: Array.isArray(zone.wildPetPool) ? JSON.parse(JSON.stringify(zone.wildPetPool)) : [],
-          authority: "test_fixture",
-          schemaVersion: 1,
-        },
-      };
+      return resolveFixtureEncounter(input, zone, {allowRequestEnemyCount: true, authority: "test_fixture"});
     },
   });
+}
+
+// Explicit test-only catalog for cases that must prove battle behavior against
+// server-owned encounter facts. The request contributes only a stable zone id;
+// enemy count, formation, stats and rewards all come from the frozen catalog.
+function createAuthoritativePetEncounterFixture(zonesById = {}) {
+  if (!zonesById || typeof zonesById !== "object" || Array.isArray(zonesById)) {
+    throw new TypeError("authoritative encounter fixtures must be an object");
+  }
+  const catalog = {};
+  for (const [rawZoneId, rawZone] of Object.entries(zonesById)) {
+    const zoneId = String(rawZoneId || "");
+    if (
+      zoneId === ""
+      || !rawZone
+      || typeof rawZone !== "object"
+      || Array.isArray(rawZone)
+    ) {
+      throw new TypeError("authoritative encounter fixture entries must be named objects");
+    }
+    const zone = JSON.parse(JSON.stringify(rawZone));
+    if (String(zone.id || "") !== zoneId) {
+      throw new TypeError(`authoritative encounter fixture id mismatch: ${zoneId}`);
+    }
+    catalog[zoneId] = zone;
+  }
+  Object.freeze(catalog);
+  return Object.freeze({
+    resolve(input = {}) {
+      const payload = input.request && typeof input.request === "object" && !Array.isArray(input.request)
+        ? input.request
+        : {};
+      const requestedZone = payload.encounterZone && typeof payload.encounterZone === "object" && !Array.isArray(payload.encounterZone)
+        ? payload.encounterZone
+        : {};
+      const intent = payload.encounterIntent && typeof payload.encounterIntent === "object" && !Array.isArray(payload.encounterIntent)
+        ? payload.encounterIntent
+        : {};
+      const zoneId = String(requestedZone.id || intent.zoneId || "");
+      if (!Object.prototype.hasOwnProperty.call(catalog, zoneId)) {
+        return {
+          ok: false,
+          code: "encounter_zone_invalid",
+          message: "测试权威遭遇不存在。",
+        };
+      }
+      return resolveFixtureEncounter(input, JSON.parse(JSON.stringify(catalog[zoneId])), {
+        allowRequestEnemyCount: false,
+        authority: "test_authoritative_fixture",
+      });
+    },
+  });
+}
+
+function resolveFixtureEncounter(input, zone, options = {}) {
+  const payload = input.request && typeof input.request === "object" && !Array.isArray(input.request)
+    ? input.request
+    : {};
+  const formationTemplate = String(zone.formationTemplate || "");
+  const fallback = fixtureEncounterCharacterCount(input.participants) > 1 ? 10 : 1;
+  const selectedWildPets = Array.isArray(zone.selectedWildPets)
+    ? zone.selectedWildPets
+    : (Array.isArray(zone.fixedWildPets) ? zone.fixedWildPets : []);
+  const fixedWildPets = Array.isArray(zone.fixedWildPets) ? zone.fixedWildPets : [];
+  const clientSelectedOnly = Object.prototype.hasOwnProperty.call(zone, "selectedEnemyCount")
+    && !Object.prototype.hasOwnProperty.call(zone, "enemyCount")
+    && !Object.prototype.hasOwnProperty.call(zone, "enemyCountMin")
+    && !Object.prototype.hasOwnProperty.call(zone, "enemyCountMax")
+    && fixedWildPets.length < 1
+    && formationTemplate !== "10v10";
+  const requestEnemyCount = options.allowRequestEnemyCount === false ? 0 : payload.enemyCount;
+  const rawEnemyCount = clientSelectedOnly
+    ? fallback
+    : requestEnemyCount || zone.enemyCount || zone.selectedEnemyCount || selectedWildPets.length;
+  const enemyCount = Math.max(1, Math.min(10, Math.trunc(Number(rawEnemyCount || (formationTemplate === "10v10" ? 10 : fallback)))));
+  return {
+    ok: true,
+    encounter: {
+      zoneId: String(zone.id || ""),
+      groupId: String(zone.encounterGroupId || ""),
+      interactionId: String(zone.interactionId || zone.sourceInteractionId || ""),
+      sourceInteractionId: String(zone.sourceInteractionId || zone.interactionId || ""),
+      sourceInteractionName: String(zone.sourceInteractionName || ""),
+      name: String(zone.name || "测试野外"),
+      formationTemplate: String(formationTemplate || (enemyCount > 1 ? "10v10" : "")),
+      enemyCount,
+      selectedWildPet: zone.selectedWildPet && typeof zone.selectedWildPet === "object" ? JSON.parse(JSON.stringify(zone.selectedWildPet)) : null,
+      selectedWildPets: selectedWildPets.filter((item) => item && typeof item === "object" && !Array.isArray(item)).map((item) => JSON.parse(JSON.stringify(item))),
+      wildPetPool: Array.isArray(zone.wildPetPool) ? JSON.parse(JSON.stringify(zone.wildPetPool)) : [],
+      authority: String(options.authority || "test_fixture"),
+      schemaVersion: 1,
+    },
+  };
 }
 
 function createFixturePetEncounterPermitAuthority() {
@@ -619,6 +679,7 @@ module.exports = {
   test,
   once,
   createAuthService,
+  createAuthoritativePetEncounterFixture,
   createMemoryAuthStore,
   createJsonAuthStore,
   createAsyncWriteAuthStore,

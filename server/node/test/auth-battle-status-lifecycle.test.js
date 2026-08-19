@@ -4,6 +4,7 @@ const {
   assert,
   test,
   createAuthService,
+  createAuthoritativePetEncounterFixture,
   createMemoryAuthStore,
   battleProfile,
 } = require("../test-support/auth-service-test-context");
@@ -483,7 +484,24 @@ test("new poison ticks in its apply round, expires 3 to 0, and cleanse suppresse
 
 test("lethal poison tick credits its frozen player and riding pet without launch", () => {
   const authority = statusFriendlyAuthority();
-  const service = createAuthService({store: createMemoryAuthStore(), battleRandomAuthority: authority});
+  const service = createAuthService({
+    store: createMemoryAuthStore(),
+    petEncounterAuthority: createAuthoritativePetEncounterFixture({
+      poison_lethal_fixture: {
+        id: "poison_lethal_fixture",
+        name: "毒杀夹具",
+        enemyCount: 1,
+        selectedWildPet: {
+          formId: "bui_normal_red_fire10",
+          name: "低血目标",
+          level: 1,
+          catchable: false,
+          battleStats: {maxHp: 15, attack: 1, defense: 1, agility: 1},
+        },
+      },
+    }),
+    battleRandomAuthority: authority,
+  });
   const player = service.register({username: "poisonkilla", password: "test1234", displayName: "毒杀甲"});
   const profile = battleProfile("毒杀甲", {level: 1, hp: 240, maxHp: 240, quick: 120}, null);
   profile.backpackSlots = [{itemId: "item_poison_single_5", count: 1}];
@@ -499,18 +517,14 @@ test("lethal poison tick credits its frozen player and riding pet without launch
     mapId: "firebud_training_yard", cellX: 12, cellY: 12, facing: "east", moving: false,
   }).ok, true);
   const encounter = service.startPartyEncounter(player.session.token, {
-    enemyCount: 1,
-    encounterZone: {
-      id: "poison_lethal_fixture",
-      name: "毒杀夹具",
-      selectedWildPet: {
-        formId: "bui_normal_red_fire10", name: "低血目标", level: 1,
-        battleStats: {maxHp: 15, attack: 1, defense: 1, agility: 1},
-      },
-    },
+    encounterZone: {id: "poison_lethal_fixture"},
   });
   const source = encounter.room.battle.actors.find((actor) => actor.accountId === player.account.accountId && actor.kind === "player");
   const target = encounter.room.battle.actors.find((actor) => actor.side === "enemy");
+  assert.deepEqual(
+    {maxHp: target.maxHp, attack: target.attack, defense: target.defense, speed: target.speed},
+    {maxHp: 15, attack: 1, defense: 1, speed: 1},
+  );
   const resolved = service.submitBattleCommand(player.session.token, encounter.room.roomId, {
     round: 1,
     actorId: source.actorId,
