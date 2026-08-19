@@ -428,23 +428,17 @@ process.stdin.on("end", () => {
       /^UPDATE auth_store_revisions SET revision = revision \+ 1/i.test(String(statement).trim())
     )), true);
 
-    committedReceipt = {
-      schemaVersion: 1,
-      operationId,
-      requestHash: operation.requestHash,
-      actionId: operation.actionId,
-      accountId,
-      committedAt: first.durableCommit.committedAt,
-      expiresAt: "2026-07-15T00:00:00.000Z",
-      response: structuredClone(first),
-    };
     const currentSession = service.getSession(token);
     assert.equal(currentSession.ok, true, JSON.stringify(currentSession));
     const publishedReceipt = service.snapshot().mutationReceipts[operationId];
     assert.equal(publishedReceipt.requestHash, operation.requestHash);
     assert.equal(publishedReceipt.actionId, operation.actionId);
+    assert.equal(publishedReceipt.scopeKind, "character");
+    assert.equal(publishedReceipt.playerId, playerId);
+    assert.equal(publishedReceipt.selectionEpoch, currentSession.session.selectionEpoch);
     assert.equal(publishedReceipt.expiresAt, "2026-07-15T00:00:00.000Z");
     assert.equal(publishedReceipt.response.ok, true);
+    committedReceipt = structuredClone(publishedReceipt);
 
     const replay = await service.invokeDurable("bankDeposit", [token, {stoneCoins: 1}], operation);
     assert.equal(replay.ok, true, JSON.stringify(replay));
