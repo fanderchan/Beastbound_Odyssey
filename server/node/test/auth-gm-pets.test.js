@@ -304,43 +304,86 @@ test("generic HTTP GM commands commit durably through the production async store
   });
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   const operationId = "bbo_generic_gm_command_0001";
-  const requestOptions = {
+  const requestOptions = (token) => ({
     method: "POST",
     headers: {
-      authorization: `Bearer ${gm.session.token}`,
+      authorization: `Bearer ${token}`,
       "Idempotency-Key": operationId,
     },
-  };
+  });
 
-  const first = await fetchJson(`${baseUrl}/gm/commands/gm_map`, requestOptions);
+  const first = await fetchJson(`${baseUrl}/gm/commands/gm_map`, requestOptions(gm.session.token));
   assert.equal(first.ok, true);
   assert.equal(first.commandId, "gm_map");
   assert.equal(first.durableCommit.operationId, operationId);
   assert.equal(first.durableCommit.replayed, false);
   assert.equal(saveCount, 1);
+  const committed = base.load();
+  assert.equal(committed.gmCommandAudit.length, 1);
+  assert.equal(committed.gmCommandAudit[0].commandId, "gm_map");
+  const receipt = committed.mutationReceipts[operationId];
+  assert.equal(receipt.accountId, gm.account.accountId);
+  assert.equal(receipt.scopeKind, "character");
+  assert.equal(receipt.playerId, gm.session.playerId);
+  assert.equal(receipt.selectionEpoch, gm.session.selectionEpoch);
+
+  const refreshed = await fetchJson(`${baseUrl}/auth/refresh`, {
+    method: "POST",
+    headers: {authorization: `Bearer ${gm.session.token}`},
+  });
+  assert.equal(refreshed.ok, true);
+  assert.notEqual(refreshed.session.token, gm.session.token);
+  assert.equal(refreshed.session.playerId, gm.session.playerId);
+  assert.equal(refreshed.session.selectionEpoch, gm.session.selectionEpoch);
+  const savesAfterRefresh = saveCount;
+
+  const refreshedReplay = await fetchJson(
+    `${baseUrl}/gm/commands/gm_map`,
+    requestOptions(refreshed.session.token),
+  );
+  assert.equal(refreshedReplay.ok, true);
+  assert.equal(refreshedReplay.auditId, first.auditId);
+  assert.equal(refreshedReplay.durableCommit.operationId, operationId);
+  assert.equal(refreshedReplay.durableCommit.replayed, true);
+  assert.equal(saveCount, savesAfterRefresh);
   assert.equal(base.load().gmCommandAudit.length, 1);
-  assert.equal(base.load().gmCommandAudit[0].commandId, "gm_map");
-  assert.equal(base.load().mutationReceipts[operationId].accountId, gm.account.accountId);
 
   const relogin = await fetchJson(`${baseUrl}/auth/login`, {
     method: "POST",
     body: JSON.stringify({username: "httpgmgenericdurable", password: "test1234"}),
   });
   assert.equal(relogin.ok, true);
-  assert.notEqual(relogin.session.token, gm.session.token);
+  assert.equal(relogin.session.playerId, refreshed.session.playerId);
+  assert.notEqual(relogin.session.selectionEpoch, refreshed.session.selectionEpoch);
   const savesAfterLogin = saveCount;
 
-  const replay = await fetchJson(`${baseUrl}/gm/commands/gm_map`, {
-    ...requestOptions,
-    headers: {
-      ...requestOptions.headers,
-      authorization: `Bearer ${relogin.session.token}`,
-    },
-  });
-  assert.equal(replay.ok, true);
-  assert.equal(replay.auditId, first.auditId);
-  assert.equal(replay.durableCommit.operationId, operationId);
-  assert.equal(replay.durableCommit.replayed, true);
+  const reloginReplay = await fetchJson(
+    `${baseUrl}/gm/commands/gm_map`,
+    requestOptions(relogin.session.token),
+  );
+  assert.equal(reloginReplay.ok, false);
+  assert.equal(reloginReplay.code, "idempotency_key_conflict");
   assert.equal(saveCount, savesAfterLogin);
   assert.equal(base.load().gmCommandAudit.length, 1);
+
+  const reselected = await fetchJson(`${baseUrl}/characters/select`, {
+    method: "POST",
+    headers: {authorization: `Bearer ${relogin.session.token}`},
+    body: JSON.stringify({playerId: relogin.session.playerId}),
+  });
+  assert.equal(reselected.ok, true);
+  assert.equal(reselected.session.playerId, relogin.session.playerId);
+  assert.notEqual(reselected.session.selectionEpoch, relogin.session.selectionEpoch);
+  const savesAfterReselection = saveCount;
+
+  const reselectionReplay = await fetchJson(
+    `${baseUrl}/gm/commands/gm_map`,
+    requestOptions(reselected.session.token),
+  );
+  assert.equal(reselectionReplay.ok, false);
+  assert.equal(reselectionReplay.code, "idempotency_key_conflict");
+  assert.equal(saveCount, savesAfterReselection);
+  const finalState = base.load();
+  assert.equal(finalState.gmCommandAudit.length, 1);
+  assert.deepEqual(finalState.mutationReceipts[operationId], receipt);
 });
