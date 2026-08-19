@@ -34,7 +34,18 @@ process.stdin.on("end", () => {
   if (stdin.includes("information_schema.tables")) {
     process.stdout.write("1\\n");
   } else if (stdin.includes("SELECT 'server_state'")) {
-    process.stdout.write("server_state\\tauth\\t{\\\"schemaVersion\\\":2,\\\"storage\\\":\\\"mysql_entity_tables\\\",\\\"marketConfig\\\":{},\\\"offlineHangConfig\\\":{},\\\"serviceEventSeq\\\":0}\\n");
+    const now = "2026-07-12T12:00:00.000Z";
+    const accountId = "acc_batch_cli";
+    const rows = [
+      ["server_state", "auth", {schemaVersion: 2, storage: "mysql_entity_tables", marketConfig: {}, offlineHangConfig: {}, petPaidResetConfig: {}, serviceEventSeq: 0}],
+      ["accounts", accountId, {accountId, username: "batchcli", displayName: "批量CLI", characterSlotsInitialized: true}],
+      ["profile_bindings", accountId, {accountId, playerId: "player_batch_cli_a", profileRevision: 7, updatedAt: now}],
+      ["account_character_slots", accountId + "/0", {schemaVersion: 1, accountId, slotIndex: 0, playerId: "player_batch_cli_a", createdAt: now, updatedAt: now, lastSelectedAt: now}],
+      ["account_character_slots", accountId + "/1", {schemaVersion: 1, accountId, slotIndex: 1, playerId: "player_batch_cli_b", createdAt: now, updatedAt: now, lastSelectedAt: null}],
+      ["profiles", "player_batch_cli_a", {playerId: "player_batch_cli_a", accountId, profileRevision: 7, updatedAt: now, profile: {schemaVersion: 1, player: {name: "迁移CLI甲", level: 20}, stoneCoins: 1234}}],
+      ["profiles", "player_batch_cli_b", {playerId: "player_batch_cli_b", accountId, profileRevision: 2, updatedAt: now, profile: {schemaVersion: 1, player: {name: "迁移CLI乙", level: 9}, stoneCoins: 4321}}],
+    ];
+    process.stdout.write(rows.map((row) => row[0] + "\\t" + row[1] + "\\t" + JSON.stringify(row[2])).join("\\n") + "\\n");
   }
 });
 `, {mode: 0o755});
@@ -60,12 +71,17 @@ process.stdin.on("end", () => {
     assert.equal(report.mode, "dry-run");
     assert.equal(report.applied, false);
     assert.equal(report.rehearsal.ok, true);
-    assert.equal(report.plan.profileCount, 0);
+    assert.equal(report.plan.changed, true);
+    assert.equal(report.plan.profileCount, 2);
+    assert.equal(report.plan.changedProfileCount, 2);
+    assert.deepEqual(report.plan.changedProfileIds, ["player_batch_cli_a", "player_batch_cli_b"]);
     assert.equal(result.stdout.includes("mysql-secret-must-not-leak"), false);
+    assert.equal(result.stdout.includes("迁移CLI甲"), false);
 
     const sql = fs.readFileSync(mysqlLogPath, "utf8");
     assert.match(sql, /information_schema\.tables/);
     assert.match(sql, /SELECT 'profiles'/);
+    assert.match(sql, /SELECT 'account_character_slots'/);
     assert.doesNotMatch(sql, /CREATE\s+(DATABASE|TABLE)/i);
     assert.doesNotMatch(sql, /START\s+TRANSACTION|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bCOMMIT\b/i);
     assert.equal(fs.existsSync(path.join(tempDir, "server/node/.local/backups")), false);
@@ -177,6 +193,7 @@ test("apply writes and verifies backup before opening writer, then saves one can
   assert.equal(result.ambiguousCommitRecovered, false);
   assert.equal(saveCount, 1);
   assert.equal(data.profiles.player_batch.profile.schemaVersion, 3);
+  assert.deepEqual(data.accountCharacterSlots, source.accountCharacterSlots);
   assert.equal(events.indexOf("backup") < events.indexOf("write-store"), true);
   assert.equal(events.indexOf("backup") < events.indexOf("write-save"), true);
   assert.equal(JSON.stringify(result).includes("password-secret"), false);
@@ -186,7 +203,7 @@ test("apply refuses source drift after backup and performs no profile save", () 
   const source = completeSnapshot();
   const reviewed = buildBatchProfileMigration(source);
   const drifted = structuredClone(source);
-  drifted.marketConfig.taxBps = 999;
+  drifted.accountCharacterSlots.acc_batch[0].lastSelectedAt = "2026-07-12T12:01:00.000Z";
   let backupWritten = false;
   let saveCount = 0;
 
@@ -257,6 +274,9 @@ test("tampered plans fail integrity checks before the first save", () => {
   const sourcePlan = buildBatchProfileMigration(completeSnapshot());
   const cases = [
     (plan) => { plan.candidateSnapshot.profiles.player_batch.profile.stoneCoins += 1; },
+    (plan) => {
+      plan.candidateSnapshot.accountCharacterSlots.acc_batch[0].updatedAt = "2026-07-12T12:02:00.000Z";
+    },
     (plan) => { plan.changedProfileIds = []; },
     (plan) => { plan.planDigest = "0".repeat(64); },
   ];
@@ -285,6 +305,7 @@ test("verification failure restores profiles only and preserves concurrent non-t
       if (saveCount === 1) {
         data.marketConfig.concurrentNote = "keep me";
         data.families.family_concurrent = {familyId: "family_concurrent", name: "并发家族"};
+        data.accountCharacterSlots.acc_batch[0].lastSelectedAt = "2026-07-12T12:03:00.000Z";
       }
     },
     load() { return structuredClone(data); },
@@ -302,6 +323,10 @@ test("verification failure restores profiles only and preserves concurrent non-t
   assert.deepEqual(data.profiles, plan.sourceSnapshot.profiles);
   assert.equal(data.marketConfig.concurrentNote, "keep me");
   assert.equal(data.families.family_concurrent.name, "并发家族");
+  assert.equal(
+    data.accountCharacterSlots.acc_batch[0].lastSelectedAt,
+    "2026-07-12T12:03:00.000Z",
+  );
 });
 
 test("rollback conflict fails closed without overwriting a third profile state", () => {
@@ -334,6 +359,18 @@ function applyArgs(plan) {
   };
 }
 
+function characterSlot(accountId, slotIndex, playerId) {
+  return {
+    accountId,
+    slotIndex,
+    playerId,
+    createdAt: NOW,
+    updatedAt: NOW,
+    lastSelectedAt: NOW,
+    schemaVersion: 1,
+  };
+}
+
 function completeSnapshot() {
   return {
     schemaVersion: 1,
@@ -354,6 +391,14 @@ function completeSnapshot() {
         updatedAt: NOW,
       },
     },
+    accountCharacterSlots: {
+      acc_batch: [
+        characterSlot("acc_batch", 0, "player_batch"),
+        null,
+        null,
+        null,
+      ],
+    },
     profiles: {
       player_batch: {
         playerId: "player_batch",
@@ -373,6 +418,7 @@ function completeSnapshot() {
     consumedEquipmentEnvelopes: {},
     marketConfig: {taxBps: 500},
     offlineHangConfig: {rewardRateBps: 5000},
+    petPaidResetConfig: {},
     parties: {},
     partyInvites: {},
     families: {},

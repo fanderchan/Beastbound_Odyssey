@@ -10,6 +10,7 @@ const {
 } = require("./equipment-envelope-consumed-ledger");
 
 const PERSISTENT_OBJECT_FIELDS = new Set([
+  "accountCharacterSlots",
   "accounts",
   "consumedEquipmentEnvelopes",
   "families",
@@ -64,6 +65,17 @@ const ARRAY_ENTITY_ID_FIELDS = Object.freeze({
   serviceEvents: "eventSeq",
 });
 const RESERVED_ENTITY_IDS = new Set(["__proto__", "constructor", "prototype"]);
+const CHARACTER_SLOT_LIMIT = 4;
+const CHARACTER_SLOT_FIELDS = Object.freeze([
+  "accountId",
+  "slotIndex",
+  "playerId",
+  "createdAt",
+  "updatedAt",
+  "lastSelectedAt",
+  "schemaVersion",
+]);
+const CHARACTER_SLOT_FIELD_SET = new Set(CHARACTER_SLOT_FIELDS);
 
 function isRecord(value) {
   return Boolean(
@@ -156,8 +168,142 @@ function validateRootFieldType(root, field, expectedType, errors) {
   return true;
 }
 
+function validIsoTimestamp(value) {
+  return typeof value === "string" && value !== "" && Number.isFinite(Date.parse(value));
+}
+
+function auditAccountCharacterSlots(root, accountIdToUsername, errors) {
+  const slotByPlayerId = new Map();
+  if (!isRecord(root.accountCharacterSlots)) {
+    return slotByPlayerId;
+  }
+  for (const accountIdKey of Object.keys(root.accountCharacterSlots).sort()) {
+    const path = `accountCharacterSlots.${accountIdKey}`;
+    const accountId = canonicalEntityId(accountIdKey);
+    if (accountId === "") {
+      errors.push(errorEntry(
+        "batch_character_roster_account_invalid",
+        path,
+        "character roster account key is invalid",
+      ));
+      continue;
+    }
+    if (!accountIdToUsername.has(accountId)) {
+      errors.push(errorEntry(
+        "batch_character_roster_account_missing",
+        path,
+        "character roster account does not exist",
+      ));
+    }
+    const slots = root.accountCharacterSlots[accountIdKey];
+    if (!Array.isArray(slots) || slots.length !== CHARACTER_SLOT_LIMIT) {
+      errors.push(errorEntry(
+        "batch_character_roster_invalid",
+        path,
+        "character roster must contain exactly four slots",
+      ));
+      continue;
+    }
+    if (slots.every((slot) => slot === null)) {
+      errors.push(errorEntry(
+        "batch_character_roster_empty_unroundtrippable",
+        path,
+        "an all-empty roster has no physical MySQL row and cannot round-trip",
+      ));
+    }
+    for (let slotIndex = 0; slotIndex < CHARACTER_SLOT_LIMIT; slotIndex += 1) {
+      const slot = slots[slotIndex];
+      const slotPath = `${path}[${slotIndex}]`;
+      if (slot === null) {
+        continue;
+      }
+      if (!isRecord(slot)) {
+        errors.push(errorEntry(
+          "batch_character_slot_document_invalid",
+          slotPath,
+          "occupied character slot must be an object",
+        ));
+        continue;
+      }
+      for (const field of Object.keys(slot).sort()) {
+        if (!CHARACTER_SLOT_FIELD_SET.has(field)) {
+          errors.push(errorEntry(
+            "batch_character_slot_field_unknown",
+            `${slotPath}.${field}`,
+            "character slot contains a field that MySQL cannot round-trip",
+          ));
+        }
+      }
+      for (const field of CHARACTER_SLOT_FIELDS) {
+        if (!hasOwn(slot, field)) {
+          errors.push(errorEntry(
+            "batch_character_slot_field_missing",
+            `${slotPath}.${field}`,
+            "character slot is missing a MySQL field",
+          ));
+        }
+      }
+      const declaredAccountId = canonicalEntityId(slot.accountId);
+      const playerId = canonicalEntityId(slot.playerId);
+      if (slot.schemaVersion !== 1) {
+        errors.push(errorEntry(
+          "batch_character_slot_schema_unsupported",
+          `${slotPath}.schemaVersion`,
+          "character slot schemaVersion must be 1",
+        ));
+      }
+      if (declaredAccountId !== accountId) {
+        errors.push(errorEntry(
+          "batch_character_slot_account_mismatch",
+          `${slotPath}.accountId`,
+          "character slot accountId must match its roster",
+        ));
+      }
+      if (!Number.isSafeInteger(slot.slotIndex) || slot.slotIndex !== slotIndex) {
+        errors.push(errorEntry(
+          "batch_character_slot_index_mismatch",
+          `${slotPath}.slotIndex`,
+          "character slot index must match its roster position",
+        ));
+      }
+      if (playerId === "") {
+        errors.push(errorEntry(
+          "batch_character_slot_player_invalid",
+          `${slotPath}.playerId`,
+          "occupied character slot requires a valid playerId",
+        ));
+      } else if (slotByPlayerId.has(playerId)) {
+        errors.push(errorEntry(
+          "batch_character_slot_player_duplicate",
+          `${slotPath}.playerId`,
+          "playerId is assigned to more than one character slot",
+        ));
+      } else {
+        slotByPlayerId.set(playerId, {accountId, slotIndex, slot});
+      }
+      if (
+        !validIsoTimestamp(slot.createdAt)
+        || !validIsoTimestamp(slot.updatedAt)
+        || !(slot.lastSelectedAt === null || validIsoTimestamp(slot.lastSelectedAt))
+      ) {
+        errors.push(errorEntry(
+          "batch_character_slot_timestamp_invalid",
+          slotPath,
+          "character slot timestamps are invalid",
+        ));
+      }
+    }
+  }
+  return slotByPlayerId;
+}
+
 function auditIdentityGraph(root, contract, errors) {
-  if (!isRecord(root.accounts) || !isRecord(root.profileBindings) || !isRecord(root.profiles)) {
+  if (
+    !isRecord(root.accounts)
+    || !isRecord(root.accountCharacterSlots)
+    || !isRecord(root.profileBindings)
+    || !isRecord(root.profiles)
+  ) {
     return;
   }
   const accountIdToUsername = new Map();
@@ -187,6 +333,8 @@ function auditIdentityGraph(root, contract, errors) {
     accountIdToUsername.set(accountId, username);
   }
 
+  const slotByPlayerId = auditAccountCharacterSlots(root, accountIdToUsername, errors);
+
   const bindingByPlayerId = new Map();
   for (const accountIdKey of Object.keys(root.profileBindings).sort()) {
     const binding = root.profileBindings[accountIdKey];
@@ -210,6 +358,14 @@ function auditIdentityGraph(root, contract, errors) {
     } else {
       bindingByPlayerId.set(playerId, binding);
     }
+    const slot = slotByPlayerId.get(playerId);
+    if (!slot || slot.accountId !== accountId) {
+      errors.push(errorEntry(
+        "batch_profile_binding_character_slot_mismatch",
+        path,
+        "active profile binding must reference a slot owned by the same account",
+      ));
+    }
     if (!Number.isSafeInteger(binding.profileRevision) || binding.profileRevision < 0) {
       errors.push(errorEntry("batch_profile_binding_revision_invalid", path, "binding revision must be non-negative"));
     }
@@ -217,7 +373,6 @@ function auditIdentityGraph(root, contract, errors) {
 
   const allowedDocumentFields = new Set(contract.profileDocumentFields);
   const requiredDocumentFields = contract.profileDocumentFields;
-  const profileAccountIds = new Set();
   for (const playerIdKey of Object.keys(root.profiles).sort()) {
     const document = root.profiles[playerIdKey];
     const path = `profiles.${playerIdKey}`;
@@ -251,11 +406,6 @@ function auditIdentityGraph(root, contract, errors) {
     if (accountId === "" || !accountIdToUsername.has(accountId)) {
       errors.push(errorEntry("batch_profile_account_missing", path, "profile account does not exist"));
     }
-    if (profileAccountIds.has(accountId)) {
-      errors.push(errorEntry("batch_profile_account_duplicate", path, "account owns more than one profile"));
-    } else if (accountId !== "") {
-      profileAccountIds.add(accountId);
-    }
     if (!Number.isSafeInteger(document.profileRevision) || document.profileRevision < 0) {
       errors.push(errorEntry("batch_profile_revision_invalid", path, "profile revision must be non-negative"));
     }
@@ -265,9 +415,22 @@ function auditIdentityGraph(root, contract, errors) {
     if (!isRecord(document.profile)) {
       errors.push(errorEntry("batch_profile_payload_invalid", `${path}.profile`, "profile payload must be an object"));
     }
+    const slot = slotByPlayerId.get(playerIdKey);
+    if (!slot) {
+      errors.push(errorEntry(
+        "batch_profile_character_slot_missing",
+        path,
+        "profile is not assigned to an account character slot",
+      ));
+    } else if (slot.accountId !== accountId) {
+      errors.push(errorEntry(
+        "batch_profile_character_slot_owner_mismatch",
+        path,
+        "profile and character slot account owners differ",
+      ));
+    }
     const binding = bindingByPlayerId.get(playerIdKey);
     if (!binding) {
-      errors.push(errorEntry("batch_profile_binding_missing", path, "profile has no binding"));
       continue;
     }
     if (String(binding.accountId || "") !== accountId) {
@@ -284,6 +447,15 @@ function auditIdentityGraph(root, contract, errors) {
         "batch_profile_document_missing",
         `profileBindings.${String(binding.accountId || "")}`,
         "binding points to a missing profile document",
+      ));
+    }
+  }
+  for (const [playerId, slot] of slotByPlayerId.entries()) {
+    if (!hasOwn(root.profiles, playerId)) {
+      errors.push(errorEntry(
+        "batch_character_slot_profile_missing",
+        `accountCharacterSlots.${slot.accountId}[${slot.slotIndex}]`,
+        "character slot points to a missing profile document",
       ));
     }
   }

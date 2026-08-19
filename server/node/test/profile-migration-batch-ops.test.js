@@ -13,11 +13,26 @@ const {
   verifyBatchProfileRollback,
 } = require("../src/auth/profile-migration-batch-ops");
 
+const NOW = "2026-07-12T08:00:00.000Z";
+
 function legacyProfile() {
   return {
     schemaVersion: 1,
     player: {name: "批量迁移测试员", level: 20},
     stoneCoins: 1234,
+  };
+}
+
+function characterSlot(accountId, slotIndex, playerId, overrides = {}) {
+  return {
+    accountId,
+    slotIndex,
+    playerId,
+    createdAt: NOW,
+    updatedAt: NOW,
+    lastSelectedAt: NOW,
+    schemaVersion: 1,
+    ...overrides,
   };
 }
 
@@ -43,28 +58,52 @@ function completeSnapshot() {
         accountId: "acc_batch",
         playerId: "player_batch",
         profileRevision: 7,
-        updatedAt: "2026-07-12T08:00:00.000Z",
+        updatedAt: NOW,
       },
       acc_peer: {
         accountId: "acc_peer",
         playerId: "player_peer",
         profileRevision: 3,
-        updatedAt: "2026-07-12T08:00:00.000Z",
+        updatedAt: NOW,
       },
+    },
+    accountCharacterSlots: {
+      acc_batch: [
+        characterSlot("acc_batch", 0, "player_batch"),
+        characterSlot("acc_batch", 1, "player_batch_alt", {lastSelectedAt: null}),
+        null,
+        null,
+      ],
+      acc_peer: [
+        characterSlot("acc_peer", 0, "player_peer"),
+        null,
+        null,
+        null,
+      ],
     },
     profiles: {
       player_batch: {
         playerId: "player_batch",
         accountId: "acc_batch",
         profileRevision: 7,
-        updatedAt: "2026-07-12T08:00:00.000Z",
+        updatedAt: NOW,
         profile: legacyProfile(),
+      },
+      player_batch_alt: {
+        playerId: "player_batch_alt",
+        accountId: "acc_batch",
+        profileRevision: 2,
+        updatedAt: NOW,
+        profile: {
+          ...legacyProfile(),
+          player: {name: "批量迁移备用角色", level: 9},
+        },
       },
       player_peer: {
         playerId: "player_peer",
         accountId: "acc_peer",
         profileRevision: 3,
-        updatedAt: "2026-07-12T08:00:00.000Z",
+        updatedAt: NOW,
         profile: legacyProfile(),
       },
     },
@@ -110,7 +149,7 @@ test("batch plan changes only profile payloads and exposes a deterministic safe 
   assert.equal(first.ok, true);
   assert.equal(first.applySafe, true);
   assert.equal(first.changed, true);
-  assert.deepEqual(first.changedProfileIds, ["player_batch", "player_peer"]);
+  assert.deepEqual(first.changedProfileIds, ["player_batch", "player_batch_alt", "player_peer"]);
   assert.deepEqual(first.addedConsumedEquipmentEnvelopeIds, []);
   assert.equal(first.candidateSnapshot.profiles.player_batch.profile.schemaVersion, 3);
   assert.deepEqual(
@@ -118,6 +157,7 @@ test("batch plan changes only profile payloads and exposes a deterministic safe 
     {...source.profiles.player_batch, profile: undefined},
   );
   assert.deepEqual(first.candidateSnapshot.marketConfig, source.marketConfig);
+  assert.deepEqual(first.candidateSnapshot.accountCharacterSlots, source.accountCharacterSlots);
   assert.equal(first.planDigest, second.planDigest);
   assert.equal(first.sourceDigest, second.sourceDigest);
   assert.equal(first.candidateDigest, second.candidateDigest);
@@ -133,6 +173,10 @@ test("root coverage fails closed for persistence gaps, runtime state, battle eve
     },
     {
       patch(root) { delete root.marketConfig; },
+      code: "batch_root_field_missing",
+    },
+    {
+      patch(root) { delete root.accountCharacterSlots; },
       code: "batch_root_field_missing",
     },
     {
@@ -226,6 +270,86 @@ test("root coverage fails closed for persistence gaps, runtime state, battle eve
   }
 });
 
+test("four-slot rosters own every profile exactly once and allow inactive sibling profiles", () => {
+  const valid = completeSnapshot();
+  const initialAudit = auditBatchMigrationRootCoverage(valid);
+  assert.equal(initialAudit.ok, true, JSON.stringify(initialAudit.errors));
+
+  const alternateActive = completeSnapshot();
+  alternateActive.profileBindings.acc_batch = {
+    accountId: "acc_batch",
+    playerId: "player_batch_alt",
+    profileRevision: 2,
+    updatedAt: NOW,
+  };
+  const alternateAudit = auditBatchMigrationRootCoverage(alternateActive);
+  assert.equal(alternateAudit.ok, true, JSON.stringify(alternateAudit.errors));
+
+  const scenarios = [
+    {
+      patch(root) {
+        root.accountCharacterSlots.acc_missing = root.accountCharacterSlots.acc_batch;
+        delete root.accountCharacterSlots.acc_batch;
+      },
+      code: "batch_character_roster_account_missing",
+    },
+    {
+      patch(root) { root.accountCharacterSlots.acc_batch.pop(); },
+      code: "batch_character_roster_invalid",
+    },
+    {
+      patch(root) { root.accountCharacterSlots.acc_batch = [null, null, null, null]; },
+      code: "batch_character_roster_empty_unroundtrippable",
+    },
+    {
+      patch(root) { root.accountCharacterSlots.acc_batch[0].accountId = "acc_peer"; },
+      code: "batch_character_slot_account_mismatch",
+    },
+    {
+      patch(root) { root.accountCharacterSlots.acc_batch[0].slotIndex = 3; },
+      code: "batch_character_slot_index_mismatch",
+    },
+    {
+      patch(root) { root.accountCharacterSlots.acc_peer[0].playerId = "player_batch"; },
+      code: "batch_character_slot_player_duplicate",
+    },
+    {
+      patch(root) { root.accountCharacterSlots.acc_batch[0].futureField = true; },
+      code: "batch_character_slot_field_unknown",
+    },
+    {
+      patch(root) { delete root.accountCharacterSlots.acc_batch[0].createdAt; },
+      code: "batch_character_slot_field_missing",
+    },
+    {
+      patch(root) { root.accountCharacterSlots.acc_batch[0].updatedAt = "not-a-time"; },
+      code: "batch_character_slot_timestamp_invalid",
+    },
+    {
+      patch(root) { root.accountCharacterSlots.acc_batch[1].playerId = "player_missing"; },
+      code: "batch_character_slot_profile_missing",
+    },
+    {
+      patch(root) { root.accountCharacterSlots.acc_batch[1] = null; },
+      code: "batch_profile_character_slot_missing",
+    },
+    {
+      patch(root) { root.profileBindings.acc_batch.playerId = "player_missing"; },
+      code: "batch_profile_binding_character_slot_mismatch",
+    },
+  ];
+  for (const scenario of scenarios) {
+    const root = completeSnapshot();
+    scenario.patch(root);
+    const audit = auditBatchMigrationRootCoverage(root);
+    assert.equal(audit.ok, false, scenario.code);
+    assert.equal(errorCodes(audit).has(scenario.code), true, JSON.stringify(audit.errors));
+    const plan = buildBatchProfileMigration(root);
+    assert.equal(plan.applySafe, false, scenario.code);
+    assert.deepEqual(plan.candidateSnapshot, root, scenario.code);
+  }
+});
+
 test("account, binding, profile ownership, map keys, and revisions are audited as one graph", () => {
   const scenarios = [
     {
@@ -273,6 +397,12 @@ test("apply verification covers both changed targets and the non-target persiste
   const nonTargetVerification = verifyBatchProfileMigration(nonTargetDrift, plan);
   assert.equal(nonTargetVerification.ok, false);
   assert.equal(errorCodes(nonTargetVerification).has("batch_apply_non_target_projection_mismatch"), true);
+
+  const rosterDrift = structuredClone(plan.candidateSnapshot);
+  rosterDrift.accountCharacterSlots.acc_peer[0].lastSelectedAt = "2026-07-12T08:01:00.000Z";
+  const rosterVerification = verifyBatchProfileMigration(rosterDrift, plan);
+  assert.equal(rosterVerification.ok, false);
+  assert.equal(errorCodes(rosterVerification).has("batch_apply_non_target_projection_mismatch"), true);
 });
 
 test("rollback restores only candidate profiles and preserves concurrent non-target state", () => {
@@ -280,6 +410,7 @@ test("rollback restores only candidate profiles and preserves concurrent non-tar
   const current = structuredClone(plan.candidateSnapshot);
   current.marketConfig.concurrentNote = "must survive rollback";
   current.families.family_concurrent = {familyId: "family_concurrent", name: "并发家族"};
+  current.accountCharacterSlots.acc_peer[0].lastSelectedAt = "2026-07-12T08:02:00.000Z";
   current.consumedEquipmentEnvelopes.eqx_concurrent_ledger_0001 = {
     schemaVersion: 1,
     envelopeId: "eqx_concurrent_ledger_0001",
@@ -287,10 +418,14 @@ test("rollback restores only candidate profiles and preserves concurrent non-tar
 
   const rollback = buildBatchProfileRollback(current, plan);
   assert.equal(rollback.ok, true);
-  assert.deepEqual(rollback.restoredProfileIds, ["player_batch", "player_peer"]);
+  assert.deepEqual(rollback.restoredProfileIds, ["player_batch", "player_batch_alt", "player_peer"]);
   assert.deepEqual(rollback.snapshot.profiles, plan.sourceSnapshot.profiles);
   assert.equal(rollback.snapshot.marketConfig.concurrentNote, "must survive rollback");
   assert.equal(rollback.snapshot.families.family_concurrent.name, "并发家族");
+  assert.equal(
+    rollback.snapshot.accountCharacterSlots.acc_peer[0].lastSelectedAt,
+    "2026-07-12T08:02:00.000Z",
+  );
   assert.equal(hasOwn(rollback.snapshot.consumedEquipmentEnvelopes, "eqx_concurrent_ledger_0001"), true);
   assert.equal(verifyBatchProfileRollback(rollback.snapshot, rollback).ok, true);
 
@@ -306,7 +441,10 @@ test("rollback accepts an already-restored before image but rejects a third prof
   const beforeRollback = buildBatchProfileRollback(plan.sourceSnapshot, plan);
   assert.equal(beforeRollback.ok, true);
   assert.deepEqual(beforeRollback.restoredProfileIds, []);
-  assert.deepEqual(beforeRollback.alreadyRestoredProfileIds, ["player_batch", "player_peer"]);
+  assert.deepEqual(
+    beforeRollback.alreadyRestoredProfileIds,
+    ["player_batch", "player_batch_alt", "player_peer"],
+  );
 
   const conflictState = structuredClone(plan.candidateSnapshot);
   conflictState.profiles.player_batch.profile.stoneCoins = 999999;
