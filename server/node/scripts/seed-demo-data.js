@@ -23,6 +23,8 @@ const DEFAULT_PREFIX = "demo";
 const DEFAULT_MANOR_ID = "firebud_manor";
 const BASE_SLOT_COUNT = 15;
 const DEMO_PET_FORM_ID = "blue_man_dragon_water10";
+const DEMO_CHARACTER_APPEARANCE_ID = "novice_hunter_v1";
+const DEMO_CHARACTER_ELEMENTS = Object.freeze({earth: 6, water: 4, fire: 0, wind: 0});
 const PET_TEMPLATE_PATH = path.resolve(repoRoot, "client/godot/data/pet_templates.json");
 const petGrowthCatalog = loadPetGrowthCatalog();
 const newPetFactory = createNewPetFactory({growthCatalog: petGrowthCatalog});
@@ -72,6 +74,7 @@ function seedDemoData(service, options, time) {
   const ensured = {};
   for (const spec of specs) {
     ensured[spec.key] = ensureAccount(service, spec, options.password);
+    ensured[spec.key] = ensureDemoCharacter(service, ensured[spec.key]);
     ensured[spec.key].profile = ensureDemoProfile(service, ensured[spec.key], spec);
   }
   const family = ensureFamily(service, ensured.leader, options.familyName);
@@ -261,8 +264,65 @@ function ensureAccount(service, spec, password) {
   throw new Error(`demo seed refuses existing or unavailable account ${spec.username}: ${detail}`);
 }
 
+function ensureDemoCharacter(service, ensured) {
+  if (!ensured || ensured.action !== "created") {
+    throw new Error("demo seed refuses to create characters for reused accounts");
+  }
+  const roster = service.listCharacters(ensured.session.token);
+  if (
+    !roster.ok
+    || roster.selectionRequired !== true
+    || !Array.isArray(roster.characters)
+    || roster.characters.length !== 4
+    || roster.characters.some((entry) => entry.occupied !== false)
+  ) {
+    throw new Error("new disposable demo account did not start with four empty character slots");
+  }
+  const created = service.createCharacter(ensured.session.token, {
+    slotIndex: 0,
+    displayName: ensured.spec.displayName,
+    appearanceId: DEMO_CHARACTER_APPEARANCE_ID,
+    elements: {...DEMO_CHARACTER_ELEMENTS},
+  });
+  if (!created.ok) {
+    throw new Error(
+      `create character ${ensured.spec.username} failed: ${created.code || ""} ${created.message || ""}`.trim(),
+    );
+  }
+  const playerId = String(created.character && created.character.playerId || "");
+  if (
+    playerId === ""
+    || created.character.slotIndex !== 0
+    || created.selectionRequired !== true
+    || created.selectedCharacter !== null
+  ) {
+    throw new Error(`created demo character ${ensured.spec.username} did not remain behind the selection gate`);
+  }
+  const selected = service.selectCharacter(ensured.session.token, {
+    slotIndex: 0,
+    playerId,
+  });
+  if (
+    !selected.ok
+    || selected.selectionRequired !== false
+    || !selected.session
+    || String(selected.session.token || "") === ""
+    || String(selected.session.playerId || "") !== playerId
+    || !selected.selectedCharacter
+    || selected.selectedCharacter.selected !== true
+  ) {
+    const detail = `${selected.code || ""} ${selected.message || ""}`.trim();
+    throw new Error(`select character ${ensured.spec.username} failed: ${detail}`.trim());
+  }
+  return {
+    ...ensured,
+    session: selected.session,
+    character: selected.selectedCharacter,
+  };
+}
+
 function ensureDemoProfile(service, ensured, spec) {
-  const internal = freshInternalProfileForCreatedAccount(service, ensured);
+  const internal = freshInternalProfileForSelectedCharacter(service, ensured);
   const profile = internal.profile;
   profile.player = objectOrEmpty(profile.player);
   profile.player.name = spec.displayName;
@@ -504,19 +564,32 @@ function snapshotValueHasContent(value) {
   return Number(value || 0) !== 0;
 }
 
-function freshInternalProfileForCreatedAccount(service, ensured) {
+function freshInternalProfileForSelectedCharacter(service, ensured) {
   if (!ensured || ensured.action !== "created") {
     throw new Error("demo seed refuses reused accounts");
   }
   const snapshot = service.snapshot();
   const accountId = String(ensured.account && ensured.account.accountId || "");
+  const roster = arrayOrEmpty(objectOrEmpty(snapshot.accountCharacterSlots)[accountId]);
+  const slot = objectOrEmpty(roster[0]);
   const binding = objectOrEmpty(objectOrEmpty(snapshot.profileBindings)[accountId]);
   const playerId = String(binding.playerId || "");
   const profileDoc = objectOrEmpty(objectOrEmpty(snapshot.profiles)[playerId]);
   const profile = clone(objectOrEmpty(profileDoc.profile));
   const profileRevision = intValue(binding.profileRevision, -1);
-  if (accountId === "" || playerId === "" || profileRevision !== 0 || Object.keys(profile).length === 0) {
-    throw new Error("new disposable demo account did not have a pristine revision-zero profile");
+  if (
+    accountId === ""
+    || roster.length !== 4
+    || String(slot.playerId || "") === ""
+    || roster.slice(1).some((entry) => entry !== null)
+    || playerId !== String(slot.playerId || "")
+    || playerId !== String(ensured.session && ensured.session.playerId || "")
+    || playerId !== String(ensured.character && ensured.character.playerId || "")
+    || profileRevision !== 0
+    || intValue(profileDoc.profileRevision, -1) !== 0
+    || Object.keys(profile).length === 0
+  ) {
+    throw new Error("new disposable demo character was not selected with a pristine revision-zero profile");
   }
   if (
     arrayOrEmpty(profile.petInstances).length > 0

@@ -32,8 +32,26 @@ test("demo seed script creates a one-time authority-safe disposable json fixture
   assert.equal(first.manor.status, "occupied");
   assert.equal(fs.existsSync(storePath), true);
   assert.equal(fs.existsSync(firstReportPath), true);
+  const firstReport = JSON.parse(fs.readFileSync(firstReportPath, "utf8"));
+  assert.deepEqual(firstReport, first);
+  assert.doesNotMatch(
+    JSON.stringify(firstReport),
+    /privateSeed|privateRoll|growthSpeciesSeed|\"private\"/,
+  );
 
   const stored = JSON.parse(fs.readFileSync(storePath, "utf8"));
+  const storedAccounts = Object.values(stored.accounts);
+  assert.equal(storedAccounts.length, 4);
+  for (const account of storedAccounts) {
+    const slots = stored.accountCharacterSlots[account.accountId];
+    assert.equal(slots.length, 4);
+    assert.equal(slots[0].slotIndex, 0);
+    assert.deepEqual(slots.slice(1), [null, null, null]);
+    assert.equal(stored.profileBindings[account.accountId].playerId, slots[0].playerId);
+    const profile = stored.profiles[slots[0].playerId].profile;
+    assert.equal(profile.player.appearanceId, "novice_hunter_v1");
+    assert.deepEqual(profile.player.elements, {earth: 6, water: 4, fire: 0, wind: 0});
+  }
   const storedPets = Object.values(stored.profiles).map((profileDoc) => profileDoc.profile.petInstances[0]);
   assert.equal(storedPets.length, 4);
   assert.deepEqual(storedPets.map((pet) => pet.level).sort((left, right) => left - right), [4, 16, 25, 32]);
