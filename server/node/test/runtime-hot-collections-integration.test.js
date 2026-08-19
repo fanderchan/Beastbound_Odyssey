@@ -6,11 +6,12 @@ const {
   createAuthService,
   createMemoryAuthStore,
 } = require("../src/auth-service");
+const {
+  registerSelectedCharacterFixture,
+} = require("../test-support/selected-character-fixture");
 
 function register(service, username, displayName) {
-  const result = service.register({username, password: "test1234", displayName});
-  assert.equal(result.ok, true);
-  return result;
+  return registerSelectedCharacterFixture(service, {username, displayName});
 }
 
 function position(service, session, cellX) {

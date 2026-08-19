@@ -8,13 +8,22 @@ const {
   createAsyncWriteAuthStore,
   createMemoryAuthStore,
 } = require("../src/auth-service");
+const {
+  registerSelectedCharacterFixture,
+} = require("../test-support/selected-character-fixture");
+const PET_PAID_RESET_FORM_POLICY_COUNT = require(
+  "../../../client/godot/data/balance/pet_paid_reset_policy.json",
+).formPolicies.length;
 
 const COMMAND_ID = "gm_pet_paid_reset_config";
 const NOW_MS = Date.parse("2026-07-17T12:00:00.000Z");
 
 function registerGm(service, username = "paidresetgm") {
-  const registered = service.register({username, password: "test1234", displayName: "重置配置GM"});
-  assert.equal(registered.ok, true);
+  const registered = registerSelectedCharacterFixture(service, {
+    username,
+    displayName: "重置配置GM",
+    characterDisplayName: "重置猎人",
+  });
   assert.equal(service.grantGm({
     username,
     commandIds: [COMMAND_ID],
@@ -28,7 +37,10 @@ function registerGm(service, username = "paidresetgm") {
 test("GM paid reset config is command-scoped, revisioned, audited, and profile-neutral", () => {
   const store = createMemoryAuthStore();
   const service = createAuthService({store, now: () => NOW_MS});
-  const player = service.register({username: "paidresetdeny", password: "test1234"});
+  const player = registerSelectedCharacterFixture(service, {
+    username: "paidresetdeny",
+    displayName: "重置配置普通玩家",
+  });
   const denied = service.getPetPaidResetConfig(player.session.token);
   assert.equal(denied.ok, false);
   assert.equal(denied.code, "gm_denied");
@@ -40,7 +52,7 @@ test("GM paid reset config is command-scoped, revisioned, audited, and profile-n
   const defaults = service.getPetPaidResetConfig(gm.session.token);
   assert.equal(defaults.ok, true);
   assert.equal(defaults.config.revision, 0);
-  assert.equal(defaults.resolvedForms.length, 34);
+  assert.equal(defaults.resolvedForms.length, PET_PAID_RESET_FORM_POLICY_COUNT);
   assert.equal(defaults.resolvedForms.find((entry) => entry.formId === "bui_normal_red_fire10").amount, 120000);
   const defaultTerminal = defaults.resolvedForms
     .find((entry) => entry.formId === "wuli_evolved_crystal_earth8_water2");

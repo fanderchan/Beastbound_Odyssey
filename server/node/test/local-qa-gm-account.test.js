@@ -28,6 +28,9 @@ const {
   assertBackendStopped,
   parseArgs,
 } = require("../scripts/local-qa-gm-account");
+const {
+  registerSelectedCharacterFixture,
+} = require("../test-support/selected-character-fixture");
 
 const NOW_MS = Date.parse("2026-07-12T08:00:00.000Z");
 const EXPIRES_AT = "2026-07-12T16:00:00.000Z";
@@ -371,7 +374,7 @@ process.stdin.on("end", () => {
 function existingAccountFixture() {
   const store = createMemoryAuthStore();
   const service = createAuthService({store, now: () => NOW_MS});
-  const registered = service.register({
+  const registered = registerSelectedCharacterFixture(service, {
     username: "auth1373",
     password: "existing-password",
     displayName: "本地QA",

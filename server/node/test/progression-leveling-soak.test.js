@@ -6,12 +6,18 @@ const {createAuthService, createMemoryAuthStore} = require("../src/auth-service"
 const {createPetEncounterAuthority} = require("../src/auth/pet-encounter-authority");
 const {loadPlayerLevelRuntime} = require("../src/auth/player-level-runtime");
 const {runProgressionLevelingSoak, routeForLevel} = require("../src/auth/progression-leveling-soak");
+const {
+  registerSelectedCharacterFixture,
+} = require("../test-support/selected-character-fixture");
 
 test("isolated new-account leveling soak reaches Lv140 through authoritative routes within every target band", () => {
   const encounterAuthority = createPetEncounterAuthority();
   const playerLevelRuntime = loadPlayerLevelRuntime({dataDir: encounterAuthority.catalog.dataDir});
   const service = createAuthService({store: createMemoryAuthStore()});
-  const account = service.register({username: "soaknewaccount", password: "test1234", displayName: "练级隔离号"});
+  const account = registerSelectedCharacterFixture(service, {
+    username: "soaknewaccount",
+    displayName: "练级隔离号",
+  });
   const startingProfile = service.getProfile(account.session.token).profile;
   assert.equal(startingProfile.player.level, 1);
   assert.equal(startingProfile.player.exp, 0);

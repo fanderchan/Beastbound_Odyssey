@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R0.F002
+> 当前游标：R0.F003
 > 当前发布结论：BLOCKED，不是可发布候选版
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -93,7 +93,7 @@
   依赖：R0.02。以当前干净候选重跑完整服务端套件，将每个失败按共同根因归类为真实回归、测试夹具漂移、环境前置缺失或已废弃预期；在动态子任务区生成一个根因一个 R0.Fxxx 任务，禁止只改断言迎合错误行为。
 
 - [ ] **R0.05 GATE｜服务端零失败门禁**
-  依赖：所有 R0.Fxxx。完整服务端测试必须 0 failure；允许明确、已有理由的 skip，但必须在 phase 文档说明。R0.F001 完成后的当前快照为 1975 项、85 failure、1 个有理由的 Valkey 环境 skip；继续完成 R0.F002–R0.F012，再刷新最终门禁。
+  依赖：所有 R0.Fxxx。完整服务端测试必须 0 failure；允许明确、已有理由的 skip，但必须在 phase 文档说明。R0.F002 完成后的当前快照为 1975 项、73 failure、1 个有理由的 Valkey 环境 skip；继续完成 R0.F003–R0.F012，再刷新最终门禁。
 
 - [ ] **R0.06 AUTO｜恢复并跑通客户端目标自动检查**
   依赖：R0.03、R0.05。通过 Godot 解析，跑通地图、音频、融合、宠物、战斗、世界交互与当前变更相关的自动检查；所有 live 检查只连本地 QA 后端。
@@ -515,7 +515,7 @@
 - [x] **R0.F001 AUTO｜迁移 demo seed 到显式建角与选角合同**
   依赖：R0.04。分类：真实回归，2 failure。`seed-demo-data.js` 仍假定注册即产生 revision-zero 档案，实际命令在四空槽合同下直接退出；必须用隔离 memory/JSON 流程显式建角、选角和造数，保留一次性输出、拒绝 MySQL、私密成长不泄露与不可覆盖合同。目标 `demo-seed-script.test.js` 全绿后重跑完整服务端套件。
 
-- [ ] **R0.F002 AUTO｜迁移严格注册测试夹具到四角色槽合同**
+- [x] **R0.F002 AUTO｜迁移严格注册测试夹具到四角色槽合同**
   依赖：R0.04。分类：测试夹具漂移，12 failure。修复 `auth-gm-pet-paid-reset-config`、`local-qa-gm-account`、`progression-leveling-soak`、`runtime-hot-collections-integration` 中仍把直接注册当作已有活动角色的夹具；显式建角/选角或只在合理处使用测试包装器，禁止恢复生产隐式建角。目标四文件全绿后重跑完整服务端套件。
 
 - [ ] **R0.F003 AUTO｜消除骑宠离线夹具的派生 ID 截断碰撞**
@@ -588,7 +588,7 @@
 
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
-| R0 干净候选基线 | 进行中（R0.01–R0.04、R0.F001 已完成；当前 R0.F002） | R0.09 完成 |
+| R0 干净候选基线 | 进行中（R0.01–R0.04、R0.F001–R0.F002 已完成；当前 R0.F003） | R0.09 完成 |
 | R1 历史候选验收 | 未开始 | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
@@ -608,6 +608,7 @@
 - 2026-08-20｜R0.03｜docs/phase_491_production_release_r0_03_qa_lane_recovery.md + 本机连续运行 summary `2026-08-19T19-49-46-310Z` / `2026-08-19T19-49-58-946Z`｜schema-v2 锁绑定 runner PID 与启动身份；仅自动回收精确 stale，active/legacy/unsafe 均 fail closed；Python 78/78、Node 48/48、源码合同、两次 Godot parse 与目标检查通过，第二次确认无残留，玩家资料哈希前后不变｜Windows lane 生命周期仍按既有边界 fail closed；完整服务端失败分类进入 R0.04
 - 2026-08-20｜R0.04｜docs/phase_492_production_release_r0_04_server_failure_classification.md｜干净候选完整服务端 `1975` 项：`1887 pass / 87 fail / 1 skip`；18 个失败文件均独立复现，87 项按 12 个共同根因闭合为 `26 真实回归 + 60 夹具漂移 + 1 已废弃预期 + 0 环境前置失败`，已生成 R0.F001–R0.F012｜本轮只分类不修复；Valkey 真集成因本机未配置端口有理由 skip，服务端零失败门禁仍阻塞
 - 2026-08-20｜R0.F001｜docs/phase_493_production_release_r0_f001_demo_seed_character_flow.md｜demo seed 严格走四空槽、显式建角、显式选角与 revision-zero 造数；目标测试 `3/3`，完整服务端 `1975` 项为 `1889 pass / 85 fail / 1 skip`，相对 R0.04 精确移除两项且无新增失败｜其余 85 项仍由 R0.F002–R0.F012 阻塞；Valkey 真集成继续因未配置隔离端口而有理由 skip
+- 2026-08-20｜R0.F002｜docs/phase_494_production_release_r0_f002_strict_character_fixtures.md｜四个严格服务测试改用共享显式角色夹具，验证四空槽、建角、选角与 token 轮换；目标 `19/19`、相邻角色/重置目录 `19/19`，完整服务端 `1975` 项为 `1901 pass / 73 fail / 1 skip`，精确移除 12 项且无新增失败｜其余 73 项仍由 R0.F003–R0.F012 阻塞；Valkey 真集成继续因未配置隔离端口而有理由 skip
 
 ## 7. 正式上线硬门槛
 
