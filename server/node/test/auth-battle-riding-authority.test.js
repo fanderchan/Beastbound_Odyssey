@@ -529,13 +529,18 @@ test("offline party removal preserves damaged ride facts for departed-profile wr
   const service = createAuthService({
     store: createMemoryAuthStore(),
     now: () => nowMs,
-    randomId: () => `ride_depart_${++serial}`,
+    // The legacy-character test fixture derives playerId from the first 12
+    // account-id characters, so keep the serial inside that retained prefix.
+    randomId: () => `ride${String(++serial).padStart(4, "0")}_dep`,
     battleRandomAuthority: deterministicBattleRandomAuthority(),
   });
   const leader = service.register({username: "ridedeparta", password: "test1234", displayName: "离队队长"});
   const member = service.register({username: "ridedepartb", password: "test1234", displayName: "离队骑手"});
   assert.equal(leader.ok, true);
   assert.equal(member.ok, true);
+  assert.match(leader.session.playerId, /^player_ride\d{4}_dep$/);
+  assert.match(member.session.playerId, /^player_ride\d{4}_dep$/);
+  assert.notEqual(member.session.playerId, leader.session.playerId);
   assert.equal(service.saveProfile(leader.session.token, {
     expectedRevision: 0,
     profile: battleProfile("离队队长", {
