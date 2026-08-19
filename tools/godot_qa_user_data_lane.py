@@ -227,7 +227,7 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "writeProcessEvidence": "b488820c61eb90ff4e6edd57ceb339bd8b97a35e4ba64314898fa333d7afc0f9",
 }
 AUTO_CHECK_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
-    "_run_auto_auth_check": "694ee50df8437c9d22bcbcd99a5a834940417a483d10c5f07ec305273a68dcdd",
+    "_run_auto_auth_check": "a4b6d2dc0bab0fb0845b1887366e2845a5298d5624d99b2aa951c5ecb5e6944e",
 }
 class LaneSafetyError(RuntimeError):
     """Raised when a lane cannot be proven safe to inspect or remove."""

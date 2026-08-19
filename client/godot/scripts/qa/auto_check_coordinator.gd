@@ -21695,12 +21695,13 @@ func _run_auto_auth_check() -> void:
 		"commandIds": ["gm_map"],
 		"account": {"accountId": "must_not_project"},
 	}).to_utf8_buffer())
+	var expected_server_command_ids := GmQaAccessPolicyModel.server_command_ids()
 	var gm_tools_contract_ok := (
 		str(gm_tools_spec.get("url", "")) == "http://127.0.0.1:8787/gm/tools"
 		and int(gm_tools_spec.get("method", -1)) == HTTPClient.METHOD_GET
 		and str(gm_tools_spec.get("body", "x")) == ""
 		and bool(gm_tools_valid.get("ok", false))
-		and (gm_tools_valid.get("commandIds", []) as Array).size() == 10
+		and (gm_tools_valid.get("commandIds", []) as Array) == expected_server_command_ids
 		and bool(gm_tools_subset.get("ok", false))
 		and not bool(gm_tools_wildcard.get("ok", false))
 		and not bool(gm_tools_expired.get("ok", false))
@@ -21802,13 +21803,14 @@ func _run_auto_auth_check() -> void:
 	var gm_qa_client_contract_ok := _gm_qa_profile_client_contract_ok()
 	var gm_qa_pet_samples_contract_ok := _gm_qa_pet_samples_client_contract_ok()
 	var gm_qa_assets_contract_ok := _gm_qa_assets_client_contract_ok()
+	var expected_available_command_text := "可用功能 %d 项" % GmQaAccessPolicyModel.client_command_ids().size()
 	var gm_identity_safe = (
 		gm_identity_text.find("测试GM") >= 0
 		and gm_identity_text.find(qa_username) >= 0
 		and gm_identity_text.find("GM") >= 0
 		and gm_identity_text.find("档案 r37") >= 0
 		and gm_identity_text.find("授权：有效至") >= 0
-		and gm_identity_text.find("可用功能 29 项") >= 0
+		and gm_identity_text.find(expected_available_command_text) >= 0
 		and gm_identity_text.find("account_secret_qa") < 0
 		and gm_identity_text.find("token_secret_qa") < 0
 		and gm_identity_text.find("gm_prepare") < 0

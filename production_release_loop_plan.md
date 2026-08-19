@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R0.06
+> 当前游标：R0.07
 > 当前发布结论：BLOCKED，不是可发布候选版
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -95,8 +95,8 @@
 - [x] **R0.05 GATE｜服务端零失败门禁**
   依赖：所有 R0.Fxxx。完整服务端测试必须 0 failure；允许明确、已有理由的 skip，但必须在 phase 文档说明。所有 R0.F001–R0.F013 均已完成；独立完整门禁连续两次均为 `1978 tests / 1977 pass / 0 fail / 1 skip`，唯一 skip 是未配置隔离 `BEASTBOUND_TEST_VALKEY_PORT` 的真实 Valkey 流测试，理由与后续生产相似环境门禁边界已记录在 Phase 506。
 
-- [ ] **R0.06 AUTO｜恢复并跑通客户端目标自动检查**
-  依赖：R0.03、R0.05。通过 Godot 解析，跑通地图、音频、融合、宠物、战斗、世界交互与当前变更相关的自动检查；所有 live 检查只连本地 QA 后端。
+- [x] **R0.06 AUTO｜恢复并跑通客户端目标自动检查**
+  依赖：R0.03、R0.05。通过 Godot 解析，跑通地图、音频、融合、宠物、战斗、世界交互与当前变更相关的自动检查；所有 live 检查只连本地 QA 后端。已修复 `--auto-auth-check` 对旧 GM QA 数量的陈旧断言，QA 源合同与运行器测试全绿；Godot 解析加 34 个目标检查最终 `35/35` 通过，隔离车道清理完成且真实玩家目录哈希不变。严格 Firebud 普通运行时与地图面板检查继续按 Phase 481 生命周期 fail closed，待 R1.01 所有者批准并 promotion 后重跑。
 
 - [ ] **R0.07 AUTO｜真实客户端基线与性能证据**
   依赖：R0.06。从 Main.tscn 启动正常 PC 客户端，记录登录、移动、战斗、背包、宠物、地图、NPC、退出的静止与移动性能；解决任何超出健康基线的热点。
@@ -591,7 +591,7 @@
 
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
-| R0 干净候选基线 | 进行中（R0.01–R0.05、R0.F001–R0.F013 已完成；当前 R0.06） | R0.09 完成 |
+| R0 干净候选基线 | 进行中（R0.01–R0.06、R0.F001–R0.F013 已完成；当前 R0.07） | R0.09 完成 |
 | R1 历史候选验收 | 未开始 | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
@@ -624,6 +624,7 @@
 - 2026-08-20｜R0.F012｜docs/phase_504_production_release_r0_f012_launcher_fixture_dependencies.md｜启动器临时仓显式复制 `server-ops.js` 当前最小运维依赖闭包 `mysql-backup-artifact.js` 与 `mysql-backup-health.js`，生产启动器和运维逻辑未改；目标两轮均 `6/6`、相邻 `29/29`，完整服务端 `1978` 项为 `1977 pass / 0 fail / 1 skip`，临时 backend、控制器、PID、锁、状态与测试目录均收尾｜R0.F013 的间歇性权威随机夹具仍待修并验证重复稳定性，R0.05 暂不完成；Valkey 真集成继续因未配置隔离端口而有理由 skip
 - 2026-08-20｜R0.F013｜docs/phase_505_production_release_r0_f013_pet_exp_battle_random_fixture.md｜两项宠物战斗经验用例注入仅存在于测试的确定性战斗反应权威，保留真实服务端 PVE 目标选择、结算、成长写回和私密字段清理；修复前目标重复第 4 轮复现单宠提前倒地，整文件重复另捕获同根 `battle_command_round_mismatch`，修复后目标 `5/5`、整文件连续 `100` 轮即 `500/500`、相邻 `94/94`，完整服务端 `1978` 项为 `1977 pass / 0 fail / 1 skip`｜所有 R0.Fxxx 已完成；下一轮独立执行 R0.05 零失败门禁，Valkey 真集成继续因未配置隔离端口而有理由 skip
 - 2026-08-20｜R0.05｜docs/phase_506_production_release_r0_05_server_zero_failure_gate.md｜确认 `npm test` 直接执行 `node --test` 并发现 215 个服务端测试文件；独立完整门禁连续两次均为 `1978 tests / 1977 pass / 0 fail / 1 skip`、`not ok=0`，TAP 时长分别 `55.889s` 与 `57.579s`，候选工作树及进程/临时目录收尾正常｜唯一 skip 是未配置隔离 `BEASTBOUND_TEST_VALKEY_PORT` 的真实 Valkey 流测试，不替代 R7/R9 的生产相似 Valkey 与 SOAK 证据；客户端门禁仍由 R0.06 阻塞
+- 2026-08-20｜R0.06｜docs/phase_507_production_release_r0_06_client_target_auto_checks.md｜修复认证自动检查对旧 GM QA 数量的陈旧断言，并保持策略模型和 SHA-256 源合同为权威；源合同、Python `78/78`、Node `48/48` 通过，Godot 解析加地图/世界/音频/融合/宠物/战斗/QA 共 34 个目标检查最终 `35/35` 通过，进程组与隔离车道完整收尾，真实玩家目录哈希不变｜严格 Firebud 普通运行时与地图面板检查须等 R1.01 所有者批准 promotion 后转绿；真实客户端和性能证据仍由 R0.07 阻塞
 
 ## 7. 正式上线硬门槛
 
