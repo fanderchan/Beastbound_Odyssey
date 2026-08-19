@@ -14,6 +14,47 @@ const {
 const {
   authorizePetServiceAction,
 } = require("../src/auth/pet-service-access");
+const {
+  loadAuthoritativeMap,
+  authoritativeInteractionPoint,
+  authoritativeSpawnCell,
+  standableCellAtDistance,
+  standableCellFarFrom,
+} = require("../test-support/authoritative-map-test-fixture");
+
+const FIREBUD_VILLAGE_MAP = loadAuthoritativeMap("firebud_village_gate");
+const FIREBUD_TRAINING_MAP = loadAuthoritativeMap("firebud_training_yard");
+const FIREBUD_TRAINING_SPAWN = authoritativeSpawnCell(FIREBUD_TRAINING_MAP);
+const FIREBUD_STABLE = authoritativeInteractionPoint(
+  FIREBUD_VILLAGE_MAP,
+  "firebud_stable_keeper",
+  {kind: "npc", actionType: "stable", movementCollision: "block"},
+);
+const FIREBUD_STABLE_NEAR = standableCellAtDistance(FIREBUD_VILLAGE_MAP, FIREBUD_STABLE.cell, 1);
+const FIREBUD_STABLE_TWO_AWAY = standableCellAtDistance(FIREBUD_VILLAGE_MAP, FIREBUD_STABLE.cell, 2);
+const FIREBUD_STABLE_FAR = standableCellFarFrom(FIREBUD_VILLAGE_MAP, [FIREBUD_STABLE.cell], 3);
+const FIREBUD_PET_SKILL_TRAINER = authoritativeInteractionPoint(
+  FIREBUD_VILLAGE_MAP,
+  "firebud_pet_skill_trainer",
+  {
+    kind: "npc",
+    actionType: "pet_skill_trainer",
+    trainerId: "firebud_pet_skill_trainer",
+    movementCollision: "block",
+  },
+);
+const FIREBUD_TRAINER_NEAR = standableCellAtDistance(FIREBUD_VILLAGE_MAP, FIREBUD_PET_SKILL_TRAINER.cell, 1);
+const FIREBUD_TRAINER_TWO_AWAY = standableCellAtDistance(FIREBUD_VILLAGE_MAP, FIREBUD_PET_SKILL_TRAINER.cell, 2);
+const FIREBUD_TRAINER_FAR = standableCellFarFrom(FIREBUD_VILLAGE_MAP, [FIREBUD_PET_SKILL_TRAINER.cell], 3);
+
+function authoritativePosition(mapDocument, cell, moving = false) {
+  return {
+    mapId: String(mapDocument.id),
+    cellX: Number(cell[0]),
+    cellY: Number(cell[1]),
+    moving,
+  };
+}
 
 function profileRevision(service, accountId) {
   const snapshot = service.snapshot();
@@ -86,12 +127,10 @@ test("stable mutations require an authoritative remote ability or nearby stable 
   assert.equal(profileRevision(service, accountId), initialRevision);
   assert.deepEqual(internalProfileForAccount(service, accountId), initialProfile);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_training_yard",
-    cellX: 5,
-    cellY: 17,
-    moving: false,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_TRAINING_MAP, FIREBUD_TRAINING_SPAWN),
+  ).ok, true);
   const wrongMap = service.profileAction(token, {
     action: "pet_stable_toggle",
     payload: {instanceId: "stable_toggle_pet"},
@@ -100,12 +139,10 @@ test("stable mutations require an authoritative remote ability or nearby stable 
   assert.equal(wrongMap.code, "pet_stable_access_required");
   assert.equal(profileRevision(service, accountId), initialRevision);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_village_gate",
-    cellX: 5,
-    cellY: 18,
-    moving: false,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_VILLAGE_MAP, FIREBUD_STABLE_TWO_AWAY),
+  ).ok, true);
   const twoCellsAway = service.profileAction(token, {
     action: "pet_stable_toggle",
     payload: {instanceId: "stable_toggle_pet", openedFromStable: true},
@@ -114,12 +151,10 @@ test("stable mutations require an authoritative remote ability or nearby stable 
   assert.equal(twoCellsAway.code, "pet_stable_access_required");
   assert.equal(profileRevision(service, accountId), initialRevision);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_village_gate",
-    cellX: 5,
-    cellY: 17,
-    moving: true,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_VILLAGE_MAP, FIREBUD_STABLE_NEAR, true),
+  ).ok, true);
   const movingNearby = service.profileAction(token, {
     action: "pet_stable_toggle",
     payload: {instanceId: "stable_toggle_pet"},
@@ -128,12 +163,10 @@ test("stable mutations require an authoritative remote ability or nearby stable 
   assert.equal(movingNearby.code, "pet_stable_access_required");
   assert.equal(profileRevision(service, accountId), initialRevision);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_village_gate",
-    cellX: 5,
-    cellY: 17,
-    moving: false,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_VILLAGE_MAP, FIREBUD_STABLE_NEAR),
+  ).ok, true);
   const stored = service.profileAction(token, {
     action: "pet_stable_toggle",
     payload: {instanceId: "stable_toggle_pet"},
@@ -149,12 +182,10 @@ test("stable mutations require an authoritative remote ability or nearby stable 
   assert.equal(petState(service, accountId, "stable_batch_pet"), "storage");
   const revisionAfterNearbySuccess = profileRevision(service, accountId);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_village_gate",
-    cellX: 20,
-    cellY: 20,
-    moving: false,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_VILLAGE_MAP, FIREBUD_STABLE_FAR),
+  ).ok, true);
   const remoteWithdrawDenied = service.profileAction(token, {
     action: "pet_stable_toggle",
     payload: {instanceId: "stable_toggle_pet"},
@@ -221,12 +252,10 @@ test("skill slot mutation requires the claimed trainer at the authoritative curr
   assert.equal(profileRevision(service, accountId), initialRevision);
   assert.equal(internalProfileForAccount(service, accountId).stoneCoins, 100);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_training_yard",
-    cellX: 8,
-    cellY: 17,
-    moving: false,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_TRAINING_MAP, FIREBUD_TRAINING_SPAWN),
+  ).ok, true);
   const wrongMap = service.profileAction(token, {
     action: "pet_skill_set_slot",
     payload: {
@@ -241,12 +270,10 @@ test("skill slot mutation requires the claimed trainer at the authoritative curr
   assert.equal(profileRevision(service, accountId), initialRevision);
   assert.equal(internalProfileForAccount(service, accountId).stoneCoins, 100);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_village_gate",
-    cellX: 8,
-    cellY: 18,
-    moving: false,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_VILLAGE_MAP, FIREBUD_TRAINER_TWO_AWAY),
+  ).ok, true);
   const twoCellsAway = service.profileAction(token, {
     action: "pet_skill_set_slot",
     payload: {
@@ -260,12 +287,10 @@ test("skill slot mutation requires the claimed trainer at the authoritative curr
   assert.equal(twoCellsAway.code, "pet_skill_trainer_access_required");
   assert.equal(profileRevision(service, accountId), initialRevision);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_village_gate",
-    cellX: 8,
-    cellY: 17,
-    moving: true,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_VILLAGE_MAP, FIREBUD_TRAINER_NEAR, true),
+  ).ok, true);
   const movingNearby = service.profileAction(token, {
     action: "pet_skill_set_slot",
     payload: {
@@ -280,12 +305,10 @@ test("skill slot mutation requires the claimed trainer at the authoritative curr
   assert.equal(profileRevision(service, accountId), initialRevision);
   assert.equal(internalProfileForAccount(service, accountId).stoneCoins, 100);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_village_gate",
-    cellX: 8,
-    cellY: 17,
-    moving: false,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_VILLAGE_MAP, FIREBUD_TRAINER_NEAR),
+  ).ok, true);
   const missingTrainer = service.profileAction(token, {
     action: "pet_skill_set_slot",
     payload: {
@@ -328,12 +351,10 @@ test("skill slot mutation requires the claimed trainer at the authoritative curr
   );
   const learnedRevision = profileRevision(service, accountId);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_village_gate",
-    cellX: 20,
-    cellY: 20,
-    moving: false,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_VILLAGE_MAP, FIREBUD_TRAINER_FAR),
+  ).ok, true);
   const farClearDenied = service.profileAction(token, {
     action: "pet_skill_set_slot",
     payload: {
@@ -424,12 +445,10 @@ test("durable stable replay keeps the committed result while a new key rechecks 
   const profile = battleProfile("兽栏幂等号", {level: 10, hp: 120, maxHp: 120}, null);
   profile.petInstances = [servicePet("durable_stable_pet")];
   assert.equal(service.saveProfile(token, {expectedRevision: 0, profile}).ok, true);
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_village_gate",
-    cellX: 5,
-    cellY: 17,
-    moving: false,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_VILLAGE_MAP, FIREBUD_STABLE_NEAR),
+  ).ok, true);
 
   const server = createHttpServer({service, logger: false});
   server.listen(0, "127.0.0.1");
@@ -455,12 +474,10 @@ test("durable stable replay keeps the committed result while a new key rechecks 
   assert.equal(petState(service, accountId, "durable_stable_pet"), "storage");
   const committedRevision = profileRevision(service, accountId);
 
-  assert.equal(service.updatePlayerPosition(token, {
-    mapId: "firebud_village_gate",
-    cellX: 20,
-    cellY: 20,
-    moving: false,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(
+    token,
+    authoritativePosition(FIREBUD_VILLAGE_MAP, FIREBUD_STABLE_FAR),
+  ).ok, true);
   const replay = await fetchJson(`${base}/profile/action`, {
     method: "POST",
     headers,

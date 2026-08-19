@@ -30,6 +30,13 @@ const {
   webSocketOpen,
   webSocketJsonReader,
 } = require("../test-support/auth-service-test-context");
+const {
+  loadAuthoritativeMap,
+  blockedInteractionStep,
+} = require("../test-support/authoritative-map-test-fixture");
+
+const FIREBUD_TRAINING_MAP = loadAuthoritativeMap("firebud_training_yard");
+const FIREBUD_TRAINING_BLOCKED_STEP = blockedInteractionStep(FIREBUD_TRAINING_MAP, "block_tester");
 
 function seedMailBackpackEquipment(service, token, itemId = "weapon_wooden_club") {
   const current = service.getProfile(token);
@@ -1412,18 +1419,18 @@ test("position snapshots reject teleports, blocked cells, and illegal map jumps"
   const walker = service.register({"username": "teleportb", "password": "test1234", "displayName": "瞬移乙"});
   assert.equal(walker.ok, true);
   assert.equal(service.updatePlayerPosition(walker.session.token, {
-    "mapId": "firebud_training_yard",
-    "cellX": 11,
-    "cellY": 13,
+    "mapId": FIREBUD_TRAINING_BLOCKED_STEP.mapId,
+    "cellX": FIREBUD_TRAINING_BLOCKED_STEP.fromCell[0],
+    "cellY": FIREBUD_TRAINING_BLOCKED_STEP.fromCell[1],
     "facing": "south",
     "moving": false,
   }).ok, true);
   const blockedStep = service.movePlayerStep(walker.session.token, {
-    "mapId": "firebud_training_yard",
-    "fromCellX": 11,
-    "fromCellY": 13,
-    "toCellX": 11,
-    "toCellY": 14,
+    "mapId": FIREBUD_TRAINING_BLOCKED_STEP.mapId,
+    "fromCellX": FIREBUD_TRAINING_BLOCKED_STEP.fromCell[0],
+    "fromCellY": FIREBUD_TRAINING_BLOCKED_STEP.fromCell[1],
+    "toCellX": FIREBUD_TRAINING_BLOCKED_STEP.toCell[0],
+    "toCellY": FIREBUD_TRAINING_BLOCKED_STEP.toCell[1],
   });
   assert.equal(blockedStep.ok, false);
   assert.equal(blockedStep.code, "movement_cell_blocked");
