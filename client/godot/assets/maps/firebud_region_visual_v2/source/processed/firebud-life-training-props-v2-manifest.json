@@ -1,0 +1,149 @@
+{
+  "cellEdgePolicy": {
+    "overrideFlag": "",
+    "overrideUsed": false,
+    "visibleAlphaMustBeInsideCell": true
+  },
+  "defaultAnchor": [
+    0.5,
+    1.0
+  ],
+  "maxDimension": 256,
+  "objects": [
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        240,
+        256
+      ],
+      "label": "firebud_training_rack",
+      "path": "../../runtime/objects/firebud_training_rack.png",
+      "sha256": "282b3fec074b1e334d52fc59f00bd034ec6948896cab50abb22bdeef0b80ab8d",
+      "sourceBbox": [
+        93,
+        108,
+        477,
+        512
+      ],
+      "sourceCell": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        0
+      ]
+    },
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        218,
+        256
+      ],
+      "label": "firebud_practice_cluster",
+      "path": "../../runtime/objects/firebud_practice_cluster.png",
+      "sha256": "48a301e208d9ce1232895b3ad46f202a1c1509b3874671331a97937b5be1ab02",
+      "sourceBbox": [
+        683,
+        64,
+        463,
+        550
+      ],
+      "sourceCell": [
+        627,
+        0,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        1
+      ]
+    },
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        256,
+        220
+      ],
+      "label": "firebud_trade_counter",
+      "path": "../../runtime/objects/firebud_trade_counter.png",
+      "sha256": "8ddc94a039c1d47a477ae6880bc0c01234674090239ee9dfe591f7c9b02773b3",
+      "sourceBbox": [
+        79,
+        728,
+        498,
+        424
+      ],
+      "sourceCell": [
+        0,
+        627,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        1,
+        0
+      ]
+    },
+    {
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "dimensions": [
+        256,
+        166
+      ],
+      "label": "firebud_grass_scatter_decal",
+      "path": "../../runtime/objects/firebud_grass_scatter_decal.png",
+      "sha256": "0f2914b9ad6c0595bf410c1405bca79379b1bedc7295d00d2b9761da96113145",
+      "sourceBbox": [
+        665,
+        804,
+        496,
+        309
+      ],
+      "sourceCell": [
+        627,
+        627,
+        627,
+        627
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        1,
+        1
+      ]
+    }
+  ],
+  "padding": 8,
+  "schemaVersion": 1,
+  "source": {
+    "alphaThreshold": 4,
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "grid": {
+      "columns": 2,
+      "rows": 2
+    },
+    "path": "firebud-life-training-props-v2-alpha.png",
+    "sha256": "7a823a0b90a048ac8ff1639f8f6d09aa6953c3cab403afbec7e88a8f1ef0a868"
+  }
+}

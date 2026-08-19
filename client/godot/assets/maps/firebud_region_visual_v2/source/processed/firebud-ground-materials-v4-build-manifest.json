@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportType": "beastbound.firebud_ground_atlas_build",
-  "scriptVersion": "1.0.0",
+  "scriptVersion": "2.0.0",
   "pillowVersion": "12.2.0",
   "materialsSource": {
     "path": "client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-ground-materials-v4.png",
@@ -21,10 +21,10 @@
   },
   "atlas": {
     "path": "client/godot/assets/maps/firebud_region_visual_v2/runtime/ground/atlas.png",
-    "sha256": "991e8c2010ade24738b8475db0549fe9dadb38874afc96ae5490a344c0638265",
+    "sha256": "5a57acdf761d5c3ed4a901178bc9407368f33b46e367c38c909aad3bbc80dd31",
     "dimensions": [
       320,
-      120
+      440
     ],
     "tileSize": [
       80,
@@ -48,7 +48,105 @@
       "firebud_ochre_path_worn_b",
       "firebud_honey_stone_moss_b",
       "firebud_tall_grass_encounter",
-      "firebud_warp_stone"
+      "firebud_warp_stone",
+      "firebud_ochre_path_edge_nw",
+      "firebud_ochre_path_edge_ne",
+      "firebud_ochre_path_edge_nw_ne",
+      "firebud_ochre_path_edge_sw",
+      "firebud_ochre_path_edge_nw_sw",
+      "firebud_ochre_path_edge_ne_sw",
+      "firebud_ochre_path_edge_nw_ne_sw",
+      "firebud_ochre_path_edge_se",
+      "firebud_ochre_path_edge_nw_se",
+      "firebud_ochre_path_edge_ne_se",
+      "firebud_ochre_path_edge_nw_ne_se",
+      "firebud_ochre_path_edge_sw_se",
+      "firebud_ochre_path_edge_nw_sw_se",
+      "firebud_ochre_path_edge_ne_sw_se",
+      "firebud_ochre_path_edge_nw_ne_sw_se",
+      "firebud_honey_stone_edge_nw",
+      "firebud_honey_stone_edge_ne",
+      "firebud_honey_stone_edge_nw_ne",
+      "firebud_honey_stone_edge_sw",
+      "firebud_honey_stone_edge_nw_sw",
+      "firebud_honey_stone_edge_ne_sw",
+      "firebud_honey_stone_edge_nw_ne_sw",
+      "firebud_honey_stone_edge_se",
+      "firebud_honey_stone_edge_nw_se",
+      "firebud_honey_stone_edge_ne_se",
+      "firebud_honey_stone_edge_nw_ne_se",
+      "firebud_honey_stone_edge_sw_se",
+      "firebud_honey_stone_edge_nw_sw_se",
+      "firebud_honey_stone_edge_ne_sw_se",
+      "firebud_honey_stone_edge_nw_ne_sw_se"
+    ],
+    "directionalPathTransitions": [
+      "firebud_ochre_path_edge_nw",
+      "firebud_ochre_path_edge_ne",
+      "firebud_ochre_path_edge_nw_ne",
+      "firebud_ochre_path_edge_sw",
+      "firebud_ochre_path_edge_nw_sw",
+      "firebud_ochre_path_edge_ne_sw",
+      "firebud_ochre_path_edge_nw_ne_sw",
+      "firebud_ochre_path_edge_se",
+      "firebud_ochre_path_edge_nw_se",
+      "firebud_ochre_path_edge_ne_se",
+      "firebud_ochre_path_edge_nw_ne_se",
+      "firebud_ochre_path_edge_sw_se",
+      "firebud_ochre_path_edge_nw_sw_se",
+      "firebud_ochre_path_edge_ne_sw_se",
+      "firebud_ochre_path_edge_nw_ne_sw_se"
+    ],
+    "pathTransitionSignatures": [
+      "nw",
+      "ne",
+      "nw_ne",
+      "sw",
+      "nw_sw",
+      "ne_sw",
+      "nw_ne_sw",
+      "se",
+      "nw_se",
+      "ne_se",
+      "nw_ne_se",
+      "sw_se",
+      "nw_sw_se",
+      "ne_sw_se",
+      "nw_ne_sw_se"
+    ],
+    "directionalPlazaTransitions": [
+      "firebud_honey_stone_edge_nw",
+      "firebud_honey_stone_edge_ne",
+      "firebud_honey_stone_edge_nw_ne",
+      "firebud_honey_stone_edge_sw",
+      "firebud_honey_stone_edge_nw_sw",
+      "firebud_honey_stone_edge_ne_sw",
+      "firebud_honey_stone_edge_nw_ne_sw",
+      "firebud_honey_stone_edge_se",
+      "firebud_honey_stone_edge_nw_se",
+      "firebud_honey_stone_edge_ne_se",
+      "firebud_honey_stone_edge_nw_ne_se",
+      "firebud_honey_stone_edge_sw_se",
+      "firebud_honey_stone_edge_nw_sw_se",
+      "firebud_honey_stone_edge_ne_sw_se",
+      "firebud_honey_stone_edge_nw_ne_sw_se"
+    ],
+    "plazaTransitionSignatures": [
+      "nw",
+      "ne",
+      "nw_ne",
+      "sw",
+      "nw_sw",
+      "ne_sw",
+      "nw_ne_sw",
+      "se",
+      "nw_se",
+      "ne_se",
+      "nw_ne_se",
+      "sw_se",
+      "nw_sw_se",
+      "ne_sw_se",
+      "nw_ne_sw_se"
     ]
   },
   "tiles": [
@@ -81,15 +179,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1088,
-        "opaquePixels": 0,
-        "partialAlphaPixels": 2112
+        "transparentPixels": 1156,
+        "opaquePixels": 1756,
+        "partialAlphaPixels": 288
       },
       "meanRgba": [
         131.84,
         83.618,
         47.898,
-        138.705
+        149.351
       ]
     },
     {
@@ -101,15 +199,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1088,
-        "opaquePixels": 0,
-        "partialAlphaPixels": 2112
+        "transparentPixels": 1156,
+        "opaquePixels": 1756,
+        "partialAlphaPixels": 288
       },
       "meanRgba": [
         131.147,
         116.471,
         78.089,
-        138.705
+        149.351
       ]
     },
     {
@@ -221,15 +319,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1088,
-        "opaquePixels": 0,
-        "partialAlphaPixels": 2112
+        "transparentPixels": 1156,
+        "opaquePixels": 1756,
+        "partialAlphaPixels": 288
       },
       "meanRgba": [
         131.757,
         83.618,
         48.817,
-        138.705
+        149.351
       ]
     },
     {
@@ -241,15 +339,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1088,
-        "opaquePixels": 0,
-        "partialAlphaPixels": 2112
+        "transparentPixels": 1156,
+        "opaquePixels": 1756,
+        "partialAlphaPixels": 288
       },
       "meanRgba": [
         130.523,
         115.867,
         77.852,
-        138.705
+        149.351
       ]
     },
     {
@@ -291,6 +389,672 @@
         49.072,
         116.883
       ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw",
+      "atlasRect": [
+        0,
+        120,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1375,
+        "opaquePixels": 1339,
+        "partialAlphaPixels": 486
+      },
+      "meanRgba": [
+        104.05,
+        68.517,
+        42.448,
+        126.274
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_ne",
+      "atlasRect": [
+        80,
+        120,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1379,
+        "opaquePixels": 1349,
+        "partialAlphaPixels": 472
+      },
+      "meanRgba": [
+        103.57,
+        69.143,
+        42.896,
+        126.582
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_ne",
+      "atlasRect": [
+        160,
+        120,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1379,
+        "opaquePixels": 1343,
+        "partialAlphaPixels": 478
+      },
+      "meanRgba": [
+        100.767,
+        68.428,
+        42.6,
+        126.3
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_sw",
+      "atlasRect": [
+        240,
+        120,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1377,
+        "opaquePixels": 1325,
+        "partialAlphaPixels": 498
+      },
+      "meanRgba": [
+        103.358,
+        68.592,
+        42.55,
+        125.544
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_sw",
+      "atlasRect": [
+        0,
+        160,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1377,
+        "opaquePixels": 1319,
+        "partialAlphaPixels": 504
+      },
+      "meanRgba": [
+        103.103,
+        69.206,
+        42.856,
+        125.643
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_ne_sw",
+      "atlasRect": [
+        80,
+        160,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1376,
+        "opaquePixels": 1317,
+        "partialAlphaPixels": 507
+      },
+      "meanRgba": [
+        102.088,
+        69.519,
+        43.064,
+        125.619
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_ne_sw",
+      "atlasRect": [
+        160,
+        160,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1376,
+        "opaquePixels": 1332,
+        "partialAlphaPixels": 492
+      },
+      "meanRgba": [
+        99.293,
+        69.23,
+        43.052,
+        125.762
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_se",
+      "atlasRect": [
+        240,
+        160,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1379,
+        "opaquePixels": 1323,
+        "partialAlphaPixels": 498
+      },
+      "meanRgba": [
+        105.167,
+        69.918,
+        43.065,
+        125.47
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_se",
+      "atlasRect": [
+        0,
+        200,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1376,
+        "opaquePixels": 1305,
+        "partialAlphaPixels": 519
+      },
+      "meanRgba": [
+        100.681,
+        69.13,
+        42.756,
+        124.921
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_ne_se",
+      "atlasRect": [
+        80,
+        200,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1376,
+        "opaquePixels": 1314,
+        "partialAlphaPixels": 510
+      },
+      "meanRgba": [
+        101.696,
+        69.177,
+        42.714,
+        125.502
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_ne_se",
+      "atlasRect": [
+        160,
+        200,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1377,
+        "opaquePixels": 1335,
+        "partialAlphaPixels": 488
+      },
+      "meanRgba": [
+        98.684,
+        69.056,
+        42.852,
+        125.918
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_sw_se",
+      "atlasRect": [
+        240,
+        200,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1372,
+        "opaquePixels": 1319,
+        "partialAlphaPixels": 509
+      },
+      "meanRgba": [
+        101.996,
+        69.74,
+        43.053,
+        125.279
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_sw_se",
+      "atlasRect": [
+        0,
+        240,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1376,
+        "opaquePixels": 1309,
+        "partialAlphaPixels": 515
+      },
+      "meanRgba": [
+        100.713,
+        69.28,
+        42.961,
+        124.869
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_ne_sw_se",
+      "atlasRect": [
+        80,
+        240,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1376,
+        "opaquePixels": 1329,
+        "partialAlphaPixels": 495
+      },
+      "meanRgba": [
+        100.496,
+        69.488,
+        43.126,
+        125.666
+      ]
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_ne_sw_se",
+      "atlasRect": [
+        160,
+        240,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1373,
+        "opaquePixels": 1329,
+        "partialAlphaPixels": 498
+      },
+      "meanRgba": [
+        98.045,
+        69.115,
+        43.051,
+        126.05
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw",
+      "atlasRect": [
+        240,
+        240,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1372,
+        "opaquePixels": 1334,
+        "partialAlphaPixels": 494
+      },
+      "meanRgba": [
+        96.081,
+        92.763,
+        65.245,
+        126.129
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_ne",
+      "atlasRect": [
+        0,
+        280,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1369,
+        "opaquePixels": 1332,
+        "partialAlphaPixels": 499
+      },
+      "meanRgba": [
+        98.458,
+        94.214,
+        66.38,
+        126.335
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_ne",
+      "atlasRect": [
+        80,
+        280,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1349,
+        "opaquePixels": 1351,
+        "partialAlphaPixels": 500
+      },
+      "meanRgba": [
+        93.639,
+        91.172,
+        64.052,
+        127.131
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_sw",
+      "atlasRect": [
+        160,
+        280,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1366,
+        "opaquePixels": 1352,
+        "partialAlphaPixels": 482
+      },
+      "meanRgba": [
+        97.813,
+        93.612,
+        65.97,
+        126.756
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_sw",
+      "atlasRect": [
+        240,
+        280,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1370,
+        "opaquePixels": 1340,
+        "partialAlphaPixels": 490
+      },
+      "meanRgba": [
+        96.019,
+        92.194,
+        64.916,
+        126.315
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_ne_sw",
+      "atlasRect": [
+        0,
+        320,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1355,
+        "opaquePixels": 1345,
+        "partialAlphaPixels": 500
+      },
+      "meanRgba": [
+        95.235,
+        91.805,
+        64.611,
+        126.676
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_ne_sw",
+      "atlasRect": [
+        80,
+        320,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1357,
+        "opaquePixels": 1348,
+        "partialAlphaPixels": 495
+      },
+      "meanRgba": [
+        92.062,
+        89.765,
+        63.053,
+        126.959
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_se",
+      "atlasRect": [
+        160,
+        320,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1355,
+        "opaquePixels": 1345,
+        "partialAlphaPixels": 500
+      },
+      "meanRgba": [
+        98.631,
+        93.69,
+        66.076,
+        126.654
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_se",
+      "atlasRect": [
+        240,
+        320,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1360,
+        "opaquePixels": 1343,
+        "partialAlphaPixels": 497
+      },
+      "meanRgba": [
+        92.124,
+        90.743,
+        63.666,
+        126.662
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_ne_se",
+      "atlasRect": [
+        0,
+        360,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1361,
+        "opaquePixels": 1353,
+        "partialAlphaPixels": 486
+      },
+      "meanRgba": [
+        92.951,
+        91.068,
+        63.955,
+        127.062
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_ne_se",
+      "atlasRect": [
+        80,
+        360,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1355,
+        "opaquePixels": 1348,
+        "partialAlphaPixels": 497
+      },
+      "meanRgba": [
+        88.292,
+        88.444,
+        61.854,
+        127.118
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_sw_se",
+      "atlasRect": [
+        160,
+        360,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1370,
+        "opaquePixels": 1347,
+        "partialAlphaPixels": 483
+      },
+      "meanRgba": [
+        100.166,
+        95.133,
+        67.085,
+        126.289
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_sw_se",
+      "atlasRect": [
+        240,
+        360,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1354,
+        "opaquePixels": 1350,
+        "partialAlphaPixels": 496
+      },
+      "meanRgba": [
+        93.801,
+        91.684,
+        64.238,
+        127.216
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_ne_sw_se",
+      "atlasRect": [
+        0,
+        400,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1353,
+        "opaquePixels": 1347,
+        "partialAlphaPixels": 500
+      },
+      "meanRgba": [
+        97.289,
+        93.573,
+        65.709,
+        126.988
+      ]
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_ne_sw_se",
+      "atlasRect": [
+        80,
+        400,
+        80,
+        40
+      ],
+      "alpha": {
+        "transparentPixels": 1354,
+        "opaquePixels": 1351,
+        "partialAlphaPixels": 495
+      },
+      "meanRgba": [
+        84.381,
+        86.381,
+        60.091,
+        127.168
+      ]
     }
-  ]
+  ],
+  "pathTransitionSource": {
+    "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-alpha.png",
+    "sha256": "bfddf32516926325f112cf73415962f4cec50e30e3821b54fa5e8bb4ae3dd94d",
+    "dimensions": [
+      1776,
+      1776
+    ],
+    "grid": {
+      "rows": 4,
+      "columns": 4
+    },
+    "blankCell": [
+      3,
+      3
+    ],
+    "signatures": [
+      "nw",
+      "ne",
+      "nw_ne",
+      "sw",
+      "nw_sw",
+      "ne_sw",
+      "nw_ne_sw",
+      "se",
+      "nw_se",
+      "ne_se",
+      "nw_ne_se",
+      "sw_se",
+      "nw_sw_se",
+      "ne_sw_se",
+      "nw_ne_sw_se"
+    ]
+  },
+  "plazaTransitionSource": {
+    "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-alpha.png",
+    "sha256": "1a45d4a24eb59b7a9b1dbbc0d0ef8cee25c7b284cd56cd3f7d32d393f3aea00f",
+    "dimensions": [
+      1776,
+      1776
+    ],
+    "grid": {
+      "rows": 4,
+      "columns": 4
+    },
+    "blankCell": [
+      3,
+      3
+    ],
+    "signatures": [
+      "nw",
+      "ne",
+      "nw_ne",
+      "sw",
+      "nw_sw",
+      "ne_sw",
+      "nw_ne_sw",
+      "se",
+      "nw_se",
+      "ne_se",
+      "nw_ne_se",
+      "sw_se",
+      "nw_sw_se",
+      "ne_sw_se",
+      "nw_ne_sw_se"
+    ]
+  }
 }

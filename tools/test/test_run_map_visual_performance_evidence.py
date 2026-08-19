@@ -66,6 +66,11 @@ class RunMapVisualPerformanceEvidenceTest(unittest.TestCase):
 
     def test_run_requires_attested_lane_and_proves_cleanup(self) -> None:
         calls: list[str] = []
+        private_home = "/".join(("", "Users", "example"))
+        private_lane_root = str(
+            Path(private_home)
+            / "Library/Application Support/BeastboundOdysseyQA_Automation"
+        )
 
         class LaneApi:
             @staticmethod
@@ -77,7 +82,7 @@ class RunMapVisualPerformanceEvidenceTest(unittest.TestCase):
                     "owner": owner,
                     "feature": RUNNER.QA_FEATURE,
                     "customUserDirName": RUNNER.QA_CUSTOM_USER_DIR_NAME,
-                    "godotLaneRoot": "/tmp/BeastboundOdysseyQA_Automation",
+                    "godotLaneRoot": private_lane_root,
                     "editorCustomFeatures": f"{existing_features},{RUNNER.QA_FEATURE}",
                     "realInventorySha256": "a" * 64,
                 }
@@ -129,7 +134,7 @@ class RunMapVisualPerformanceEvidenceTest(unittest.TestCase):
                 "feature": RUNNER.QA_FEATURE,
                 "lane": RUNNER.QA_LANE,
                 "status": "passed",
-                "userDataRoot": "/tmp/BeastboundOdysseyQA_Automation",
+                "userDataRoot": private_lane_root,
             }
             stdout = (
                 RUNNER.QA_ATTESTATION_PREFIX
@@ -153,6 +158,14 @@ class RunMapVisualPerformanceEvidenceTest(unittest.TestCase):
         self.assertEqual(calls, ["prepare", "verify", "cleanup", "inspect"])
         self.assertTrue(record["qaLane"]["laneAbsentAfterCleanup"])
         self.assertTrue(record["qaLane"]["realUnchanged"])
+        serialized = json.dumps(record, ensure_ascii=False)
+        self.assertNotIn(private_lane_root, serialized)
+        self.assertNotIn(private_home, serialized)
+        self.assertIn(RUNNER.QA_USER_DATA_ROOT_REDACTION, serialized)
+        self.assertEqual(
+            record["qaLane"]["attestation"]["userDataRoot"],
+            RUNNER.QA_USER_DATA_ROOT_REDACTION,
+        )
 
     def test_run_cleans_prepared_lane_when_environment_identity_is_invalid(self) -> None:
         calls: list[str] = []

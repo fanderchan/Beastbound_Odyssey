@@ -22,7 +22,9 @@ const BUNDLE_MAP_IDS := {
 	"mistcap_marsh_visual_v1": ["mistcap_marsh"],
 }
 const GENERATE_CATALOG_CONTRACT_FLAG := "--generate-map-visual-catalog-contract"
+const GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX := "--generate-map-visual-review-catalog-contract="
 const OVERWRITE_CATALOG_CONTRACT_FLAG := "--overwrite-map-visual-catalog-contract"
+const PREVIEW_CATALOG_CONTRACT_FLAG := "--preview-map-visual-catalog-contract"
 const CATALOG_CONTRACT_REPORT_TYPE := "beastbound.map_visual_catalog_contract"
 const CATALOG_CONTRACT_REPORT_PATH := "evidence/catalog-contract-check.json"
 const AUTH_ARGUMENT_NAMES: Array[String] = [
@@ -53,10 +55,32 @@ func _initialize() -> void:
 		quit(2)
 		return
 	var generate_contract := args.has(GENERATE_CATALOG_CONTRACT_FLAG)
+	var review_generation_bundle_id := _review_generation_bundle_id(args)
+	var generate_review_contract := review_generation_bundle_id != ""
 	var overwrite_contract := args.has(OVERWRITE_CATALOG_CONTRACT_FLAG)
-	var report := run(not generate_contract)
-	if generate_contract and str(report.get("result", "FAIL")) == "PASS":
-		var generation := _write_catalog_contract_reports(report, overwrite_contract)
+	var preview_contract := args.has(PREVIEW_CATALOG_CONTRACT_FLAG)
+	var report := run(
+		not generate_contract and not generate_review_contract and not preview_contract,
+		preview_contract or generate_review_contract
+	)
+	if preview_contract:
+		report["mode"] = "catalog_contract_preview"
+	elif generate_review_contract:
+		report["mode"] = "review_catalog_contract_generation"
+	if (
+		(generate_contract or generate_review_contract)
+		and str(report.get("result", "FAIL")) == "PASS"
+	):
+		var bundle_ids_override: Array = (
+			[review_generation_bundle_id]
+			if generate_review_contract
+			else []
+		)
+		var generation := _write_catalog_contract_reports(
+			report,
+			overwrite_contract,
+			bundle_ids_override
+		)
 		report["catalogContractGeneration"] = generation
 		if str(generation.get("result", "FAIL")) != "PASS":
 			report["result"] = "FAIL"
@@ -67,9 +91,14 @@ func _initialize() -> void:
 	quit(0 if str(report.get("result", "FAIL")) == "PASS" else 1)
 
 
-static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
+static func run(
+	validate_frozen_catalog_contract: bool = true,
+	pending_catalog_preview: bool = false
+) -> Dictionary:
 	var errors: Array[String] = []
 	var summaries: Array[Dictionary] = []
+	var selected_preview_map_ids: Array[String] = []
+	var staged_primary_errors_by_map: Dictionary = {}
 	var review_candidate_summaries: Array[Dictionary] = []
 	var binding_hashes: Dictionary = {}
 	var map_data_hashes: Dictionary = {}
@@ -134,7 +163,28 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 				% [map_id, binding_manifest_path, manifest_path]
 			)
 		var manifest := _read_json(manifest_path, errors, "地图视觉 manifest %s" % map_id)
-		_validate_authority_contract(map_id, map_data, binding, manifest, errors)
+		var staged_review_manifest_path := MapVisualCatalog.review_catalog_manifest_path(map_id)
+		var staged_review_binding_path := MapVisualCatalog.review_catalog_binding_path(map_id)
+		var staged_review_candidate := (
+			pending_catalog_preview
+			and staged_review_manifest_path != ""
+			and staged_review_binding_path != ""
+			and (
+				staged_review_manifest_path != manifest_path
+				or staged_review_binding_path != binding_path
+			)
+		)
+		var staged_primary_errors: Array[String] = []
+		if staged_review_candidate:
+			_validate_authority_contract(
+				map_id,
+				map_data,
+				binding,
+				manifest,
+				staged_primary_errors
+			)
+		else:
+			_validate_authority_contract(map_id, map_data, binding, manifest, errors)
 		var expected_normal_access := _expected_normal_access(manifest, map_id, errors)
 		var binding_hash := FileAccess.get_sha256(binding_path) if FileAccess.file_exists(binding_path) else ""
 		var map_data_hash := FileAccess.get_sha256(map_path) if FileAccess.file_exists(map_path) else ""
@@ -156,7 +206,10 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 		var before := map_data.duplicate(true)
 		var normal := MapVisualCatalog.prepare_map(map_id, map_data, false)
 		if expected_normal_access and normal.is_empty():
-			errors.append("released 地图没有进入普通运行时：%s" % map_id)
+			if staged_review_candidate:
+				staged_primary_errors.append("released 地图没有进入普通运行时：%s" % map_id)
+			else:
+				errors.append("released 地图没有进入普通运行时：%s" % map_id)
 		elif not expected_normal_access and not normal.is_empty():
 			errors.append("owner_review_pending 地图绕过 QA 开关：%s" % map_id)
 		if map_data != before:
@@ -167,24 +220,41 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 			true
 		)
 		if primary_preview.is_empty():
-			errors.append("主 catalog QA preview 地图准备失败：%s" % map_id)
-			errors.append_array(MapVisualCatalog.errors_for_map(map_id))
-			continue
+			if staged_review_candidate:
+				staged_primary_errors.append("主 catalog QA preview 地图准备失败：%s" % map_id)
+				staged_primary_errors.append_array(MapVisualCatalog.errors_for_map(map_id))
+			else:
+				errors.append("主 catalog QA preview 地图准备失败：%s" % map_id)
+				errors.append_array(MapVisualCatalog.errors_for_map(map_id))
+				continue
 		if map_data != before:
 			errors.append("主 catalog QA prepare 修改了权威 mapData：%s" % map_id)
-		_validate_prepared_map(map_id, map_data, manifest, primary_preview, errors)
-		summaries.append({
-			"mapId": map_id,
-			"groundDraws": MapVisualRenderer.ground_draw_count(primary_preview),
-			"objects": MapVisualRenderer.object_draw_count(primary_preview),
-			"protectedCells": (primary_preview.get("protectedLookup", {}) as Dictionary).size(),
-		})
+		if not primary_preview.is_empty():
+			if staged_review_candidate:
+				_validate_prepared_map(
+					map_id,
+					map_data,
+					manifest,
+					primary_preview,
+					staged_primary_errors
+				)
+			else:
+				_validate_prepared_map(map_id, map_data, manifest, primary_preview, errors)
+			summaries.append({
+				"mapId": map_id,
+				"groundDraws": MapVisualRenderer.ground_draw_count(primary_preview),
+				"objects": MapVisualRenderer.object_draw_count(primary_preview),
+				"protectedCells": (primary_preview.get("protectedLookup", {}) as Dictionary).size(),
+			})
+		if staged_review_candidate:
+			staged_primary_errors_by_map[map_id] = staged_primary_errors.duplicate()
 
 		var selected_preview := MapVisualCatalog.prepare_map(map_id, map_data, true)
 		if selected_preview.is_empty():
 			errors.append("QA review/fallback 地图准备失败：%s" % map_id)
 			errors.append_array(MapVisualCatalog.errors_for_map(map_id))
 			continue
+		selected_preview_map_ids.append(map_id)
 		if map_data != before:
 			errors.append("QA review/fallback prepare 修改了权威 mapData：%s" % map_id)
 		if bool(selected_preview.get("reviewCandidate", false)):
@@ -230,7 +300,12 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 			if review_binding_hash.length() != 64:
 				errors.append("无法冻结 review 地图视觉 binding SHA-256：%s" % map_id)
 			var normal_bundle_id := str(normal.get("bundleId", ""))
-			if (
+			var normal_failed_closed_for_staged_authority := (
+				pending_catalog_preview
+				and staged_review_candidate
+				and normal.is_empty()
+			)
+			if not normal_failed_closed_for_staged_authority and (
 				normal.is_empty()
 				or bool(normal.get("reviewCandidate", false))
 				or str(normal.get("catalogSource", "")) != "normal"
@@ -506,7 +581,7 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 		func(error: String) -> bool:
 			return error.contains("普通运行时") or error.contains("绕过 QA") or error.contains("生命周期")
 	).is_empty()
-	var qa_preview_enabled := summaries.size() == EXPECTED_MAP_IDS.size()
+	var qa_preview_enabled := _same_string_set(selected_preview_map_ids, EXPECTED_MAP_IDS)
 	var checks := {
 		"catalogInitialized": catalog_initialized,
 		"catalogCoverageExact": catalog_coverage_exact,
@@ -534,19 +609,39 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 		for summary in summaries:
 			if map_ids.has(str(summary.get("mapId", ""))):
 				bundle_maps.append(summary.duplicate(true))
+		var bundle_errors: Array[String] = errors.duplicate()
+		if pending_catalog_preview:
+			for map_id_value in map_ids:
+				var map_id := str(map_id_value)
+				var staged_values: Variant = staged_primary_errors_by_map.get(map_id, [])
+				if staged_values is Array:
+					bundle_errors.append_array(staged_values as Array[String])
+		var bundle_preview_enabled := bundle_maps.size() == map_ids.size()
+		if not bundle_preview_enabled and pending_catalog_preview:
+			bundle_errors.append(
+				"primary bundle 与 staged 权威地图不一致，已在 preview 模式失败关闭：%s"
+				% bundle_id
+			)
+		var bundle_checks := checks.duplicate(true)
+		bundle_checks["normalLifecycleAccessValid"] = (
+			lifecycle_valid and bundle_preview_enabled
+		)
+		bundle_checks["qaPreviewEnabled"] = bundle_preview_enabled
+		bundle_checks["allIndependentChecksPassed"] = bundle_errors.is_empty()
+		var bundle_result := "PASS" if bundle_errors.is_empty() else "FAIL"
 		bundle_reports[bundle_id] = {
 			"schemaVersion": 1,
 			"reportType": CATALOG_CONTRACT_REPORT_TYPE,
 			"generatedAtUtc": generated_at_utc,
 			"bundleId": bundle_id,
-			"result": result,
+			"result": bundle_result,
 			"testedMapIds": map_ids.duplicate(),
 			"catalogSha256": catalog_hash,
 			"bindingHashes": bundle_binding_hashes,
 			"mapDataHashes": bundle_map_data_hashes,
 			"maps": bundle_maps,
-			"checks": checks.duplicate(true),
-			"errors": errors.duplicate(),
+			"checks": bundle_checks,
+			"errors": bundle_errors,
 		}
 	var review_bundle_ids: Array[String] = []
 	for review_bundle_id_value in review_expected_map_ids_by_bundle.keys():
@@ -585,19 +680,28 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 			"allIndependentChecksPassed": errors.is_empty(),
 			"frozenReportValidationSkippedForGeneration": not validate_frozen_catalog_contract,
 		}
+		var review_errors: Array[String] = errors.duplicate()
+		if not bool(review_checks.get("catalogCoverageExact", false)):
+			review_errors.append("review bundle catalog 覆盖不完整：%s" % review_bundle_id)
+		if not bool(review_checks.get("catalogPathsExact", false)):
+			review_errors.append("review bundle catalog 路径不精确：%s" % review_bundle_id)
+		if not bool(review_checks.get("currentHashesComplete", false)):
+			review_errors.append("review bundle 当前哈希不完整：%s" % review_bundle_id)
+		review_checks["allIndependentChecksPassed"] = review_errors.is_empty()
+		var review_result := "PASS" if review_errors.is_empty() else "FAIL"
 		bundle_reports[review_bundle_id] = {
 			"schemaVersion": 1,
 			"reportType": CATALOG_CONTRACT_REPORT_TYPE,
 			"generatedAtUtc": generated_at_utc,
 			"bundleId": review_bundle_id,
-			"result": result,
+			"result": review_result,
 			"testedMapIds": expected_review_map_ids.duplicate(),
 			"catalogSha256": review_catalog_hash,
 			"bindingHashes": review_bundle_binding_hashes.duplicate(true),
 			"mapDataHashes": review_bundle_map_hashes.duplicate(true),
 			"maps": review_bundle_summaries.duplicate(true),
 			"checks": review_checks,
-			"errors": errors.duplicate(),
+			"errors": review_errors,
 		}
 	review_bundle_ids.sort()
 
@@ -625,29 +729,76 @@ static func run(validate_frozen_catalog_contract: bool = true) -> Dictionary:
 	}
 
 
+static func _review_generation_bundle_id(args: PackedStringArray) -> String:
+	for arg in args:
+		if arg.begins_with(GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX):
+			return arg.substr(GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX.length()).strip_edges()
+	return ""
+
+
+static func _is_safe_bundle_id(value: String) -> bool:
+	if value == "":
+		return false
+	var regex := RegEx.new()
+	if regex.compile("^[a-z0-9]+(?:_[a-z0-9]+)*$") != OK:
+		return false
+	return regex.search(value) != null
+
+
 static func _catalog_contract_cli_error(args: PackedStringArray) -> String:
 	var generate_requested := args.has(GENERATE_CATALOG_CONTRACT_FLAG)
+	var review_generate_count := 0
+	var review_generation_bundle_id := ""
+	for arg in args:
+		if arg.begins_with(GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX):
+			review_generate_count += 1
+			review_generation_bundle_id = arg.substr(
+				GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX.length()
+			).strip_edges()
+	var review_generate_requested := review_generate_count > 0
 	var overwrite_requested := args.has(OVERWRITE_CATALOG_CONTRACT_FLAG)
-	if overwrite_requested and not generate_requested:
-		return "%s 只能与 %s 一起使用" % [
-			OVERWRITE_CATALOG_CONTRACT_FLAG,
+	var preview_requested := args.has(PREVIEW_CATALOG_CONTRACT_FLAG)
+	if review_generate_count > 1:
+		return "%s 必须且只能出现一次" % GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX
+	if review_generate_requested and not _is_safe_bundle_id(review_generation_bundle_id):
+		return "%s 后必须是安全 bundleId" % GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX
+	if generate_requested and review_generate_requested:
+		return "%s 不得与 %s 同时使用" % [
 			GENERATE_CATALOG_CONTRACT_FLAG,
+			GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX,
+		]
+	if preview_requested and (generate_requested or review_generate_requested):
+		return "%s 不得与 catalog contract 生成参数同时使用" % [
+			PREVIEW_CATALOG_CONTRACT_FLAG,
+		]
+	if overwrite_requested and not (generate_requested or review_generate_requested):
+		return "%s 只能与 catalog contract 生成参数一起使用" % [
+			OVERWRITE_CATALOG_CONTRACT_FLAG,
 		]
 	for arg in args:
 		for forbidden_name in AUTH_ARGUMENT_NAMES:
 			if arg == forbidden_name or arg.begins_with(forbidden_name + "="):
 				return "地图视觉 catalog contract 检查拒绝登录/server 参数：%s" % forbidden_name
-		if arg != GENERATE_CATALOG_CONTRACT_FLAG and arg != OVERWRITE_CATALOG_CONTRACT_FLAG:
+		if (
+			arg != GENERATE_CATALOG_CONTRACT_FLAG
+			and arg != OVERWRITE_CATALOG_CONTRACT_FLAG
+			and arg != PREVIEW_CATALOG_CONTRACT_FLAG
+			and not arg.begins_with(GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX)
+		):
 			return "地图视觉 catalog contract 检查不接受未知参数：%s" % arg
 	return ""
 
 
 static func _write_catalog_contract_reports(
 	run_report: Dictionary,
-	overwrite: bool
+	overwrite: bool,
+	bundle_ids_override: Array = []
 ) -> Dictionary:
 	var errors: Array[String] = []
-	if str(run_report.get("mode", "")) != "catalog_contract_generation":
+	if not [
+		"catalog_contract_generation",
+		"review_catalog_contract_generation",
+	].has(str(run_report.get("mode", ""))):
 		errors.append("catalog contract 只允许写入 generation 模式报告")
 	if str(run_report.get("result", "FAIL")) != "PASS":
 		errors.append("独立 runtime/path/hash 检查未通过，拒绝写入 catalog contract")
@@ -669,11 +820,17 @@ static func _write_catalog_contract_reports(
 	var review_bundle_ids: Array = (
 		review_bundle_ids_value as Array if review_bundle_ids_value is Array else []
 	)
-	var bundle_ids_to_write: Array = (
-		review_bundle_ids.duplicate()
-		if not review_bundle_ids.is_empty()
-		else BUNDLE_MAP_IDS.keys()
-	)
+	var bundle_ids_to_write: Array = bundle_ids_override.duplicate()
+	if bundle_ids_to_write.is_empty():
+		bundle_ids_to_write = (
+			review_bundle_ids.duplicate()
+			if not review_bundle_ids.is_empty()
+			else BUNDLE_MAP_IDS.keys()
+		)
+	for bundle_id_value in bundle_ids_override:
+		var bundle_id := str(bundle_id_value)
+		if not review_bundle_ids.has(bundle_id):
+			errors.append("review catalog generation bundleId 不在 review catalog：%s" % bundle_id)
 	var targets := _catalog_contract_report_targets(
 		errors,
 		bundle_ids_to_write,
@@ -1661,11 +1818,9 @@ static func _validate_prepared_map(
 			cell as Vector2i
 		):
 			errors.append("地表命令语义 tile 与 prepared lookup 不一致：%s/%s" % [map_id, key])
-		var expected_visual_tile_id := MapVisualCatalog._select_tile_variant(
-			map_id,
-			cell as Vector2i,
-			semantic_tile_id,
-			variant_config
+		var expected_visual_tile_id := MapVisualCatalog.prepared_tile_id(
+			prepared,
+			cell as Vector2i
 		)
 		if str(command.get("tileId", "")) != expected_visual_tile_id:
 			errors.append("地表命令变体选择不确定：%s/%s" % [map_id, key])

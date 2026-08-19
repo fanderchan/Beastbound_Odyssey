@@ -13,6 +13,40 @@
     "encounterTileId": "firebud_tall_grass_encounter",
     "warpTileId": "firebud_warp_stone",
     "pathTileId": "firebud_ochre_path_a",
+    "pathTransitionTileIds": {
+      "nw": "firebud_ochre_path_edge_nw",
+      "ne": "firebud_ochre_path_edge_ne",
+      "nw_ne": "firebud_ochre_path_edge_nw_ne",
+      "sw": "firebud_ochre_path_edge_sw",
+      "nw_sw": "firebud_ochre_path_edge_nw_sw",
+      "ne_sw": "firebud_ochre_path_edge_ne_sw",
+      "nw_ne_sw": "firebud_ochre_path_edge_nw_ne_sw",
+      "se": "firebud_ochre_path_edge_se",
+      "nw_se": "firebud_ochre_path_edge_nw_se",
+      "ne_se": "firebud_ochre_path_edge_ne_se",
+      "nw_ne_se": "firebud_ochre_path_edge_nw_ne_se",
+      "sw_se": "firebud_ochre_path_edge_sw_se",
+      "nw_sw_se": "firebud_ochre_path_edge_nw_sw_se",
+      "ne_sw_se": "firebud_ochre_path_edge_ne_sw_se",
+      "nw_ne_sw_se": "firebud_ochre_path_edge_nw_ne_sw_se"
+    },
+    "plazaTransitionTileIds": {
+      "nw": "firebud_honey_stone_edge_nw",
+      "ne": "firebud_honey_stone_edge_ne",
+      "nw_ne": "firebud_honey_stone_edge_nw_ne",
+      "sw": "firebud_honey_stone_edge_sw",
+      "nw_sw": "firebud_honey_stone_edge_nw_sw",
+      "ne_sw": "firebud_honey_stone_edge_ne_sw",
+      "nw_ne_sw": "firebud_honey_stone_edge_nw_ne_sw",
+      "se": "firebud_honey_stone_edge_se",
+      "nw_se": "firebud_honey_stone_edge_nw_se",
+      "ne_se": "firebud_honey_stone_edge_ne_se",
+      "nw_ne_se": "firebud_honey_stone_edge_nw_ne_se",
+      "sw_se": "firebud_honey_stone_edge_sw_se",
+      "nw_sw_se": "firebud_honey_stone_edge_nw_sw_se",
+      "ne_sw_se": "firebud_honey_stone_edge_ne_sw_se",
+      "nw_ne_sw_se": "firebud_honey_stone_edge_nw_ne_sw_se"
+    },
     "plazaTileId": "firebud_honey_stone_a",
     "variantSeed": 38301,
     "variantClusterSize": 3,
@@ -40,12 +74,23 @@
       },
       {
         "from": [14, 12],
+        "to": [21, 17]
+      },
+      {
+        "from": [21, 17],
         "to": [30, 28]
+      },
+      {
+        "from": [19, 16],
+        "to": [13, 20]
       }
     ],
     "plazaRects": [
-      [4, 9, 4, 4],
-      [12, 10, 6, 4]
+      [4, 8, 5, 3],
+      [10, 6, 7, 4],
+      [12, 10, 5, 3],
+      [18, 15, 3, 3],
+      [11, 14, 5, 3]
     ],
     "plazaCells": [],
     "overrides": []
@@ -54,86 +99,131 @@
     {
       "instanceId": "training_target_blocked_cluster_01",
       "objectId": "firebud_training_target",
-      "grid": [4, 4],
+      "grid": [6, 7],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[3, 3], [4, 3], [4, 4]]
+      "collisionFootprint": [[5, 6], [6, 6], [6, 7]]
     },
     {
       "instanceId": "training_fence_blocked_cluster_01",
       "objectId": "firebud_low_fence",
-      "grid": [8, 4],
+      "grid": [8, 5],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[7, 4], [8, 4], [7, 5]]
+      "collisionFootprint": [[7, 4], [8, 4], [8, 5]]
     },
     {
       "instanceId": "training_supplies_blocked_cluster_01",
       "objectId": "firebud_supply_pots",
-      "grid": [15, 7],
+      "grid": [17, 8],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[14, 6], [15, 6], [15, 7]]
+      "collisionFootprint": [[16, 7], [17, 7], [17, 8]]
     },
     {
       "instanceId": "training_planter_blocked_cluster_01",
       "objectId": "firebud_low_planter",
-      "grid": [23, 17],
+      "grid": [19, 23],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[21, 16], [22, 16], [23, 17]]
+      "collisionFootprint": [[17, 22], [18, 22], [19, 23]]
     },
     {
       "instanceId": "training_ember_shrub_blocked_cluster_01",
       "objectId": "firebud_ember_shrub",
-      "grid": [3, 7],
+      "grid": [3, 8],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[2, 7], [3, 7]]
+      "collisionFootprint": [[2, 8], [3, 8]]
     },
     {
       "instanceId": "training_honey_rocks_blocked_cluster_01",
       "objectId": "firebud_honey_rock_cluster",
-      "grid": [9, 3],
+      "grid": [4, 5],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[9, 2], [9, 3]]
+      "collisionFootprint": [[4, 4], [4, 5]]
     },
     {
-      "instanceId": "training_stone_totem_blocked_cluster_01",
-      "objectId": "firebud_stone_totem",
-      "grid": [20, 12],
+      "instanceId": "training_honey_rocks_blocked_cluster_02",
+      "objectId": "firebud_honey_rock_cluster",
+      "grid": [22, 13],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[18, 11], [19, 11], [20, 12]]
+      "collisionFootprint": [[20, 12], [21, 12], [22, 13]]
     },
     {
       "instanceId": "training_fence_blocked_cluster_02",
       "objectId": "firebud_low_fence",
-      "grid": [12, 15],
+      "grid": [16, 11],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[11, 14], [12, 15]]
+      "collisionFootprint": [[15, 10], [16, 11]]
     },
     {
-      "instanceId": "training_ground_decal_grass_01",
-      "objectId": "firebud_flower_meadow_decal",
-      "grid": [1, 2],
+      "instanceId": "training_rack_blocked_cluster_01",
+      "objectId": "firebud_training_rack",
+      "grid": [10, 7],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[9, 6], [10, 7]]
+    },
+    {
+      "instanceId": "training_practice_cluster_blocked_01",
+      "objectId": "firebud_practice_cluster",
+      "grid": [14, 7],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[13, 6], [14, 6], [14, 7]]
+    },
+    {
+      "instanceId": "training_edge_scenery_tree_west_01",
+      "objectId": "firebud_ancient_tree_scenery",
+      "grid": [-5, 18],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
     },
     {
-      "instanceId": "training_ground_decal_grass_02",
+      "instanceId": "training_edge_scenery_tree_east_01",
+      "objectId": "firebud_ancient_tree_scenery",
+      "grid": [37, 15],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "training_ancient_tree_blocked_cluster_01",
+      "objectId": "firebud_ancient_tree",
+      "grid": [30, 21],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[28, 20], [29, 20], [30, 21]]
+    },
+    {
+      "instanceId": "training_target_blocked_cluster_02",
+      "objectId": "firebud_training_target",
+      "grid": [13, 16],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[12, 15], [13, 15], [13, 16]]
+    },
+    {
+      "instanceId": "training_flower_accent_01",
       "objectId": "firebud_flower_meadow_decal",
       "grid": [2, 2],
       "offset": [0, 0],
@@ -142,81 +232,63 @@
       "collisionFootprint": []
     },
     {
-      "instanceId": "training_ground_decal_flower_01",
-      "objectId": "firebud_flower_meadow_decal",
-      "grid": [6, 2],
+      "instanceId": "training_grass_scatter_01",
+      "objectId": "firebud_grass_scatter_decal",
+      "grid": [5, 4],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
     },
     {
-      "instanceId": "training_ground_decal_grass_03",
-      "objectId": "firebud_flower_meadow_decal",
-      "grid": [6, 6],
+      "instanceId": "training_grass_scatter_02",
+      "objectId": "firebud_grass_scatter_decal",
+      "grid": [11, 9],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
     },
     {
-      "instanceId": "training_ground_decal_flower_02",
-      "objectId": "firebud_flower_meadow_decal",
-      "grid": [10, 6],
+      "instanceId": "training_grass_scatter_03",
+      "objectId": "firebud_grass_scatter_decal",
+      "grid": [18, 14],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
     },
     {
-      "instanceId": "training_ground_decal_grass_04",
-      "objectId": "firebud_flower_meadow_decal",
-      "grid": [13, 9],
+      "instanceId": "training_grass_scatter_04",
+      "objectId": "firebud_grass_scatter_decal",
+      "grid": [26, 23],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
     },
     {
-      "instanceId": "training_ground_decal_flower_03",
-      "objectId": "firebud_flower_meadow_decal",
-      "grid": [17, 13],
+      "instanceId": "training_grass_scatter_side_yard_01",
+      "objectId": "firebud_grass_scatter_decal",
+      "grid": [11, 15],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
     },
     {
-      "instanceId": "training_ground_decal_grass_05",
-      "objectId": "firebud_flower_meadow_decal",
-      "grid": [24, 15],
+      "instanceId": "training_grass_scatter_05",
+      "objectId": "firebud_grass_scatter_decal",
+      "grid": [31, 27],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
     },
     {
-      "instanceId": "training_ground_decal_flower_04",
+      "instanceId": "training_flower_accent_02",
       "objectId": "firebud_flower_meadow_decal",
-      "grid": [6, 17],
-      "offset": [0, 0],
-      "mirrored": false,
-      "interactionLink": null,
-      "collisionFootprint": []
-    },
-    {
-      "instanceId": "training_ground_decal_grass_06",
-      "objectId": "firebud_flower_meadow_decal",
-      "grid": [28, 24],
-      "offset": [0, 0],
-      "mirrored": false,
-      "interactionLink": null,
-      "collisionFootprint": []
-    },
-    {
-      "instanceId": "training_ground_decal_flower_05",
-      "objectId": "firebud_flower_meadow_decal",
-      "grid": [30, 28],
+      "grid": [31, 29],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,

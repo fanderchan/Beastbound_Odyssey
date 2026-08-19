@@ -10,7 +10,7 @@
   "ownerReviewStatus": "pending",
   "releaseApproved": false,
   "runtimeEnabled": false,
-  "generatedAt": "2026-08-10T15:49:50+08:00",
+  "generatedAt": "2026-08-19T03:15:00+08:00",
   "tool": "OpenAI image_gen",
   "rawFiles": [
     {
@@ -72,6 +72,32 @@
       "generatedOriginal": true
     },
     {
+      "path": "source/raw/firebud-path-edge-transitions-v1.png",
+      "sha256": "08520c520bc7d7fc263ec651b67ffb42f516a16fc100b001c4567f675deca11b",
+      "dimensions": [1254, 1254],
+      "generationCallId": "exec-4b6f5fe9-bfb2-4f99-b14f-5bd791fcd932",
+      "generatedAt": "2026-08-19T03:00:00+08:00",
+      "promptPath": "source/prompts/firebud-path-edge-transitions-v1.md",
+      "promptTextSha256": "b2a8eb9cef648e68bfbc8141348dc345a8246b28cb74e8aa445c048dbf8919db",
+      "promptFileSha256": "b2a8eb9cef648e68bfbc8141348dc345a8246b28cb74e8aa445c048dbf8919db",
+      "lineageRole": "accepted_directional_path_transition_sheet",
+      "inputReferences": [],
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-plaza-edge-transitions-v1.png",
+      "sha256": "c279c9c0ba743d8455d820078268263227e5b87b464832f8fb6c1305e38e360a",
+      "dimensions": [1254, 1254],
+      "generationCallId": "exec-e24b5667-754a-430e-b98f-7e05de0c5c05",
+      "generatedAt": "2026-08-19T02:47:00+08:00",
+      "promptPath": "source/prompts/firebud-plaza-edge-transitions-v1.md",
+      "promptTextSha256": "b8d10f82212800210d04fa40026ea99ca00c0787b3b9c72dcd3bcd8bf3eef182",
+      "promptFileSha256": "b8d10f82212800210d04fa40026ea99ca00c0787b3b9c72dcd3bcd8bf3eef182",
+      "lineageRole": "accepted_directional_plaza_transition_sheet",
+      "inputReferences": [],
+      "generatedOriginal": true
+    },
+    {
       "path": "source/raw/firebud-tree-landmark-v1.png",
       "sha256": "0f45e533ba766c001c6c47be030c0f671aba57909e2ff9f87bb6d2bbaf709c63",
       "dimensions": [1358, 1159],
@@ -110,6 +136,126 @@
       "sourcePath": "source/generated/firebud-service-pavilion-v1.png",
       "reuseMode": "same-volume-hardlink-byte-identical",
       "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-life-training-props-v2.png",
+      "sha256": "02ade1a16625f779d4b62611a90ce4504d8cad711feb3abece1a4a0f9304516c",
+      "dimensions": [1254, 1254],
+      "generationCallId": "exec-e4ceaba0-d137-44d1-81b0-357bcbb855ee",
+      "generatedAt": "2026-08-18T00:07:00+08:00",
+      "promptPath": "source/prompts/firebud-life-training-props-v2.md",
+      "promptTextSha256": "b7a82c639ec06363d9b68c7e23caefb176e737184a929f9170d3b7894b1144ee",
+      "promptFileSha256": "b7a82c639ec06363d9b68c7e23caefb176e737184a929f9170d3b7894b1144ee",
+      "lineageRole": "rejected_baked_checkerboard_transparency_attempt",
+      "rejectionReason": "RGB output baked a checkerboard into the pixels instead of carrying real alpha",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-life-training-props-v2-chroma.png",
+      "sha256": "bfb0cc13e0235b8f11d599beb0f33568a44f332114d0367c4e5a1a467940bc66",
+      "dimensions": [1254, 1254],
+      "generationCallId": "exec-2ea41204-db80-4909-85fc-d51910cc647c",
+      "generatedAt": "2026-08-18T00:10:00+08:00",
+      "promptPath": "source/prompts/firebud-life-training-props-v2.md",
+      "promptTextSha256": "b7a82c639ec06363d9b68c7e23caefb176e737184a929f9170d3b7894b1144ee",
+      "promptFileSha256": "b7a82c639ec06363d9b68c7e23caefb176e737184a929f9170d3b7894b1144ee",
+      "lineageRole": "accepted_chroma_key_prop_sheet",
+      "parentGenerationCallId": "exec-e4ceaba0-d137-44d1-81b0-357bcbb855ee",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-path-edge-autotile-v2-row-1.png",
+      "sha256": "6a90f2e4a4cea4a1ca1db65a5efeab1e8893c5dc940845c5ed6a0d35057ae26e",
+      "dimensions": [1774, 887],
+      "generationCallId": "exec-4c0556a9-7df1-47ad-b2fd-bbe82afc739e",
+      "promptPath": "source/prompts/firebud-path-edge-autotile-v2.md",
+      "promptFileSha256": "4ca58cb4be3f520d0c655fdc3d23bd5b5334e2b3b76ab5b4117cff391d44c17d",
+      "lineageRole": "accepted_complete_path_autotile_row_1",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-path-edge-autotile-v2-row-2.png",
+      "sha256": "786502f18f5a852e2878f5977a7c4981da4f05b66395de6584fd157c4e2c9e99",
+      "dimensions": [1774, 887],
+      "generationCallId": "exec-ab3cda19-18b2-4d91-8a3c-6760ee2918b3",
+      "promptPath": "source/prompts/firebud-path-edge-autotile-v2.md",
+      "promptFileSha256": "4ca58cb4be3f520d0c655fdc3d23bd5b5334e2b3b76ab5b4117cff391d44c17d",
+      "lineageRole": "accepted_complete_path_autotile_row_2",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-path-edge-autotile-v2-row-3.png",
+      "sha256": "2492425b9ecd1cbd791587b6cd17d3dfd0ba4247008e1ef5d669a0b634b8bd05",
+      "dimensions": [1774, 887],
+      "generationCallId": "exec-898191b3-de59-4344-bdc2-7bf44bd2fac8",
+      "promptPath": "source/prompts/firebud-path-edge-autotile-v2.md",
+      "promptFileSha256": "4ca58cb4be3f520d0c655fdc3d23bd5b5334e2b3b76ab5b4117cff391d44c17d",
+      "lineageRole": "accepted_complete_path_autotile_row_3",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-path-edge-autotile-v2-row-4.png",
+      "sha256": "57b32b1716e5fba26d9948262dcff50003ff05f630dc353053e37101950b2639",
+      "dimensions": [1774, 887],
+      "generationCallId": "exec-4034caee-bde6-46b2-8d1f-1034f8e70225",
+      "promptPath": "source/prompts/firebud-path-edge-autotile-v2.md",
+      "promptFileSha256": "4ca58cb4be3f520d0c655fdc3d23bd5b5334e2b3b76ab5b4117cff391d44c17d",
+      "lineageRole": "accepted_complete_path_autotile_row_4",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-plaza-edge-autotile-v2-row-1-rejected-raised-slab.png",
+      "sha256": "2429f25ec866530ec89b73206e68a781bfafcf9327c39cea90455f44afc71cf3",
+      "dimensions": [1774, 887],
+      "generationCallId": "exec-174eb6c8-41b3-4fc9-aa33-b7f5f07c89d4",
+      "promptPath": "source/prompts/firebud-plaza-edge-autotile-v2.md",
+      "promptFileSha256": "3b47206c111a56195af93fc5f46e41c7bbf1d3423892260528ee3a13533fb4f0",
+      "lineageRole": "rejected_raised_plaza_slab_parent",
+      "rejectionReason": "visible raised slab, lower vertical faces, bevel rims, and cast thickness",
+      "acceptedForRuntime": false,
+      "lineageOnly": true,
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-plaza-edge-autotile-v2-row-1.png",
+      "sha256": "8b5e68b30c2ce74ffaaa57814b82ce1c67275a725931eb5f4168895a70aac62f",
+      "dimensions": [1774, 887],
+      "generationCallId": "exec-559cb91c-0587-449c-9c13-9ebfa7fbc54a",
+      "parentGenerationCallId": "exec-174eb6c8-41b3-4fc9-aa33-b7f5f07c89d4",
+      "promptPath": "source/prompts/firebud-plaza-edge-autotile-v2.md",
+      "promptFileSha256": "3b47206c111a56195af93fc5f46e41c7bbf1d3423892260528ee3a13533fb4f0",
+      "lineageRole": "accepted_flat_plaza_autotile_row_1_edit",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-plaza-edge-autotile-v2-row-2.png",
+      "sha256": "97788fa84f6f7b21f07181dd80cfe8f806a6c1caba0ffd8d783de117c0b7e583",
+      "dimensions": [1774, 887],
+      "generationCallId": "exec-b784ca05-1fab-4d3c-823e-e079e437a772",
+      "promptPath": "source/prompts/firebud-plaza-edge-autotile-v2.md",
+      "promptFileSha256": "3b47206c111a56195af93fc5f46e41c7bbf1d3423892260528ee3a13533fb4f0",
+      "lineageRole": "accepted_complete_plaza_autotile_row_2",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-plaza-edge-autotile-v2-row-3.png",
+      "sha256": "d5d202785f5ee30b5331847be0eed4a3ea087272a4f9ea4c17122fa970513906",
+      "dimensions": [1774, 887],
+      "generationCallId": "exec-bd0f3abb-bbba-4259-91d4-5919b9cc03cc",
+      "promptPath": "source/prompts/firebud-plaza-edge-autotile-v2.md",
+      "promptFileSha256": "3b47206c111a56195af93fc5f46e41c7bbf1d3423892260528ee3a13533fb4f0",
+      "lineageRole": "accepted_complete_plaza_autotile_row_3",
+      "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/firebud-plaza-edge-autotile-v2-row-4.png",
+      "sha256": "3f4eeac231a6bafe3c68bfe2e9c675ae2c8344d13038bb7b6acbd745cae62202",
+      "dimensions": [1774, 887],
+      "generationCallId": "exec-7dabee13-65f8-4b21-ad96-b14a68ef8bfc",
+      "promptPath": "source/prompts/firebud-plaza-edge-autotile-v2.md",
+      "promptFileSha256": "3b47206c111a56195af93fc5f46e41c7bbf1d3423892260528ee3a13533fb4f0",
+      "lineageRole": "accepted_complete_plaza_autotile_row_4",
+      "generatedOriginal": true
     }
   ],
   "buildArtifacts": [
@@ -129,8 +275,18 @@
       "dimensions": [1254, 1254]
     },
     {
+      "path": "source/processed/firebud-path-edge-transitions-v1-alpha.png",
+      "sha256": "0708fe86c286c91a52f376f88db2311d2360589e5da86bc920473b4275e238ae",
+      "dimensions": [1254, 1254]
+    },
+    {
+      "path": "source/processed/firebud-plaza-edge-transitions-v1-alpha.png",
+      "sha256": "62403172844340cac98a728ad97d400ede22f4aaa3b2e03eebce30556641879c",
+      "dimensions": [1254, 1254]
+    },
+    {
       "path": "source/processed/firebud-ground-materials-v4-build-manifest.json",
-      "sha256": "02e4f7073c57561bdd6d1a4eb2be46cde1074db64879876dc1f08715ac051a67"
+      "sha256": "b4d7dbb56cd541730a0c85ec69a2cff932c3f2cad3945e47f4507c394ce42ad6"
     },
     {
       "path": "source/processed/firebud-ground-sheet-v3-combined-12tiles.png",
@@ -168,14 +324,81 @@
       "dimensions": [1254, 1254],
       "sourceBundleId": "firebud_region_visual_v1",
       "reuseMode": "same-volume-hardlink-byte-identical"
+    },
+    {
+      "path": "source/processed/firebud-life-training-props-v2-alpha.png",
+      "sha256": "7a823a0b90a048ac8ff1639f8f6d09aa6953c3cab403afbec7e88a8f1ef0a868",
+      "dimensions": [1254, 1254]
+    },
+    {
+      "path": "source/processed/firebud-life-training-props-v2-manifest.json",
+      "sha256": "3755114ba8f72d46b587a7ec1c3147f522ebefebed50ee141a2ddfc9d1c5c9e5"
+    },
+    {
+      "path": "source/processed/firebud-path-edge-autotile-v2-row-1-alpha.png",
+      "sha256": "1ab54dd83a500c03693d0a5f001f5f923301b588154442a6806b999a7ed728ec",
+      "dimensions": [1774, 887]
+    },
+    {
+      "path": "source/processed/firebud-path-edge-autotile-v2-row-2-alpha.png",
+      "sha256": "da158f02ad46ee0334638586ea4823757e0b2e81429b7796aeb0ace7229ec264",
+      "dimensions": [1774, 887]
+    },
+    {
+      "path": "source/processed/firebud-path-edge-autotile-v2-row-3-alpha.png",
+      "sha256": "c358c48ecbf4f3070fcbe64ecd7c2cf45fbdc9e810acfc9762be059335c022a3",
+      "dimensions": [1774, 887]
+    },
+    {
+      "path": "source/processed/firebud-path-edge-autotile-v2-row-4-alpha.png",
+      "sha256": "7605554b958a4fa9893b01e82ffb34664e3bbd8ec7dc2705f648acc37ae594ec",
+      "dimensions": [1774, 887]
+    },
+    {
+      "path": "source/processed/firebud-plaza-edge-autotile-v2-row-1-alpha.png",
+      "sha256": "45a896c09543484b4f7f71de369131cd150217bdc344621ef90b979ade80b7ff",
+      "dimensions": [1774, 887]
+    },
+    {
+      "path": "source/processed/firebud-plaza-edge-autotile-v2-row-2-alpha.png",
+      "sha256": "77db9fec42b18d127413735be5ab5eb2e419835cc1ea738432a0921d5e05f2fb",
+      "dimensions": [1774, 887]
+    },
+    {
+      "path": "source/processed/firebud-plaza-edge-autotile-v2-row-3-alpha.png",
+      "sha256": "e7ee3bc0be0a6ceefee7b2c46f4b3afd4672a63cbd9479437b6738eeefd5767d",
+      "dimensions": [1774, 887]
+    },
+    {
+      "path": "source/processed/firebud-plaza-edge-autotile-v2-row-4-alpha.png",
+      "sha256": "d07285144f94afc4c0fe86b6b56faac4b8471413b80f0beab35dcd82da996c97",
+      "dimensions": [1774, 887]
+    },
+    {
+      "path": "source/processed/firebud-path-edge-autotile-v2-alpha.png",
+      "sha256": "bfddf32516926325f112cf73415962f4cec50e30e3821b54fa5e8bb4ae3dd94d",
+      "dimensions": [1776, 1776]
+    },
+    {
+      "path": "source/processed/firebud-plaza-edge-autotile-v2-alpha.png",
+      "sha256": "1a45d4a24eb59b7a9b1dbbc0d0ef8cee25c7b284cd56cd3f7d32d393f3aea00f",
+      "dimensions": [1776, 1776]
+    },
+    {
+      "path": "source/processed/firebud-path-edge-autotile-v2-assembly-manifest.json",
+      "sha256": "ae22a5cc1b546aaffc507ffb7666fe86786a8dec5f80e1b69f1f1067efa458a2"
+    },
+    {
+      "path": "source/processed/firebud-plaza-edge-autotile-v2-assembly-manifest.json",
+      "sha256": "597472fe0300c1fcabc4b8eeae4cf4c6980a1b9f0df1af456b590aecf7ee8cac"
     }
   ],
   "assets": [
     {
-      "assetId": "firebud_ground_atlas_12tiles",
+      "assetId": "firebud_ground_atlas_42tiles",
       "path": "runtime/ground/atlas.png",
-      "sha256": "991e8c2010ade24738b8475db0549fe9dadb38874afc96ae5490a344c0638265",
-      "dimensions": [320, 120],
+      "sha256": "5a57acdf761d5c3ed4a901178bc9407368f33b46e367c38c909aad3bbc80dd31",
+      "dimensions": [320, 440],
       "tileSize": [80, 40],
       "atlasColumns": 4,
       "tileIds": [
@@ -190,22 +413,58 @@
         "firebud_ochre_path_worn_b",
         "firebud_honey_stone_moss_b",
         "firebud_tall_grass_encounter",
-        "firebud_warp_stone"
+        "firebud_warp_stone",
+        "firebud_ochre_path_edge_nw",
+        "firebud_ochre_path_edge_ne",
+        "firebud_ochre_path_edge_nw_ne",
+        "firebud_ochre_path_edge_sw",
+        "firebud_ochre_path_edge_nw_sw",
+        "firebud_ochre_path_edge_ne_sw",
+        "firebud_ochre_path_edge_nw_ne_sw",
+        "firebud_ochre_path_edge_se",
+        "firebud_ochre_path_edge_nw_se",
+        "firebud_ochre_path_edge_ne_se",
+        "firebud_ochre_path_edge_nw_ne_se",
+        "firebud_ochre_path_edge_sw_se",
+        "firebud_ochre_path_edge_nw_sw_se",
+        "firebud_ochre_path_edge_ne_sw_se",
+        "firebud_ochre_path_edge_nw_ne_sw_se",
+        "firebud_honey_stone_edge_nw",
+        "firebud_honey_stone_edge_ne",
+        "firebud_honey_stone_edge_nw_ne",
+        "firebud_honey_stone_edge_sw",
+        "firebud_honey_stone_edge_nw_sw",
+        "firebud_honey_stone_edge_ne_sw",
+        "firebud_honey_stone_edge_nw_ne_sw",
+        "firebud_honey_stone_edge_se",
+        "firebud_honey_stone_edge_nw_se",
+        "firebud_honey_stone_edge_ne_se",
+        "firebud_honey_stone_edge_nw_ne_se",
+        "firebud_honey_stone_edge_sw_se",
+        "firebud_honey_stone_edge_nw_sw_se",
+        "firebud_honey_stone_edge_ne_sw_se",
+        "firebud_honey_stone_edge_nw_ne_sw_se"
       ],
       "rawPaths": [
         "source/raw/firebud-ground-materials-v4.png",
-        "source/processed/firebud-semantic-variants-v1-alpha.png"
+        "source/processed/firebud-semantic-variants-v1-alpha.png",
+        "source/processed/firebud-path-edge-autotile-v2-alpha.png",
+        "source/processed/firebud-plaza-edge-autotile-v2-alpha.png"
       ],
-      "tool": "OpenAI image_gen plus deterministic vendored Pillow builder",
+      "tool": "OpenAI image_gen plus deterministic repository-owned Pillow assembly and atlas builders",
       "promptPath": "source/prompts/firebud-ground-materials-v4.md",
+      "transitionPromptPath": "source/prompts/firebud-path-edge-autotile-v2.md",
+      "plazaTransitionPromptPath": "source/prompts/firebud-plaza-edge-autotile-v2.md",
       "rawPath": "source/raw/firebud-ground-materials-v4.png",
       "generatedAt": "2026-08-10T15:49:50+08:00",
       "operations": [
         "bounded crops from the accepted four-quadrant meadow, clay, stone, and root-soil material source",
         "deterministic luminance grading and Lanczos downsample to 80x40",
+        "chroma-key alpha cleanup of eight frozen four-cell row sources",
+        "strict 4x4 assembly of 15 non-empty path signatures and 15 non-empty plaza signatures with the sixteenth cell required blank",
         "same-material base bleed for seam-free meadow coverage",
-        "feathered partial-alpha semantic overlays for paths, stone, soil, encounters, and warps",
-        "deterministic 12-tile 320x120 RGBA atlas assembly"
+        "opaque-centered connected road mattes with feathered outer edges; stone, soil, encounters, and warps remain feathered semantic overlays",
+        "deterministic 42-tile 320x440 RGBA atlas assembly"
       ]
     },
     {
@@ -382,6 +641,60 @@
         "path": "runtime/objects/firebud_service_pavilion.png",
         "sha256": "1eaa9f5a13781419a0c6ea1c611cfcdd60a28bc2fbabce237789631de0740eec"
       }
+    },
+    {
+      "assetId": "firebud_training_rack",
+      "path": "runtime/objects/firebud_training_rack.png",
+      "sha256": "282b3fec074b1e334d52fc59f00bd034ec6948896cab50abb22bdeef0b80ab8d",
+      "dimensions": [240, 256],
+      "anchor": [0.5, 1.0],
+      "promptPath": "source/prompts/firebud-life-training-props-v2.md",
+      "rawPath": "source/raw/firebud-life-training-props-v2-chroma.png",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "generatedAt": "2026-08-18T00:10:00+08:00",
+      "operations": [
+        "targeted flat chroma background repair after rejecting a baked checkerboard output",
+        "chroma-key alpha cleanup",
+        "alpha bbox crop",
+        "premultiplied-alpha downsample",
+        "transparent padding"
+      ]
+    },
+    {
+      "assetId": "firebud_practice_cluster",
+      "path": "runtime/objects/firebud_practice_cluster.png",
+      "sha256": "48a301e208d9ce1232895b3ad46f202a1c1509b3874671331a97937b5be1ab02",
+      "dimensions": [218, 256],
+      "anchor": [0.5, 1.0],
+      "promptPath": "source/prompts/firebud-life-training-props-v2.md",
+      "rawPath": "source/raw/firebud-life-training-props-v2-chroma.png",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "generatedAt": "2026-08-18T00:10:00+08:00",
+      "operations": ["chroma-key alpha cleanup", "alpha bbox crop", "premultiplied-alpha downsample", "transparent padding"]
+    },
+    {
+      "assetId": "firebud_trade_counter",
+      "path": "runtime/objects/firebud_trade_counter.png",
+      "sha256": "8ddc94a039c1d47a477ae6880bc0c01234674090239ee9dfe591f7c9b02773b3",
+      "dimensions": [256, 220],
+      "anchor": [0.5, 1.0],
+      "promptPath": "source/prompts/firebud-life-training-props-v2.md",
+      "rawPath": "source/raw/firebud-life-training-props-v2-chroma.png",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "generatedAt": "2026-08-18T00:10:00+08:00",
+      "operations": ["chroma-key alpha cleanup", "alpha bbox crop", "premultiplied-alpha downsample", "transparent padding"]
+    },
+    {
+      "assetId": "firebud_grass_scatter_decal",
+      "path": "runtime/objects/firebud_grass_scatter_decal.png",
+      "sha256": "0f2914b9ad6c0595bf410c1405bca79379b1bedc7295d00d2b9761da96113145",
+      "dimensions": [256, 166],
+      "anchor": [0.5, 1.0],
+      "promptPath": "source/prompts/firebud-life-training-props-v2.md",
+      "rawPath": "source/raw/firebud-life-training-props-v2-chroma.png",
+      "tool": "OpenAI image_gen plus deterministic repository scripts",
+      "generatedAt": "2026-08-18T00:10:00+08:00",
+      "operations": ["chroma-key alpha cleanup", "alpha bbox crop", "premultiplied-alpha downsample", "transparent padding"]
     }
   ],
   "toolchain": {
@@ -398,14 +711,20 @@
     },
     "groundAtlasBuilder": {
       "path": "source/tools/build_ground_atlas_v4.py",
-      "sha256": "2e6ff866aeebc078179ffd79b5b34fd7b384c0fc8904cc6dff47953d95e36d70",
+      "sha256": "1281c670da9b83dad3e9a40b5b4d166216d87b7e2b8d448d003189514f82407b",
+      "repositoryOwned": true,
+      "version": "2.0.0"
+    },
+    "surfaceAutotileAssembler": {
+      "path": "source/tools/assemble_surface_autotile_sheet.py",
+      "sha256": "79cbe937cdf6c6f59056afcc138aebef08f048e3b253496450046bda3df61f11",
       "repositoryOwned": true,
       "version": "1.0.0"
     },
     "ffmpeg": "8.1.1"
   },
   "sourceIngestion": {
-    "method": "immutable image_gen output copied byte-identically for v4 ground materials; reused v1 sources remain same-filesystem hardlinks",
+    "method": "immutable image_gen outputs copied byte-identically; the complete path and plaza autotiles use the frozen v1 transition art as material/camera reference plus accepted preceding rows for consistency; the raised plaza parent and checkerboard prop attempt remain rejected lineage; reused v1 sources remain same-filesystem hardlinks",
     "authoritativeIdentity": "raw file SHA-256",
     "externalRuntimeDependency": false
   },
@@ -413,11 +732,25 @@
     "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-ground-sheet-v3.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-sheet-v3-alpha.png --key-color '#ff00ff' --soft-matte --transparent-threshold 10 --opaque-threshold 72 --edge-contract 1 --despill",
     "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-meadow-variants-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-meadow-variants-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill --force",
     "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-semantic-variants-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-semantic-variants-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill --force",
-    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/build_ground_atlas_v4.py --materials client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-ground-materials-v4.png --semantics client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-semantic-variants-v1-alpha.png --output client/godot/assets/maps/firebud_region_visual_v2/runtime/ground/atlas.png --manifest client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-materials-v4-build-manifest.json --overwrite",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-path-edge-transitions-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-transitions-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-plaza-edge-transitions-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-transitions-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-path-edge-autotile-v2-row-1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-row-1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-path-edge-autotile-v2-row-2.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-row-2-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-path-edge-autotile-v2-row-3.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-row-3-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-path-edge-autotile-v2-row-4.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-row-4-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-plaza-edge-autotile-v2-row-1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-row-1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-plaza-edge-autotile-v2-row-2.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-row-2-alpha.png --key-color '#da1cda' --soft-matte --transparent-threshold 28 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-plaza-edge-autotile-v2-row-3.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-row-3-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-plaza-edge-autotile-v2-row-4.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-row-4-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/assemble_surface_autotile_sheet.py --surface path --row client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-row-1-alpha.png --row client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-row-2-alpha.png --row client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-row-3-alpha.png --row client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-row-4-alpha.png --output client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-alpha.png --manifest client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-assembly-manifest.json",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/assemble_surface_autotile_sheet.py --surface plaza --row client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-row-1-alpha.png --row client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-row-2-alpha.png --row client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-row-3-alpha.png --row client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-row-4-alpha.png --output client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-alpha.png --manifest client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-assembly-manifest.json",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/build_ground_atlas_v4.py --materials client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-ground-materials-v4.png --semantics client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-semantic-variants-v1-alpha.png --transitions client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v2-alpha.png --plaza-transitions client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v2-alpha.png --output client/godot/assets/maps/firebud_region_visual_v2/runtime/ground/atlas.png --manifest client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ground-materials-v4-build-manifest.json --overwrite",
     "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-tree-landmark-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-tree-landmark-v1-alpha.png --key-color '#ff00ff' --soft-matte --transparent-threshold 10 --opaque-threshold 72 --edge-contract 1 --despill",
     "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-compact-props-v1.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-compact-props-v1-alpha.png --key-color '#ff00ff' --soft-matte --transparent-threshold 10 --opaque-threshold 72 --edge-contract 1 --despill",
     "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-tree-landmark-v1-alpha.png --rows 1 --columns 1 --labels firebud_ancient_tree --output-dir client/godot/assets/maps/firebud_region_visual_v2/runtime/objects --padding 8 --max-dimension 512 --alpha-threshold 4 --anchor 0.5 1.0 --manifest-name firebud-ancient-tree-manifest.json",
     "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-compact-props-v1-alpha.png --rows 2 --columns 2 --labels firebud_ember_shrub firebud_honey_rock_cluster firebud_flower_meadow_decal firebud_stone_totem --output-dir client/godot/assets/maps/firebud_region_visual_v2/runtime/objects --padding 8 --max-dimension 256 --alpha-threshold 4 --anchor 0.5 1.0 --manifest-name firebud-compact-props-manifest.json",
+    "python3 client/godot/assets/maps/firebud_region_visual_v2/source/tools/remove_chroma_key.py --input client/godot/assets/maps/firebud_region_visual_v2/source/raw/firebud-life-training-props-v2-chroma.png --out client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-life-training-props-v2-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
+    "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-life-training-props-v2-alpha.png --rows 2 --columns 2 --labels firebud_training_rack firebud_practice_cluster firebud_trade_counter firebud_grass_scatter_decal --output-dir .run/map-build/firebud-life-training-props-v2 --alpha-threshold 4, followed by byte-identical copy of the four PNGs into runtime/objects and path-normalized manifest copy into source/processed",
     "mv client/godot/assets/maps/firebud_region_visual_v2/runtime/objects/firebud-ancient-tree-manifest.json client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-ancient-tree-manifest.json and rewrite its relative source/runtime paths without changing declared asset hashes",
     "mv client/godot/assets/maps/firebud_region_visual_v2/runtime/objects/firebud-compact-props-manifest.json client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-compact-props-manifest.json and rewrite its relative source/runtime paths without changing declared asset hashes",
     "ln client/godot/assets/maps/firebud_region_visual_v1/runtime/objects/firebud_training_target.png client/godot/assets/maps/firebud_region_visual_v2/runtime/objects/firebud_training_target.png",
@@ -429,22 +762,26 @@
   "reproducibility": {
     "rawToProcessedByteExact": true,
     "processedToRuntimeByteExact": true,
-    "outputPrecondition": "The frozen v4 builder refuses replacement unless --overwrite is supplied; every reused v1 runtime hardlink destination must not exist before its producing command runs.",
+    "outputPrecondition": "The surface assembler requires all four outputs to be absent and refuses incomplete or edge-touching rows; the v4 atlas builder refuses replacement unless --overwrite is supplied; every reused v1 runtime hardlink destination must not exist before its producing command runs.",
     "externalToolVendored": true,
     "releaseBlocker": null
   },
   "qualityChecks": {
     "cellEdgeTouches": 0,
-    "groundAtlasTileCount": 12,
+    "groundAtlasTileCount": 42,
     "groundRenderMode": "layered_semantic_overlay",
+    "directionalPathTransitionTiles": 15,
+    "directionalPlazaTransitionTiles": 15,
+    "surfaceTransitionSignatures": ["nw", "ne", "nw_ne", "sw", "nw_sw", "ne_sw", "nw_ne_sw", "se", "nw_se", "ne_se", "nw_ne_se", "sw_se", "nw_sw_se", "ne_sw_se", "nw_ne_sw_se"],
+    "pathTransitionSelection": "prepare-time exact exposed-edge signature selection; no missing fallback and no draw-time randomness",
     "baseAntiSeamBleed": true,
     "semanticOverlayFeathering": true,
     "runtimeBorderMaxAlpha": 0,
     "runtimeVisibleMagentaLikePixels": 0,
     "visualAlphaEdgeReview": "pass",
-    "visualReviewNote": "Calm sage meadow, muted terracotta path, irregular honey stone, and restrained root soil render without dark seams, checkerboard repetition, or visible magenta fringe."
+    "visualReviewNote": "Calm sage meadow, muted terracotta path, irregular honey stone, restrained root soil, and all 15 path plus all 15 plaza grass-invasion signatures are flat, readable, internally opaque, and free of visible magenta fringe. Runtime seam, movement, collision, and owner-review evidence must be recaptured for this new atlas before release."
   },
   "mirrored": false,
   "bakedActors": false,
-  "replacementPath": "Regenerate from the frozen prompts, rebuild the layered ground atlas with source/tools/build_ground_atlas_v4.py, then reproduce chroma-key cleanup and object extraction using the listed deterministic commands."
+  "replacementPath": "Regenerate the frozen row prompts, reproduce the eight alpha rows, assemble both strict 4x4 complete-signature sheets with source/tools/assemble_surface_autotile_sheet.py, rebuild the 42-tile layered atlas with source/tools/build_ground_atlas_v4.py, then reproduce object extraction using the listed deterministic commands."
 }

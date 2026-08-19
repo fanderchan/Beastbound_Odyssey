@@ -31,6 +31,12 @@ const VALID_CAPTURE_VARIANTS: Array[String] = [
 	"collision",
 	"occlusion",
 ]
+const MOVING_CAPTURE_VARIANTS: Array[String] = [
+	"movement_path",
+	"warp",
+	"collision",
+	"occlusion",
+]
 const SETTLE_FRAMES := 10
 const COMPLETE_FRAME_ATTEMPTS := 10
 const MOVE_FRAME_LIMIT := 240
@@ -250,6 +256,8 @@ func run(request: Dictionary) -> Dictionary:
 		if target.is_empty():
 			errors.append("找不到可由真实鼠标点击到达且不被 UI 遮挡的目标格")
 		else:
+			report["targetCandidateCount"] = int(target.get("candidateCount", 0))
+			report["targetVariantIndex"] = int(target.get("variantIndex", -1))
 			target_cell = target.get("cell", start_cell) as Vector2i
 			input_report = await _send_real_mouse_click(target.get("screenPoint", Vector2.ZERO) as Vector2)
 			var changed := false
@@ -523,6 +531,18 @@ func _find_reachable_visible_target(
 		Vector2i(-1, 0),
 		Vector2i(0, -1),
 	]
+	# A newly dressed service area may invalidate several curated offsets. Add a
+	# deterministic perimeter search so the four moving evidence variants still
+	# receive four different reachable cells instead of wrapping with modulo and
+	# silently freezing duplicate pixels.
+	for radius in range(1, 9):
+		for delta_x in range(-radius, radius + 1):
+			for delta_y in range(-radius, radius + 1):
+				if maxi(abs(delta_x), abs(delta_y)) != radius:
+					continue
+				var offset := Vector2i(delta_x, delta_y)
+				if not offsets.has(offset):
+					offsets.append(offset)
 	var viewport_rect := Rect2(Vector2(48, 48), Vector2(EXPECTED_VIEWPORT - Vector2i(96, 96)))
 	var candidates: Array[Dictionary] = []
 	for offset in offsets:
@@ -546,10 +566,15 @@ func _find_reachable_visible_target(
 		})
 	if candidates.is_empty():
 		return {}
-	var variant_index := VALID_CAPTURE_VARIANTS.find(capture_variant)
+	var variant_index := MOVING_CAPTURE_VARIANTS.find(capture_variant)
 	if variant_index < 0:
 		variant_index = 0
-	return candidates[variant_index % candidates.size()]
+	if variant_index >= candidates.size():
+		return {}
+	var selected := (candidates[variant_index] as Dictionary).duplicate(true)
+	selected["candidateCount"] = candidates.size()
+	selected["variantIndex"] = variant_index
+	return selected
 
 
 func _near_visual_collision(candidate: Vector2i) -> bool:
@@ -692,6 +717,8 @@ static func _base_report(request: Dictionary) -> Dictionary:
 		"tileCounts": {},
 		"startCell": [],
 		"targetCell": [],
+		"targetCandidateCount": 0,
+		"targetVariantIndex": -1,
 		"endCell": [],
 		"playerCellChanged": false,
 		"input": {},

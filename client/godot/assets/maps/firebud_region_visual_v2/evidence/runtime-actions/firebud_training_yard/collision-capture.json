@@ -54,29 +54,39 @@
 	"bundleId": "firebud_region_visual_v2",
 	"mapStyleId": "firebud_warm_stone_v2",
 	"groundDrawCount": 1224,
-	"objectCount": 19,
+	"objectCount": 22,
 	"tileCounts": {
-		"firebud_meadow_a": 269,
-		"firebud_meadow_b": 293,
-		"firebud_meadow_dry_b": 275,
-		"firebud_meadow_clover_c": 256,
+		"firebud_meadow_a": 268,
+		"firebud_meadow_b": 282,
+		"firebud_meadow_dry_b": 246,
+		"firebud_meadow_clover_c": 231,
+		"firebud_honey_stone_moss_b": 32,
 		"firebud_honey_stone_a": 20,
-		"firebud_honey_stone_moss_b": 20,
-		"firebud_ochre_path_worn_b": 43,
-		"firebud_ochre_path_a": 47,
-		"firebud_warp_stone": 1
+		"firebud_ochre_path_a": 30,
+		"firebud_ochre_path_worn_b": 32,
+		"firebud_warp_stone": 1,
+		"firebud_ochre_path_edge_ne": 4,
+		"firebud_ochre_path_edge_sw": 19,
+		"firebud_ochre_path_edge_nw": 10,
+		"firebud_ochre_path_edge_se": 19,
+		"firebud_honey_stone_edge_nw": 9,
+		"firebud_honey_stone_edge_ne": 11,
+		"firebud_honey_stone_edge_se": 7,
+		"firebud_honey_stone_edge_sw": 3
 	},
 	"startCell": [
 		14,
 		12
 	],
 	"targetCell": [
-		17,
-		15
+		10,
+		11
 	],
+	"targetCandidateCount": 97,
+	"targetVariantIndex": 2,
 	"endCell": [
-		17,
-		15
+		10,
+		11
 	],
 	"playerCellChanged": true,
 	"input": {
@@ -86,15 +96,15 @@
 		"releaseProcessFrame": 11,
 		"frameSeparated": true,
 		"screenPoint": [
-			640.0,
-			437.419372558594
+			562.580627441406,
+			295.48388671875
 		]
 	},
 	"screenshotPath": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_training_yard/collision.png",
-	"screenshotSha256": "d3218040c65710e4722fd902c90523eeabfe569dfb413298b83fb74c1e098883",
+	"screenshotSha256": "ae0c7e59fd2c488561e6b35b80b98b4a523e42be2efb22936dd5eb73cddeea9c",
 	"screenshot": {
 		"path": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_training_yard/collision.png",
-		"sha256": "d3218040c65710e4722fd902c90523eeabfe569dfb413298b83fb74c1e098883",
+		"sha256": "ae0c7e59fd2c488561e6b35b80b98b4a523e42be2efb22936dd5eb73cddeea9c",
 		"width": 1280,
 		"height": 720
 	},
@@ -107,5 +117,5 @@
 	"errors": [],
 	"result": "PASS",
 	"ok": true,
-	"generatedAtUtc": "2026-08-15T23:29:05Z"
+	"generatedAtUtc": "2026-08-18T19:21:38Z"
 }

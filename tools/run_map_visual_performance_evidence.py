@@ -24,6 +24,7 @@ QA_LANE_ARGUMENT = "--beastbound-qa-user-data-lane=automation"
 QA_ATTESTATION_PREFIX = "BEASTBOUND_QA_USER_DATA_ATTESTATION: "
 QA_FEATURE = "beastbound_qa_automation"
 QA_CUSTOM_USER_DIR_NAME = "BeastboundOdysseyQA_Automation"
+QA_USER_DATA_ROOT_REDACTION = "<QA_USER_DATA_ROOT>"
 
 
 def _utc_now() -> str:
@@ -126,6 +127,28 @@ def _parse_qa_lane_attestation(
     return expected
 
 
+def _sanitize_qa_lane_evidence_text(
+    text: str,
+    prepared: dict[str, Any],
+) -> str:
+    """Redact the validated machine-local QA root before evidence is persisted."""
+    user_data_root = str(prepared.get("godotLaneRoot", "")).strip()
+    if not user_data_root:
+        raise builder.EvidenceError("QA lane root is missing before evidence redaction")
+    sanitized = text.replace(user_data_root, QA_USER_DATA_ROOT_REDACTION)
+    if user_data_root in sanitized:
+        raise builder.EvidenceError("QA lane root remained after evidence redaction")
+    return sanitized
+
+
+def _public_qa_lane_attestation(
+    attestation: dict[str, str],
+) -> dict[str, str]:
+    public = dict(attestation)
+    public["userDataRoot"] = QA_USER_DATA_ROOT_REDACTION
+    return public
+
+
 def _validate_lane_cleanup(
     prepared: dict[str, Any],
     verified: dict[str, Any] | None,
@@ -202,6 +225,8 @@ def _run(
             completed.stdout + completed.stderr,
             prepared,
         )
+        public_stdout = _sanitize_qa_lane_evidence_text(completed.stdout, prepared)
+        public_stderr = _sanitize_qa_lane_evidence_text(completed.stderr, prepared)
         record = {
             "schemaVersion": 1,
             "recordType": "beastbound_map_performance_runner_receipt",
@@ -213,9 +238,9 @@ def _run(
             "startedAtUtc": started,
             "endedAtUtc": ended,
             "returncode": completed.returncode,
-            "stdout": completed.stdout,
-            "stderr": completed.stderr,
-            "qaLane": {"attestation": attestation},
+            "stdout": public_stdout,
+            "stderr": public_stderr,
+            "qaLane": {"attestation": _public_qa_lane_attestation(attestation)},
         }
         # Validate each run before it can enter the frozen receipt.
         builder.parse_perf_run(record)

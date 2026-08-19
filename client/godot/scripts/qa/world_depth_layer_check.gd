@@ -26,6 +26,7 @@ static func run(
 		return _report(errors, 0, 0, 0)
 
 	var expected_map_objects := MapVisualRenderer.world_depth_commands(prepared).size()
+	var visual_interaction_links := MapVisualRenderer.world_interaction_link_lookup(prepared)
 	var expected_npcs := 0
 	var expected_interaction_props := 0
 	for value in map_data.get("interactionPoints", []):
@@ -34,7 +35,10 @@ static func run(
 		var kind := str((value as Dictionary).get("kind", ""))
 		if kind == "npc":
 			expected_npcs += 1
-		elif ["gate", "record_point", "sign", "guardian"].has(kind):
+		elif (
+			["gate", "record_point", "sign", "guardian"].has(kind)
+			and not visual_interaction_links.has(str((value as Dictionary).get("id", "")))
+		):
 			expected_interaction_props += 1
 	var actual_map_objects := int(depth_layer.call("group_count", "map_objects"))
 	var actual_npcs := int(depth_layer.call("group_count", "npcs"))
@@ -54,6 +58,13 @@ static func run(
 			"统一深度层交互道具数不一致：expected=%d actual=%d"
 			% [expected_interaction_props, actual_interaction_props]
 		)
+	for interaction_id_value in visual_interaction_links:
+		var interaction_id := str(interaction_id_value)
+		var map_object_stable_id := str(visual_interaction_links.get(interaction_id, ""))
+		if map_object_stable_id == "" or not bool(depth_layer.call("has_depth_member", map_object_stable_id)):
+			errors.append("交互地图物件未进入统一深度层：%s" % interaction_id)
+		if bool(depth_layer.call("has_depth_member", "interaction:%s" % interaction_id)):
+			errors.append("交互地图物件与程序占位物重复绘制：%s" % interaction_id)
 	for actor_id in ["actor:player", "actor:pet"]:
 		if not bool(depth_layer.call("has_depth_member", actor_id)):
 			errors.append("统一深度层缺少运行时角色：%s" % actor_id)

@@ -87,6 +87,16 @@ class PerformanceParserTests(unittest.TestCase):
 
 
 class CollisionReceiptTests(unittest.TestCase):
+    def test_runner_redirects_engine_log_without_changing_evidence_command(self) -> None:
+        args = list(builder.COLLISION_COMMAND_ARGS)
+        self.assertEqual(args.count("--log-file"), 1)
+        log_flag_index = args.index("--log-file")
+        self.assertEqual(
+            args[log_flag_index + 1],
+            "../../.run/map-visual-runtime-check.log",
+        )
+        self.assertNotIn("--log-file", builder.COLLISION_COMMAND)
+
     def _stdout(self) -> str:
         payload = {
             "mode": "strict_frozen_validation",
@@ -100,6 +110,21 @@ class CollisionReceiptTests(unittest.TestCase):
                         "firebud_village_gate",
                     ],
                 }
+            },
+        }
+        return (
+            "Godot fixture\nmap visual runtime check: "
+            + json.dumps(payload)
+            + "\n"
+        )
+
+    def _preview_stdout(self, report: dict) -> str:
+        payload = {
+            "mode": "catalog_contract_preview",
+            "result": "PASS",
+            "errors": [],
+            "bundleReports": {
+                "firebud_region_visual_v2": report,
             },
         }
         return (
@@ -135,6 +160,118 @@ class CollisionReceiptTests(unittest.TestCase):
                     runner=runner,
                 )
             self.assertEqual(output.read_text(encoding="utf-8"), self._stdout())
+
+    def test_pending_preview_requires_exact_frozen_catalog_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            godot_root = root / "client/godot"
+            bundle_root = (
+                godot_root / "assets/maps/firebud_region_visual_v2"
+            )
+            evidence = bundle_root / "evidence"
+            evidence.mkdir(parents=True)
+            manifest = {
+                "status": "owner_review_pending",
+                "ownerReviewStatus": "pending",
+                "releaseApproved": False,
+                "runtimeEnabled": False,
+            }
+            (bundle_root / "map-visual-bundle.json").write_text(
+                json.dumps(manifest),
+                encoding="utf-8",
+            )
+            report = {
+                "bundleId": "firebud_region_visual_v2",
+                "result": "PASS",
+                "errors": [],
+                "testedMapIds": [
+                    "firebud_training_yard",
+                    "firebud_village_gate",
+                ],
+                "catalogSha256": "a" * 64,
+                "bindingHashes": {
+                    "firebud_training_yard": "b" * 64,
+                    "firebud_village_gate": "c" * 64,
+                },
+                "mapDataHashes": {
+                    "firebud_training_yard": "d" * 64,
+                    "firebud_village_gate": "e" * 64,
+                },
+                "maps": [
+                    {
+                        "mapId": "firebud_training_yard",
+                        "groundDraws": 1,
+                        "objects": 2,
+                        "protectedCells": 3,
+                    },
+                    {
+                        "mapId": "firebud_village_gate",
+                        "groundDraws": 4,
+                        "objects": 5,
+                        "protectedCells": 6,
+                    },
+                ],
+            }
+            (evidence / "catalog-contract-check.json").write_text(
+                json.dumps(report),
+                encoding="utf-8",
+            )
+            stdout = self._preview_stdout(report)
+
+            def runner(args, **_kwargs):
+                self.assertEqual(
+                    args,
+                    list(builder.COLLISION_PREVIEW_COMMAND_ARGS),
+                )
+                return subprocess.CompletedProcess(
+                    args=args,
+                    returncode=0,
+                    stdout=stdout,
+                    stderr="",
+                )
+
+            with (
+                mock.patch.object(builder, "REPO_ROOT", root),
+                mock.patch.object(builder, "GODOT_ROOT", godot_root),
+            ):
+                output = builder.capture_collision_receipt(
+                    "firebud_region_visual_v2",
+                    allow_pending_catalog_preview=True,
+                    runner=runner,
+                )
+            self.assertEqual(output.read_text(encoding="utf-8"), stdout)
+
+    def test_pending_preview_rejects_released_manifest_before_runner(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            godot_root = root / "client/godot"
+            bundle_root = (
+                godot_root / "assets/maps/firebud_region_visual_v2"
+            )
+            bundle_root.mkdir(parents=True)
+            (bundle_root / "map-visual-bundle.json").write_text(
+                json.dumps(
+                    {
+                        "status": "released",
+                        "ownerReviewStatus": "approved",
+                        "releaseApproved": True,
+                        "runtimeEnabled": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            runner = mock.Mock()
+            with (
+                mock.patch.object(builder, "REPO_ROOT", root),
+                mock.patch.object(builder, "GODOT_ROOT", godot_root),
+                self.assertRaises(builder.EvidenceError),
+            ):
+                builder.capture_collision_receipt(
+                    "firebud_region_visual_v2",
+                    allow_pending_catalog_preview=True,
+                    runner=runner,
+                )
+            runner.assert_not_called()
 
     def test_capture_rejects_failed_runner_without_overwriting(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

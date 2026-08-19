@@ -4,7 +4,7 @@
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
   "comparisonMode": "legacy_fallback_vs_candidate",
-  "generatedAtUtc": "2026-08-10T20:42:28.946Z",
+  "generatedAtUtc": "2026-08-18T20:06:45.859Z",
   "scene": "res://scenes/Main.tscn",
   "viewport": [
     1280,
@@ -30,39 +30,39 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.29,
-            0.465,
-            0.58
+            0.26,
+            0.351,
+            0.45
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.007,
-            0.06
+            0.107,
+            0.86
           ]
         },
         "moving": {
-          "samples": 3,
+          "samples": 2,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.22,
-            0.377,
-            0.48
+            0.17,
+            0.245,
+            0.32
           ],
           "drawWorldMsMinMeanMax": [
-            0.0,
-            0.197,
-            0.53
+            0.92,
+            2.675,
+            4.43
           ],
-          "clicks": 30,
-          "accepted": 30,
-          "resolved": 10,
-          "applied": 10,
+          "clicks": 35,
+          "accepted": 35,
+          "resolved": 11,
+          "applied": 11,
           "avgInputUs": 1,
-          "maxInputUs": 4,
+          "maxInputUs": 1,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -82,38 +82,38 @@
           ],
           "processTotalMsMinMeanMax": [
             0.26,
-            0.324,
-            0.44
+            0.348,
+            0.39
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.009,
-            0.07
+            0.01,
+            0.08
           ]
         },
         "moving": {
-          "samples": 2,
+          "samples": 3,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.26,
-            0.31,
-            0.36
+            0.41,
+            0.54,
+            0.66
           ],
           "drawWorldMsMinMeanMax": [
             0.09,
-            0.275,
-            0.46
+            0.45,
+            0.77
           ],
-          "clicks": 30,
-          "accepted": 30,
-          "resolved": 10,
-          "applied": 10,
+          "clicks": 60,
+          "accepted": 60,
+          "resolved": 18,
+          "applied": 18,
           "avgInputUs": 2,
-          "maxInputUs": 19,
+          "maxInputUs": 6,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -124,8 +124,8 @@
       },
       "comparison": {
         "processTotalMeanDeltaMs": {
-          "idle": -0.141,
-          "moving": -0.067
+          "idle": -0.003,
+          "moving": 0.295
         },
         "thresholds": {
           "candidateIdleProcessMeanMaxMs": 0.5,
@@ -154,17 +154,17 @@
           ],
           "processTotalMsMinMeanMax": [
             0.3,
-            0.412,
-            0.53
+            0.324,
+            0.36
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.01,
-            0.08
+            0.066,
+            0.53
           ]
         },
         "moving": {
-          "samples": 4,
+          "samples": 2,
           "fpsMinMeanMax": [
             60.0,
             60.0,
@@ -172,20 +172,20 @@
           ],
           "processTotalMsMinMeanMax": [
             0.26,
-            0.378,
-            0.47
+            0.325,
+            0.39
           ],
           "drawWorldMsMinMeanMax": [
-            0.0,
-            0.258,
-            0.88
+            0.95,
+            1.94,
+            2.93
           ],
-          "clicks": 30,
-          "accepted": 30,
-          "resolved": 10,
-          "applied": 10,
-          "avgInputUs": 2,
-          "maxInputUs": 6,
+          "clicks": 38,
+          "accepted": 38,
+          "resolved": 12,
+          "applied": 12,
+          "avgInputUs": 1,
+          "maxInputUs": 2,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -204,9 +204,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.37,
-            0.441,
-            0.52
+            0.32,
+            0.364,
+            0.4
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -222,21 +222,21 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.25,
-            0.375,
-            0.5
+            0.48,
+            0.54,
+            0.6
           ],
           "drawWorldMsMinMeanMax": [
-            0.11,
-            0.35,
-            0.59
+            0.63,
+            0.67,
+            0.71
           ],
-          "clicks": 30,
-          "accepted": 30,
-          "resolved": 10,
-          "applied": 10,
+          "clicks": 60,
+          "accepted": 60,
+          "resolved": 18,
+          "applied": 18,
           "avgInputUs": 2,
-          "maxInputUs": 19,
+          "maxInputUs": 3,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -247,8 +247,8 @@
       },
       "comparison": {
         "processTotalMeanDeltaMs": {
-          "idle": 0.029,
-          "moving": -0.003
+          "idle": 0.04,
+          "moving": 0.215
         },
         "thresholds": {
           "candidateIdleProcessMeanMaxMs": 0.5,
@@ -270,14 +270,14 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:23855b4636d1351e70f5cdaa1099dbb8fda62c81+beastbound-map-runtime-surface-v2:c2da47cd8c3341067ae0961091d85b63f8daa70db8acab0712014a6dbcdb5f28"
+    "buildIdentity": "git:1f22eded5a2c72191d57ac5eb2e4edfbcd75ad91+beastbound-map-runtime-surface-v2:36c729603b72d7e6192621f5bad62e9c203627ade6965708ec3057a02084954d"
   },
   "rawRunnerReceipt": {
     "path": "evidence/performance-runner-receipt.jsonl",
-    "sha256": "0d1eda1adcf09acaeca37929e0e29516a19660a89610aa13e4c6c53edbe5ae79"
+    "sha256": "1aacb3ca6e83e365d0c3c4915e00fd02ecd74d5026364fe05da02565e019fce5"
   },
   "notes": [
-    "All twelve variants ran through the real Main.tscn non-headless Metal path.",
+    "All 8 variants ran through the real Main.tscn non-headless Metal path.",
     "Moving variants used cross-frame Input.parse_input_event mouse press/release delivery.",
     "All values were parsed from the verbatim Godot stdout/stderr frozen in the raw JSONL receipt."
   ]

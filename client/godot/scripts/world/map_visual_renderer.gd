@@ -117,8 +117,22 @@ static func world_depth_commands(prepared: Dictionary) -> Array[Dictionary]:
 			"tiePriority": 20,
 			"texture": texture,
 			"drawRect": draw_rect,
+			"collisionRole": str(command.get("collisionRole", "")),
+			"interactionLink": command.get("interactionLink"),
 		})
 	return commands
+
+
+static func world_interaction_link_lookup(prepared: Dictionary) -> Dictionary:
+	var lookup: Dictionary = {}
+	for command in world_depth_commands(prepared):
+		if str(command.get("collisionRole", "")) != "interaction":
+			continue
+		var interaction_id := str(command.get("interactionLink", "")).strip_edges()
+		if interaction_id == "":
+			continue
+		lookup[interaction_id] = str(command.get("stableId", ""))
+	return lookup
 
 
 static func foreground_overlay_commands(prepared: Dictionary) -> Array[Dictionary]:

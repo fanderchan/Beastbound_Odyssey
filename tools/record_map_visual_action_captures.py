@@ -48,6 +48,12 @@ ACTION_MODES = {
     "occlusion": "moving",
 }
 DEFAULT_RUN_ROOT = Path(".run/evidence/map_visual_action_captures")
+PENDING_LIFECYCLE = {
+    "status": "owner_review_pending",
+    "ownerReviewStatus": "pending",
+    "releaseApproved": False,
+    "runtimeEnabled": False,
+}
 
 
 class MapActionCaptureError(RuntimeError):
@@ -83,6 +89,14 @@ def _parse_args() -> argparse.Namespace:
             "仅允许归档没有截图的明确 FAIL 报告"
         ),
     )
+    parser.add_argument(
+        "--replace-pending-evidence",
+        action="store_true",
+        help=(
+            "仅为仍处于 owner_review_pending 的 bundle 事务式替换完整正式动作对；"
+            "旧字节归档到本次 .run，任一步失败恢复全部旧字节"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -108,9 +122,19 @@ def _target_state(
     report: Path,
     *,
     resume: bool,
+    replace_pending: bool = False,
 ) -> str:
     screenshot_exists = screenshot.is_file()
     report_exists = report.is_file()
+    if replace_pending:
+        if resume:
+            raise MapActionCaptureError("替换 pending 证据不能与 --resume 同用")
+        if screenshot_exists and report_exists:
+            return "replace"
+        raise MapActionCaptureError(
+            "pending 证据替换要求每个旧正式动作对都完整存在："
+            f"{_portable(screenshot)} / {_portable(report)}"
+        )
     if screenshot_exists and report_exists:
         if not resume:
             raise MapActionCaptureError(
@@ -145,6 +169,58 @@ def _target_state(
             f"{_portable(report)}"
         )
     return "archive_failed_report"
+
+
+def _validate_pending_replacement(manifest_path: Path, bundle_id: str) -> None:
+    manifest = _read_json_object(manifest_path, label="地图 bundle manifest")
+    if manifest.get("bundleId") != bundle_id:
+        raise MapActionCaptureError("pending 证据替换 bundleId 不一致")
+    lifecycle = {key: manifest.get(key) for key in PENDING_LIFECYCLE}
+    if lifecycle != PENDING_LIFECYCLE:
+        raise MapActionCaptureError(
+            f"拒绝替换非 pending bundle 的正式动作证据：{lifecycle}"
+        )
+
+
+def _backup_formal_pairs(
+    targets: list[tuple[str, str, str, Path, Path, str]],
+    backup_root: Path,
+) -> list[tuple[Path, Path]]:
+    moves: list[tuple[Path, Path]] = []
+    try:
+        for map_id, action_kind, _mode, screenshot, report, target_state in targets:
+            if target_state != "replace":
+                continue
+            for source in (screenshot, report):
+                relative = Path(map_id) / action_kind / source.name
+                backup = backup_root / relative
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                if backup.exists():
+                    raise MapActionCaptureError(
+                        f"旧动作证据归档目标已存在：{_portable(backup)}"
+                    )
+                source.replace(backup)
+                moves.append((source, backup))
+    except BaseException:
+        _restore_formal_pairs(moves)
+        raise
+    return moves
+
+
+def _restore_formal_pairs(backups: list[tuple[Path, Path]]) -> None:
+    errors: list[str] = []
+    for destination, backup in reversed(backups):
+        try:
+            if destination.exists():
+                destination.unlink()
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            backup.replace(destination)
+        except OSError as error:
+            errors.append(f"{_portable(destination)}: {error}")
+    if errors:
+        raise MapActionCaptureError(
+            "正式动作证据回滚不完整：" + "; ".join(errors)
+        )
 
 
 def _next_archive_path(action_root: Path) -> Path:
@@ -307,6 +383,11 @@ def _record(args: argparse.Namespace) -> Path:
     godot = CORE._require_executable(str(args.godot), label="Godot")
     run_root = (REPO_ROOT / DEFAULT_RUN_ROOT / args.bundle_id / run_id).resolve()
     resume = bool(args.resume)
+    replace_pending = bool(args.replace_pending_evidence)
+    if resume and replace_pending:
+        raise MapActionCaptureError(
+            "--resume 与 --replace-pending-evidence 不能同用"
+        )
     if resume:
         if not run_root.is_dir():
             raise MapActionCaptureError(
@@ -325,8 +406,11 @@ def _record(args: argparse.Namespace) -> Path:
     bundle_root = (
         REPO_ROOT / "client" / "godot" / "assets" / "maps" / args.bundle_id
     )
-    if not (bundle_root / "map-visual-bundle.json").is_file():
+    manifest_path = bundle_root / "map-visual-bundle.json"
+    if not manifest_path.is_file():
         raise MapActionCaptureError(f"地图 bundle 不存在：{bundle_root}")
+    if replace_pending:
+        _validate_pending_replacement(manifest_path, str(args.bundle_id))
     output_root = bundle_root / "evidence" / "runtime-actions"
     output_root.mkdir(parents=True, exist_ok=True)
 
@@ -337,15 +421,63 @@ def _record(args: argparse.Namespace) -> Path:
             map_output = output_root / map_id
             screenshot = map_output / f"{action_kind}.png"
             report = map_output / f"{action_kind}-capture.json"
-            target_state = _target_state(screenshot, report, resume=resume)
+            target_state = _target_state(
+                screenshot,
+                report,
+                resume=resume,
+                replace_pending=replace_pending,
+            )
             targets.append(
                 (map_id, action_kind, mode, screenshot, report, target_state)
             )
 
+    backups: list[tuple[Path, Path]] = []
+    if replace_pending:
+        backups = _backup_formal_pairs(targets, run_root / "superseded")
+
     records: list[dict[str, Any]] = []
-    for map_id, action_kind, mode, screenshot, report, target_state in targets:
-        action_root = run_root / map_id / action_kind
-        if target_state == "reuse":
+    try:
+        for map_id, action_kind, mode, screenshot, report, target_state in targets:
+            action_root = run_root / map_id / action_kind
+            if target_state == "reuse":
+                records.append(
+                    _record_entry(
+                        map_id=map_id,
+                        action_kind=action_kind,
+                        mode=mode,
+                        screenshot=screenshot,
+                        report=report,
+                        action_run=_find_successful_action_run(action_root),
+                        resumed=True,
+                    )
+                )
+                continue
+            archived_failed_report: Path | None = None
+            if target_state == "archive_failed_report":
+                archived_failed_report = _archive_failed_report(report, action_root)
+            screenshot.parent.mkdir(parents=True, exist_ok=True)
+            action_run = _next_action_run(action_root)
+            log_path = action_run / "godot.log"
+            command = RECORDER._build_godot_command(
+                godot=godot,
+                avi_path=None,
+                map_id=map_id,
+                mode=mode,
+                screenshot_path=screenshot.resolve(),
+                report_path=report.resolve(),
+                capture_variant=action_kind,
+            )
+            CORE._run_official_lane_godot_sequence(
+                run_dir=action_run,
+                godot=godot,
+                base_environment=base_environment,
+                native_command=command,
+                native_log=log_path,
+                timeout_seconds=timeout_seconds,
+                native_log_validator=lambda path: RECORDER._validate_godot_log(
+                    path, movie_mode=False
+                ),
+            )
             records.append(
                 _record_entry(
                     map_id=map_id,
@@ -353,68 +485,43 @@ def _record(args: argparse.Namespace) -> Path:
                     mode=mode,
                     screenshot=screenshot,
                     report=report,
-                    action_run=_find_successful_action_run(action_root),
-                    resumed=True,
+                    action_run=action_run,
+                    resumed=resume,
+                    archived_failed_report=archived_failed_report,
                 )
             )
-            continue
-        archived_failed_report: Path | None = None
-        if target_state == "archive_failed_report":
-            archived_failed_report = _archive_failed_report(report, action_root)
-        screenshot.parent.mkdir(parents=True, exist_ok=True)
-        action_run = _next_action_run(action_root)
-        log_path = action_run / "godot.log"
-        command = RECORDER._build_godot_command(
-            godot=godot,
-            avi_path=None,
-            map_id=map_id,
-            mode=mode,
-            screenshot_path=screenshot.resolve(),
-            report_path=report.resolve(),
-            capture_variant=action_kind,
-        )
-        CORE._run_official_lane_godot_sequence(
-            run_dir=action_run,
-            godot=godot,
-            base_environment=base_environment,
-            native_command=command,
-            native_log=log_path,
-            timeout_seconds=timeout_seconds,
-            native_log_validator=lambda path: RECORDER._validate_godot_log(
-                path, movie_mode=False
-            ),
-        )
-        records.append(
-            _record_entry(
-                map_id=map_id,
-                action_kind=action_kind,
-                mode=mode,
-                screenshot=screenshot,
-                report=report,
-                action_run=action_run,
-                resumed=resume,
-                archived_failed_report=archived_failed_report,
-            )
-        )
 
-    summary = {
-        "schemaVersion": 1,
-        "reportType": "beastbound_map_visual_action_capture_matrix",
-        "generatedAtUtc": _utc_now(),
-        "result": "PASS",
-        "bundleId": args.bundle_id,
-        "maps": list(RECORDER.REVIEW_MAPS),
-        "actionKinds": list(ACTION_KINDS),
-        "captureCount": len(records),
-        "resumed": resume,
-        "records": records,
-    }
-    summary_path = run_root / "capture-matrix.json"
-    summary_path.write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return summary_path
+        summary = {
+            "schemaVersion": 1,
+            "reportType": "beastbound_map_visual_action_capture_matrix",
+            "generatedAtUtc": _utc_now(),
+            "result": "PASS",
+            "bundleId": args.bundle_id,
+            "maps": list(RECORDER.REVIEW_MAPS),
+            "actionKinds": list(ACTION_KINDS),
+            "captureCount": len(records),
+            "resumed": resume,
+            "replacedPendingEvidence": replace_pending,
+            "supersededEvidence": [
+                CORE._artifact_record(backup) for _destination, backup in backups
+            ],
+            "records": records,
+        }
+        summary_path = run_root / "capture-matrix.json"
+        summary_path.write_text(
+            json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return summary_path
+    except BaseException as error:
+        if backups:
+            try:
+                _restore_formal_pairs(backups)
+            except MapActionCaptureError as rollback_error:
+                raise MapActionCaptureError(
+                    f"动作录制失败且旧正式证据回滚失败：{rollback_error}"
+                ) from error
+        raise
 
 
 def main() -> int:

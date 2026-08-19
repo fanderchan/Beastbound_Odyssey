@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportType": "beastbound_map_computer_use_review",
-  "generatedAtUtc": "2026-08-15T23:30:00Z",
+  "generatedAtUtc": "2026-08-18T19:46:28Z",
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
   "testedMapIds": [
@@ -22,290 +22,290 @@
       "actionId": "firebud_training_yard_pointer",
       "actionKind": "pointer",
       "mapId": "firebud_training_yard",
-      "description": "Left-click the visible main-task navigation target and verify the live trainer interaction opens in the normal client.",
+      "description": "打开训练场当前地图，核对地图指针、坐标和四个真实导航目标。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
-          "sha256": "76c47a72c16455fc8a735490284f9203fe3daeea1814f40018b541849116051b"
+          "sha256": "380376878d8b4c55afde488a9f456ccda9b2082a8ea6ab2c96d2e4ee47ae8fa8"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/pointer-capture.json",
-          "sha256": "212127582b83dba9e14b2a00bc89e6263149c5f30727d791ce03bb1328dae81a"
+          "sha256": "830a3a2b4d04d5d1f1a3228642d3d284010c9afd0ddf3a1513de9dab69587b55"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-before.jpeg",
-          "sha256": "7c129c78264fd72d047cf92d8799eb0fdb483dca6f627317d62540c47f987d0d"
+          "sha256": "197fde09d13b8353e962d55cbb9e8c75b1e8b1808c752849d3d270ff710c37e5"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-after.jpeg",
-          "sha256": "91969bfa0c818b5b187221a619548ca5458042a86bd98351ca3fb0884e541019"
+          "sha256": "2809e66aedf37a19ebab12f9f8980deb3d4e000f60f1162f43085f0697660d6b"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_pointer.jsonl",
-        "sha256": "28ec7e3ec022d9fe9402c7db8509b91ebc6882fa2acdf6045100a5339cd00dad"
+        "sha256": "75352d893d221d1073c9a08e316079244b788fc4b66a4dab8121502002ac8fc2"
       }
     },
     {
       "actionId": "firebud_training_yard_movement_path",
       "actionKind": "movement_path",
       "mapId": "firebud_training_yard",
-      "description": "Left-click walkable meadow and verify the player moves across frames with a readable route and final marker.",
+      "description": "点击训练场东北侧草地，核对真实跨帧移动和连续路线。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/movement_path.png",
-          "sha256": "ea912ff531460b8de85eb2d5502af0ca145f386384ff6d8a47a9359dbf4a8751"
+          "sha256": "533ba8938f7b0064ca95d41bcbeba303006156642bd02b78604e681905dd85ca"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/movement_path-capture.json",
-          "sha256": "2830dba6a83b3047f19d9e02364b4b1f12468eda86275843058ca15d20dd4657"
+          "sha256": "062d94940cb23fa2980a9130546235c4f0e405ccf4cb342009de8e673b7b9ecc"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-before.jpeg",
-          "sha256": "f508e0cc84b0c2ebfaa749aa57795cf70380e68cac23ec285493b79998f832b1"
+          "sha256": "197fde09d13b8353e962d55cbb9e8c75b1e8b1808c752849d3d270ff710c37e5"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-after.jpeg",
-          "sha256": "dd21f94ab12fca5bdc0a2ce69c02c5aab2e6c186a505c2df650dea80d78cef67"
+          "sha256": "6accb243e4a3772e9782b896f1ad408963e18c414e8ae14ea48c754e8ff7311d"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_movement_path.jsonl",
-        "sha256": "f448b842759f910c559affb130ead95cff5955124240a9f39a79b99dae74bb73"
+        "sha256": "c1b2d4cf48ac24af4ec0e1bfd2255e73d247c8722010a809e23a05a7ba738bf9"
       }
     },
     {
       "actionId": "firebud_training_yard_warp",
       "actionKind": "warp",
       "mapId": "firebud_training_yard",
-      "description": "Select the village gate in the normal map UI, traverse to it, and verify the village spawn after the transition.",
+      "description": "通过训练场地图面板选择村口木门，核对跨图寻路和火芽村落点。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/warp.png",
-          "sha256": "c6a4ff50033d14d8fd3ddaa6054fdae78f4c7e63954f7f448b8288cb09fe9124"
+          "sha256": "1fce54124434e53a5e9579a8949a173498ba19c04b154995c6e49a11482c368d"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/warp-capture.json",
-          "sha256": "180c2c0454a710958ba378f99bd33f38c9c9fd796d4fca7727ac8ab405c78241"
+          "sha256": "f9f1aeec30063fd5ef860080b9d91a35e914aaf25c3b314f25e43ce2a5542d2b"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-before.jpeg",
-          "sha256": "7c129c78264fd72d047cf92d8799eb0fdb483dca6f627317d62540c47f987d0d"
+          "sha256": "197fde09d13b8353e962d55cbb9e8c75b1e8b1808c752849d3d270ff710c37e5"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-after.jpeg",
-          "sha256": "de37bef344896149918ffe322820a06a6b0e8baf0fc616ac60d6bcd443070ea1"
+          "sha256": "1b1838040d568a57357f1eb13d325fa117cf3f84492565334509b16b5dc03970"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_warp.jsonl",
-        "sha256": "7318387d1395f85b5b4f727f398d7992fd8db8260e63946066167fcdada18e23"
+        "sha256": "17c631a075a7ccba0918fc4b19384cb621ffbd1541d91f771d5ef0826b630756"
       }
     },
     {
       "actionId": "firebud_training_yard_collision",
       "actionKind": "collision",
       "mapId": "firebud_training_yard",
-      "description": "Click the blocking ember shrub and verify the player does not enter or overlap its collision footprint.",
+      "description": "点击木栅栏另一侧草地，核对路线绕过显式阻挡 footprint。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/collision.png",
-          "sha256": "d3218040c65710e4722fd902c90523eeabfe569dfb413298b83fb74c1e098883"
+          "sha256": "ae0c7e59fd2c488561e6b35b80b98b4a523e42be2efb22936dd5eb73cddeea9c"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/collision-capture.json",
-          "sha256": "db20ec9fdfae24a299ba0a772bf949f38661d1bb513f78d63a01d877fabc343f"
+          "sha256": "f8f958cd1a82a707c21e8766481efb12c407f4e5628c2b1b9bce9d2b25762da1"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-before.jpeg",
-          "sha256": "ca1dcf2c376418c97b710e591a1b73dabe27523488729a06b8050c2c619a8dc6"
+          "sha256": "197fde09d13b8353e962d55cbb9e8c75b1e8b1808c752849d3d270ff710c37e5"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-after.jpeg",
-          "sha256": "3d8ccdbc11c716614d02d5d249703e4131bf96bc274ffd183c7abf85bcd8f9a4"
+          "sha256": "7143f274a5b4250e79cddb7fc581d20bef5cba7852bec3c3454189b84af26add"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_collision.jsonl",
-        "sha256": "f51ec6a32a8c1049ea6d04f1d993c089e2722699d413d472738db1c68a5ccd87"
+        "sha256": "520a63c436a15c4e4972cc999a78d788c29e481611fe05f394d5e5b214baf093"
       }
     },
     {
       "actionId": "firebud_training_yard_occlusion",
       "actionKind": "occlusion",
       "mapId": "firebud_training_yard",
-      "description": "Walk from behind the tall supply pots to their front and verify the actor changes y-sort layer without changing collision truth.",
+      "description": "走到补给陶罐后侧，核对角色前后层级和局部遮挡。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/occlusion.png",
-          "sha256": "468d4e0918c528f957ae79bdaa83ffe245a76d4209c9b79d3cde28a1c317ca4e"
+          "sha256": "1c1ac74cf6af001f20077fa9158e7c6d252c0731d31a4b4d4821f22a61471166"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/occlusion-capture.json",
-          "sha256": "062cf0aa6490dff754fd7efbce7c0cc9f3012c83344a229746161be6a89667bb"
+          "sha256": "703c3c127c48a39fc53b7f90678cc9187bd6fa8d2864158939519cfc8bb490c5"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-before.jpeg",
-          "sha256": "8763bc257cbcc7c360b738d7fbf81b69fa7c6811590c4f478a9d5f95813d6a1a"
+          "sha256": "197fde09d13b8353e962d55cbb9e8c75b1e8b1808c752849d3d270ff710c37e5"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-after.jpeg",
-          "sha256": "f508e0cc84b0c2ebfaa749aa57795cf70380e68cac23ec285493b79998f832b1"
+          "sha256": "d6d50ba50ef2bba8f28e5b902a3f28e43a9fc0b9f801fe33cfa6448b8cfe462b"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_occlusion.jsonl",
-        "sha256": "9173127581dc9f15e4b258b9e85e36a696d3345525b54d7e9ddc79f89dae9a2b"
+        "sha256": "57d2efc3fe1399229966356d39c48fcf419235b6fd766fad2d4224ab20ab4069"
       }
     },
     {
       "actionId": "firebud_village_gate_pointer",
       "actionKind": "pointer",
       "mapId": "firebud_village_gate",
-      "description": "Point at the live village doctor map target and verify the normal doctor dialogue opens from a reachable approach cell.",
+      "description": "打开火芽村当前地图，核对服务节点、记录点和地图指针。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
-          "sha256": "a2e81c6048d888e135e26dc37ce38f4876b2ee7f1f025caafb9b384354d57f82"
+          "sha256": "ec3097b99ded84d4cfbfe413f252654c8fe43af32790e5b4de78b840349247a5"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/pointer-capture.json",
-          "sha256": "b6955c575e951ff37e6d2c960a2854f2b9f94a9cf58e6c2b70e8b0dde125e4cf"
+          "sha256": "8b7f896c357b38c18042c77a24f8f8b0d462b766e7448ad3e916b19ed2c6661b"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-before.jpeg",
-          "sha256": "de37bef344896149918ffe322820a06a6b0e8baf0fc616ac60d6bcd443070ea1"
+          "sha256": "ba5d6d68694ffa39945f9ca6cdea702c5668fb1bd7cfc92ca11606175bc5c54b"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-after.jpeg",
-          "sha256": "4fd8a51c53f0c2075a1c57b65faef80b69ea2379a6dca28a291b20f72ba60c59"
+          "sha256": "fece8e02703b1a31f005003967bb992db9fe658bd352d8720c67cf84a99e4e6c"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_pointer.jsonl",
-        "sha256": "c8769f582e21f38b73c15c57286c6970a4c2c8970f7f4f7c4a35afff19b5b903"
+        "sha256": "7f9cdadbb6ff57c9599059afd9173312393b358c5d236968103c6fa3f4fec12c"
       }
     },
     {
       "actionId": "firebud_village_gate_movement_path",
       "actionKind": "movement_path",
       "mapId": "firebud_village_gate",
-      "description": "Left-click the meadow near the pavilion and verify a readable multi-cell route across the village composition.",
+      "description": "点击服务区右侧草地，核对路线穿过主通道而不穿 NPC。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/movement_path.png",
-          "sha256": "92b54920aec4e1c08002394a8c7c7b3e86f19797a4fc115c5a54dfa8d1d27a33"
+          "sha256": "afa972f5448a5d89a76a38ce2c956cd0c853f2c5905cb18627ae39cae72ddb26"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/movement_path-capture.json",
-          "sha256": "43f316b04ab31e256621192a713ca6e81ec5755459dc2b78522fec74229db609"
+          "sha256": "6a178ac58962ab661cbd6c3753783875b72fa880516d880a8dfc67e13d6cf6a8"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-before.jpeg",
-          "sha256": "f23ecd2d3353bbe4beed144fe70cb718a2f89176f1a7e8e6db14d6eb41086f78"
+          "sha256": "ba5d6d68694ffa39945f9ca6cdea702c5668fb1bd7cfc92ca11606175bc5c54b"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-after.jpeg",
-          "sha256": "6354535dad44accf5bbd3cbade00f4a3ada7cb7b9ff642d7df3354887449d3fd"
+          "sha256": "9ba325c444efa4b917fa67cb4ebfc2c6ca9254cce53d870df38b7cd21171671a"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_movement_path.jsonl",
-        "sha256": "e8037791b6e7564459024186fe2297815c72ee92365b00cf0618346c5bf2b6bc"
+        "sha256": "d540af93e7d18e18ecdced4fbe21e3149aad18700aa481db5c0e4b2c7436a476"
       }
     },
     {
       "actionId": "firebud_village_gate_warp",
       "actionKind": "warp",
       "mapId": "firebud_village_gate",
-      "description": "Use the visible task route from the village, cross the return warp, and verify the training-yard arrival and next interaction.",
+      "description": "点击主线自动寻路，从火芽村返回训练场并打开训练师对话。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/warp.png",
-          "sha256": "a582079188c9ac3fa7538ccdb13c9f010ac2f088be98d2072516751b063264e7"
+          "sha256": "11d1e9c84f8e4a5512c9f448b524ffbec7544ad5e4d9b1eccbee1bb69bb8652f"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/warp-capture.json",
-          "sha256": "13887445fb299a8d8ea5ed5c74e1efd6667b576e16d977a3a0a8675856e6d1b9"
+          "sha256": "3dc5977d5b8d0b3bf92555e046c1d02b8afe9b593023273631b4b323bd376507"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-before.jpeg",
-          "sha256": "4e418c9196848130454958a298e6ab40ed2c23d226d999604e54743468b37bbf"
+          "sha256": "ba5d6d68694ffa39945f9ca6cdea702c5668fb1bd7cfc92ca11606175bc5c54b"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-after.jpeg",
-          "sha256": "3e38fa5bdd02e8258aa9deec8401c175c5d693a15aead1aeea41e73df557d22f"
+          "sha256": "54c230d78edf0064888ebc5795e8a53e2d82664d820a32418335f6301e45aaf0"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_warp.jsonl",
-        "sha256": "5d35108997a759d22a153a5b65784b58e0f2e2a96a87b2645b62eee2067d9e29"
+        "sha256": "439e23261ed8cf5c7b8d7e4a0ccaf4bfc588b3956d0c02abfaf8c8935bb7d9cb"
       }
     },
     {
       "actionId": "firebud_village_gate_collision",
       "actionKind": "collision",
       "mapId": "firebud_village_gate",
-      "description": "Click the low fence collision edge and verify the actor remains on its walkable side without visual overlap.",
+      "description": "点击古树树冠阻挡区，核对大地标视觉范围与不可行走 footprint。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/collision.png",
-          "sha256": "2435974614c68132afffe6ec1922375fc21d5f6f166970f21e34e4970c4d7786"
+          "sha256": "45146e180ebce9b785dc1522cbd2fe17064cf7e916bbf379bf683c748015cf2e"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/collision-capture.json",
-          "sha256": "e86f7a83f345adb45d78d2bf301829c71b3d77badc96567432d7d7f2bde4c03e"
+          "sha256": "f7c64966d4573da9cf4b85be25db6bedd7cc1a45e0b62ca020d8b096bcaa5eed"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-before.jpeg",
-          "sha256": "a302db9aef33f3981d957f236e3bf83f6b73227ca44a8f68ca8e203003e05453"
+          "sha256": "ba5d6d68694ffa39945f9ca6cdea702c5668fb1bd7cfc92ca11606175bc5c54b"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-after.jpeg",
-          "sha256": "4e418c9196848130454958a298e6ab40ed2c23d226d999604e54743468b37bbf"
+          "sha256": "abcbaaa3a3ef667ae0544d1cfea24b359a64a86915104442c905b1313ce812bf"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_collision.jsonl",
-        "sha256": "b1c5c33490efeacab37eeda99c73dc839764ddad774d02bfec363f9591d32885"
+        "sha256": "16f2fbf577a06f2da714054875fe65a540bc9bae70f48e0117d0171aa1ddbfa5"
       }
     },
     {
       "actionId": "firebud_village_gate_occlusion",
       "actionKind": "occlusion",
       "mapId": "firebud_village_gate",
-      "description": "Walk from behind the ancient tree to its foreground and verify canopy/trunk y-sort while roots remain blocking.",
+      "description": "走入火芽古树后侧，核对大型树冠与树干的前景遮挡。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/occlusion.png",
-          "sha256": "566813b170e701cec2e977ef1a1370d2bfe469e78a5a5a2da6710806d87f3cb1"
+          "sha256": "172eb42bfeb3e22fe3d82b162f0cdbdae5c5db4f5ace3b2fe080afd841e8d8fc"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/occlusion-capture.json",
-          "sha256": "863e92f0b12d1bf1b423e472a3e3e5aee6afb7ae2b4f51813959a442ae329d35"
+          "sha256": "130238153d4e7116cc8b6b7730b7bacf828a336ac603f0ead782b85db226262b"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-before.jpeg",
-          "sha256": "f605a60397c0026ef16a2715f04396f44be8fff8bac3424dbb12099e51d280ab"
+          "sha256": "ba5d6d68694ffa39945f9ca6cdea702c5668fb1bd7cfc92ca11606175bc5c54b"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-after.jpeg",
-          "sha256": "a302db9aef33f3981d957f236e3bf83f6b73227ca44a8f68ca8e203003e05453"
+          "sha256": "b6836ffe72145e22d995cb233bd945198b56659773a293c76d6d48e7ba051568"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_occlusion.jsonl",
-        "sha256": "aa9c9fd0bc265a141a90a1a3a3e8016a167cceea859655628c8c2a59d4295188"
+        "sha256": "53863051c620a080c10374f999d3245fb7d5cdbd4fd5aa231a3855cf46544004"
       }
     }
   ]

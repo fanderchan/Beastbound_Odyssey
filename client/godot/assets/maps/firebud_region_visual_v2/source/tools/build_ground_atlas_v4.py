@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Build the Firebud v2 layered 12-tile ground atlas deterministically.
+"""Build the Firebud v2 layered 12-, 27-, or 42-tile ground atlas deterministically.
 
 The generated 2x2 material source supplies quiet grass, clay, flagstone, and
 root-soil surfaces. The existing generated semantic sheet supplies the tall
 grass and warp identities. Base meadow tiles use a small same-material bleed
 to prevent raster seams. Semantic tiles use a feathered alpha matte so Godot
 can draw them over the meadow base without exposing the grid as hard diamonds.
+An optional generated 4x4 transition sheet adds all fifteen non-empty exposed
+edge combinations for the path without changing the frozen 12-tile build when
+the input is absent. A second 4x4 sheet does the same for exposed plaza edges.
+Cell 16 is intentionally transparent and proves the exact row-major contract.
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ from pathlib import Path
 
 from PIL import (
     Image,
+    ImageChops,
     ImageEnhance,
     ImageFilter,
     ImageOps,
@@ -27,9 +32,27 @@ from PIL import (
 )
 
 
-SCRIPT_VERSION = "1.0.0"
+SCRIPT_VERSION = "2.0.0"
 TILE_SIZE = (80, 40)
 ATLAS_COLUMNS = 4
+AUTOTILE_GRID_SIZE = 4
+AUTOTILE_SIGNATURES = (
+    "nw",
+    "ne",
+    "nw_ne",
+    "sw",
+    "nw_sw",
+    "ne_sw",
+    "nw_ne_sw",
+    "se",
+    "nw_se",
+    "ne_se",
+    "nw_ne_se",
+    "sw_se",
+    "nw_sw_se",
+    "ne_sw_se",
+    "nw_ne_sw_se",
+)
 TILE_ORDER = (
     "firebud_meadow_a",
     "firebud_ochre_path_a",
@@ -43,6 +66,12 @@ TILE_ORDER = (
     "firebud_honey_stone_moss_b",
     "firebud_tall_grass_encounter",
     "firebud_warp_stone",
+)
+TRANSITION_TILE_ORDER = tuple(
+    f"firebud_ochre_path_edge_{signature}" for signature in AUTOTILE_SIGNATURES
+)
+PLAZA_TRANSITION_TILE_ORDER = tuple(
+    f"firebud_honey_stone_edge_{signature}" for signature in AUTOTILE_SIGNATURES
 )
 
 
@@ -85,6 +114,42 @@ def quadrant(image: Image.Image, column: int, row: int) -> Image.Image:
     right = image.width * (column + 1) // 2
     bottom = image.height * (row + 1) // 2
     return image.crop((left, top, right, bottom))
+
+
+def autotile_cell(image: Image.Image, column: int, row: int) -> Image.Image:
+    if image.width != image.height:
+        raise BuildError(
+            f"autotile sheet must be square, got {image.width}x{image.height}"
+        )
+    if image.width % AUTOTILE_GRID_SIZE != 0:
+        raise BuildError(
+            f"autotile sheet size must divide by {AUTOTILE_GRID_SIZE}, "
+            f"got {image.width}x{image.height}"
+        )
+    cell_size = image.width // AUTOTILE_GRID_SIZE
+    left = column * cell_size
+    top = row * cell_size
+    return image.crop((left, top, left + cell_size, top + cell_size))
+
+
+def validate_autotile_sheet(image: Image.Image, label: str) -> None:
+    if image.width != image.height or image.width % AUTOTILE_GRID_SIZE != 0:
+        raise BuildError(
+            f"{label} must be a square {AUTOTILE_GRID_SIZE}x{AUTOTILE_GRID_SIZE} sheet"
+        )
+    for index in range(AUTOTILE_GRID_SIZE * AUTOTILE_GRID_SIZE):
+        row, column = divmod(index, AUTOTILE_GRID_SIZE)
+        cell = autotile_cell(image, column, row)
+        alpha_bbox = cell.getchannel("A").getbbox()
+        if index == len(AUTOTILE_SIGNATURES):
+            if alpha_bbox is not None:
+                raise BuildError(f"{label} row 4 column 4 must be transparent")
+            continue
+        if alpha_bbox is None:
+            raise BuildError(f"{label} cell {column},{row} has no visible alpha")
+        left, top, right, bottom = alpha_bbox
+        if left <= 0 or top <= 0 or right >= cell.width or bottom >= cell.height:
+            raise BuildError(f"{label} cell {column},{row} touches a cell edge")
 
 
 def centered_crop(
@@ -151,6 +216,27 @@ def diamond_mask(*, overlay: bool) -> Image.Image:
                     alpha = 0
                 else:
                     alpha = round(255.0 * (1.22 - distance) / 0.10)
+            pixels[x, y] = max(0, min(255, alpha))
+    return mask
+
+
+def connected_surface_mask() -> Image.Image:
+    """Keep connected road cells opaque while retaining a short outer matte."""
+
+    width, height = TILE_SIZE
+    mask = Image.new("L", TILE_SIZE, 0)
+    pixels = mask.load()
+    for y in range(height):
+        for x in range(width):
+            distance = abs((x + 0.5 - width / 2.0) / (width / 2.0)) + abs(
+                (y + 0.5 - height / 2.0) / (height / 2.0)
+            )
+            if distance <= 1.04:
+                alpha = 255
+            elif distance >= 1.14:
+                alpha = 0
+            else:
+                alpha = round(255.0 * (1.14 - distance) / 0.10)
             pixels[x, y] = max(0, min(255, alpha))
     return mask
 
@@ -225,6 +311,97 @@ def semantic_tile(
     return tile
 
 
+def _hue_band_mask(image: Image.Image) -> Image.Image:
+    """Select generated yellow/green grass while excluding ochre path pixels."""
+
+    hue, saturation, _value = image.convert("RGB").convert("HSV").split()
+    hue_mask = hue.point(
+        lambda value: (
+            0
+            if value < 28 or value > 112
+            else min(255, (value - 28) * 24)
+            if value < 39
+            else min(255, (112 - value) * 14)
+            if value > 94
+            else 255
+        )
+    )
+    saturation_mask = saturation.point(
+        lambda value: 0 if value <= 22 else min(255, (value - 22) * 7)
+    )
+    return ImageChops.multiply(hue_mask, saturation_mask).filter(
+        ImageFilter.GaussianBlur(radius=0.8)
+    )
+
+
+def _expanded_grass_mask(image: Image.Image) -> Image.Image:
+    return _hue_band_mask(image).filter(ImageFilter.MaxFilter(size=5)).filter(
+        ImageFilter.GaussianBlur(radius=0.55)
+    )
+
+
+def path_transition_tile(source: Image.Image, *, column: int, row: int) -> Image.Image:
+    """Normalize one generated directional path tile into the Firebud palette."""
+
+    cell = autotile_cell(source, column, row)
+    alpha_bbox = cell.getchannel("A").getbbox()
+    if alpha_bbox is None:
+        raise BuildError(f"path transition cell {column},{row} has no visible alpha")
+    tile = cell.crop(alpha_bbox).convert("RGBa").resize(
+        TILE_SIZE, Image.Resampling.LANCZOS
+    ).convert("RGBA")
+    source_alpha = tile.getchannel("A")
+    tile = ImageEnhance.Color(tile).enhance(0.76)
+    tile = ImageEnhance.Brightness(tile).enhance(0.78)
+    grass_mask = _expanded_grass_mask(tile)
+    path_grade = recolor_luminance(
+        tile,
+        (78, 46, 31),
+        (197, 132, 78),
+        0.90,
+    )
+    grass_grade = recolor_luminance(
+        tile,
+        (32, 50, 38),
+        (125, 147, 91),
+        0.96,
+    )
+    graded = Image.composite(grass_grade, path_grade, grass_mask)
+    graded.putalpha(ImageChops.darker(source_alpha, connected_surface_mask()))
+    return graded
+
+
+def plaza_transition_tile(source: Image.Image, *, column: int, row: int) -> Image.Image:
+    """Normalize one generated directional plaza tile into the Firebud palette."""
+
+    cell = autotile_cell(source, column, row)
+    alpha_bbox = cell.getchannel("A").getbbox()
+    if alpha_bbox is None:
+        raise BuildError(f"plaza transition cell {column},{row} has no visible alpha")
+    tile = cell.crop(alpha_bbox).convert("RGBa").resize(
+        TILE_SIZE, Image.Resampling.LANCZOS
+    ).convert("RGBA")
+    source_alpha = tile.getchannel("A")
+    tile = ImageEnhance.Color(tile).enhance(0.72)
+    tile = ImageEnhance.Brightness(tile).enhance(0.80)
+    grass_mask = _expanded_grass_mask(tile)
+    stone_grade = recolor_luminance(
+        tile,
+        (73, 66, 49),
+        (199, 182, 126),
+        0.90,
+    )
+    grass_grade = recolor_luminance(
+        tile,
+        (32, 50, 38),
+        (125, 147, 91),
+        0.96,
+    )
+    graded = Image.composite(grass_grade, stone_grade, grass_mask)
+    graded.putalpha(ImageChops.darker(source_alpha, connected_surface_mask()))
+    return graded
+
+
 def alpha_stats(image: Image.Image) -> dict[str, int]:
     alpha = image.getchannel("A")
     histogram = alpha.histogram()
@@ -235,7 +412,12 @@ def alpha_stats(image: Image.Image) -> dict[str, int]:
     }
 
 
-def build_tiles(materials: Image.Image, semantics: Image.Image) -> dict[str, Image.Image]:
+def build_tiles(
+    materials: Image.Image,
+    semantics: Image.Image,
+    transitions: Image.Image | None = None,
+    plaza_transitions: Image.Image | None = None,
+) -> dict[str, Image.Image]:
     meadow = quadrant(materials, 0, 0)
     clay = quadrant(materials, 1, 0)
     stone = quadrant(materials, 0, 1)
@@ -347,7 +529,40 @@ def build_tiles(materials: Image.Image, semantics: Image.Image) -> dict[str, Ima
             brightness=0.78,
         ),
     }
-    if tuple(tiles) != TILE_ORDER:
+    if transitions is not None:
+        validate_autotile_sheet(transitions, "path transition source")
+        for tile_id in (
+            "firebud_ochre_path_a",
+            "firebud_ochre_path_worn_b",
+        ):
+            tiles[tile_id].putalpha(connected_surface_mask())
+        for index, tile_id in enumerate(TRANSITION_TILE_ORDER):
+            row, column = divmod(index, AUTOTILE_GRID_SIZE)
+            tiles[tile_id] = path_transition_tile(
+                transitions,
+                column=column,
+                row=row,
+            )
+    if plaza_transitions is not None:
+        validate_autotile_sheet(plaza_transitions, "plaza transition source")
+        for tile_id in (
+            "firebud_honey_stone_a",
+            "firebud_honey_stone_moss_b",
+        ):
+            tiles[tile_id].putalpha(connected_surface_mask())
+        for index, tile_id in enumerate(PLAZA_TRANSITION_TILE_ORDER):
+            row, column = divmod(index, AUTOTILE_GRID_SIZE)
+            tiles[tile_id] = plaza_transition_tile(
+                plaza_transitions,
+                column=column,
+                row=row,
+            )
+    expected_order = (
+        TILE_ORDER
+        + (TRANSITION_TILE_ORDER if transitions is not None else ())
+        + (PLAZA_TRANSITION_TILE_ORDER if plaza_transitions is not None else ())
+    )
+    if tuple(tiles) != expected_order:
         raise BuildError("internal tile order drifted from the runtime contract")
     return tiles
 
@@ -388,6 +603,16 @@ def write_json_atomic(payload: dict, destination: Path, overwrite: bool) -> None
 def build(args: argparse.Namespace) -> dict:
     materials_path = args.materials.resolve()
     semantics_path = args.semantics.resolve()
+    transitions_argument = getattr(args, "transitions", None)
+    transitions_path = (
+        transitions_argument.resolve() if transitions_argument is not None else None
+    )
+    plaza_transitions_argument = getattr(args, "plaza_transitions", None)
+    plaza_transitions_path = (
+        plaza_transitions_argument.resolve()
+        if plaza_transitions_argument is not None
+        else None
+    )
     output_path = args.output.resolve()
     manifest_path = args.manifest.resolve()
     if output_path == manifest_path:
@@ -395,15 +620,35 @@ def build(args: argparse.Namespace) -> dict:
 
     materials = open_rgba(materials_path, "materials source")
     semantics = open_rgba(semantics_path, "semantic source")
-    tiles = build_tiles(materials, semantics)
-    atlas = Image.new("RGBA", (TILE_SIZE[0] * ATLAS_COLUMNS, TILE_SIZE[1] * 3), (0, 0, 0, 0))
-    for index, tile_id in enumerate(TILE_ORDER):
+    transitions = (
+        open_rgba(transitions_path, "path transition source")
+        if transitions_path is not None
+        else None
+    )
+    plaza_transitions = (
+        open_rgba(plaza_transitions_path, "plaza transition source")
+        if plaza_transitions_path is not None
+        else None
+    )
+    tiles = build_tiles(materials, semantics, transitions, plaza_transitions)
+    tile_order = (
+        TILE_ORDER
+        + (TRANSITION_TILE_ORDER if transitions is not None else ())
+        + (PLAZA_TRANSITION_TILE_ORDER if plaza_transitions is not None else ())
+    )
+    atlas_rows = (len(tile_order) + ATLAS_COLUMNS - 1) // ATLAS_COLUMNS
+    atlas = Image.new(
+        "RGBA",
+        (TILE_SIZE[0] * ATLAS_COLUMNS, TILE_SIZE[1] * atlas_rows),
+        (0, 0, 0, 0),
+    )
+    for index, tile_id in enumerate(tile_order):
         row, column = divmod(index, ATLAS_COLUMNS)
         atlas.alpha_composite(tiles[tile_id], (column * TILE_SIZE[0], row * TILE_SIZE[1]))
     save_png_atomic(atlas, output_path, args.overwrite)
 
     tile_entries = []
-    for index, tile_id in enumerate(TILE_ORDER):
+    for index, tile_id in enumerate(tile_order):
         row, column = divmod(index, ATLAS_COLUMNS)
         tile_entries.append(
             {
@@ -446,7 +691,7 @@ def build(args: argparse.Namespace) -> dict:
             ],
             "semanticOverlays": [
                 tile_id
-                for tile_id in TILE_ORDER
+                for tile_id in tile_order
                 if tile_id
                 not in {
                     "firebud_meadow_a",
@@ -456,9 +701,39 @@ def build(args: argparse.Namespace) -> dict:
                     "firebud_meadow_far",
                 }
             ],
+            "directionalPathTransitions": list(TRANSITION_TILE_ORDER)
+            if transitions is not None
+            else [],
+            "pathTransitionSignatures": list(AUTOTILE_SIGNATURES)
+            if transitions is not None
+            else [],
+            "directionalPlazaTransitions": list(PLAZA_TRANSITION_TILE_ORDER)
+            if plaza_transitions is not None
+            else [],
+            "plazaTransitionSignatures": list(AUTOTILE_SIGNATURES)
+            if plaza_transitions is not None
+            else [],
         },
         "tiles": tile_entries,
     }
+    if transitions_path is not None and transitions is not None:
+        payload["pathTransitionSource"] = {
+            "path": portable_path(transitions_path),
+            "sha256": sha256(transitions_path),
+            "dimensions": list(transitions.size),
+            "grid": {"rows": 4, "columns": 4},
+            "blankCell": [3, 3],
+            "signatures": list(AUTOTILE_SIGNATURES),
+        }
+    if plaza_transitions_path is not None and plaza_transitions is not None:
+        payload["plazaTransitionSource"] = {
+            "path": portable_path(plaza_transitions_path),
+            "sha256": sha256(plaza_transitions_path),
+            "dimensions": list(plaza_transitions.size),
+            "grid": {"rows": 4, "columns": 4},
+            "blankCell": [3, 3],
+            "signatures": list(AUTOTILE_SIGNATURES),
+        }
     write_json_atomic(payload, manifest_path, args.overwrite)
     return payload
 
@@ -467,6 +742,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--materials", type=Path, required=True)
     parser.add_argument("--semantics", type=Path, required=True)
+    parser.add_argument("--transitions", type=Path)
+    parser.add_argument("--plaza-transitions", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--overwrite", action="store_true")

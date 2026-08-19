@@ -24,6 +24,7 @@ from typing import Any, Iterable
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GODOT_ROOT = REPO_ROOT / "client/godot"
 GODOT_SCENE = "res://scenes/Main.tscn"
+COLLISION_LOG_PATH = "../../.run/map-visual-runtime-check.log"
 COLLISION_COMMAND = (
     "godot --headless --path client/godot --script "
     "res://scripts/qa/map_visual_runtime_check.gd"
@@ -33,8 +34,19 @@ COLLISION_COMMAND_ARGS = (
     "--headless",
     "--path",
     "client/godot",
+    "--log-file",
+    COLLISION_LOG_PATH,
     "--script",
     "res://scripts/qa/map_visual_runtime_check.gd",
+)
+COLLISION_PREVIEW_FLAG = "--preview-map-visual-catalog-contract"
+COLLISION_PREVIEW_COMMAND = (
+    f"{COLLISION_COMMAND} -- {COLLISION_PREVIEW_FLAG}"
+)
+COLLISION_PREVIEW_COMMAND_ARGS = (
+    *COLLISION_COMMAND_ARGS,
+    "--",
+    COLLISION_PREVIEW_FLAG,
 )
 RUNNER_VERSION = "4.7.stable.official.5b4e0cb0f"
 THRESHOLDS = {
@@ -382,13 +394,31 @@ def _runtime_payload(receipt: Path) -> dict[str, Any]:
 def capture_collision_receipt(
     bundle_id: str,
     *,
+    allow_pending_catalog_preview: bool = False,
     runner: Any = subprocess.run,
 ) -> Path:
     if bundle_id not in MAP_BUNDLES:
         raise EvidenceError(f"unknown map bundle: {bundle_id}")
     relative_root, expected_map_ids = MAP_BUNDLES[bundle_id]
+    bundle_root = GODOT_ROOT / relative_root
+    command_args = COLLISION_COMMAND_ARGS
+    expected_mode = "strict_frozen_validation"
+    if allow_pending_catalog_preview:
+        manifest = _read_json(bundle_root / "map-visual-bundle.json")
+        if (
+            manifest.get("status") != "owner_review_pending"
+            or manifest.get("ownerReviewStatus") != "pending"
+            or manifest.get("releaseApproved") is not False
+            or manifest.get("runtimeEnabled") is not False
+        ):
+            raise EvidenceError(
+                "catalog preview receipt is restricted to a fail-closed "
+                "owner_review_pending bundle"
+            )
+        command_args = COLLISION_PREVIEW_COMMAND_ARGS
+        expected_mode = "catalog_contract_preview"
     completed = runner(
-        list(COLLISION_COMMAND_ARGS),
+        list(command_args),
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -401,7 +431,7 @@ def capture_collision_receipt(
         )
     payload = _runtime_payload_text(receipt_text, label="Godot stdout/stderr")
     if (
-        payload.get("mode") != "strict_frozen_validation"
+        payload.get("mode") != expected_mode
         or payload.get("result") != "PASS"
         or payload.get("errors") != []
     ):
@@ -414,8 +444,31 @@ def capture_collision_receipt(
         or tuple(report.get("testedMapIds", ())) != expected_map_ids
     ):
         raise EvidenceError(f"runtime receipt lacks PASS bundle report: {bundle_id}")
+    if allow_pending_catalog_preview:
+        frozen_catalog = _read_json(
+            bundle_root / "evidence/catalog-contract-check.json"
+        )
+        if (
+            frozen_catalog.get("bundleId") != bundle_id
+            or frozen_catalog.get("result") != "PASS"
+            or frozen_catalog.get("errors") != []
+        ):
+            raise EvidenceError(
+                f"pending bundle catalog contract is not a clean PASS: {bundle_id}"
+            )
+        for key in (
+            "testedMapIds",
+            "catalogSha256",
+            "bindingHashes",
+            "mapDataHashes",
+            "maps",
+        ):
+            if report.get(key) != frozen_catalog.get(key):
+                raise EvidenceError(
+                    f"catalog preview/frozen snapshot drift at {key}"
+                )
 
-    output = GODOT_ROOT / relative_root / "evidence/collision-runner-receipt.log"
+    output = bundle_root / "evidence/collision-runner-receipt.log"
     temp = output.with_name(f".{output.name}.{os.getpid()}.tmp")
     if temp.exists():
         raise EvidenceError(f"collision receipt temp already exists: {temp}")
@@ -478,7 +531,11 @@ def build_collision_report(
         "result": "PASS",
         "generatedAtUtc": report_snapshot["generatedAtUtc"],
         "scene": GODOT_SCENE,
-        "command": COLLISION_COMMAND,
+        "command": (
+            COLLISION_PREVIEW_COMMAND
+            if runtime.get("mode") == "catalog_contract_preview"
+            else COLLISION_COMMAND
+        ),
         "testedMapIds": list(map_ids),
         "checks": {key: "PASS" for key in REQUIRED_COLLISION_CHECKS},
         "maps": maps,
@@ -803,12 +860,28 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--build-identity")
     parser.add_argument("--update-manifest-ref", action="store_true")
+    parser.add_argument(
+        "--allow-pending-catalog-preview",
+        action="store_true",
+        help=(
+            "For collision-receipt only: use the read-only catalog preview "
+            "runner for an exact fail-closed owner_review_pending bundle."
+        ),
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        if (
+            args.allow_pending_catalog_preview
+            and args.mode != "collision-receipt"
+        ):
+            raise EvidenceError(
+                "--allow-pending-catalog-preview is only valid for "
+                "collision-receipt"
+            )
         identity = build_identity()
         if args.mode == "identity":
             print(identity)
@@ -816,7 +889,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.bundle_id is None:
             raise EvidenceError("--bundle-id is required")
         if args.mode == "collision-receipt":
-            output = capture_collision_receipt(args.bundle_id)
+            output = capture_collision_receipt(
+                args.bundle_id,
+                allow_pending_catalog_preview=(
+                    args.allow_pending_catalog_preview
+                ),
+            )
             print(
                 json.dumps(
                     {

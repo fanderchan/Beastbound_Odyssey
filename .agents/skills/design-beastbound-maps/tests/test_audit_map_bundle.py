@@ -145,6 +145,22 @@ class RuntimeScreenshotCoverageTests(unittest.TestCase):
             AUDITOR.duplicate_runtime_screenshot_hashes(screenshots),
         )
 
+
+class CollisionCommandContractTests(unittest.TestCase):
+    def test_strict_and_read_only_pending_preview_are_the_only_commands(self) -> None:
+        self.assertEqual(
+            {
+                AUDITOR.COLLISION_COMMAND,
+                AUDITOR.COLLISION_PREVIEW_COMMAND,
+            },
+            AUDITOR.VALID_COLLISION_COMMANDS,
+        )
+        self.assertNotIn(
+            AUDITOR.COLLISION_COMMAND + " --generate-map-visual-catalog-contract",
+            AUDITOR.VALID_COLLISION_COMMANDS,
+        )
+
+
 class ReleaseAttestationTests(unittest.TestCase):
     def _write_attestation(
         self,

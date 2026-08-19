@@ -17,7 +17,7 @@
   ],
   "catalogContractCheck": {
     "path": "evidence/catalog-contract-check.json",
-    "sha256": "bb62917d0e6fa5bf001b108410ebf561cc071be6e54fdeabff94158c40938460"
+    "sha256": "46429126f35245a2fac8c7b466a473fb4b2f0af505d256596f4e4e5679e4a90d"
   },
   "source": {
     "origin": "AI-generated original",
@@ -67,6 +67,22 @@
         ]
       },
       {
+        "path": "source/raw/firebud-path-edge-transitions-v1.png",
+        "sha256": "08520c520bc7d7fc263ec651b67ffb42f516a16fc100b001c4567f675deca11b",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-transitions-v1.png",
+        "sha256": "c279c9c0ba743d8455d820078268263227e5b87b464832f8fb6c1305e38e360a",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      {
         "path": "source/raw/firebud-tree-landmark-v1.png",
         "sha256": "0f45e533ba766c001c6c47be030c0f671aba57909e2ff9f87bb6d2bbaf709c63",
         "dimensions": [
@@ -97,6 +113,96 @@
           1254,
           1254
         ]
+      },
+      {
+        "path": "source/raw/firebud-life-training-props-v2.png",
+        "sha256": "02ade1a16625f779d4b62611a90ce4504d8cad711feb3abece1a4a0f9304516c",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      {
+        "path": "source/raw/firebud-life-training-props-v2-chroma.png",
+        "sha256": "bfb0cc13e0235b8f11d599beb0f33568a44f332114d0367c4e5a1a467940bc66",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v2-row-1.png",
+        "sha256": "6a90f2e4a4cea4a1ca1db65a5efeab1e8893c5dc940845c5ed6a0d35057ae26e",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v2-row-2.png",
+        "sha256": "786502f18f5a852e2878f5977a7c4981da4f05b66395de6584fd157c4e2c9e99",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v2-row-3.png",
+        "sha256": "2492425b9ecd1cbd791587b6cd17d3dfd0ba4247008e1ef5d669a0b634b8bd05",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v2-row-4.png",
+        "sha256": "57b32b1716e5fba26d9948262dcff50003ff05f630dc353053e37101950b2639",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v2-row-1-rejected-raised-slab.png",
+        "sha256": "2429f25ec866530ec89b73206e68a781bfafcf9327c39cea90455f44afc71cf3",
+        "dimensions": [
+          1774,
+          887
+        ],
+        "acceptedForRuntime": false,
+        "lineageOnly": true
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v2-row-1.png",
+        "sha256": "8b5e68b30c2ce74ffaaa57814b82ce1c67275a725931eb5f4168895a70aac62f",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v2-row-2.png",
+        "sha256": "97788fa84f6f7b21f07181dd80cfe8f806a6c1caba0ffd8d783de117c0b7e583",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v2-row-3.png",
+        "sha256": "d5d202785f5ee30b5331847be0eed4a3ea087272a4f9ea4c17122fa970513906",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v2-row-4.png",
+        "sha256": "3f4eeac231a6bafe3c68bfe2e9c675ae2c8344d13038bb7b6acbd745cae62202",
+        "dimensions": [
+          1774,
+          887
+        ]
       }
     ],
     "buildArtifacts": [
@@ -125,8 +231,24 @@
         ]
       },
       {
+        "path": "source/processed/firebud-path-edge-transitions-v1-alpha.png",
+        "sha256": "0708fe86c286c91a52f376f88db2311d2360589e5da86bc920473b4275e238ae",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-transitions-v1-alpha.png",
+        "sha256": "62403172844340cac98a728ad97d400ede22f4aaa3b2e03eebce30556641879c",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      {
         "path": "source/processed/firebud-ground-materials-v4-build-manifest.json",
-        "sha256": "02e4f7073c57561bdd6d1a4eb2be46cde1074db64879876dc1f08715ac051a67"
+        "sha256": "b4d7dbb56cd541730a0c85ec69a2cff932c3f2cad3945e47f4507c394ce42ad6"
       },
       {
         "path": "source/processed/firebud-ground-sheet-v3-combined-12tiles.png",
@@ -175,6 +297,106 @@
           1254,
           1254
         ]
+      },
+      {
+        "path": "source/processed/firebud-life-training-props-v2-alpha.png",
+        "sha256": "7a823a0b90a048ac8ff1639f8f6d09aa6953c3cab403afbec7e88a8f1ef0a868",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      {
+        "path": "source/processed/firebud-life-training-props-v2-manifest.json",
+        "sha256": "3755114ba8f72d46b587a7ec1c3147f522ebefebed50ee141a2ddfc9d1c5c9e5"
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v2-row-1-alpha.png",
+        "sha256": "1ab54dd83a500c03693d0a5f001f5f923301b588154442a6806b999a7ed728ec",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v2-row-2-alpha.png",
+        "sha256": "da158f02ad46ee0334638586ea4823757e0b2e81429b7796aeb0ace7229ec264",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v2-row-3-alpha.png",
+        "sha256": "c358c48ecbf4f3070fcbe64ecd7c2cf45fbdc9e810acfc9762be059335c022a3",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v2-row-4-alpha.png",
+        "sha256": "7605554b958a4fa9893b01e82ffb34664e3bbd8ec7dc2705f648acc37ae594ec",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v2-row-1-alpha.png",
+        "sha256": "45a896c09543484b4f7f71de369131cd150217bdc344621ef90b979ade80b7ff",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v2-row-2-alpha.png",
+        "sha256": "77db9fec42b18d127413735be5ab5eb2e419835cc1ea738432a0921d5e05f2fb",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v2-row-3-alpha.png",
+        "sha256": "e7ee3bc0be0a6ceefee7b2c46f4b3afd4672a63cbd9479437b6738eeefd5767d",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v2-row-4-alpha.png",
+        "sha256": "d07285144f94afc4c0fe86b6b56faac4b8471413b80f0beab35dcd82da996c97",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v2-alpha.png",
+        "sha256": "bfddf32516926325f112cf73415962f4cec50e30e3821b54fa5e8bb4ae3dd94d",
+        "dimensions": [
+          1776,
+          1776
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v2-alpha.png",
+        "sha256": "1a45d4a24eb59b7a9b1dbbc0d0ef8cee25c7b284cd56cd3f7d32d393f3aea00f",
+        "dimensions": [
+          1776,
+          1776
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v2-assembly-manifest.json",
+        "sha256": "ae22a5cc1b546aaffc507ffb7666fe86786a8dec5f80e1b69f1f1067efa458a2"
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v2-assembly-manifest.json",
+        "sha256": "597472fe0300c1fcabc4b8eeae4cf4c6980a1b9f0df1af456b590aecf7ee8cac"
       }
     ],
     "promptFiles": [
@@ -199,6 +421,14 @@
         "sha256": "8504e031c4eb2c99e21bfcb3b080fc7f12034781777b16581e5f6af88512bcf3"
       },
       {
+        "path": "source/prompts/firebud-path-edge-transitions-v1.md",
+        "sha256": "b2a8eb9cef648e68bfbc8141348dc345a8246b28cb74e8aa445c048dbf8919db"
+      },
+      {
+        "path": "source/prompts/firebud-plaza-edge-transitions-v1.md",
+        "sha256": "b8d10f82212800210d04fa40026ea99ca00c0787b3b9c72dcd3bcd8bf3eef182"
+      },
+      {
         "path": "source/prompts/firebud-ancient-tree-v1.md",
         "sha256": "c4ebacbadd25e91cda332b6e3299c86223a9f92c7a53f31b501f142eebf4b49a"
       },
@@ -213,19 +443,31 @@
       {
         "path": "source/prompts/reused-v1/firebud-service-pavilion.md",
         "sha256": "be8362d85d347b6a3a24282ab81854a0b6fbde4f0c0ccb8d04cdda8ffb44b179"
+      },
+      {
+        "path": "source/prompts/firebud-life-training-props-v2.md",
+        "sha256": "b7a82c639ec06363d9b68c7e23caefb176e737184a929f9170d3b7894b1144ee"
+      },
+      {
+        "path": "source/prompts/firebud-path-edge-autotile-v2.md",
+        "sha256": "4ca58cb4be3f520d0c655fdc3d23bd5b5334e2b3b76ab5b4117cff391d44c17d"
+      },
+      {
+        "path": "source/prompts/firebud-plaza-edge-autotile-v2.md",
+        "sha256": "3b47206c111a56195af93fc5f46e41c7bbf1d3423892260528ee3a13533fb4f0"
       }
     ],
     "provenance": {
       "path": "source/provenance.json",
-      "sha256": "564af4edf96f12cc4cdc96f4491ad53fd91f34dfa9bf85c3581e563f0f6486b3"
+      "sha256": "b23a547dd865e8682981208ec81decd70b78bdfda19f5dc95206d3e652449a15"
     }
   },
   "groundAtlas": {
     "path": "runtime/ground/atlas.png",
-    "sha256": "991e8c2010ade24738b8475db0549fe9dadb38874afc96ae5490a344c0638265",
+    "sha256": "5a57acdf761d5c3ed4a901178bc9407368f33b46e367c38c909aad3bbc80dd31",
     "dimensions": [
       320,
-      120
+      440
     ],
     "alphaMode": "mixed"
   },
@@ -349,6 +591,306 @@
         40
       ],
       "role": "warp"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw",
+      "rect": [
+        0,
+        120,
+        80,
+        40
+      ],
+      "role": "path_transition_nw"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_ne",
+      "rect": [
+        80,
+        120,
+        80,
+        40
+      ],
+      "role": "path_transition_ne"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_ne",
+      "rect": [
+        160,
+        120,
+        80,
+        40
+      ],
+      "role": "path_transition_nw_ne"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_sw",
+      "rect": [
+        240,
+        120,
+        80,
+        40
+      ],
+      "role": "path_transition_sw"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_sw",
+      "rect": [
+        0,
+        160,
+        80,
+        40
+      ],
+      "role": "path_transition_nw_sw"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_ne_sw",
+      "rect": [
+        80,
+        160,
+        80,
+        40
+      ],
+      "role": "path_transition_ne_sw"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_ne_sw",
+      "rect": [
+        160,
+        160,
+        80,
+        40
+      ],
+      "role": "path_transition_nw_ne_sw"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_se",
+      "rect": [
+        240,
+        160,
+        80,
+        40
+      ],
+      "role": "path_transition_se"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_se",
+      "rect": [
+        0,
+        200,
+        80,
+        40
+      ],
+      "role": "path_transition_nw_se"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_ne_se",
+      "rect": [
+        80,
+        200,
+        80,
+        40
+      ],
+      "role": "path_transition_ne_se"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_ne_se",
+      "rect": [
+        160,
+        200,
+        80,
+        40
+      ],
+      "role": "path_transition_nw_ne_se"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_sw_se",
+      "rect": [
+        240,
+        200,
+        80,
+        40
+      ],
+      "role": "path_transition_sw_se"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_sw_se",
+      "rect": [
+        0,
+        240,
+        80,
+        40
+      ],
+      "role": "path_transition_nw_sw_se"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_ne_sw_se",
+      "rect": [
+        80,
+        240,
+        80,
+        40
+      ],
+      "role": "path_transition_ne_sw_se"
+    },
+    {
+      "tileId": "firebud_ochre_path_edge_nw_ne_sw_se",
+      "rect": [
+        160,
+        240,
+        80,
+        40
+      ],
+      "role": "path_transition_nw_ne_sw_se"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw",
+      "rect": [
+        240,
+        240,
+        80,
+        40
+      ],
+      "role": "plaza_transition_nw"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_ne",
+      "rect": [
+        0,
+        280,
+        80,
+        40
+      ],
+      "role": "plaza_transition_ne"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_ne",
+      "rect": [
+        80,
+        280,
+        80,
+        40
+      ],
+      "role": "plaza_transition_nw_ne"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_sw",
+      "rect": [
+        160,
+        280,
+        80,
+        40
+      ],
+      "role": "plaza_transition_sw"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_sw",
+      "rect": [
+        240,
+        280,
+        80,
+        40
+      ],
+      "role": "plaza_transition_nw_sw"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_ne_sw",
+      "rect": [
+        0,
+        320,
+        80,
+        40
+      ],
+      "role": "plaza_transition_ne_sw"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_ne_sw",
+      "rect": [
+        80,
+        320,
+        80,
+        40
+      ],
+      "role": "plaza_transition_nw_ne_sw"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_se",
+      "rect": [
+        160,
+        320,
+        80,
+        40
+      ],
+      "role": "plaza_transition_se"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_se",
+      "rect": [
+        240,
+        320,
+        80,
+        40
+      ],
+      "role": "plaza_transition_nw_se"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_ne_se",
+      "rect": [
+        0,
+        360,
+        80,
+        40
+      ],
+      "role": "plaza_transition_ne_se"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_ne_se",
+      "rect": [
+        80,
+        360,
+        80,
+        40
+      ],
+      "role": "plaza_transition_nw_ne_se"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_sw_se",
+      "rect": [
+        160,
+        360,
+        80,
+        40
+      ],
+      "role": "plaza_transition_sw_se"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_sw_se",
+      "rect": [
+        240,
+        360,
+        80,
+        40
+      ],
+      "role": "plaza_transition_nw_sw_se"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_ne_sw_se",
+      "rect": [
+        0,
+        400,
+        80,
+        40
+      ],
+      "role": "plaza_transition_ne_sw_se"
+    },
+    {
+      "tileId": "firebud_honey_stone_edge_nw_ne_sw_se",
+      "rect": [
+        80,
+        400,
+        80,
+        40
+      ],
+      "role": "plaza_transition_nw_ne_sw_se"
     }
   ],
   "objects": [
@@ -880,11 +1422,11 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        130,
-        142
+        70,
+        76
       ],
       "renderLayer": "world",
-      "collisionRole": "blocking",
+      "collisionRole": "interaction",
       "scale": [
         1.0,
         1.0
@@ -922,6 +1464,209 @@
           ]
         ]
       }
+    },
+    {
+      "objectId": "firebud_training_rack",
+      "asset": {
+        "path": "runtime/objects/firebud_training_rack.png",
+        "sha256": "282b3fec074b1e334d52fc59f00bd034ec6948896cab50abb22bdeef0b80ab8d",
+        "dimensions": [
+          240,
+          256
+        ],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [
+        126,
+        134
+      ],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "sortPoint": [
+        0.5,
+        1.0
+      ],
+      "sort": {
+        "mode": "y",
+        "offset": 0
+      },
+      "collision": {
+        "mode": "polygon",
+        "points": [
+          [
+            28,
+            208
+          ],
+          [
+            212,
+            208
+          ],
+          [
+            222,
+            244
+          ],
+          [
+            18,
+            244
+          ]
+        ]
+      }
+    },
+    {
+      "objectId": "firebud_practice_cluster",
+      "asset": {
+        "path": "runtime/objects/firebud_practice_cluster.png",
+        "sha256": "48a301e208d9ce1232895b3ad46f202a1c1509b3874671331a97937b5be1ab02",
+        "dimensions": [
+          218,
+          256
+        ],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [
+        120,
+        141
+      ],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "sortPoint": [
+        0.5,
+        1.0
+      ],
+      "sort": {
+        "mode": "y",
+        "offset": 0
+      },
+      "collision": {
+        "mode": "polygon",
+        "points": [
+          [
+            24,
+            211
+          ],
+          [
+            194,
+            211
+          ],
+          [
+            206,
+            244
+          ],
+          [
+            14,
+            244
+          ]
+        ]
+      }
+    },
+    {
+      "objectId": "firebud_trade_counter",
+      "asset": {
+        "path": "runtime/objects/firebud_trade_counter.png",
+        "sha256": "8ddc94a039c1d47a477ae6880bc0c01234674090239ee9dfe591f7c9b02773b3",
+        "dimensions": [
+          256,
+          220
+        ],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [
+        132,
+        113
+      ],
+      "renderLayer": "world",
+      "collisionRole": "blocking",
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "sortPoint": [
+        0.5,
+        1.0
+      ],
+      "sort": {
+        "mode": "y",
+        "offset": 0
+      },
+      "collision": {
+        "mode": "polygon",
+        "points": [
+          [
+            20,
+            170
+          ],
+          [
+            236,
+            170
+          ],
+          [
+            246,
+            208
+          ],
+          [
+            10,
+            208
+          ]
+        ]
+      }
+    },
+    {
+      "objectId": "firebud_grass_scatter_decal",
+      "asset": {
+        "path": "runtime/objects/firebud_grass_scatter_decal.png",
+        "sha256": "0f2914b9ad6c0595bf410c1405bca79379b1bedc7295d00d2b9761da96113145",
+        "dimensions": [
+          256,
+          166
+        ],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [
+        112,
+        73
+      ],
+      "renderLayer": "ground_decal",
+      "collisionRole": "decorative",
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "sortPoint": [
+        0.5,
+        1.0
+      ],
+      "sort": {
+        "mode": "y",
+        "offset": 0
+      },
+      "collision": {
+        "mode": "none",
+        "points": []
+      }
     }
   ],
   "mapBindings": [
@@ -929,43 +1674,52 @@
       "mapId": "firebud_training_yard",
       "binding": {
         "path": "bindings/firebud_training_yard.json",
-        "sha256": "d1b249a4aa923e07864358fea1bb4bc5a5fa82db4c1eaf7899378ca9312cc14b"
+        "sha256": "2775987fa144e2a7f337a03d871bcd835d176e9af7a5461024997a0e3aaed073"
       }
     },
     {
       "mapId": "firebud_village_gate",
       "binding": {
         "path": "bindings/firebud_village_gate.json",
-        "sha256": "b0c7335a9d40dffc24a7b0c4e7d5a86522d57b7b481cced458ca3374a1747962"
+        "sha256": "0a97650b8a8781f4831881cbf99adbc76d3a2287bdd08ef7aeaf17a15fb33252"
       }
     }
   ],
   "evidence": {
-    "dressedReference": {
+    "dressedReference": null,
+    "layeredPreview": null,
+    "runtimeScreenshots": [],
+    "computerUseReport": null,
+    "collisionAudit": {
+      "path": "evidence/collision-audit.json",
+      "sha256": "c78abc27778ca7daa1d7fb20c35f7cbc0aba80bb028535d3743bf0eadaa59e58"
+    },
+    "performanceReport": null,
+    "supersededDressedReference": {
       "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
-      "sha256": "a2e81c6048d888e135e26dc37ce38f4876b2ee7f1f025caafb9b384354d57f82",
+      "sha256": "ec3097b99ded84d4cfbfe413f252654c8fe43af32790e5b4de78b840349247a5",
       "dimensions": [
         1280,
         720
       ],
       "alphaMode": "opaque"
     },
-    "layeredPreview": {
+    "supersededLayeredPreview": {
       "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
-      "sha256": "76c47a72c16455fc8a735490284f9203fe3daeea1814f40018b541849116051b",
+      "sha256": "380376878d8b4c55afde488a9f456ccda9b2082a8ea6ab2c96d2e4ee47ae8fa8",
       "dimensions": [
         1280,
         720
       ],
       "alphaMode": "opaque"
     },
-    "runtimeScreenshots": [
+    "supersededRuntimeScreenshots": [
       {
         "mapId": "firebud_training_yard",
         "mode": "idle",
         "image": {
           "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
-          "sha256": "76c47a72c16455fc8a735490284f9203fe3daeea1814f40018b541849116051b",
+          "sha256": "380376878d8b4c55afde488a9f456ccda9b2082a8ea6ab2c96d2e4ee47ae8fa8",
           "dimensions": [
             1280,
             720
@@ -974,7 +1728,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/firebud_training_yard/pointer-capture.json",
-          "sha256": "212127582b83dba9e14b2a00bc89e6263149c5f30727d791ce03bb1328dae81a"
+          "sha256": "830a3a2b4d04d5d1f1a3228642d3d284010c9afd0ddf3a1513de9dab69587b55"
         }
       },
       {
@@ -982,7 +1736,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/firebud_training_yard/movement_path.png",
-          "sha256": "ea912ff531460b8de85eb2d5502af0ca145f386384ff6d8a47a9359dbf4a8751",
+          "sha256": "533ba8938f7b0064ca95d41bcbeba303006156642bd02b78604e681905dd85ca",
           "dimensions": [
             1280,
             720
@@ -991,7 +1745,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/firebud_training_yard/movement_path-capture.json",
-          "sha256": "2830dba6a83b3047f19d9e02364b4b1f12468eda86275843058ca15d20dd4657"
+          "sha256": "062d94940cb23fa2980a9130546235c4f0e405ccf4cb342009de8e673b7b9ecc"
         }
       },
       {
@@ -999,7 +1753,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/firebud_training_yard/warp.png",
-          "sha256": "c6a4ff50033d14d8fd3ddaa6054fdae78f4c7e63954f7f448b8288cb09fe9124",
+          "sha256": "1fce54124434e53a5e9579a8949a173498ba19c04b154995c6e49a11482c368d",
           "dimensions": [
             1280,
             720
@@ -1008,7 +1762,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/firebud_training_yard/warp-capture.json",
-          "sha256": "180c2c0454a710958ba378f99bd33f38c9c9fd796d4fca7727ac8ab405c78241"
+          "sha256": "f9f1aeec30063fd5ef860080b9d91a35e914aaf25c3b314f25e43ce2a5542d2b"
         }
       },
       {
@@ -1016,7 +1770,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/firebud_training_yard/collision.png",
-          "sha256": "d3218040c65710e4722fd902c90523eeabfe569dfb413298b83fb74c1e098883",
+          "sha256": "ae0c7e59fd2c488561e6b35b80b98b4a523e42be2efb22936dd5eb73cddeea9c",
           "dimensions": [
             1280,
             720
@@ -1025,7 +1779,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/firebud_training_yard/collision-capture.json",
-          "sha256": "db20ec9fdfae24a299ba0a772bf949f38661d1bb513f78d63a01d877fabc343f"
+          "sha256": "f8f958cd1a82a707c21e8766481efb12c407f4e5628c2b1b9bce9d2b25762da1"
         }
       },
       {
@@ -1033,7 +1787,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/firebud_training_yard/occlusion.png",
-          "sha256": "468d4e0918c528f957ae79bdaa83ffe245a76d4209c9b79d3cde28a1c317ca4e",
+          "sha256": "1c1ac74cf6af001f20077fa9158e7c6d252c0731d31a4b4d4821f22a61471166",
           "dimensions": [
             1280,
             720
@@ -1042,7 +1796,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/firebud_training_yard/occlusion-capture.json",
-          "sha256": "062cf0aa6490dff754fd7efbce7c0cc9f3012c83344a229746161be6a89667bb"
+          "sha256": "703c3c127c48a39fc53b7f90678cc9187bd6fa8d2864158939519cfc8bb490c5"
         }
       },
       {
@@ -1050,7 +1804,7 @@
         "mode": "idle",
         "image": {
           "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
-          "sha256": "a2e81c6048d888e135e26dc37ce38f4876b2ee7f1f025caafb9b384354d57f82",
+          "sha256": "ec3097b99ded84d4cfbfe413f252654c8fe43af32790e5b4de78b840349247a5",
           "dimensions": [
             1280,
             720
@@ -1059,7 +1813,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/firebud_village_gate/pointer-capture.json",
-          "sha256": "b6955c575e951ff37e6d2c960a2854f2b9f94a9cf58e6c2b70e8b0dde125e4cf"
+          "sha256": "8b7f896c357b38c18042c77a24f8f8b0d462b766e7448ad3e916b19ed2c6661b"
         }
       },
       {
@@ -1067,7 +1821,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/firebud_village_gate/movement_path.png",
-          "sha256": "92b54920aec4e1c08002394a8c7c7b3e86f19797a4fc115c5a54dfa8d1d27a33",
+          "sha256": "afa972f5448a5d89a76a38ce2c956cd0c853f2c5905cb18627ae39cae72ddb26",
           "dimensions": [
             1280,
             720
@@ -1076,7 +1830,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/firebud_village_gate/movement_path-capture.json",
-          "sha256": "43f316b04ab31e256621192a713ca6e81ec5755459dc2b78522fec74229db609"
+          "sha256": "6a178ac58962ab661cbd6c3753783875b72fa880516d880a8dfc67e13d6cf6a8"
         }
       },
       {
@@ -1084,7 +1838,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/firebud_village_gate/warp.png",
-          "sha256": "a582079188c9ac3fa7538ccdb13c9f010ac2f088be98d2072516751b063264e7",
+          "sha256": "11d1e9c84f8e4a5512c9f448b524ffbec7544ad5e4d9b1eccbee1bb69bb8652f",
           "dimensions": [
             1280,
             720
@@ -1093,7 +1847,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/firebud_village_gate/warp-capture.json",
-          "sha256": "13887445fb299a8d8ea5ed5c74e1efd6667b576e16d977a3a0a8675856e6d1b9"
+          "sha256": "3dc5977d5b8d0b3bf92555e046c1d02b8afe9b593023273631b4b323bd376507"
         }
       },
       {
@@ -1101,7 +1855,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/firebud_village_gate/collision.png",
-          "sha256": "2435974614c68132afffe6ec1922375fc21d5f6f166970f21e34e4970c4d7786",
+          "sha256": "45146e180ebce9b785dc1522cbd2fe17064cf7e916bbf379bf683c748015cf2e",
           "dimensions": [
             1280,
             720
@@ -1110,7 +1864,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/firebud_village_gate/collision-capture.json",
-          "sha256": "e86f7a83f345adb45d78d2bf301829c71b3d77badc96567432d7d7f2bde4c03e"
+          "sha256": "f7c64966d4573da9cf4b85be25db6bedd7cc1a45e0b62ca020d8b096bcaa5eed"
         }
       },
       {
@@ -1118,7 +1872,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/firebud_village_gate/occlusion.png",
-          "sha256": "566813b170e701cec2e977ef1a1370d2bfe469e78a5a5a2da6710806d87f3cb1",
+          "sha256": "172eb42bfeb3e22fe3d82b162f0cdbdae5c5db4f5ace3b2fe080afd841e8d8fc",
           "dimensions": [
             1280,
             720
@@ -1127,21 +1881,21 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/firebud_village_gate/occlusion-capture.json",
-          "sha256": "863e92f0b12d1bf1b423e472a3e3e5aee6afb7ae2b4f51813959a442ae329d35"
+          "sha256": "130238153d4e7116cc8b6b7730b7bacf828a336ac603f0ead782b85db226262b"
         }
       }
     ],
-    "computerUseReport": {
+    "supersededComputerUseReport": {
       "path": "evidence/computer-use-review.json",
-      "sha256": "e222642be30497abdce7b4d8b0daad95b943b8d9bb58bf8788740c29f1fb63d5"
+      "sha256": "f26afdb5c96ddbf2dd3b2e57cfeab941fce0821bffadd7c29046917fb47340f4"
     },
-    "collisionAudit": {
+    "supersededCollisionAudit": {
       "path": "evidence/collision-audit.json",
-      "sha256": "36423136ac290ab6452cf8b73e140bee3dcab30f8e588ee2517053eed32c0110"
+      "sha256": "419e3ac33e913811b2bffe555244a6c1dcb830bfb958c35fc8e174f0cf2dcf0a"
     },
-    "performanceReport": {
+    "supersededPerformanceReport": {
       "path": "evidence/performance-report.json",
-      "sha256": "539dedc2e9169390812d849c6c0cecd434eb34da98672148a652dd0617a3f2cf"
+      "sha256": "44e900afa9fe9592383dc77c93ae3b74ffa995d1042e3f89b05241e17f50cf19"
     },
     "ownerAcceptance": null
   }

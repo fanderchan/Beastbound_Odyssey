@@ -17,8 +17,23 @@ MATERIALS_PATH = BUNDLE_ROOT / "source/raw/firebud-ground-materials-v4.png"
 SEMANTICS_PATH = (
     BUNDLE_ROOT / "source/processed/firebud-semantic-variants-v1-alpha.png"
 )
+TRANSITIONS_PATH = (
+    BUNDLE_ROOT / "source/processed/firebud-path-edge-autotile-v2-alpha.png"
+)
+PLAZA_TRANSITIONS_PATH = (
+    BUNDLE_ROOT / "source/processed/firebud-plaza-edge-autotile-v2-alpha.png"
+)
+LEGACY_TRANSITIONS_PATH = (
+    BUNDLE_ROOT / "source/processed/firebud-path-edge-transitions-v1-alpha.png"
+)
 EXPECTED_ATLAS_SHA256 = (
     "991e8c2010ade24738b8475db0549fe9dadb38874afc96ae5490a344c0638265"
+)
+EXPECTED_TRANSITION_ATLAS_SHA256 = (
+    "a5125f527f56286a78cb84a7f0ef6ab3cdf05cb6d2a488680acba0884e79498d"
+)
+EXPECTED_PATH_AND_PLAZA_TRANSITION_ATLAS_SHA256 = (
+    "5a57acdf761d5c3ed4a901178bc9407368f33b46e367c38c909aad3bbc80dd31"
 )
 
 SPEC = importlib.util.spec_from_file_location("build_firebud_ground_atlas_v4", TOOL_PATH)
@@ -27,10 +42,19 @@ TOOL = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(TOOL)
 
 
-def _arguments(root: Path, name: str, *, overwrite: bool = False) -> argparse.Namespace:
+def _arguments(
+    root: Path,
+    name: str,
+    *,
+    overwrite: bool = False,
+    transitions: bool = False,
+    plaza_transitions: bool = False,
+) -> argparse.Namespace:
     return argparse.Namespace(
         materials=MATERIALS_PATH,
         semantics=SEMANTICS_PATH,
+        transitions=TRANSITIONS_PATH if transitions else None,
+        plaza_transitions=PLAZA_TRANSITIONS_PATH if plaza_transitions else None,
         output=root / f"{name}.png",
         manifest=root / f"{name}.json",
         overwrite=overwrite,
@@ -51,6 +75,91 @@ class BuildFirebudGroundAtlasV4Test(unittest.TestCase):
                 [entry["tileId"] for entry in payload["tiles"]],
                 list(TOOL.TILE_ORDER),
             )
+
+    def test_complete_path_autotile_extends_atlas_without_base_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            arguments = _arguments(Path(temporary), "atlas", transitions=True)
+            payload = TOOL.build(arguments)
+
+            self.assertEqual(
+                TOOL.sha256(arguments.output), EXPECTED_TRANSITION_ATLAS_SHA256
+            )
+            self.assertEqual(payload["atlas"]["dimensions"], [320, 280])
+            self.assertEqual(
+                payload["renderContract"]["directionalPathTransitions"],
+                list(TOOL.TRANSITION_TILE_ORDER),
+            )
+            self.assertEqual(
+                [entry["tileId"] for entry in payload["tiles"]],
+                list(TOOL.TILE_ORDER + TOOL.TRANSITION_TILE_ORDER),
+            )
+            self.assertEqual(
+                payload["pathTransitionSource"]["grid"],
+                {"rows": 4, "columns": 4},
+            )
+            self.assertEqual(
+                payload["pathTransitionSource"]["signatures"],
+                list(TOOL.AUTOTILE_SIGNATURES),
+            )
+            self.assertEqual(payload["pathTransitionSource"]["blankCell"], [3, 3])
+            entries = {entry["tileId"]: entry for entry in payload["tiles"]}
+            for tile_id in TOOL.TRANSITION_TILE_ORDER:
+                entry = entries[tile_id]
+                self.assertGreater(entry["alpha"]["opaquePixels"], 0)
+                self.assertGreater(entry["alpha"]["partialAlphaPixels"], 0)
+                self.assertLess(entry["meanRgba"][0], 140.0)
+                self.assertGreater(entry["meanRgba"][1], 65.0)
+
+    def test_plaza_transitions_extend_the_path_transition_atlas(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            arguments = _arguments(
+                Path(temporary),
+                "atlas",
+                transitions=True,
+                plaza_transitions=True,
+            )
+            payload = TOOL.build(arguments)
+
+            self.assertEqual(
+                TOOL.sha256(arguments.output),
+                EXPECTED_PATH_AND_PLAZA_TRANSITION_ATLAS_SHA256,
+            )
+            self.assertEqual(payload["atlas"]["dimensions"], [320, 440])
+            self.assertEqual(
+                payload["renderContract"]["directionalPlazaTransitions"],
+                list(TOOL.PLAZA_TRANSITION_TILE_ORDER),
+            )
+            self.assertEqual(
+                [entry["tileId"] for entry in payload["tiles"]],
+                list(
+                    TOOL.TILE_ORDER
+                    + TOOL.TRANSITION_TILE_ORDER
+                    + TOOL.PLAZA_TRANSITION_TILE_ORDER
+                ),
+            )
+            self.assertEqual(
+                payload["plazaTransitionSource"]["grid"],
+                {"rows": 4, "columns": 4},
+            )
+            self.assertEqual(
+                payload["plazaTransitionSource"]["signatures"],
+                list(TOOL.AUTOTILE_SIGNATURES),
+            )
+            self.assertEqual(payload["plazaTransitionSource"]["blankCell"], [3, 3])
+            entries = {entry["tileId"]: entry for entry in payload["tiles"]}
+            for tile_id in TOOL.PLAZA_TRANSITION_TILE_ORDER:
+                entry = entries[tile_id]
+                self.assertGreater(entry["alpha"]["opaquePixels"], 0)
+                self.assertGreater(entry["alpha"]["partialAlphaPixels"], 0)
+                self.assertGreater(entry["meanRgba"][0], 80.0)
+                self.assertGreater(entry["meanRgba"][1], 75.0)
+
+    def test_legacy_four_single_edge_sheet_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            arguments = _arguments(Path(temporary), "atlas", transitions=True)
+            arguments.transitions = LEGACY_TRANSITIONS_PATH
+            with self.assertRaises(TOOL.BuildError):
+                TOOL.build(arguments)
 
     def test_repeat_build_is_byte_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -89,6 +198,8 @@ class BuildFirebudGroundAtlasV4Test(unittest.TestCase):
             arguments = argparse.Namespace(
                 materials=MATERIALS_PATH,
                 semantics=SEMANTICS_PATH,
+                transitions=None,
+                plaza_transitions=None,
                 output=path,
                 manifest=path,
                 overwrite=False,

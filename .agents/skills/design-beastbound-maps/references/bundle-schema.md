@@ -847,6 +847,14 @@ produced from the final report. Pending reports may omit these two fields only
 while truthfully retaining the corresponding missing release gate;
 approved/released evidence may not.
 
+Collision reports normally name the strict `map_visual_runtime_check.gd`
+command. A fail-closed pending bundle may instead name the same runner with
+`-- --preview-map-visual-catalog-contract` when a shared authoritative map
+change has intentionally invalidated the old primary bundle. The preview must
+be read-only, remain byte-for-byte equal to that candidate's frozen catalog
+snapshot, and never substitutes for the strict runtime/pre-export gate after
+catalog promotion.
+
 ### Computer Use report and per-map action matrix
 
 The Computer Use report is separate from Main-scene capture reports and from

@@ -71,6 +71,13 @@ COLLISION_COMMAND = (
     "godot --headless --path client/godot --script "
     "res://scripts/qa/map_visual_runtime_check.gd"
 )
+COLLISION_PREVIEW_COMMAND = (
+    f"{COLLISION_COMMAND} -- --preview-map-visual-catalog-contract"
+)
+VALID_COLLISION_COMMANDS = {
+    COLLISION_COMMAND,
+    COLLISION_PREVIEW_COMMAND,
+}
 PERFORMANCE_COMPARISON_MODE = "legacy_fallback_vs_candidate"
 PERFORMANCE_GATE_NAMES = {
     "candidateIdleWithinLimit",
@@ -2187,8 +2194,11 @@ def validate_report(
     if key == "collisionAudit":
         if report.get("scene") != MAIN_SCENE:
             audit.error(f"{field_name}.scene", f"must equal {MAIN_SCENE!r}")
-        if report.get("command") != COLLISION_COMMAND:
-            audit.error(f"{field_name}.command", f"must equal {COLLISION_COMMAND!r}")
+        if report.get("command") not in VALID_COLLISION_COMMANDS:
+            audit.error(
+                f"{field_name}.command",
+                f"must equal one of {sorted(VALID_COLLISION_COMMANDS)!r}",
+            )
         checks = report.get("checks")
         if not isinstance(checks, dict) or not checks:
             audit.error(f"{field_name}.checks", "expected a non-empty check-to-result object")

@@ -126,6 +126,9 @@ const AudioMusicReviewPreview := preload(
 const AutoCheckCoordinator := preload("res://scripts/qa/auto_check_coordinator.gd")
 const NpcArtCatalogCheck := preload("res://scripts/qa/npc_art_catalog_check.gd")
 const MapVisualRuntimeCheck := preload("res://scripts/qa/map_visual_runtime_check.gd")
+const FirebudVillageServiceLayoutCheck := preload(
+	"res://scripts/qa/firebud_village_service_layout_check.gd"
+)
 const WorldPresentationProfileCheck := preload(
 	"res://scripts/qa/world_presentation_profile_check.gd"
 )
@@ -933,6 +936,7 @@ var auto_npc_interaction_check: bool = false
 var auto_npc_hover_identity_check: bool = false
 var auto_npc_appearance_check: bool = false
 var auto_map_visual_runtime_check: bool = false
+var auto_firebud_village_service_layout_check: bool = false
 var auto_npc_collision_check: bool = false
 var auto_facility_dialog_options_check: bool = false
 var auto_npc_quest_marker_check: bool = false
@@ -2328,6 +2332,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_npc_appearance_check")
 	elif auto_map_visual_runtime_check:
 		call_deferred("_run_auto_map_visual_runtime_check")
+	elif auto_firebud_village_service_layout_check:
+		call_deferred("_run_auto_firebud_village_service_layout_check")
 	elif auto_npc_collision_check:
 		call_deferred("_run_auto_npc_collision_check")
 	elif auto_npc_interaction_check:
@@ -2680,6 +2686,8 @@ func _apply_preview_window_args() -> void:
 		elif arg == "--auto-map-visual-runtime-check":
 			auto_map_visual_runtime_check = true
 			map_art_review_preview = true
+		elif arg == "--auto-firebud-village-service-layout-check":
+			auto_firebud_village_service_layout_check = true
 		elif arg == "--auto-npc-collision-check":
 			auto_npc_collision_check = true
 		elif arg == "--auto-facility-dialog-options-check":
@@ -3699,6 +3707,7 @@ func _run_movement_spam_click_check() -> void:
 	var input_elapsed_usec := 0
 	var max_input_usec := 0
 	var ui_skipped_count := 0
+	var interaction_skipped_count := 0
 	var mouse_event_count := 0
 	var viewport_rect := Rect2(Vector2.ZERO, _layout_size())
 	for frame_index in range(40):
@@ -3715,6 +3724,14 @@ func _run_movement_spam_click_check() -> void:
 			var screen_point := _world_to_screen(IsoMapModel.grid_to_world(map_data, candidate))
 			if not viewport_rect.has_point(screen_point) or _is_ui_point(screen_point):
 				ui_skipped_count += 1
+				continue
+			var world_point := _screen_to_world(screen_point)
+			if (
+				not _find_ground_pet_drop_at_world_point(world_point).is_empty()
+				or not _npc_hover_interaction_at_screen_point(screen_point).is_empty()
+				or not InteractionModel.find_at_world_point(map_data, world_point, 34.0, false).is_empty()
+			):
+				interaction_skipped_count += 1
 				continue
 			# Input.parse_input_event accepts host-window coordinates. Convert the
 			# desired viewport point first so the delivered event remains correct
@@ -3779,11 +3796,12 @@ func _run_movement_spam_click_check() -> void:
 	)
 	var final_target_matches := final_player_cell == last_cell
 	var status := "ok" if click_count > 0 and moved and coalesced and input_fast and input_screen_roundtrip and settled and final_target_matches else "failed"
-	print("movement spam click check ready: status=%s clicks=%d click_limit=%d ui_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d screen_matches=%d screen_mismatches=%d screen_roundtrip=%s avg_input_us=%d max_input_us=%d settle_frames=%d moved=%s coalesced=%s settled=%s final_match=%s auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
+	print("movement spam click check ready: status=%s clicks=%d click_limit=%d ui_skipped=%d interaction_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d screen_matches=%d screen_mismatches=%d screen_roundtrip=%s avg_input_us=%d max_input_us=%d settle_frames=%d moved=%s coalesced=%s settled=%s final_match=%s auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
 		status,
 		click_count,
 		movement_spam_click_limit,
 		ui_skipped_count,
+		interaction_skipped_count,
 		mouse_event_count,
 		input_ui_reject_count,
 		input_remote_hit_count,
@@ -3975,6 +3993,24 @@ func _run_auto_map_visual_runtime_check() -> void:
 		errors.append_array(depth_report.get("errors", []) as Array)
 		report["errors"] = errors
 	print("map visual runtime check: %s" % JSON.stringify(report))
+	get_tree().quit(0 if str(report.get("result", "FAIL")) == "PASS" else 1)
+
+
+func _run_auto_firebud_village_service_layout_check() -> void:
+	var report := FirebudVillageServiceLayoutCheck.run()
+	print("firebud village service layout check: %s" % JSON.stringify(report))
+	var summary := report.get("summary", {}) as Dictionary
+	var errors := report.get("errors", []) as Array
+	print(
+		"firebud village service layout check ready: status=%s errors=%d npc_count=%d layout_objects=%d min_spacing_px=%.2f"
+		% [
+			"ok" if str(report.get("result", "FAIL")) == "PASS" else "failed",
+			errors.size(),
+			int(summary.get("npcCount", 0)),
+			int(summary.get("layoutObjectCount", 0)),
+			float(summary.get("minFootpointSpacingPx", 0.0)),
+		]
+	)
 	get_tree().quit(0 if str(report.get("result", "FAIL")) == "PASS" else 1)
 
 
@@ -9116,12 +9152,19 @@ func _sync_world_visual_layers(
 	]
 	if force or map_signature != world_depth_map_signature_cache:
 		world_depth_map_signature_cache = map_signature
+		var map_object_commands := MapVisualRenderer.world_depth_commands(map_visual_render_state)
+		var visual_interaction_links := MapVisualRenderer.world_interaction_link_lookup(
+			map_visual_render_state
+		)
 		world_depth_layer.replace_group(
 			"map_objects",
-			MapVisualRenderer.world_depth_commands(map_visual_render_state)
+			map_object_commands
 		)
 		world_depth_layer.replace_group("npcs", _world_depth_npc_commands())
-		world_depth_layer.replace_group("interaction_props", _world_depth_interaction_prop_commands())
+		world_depth_layer.replace_group(
+			"interaction_props",
+			_world_depth_interaction_prop_commands(visual_interaction_links)
+		)
 	var remote_signature := "%s|%s" % [current_map_id, online_position_draw_signature_cache]
 	if force or remote_signature != world_depth_remote_signature_cache:
 		world_depth_remote_signature_cache = remote_signature
@@ -9198,7 +9241,9 @@ func _world_depth_npc_commands() -> Array[Dictionary]:
 	return commands
 
 
-func _world_depth_interaction_prop_commands() -> Array[Dictionary]:
+func _world_depth_interaction_prop_commands(
+	visual_interaction_links: Dictionary = {}
+) -> Array[Dictionary]:
 	var commands: Array[Dictionary] = []
 	var index := 0
 	for value in map_data.get("interactionPoints", []):
@@ -9212,6 +9257,8 @@ func _world_depth_interaction_prop_commands() -> Array[Dictionary]:
 		if item_id == "":
 			item_id = "map_interaction_%d" % index
 		index += 1
+		if visual_interaction_links.has(item_id):
+			continue
 		var cell := InteractionModel.cell_for(item)
 		var ground_contact := IsoMapModel.grid_to_world(map_data, cell)
 		commands.append({
