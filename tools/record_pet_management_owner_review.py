@@ -102,7 +102,7 @@ MANAGEMENT_RECORDER_CONTRACT_FUNCTION_SHA256 = {
     "_mark_active_lane_signal": "72050cd6e9e7ce036f875591f7f00520903ad881a12c13d6146766fc7ec58fee",
     "_load_lane_helper": "a03b63e8193885134c6afd0fa63ff9473578bdfa8d9d92f3a3f692d875a4797b",
     "_parse_exact_qa_lane_attestation": "1b9968e8a74dcae7efdf5b203468e7f9fa1df9727f7ff2444131d608f9fffe59",
-    "_prepare_automation_lane": "6b99899db93acd99b9dfef6fd81fbe4bb9455885d48c0dc901c3f6270079f96b",
+    "_prepare_automation_lane": "4c5c905a233de06339cb45c7966caa942a9289d7850177dc80645f34e1dea892",
     "_record": "fbef58d17cf28d7e2fc4912c59c7f99031b107eff21026778755a7ae6ed5bc32",
     "_record_into": "ee90182360a5fd9f42b66816863609444d440eed11a58ea5db85d71a4348e676",
     "_require_contained_godot_process": "0928724c39c0920d9b161f8b95b5c814d10af8bed857b331b98fd9056328c1cc",
@@ -768,24 +768,28 @@ def _prepare_automation_lane(
     owner: str,
     lane_helper: Any = LANE_HELPER,
 ) -> dict[str, Any]:
+    runner_pid = os.getppid()
     prepared = dict(
         lane_helper.prepare_lane(
             QA_LANE,
             str(base_environment.get("GODOT_EDITOR_CUSTOM_FEATURES", "")),
             owner,
+            runner_pid,
         )
     )
     expected_keys = {
         "status", "lane", "owner", "feature", "customUserDirName",
         "laneRoot", "godotLaneRoot", "realRoot", "godotRealRoot",
         "realInventorySha256", "realEntryCount", "laneInventorySha256",
-        "laneEntryCount", "editorCustomFeatures",
+        "laneEntryCount", "editorCustomFeatures", "lockSchemaVersion",
+        "runnerPid", "runnerStartIdentitySha256",
     }
     _require_exact_keys(prepared, expected_keys, "prepare payload")
     for field in (
         "status", "lane", "owner", "feature", "customUserDirName",
         "laneRoot", "godotLaneRoot", "realRoot", "godotRealRoot",
         "realInventorySha256", "laneInventorySha256", "editorCustomFeatures",
+        "runnerStartIdentitySha256",
     ):
         if type(prepared[field]) is not str:
             raise PetManagementRecordingError(f"prepare {field} 必须是字符串")
@@ -806,6 +810,10 @@ def _prepare_automation_lane(
         or lane_root != godot_lane_root
         or real_root != godot_real_root
         or _paths_intersect(lane_root, real_root)
+        or type(prepared["lockSchemaVersion"]) is not int
+        or prepared["lockSchemaVersion"] != 2
+        or type(prepared["runnerPid"]) is not int
+        or prepared["runnerPid"] != runner_pid
     ):
         raise PetManagementRecordingError("prepare payload identity 不匹配")
     _require_lower_hex(prepared["owner"], 32, "prepare owner")
@@ -814,6 +822,11 @@ def _prepare_automation_lane(
     )
     _require_lower_hex(
         prepared["laneInventorySha256"], 64, "prepare laneInventorySha256"
+    )
+    _require_lower_hex(
+        prepared["runnerStartIdentitySha256"],
+        64,
+        "prepare runnerStartIdentitySha256",
     )
     _require_non_negative_integer(prepared["realEntryCount"], "prepare realEntryCount")
     _require_non_negative_integer(prepared["laneEntryCount"], "prepare laneEntryCount")

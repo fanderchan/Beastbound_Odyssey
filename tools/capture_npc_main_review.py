@@ -13,13 +13,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import re
-import shlex
 import shutil
 import subprocess
 import sys
-import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,11 +31,20 @@ import PIL
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GODOT_PROJECT = REPO_ROOT / "client" / "godot"
 MAIN_SCENE = "res://scenes/Main.tscn"
+CORE_PATH = REPO_ROOT / "tools" / "record_pet_management_owner_review.py"
+CORE_SPEC = importlib.util.spec_from_file_location(
+    "_beastbound_npc_main_review_lane_core",
+    CORE_PATH,
+)
+if CORE_SPEC is None or CORE_SPEC.loader is None:
+    raise RuntimeError(f"无法加载隔离运行核心：{CORE_PATH}")
+CORE = importlib.util.module_from_spec(CORE_SPEC)
+CORE_SPEC.loader.exec_module(CORE)
 DEFAULT_OUTPUT_ROOT = Path(
     ".run/evidence/phase327_npc_archetype_art/main-review-candidate"
 )
 
-INDEX_SCHEMA_VERSION = 1
+INDEX_SCHEMA_VERSION = 2
 INDEX_TYPE = "beastbound_npc_main_review_evidence"
 REPORT_SCHEMA_VERSION = 1
 REPORT_TYPE = "beastbound_npc_main_review_capture"
@@ -90,7 +98,7 @@ TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_stable_keeper",
-        "facing": "southeast",
+        "facing": "north",
         "portraitState": "speaking",
     },
     {
@@ -99,7 +107,7 @@ TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_bank_keeper",
-        "facing": "northwest",
+        "facing": "south",
         "portraitState": "speaking",
     },
     {
@@ -126,7 +134,7 @@ TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "village_guard",
-        "facing": "southwest",
+        "facing": "south",
         "portraitState": "speaking",
     },
     {
@@ -135,7 +143,7 @@ TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_doctor",
-        "facing": "south",
+        "facing": "north",
         "portraitState": "speaking",
     },
     {
@@ -144,7 +152,7 @@ TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_equipment_keeper",
-        "facing": "southeast",
+        "facing": "south",
         "portraitState": "speaking",
     },
     {
@@ -153,7 +161,7 @@ TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_riding_trainer",
-        "facing": "southeast",
+        "facing": "north",
         "portraitState": "speaking",
     },
 )
@@ -165,7 +173,7 @@ REMAINING7_TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_rebirth_mentor",
-        "facing": "southwest",
+        "facing": "south",
         "portraitState": "speaking",
     },
     {
@@ -174,7 +182,7 @@ REMAINING7_TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_pet_mm_trial_mentor",
-        "facing": "southwest",
+        "facing": "south",
         "portraitState": "speaking",
     },
     {
@@ -183,7 +191,7 @@ REMAINING7_TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_pet_mm_stage2_keeper",
-        "facing": "northwest",
+        "facing": "south",
         "portraitState": "speaking",
     },
     {
@@ -192,7 +200,7 @@ REMAINING7_TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_diamond_keeper",
-        "facing": "southeast",
+        "facing": "south",
         "portraitState": "speaking",
     },
     {
@@ -201,7 +209,7 @@ REMAINING7_TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_pet_skill_trainer",
-        "facing": "southeast",
+        "facing": "north",
         "portraitState": "speaking",
     },
     {
@@ -210,7 +218,7 @@ REMAINING7_TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_welfare_clerk",
-        "facing": "southeast",
+        "facing": "south",
         "portraitState": "speaking",
     },
     {
@@ -219,7 +227,7 @@ REMAINING7_TARGETS: tuple[dict[str, str], ...] = (
         "mapId": "firebud_village_gate",
         "spawnName": "doctor_record",
         "npcId": "firebud_storyteller",
-        "facing": "northwest",
+        "facing": "north",
         "portraitState": "speaking",
     },
 )
@@ -339,36 +347,6 @@ def _read_json(path: Path, *, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise NpcMainReviewError(f"{label} 根节点必须是对象：{path}")
     return value
-
-
-def _run_logged(
-    command: Sequence[str],
-    *,
-    log_path: Path,
-    timeout_seconds: float,
-) -> None:
-    with log_path.open("w", encoding="utf-8") as log:
-        log.write(f"$ {shlex.join(command)}\n")
-        log.flush()
-        try:
-            completed = subprocess.run(
-                list(command),
-                cwd=REPO_ROOT,
-                stdin=subprocess.DEVNULL,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                check=False,
-                timeout=timeout_seconds,
-            )
-        except subprocess.TimeoutExpired as error:
-            log.write(f"\nTIMEOUT after {timeout_seconds:.1f}s\n")
-            raise NpcMainReviewError(
-                f"命令超时（{timeout_seconds:.1f}s），详见 {_repo_relative(log_path)}"
-            ) from error
-    if completed.returncode != 0:
-        raise NpcMainReviewError(
-            f"命令失败 exit={completed.returncode}，详见 {_repo_relative(log_path)}"
-        )
 
 
 def _capture_version(executable: str, arguments: Sequence[str]) -> str:
@@ -778,19 +756,27 @@ def _capture_target(
     screenshot_path = (target_dir / "main-dialog-1280x720.png").resolve()
     report_path = (target_dir / "main-dialog-report.json").resolve()
     log_path = target_dir / "godot-main.log"
-    with tempfile.TemporaryDirectory(
-        prefix=f"beastbound-npc-main-{target['roleId']}-"
-    ) as user_data_dir:
-        command = _build_capture_command(
-            godot=godot,
-            user_data_dir=user_data_dir,
-            target=target,
-            run_id=run_id,
-            screenshot_path=screenshot_path,
-            report_path=report_path,
-            qa_preview=qa_preview,
-        )
-        _run_logged(command, log_path=log_path, timeout_seconds=timeout_seconds)
+    lane_dir = target_dir / "qa-lane"
+    lane_dir.mkdir(parents=False, exist_ok=False)
+    temporary_dir = target_dir / "tmp"
+    temporary_dir.mkdir(parents=False, exist_ok=False)
+    command = _build_capture_command(
+        godot=godot,
+        target=target,
+        run_id=run_id,
+        screenshot_path=screenshot_path,
+        report_path=report_path,
+        qa_preview=qa_preview,
+    )
+    lane_evidence = CORE._run_official_lane_godot_sequence(
+        run_dir=lane_dir,
+        godot=godot,
+        base_environment=CORE._isolated_environment(temporary_dir),
+        native_command=command,
+        native_log=log_path,
+        timeout_seconds=timeout_seconds,
+        native_log_validator=_validate_godot_capture_log,
+    )
     report = _validate_capture_report(
         report_path,
         target=target,
@@ -827,13 +813,59 @@ def _capture_target(
         "screenshot": screenshot_record,
         "report": _artifact_record(report_path),
         "log": _artifact_record(log_path),
+        "qaLane": {
+            "lane": CORE.QA_LANE,
+            "feature": CORE.QA_LANE_FEATURE,
+            "customUserDirName": CORE.QA_LANE_CUSTOM_USER_DIR_NAME,
+            "sourceCheck": lane_evidence["sourceCheck"],
+            "initialVerification": lane_evidence["initialVerification"],
+            "attestation": lane_evidence["native"]["attestation"],
+            "cleanup": lane_evidence["cleanup"],
+            "postCleanupInspect": lane_evidence["postCleanupInspect"],
+            "lifecycle": _artifact_record(lane_evidence["lifecyclePath"]),
+            "ownerEvidence": _artifact_record(lane_evidence["ownerEvidencePath"]),
+        },
     }
+
+
+def _validate_godot_capture_log(log_path: Path) -> dict[str, Any]:
+    text = log_path.read_text(encoding="utf-8", errors="replace")
+    forbidden = (
+        "SCRIPT ERROR:",
+        "Parse Error:",
+        "ERROR:",
+        "WARNING:",
+        "ObjectDB instances were leaked",
+        "resources still in use at exit",
+        "Orphan StringName",
+    )
+    found = [token for token in forbidden if token in text]
+    if found:
+        raise NpcMainReviewError(
+            "NPC Main Godot 日志包含错误、警告或泄漏：" + ", ".join(found)
+        )
+    marker = "npc main review capture: "
+    marker_lines = [line for line in text.splitlines() if line.startswith(marker)]
+    if len(marker_lines) != 1:
+        raise NpcMainReviewError(
+            f"NPC Main Godot 日志必须恰好包含一条结果标记，实际 {len(marker_lines)}"
+        )
+    try:
+        payload = json.loads(marker_lines[0][len(marker) :])
+    except json.JSONDecodeError as error:
+        raise NpcMainReviewError("NPC Main Godot 结果标记不是合法 JSON") from error
+    if (
+        not isinstance(payload, dict)
+        or payload.get("status") != "passed"
+        or payload.get("ok") is not True
+    ):
+        raise NpcMainReviewError("NPC Main Godot 结果标记未通过")
+    return {"status": "passed", "resultMarkerCount": 1}
 
 
 def _build_capture_command(
     *,
     godot: str,
-    user_data_dir: str,
     target: dict[str, str],
     run_id: str,
     screenshot_path: Path,
@@ -844,8 +876,6 @@ def _build_capture_command(
         godot,
         "--path",
         str(GODOT_PROJECT),
-        "--user-data-dir",
-        user_data_dir,
         "--scene",
         MAIN_SCENE,
         "--",
@@ -861,10 +891,14 @@ def _build_capture_command(
         f"--npc-main-review-run-id={run_id}",
         f"--npc-main-review-output={screenshot_path}",
         f"--npc-main-review-report={report_path}",
+        CORE.QA_LANE_ARGUMENT,
     ]
     if qa_preview:
         user_args.insert(1, "--npc-art-review-preview")
-    return engine_args + user_args
+    command = engine_args + user_args
+    if command.count(CORE.QA_LANE_ARGUMENT) != 1 or "--user-data-dir" in command:
+        raise NpcMainReviewError("NPC Main 命令的官方 QA lane 边界不精确")
+    return command
 
 
 def _record(args: argparse.Namespace) -> Path:
@@ -888,12 +922,6 @@ def _record(args: argparse.Namespace) -> Path:
     if timeout_seconds <= 0:
         raise NpcMainReviewError("--timeout-seconds 必须大于 0")
 
-    import_log = run_dir / "godot-import.log"
-    _run_logged(
-        [godot, "--headless", "--path", str(GODOT_PROJECT), "--import"],
-        log_path=import_log,
-        timeout_seconds=timeout_seconds,
-    )
     captures: list[dict[str, Any]] = []
     for target in targets:
         print(
@@ -918,6 +946,7 @@ def _record(args: argparse.Namespace) -> Path:
         _artifact_record(path)
         for path in sorted(run_dir.rglob("*"), key=lambda value: value.as_posix())
         if path.is_file() and path.name != "evidence-index.json"
+        and "tmp" not in path.relative_to(run_dir).parts
     ]
     index = {
         "schemaVersion": INDEX_SCHEMA_VERSION,
@@ -945,12 +974,17 @@ def _record(args: argparse.Namespace) -> Path:
                 "normalPlayerRuntimeEnabled"
             ],
         },
+        "isolation": {
+            "officialAutomationQaLanePerCapture": True,
+            "qaLaneCleanedAfterEveryCapture": True,
+            "normalPlayerSavePathUsed": False,
+            "unisolatedImportPreflight": False,
+        },
         "tools": {
             "godot": _capture_version(godot, ["--version"]),
             "pillow": PIL.__version__,
             "python": sys.version.splitlines()[0],
         },
-        "importLog": _artifact_record(import_log),
         "captures": captures,
         "files": files,
         "indexedFileCount": len(files),

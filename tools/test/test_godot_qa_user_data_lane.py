@@ -89,7 +89,7 @@ _run_pet_codex_awakened_owner_review_capture _startup_auth_cli_arg
 EXPECTED_RUNNER_CONTRACT_FUNCTIONS = frozenset("""
 assertExactPayloadKeys assertExistingPathComponentsAreDirectoriesWithoutLinks
 assertHex assertJsonKeysUnique assertNonNegativeInteger assertPreflightProbeContained
-autoCheckCompletionContract buildCheck buildGodotLaneEnvironment buildQaLaneSummary
+authenticatedJson autoCheckCompletionContract buildCheck buildGodotLaneEnvironment buildQaLaneSummary
 buildRunSummary cleanupQaLane createLanePreservationError createSynchronousLog delay descendantProcessIds
 discoverAutoCheckFlags ensureProcessGroupClosed ensureStartupLoginAccount escapeRegExp
 expectedAutoCompletionPrefix extraUserArgsForFlag filterFlags gitSha
@@ -1528,7 +1528,7 @@ class GodotQaLaneSourceContractTests(unittest.TestCase):
         }))
         self.assertEqual(
             RUNNER_SOURCE_SHA256,
-            "545801f8ae61787be95d76b95fd6ae0c96954ca39c1bf6245e5b83b641653372",
+            "23460d04e438f8f996d9c47386f928bb8b89db298b09a74bd1e6def0f0b9c6a8",
         )
 
     def test_lane_paths_class_and_helper_entrypoint_bindings_are_exact(self) -> None:

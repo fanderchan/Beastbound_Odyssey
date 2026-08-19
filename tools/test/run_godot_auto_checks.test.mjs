@@ -16,6 +16,7 @@ import {
   createSynchronousLog,
   descendantProcessIds,
   discoverAutoCheckFlags,
+  ensureStartupLoginAccount,
   ensureProcessGroupClosed,
   expectedAutoCompletionPrefix,
   godotCompileFailureDiagnostic,
@@ -1363,6 +1364,80 @@ test("startup account preparation fetch honors its abort signal", async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("startup account preparation creates one explicit complete character for an empty roster", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const responses = [
+    {ok: true, session: {token: "session-register"}},
+    {ok: true, characters: [
+      {slotIndex: 0, occupied: false},
+      {slotIndex: 1, occupied: false},
+      {slotIndex: 2, occupied: false},
+      {slotIndex: 3, occupied: false},
+    ]},
+    {ok: true, character: {playerId: "player-startup", slotIndex: 0}},
+  ];
+  globalThis.fetch = async (url, options) => {
+    calls.push({url: String(url), options});
+    const payload = responses.shift();
+    return {status: 200, json: async () => payload};
+  };
+  try {
+    await ensureStartupLoginAccount(
+      "http://127.0.0.1:8787/",
+      "startup-fixture",
+      "test1234",
+      new AbortController().signal,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(calls.length, 3);
+  assert.equal(calls[0].url, "http://127.0.0.1:8787/auth/register");
+  assert.equal(calls[1].url, "http://127.0.0.1:8787/characters");
+  assert.equal(calls[1].options.method, "GET");
+  assert.equal(calls[1].options.headers.authorization, "Bearer session-register");
+  assert.equal(calls[2].options.method, "POST");
+  assert.match(calls[2].options.headers["Idempotency-Key"], /^bbo_startup_character_[0-9a-f]{32}$/);
+  assert.deepEqual(JSON.parse(calls[2].options.body), {
+    appearanceId: "novice_hunter_v1",
+    displayName: "启动猎人ture",
+    elements: {earth: 6, water: 4, fire: 0, wind: 0},
+    slotIndex: 0,
+  });
+});
+
+test("startup account preparation logs in and preserves an existing character roster", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const responses = [
+    {ok: false, code: "username_taken"},
+    {ok: true, session: {token: "session-login"}},
+    {ok: true, characters: [{slotIndex: 0, occupied: true, playerId: "player-existing"}]},
+  ];
+  globalThis.fetch = async (url, options) => {
+    calls.push({url: String(url), options});
+    const payload = responses.shift();
+    return {status: 200, json: async () => payload};
+  };
+  try {
+    await ensureStartupLoginAccount(
+      "http://127.0.0.1:8787",
+      "startup-existing",
+      "test1234",
+      new AbortController().signal,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.deepEqual(calls.map((call) => new URL(call.url).pathname), [
+    "/auth/register",
+    "/auth/login",
+    "/characters",
+  ]);
+  assert.equal(calls[2].options.headers.authorization, "Bearer session-login");
 });
 
 test("startup account preparation stops before HTTP when evidence logging fails", async () => {

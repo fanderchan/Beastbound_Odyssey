@@ -23978,8 +23978,11 @@ func _line_has_raw_server_error_message(line: String) -> bool:
 func _run_auto_auth_server_live_check() -> void:
 	host.profile_save_enabled = false
 	var username = "live%d" % int(Time.get_ticks_usec() % 100000000000)
+	var base_url := OS.get_environment("BEASTBOUND_AUTH_SERVER_URL").strip_edges()
+	if base_url == "":
+		base_url = ServerAuthClientModel.DEFAULT_BASE_URL
 	if host.auth_server_url_input != null:
-		host.auth_server_url_input.text = ServerAuthClientModel.DEFAULT_BASE_URL
+		host.auth_server_url_input.text = base_url
 	if host.auth_username_input != null:
 		host.auth_username_input.text = username
 	if host.auth_password_input != null:
@@ -23994,14 +23997,78 @@ func _run_auto_auth_server_live_check() -> void:
 	host._set_auth_mode(true)
 	host._on_auth_submit_pressed()
 	var frames = 0
-	while frames < 360 and (host.auth_request_pending or not host.account_authenticated):
+	while frames < 480 and (
+		host.auth_request_pending
+		or host.character_entry_panel == null
+		or not host.character_entry_panel.visible
+		or bool(host.character_entry_panel.snapshot().get("loading", false))
+	):
+		frames += 1
+		await host.get_tree().process_frame
+	var entry_snapshot: Dictionary = (
+		host.character_entry_panel.snapshot()
+		if host.character_entry_panel != null
+		else {}
+	)
+	var entry_ok: bool = (
+		not host.account_authenticated
+		and host.character_entry_panel != null
+		and host.character_entry_panel.visible
+		and not bool(entry_snapshot.get("loading", true))
+		and int(entry_snapshot.get("slotCount", 0)) == 4
+		and _character_entry_occupied_count(entry_snapshot) == 0
+		and str(entry_snapshot.get("selectedPlayerId", "")).strip_edges() == ""
+		and host._character_entry() != null
+		and host._character_entry().has_pending_session()
+	)
+	if entry_ok:
+		host.character_entry_panel.set_loading(true, "正在创建角色…")
+		host.character_entry_panel.create_character_requested.emit({
+			"slotIndex": 0,
+			"displayName": "联网猎人%s" % username.substr(maxi(0, username.length() - 4)),
+			"appearanceId": "novice_hunter_v1",
+			"elements": {"earth": 6, "water": 4, "fire": 0, "wind": 0},
+		})
+	frames = 0
+	while frames < 480 and (
+		host.character_entry_panel != null
+		and bool(host.character_entry_panel.snapshot().get("loading", false))
+	):
+		frames += 1
+		await host.get_tree().process_frame
+	var created_snapshot: Dictionary = (
+		host.character_entry_panel.snapshot()
+		if host.character_entry_panel != null
+		else {}
+	)
+	var created_player_id := str(created_snapshot.get("selectedPlayerId", "")).strip_edges()
+	var create_ok: bool = (
+		entry_ok
+		and not host.account_authenticated
+		and host.character_entry_panel != null
+		and host.character_entry_panel.visible
+		and not bool(created_snapshot.get("loading", true))
+		and _character_entry_occupied_count(created_snapshot) == 1
+		and created_player_id != ""
+	)
+	if create_ok:
+		host.character_entry_panel.set_loading(true, "正在进入世界…")
+		host.character_entry_panel.select_character_requested.emit(created_player_id)
+	frames = 0
+	while frames < 600 and (
+		not host.account_authenticated
+		or host.server_profile_sync_state == "loading"
+		or host.server_profile_sync_state == "uploading"
+	):
 		frames += 1
 		await host.get_tree().process_frame
 	var auth_ok = (
-		host.account_authenticated
+		create_ok
+		and host.account_authenticated
 		and str(host.current_account_session.get("username", "")) == username
 		and str(host.current_account_session.get("authSource", "")) == ServerAuthClientModel.SOURCE_SERVER
 		and str(host.current_account_session.get("serverSessionToken", "")).strip_edges() != ""
+		and str(host.current_account_session.get("playerId", "")) == created_player_id
 	)
 	frames = 0
 	while frames < 420 and (host.server_profile_sync_state == "loading" or host.server_profile_sync_state == "uploading"):
@@ -24045,10 +24112,12 @@ func _run_auto_auth_server_live_check() -> void:
 		and host.backpack_panel.visible
 		and host.backpack_slot_buttons.size() > 0
 	)
-	var status = "ok" if auth_ok and sync_ok and account_panel_ok and empty_backpack_ok and backpack_panel_ok else "failed"
-	print("auth server live check ready: status=%s username=%s auth=%s sync=%s account_panel=%s empty_backpack=%s backpack_panel=%s state=%s revision=%d filled=%s capture_tools=%s message=%s" % [
+	var status = "ok" if entry_ok and create_ok and auth_ok and sync_ok and account_panel_ok and empty_backpack_ok and backpack_panel_ok else "failed"
+	print("auth server live check ready: status=%s username=%s entry=%s create=%s auth=%s sync=%s account_panel=%s empty_backpack=%s backpack_panel=%s state=%s revision=%d filled=%s capture_tools=%s message=%s" % [
 		status,
 		username,
+		str(entry_ok),
+		str(create_ok),
 		str(auth_ok),
 		str(sync_ok),
 		str(account_panel_ok),
@@ -24174,9 +24243,14 @@ func _run_auto_startup_login_check() -> void:
 	var frames = 0
 	while frames < 480 and (
 		host.auth_request_pending
-		or host.character_entry_panel == null
-		or not host.character_entry_panel.visible
-		or bool(host.character_entry_panel.snapshot().get("loading", false))
+		or (
+			not host.account_authenticated
+			and (
+				host.character_entry_panel == null
+				or not host.character_entry_panel.visible
+				or bool(host.character_entry_panel.snapshot().get("loading", false))
+			)
+		)
 	):
 		frames += 1
 		await host.get_tree().process_frame
@@ -24190,6 +24264,8 @@ func _run_auto_startup_login_check() -> void:
 	)
 	if character_entry_ok:
 		host._character_entry().enter_selected_character()
+	var direct_auth_ok: bool = host.account_authenticated
+	var startup_route_ok: bool = character_entry_ok or direct_auth_ok
 	frames = 0
 	while frames < 480 and not host.account_authenticated:
 		frames += 1
@@ -24214,11 +24290,13 @@ func _run_auto_startup_login_check() -> void:
 	)
 	var auth_panel_hidden_ok = host.auth_panel == null or not host.auth_panel.visible
 	var world_ok = host.world_log_message.find("已进入游戏") >= 0 or host.account_authenticated
-	var status = "ok" if character_entry_ok and auth_ok and sync_ok and auth_panel_hidden_ok and world_ok else "failed"
-	print("startup login args check ready: status=%s username=%s character_entry=%s auth=%s sync=%s panel_hidden=%s world=%s state=%s revision=%d" % [
+	var status = "ok" if startup_route_ok and auth_ok and sync_ok and auth_panel_hidden_ok and world_ok else "failed"
+	print("startup login args check ready: status=%s username=%s route=%s character_entry=%s direct_auth=%s auth=%s sync=%s panel_hidden=%s world=%s state=%s revision=%d" % [
 		status,
 		expected_username,
+		"character_entry" if character_entry_ok else ("direct_single_character" if direct_auth_ok else "none"),
 		str(character_entry_ok),
+		str(direct_auth_ok),
 		str(auth_ok),
 		str(sync_ok),
 		str(auth_panel_hidden_ok),
@@ -24280,8 +24358,8 @@ func _run_auto_character_entry_live_check() -> void:
 		and host.character_entry_panel.visible
 		and not bool(initial_snapshot.get("loading", true))
 		and int(initial_snapshot.get("slotCount", 0)) == 4
-		and initial_occupied == 1
-		and initial_player_id != ""
+		and initial_occupied == 0
+		and initial_player_id == ""
 		and host._character_entry() != null
 		and host._character_entry().has_pending_session()
 	)
@@ -24289,8 +24367,10 @@ func _run_auto_character_entry_live_check() -> void:
 	if entry_ok:
 		host.character_entry_panel.set_loading(true, "正在创建角色…")
 		host.character_entry_panel.create_character_requested.emit({
-			"slotIndex": 1,
-			"displayName": "第二猎人",
+			"slotIndex": 0,
+			"displayName": "第一猎人",
+			"appearanceId": "novice_hunter_v1",
+			"elements": {"earth": 6, "water": 4, "fire": 0, "wind": 0},
 		})
 	frames = 0
 	while frames < 480 and (
@@ -24299,25 +24379,57 @@ func _run_auto_character_entry_live_check() -> void:
 	):
 		frames += 1
 		await host.get_tree().process_frame
-	var created_snapshot: Dictionary = (
+	var first_created_snapshot: Dictionary = (
 		host.character_entry_panel.snapshot()
 		if host.character_entry_panel != null
 		else {}
 	)
-	var created_player_id := str(created_snapshot.get("selectedPlayerId", "")).strip_edges()
-	var create_ok: bool = (
+	var first_player_id := str(first_created_snapshot.get("selectedPlayerId", "")).strip_edges()
+	var first_create_ok: bool = (
 		entry_ok
 		and not host.account_authenticated
+		and host.character_entry_panel != null
 		and host.character_entry_panel.visible
-		and not bool(created_snapshot.get("loading", true))
-		and _character_entry_occupied_count(created_snapshot) == 2
-		and created_player_id != ""
-		and created_player_id != initial_player_id
+		and not bool(first_created_snapshot.get("loading", true))
+		and _character_entry_occupied_count(first_created_snapshot) == 1
+		and first_player_id != ""
 	)
 
-	if create_ok:
+	if first_create_ok:
+		host.character_entry_panel.set_loading(true, "正在创建角色…")
+		host.character_entry_panel.create_character_requested.emit({
+			"slotIndex": 1,
+			"displayName": "第二猎人",
+			"appearanceId": "novice_hunter_v1",
+			"elements": {"earth": 0, "water": 0, "fire": 6, "wind": 4},
+		})
+	frames = 0
+	while frames < 480 and (
+		host.character_entry_panel != null
+		and bool(host.character_entry_panel.snapshot().get("loading", false))
+	):
+		frames += 1
+		await host.get_tree().process_frame
+	var second_created_snapshot: Dictionary = (
+		host.character_entry_panel.snapshot()
+		if host.character_entry_panel != null
+		else {}
+	)
+	var second_player_id := str(second_created_snapshot.get("selectedPlayerId", "")).strip_edges()
+	var second_create_ok: bool = (
+		first_create_ok
+		and not host.account_authenticated
+		and host.character_entry_panel != null
+		and host.character_entry_panel.visible
+		and not bool(second_created_snapshot.get("loading", true))
+		and _character_entry_occupied_count(second_created_snapshot) == 2
+		and second_player_id != ""
+		and second_player_id != first_player_id
+	)
+
+	if second_create_ok:
 		host.character_entry_panel.set_loading(true, "正在进入世界…")
-		host.character_entry_panel.select_character_requested.emit(created_player_id)
+		host.character_entry_panel.select_character_requested.emit(second_player_id)
 	frames = 0
 	while frames < 600 and (
 		not host.account_authenticated
@@ -24333,13 +24445,13 @@ func _run_auto_character_entry_live_check() -> void:
 		host.current_account_session.get("profileSavePath", "")
 	)
 	var select_ok: bool = (
-		create_ok
+		second_create_ok
 		and host.account_authenticated
 		and str(host.current_account_session.get("username", "")) == username
-		and str(host.current_account_session.get("playerId", "")) == created_player_id
+		and str(host.current_account_session.get("playerId", "")) == second_player_id
 		and int(host.current_account_session.get("characterSlotIndex", -1)) == 1
 		and selected_token != ""
-		and selected_path.find("/characters/%s/" % created_player_id) >= 0
+		and selected_path.find("/characters/%s/" % second_player_id) >= 0
 		and host.server_profile_sync_state == "ready"
 		and (host.character_entry_panel == null or not host.character_entry_panel.visible)
 	)
@@ -24347,16 +24459,18 @@ func _run_auto_character_entry_live_check() -> void:
 		await host._auto_http_request_spec(
 			ServerAuthClientModel.logout_request(base_url, selected_token)
 		)
-	var status := "ok" if entry_ok and create_ok and select_ok else "failed"
-	print("character entry live check ready: status=%s username=%s register=%s entry=%s create=%s select=%s initial=%d created=%d slot=%d sync=%s" % [
+	var status := "ok" if entry_ok and first_create_ok and second_create_ok and select_ok else "failed"
+	print("character entry live check ready: status=%s username=%s register=%s entry=%s first_create=%s second_create=%s select=%s initial=%d first=%d second=%d slot=%d sync=%s" % [
 		status,
 		username,
 		str(register_ok),
 		str(entry_ok),
-		str(create_ok),
+		str(first_create_ok),
+		str(second_create_ok),
 		str(select_ok),
 		initial_occupied,
-		_character_entry_occupied_count(created_snapshot),
+		_character_entry_occupied_count(first_created_snapshot),
+		_character_entry_occupied_count(second_created_snapshot),
 		int(host.current_account_session.get("characterSlotIndex", -1)),
 		host.server_profile_sync_state,
 	])
@@ -25024,28 +25138,53 @@ func _run_auto_online_position_live_check() -> void:
 
 func _run_auto_server_movement_live_check() -> void:
 	host.profile_save_enabled = false
+	var base_url := OS.get_environment("BEASTBOUND_AUTH_SERVER_URL").strip_edges()
+	if base_url == "":
+		base_url = ServerAuthClientModel.DEFAULT_BASE_URL
 	var challenger_username = host._live_check_username("mva")
 	var opponent_username = host._live_check_username("mvb")
 	var challenger_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		challenger_username,
 		"test1234",
 		"移动甲"
 	))
 	var opponent_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		opponent_username,
 		"test1234",
 		"移动乙"
 	))
 	var challenger_parsed = ServerAuthClientModel.parse_auth_response(int(challenger_register.get("responseCode", 0)), challenger_register.get("body", PackedByteArray()) as PackedByteArray)
 	var opponent_parsed = ServerAuthClientModel.parse_auth_response(int(opponent_register.get("responseCode", 0)), opponent_register.get("body", PackedByteArray()) as PackedByteArray)
-	var challenger_session = challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
-	var opponent_session = opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
 	var register_ok = bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	var challenger_character := await _prepare_registered_live_character_session(
+		challenger_parsed,
+		"移动甲",
+		base_url
+	)
+	var opponent_character := await _prepare_registered_live_character_session(
+		opponent_parsed,
+		"移动乙",
+		base_url
+	)
+	var challenger_session: Dictionary = (
+		challenger_character.get("session", {}) as Dictionary
+		if challenger_character.get("session", {}) is Dictionary
+		else {}
+	)
+	var opponent_session: Dictionary = (
+		opponent_character.get("session", {}) as Dictionary
+		if opponent_character.get("session", {}) is Dictionary
+		else {}
+	)
+	var character_ok := (
+		bool(challenger_character.get("ok", false))
+		and bool(opponent_character.get("ok", false))
+	)
 	var base_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(3, -1)
 	var challenger_seed_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -25056,7 +25195,7 @@ func _run_auto_server_movement_live_check() -> void:
 		}
 	))
 	var opponent_seed_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -25070,7 +25209,7 @@ func _run_auto_server_movement_live_check() -> void:
 	var opponent_seed_parsed = ServerAuthClientModel.parse_player_position_update_response(int(opponent_seed_response.get("responseCode", 0)), opponent_seed_response.get("body", PackedByteArray()) as PackedByteArray)
 	var seed_ok = bool(challenger_seed_parsed.get("ok", false)) and bool(opponent_seed_parsed.get("ok", false))
 	var step_response = await host._auto_http_request_spec(ServerAuthClientModel.movement_step_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -25090,7 +25229,7 @@ func _run_auto_server_movement_live_check() -> void:
 		and int(step_position.get("movementSeq", 0)) >= 1
 	)
 	var jump_response = await host._auto_http_request_spec(ServerAuthClientModel.movement_step_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -25103,7 +25242,7 @@ func _run_auto_server_movement_live_check() -> void:
 	var jump_parsed = ServerAuthClientModel.parse_movement_step_response(int(jump_response.get("responseCode", 0)), jump_response.get("body", PackedByteArray()) as PackedByteArray)
 	var jump_rejected = not bool(jump_parsed.get("ok", true)) and str(jump_parsed.get("code", "")) == "movement_step_too_far"
 	var invite_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		opponent_username
 	))
@@ -25111,7 +25250,7 @@ func _run_auto_server_movement_live_check() -> void:
 	var invite = invite_parsed.get("invite", {}) as Dictionary if invite_parsed.get("invite", {}) is Dictionary else {}
 	var invite_id = str(invite.get("inviteId", ""))
 	await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -25122,14 +25261,14 @@ func _run_auto_server_movement_live_check() -> void:
 		}
 	))
 	var moving_accept_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		invite_id
 	))
 	var moving_accept_parsed = ServerAuthClientModel.parse_battle_action_response(int(moving_accept_response.get("responseCode", 0)), moving_accept_response.get("body", PackedByteArray()) as PackedByteArray)
 	var moving_rejected = not bool(moving_accept_parsed.get("ok", true)) and str(moving_accept_parsed.get("code", "")) == "battle_player_moving"
 	await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -25140,7 +25279,7 @@ func _run_auto_server_movement_live_check() -> void:
 		}
 	))
 	var accept_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		invite_id
 	))
@@ -25149,7 +25288,7 @@ func _run_auto_server_movement_live_check() -> void:
 	var room_entry = room.get("entry", {}) as Dictionary if room.get("entry", {}) is Dictionary else {}
 	var room_ok = bool(accept_parsed.get("ok", false)) and str(room.get("status", "")) == "ready" and int(room_entry.get("distanceCells", -1)) == 1
 	var locked_response = await host._auto_http_request_spec(ServerAuthClientModel.movement_step_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -25161,10 +25300,11 @@ func _run_auto_server_movement_live_check() -> void:
 	))
 	var locked_parsed = ServerAuthClientModel.parse_movement_step_response(int(locked_response.get("responseCode", 0)), locked_response.get("body", PackedByteArray()) as PackedByteArray)
 	var battle_locked = not bool(locked_parsed.get("ok", true)) and str(locked_parsed.get("code", "")) == "movement_battle_locked"
-	var status = "ok" if register_ok and seed_ok and step_ok and jump_rejected and bool(invite_parsed.get("ok", false)) and moving_rejected and room_ok and battle_locked else "failed"
-	print("server movement live check ready: status=%s register=%s seed=%s step=%s jump=%s moving_gate=%s room=%s battle_lock=%s challenger=%s opponent=%s" % [
+	var status = "ok" if register_ok and character_ok and seed_ok and step_ok and jump_rejected and bool(invite_parsed.get("ok", false)) and moving_rejected and room_ok and battle_locked else "failed"
+	print("server movement live check ready: status=%s register=%s characters=%s seed=%s step=%s jump=%s moving_gate=%s room=%s battle_lock=%s challenger=%s opponent=%s" % [
 		status,
 		str(register_ok),
+		str(character_ok),
 		str(seed_ok),
 		str(step_ok),
 		str(jump_rejected),
@@ -26072,9 +26212,31 @@ func _run_auto_server_battle_turn_live_check() -> void:
 	))
 	var challenger_parsed = ServerAuthClientModel.parse_auth_response(int(challenger_register.get("responseCode", 0)), challenger_register.get("body", PackedByteArray()) as PackedByteArray)
 	var opponent_parsed = ServerAuthClientModel.parse_auth_response(int(opponent_register.get("responseCode", 0)), opponent_register.get("body", PackedByteArray()) as PackedByteArray)
-	var challenger_session = challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
-	var opponent_session = opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
 	var register_ok = bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	var challenger_character := await _prepare_registered_live_character_session(
+		challenger_parsed,
+		"回合甲",
+		base_url
+	)
+	var opponent_character := await _prepare_registered_live_character_session(
+		opponent_parsed,
+		"回合乙",
+		base_url
+	)
+	var challenger_session: Dictionary = (
+		challenger_character.get("session", {}) as Dictionary
+		if challenger_character.get("session", {}) is Dictionary
+		else {}
+	)
+	var opponent_session: Dictionary = (
+		opponent_character.get("session", {}) as Dictionary
+		if opponent_character.get("session", {}) is Dictionary
+		else {}
+	)
+	var character_ok := (
+		bool(challenger_character.get("ok", false))
+		and bool(opponent_character.get("ok", false))
+	)
 	var battle_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(5, -1)
 	var challenger_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
 		base_url,
@@ -26295,10 +26457,11 @@ func _run_auto_server_battle_turn_live_check() -> void:
 	var room = host.server_battle_state.get("room", {}) as Dictionary if host.server_battle_state.get("room", {}) is Dictionary else {}
 	var battle = room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
 	var room_round_ok = int(battle.get("round", 0)) == 2
-	var status = "ok" if register_ok and positions_ok and stream_ready and invite_event_ok and room_ready_ok and actor_ids_ok and command_submitted_ok and command_turn_ok and turn_event_ok and playback_ok and room_round_ok else "failed"
-	print("server battle turn live check ready: status=%s register=%s positions=%s stream=%s invite=%s room=%s actors=%s required=%d pets=%s submitted=%s turn=%s turn_event=%s playback=%s round=%s room=%s challenger=%s opponent=%s events=%s" % [
+	var status = "ok" if register_ok and character_ok and positions_ok and stream_ready and invite_event_ok and room_ready_ok and actor_ids_ok and command_submitted_ok and command_turn_ok and turn_event_ok and playback_ok and room_round_ok else "failed"
+	print("server battle turn live check ready: status=%s register=%s characters=%s positions=%s stream=%s invite=%s room=%s actors=%s required=%d pets=%s submitted=%s turn=%s turn_event=%s playback=%s round=%s room_id=%s challenger=%s opponent=%s events=%s" % [
 		status,
 		str(register_ok),
+		str(character_ok),
 		str(positions_ok),
 		str(stream_ready),
 		str(invite_event_ok),
@@ -26314,7 +26477,7 @@ func _run_auto_server_battle_turn_live_check() -> void:
 		room_id,
 		challenger_username,
 		opponent_username,
-		str(host.battle_last_round_event_types),
+		JSON.stringify(host.battle_last_round_event_types),
 	])
 	host._stop_server_event_stream()
 	host.get_tree().quit(0 if status == "ok" else 1)
@@ -26808,31 +26971,56 @@ func _run_auto_server_battle_return_check() -> void:
 
 func _run_auto_server_battle_leave_ui_live_check() -> void:
 	host.profile_save_enabled = false
+	var base_url := OS.get_environment("BEASTBOUND_AUTH_SERVER_URL").strip_edges()
+	if base_url == "":
+		base_url = ServerAuthClientModel.DEFAULT_BASE_URL
 	var suffix = str(Time.get_ticks_usec() % 10000000000)
 	var challenger_username = "bla%s" % suffix
 	var opponent_username = "blb%s" % suffix
 	challenger_username = challenger_username.substr(0, mini(20, challenger_username.length()))
 	opponent_username = opponent_username.substr(0, mini(20, opponent_username.length()))
 	var challenger_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		challenger_username,
 		"test1234",
 		"离开甲"
 	))
 	var opponent_register = await host._auto_http_request_spec(ServerAuthClientModel.register_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		opponent_username,
 		"test1234",
 		"离开乙"
 	))
 	var challenger_parsed = ServerAuthClientModel.parse_auth_response(int(challenger_register.get("responseCode", 0)), challenger_register.get("body", PackedByteArray()) as PackedByteArray)
 	var opponent_parsed = ServerAuthClientModel.parse_auth_response(int(opponent_register.get("responseCode", 0)), opponent_register.get("body", PackedByteArray()) as PackedByteArray)
-	var challenger_session = challenger_parsed.get("session", {}) as Dictionary if challenger_parsed.get("session", {}) is Dictionary else {}
-	var opponent_session = opponent_parsed.get("session", {}) as Dictionary if opponent_parsed.get("session", {}) is Dictionary else {}
 	var register_ok = bool(challenger_parsed.get("ok", false)) and bool(opponent_parsed.get("ok", false))
+	var challenger_character := await _prepare_registered_live_character_session(
+		challenger_parsed,
+		"离开甲",
+		base_url
+	)
+	var opponent_character := await _prepare_registered_live_character_session(
+		opponent_parsed,
+		"离开乙",
+		base_url
+	)
+	var challenger_session: Dictionary = (
+		challenger_character.get("session", {}) as Dictionary
+		if challenger_character.get("session", {}) is Dictionary
+		else {}
+	)
+	var opponent_session: Dictionary = (
+		opponent_character.get("session", {}) as Dictionary
+		if opponent_character.get("session", {}) is Dictionary
+		else {}
+	)
+	var character_ok := (
+		bool(challenger_character.get("ok", false))
+		and bool(opponent_character.get("ok", false))
+	)
 	var battle_cell = IsoMapModel.spawn_cell(host.map_data) + Vector2i(9, -1)
 	var challenger_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -26843,7 +27031,7 @@ func _run_auto_server_battle_leave_ui_live_check() -> void:
 		}
 	))
 	var opponent_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		{
 			"mapId": host.current_map_id,
@@ -26857,7 +27045,7 @@ func _run_auto_server_battle_leave_ui_live_check() -> void:
 	var opponent_position_parsed = ServerAuthClientModel.parse_player_position_update_response(int(opponent_position_response.get("responseCode", 0)), opponent_position_response.get("body", PackedByteArray()) as PackedByteArray)
 	var positions_ok = bool(challenger_position_parsed.get("ok", false)) and bool(opponent_position_parsed.get("ok", false))
 	host.current_account_session = opponent_session
-	host.current_account_session["serverBaseUrl"] = ServerAuthClientModel.DEFAULT_BASE_URL
+	host.current_account_session["serverBaseUrl"] = base_url
 	host.account_authenticated = true
 	host.server_profile_sync_state = "ready"
 	host.server_battle_state.clear()
@@ -26872,7 +27060,7 @@ func _run_auto_server_battle_leave_ui_live_check() -> void:
 	var stream_ready = host.server_event_state == "open" or host._server_event_type_seen("events.ready")
 	host.server_event_seen.clear()
 	var invite_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_invite_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(challenger_session.get("serverSessionToken", "")),
 		opponent_username
 	))
@@ -26885,7 +27073,7 @@ func _run_auto_server_battle_leave_ui_live_check() -> void:
 		await host.get_tree().process_frame
 	var invite_event_ok = bool(invite_parsed.get("ok", false)) and invite_id != "" and host._server_event_type_seen("battle.invite") and host._battle_invite_seen(invite_id)
 	var accept_response = await host._auto_http_request_spec(ServerAuthClientModel.battle_invite_accept_request(
-		ServerAuthClientModel.DEFAULT_BASE_URL,
+		base_url,
 		str(opponent_session.get("serverSessionToken", "")),
 		invite_id
 	))
@@ -26919,10 +27107,11 @@ func _run_auto_server_battle_leave_ui_live_check() -> void:
 	var close_event_ok = host._server_event_type_seen("battle.room_closed")
 	var leave_ok = close_event_ok and not host.battle_active and not host.server_battle_command_request_active
 	var log_ok = host.world_log_message.find("你已离开切磋") >= 0
-	var status = "ok" if register_ok and positions_ok and stream_ready and invite_event_ok and ready_event_ok and leave_button_ok and request_started_ok and leave_ok and log_ok else "failed"
-	print("server battle leave ui live check ready: status=%s register=%s positions=%s stream=%s invite=%s ready=%s button=%s request=%s leave=%s log=%s room_id=%s challenger=%s opponent=%s message=%s" % [
+	var status = "ok" if register_ok and character_ok and positions_ok and stream_ready and invite_event_ok and ready_event_ok and leave_button_ok and request_started_ok and leave_ok and log_ok else "failed"
+	print("server battle leave ui live check ready: status=%s register=%s characters=%s positions=%s stream=%s invite=%s ready=%s button=%s request=%s leave=%s log=%s room_id=%s challenger=%s opponent=%s message=%s" % [
 		status,
 		str(register_ok),
+		str(character_ok),
 		str(positions_ok),
 		str(stream_ready),
 		str(invite_event_ok),
@@ -29244,7 +29433,8 @@ func _run_auto_server_battle_pet_command_live_check() -> void:
 
 func _prepare_registered_live_character_session(
 	parsed_register: Dictionary,
-	display_name: String
+	display_name: String,
+	requested_base_url: String = ServerAuthClientModel.DEFAULT_BASE_URL
 ) -> Dictionary:
 	var pending_session: Dictionary = (
 		(parsed_register.get("session", {}) as Dictionary).duplicate(true)
@@ -29260,7 +29450,7 @@ func _prepare_registered_live_character_session(
 			"selected": false,
 			"session": {},
 		}
-	var base_url := ServerAuthClientModel.DEFAULT_BASE_URL
+	var base_url := ServerAuthClientModel.normalized_base_url(requested_base_url)
 	pending_session["serverBaseUrl"] = base_url
 	var roster_response: Dictionary = await host._auto_http_request_spec(
 		ServerAuthClientModel.characters_request(base_url, pending_token)

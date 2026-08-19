@@ -54,7 +54,7 @@ LANES = {
     },
 }
 RESERVED_FEATURES = frozenset(record["feature"] for record in LANES.values())
-RUNNER_SOURCE_SHA256 = "545801f8ae61787be95d76b95fd6ae0c96954ca39c1bf6245e5b83b641653372"
+RUNNER_SOURCE_SHA256 = "23460d04e438f8f996d9c47386f928bb8b89db298b09a74bd1e6def0f0b9c6a8"
 HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_absent_inventory": "98f816ee9fc7b7c8eb2f1b8506a805995ad5972c8e06888a05e6f2e845e9940c",
     "_assert_no_symlink_components": "eab6e07e0cee299d46589930d37318184b88b83bd7080d02d24429d89c29b993",
@@ -116,7 +116,7 @@ HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_sha256_from_descriptor": "2ad426766dd214d2c1e55cac6d1cfe31872c3df7673ef7296fd7c6e21c368b40",
     "_stable_stat_tuple": "3945f10854ad36d3ff0918caa6fcc3a3ad01553934838afe54ccd451b1310110",
     "_top_level_assignment_sources": "f5c7b66dfefb5f6553a33e599e54e631ef99306ee31fc90f7c2340d080d17ad2",
-    "_validate_helper_constant_contract": "473adf439bd7371c48b02a47af9fdf6cacf1e2b0df229b953dbcb55dbdc2eac1",
+    "_validate_helper_constant_contract": "c680ba6de8712d6d3dd518bdab38f25c9e978cdfb1f0de051189dd1374d634c8",
     "_validate_helper_function_contract": "8536c2d474585b026827b36807ba6e34c8e5460a36c4b957707314c9dbcdb129",
     "_validate_named_function_contract": "babc90c421bc13a6716f008593999d7c444a3abb926c439d415e78a34647fcf5",
     "_validated_owner_token": "a8af7ed3f13ade53c4a5113b01cfd336040787c2f2fcfb703dda502a5eab5690",
@@ -159,6 +159,7 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "assertJsonKeysUnique": "09e1fb033f7f07e74e14eb36148a8906e3597136b68847c40afe7370b4f340b9",
     "assertNonNegativeInteger": "fdd180e35b960b1a7ae62a8766eda10f85b5da7bd925db1fe92626c5eb173e8e",
     "assertPreflightProbeContained": "18017ffeba49cb20f998d0f30aedc2c3af6d387cbebd92e75c86230ca53ab302",
+    "authenticatedJson": "4178cc6f02f7030747c16ca62802ec921b2e563ba271b8a1103fd471aac28317",
     "autoCheckCompletionContract": "3ea236319b6d85c1332737c1c37722afb93a9bf9e7e09d2d7226a700940ac17d",
     "buildCheck": "532e6de122e82e6404e9f8251597034aa818e7f5fc10418f9850b825de193a1d",
     "buildGodotLaneEnvironment": "78b2a1f70a897f79ad94c4753ff0ab68092b13b95465e5163a9fd10d98169a60",
@@ -171,7 +172,7 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "descendantProcessIds": "b985a7931e3ba557084651fbc2e91f5701f7ee9cb8f70bddc78712cae66235f9",
     "discoverAutoCheckFlags": "ce8b635245847d953ba649a8248356c3fc8a8e63664885c26414059d0feaa67d",
     "ensureProcessGroupClosed": "5a14bf975fdb116fdf4c47077e796fedd58b5a7deacb6aaf807564fe30e8deb3",
-    "ensureStartupLoginAccount": "9c74a165e4a9f0f9d7e37ef30a8ef48feecded9bb9a6ff2aabe3a7f560caaa45",
+    "ensureStartupLoginAccount": "b4d41089f166aa8f230cb133e7e3e544f7aac938901d15fa73bccb62aa342216",
     "escapeRegExp": "d0180bd9422ef0810aeff440514f155fd11635028932741137e77c72c13c9d15",
     "expectedAutoCompletionPrefix": "d777f3e4ef6a5c36042705863899a4e3c2e1bcd8e8244903c0d533983a512d5c",
     "extraUserArgsForFlag": "3414fab1976efee1bd133104ef82f845dad377200a7b86e56a1601de3c3b363a",
@@ -181,7 +182,7 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "godotHelpHasOption": "bbb81b32286181c0962f9f29f3eea2199bd336e79f7ccb9f6557b8afccc64f79",
     "inferQuitAfter": "d9aaa6ce8f5e685714ad27246a39f5ae0a1b31f781bad62ca589199df3c62c71",
     "isEqualOrDescendantPath": "192525d84f93ce40f74eac7e5f4b8307006ec3cef16fd861601fa680334b693c",
-    "main": "6d426a08bc2807772cb9cb5d9c05d52d36695078a84436421552f512011c3b82",
+    "main": "8181cdfbb06e2fae4f8ec5efa038a4fe0dd97e9cf9a19b0229d178a5936d9a6c",
     "makeResult": "23e7154257138f853c39ad56d3823ca44606091111fbcc17adef2fbe4eba66f4",
     "markLaneVerificationFailure": "1e8eb47178c1e2afba24cb46f9a091b0dff07a7543b58f91c4f3985dce4d4d5f",
     "markProcessGroupResidual": "bc2022a77fca3fcac9f8ee6d022efa9f73a31fe5bed858cb742ad218cef6a1f9",
@@ -2936,7 +2937,7 @@ def _validate_helper_constant_contract(helper_text: str) -> None:
             'RESERVED_FEATURES = frozenset(record["feature"] for record in LANES.values())\n'
         ),
         "RUNNER_SOURCE_SHA256": (
-            'RUNNER_SOURCE_SHA256 = "545801f8ae61787be95d76b95fd6ae0c96954ca39c1bf6245e5b83b641653372"\n'
+            'RUNNER_SOURCE_SHA256 = "23460d04e438f8f996d9c47386f928bb8b89db298b09a74bd1e6def0f0b9c6a8"\n'
         ),
     }
     for name, expected_source in expected.items():

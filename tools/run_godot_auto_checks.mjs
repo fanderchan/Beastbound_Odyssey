@@ -837,16 +837,73 @@ async function ensureStartupLoginAccount(baseUrl, username, password, signal) {
     password,
     displayName: `启动登录${username.slice(-4)}`,
   }, signal);
-  if (register.ok) {
-    return;
-  }
-  if (register.code !== "username_taken") {
+  let authenticated = register;
+  if (!register.ok && register.code !== "username_taken") {
     throw new Error(`startup login account register failed: code=${register.code || "unknown"} message=${register.message || ""}`);
   }
-  const login = await postAuthJson(baseUrl, "/auth/login", {username, password}, signal);
-  if (!login.ok) {
-    throw new Error(`startup login account login failed: code=${login.code || "unknown"} message=${login.message || ""}`);
+  if (!register.ok) {
+    authenticated = await postAuthJson(baseUrl, "/auth/login", {username, password}, signal);
+    if (!authenticated.ok) {
+      throw new Error(`startup login account login failed: code=${authenticated.code || "unknown"} message=${authenticated.message || ""}`);
+    }
   }
+  const token = String(authenticated.session && authenticated.session.token || "").trim();
+  if (token === "") {
+    throw new Error("startup login account preparation returned no session token");
+  }
+  const roster = await authenticatedJson(baseUrl, "/characters", {
+    method: "GET",
+    token,
+    signal,
+  });
+  if (!roster.ok || !Array.isArray(roster.characters)) {
+    throw new Error(`startup login character roster failed: code=${roster.code || "unknown"} message=${roster.message || ""}`);
+  }
+  if (roster.characters.some((character) => character && character.occupied === true)) {
+    return;
+  }
+  const idempotencyKey = `bbo_startup_character_${createHash("sha256").update(String(username)).digest("hex").slice(0, 32)}`;
+  const created = await authenticatedJson(baseUrl, "/characters", {
+    body: {
+      appearanceId: "novice_hunter_v1",
+      displayName: `启动猎人${String(username).slice(-4)}`,
+      elements: {earth: 6, water: 4, fire: 0, wind: 0},
+      slotIndex: 0,
+    },
+    idempotencyKey,
+    method: "POST",
+    token,
+    signal,
+  });
+  if (!created.ok || !created.character || String(created.character.playerId || "").trim() === "") {
+    throw new Error(`startup login character create failed: code=${created.code || "unknown"} message=${created.message || ""}`);
+  }
+}
+
+async function authenticatedJson(baseUrl, routePath, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const headers = {
+    authorization: `Bearer ${String(options.token || "")}`,
+    [CLIENT_VERSION_HEADER]: SERVER_VERSION,
+    [CLIENT_PROTOCOL_HEADER]: String(PROTOCOL_VERSION),
+  };
+  if (method !== "GET") {
+    headers["content-type"] = "application/json";
+  }
+  if (String(options.idempotencyKey || "") !== "") {
+    headers["Idempotency-Key"] = String(options.idempotencyKey);
+  }
+  const response = await fetch(`${String(baseUrl).replace(/\/+$/, "")}${routePath}`, {
+    method,
+    headers,
+    ...(method === "GET" ? {} : {body: JSON.stringify(options.body || {})}),
+    signal: options.signal,
+  });
+  const payload = await response.json().catch(() => ({}));
+  return {
+    httpStatus: response.status,
+    ...payload,
+  };
 }
 
 async function postAuthJson(baseUrl, routePath, body, signal) {
@@ -2920,6 +2977,7 @@ export {
   createSynchronousLog,
   descendantProcessIds,
   discoverAutoCheckFlags,
+  ensureStartupLoginAccount,
   ensureProcessGroupClosed,
   expectedAutoCompletionPrefix,
   godotCompileFailureDiagnostic,

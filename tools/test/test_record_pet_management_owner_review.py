@@ -55,7 +55,13 @@ class _FakeLaneHelper:
         if root != REPO_ROOT:
             raise AssertionError(root)
 
-    def prepare_lane(self, lane: str, features: str, owner: str) -> dict:
+    def prepare_lane(
+        self,
+        lane: str,
+        features: str,
+        owner: str,
+        runner_pid: int = 43100,
+    ) -> dict:
         self.calls.append("prepare")
         if lane != TOOL.QA_LANE or features != "existing_feature":
             raise AssertionError((lane, features))
@@ -74,6 +80,9 @@ class _FakeLaneHelper:
             "laneInventorySha256": self.lane_sha,
             "laneEntryCount": 1,
             "editorCustomFeatures": f"existing_feature,{TOOL.QA_LANE_FEATURE}",
+            "lockSchemaVersion": 2,
+            "runnerPid": runner_pid,
+            "runnerStartIdentitySha256": "d" * 64,
         }
 
     def verify_lane(self, lane: str, owner: str, real_sha: str) -> dict:

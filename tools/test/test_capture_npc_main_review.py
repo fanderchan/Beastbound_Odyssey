@@ -384,7 +384,6 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
     def test_first8_capture_command_uses_normal_released_runtime(self) -> None:
         command = TOOL._build_capture_command(
             godot="/opt/godot",
-            user_data_dir="/tmp/npc-main-user",
             target=self.target,
             run_id=self.run_id,
             screenshot_path=self.screenshot,
@@ -398,6 +397,8 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
         self.assertNotIn("--npc-main-review-capture", command[:separator])
         self.assertIn("--npc-main-review-capture", command[separator + 1 :])
         self.assertNotIn("--npc-art-review-preview", command[separator + 1 :])
+        self.assertEqual(command.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
+        self.assertNotIn("--user-data-dir", command)
         self.assertIn(
             f"--npc-main-review-run-id={self.run_id}", command[separator + 1 :]
         )
@@ -406,7 +407,6 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
         target = dict(TOOL.REMAINING7_TARGETS[0])
         command = TOOL._build_capture_command(
             godot="/opt/godot",
-            user_data_dir="/tmp/npc-main-user",
             target=target,
             run_id=self.run_id,
             screenshot_path=self.screenshot,
@@ -417,6 +417,31 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
         self.assertEqual(command.count("--"), 1)
         self.assertIn("--npc-main-review-capture", command[separator + 1 :])
         self.assertIn("--npc-art-review-preview", command[separator + 1 :])
+        self.assertEqual(command.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
+        self.assertNotIn("--user-data-dir", command)
+
+    def test_capture_source_uses_official_lane_sequence_only(self) -> None:
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("CORE._run_official_lane_godot_sequence", source)
+        self.assertIn("CORE._isolated_environment", source)
+        self.assertNotIn("tempfile.TemporaryDirectory", source)
+
+    def test_godot_log_gate_requires_one_passed_marker_and_no_errors(self) -> None:
+        log_path = self.root / "godot-main.log"
+        log_path.write_text(
+            'npc main review capture: {"status":"passed","ok":true}\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(
+            TOOL._validate_godot_capture_log(log_path),
+            {"status": "passed", "resultMarkerCount": 1},
+        )
+        log_path.write_text(
+            'ERROR: unsafe\nnpc main review capture: {"status":"passed","ok":true}\n',
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(TOOL.NpcMainReviewError, "错误、警告或泄漏"):
+            TOOL._validate_godot_capture_log(log_path)
 
     def test_rejects_non_1280x720_screenshot(self) -> None:
         Image.new("RGBA", (640, 360), (20, 70, 80, 255)).save(self.screenshot)
@@ -432,6 +457,10 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
         self.assertEqual(
             len({(target["mapId"], target["npcId"]) for target in TOOL.TARGETS}),
             8,
+        )
+        self.assertEqual(
+            [target["facing"] for target in TOOL.TARGETS],
+            ["north", "south", "south", "northwest", "south", "north", "south", "north"],
         )
 
     def test_remaining7_target_contract_is_exact_and_disjoint(self) -> None:
@@ -470,6 +499,10 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
             len({(target["mapId"], target["npcId"]) for target in all_targets}),
             15,
         )
+        self.assertEqual(
+            [target["facing"] for target in remaining],
+            ["south", "south", "south", "south", "north", "south", "north"],
+        )
 
     def test_parser_preserves_first8_default_and_selects_remaining7(self) -> None:
         self.assertEqual(
@@ -494,12 +527,6 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
         original_cwd = Path.cwd()
         resolved_root = self.root.resolve()
 
-        def fake_run_logged(
-            _command: object, *, log_path: Path, timeout_seconds: float
-        ) -> None:
-            self.assertGreater(timeout_seconds, 0)
-            log_path.write_text("fake capture passed\n", encoding="utf-8")
-
         def fake_capture_target(**kwargs: object) -> dict[str, object]:
             target = kwargs["target"]
             target_dir = kwargs["target_dir"]
@@ -523,7 +550,6 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
                 mock.patch.object(
                     TOOL, "_require_executable", return_value="/opt/godot"
                 ),
-                mock.patch.object(TOOL, "_run_logged", side_effect=fake_run_logged),
                 mock.patch.object(
                     TOOL, "_capture_target", side_effect=fake_capture_target
                 ),
@@ -550,6 +576,15 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
         self.assertEqual(index["expected"]["captureCount"], 7)
         self.assertFalse(index["expected"]["normalPlayerRuntimeEnabled"])
         self.assertEqual(
+            index["isolation"],
+            {
+                "officialAutomationQaLanePerCapture": True,
+                "qaLaneCleanedAfterEveryCapture": True,
+                "normalPlayerSavePathUsed": False,
+                "unisolatedImportPreflight": False,
+            },
+        )
+        self.assertEqual(
             index["appearanceIds"],
             [target["appearanceId"] for target in targets],
         )
@@ -564,12 +599,6 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
         run_id = "phase-main-first8-test-v1"
         original_cwd = Path.cwd()
         resolved_root = self.root.resolve()
-
-        def fake_run_logged(
-            _command: object, *, log_path: Path, timeout_seconds: float
-        ) -> None:
-            self.assertGreater(timeout_seconds, 0)
-            log_path.write_text("fake capture passed\n", encoding="utf-8")
 
         def fake_capture_target(**kwargs: object) -> dict[str, object]:
             target = kwargs["target"]
@@ -594,7 +623,6 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
                 mock.patch.object(
                     TOOL, "_require_executable", return_value="/opt/godot"
                 ),
-                mock.patch.object(TOOL, "_run_logged", side_effect=fake_run_logged),
                 mock.patch.object(
                     TOOL, "_capture_target", side_effect=fake_capture_target
                 ),
@@ -617,6 +645,7 @@ class CaptureNpcMainReviewTest(unittest.TestCase):
         self.assertFalse(index["qaPreview"])
         self.assertEqual(index["expected"]["captureCount"], 8)
         self.assertTrue(index["expected"]["normalPlayerRuntimeEnabled"])
+        self.assertFalse(index["isolation"]["normalPlayerSavePathUsed"])
 
 
 if __name__ == "__main__":

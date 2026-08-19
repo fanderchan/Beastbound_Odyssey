@@ -9505,7 +9505,19 @@ func _apply_server_event_reset(event: Dictionary) -> void:
 	_request_online_position_snapshot()
 
 func _record_server_event_seen(event: Dictionary) -> void:
-	if not auto_server_event_live_check and not auto_server_event_replay_live_check:
+	if not (
+		auto_online_position_live_check
+		or auto_online_aoi_live_check
+		or auto_server_event_live_check
+		or auto_server_event_replay_live_check
+		or auto_battle_room_live_check
+		or auto_server_battle_turn_live_check
+		or auto_server_battle_close_live_check
+		or auto_server_battle_leave_ui_live_check
+		or auto_server_battle_pet_snapshot_live_check
+		or auto_server_battle_pet_command_live_check
+		or auto_server_battle_switch_pet_live_check
+	):
 		return
 	for record in _server_event_seen_records(event):
 		server_event_seen.append(record)
