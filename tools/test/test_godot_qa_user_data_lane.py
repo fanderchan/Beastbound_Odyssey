@@ -1528,7 +1528,7 @@ class GodotQaLaneSourceContractTests(unittest.TestCase):
         }))
         self.assertEqual(
             RUNNER_SOURCE_SHA256,
-            "23460d04e438f8f996d9c47386f928bb8b89db298b09a74bd1e6def0f0b9c6a8",
+            "75fe8c6c8eaa3b085d2e94013b6f466345e56baef32c3061c7997a560c68b642",
         )
 
     def test_lane_paths_class_and_helper_entrypoint_bindings_are_exact(self) -> None:

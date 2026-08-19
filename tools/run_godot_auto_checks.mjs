@@ -69,6 +69,7 @@ function usage() {
     "  --from <flag>          Start from a discovered flag.",
     "  --max <count>          Run at most count checks after filters.",
     "  --fail-fast           Stop after the first failed check.",
+    "  --parse-only          Run only the base parse check in the fixed QA lane.",
     "  --no-parse            Skip the base godot --headless --quit parse check.",
     "  --output-dir <dir>     Override summary/log output directory.",
     "  --godot <path>         Override Godot binary path.",
@@ -86,6 +87,7 @@ function parseArgs(argv) {
     from: "",
     max: 0,
     failFast: false,
+    parseOnly: false,
     includeParse: true,
     outputDir: DEFAULT_OUTPUT_DIR,
     godot: DEFAULT_GODOT,
@@ -123,6 +125,8 @@ function parseArgs(argv) {
       options.max = Math.max(0, Number.parseInt(arg.slice("--max=".length), 10));
     } else if (arg === "--fail-fast") {
       options.failFast = true;
+    } else if (arg === "--parse-only") {
+      options.parseOnly = true;
     } else if (arg === "--no-parse") {
       options.includeParse = false;
     } else if (arg === "--output-dir") {
@@ -148,6 +152,15 @@ function parseArgs(argv) {
     } else {
       throw new Error(`Unknown option: ${arg}\n${usage()}`);
     }
+  }
+  if (options.parseOnly && !options.includeParse) {
+    throw new Error("--parse-only cannot be combined with --no-parse");
+  }
+  if (
+    options.parseOnly
+    && (options.only.length > 0 || options.exclude.size > 0 || options.from !== "" || options.max > 0)
+  ) {
+    throw new Error("--parse-only cannot be combined with check filters");
   }
   return options;
 }
@@ -2748,7 +2761,7 @@ async function main() {
     }
     return;
   }
-  const selectedFlags = filterFlags(allFlags, options);
+  const selectedFlags = options.parseOnly ? [] : filterFlags(allFlags, options);
   const names = options.includeParse ? [PARSE_CHECK_NAME, ...selectedFlags] : selectedFlags;
   if (names.length === 0) {
     console.log("No Godot checks selected.");
@@ -2982,6 +2995,7 @@ export {
   expectedAutoCompletionPrefix,
   godotCompileFailureDiagnostic,
   makeResult,
+  parseArgs,
   parseAutoCheckCompletion,
   parseLaneHelperOutput,
   parseQaLaneAttestation,

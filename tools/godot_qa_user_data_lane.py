@@ -54,7 +54,7 @@ LANES = {
     },
 }
 RESERVED_FEATURES = frozenset(record["feature"] for record in LANES.values())
-RUNNER_SOURCE_SHA256 = "23460d04e438f8f996d9c47386f928bb8b89db298b09a74bd1e6def0f0b9c6a8"
+RUNNER_SOURCE_SHA256 = "75fe8c6c8eaa3b085d2e94013b6f466345e56baef32c3061c7997a560c68b642"
 HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_absent_inventory": "98f816ee9fc7b7c8eb2f1b8506a805995ad5972c8e06888a05e6f2e845e9940c",
     "_assert_no_symlink_components": "eab6e07e0cee299d46589930d37318184b88b83bd7080d02d24429d89c29b993",
@@ -116,7 +116,7 @@ HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_sha256_from_descriptor": "2ad426766dd214d2c1e55cac6d1cfe31872c3df7673ef7296fd7c6e21c368b40",
     "_stable_stat_tuple": "3945f10854ad36d3ff0918caa6fcc3a3ad01553934838afe54ccd451b1310110",
     "_top_level_assignment_sources": "f5c7b66dfefb5f6553a33e599e54e631ef99306ee31fc90f7c2340d080d17ad2",
-    "_validate_helper_constant_contract": "c680ba6de8712d6d3dd518bdab38f25c9e978cdfb1f0de051189dd1374d634c8",
+    "_validate_helper_constant_contract": "ade5604ebbee910e312b4cf6e75092879848d812e4be7862d9507e5fe320d27e",
     "_validate_helper_function_contract": "8536c2d474585b026827b36807ba6e34c8e5460a36c4b957707314c9dbcdb129",
     "_validate_named_function_contract": "babc90c421bc13a6716f008593999d7c444a3abb926c439d415e78a34647fcf5",
     "_validated_owner_token": "a8af7ed3f13ade53c4a5113b01cfd336040787c2f2fcfb703dda502a5eab5690",
@@ -182,13 +182,13 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "godotHelpHasOption": "bbb81b32286181c0962f9f29f3eea2199bd336e79f7ccb9f6557b8afccc64f79",
     "inferQuitAfter": "d9aaa6ce8f5e685714ad27246a39f5ae0a1b31f781bad62ca589199df3c62c71",
     "isEqualOrDescendantPath": "192525d84f93ce40f74eac7e5f4b8307006ec3cef16fd861601fa680334b693c",
-    "main": "8181cdfbb06e2fae4f8ec5efa038a4fe0dd97e9cf9a19b0229d178a5936d9a6c",
+    "main": "c1cd2b76f34258c35e4fcca9f54f4f04323f497ffe967dae7c9acb5c146d9395",
     "makeResult": "23e7154257138f853c39ad56d3823ca44606091111fbcc17adef2fbe4eba66f4",
     "markLaneVerificationFailure": "1e8eb47178c1e2afba24cb46f9a091b0dff07a7543b58f91c4f3985dce4d4d5f",
     "markProcessGroupResidual": "bc2022a77fca3fcac9f8ee6d022efa9f73a31fe5bed858cb742ad218cef6a1f9",
     "normalizeGodotPath": "7817cb84d5d4345b130d21868172d79ba00bf0a1f05c17cc005388837c15744c",
     "nowStamp": "a1c7bc5c8023b2420b9611adb71d47ccaec657dd155ea53ec2d8a814413af5a2",
-    "parseArgs": "6d0f9e748a1983f0b3dbed126c03bdd3a249661ec2dad0ffda6ee0c9bc1c6cec",
+    "parseArgs": "1a057d31eea615987ff76cc58518e526e3b976972544177f814de88bbbf39c9b",
     "parseAutoCheckCompletion": "90fb73d0b93485979a73fcf037dbc7af03f2d6ef48e661b23f00fde9a7e8ea70",
     "parseLaneHelperOutput": "5db916aadd2932fd4883b825151906e07bb1a2b4658af0f231ba88b169a860a3",
     "parseQaLaneAttestation": "99dc1d415ca2532d1192c6cf80bc68012dffae7ec68f19217c3456555bf54952",
@@ -211,7 +211,7 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "splitFlags": "d7ee69b8ef6027cb94f288bd3da2bc07ead869a111b4ba8578f95024bcd1e0a8",
     "terminateProcessGroup": "2dc336ea9b5c6975ef5e9b31763f83ea0fad990b6429d3e9e7eec07782afee4a",
     "terminateWindowsProcessIds": "9485dd3d699bbaf3a915fd44027fab4d616889afa4062b94128969a172f015bc",
-    "usage": "8e4183877b1ab3221a6ab734fd883b2b0402d4070a25e3df96db39a30d162668",
+    "usage": "1aadfd9accb8af37f03f60dc7dae79efce2d1520f90a565519a55cd93227d699",
     "validateCleanedLanePayload": "96beef139205206e7f14ecfcfd385cfb9028498a502f2d62fe7f50123e285575",
     "validatePreparedLanePayload": "0ecf77e4913c5757b75f9ca140b2d7859c44098c9c3a9aa598a68bc47f4db12b",
     "validateQaOutputDirectory": "304cc9eed032830fe046dcb9a311cef80f990847f20521140ddccb2f64d25c23",
@@ -2937,7 +2937,7 @@ def _validate_helper_constant_contract(helper_text: str) -> None:
             'RESERVED_FEATURES = frozenset(record["feature"] for record in LANES.values())\n'
         ),
         "RUNNER_SOURCE_SHA256": (
-            'RUNNER_SOURCE_SHA256 = "23460d04e438f8f996d9c47386f928bb8b89db298b09a74bd1e6def0f0b9c6a8"\n'
+            'RUNNER_SOURCE_SHA256 = "75fe8c6c8eaa3b085d2e94013b6f466345e56baef32c3061c7997a560c68b642"\n'
         ),
     }
     for name, expected_source in expected.items():

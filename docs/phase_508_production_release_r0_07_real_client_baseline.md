@@ -10,7 +10,7 @@
 - Firebud 两张地图、发布 v1 与待审 v2、静止与真实跨帧移动共 `8/8` 性能记录通过；
 - 10v10 战斗静止、指令选择、目标切换共 `21/21` 性能门禁通过；
 - 世界 HUD 44.3 秒视频、战斗 13.533 秒视频和首批 8 个 NPC 的真实 Main 截图包均生成并通过结构/日志/隔离门禁；
-- 最终 Python `152/152`、Node `50/50`、Godot 4.7 解析、QA 源合同和补丁格式检查通过；本地后端、Godot 进程与三个固定 QA 车道全部收尾。
+- 最终 Python `152/152`、Node `52/52`、隔离 Godot 4.7 parse-only `1/1`、QA 源合同和补丁格式检查通过；本地后端、Godot 进程与三个固定 QA 车道全部收尾。
 
 这些证据只证明当前候选的功能基线、交互可达性和性能健康，不代表 Firebud v2、NPC、美术或战斗视觉已获项目所有者批准。所有 `owner_review_pending` 状态保持不变，生产发布结论仍为 `BLOCKED`。
 
@@ -37,6 +37,8 @@
 - 删除无隔离 import 预检，由真实 Main 启动完成导入，并以 `importFresh` 与严格 Godot 日志门禁判定；
 - 每个 NPC capture 必须且只能产生一个成功 JSON 标记，任何错误、警告、泄漏或重复标记均 fail closed；
 - 首批 8 个 NPC 的期待朝向按当前权威 Firebud v2 地图精确冻结，没有放宽为“任意方向通过”。
+
+收尾时又确认裸跑 `godot --headless --path client/godot --quit` 也会使用普通玩家目录并改写日志/偏好。因此运行器新增互斥的 `--parse-only` 模式，只执行基础解析但仍完整使用固定 QA 车道、进程组和 cleanup；仓库验证规则也已切换到该入口。
 
 NPC 工作仍保持 `npcId` 的名字/地图/对话职责与 `appearanceId` 的共享外观职责分离；本轮只修录制与验证路径，没有新增、替换或批准 NPC 资产。
 
@@ -140,15 +142,21 @@ status=passed gates=21/21 actors=20 actualLeftClicks=25
 313debc60d2641f8aaa70e34c34f637949c622a30f7c8e54ca0b953d73bf719c
 ```
 
-旧 NPC 录制器第一次尝试在隔离门禁拒绝任意 user-data 参数前执行了无隔离 import，真实目录哈希因此变化。只做路径、时间和大小的元数据核验后，变化定位为两个 Godot 日志文件的轮转：`logs/godot.log` 与一个带时间戳的 Godot log；最近窗口内没有观察到账号、档案或其他玩家数据路径变化。本轮没有读取、删除或回滚这些日志，也没有把旧哈希伪装为未变化。
+旧 NPC 录制器第一次尝试在隔离门禁拒绝任意 user-data 参数前执行了无隔离 import，真实目录哈希因此变化。只做路径、时间和大小的元数据核验后，第一次变化定位为两个 Godot 日志文件的轮转：`logs/godot.log` 与一个带时间戳的 Godot log；最近窗口内没有观察到账号或档案路径变化。本轮没有读取、删除或回滚这些日志，也没有把旧哈希伪装为未变化。
 
-修复录制器后，最终真实目录仍为 696 项，稳定 SHA-256 为：
+修复录制器后，8 次官方 NPC capture 保持 696 项和下列 SHA-256 不变：
 
 ```text
 cfb37ab00ac3edfd952f090daa5658425ce44d8177bf832d1a8a8d28390bcdaf
 ```
 
-此后首批 8 个 NPC 的每次官方车道运行以及最终遗留 `client1` 旧锁恢复均证明 `realUnchanged=true`。收尾时：
+随后按旧仓库规则直接执行一次裸 Godot 无头解析，清单再次变化。纯元数据核验显示这次发生了 Godot 日志轮转，并更新了 `beastbound_audio_settings.json`；这说明裸 parse 并非对普通玩家目录只读。本轮仍未读取或擅自回滚该偏好文件，也没有观察到账号、角色、进度或其他档案路径变化。为避免复发，本轮增加并实跑固定 QA 车道的 `--parse-only`，最终真实目录仍为 696 项，稳定 SHA-256 为：
+
+```text
+fbff2a0ac07e24126993c0183c37a5c564af15e01e83a99d3ee40fa8f708cd9d
+```
+
+安全 parse-only 的摘要为 `.run/godot_auto_checks/r0_07_parse_only/2026-08-19T23-36-11-411Z_summary.json`：`1/1 passed`、`processGroupsClosed=true`、`qaLaneCleanup.status=cleaned`、`realUnchanged=true`。最终收尾时：
 
 - `127.0.0.1:8787` 无监听；
 - 无候选后端或 Godot 进程；
@@ -167,16 +175,18 @@ python3 -B -m unittest \
   tools.test.test_record_battle_layout_owner_review
 node --test tools/test/run_godot_auto_checks.test.mjs
 python3 -B tools/godot_qa_user_data_lane.py source-check
-godot --headless --path client/godot --quit
+node tools/run_godot_auto_checks.mjs \
+  --parse-only \
+  --output-dir .run/godot_auto_checks/r0_07_parse_only
 git diff --check
 ```
 
 结果：
 
 - Python：`152 tests / OK`；
-- Node：`50 tests / 50 pass / 0 fail`；
+- Node：`52 tests / 52 pass / 0 fail`；
 - QA 源合同：`source_contract_passed`；
-- Godot：`4.7.stable.official.5b4e0cb0f`，解析退出码 0；
+- Godot：`4.7.stable.official.5b4e0cb0f`，隔离 parse-only `1/1 passed`，真实目录哈希不变；
 - `git diff --check`：通过。
 
 没有重复运行完整服务端套件或 `tools/run_local_ci.mjs`：紧邻 R0.05 已冻结完整服务端零失败门禁，本阶段改动集中于客户端 live QA、运行器和证据录制，以上目标套件是更窄且直接的回归集合。

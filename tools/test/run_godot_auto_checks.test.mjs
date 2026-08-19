@@ -21,6 +21,7 @@ import {
   expectedAutoCompletionPrefix,
   godotCompileFailureDiagnostic,
   makeResult,
+  parseArgs,
   parseAutoCheckCompletion,
   parseLaneHelperOutput,
   parseQaLaneAttestation,
@@ -1407,6 +1408,32 @@ test("startup account preparation creates one explicit complete character for an
     elements: {earth: 6, water: 4, fire: 0, wind: 0},
     slotIndex: 0,
   });
+});
+
+test("parse-only selects the isolated base parse without client checks", () => {
+  const options = parseArgs([
+    "--parse-only",
+    "--output-dir",
+    ".run/godot_auto_checks/parse-only-test",
+  ]);
+  assert.equal(options.parseOnly, true);
+  assert.equal(options.includeParse, true);
+  assert.deepEqual(options.only, []);
+  assert.equal(
+    options.outputDir,
+    path.resolve(repoRoot, ".run/godot_auto_checks/parse-only-test"),
+  );
+});
+
+test("parse-only rejects contradictory parse and check filters", () => {
+  assert.throws(
+    () => parseArgs(["--parse-only", "--no-parse"]),
+    /cannot be combined with --no-parse/,
+  );
+  assert.throws(
+    () => parseArgs(["--parse-only", "--only=--auto-map-panel-check"]),
+    /cannot be combined with check filters/,
+  );
 });
 
 test("startup account preparation logs in and preserves an existing character roster", async () => {

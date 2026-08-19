@@ -65,7 +65,7 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 
 - Start with `git diff --check`, syntax/parse checks, and the narrowest tests that cover changed behavior. Report exact commands and results, plus residual risk from checks not run.
 - Server tests can be selected with `node --test server/node/test/<domain>.test.js`; the complete server suite is `npm --prefix server/node test`.
-- The minimum Godot parse check is `godot --headless --path client/godot --quit`. Use `node tools/run_godot_auto_checks.mjs --only <comma-separated flags> --fail-fast` for relevant client checks.
+- The minimum Godot parse check is `node tools/run_godot_auto_checks.mjs --parse-only`; it runs `godot --headless --path client/godot --quit` inside the fixed QA user-data lane. Do not run the bare Godot parse against the normal user-data path because even a headless quit can rotate logs and rewrite preferences. Use `node tools/run_godot_auto_checks.mjs --only <comma-separated flags> --fail-fast` for relevant client checks.
 - Live Godot checks may create accounts or mutate server state. Run them only against the local QA backend, never against a shared/LAN/production server. Set `BEASTBOUND_ALLOW_POSITION_TELEPORT=1` only for explicit local QA checks that need arbitrary coordinates.
 - For gameplay/client changes, launch the real client path `godot --path client/godot --scene res://scenes/Main.tscn` when practical; headless checks alone do not prove normal PC UI behavior.
 - Changes to movement, input, HUD, draw, pathfinding, map/quest markers, panels, inventory, battle loops, or profile synchronization require before/after idle and moving performance evidence. Use `--perf-probe` plus the relevant movement/panel stress probe.
