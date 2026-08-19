@@ -54,6 +54,7 @@ const MARKET_BUY_ACTION_ID = "POST /market/buy";
 const MARKET_CREATE_ACTION_ID = "POST /market/list";
 const MARKET_CREATE_CAPACITY_GUARD_KEY = "market_create_capacity";
 const MUTATION_RECEIPT_CAPACITY_GUARD_KEY = "mutation_receipt_capacity";
+const MAIL_STORAGE_CONTROL_SCOPE_KEY = "mail_lifecycle";
 const MAIL_ENVELOPE_ID = "eqx_shared_mail_duplicate_0001";
 
 function createSharedMysqlTransactionHarness(options = {}) {
@@ -100,6 +101,7 @@ function baselineAuthority() {
     schemaVersion: 1,
     accounts: {},
     sessions: {},
+    accountCharacterSlots: {},
     profileBindings: {},
     profiles: {},
     mutationReceipts: {},
@@ -125,6 +127,20 @@ function baselineAuthority() {
       profileRevision: 1,
       updatedAt: UPDATED_AT_1,
     };
+    authority.accountCharacterSlots[actor.accountId] = [
+      {
+        schemaVersion: 1,
+        accountId: actor.accountId,
+        slotIndex: 0,
+        playerId: actor.playerId,
+        createdAt: UPDATED_AT_1,
+        updatedAt: UPDATED_AT_1,
+        lastSelectedAt: UPDATED_AT_1,
+      },
+      null,
+      null,
+      null,
+    ];
     authority.profiles[actor.playerId] = {
       playerId: actor.playerId,
       accountId: actor.accountId,
@@ -908,6 +924,7 @@ function sqlSeed(options = {}) {
   const mutationReceiptCount = Object.keys(mutationReceipts).length;
   assert.ok(mutationReceiptCount <= DURABLE_RECEIPT_MAX_COUNT);
   const profileBindings = {};
+  const accountCharacterSlots = {};
   const profiles = {};
   for (const actor of Object.values(ACTORS)) {
     profileBindings[actor.accountId] = {
@@ -924,6 +941,22 @@ function sqlSeed(options = {}) {
       updated_at: UPDATED_AT_1,
       profile_json: authority.profiles[actor.playerId].profile,
     };
+  }
+  for (const slots of Object.values(authority.accountCharacterSlots || {})) {
+    for (const slot of slots) {
+      if (slot === null) {
+        continue;
+      }
+      accountCharacterSlots[`${slot.accountId}/${slot.slotIndex}`] = {
+        account_id: slot.accountId,
+        slot_index: slot.slotIndex,
+        player_id: slot.playerId,
+        created_at: slot.createdAt,
+        updated_at: slot.updatedAt,
+        last_selected_at: slot.lastSelectedAt,
+        document_json: slot,
+      };
+    }
   }
   return {
     auth_store_revisions: {
@@ -961,6 +994,7 @@ function sqlSeed(options = {}) {
       }]),
     ),
     profile_bindings: profileBindings,
+    account_character_slots: accountCharacterSlots,
     profiles,
     market_listings: Object.fromEntries(
       Object.entries(authority.marketListings || {}).map(([listingId, listing]) => [listingId, {
@@ -992,6 +1026,17 @@ function sqlSeed(options = {}) {
     ),
     mutation_receipts: mutationReceipts,
     market_capacity_counts: marketCapacityCountRows(options.marketCapacityCounts),
+    mail_storage_control: {
+      [MAIL_STORAGE_CONTROL_SCOPE_KEY]: {
+        scope_key: MAIL_STORAGE_CONTROL_SCOPE_KEY,
+        schema_generation: 1,
+        data_generation: 0,
+        lifecycle_state: "uninitialized",
+        archive_enabled: 0,
+        vault_claim_enabled: 0,
+        active_limit_enabled: 0,
+      },
+    },
   };
 }
 
@@ -1057,6 +1102,63 @@ function jsonParameter(value, sql) {
   }
 }
 
+const MYSQL_STRING_LITERAL_PATTERN = "'(?:''|\\\\.|[^'])*'";
+const RAW_ACCOUNT_CHARACTER_SLOT_INSERT_PATTERN = new RegExp(
+  `^INSERT INTO account_character_slots \\(account_id, slot_index, player_id, created_at, updated_at, last_selected_at, document_json\\) VALUES \\((${MYSQL_STRING_LITERAL_PATTERN}), ([0-3]), (${MYSQL_STRING_LITERAL_PATTERN}), (${MYSQL_STRING_LITERAL_PATTERN}), (${MYSQL_STRING_LITERAL_PATTERN}), (NULL|${MYSQL_STRING_LITERAL_PATTERN}), CAST\\((${MYSQL_STRING_LITERAL_PATTERN}) AS JSON\\)\\)$`,
+  "i",
+);
+const RAW_MAIL_INSERT_PATTERN = new RegExp(
+  `^INSERT INTO mail_messages \\(mail_id, sender_account_id, recipient_account_id, title, created_at, read_at, document_json\\) VALUES \\((${MYSQL_STRING_LITERAL_PATTERN}), (${MYSQL_STRING_LITERAL_PATTERN}), (${MYSQL_STRING_LITERAL_PATTERN}), (${MYSQL_STRING_LITERAL_PATTERN}), (${MYSQL_STRING_LITERAL_PATTERN}), (NULL|${MYSQL_STRING_LITERAL_PATTERN}), CAST\\((${MYSQL_STRING_LITERAL_PATTERN}) AS JSON\\)\\)$`,
+  "i",
+);
+
+function mysqlStringLiteral(value, sql) {
+  const token = String(value || "");
+  if (token.length < 2 || token[0] !== "'" || token[token.length - 1] !== "'") {
+    const error = new Error(`invalid MySQL string literal for modeled SQL: ${normalizeSql(sql)}`);
+    error.code = "shared_mysql_string_literal_invalid";
+    throw error;
+  }
+  const body = token.slice(1, -1);
+  let decoded = "";
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (char === "'" && body[index + 1] === "'") {
+      decoded += "'";
+      index += 1;
+      continue;
+    }
+    if (char !== "\\") {
+      decoded += char;
+      continue;
+    }
+    index += 1;
+    if (index >= body.length) {
+      const error = new Error(`unterminated MySQL escape for modeled SQL: ${normalizeSql(sql)}`);
+      error.code = "shared_mysql_string_literal_invalid";
+      throw error;
+    }
+    const escaped = body[index];
+    decoded += ({"0": "\0", b: "\b", n: "\n", r: "\r", t: "\t", Z: "\x1a"})[escaped] ?? escaped;
+  }
+  return decoded;
+}
+
+function nullableMysqlStringLiteral(value, sql) {
+  return String(value).toUpperCase() === "NULL" ? null : mysqlStringLiteral(value, sql);
+}
+
+function assertModeledDocumentProjection(document, expected, sql) {
+  for (const [field, value] of Object.entries(expected)) {
+    if (JSON.stringify(document && document[field]) === JSON.stringify(value)) {
+      continue;
+    }
+    const error = new Error(`modeled MySQL document projection mismatch: ${field}: ${normalizeSql(sql)}`);
+    error.code = "shared_mysql_document_projection_mismatch";
+    throw error;
+  }
+}
+
 function createProductionSqlHandler(queryLog, options = {}) {
   let snapshotProvider = typeof options.snapshotProvider === "function"
     ? options.snapshotProvider
@@ -1080,6 +1182,10 @@ function createProductionSqlHandler(queryLog, options = {}) {
     if (/^SELECT document_json FROM server_state WHERE state_key = 'auth' FOR UPDATE$/i.test(normalized)) {
       requiredParams(params, 0, sql);
       return operation.selectForUpdate("server_state", "auth");
+    }
+    if (/^SELECT scope_key, schema_generation, data_generation, lifecycle_state, archive_enabled, vault_claim_enabled, active_limit_enabled FROM mail_storage_control WHERE scope_key = \? FOR SHARE$/i.test(normalized)) {
+      const [scopeKey] = requiredParams(params, 1, sql);
+      return operation.selectForShare("mail_storage_control", String(scopeKey));
     }
 
     const revisionUpdate = normalized.match(
@@ -1174,6 +1280,36 @@ function createProductionSqlHandler(queryLog, options = {}) {
       });
     }
 
+    const rawCharacterSlotInsert = normalized.match(RAW_ACCOUNT_CHARACTER_SLOT_INSERT_PATTERN);
+    if (rawCharacterSlotInsert) {
+      requiredParams(params, 0, sql);
+      const accountId = mysqlStringLiteral(rawCharacterSlotInsert[1], sql);
+      const slotIndex = Number(rawCharacterSlotInsert[2]);
+      const playerId = mysqlStringLiteral(rawCharacterSlotInsert[3], sql);
+      const createdAt = mysqlStringLiteral(rawCharacterSlotInsert[4], sql);
+      const updatedAt = mysqlStringLiteral(rawCharacterSlotInsert[5], sql);
+      const lastSelectedAt = nullableMysqlStringLiteral(rawCharacterSlotInsert[6], sql);
+      const documentJson = jsonParameter(mysqlStringLiteral(rawCharacterSlotInsert[7], sql), sql);
+      assertModeledDocumentProjection(documentJson, {
+        schemaVersion: 1,
+        accountId,
+        slotIndex,
+        playerId,
+        createdAt,
+        updatedAt,
+        lastSelectedAt,
+      }, sql);
+      return operation.insert("account_character_slots", `${accountId}/${slotIndex}`, {
+        account_id: accountId,
+        slot_index: slotIndex,
+        player_id: playerId,
+        created_at: createdAt,
+        updated_at: updatedAt,
+        last_selected_at: lastSelectedAt,
+        document_json: documentJson,
+      });
+    }
+
     if (/^INSERT INTO mutation_receipts \(operation_id, request_hash, action_id, account_id, committed_at, expires_at, document_json\) VALUES \(\?, \?, \?, \?, \?, \?, CAST\(\? AS JSON\)\)$/i.test(normalized)) {
       const [operationId, requestHash, actionId, accountId, committedAt, expiresAt, documentJson]
         = requiredParams(params, 7, sql);
@@ -1230,6 +1366,35 @@ function createProductionSqlHandler(queryLog, options = {}) {
         created_at: String(createdAt),
         read_at: readAt === null ? null : String(readAt),
         document_json: jsonParameter(documentJson, sql),
+      });
+    }
+
+    const rawMailInsert = normalized.match(RAW_MAIL_INSERT_PATTERN);
+    if (rawMailInsert) {
+      requiredParams(params, 0, sql);
+      const mailId = mysqlStringLiteral(rawMailInsert[1], sql);
+      const senderAccountId = mysqlStringLiteral(rawMailInsert[2], sql);
+      const recipientAccountId = mysqlStringLiteral(rawMailInsert[3], sql);
+      const title = mysqlStringLiteral(rawMailInsert[4], sql);
+      const createdAt = mysqlStringLiteral(rawMailInsert[5], sql);
+      const readAt = nullableMysqlStringLiteral(rawMailInsert[6], sql);
+      const documentJson = jsonParameter(mysqlStringLiteral(rawMailInsert[7], sql), sql);
+      assertModeledDocumentProjection(documentJson, {
+        mailId,
+        senderAccountId,
+        recipientAccountId,
+        title,
+        createdAt,
+        readAt,
+      }, sql);
+      return operation.insert("mail_messages", mailId, {
+        mail_id: mailId,
+        sender_account_id: senderAccountId,
+        recipient_account_id: recipientAccountId,
+        title,
+        created_at: createdAt,
+        read_at: readAt,
+        document_json: documentJson,
       });
     }
 
@@ -1409,6 +1574,9 @@ function loaderRowsFromSqlSnapshot(snapshot) {
   for (const [accountId, binding] of Object.entries(snapshot.profile_bindings || {})) {
     rows.push(["profile_bindings", accountId, JSON.stringify(binding.document_json)]);
   }
+  for (const [slotKey, slot] of Object.entries(snapshot.account_character_slots || {})) {
+    rows.push(["account_character_slots", slotKey, JSON.stringify(slot.document_json)]);
+  }
   for (const [playerId, profile] of Object.entries(snapshot.profiles || {})) {
     rows.push(["profiles", playerId, JSON.stringify({
       playerId: profile.player_id,
@@ -1486,6 +1654,122 @@ function isResourceConflict(error) {
 function isGlobalConflict(error) {
   return Boolean(error && error.code === "mysql_store_revision_conflict");
 }
+
+test("legacy slot bridge and generation control lock stay ordered and roll back atomically", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-slot-bridge-"));
+  const seed = sqlSeed();
+  seed.account_character_slots = {};
+  const operationId = "op_shared_slot_bridge_rollback_0001";
+  const requestHash = "e".repeat(64);
+  const collidingReceipt = {
+    schemaVersion: 1,
+    operationId,
+    requestHash,
+    actionId: MAIL_SEND_ACTION_ID,
+    accountId: ACTORS.a.accountId,
+    committedAt: UPDATED_AT_2,
+    expiresAt: "2026-07-17T02:10:00.000Z",
+    response: {ok: true, operationId, source: "physical_collision"},
+  };
+  const loaderSeed = structuredClone(seed);
+  seed.auth_store_revisions[MUTATION_RECEIPT_CAPACITY_GUARD_KEY].revision = 1;
+  seed.mutation_receipts[operationId] = {
+    operation_id: operationId,
+    request_hash: requestHash,
+    action_id: MAIL_SEND_ACTION_ID,
+    account_id: ACTORS.a.accountId,
+    committed_at: UPDATED_AT_2,
+    expires_at: collidingReceipt.expiresAt,
+    document_json: collidingReceipt,
+  };
+  const queryLog = [];
+  const loader = createSharedLoader(tempDir, loaderSeed);
+  let committedSnapshotObserved = false;
+  const writerId = "legacy_slot_bridge";
+  const harness = createSharedMysqlTransactionHarness({
+    seed,
+    statementHandler: createProductionSqlHandler(queryLog),
+    onCommittedSnapshot(snapshot) {
+      committedSnapshotObserved = true;
+      loader.writeSnapshot(snapshot);
+    },
+  });
+  const store = createProductionStore(loader.fakeMysqlPath, harness.poolFor(writerId));
+
+  try {
+    const loaded = store.load();
+    assert.deepEqual(
+      Object.values(loaded.accountCharacterSlots).map((slots) => slots[0].playerId).sort(),
+      [ACTORS.a.playerId, ACTORS.b.playerId].sort(),
+    );
+    const after = nextMailSendAuthority(loaded, "a", "b", {
+      mailId: "mail_shared_slot_bridge_rollback",
+      operationId,
+      requestHash,
+      updatedAt: UPDATED_AT_2,
+    });
+    await assert.rejects(
+      store.saveAsync(after),
+      (error) => (
+        error
+        && error.code === "mysql_resource_revision_conflict"
+        && error.resource === "mutation_receipt"
+        && error.resourceKey === operationId
+        && error.outcomeUnknown === false
+        && error.rollbackConfirmed === true
+      ),
+    );
+
+    const writerQueries = queryLog.filter((entry) => entry.writerId === writerId);
+    const globalBarrierIndex = writerQueries.findIndex((entry) => (
+      /^SELECT revision AS storeRevision FROM auth_store_revisions.+FOR UPDATE$/i.test(entry.sql)
+    ));
+    const controlLockIndex = writerQueries.findIndex((entry) => (
+      /FROM mail_storage_control.+FOR SHARE$/i.test(entry.sql)
+    ));
+    const slotInsertIndexes = writerQueries
+      .map((entry, index) => (/^INSERT INTO account_character_slots\b/i.test(entry.sql) ? index : -1))
+      .filter((index) => index >= 0);
+    const mailInsertIndex = writerQueries.findIndex((entry) => (
+      /^INSERT INTO mail_messages\b/i.test(entry.sql)
+    ));
+    const receiptInsertIndex = writerQueries.findIndex((entry) => (
+      /^INSERT INTO mutation_receipts\b/i.test(entry.sql)
+    ));
+    assert.equal(globalBarrierIndex >= 0, true);
+    assert.equal(controlLockIndex > globalBarrierIndex, true);
+    assert.equal(slotInsertIndexes.length, 2);
+    assert.equal(slotInsertIndexes[0] > controlLockIndex, true);
+    assert.equal(mailInsertIndex > slotInsertIndexes.at(-1), true);
+    assert.equal(receiptInsertIndex > mailInsertIndex, true);
+
+    const committed = harness.snapshot();
+    assert.deepEqual(committed.account_character_slots, {});
+    assert.deepEqual(committed.mail_messages, {});
+    assert.deepEqual(committed.mutation_receipts, {[operationId]: seed.mutation_receipts[operationId]});
+    assert.equal(committed.auth_store_revisions.auth.revision, 0);
+    assert.equal(
+      committed.auth_store_revisions[MUTATION_RECEIPT_CAPACITY_GUARD_KEY].revision,
+      1,
+    );
+    assert.deepEqual(
+      committed.mail_storage_control[MAIL_STORAGE_CONTROL_SCOPE_KEY],
+      seed.mail_storage_control[MAIL_STORAGE_CONTROL_SCOPE_KEY],
+    );
+    assert.equal(committedSnapshotObserved, false);
+    assert.equal(
+      harness.events().some((event) => (
+        event.type === "rollback_applied" && event.writerId === writerId
+      )),
+      true,
+    );
+  } finally {
+    await store.close();
+    fs.rmSync(tempDir, {recursive: true, force: true});
+  }
+
+  assert.equal(harness.assertIdle(), true);
+});
 
 test("different profiles share the auth barrier, retain both winners, and keep Node-local baselines row-local", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "beastbound-shared-different-"));
