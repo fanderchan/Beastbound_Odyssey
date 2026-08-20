@@ -1,6 +1,6 @@
 # Beastbound Odyssey Agent Instructions
 
-These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific rules live in `client/godot/AGENTS.md` and `server/node/AGENTS.md` and apply together with this file.
+These rules apply to this repository. More specific rules live in `client/godot/AGENTS.md` and `server/node/AGENTS.md` and apply together with this file.
 
 ## Start Every Task From Repository Truth
 
@@ -22,7 +22,7 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 ## Product Direction
 
 - Build an original StoneAge-inspired 2.5D turn-based pet MMORPG, not a one-to-one clone. Use StoneAge references for behavior intent only.
-- Before approving a player-visible gameplay or UX addition, inspect the verified StoneAge 8.0 behavior in `/Users/fander/projects/_local_references/StoneAge` and treat that mature behavior as the default baseline. Depart only when a documented Beastbound product difference or evidenced player pain justifies the change; record the expected benefit, tradeoff, and why it is not over-design. Keep technical recovery and safety mechanisms invisible unless players genuinely need to operate them. StoneAge remains a reference rather than a source to copy, and Beastbound-specific rules still take priority when explicitly decided.
+- Before approving a player-visible gameplay or UX addition, inspect the verified StoneAge 8.0 behavior in `../_local_references/StoneAge` (resolved from the repository root) and treat that mature behavior as the default baseline. Depart only when a documented Beastbound product difference or evidenced player pain justifies the change; record the expected benefit, tradeoff, and why it is not over-design. Keep technical recovery and safety mechanisms invisible unless players genuinely need to operate them. StoneAge remains a reference rather than a source to copy, and Beastbound-specific rules still take priority when explicitly decided.
 - The commercial target is an always-online Chinese recharge-supported private-server-style MMORPG, not a Steam/single-player/buy-to-play product. The long-term capacity target is at least 200 players on one map; do not claim that capacity before load evidence exists.
 - The primary player promise is pet jackpot cultivation: visible Lv1 4V, hidden per-level growth learned through training, and high-variance rebirth/evolution/fusion with active/passive inheritance. Preserve that uncertainty instead of exposing one final quality number immediately.
 - The release target is PC desktop first at the normal 1280x720 client path. Keep shared contracts reusable where cheap, but do not add mobile-only layouts, portrait flows, touch-only features, or mobile release blockers unless the user explicitly reprioritizes mobile.
@@ -91,7 +91,7 @@ These rules apply to `/Users/fander/projects/Beastbound_Odyssey`. More specific 
 
 ## Assets And External References
 
-- For uncertain StoneAge 8.0 behavior, inspect `/Users/fander/projects/_local_references/StoneAge` first. Do not re-clone it unless missing or explicitly asked to refresh.
+- For uncertain StoneAge 8.0 behavior, inspect `../_local_references/StoneAge` from the repository root first. Do not re-clone it unless missing or explicitly asked to refresh.
 - Use StoneAge 8.0, StoneAge9, or SA80 only for mechanics, data-contract ideas, validation patterns, and replaceable pipeline structure. Never copy their source, numbers, maps, NPC scripts, audio, or art without explicit approval.
 - Every non-placeholder runtime asset must document source, ownership, replacement path, and validation evidence. Keep placeholders easy to replace.
 - For movement collision reference, StoneAge `CHAR_ISOVERED=1` means passable/overlappable and `0` blocks; Beastbound expresses this as NPC `movementCollision`.

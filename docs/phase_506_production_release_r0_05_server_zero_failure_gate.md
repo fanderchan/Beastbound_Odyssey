@@ -14,7 +14,7 @@
 
 ## 仓库与依赖复核
 
-- 候选工作树：`/Users/fander/projects/Beastbound_Odyssey_release_candidate`；
+- 候选工作树：独立分支 `codex/production-release-candidate` 的专用 worktree；
 - 分支：`codex/production-release-candidate`；
 - 门禁前 HEAD 与远端候选均为 `38da5f442df7a403898fa0334800e71233512631`；
 - 最新 `origin/main` 为 `ddcb4ff770093d0ae1533631f6371b11e1ce4f30`，候选相对它 `behind 0 / ahead 18`；
