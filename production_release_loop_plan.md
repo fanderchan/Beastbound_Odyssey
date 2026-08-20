@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.01
+> 当前游标：R1.W001
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -111,11 +111,11 @@
 
 每个候选必须分别展示、分别决定、分别提升。拒绝或要求修改时，在动态区插入一个对应 R1.Wxxx 返工任务；不得批量放行。
 
-- [ ] **R1.01 OWNER｜Firebud Village v2 人眼验收**
-  依赖：R0.09。展示真实 Main.tscn 中静止、移动、寻路、NPC、战斗切入和性能证据；项目所有者明确批准、退回或首发延期。
+- [x] **R1.01 OWNER｜Firebud Village v2 人眼验收**
+  依赖：R0.09。展示真实 Main.tscn 中静止、移动、寻路、NPC、战斗切入和性能证据；项目所有者明确批准、退回或首发延期。2026-08-21 项目所有者明确退回：修正碰撞/哈希与录片收口，重做道路过渡、UI 安全区和密度比例后再审；本项只记录退回结论，不批准、不提升、不启用候选，返工拆为 R1.W001–R1.W007。
 
 - [ ] **R1.02 AUTO｜执行 Firebud Village v2 验收结论**
-  依赖：R1.01。批准则使用现有 hash-bound 提升与证明链精确发布；退回则完成 R1.Wxxx 后再审；延期则保证玩家不可到达且旧正式版本保持有效。
+  依赖：R1.W007（本次 R1.01 已退回）。返工后再次批准才使用新冻结的 hash-bound 提升与证明链精确发布；再次退回则继续按一个根因一个 R1.Wxxx 返工；延期则保证玩家不可到达且旧正式版本保持有效。
 
 - [ ] **R1.03 OWNER｜融合肖像与融合流程人眼验收**
   依赖：R0.09。展示 Phase 479 候选的来源/结果肖像、融合确认、结果页、正常状态、失败状态与当前不含骑乘的边界。
@@ -555,6 +555,27 @@
 
 由 R1 的 OWNER 验收生成。一个明确视觉、音频、玩法或集成问题一个任务；修完必须重新 OWNER 验收。
 
+- [ ] **R1.W001 AUTO｜Firebud v2 权威碰撞、保护格与哈希闭环**
+  依赖：R1.01。逐项关闭当前严格 runtime 报告中的 13 个 `blocking footprint`／`blockedCells` 不一致，移开占用村口 `(6,18)`、`(7,18)` 出生/warp/NPC approach/主路保护格的视觉阻挡物；保持稳定 mapId、spawn、warp、交互、遭遇与主路语义，使用权威 runner 重建 map data、binding、catalog contract 与相关哈希。严格 runtime、collision、movement、pathfinding、warp 和服务点接近检查必须通过，bundle 仍保持 pending。
+
+- [ ] **R1.W002 AUTO｜Firebud v2 真实 Main 录片收口与 QA lane 恢复**
+  依赖：R1.W001。复现并修复村口 moving native 截图已生成后仍在正式报告/音频/渲染收口阶段等待 600 秒的问题；成功、失败和超时路径都必须有界退出、写出可信回执、关闭进程组并精确清理 owner-bound automation lane。村口与训练场 idle/moving 连续两轮完整录片通过，真实玩家目录哈希前后一致且无孤儿进程。
+
+- [ ] **R1.W003 AUTO｜Firebud v2 道路、草地与广场过渡返工**
+  依赖：R1.W002。重做当前 1280×720 Main 画面中明显的矩形拼块、硬直角和锯齿边；保留 80×40 语义地砖、15 组合道路/广场过渡、碰撞、寻路、warp 和 protected 事实不变。冻结原稿、prompt、处理中间稿、atlas 与可复现哈希，并以村口/训练场同机位前后图证明主路连续、路口清楚且没有新接缝。
+
+- [ ] **R1.W004 AUTO｜Firebud v2 PC HUD 安全区与边缘构图返工**
+  依赖：R1.W003。在正常 1280×720 PC HUD 下重新安排纯视觉物件、镜头构图或安全留白，使右侧任务栏不压住训练设施/主地标，村口右下环形地标与其他关键物件不被屏幕边缘裁切；不得靠隐藏任务 HUD、移动 warp/spawn 或扩大可走地图冒充通过。真实 Main 静止、移动、warp 与遮挡截图必须覆盖安全区。
+
+- [ ] **R1.W005 AUTO｜Firebud v2 密度、比例、光照与生活感统一**
+  依赖：R1.W004。收敛村口同屏 NPC/标记/道具拥挤、角色与物件比例及清晰度/光照不一致，让服务区、中央通行带和训练层级自然可读；NPC 仍由 actor catalog 独立渲染，禁止烘焙进地图。任何命名 NPC 或服务格变更都必须显式列出并回归交互/接近距离，不能静默改变玩法拓扑。
+
+- [ ] **R1.W006 AUTO｜Firebud v2 精确返工证据重新冻结**
+  依赖：R1.W001、R1.W002、R1.W003、R1.W004、R1.W005。将旧 Phase 481 与本次退回材料明确 supersede，基于同一精确候选重新生成两张地图各 `pointer / movement_path / warp / collision / occlusion` 的独立 Main pair 与 Computer Use receipt、完整 1280×720/30fps/1× 视频、collision/catalog/performance 原始 runner 回执、来源与 build identity。离线 auditor 必须结构 PASS，除 owner acceptance、release attestation 和 released lifecycle 外不再有证据缺口；候选仍不得进入普通玩家运行时。
+
+- [ ] **R1.W007 OWNER｜Firebud v2 返工后人眼复验**
+  依赖：R1.W006。向项目所有者展示精确冻结的村口/训练场静止、移动、寻路、NPC、warp、遮挡、战斗切入与性能材料，并再次明确选择批准、退回或首发延期；未明确批准不得执行 R1.02 promotion。
+
 ### R2.Dxxx — Boss/PvP 决策缺口
 
 由 R2.02 生成。一个玩家决策或服务端权威缺口一个任务。
@@ -592,7 +613,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 未开始（当前 R1.01 OWNER） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.01 已退回，当前 R1.W001） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -628,6 +649,7 @@
 - 2026-08-20｜R0.07｜docs/phase_508_production_release_r0_07_real_client_baseline.md + `.run/evidence/r0_07/`｜真实 Main 本地在线 `8/8`、Firebud v1/v2 静止/移动 `8/8`、10v10 战斗性能 `21/21` 通过；世界 HUD 44.3 秒、战斗 13.533 秒及 8 个 NPC Main 证据完成；发现裸 parse 会轮转普通玩家日志并更新音频偏好后新增隔离 `--parse-only`，Python `152/152`、Node `52/52`、安全解析 `1/1` 和源合同全绿，后端/进程/三条 QA 车道完整收尾｜Firebud v2、NPC 与战斗视觉仍为 owner review pending，正式构建与低端机/SOAK 尚未执行；发布结论保持 BLOCKED
 - 2026-08-20｜R0.08｜docs/phase_509_production_release_r0_08_candidate_hygiene_reproducibility.md + `.run/release_candidate/r0_08/candidate-audit.json`｜最终 HEAD 的 23 个线性提交与 225 条差异路径精确入表，未分类/生成状态/真实秘密/私人绝对路径/孤儿进程均为 0；Firebud 不可变证据逐层 SHA 闭合，两次源码 tar 字节一致，隔离 index 反向 full-index binary patch 精确重建 origin/main tree；Node `58/58`、QA source contract、隔离 Godot parse `1/1` 通过，车道/进程收尾｜未安装外部 secret scanner，完整历史/供应链安全仍留 R7；完整候选 CI 与跨阶段一致性留 R0.09，owner pending 状态不变，发布结论保持 BLOCKED
 - 2026-08-20｜R0.09｜docs/phase_510_production_release_r0_09_clean_candidate_baseline.md + `.run/local_ci/r0_09_full_gate_pass5/2026-08-20T15-30-29-864Z_summary.json`｜统一门禁 `8/8`；完整服务端 `1981/1980 pass/0 fail/1 skip`，Godot 发布目标 `35/35`、隔离 JSON 联机 `8/8`、性能 `5/5`；定向 Node `98/98`、候选审计器 `6/6`、Python `78/78`、战斗夹具连续十轮 `20/20`，进程组、QA lane、真实玩家资料哈希、后端端口和候选进程全部收尾｜R0 基线成立但全局发布仍 BLOCKED；Valkey 生产相似验证、全部 OWNER 候选、玩法内容、正式资产、支付、运维安全、签名制品、封测与 R10 门禁仍未完成，下一任务 R1.01
+- 2026-08-21｜R1.01｜项目所有者明确退回 + docs/phase_511_production_release_r1_01_firebud_v2_owner_rejection.md + `.run/evidence/r1_01_firebud_owner_review/`｜受审提交 `23d0cf178` 的真实 Main 村口/训练场材料已展示；基础解析、展示档案及移动/寻路/NPC/切图/遇敌/战斗入口通过，性能保持 60fps；严格 runtime 复现 13 个碰撞/哈希不一致，完整录片在村口 moving native 收口 600 秒超时，画面确认道路拼块、HUD 安全区和密度比例未达冻结线｜候选继续 `owner_review_pending` 且普通玩家不可用；R1.W001–R1.W007 依次关闭碰撞/哈希、录片收口、道路过渡、构图安全区、密度比例、证据重建和 OWNER 复验，下一任务 R1.W001
 
 ## 7. 正式上线硬门槛
 
