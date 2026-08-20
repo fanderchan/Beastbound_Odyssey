@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W002
+> 当前游标：R1.W003
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -558,8 +558,8 @@
 - [x] **R1.W001 AUTO｜Firebud v2 权威碰撞、保护格与哈希闭环**
   依赖：R1.01。完成校正：Phase 511 报告中的 13 个 footprint、`(6,18)`／`(7,18)` 保护格及旧 map hash 错误，实际来自 primary v1 binding 与 staged v2 权威 map data 的交叉比较，不是当前 v2 binding 缺陷；v2 花坛原本已在 `[12,20]`，18 个 blocking placement 的 47 个 footprint cell 全部命中权威 `blockedCells`，map data/binding 字节与既有哈希均未改。严格 pending preview 现在实际复验冻结 v2 报告，并把 v1 的预期 fail-closed 隔离在 v1 bundle report；catalog/collision receipt/audit 已按新 runner 重冻，movement、pathfinding、warp、NPC/服务点与证据门禁通过。bundle 继续 pending，未重写 v1 历史验收，未提升或启用。
 
-- [ ] **R1.W002 AUTO｜Firebud v2 真实 Main 录片收口与 QA lane 恢复**
-  依赖：R1.W001。复现并修复村口 moving native 截图已生成后仍在正式报告/音频/渲染收口阶段等待 600 秒的问题；成功、失败和超时路径都必须有界退出、写出可信回执、关闭进程组并精确清理 owner-bound automation lane。村口与训练场 idle/moving 连续两轮完整录片通过，真实玩家目录哈希前后一致且无孤儿进程。
+- [x] **R1.W002 AUTO｜Firebud v2 真实 Main 录片收口与 QA lane 恢复**
+  依赖：R1.W001。已关闭截图后等待无 redraw 的 `frame_post_draw` 导致 600 秒超时，以及短生命周期视觉取证启动 Ogg 后的间歇资源泄漏；退出 drain 改为显式停播/断流、16 个 process frame + 1.5 秒有界释放，地图视觉录片禁用 production playback 但保留可解码 AAC 音轨。共享 runner 只在 leader reaped、进程组关闭和 owner-bound verify 全部可信时清理 contained timeout，并生成 hash-bound 失败回执。真实 Main 村口/训练场 idle/moving 连续两轮完整录片通过，8 个 lane lifecycle／32 个 phase 进程全部收尾，真实玩家目录哈希不变且无本轮候选孤儿进程。
 
 - [ ] **R1.W003 AUTO｜Firebud v2 道路、草地与广场过渡返工**
   依赖：R1.W002。重做当前 1280×720 Main 画面中明显的矩形拼块、硬直角和锯齿边；保留 80×40 语义地砖、15 组合道路/广场过渡、碰撞、寻路、warp 和 protected 事实不变。冻结原稿、prompt、处理中间稿、atlas 与可复现哈希，并以村口/训练场同机位前后图证明主路连续、路口清楚且没有新接缝。
@@ -651,6 +651,7 @@
 - 2026-08-20｜R0.09｜docs/phase_510_production_release_r0_09_clean_candidate_baseline.md + `.run/local_ci/r0_09_full_gate_pass5/2026-08-20T15-30-29-864Z_summary.json`｜统一门禁 `8/8`；完整服务端 `1981/1980 pass/0 fail/1 skip`，Godot 发布目标 `35/35`、隔离 JSON 联机 `8/8`、性能 `5/5`；定向 Node `98/98`、候选审计器 `6/6`、Python `78/78`、战斗夹具连续十轮 `20/20`，进程组、QA lane、真实玩家资料哈希、后端端口和候选进程全部收尾｜R0 基线成立但全局发布仍 BLOCKED；Valkey 生产相似验证、全部 OWNER 候选、玩法内容、正式资产、支付、运维安全、签名制品、封测与 R10 门禁仍未完成，下一任务 R1.01
 - 2026-08-21｜R1.01｜项目所有者明确退回 + docs/phase_511_production_release_r1_01_firebud_v2_owner_rejection.md + `.run/evidence/r1_01_firebud_owner_review/`｜受审提交 `23d0cf178` 的真实 Main 村口/训练场材料已展示；基础解析、展示档案及移动/寻路/NPC/切图/遇敌/战斗入口通过，性能保持 60fps；严格 runtime 复现 13 个碰撞/哈希不一致，完整录片在村口 moving native 收口 600 秒超时，画面确认道路拼块、HUD 安全区和密度比例未达冻结线｜候选继续 `owner_review_pending` 且普通玩家不可用；R1.W001–R1.W007 依次关闭碰撞/哈希、录片收口、道路过渡、构图安全区、密度比例、证据重建和 OWNER 复验，下一任务 R1.W001
 - 2026-08-21｜R1.W001｜docs/phase_512_production_release_r1_w001_firebud_collision_hash_closure.md + catalog `092a9ba229ef` + collision audit `df20cd944c4b`｜根因校正为 primary v1 与 staged v2 map data 的交叉比较；v2 两份 binding、两份 map data 哈希未改，18 个 blocking placement／47 个 footprint cell 全部命中权威阻挡，花坛保持 `[12,20]` 且不占 `(6,18)`／`(7,18)`；严格 pending preview 双层 frozen validation、Godot `9/9`、服务端 `42/42`、构建器 `16/16`、auditor `17/17` 与 bundle 结构审计通过｜v1 仍按设计 fail closed 至正式 promotion，bundle 保持 `owner_review_pending`／不可达；录片收口、道路过渡、UI 安全区、密度比例及新 OWNER 证据仍待 W002–W007，下一任务 R1.W002
+- 2026-08-21｜R1.W002｜docs/phase_513_production_release_r1_w002_firebud_main_recording_closure.md + `.run/evidence/r1_w002/`｜修复截图后无 redraw 的渲染等待与短生命周期 Ogg 泄漏，contained timeout 仅在进程组完整关闭后 owner-bound 清理并生成 hash-bound 失败回执；村口/训练场 idle+moving 连续两轮真实 Main 录片 `2/2`，8 个 lifecycle／32 个 phase 进程收尾，媒体与清单逐项通过，玩家 inventory SHA-256 全程不变；Python `205/205`、Node `56/56`、隔离解析 `1/1`、目标 Godot `4/4` 全绿｜候选仍为 `owner_review_pending`／不可达，画面未批准；道路过渡、UI 安全区、密度比例及新 OWNER 证据仍待 W003–W007，下一任务 R1.W003
 
 ## 7. 正式上线硬门槛
 

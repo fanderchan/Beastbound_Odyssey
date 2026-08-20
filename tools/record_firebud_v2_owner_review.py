@@ -344,14 +344,26 @@ def _read_capture_report(
     else:
         for key, expected in {
             "status": "passed",
+            "audioPlaybackDisabled": True,
             "audioStopped": True,
+            "audioStreamsDetached": True,
             "audioManagerReleased": True,
-            "drainFrames": 4,
+            "drainSeconds": 1.5,
+            "drainFrames": 16,
         }.items():
             if cleanup.get(key) != expected:
                 mismatches.append(
                     f"runtimeCleanup.{key}={cleanup.get(key)!r}"
                 )
+        detached_count = cleanup.get("detachedAudioPlayerCount")
+        if (
+            type(detached_count) is not int
+            or detached_count <= 0
+        ):
+            mismatches.append(
+                "runtimeCleanup.detachedAudioPlayerCount="
+                f"{detached_count!r}"
+            )
     if mode == "moving":
         input_report = report.get("input")
         if not isinstance(input_report, dict):
@@ -804,20 +816,71 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
     return summary_path
 
 
-def _write_failure_summary(run_dir: Path, *, run_id: str, error: BaseException) -> None:
+def _write_failure_summary(
+    run_dir: Path,
+    *,
+    run_id: str,
+    error: BaseException,
+) -> bool:
+    lane_receipts: list[dict[str, Any]] = []
+    lane_receipt_read_errors: list[dict[str, Any]] = []
+    for lifecycle_path in sorted(
+        run_dir.glob("segments/*-qa-lane/qa-lane-lifecycle.json")
+    ):
+        try:
+            with lifecycle_path.open("r", encoding="utf-8", newline="") as stream:
+                lifecycle = json.load(stream)
+            if not isinstance(lifecycle, dict):
+                raise ValueError("QA lane lifecycle authority 不是 JSON object")
+            lane_receipts.append(
+                {
+                    "artifact": CORE._artifact_record(lifecycle_path),
+                    "lifecycle": lifecycle,
+                }
+            )
+        except BaseException as read_error:
+            lane_receipt_read_errors.append(
+                {
+                    "path": CORE._repo_relative(lifecycle_path),
+                    **CORE._failure_envelope(read_error),
+                }
+            )
+    supersedes_summary: dict[str, Any] | None = None
+    summary_path = run_dir / "summary.json"
     try:
-        CORE._write_json(run_dir / "failure-summary.json", {
-            "schemaVersion": REPORT_SCHEMA_VERSION,
-            "reportType": REPORT_TYPE,
-            "status": "failed",
-            "runId": run_id,
-            "generatedAtUtc": _utc_now().isoformat().replace("+00:00", "Z"),
-            "errorType": type(error).__name__,
-            "error": str(error) or type(error).__name__,
-            "evidenceDirectoryPreserved": True,
-        })
-    except OSError:
-        pass
+        if summary_path.is_file():
+            supersedes_summary = CORE._artifact_record(summary_path)
+    except BaseException as summary_error:
+        supersedes_summary = {
+            "path": CORE._repo_relative(summary_path),
+            **CORE._failure_envelope(summary_error),
+        }
+    try:
+        CORE._write_secure_json(
+            run_dir / "failure-summary.json",
+            {
+                "schemaVersion": REPORT_SCHEMA_VERSION,
+                "reportType": REPORT_TYPE,
+                "status": "failed",
+                "finalStatusAuthority": True,
+                "supersedesSummary": supersedes_summary,
+                "runId": run_id,
+                "generatedAtUtc": _utc_now().isoformat().replace("+00:00", "Z"),
+                **CORE._failure_envelope(error),
+                "evidenceDirectoryPreserved": True,
+                "qaLaneReceipts": lane_receipts,
+                "qaLaneReceiptReadErrors": lane_receipt_read_errors,
+                "sha256Manifest": {
+                    "path": CORE._repo_relative(run_dir / "SHA256SUMS"),
+                    "writeAttemptedAfterSummary": True,
+                    "successNotClaimedByFailureSummary": True,
+                },
+            },
+            exclusive=True,
+        )
+    except BaseException:
+        return False
+    return True
 
 
 def _record(args: argparse.Namespace) -> Path:
@@ -838,7 +901,34 @@ def _record(args: argparse.Namespace) -> Path:
     try:
         return _record_into(args=args, run_id=run_id, run_dir=run_dir)
     except BaseException as error:
-        _write_failure_summary(run_dir, run_id=run_id, error=error)
+        failure_summary_written = _write_failure_summary(
+            run_dir,
+            run_id=run_id,
+            error=error,
+        )
+        if failure_summary_written:
+            try:
+                retained = sorted(
+                    (
+                        path
+                        for path in run_dir.rglob("*")
+                        if path.is_file()
+                        and path.name != "SHA256SUMS"
+                        and path.relative_to(run_dir).parts[0] != "tmp"
+                    ),
+                    key=lambda path: str(path.relative_to(run_dir)),
+                )
+                if retained:
+                    CORE._write_sha256_manifest(run_dir, retained)
+            except BaseException:
+                pass
+        else:
+            try:
+                (run_dir / "SHA256SUMS").unlink()
+            except FileNotFoundError:
+                pass
+            except BaseException:
+                pass
         raise
 
 

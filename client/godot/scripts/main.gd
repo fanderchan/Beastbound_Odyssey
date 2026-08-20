@@ -1541,6 +1541,11 @@ func _build_game_audio_manager() -> void:
 	if game_audio_manager != null:
 		return
 	game_audio_manager = GameAudioManager.new()
+	if map_visual_review_capture:
+		# The map owner-review movie validates visuals, input and isolation. Keep
+		# MovieWriter's stereo track, but never start production Ogg playback in a
+		# process that intentionally quits immediately after one screenshot.
+		game_audio_manager.configure_playback_enabled(false)
 	game_audio_manager.name = "GameAudioManager"
 	add_child(game_audio_manager)
 	battle_audio_timeline_controller = BattleAudioTimelineController.new()

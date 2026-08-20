@@ -187,12 +187,27 @@ def _clean_process(phase: str) -> dict:
         "exitCode": 0,
         "leaderReaped": True,
         "timedOut": False,
+        "timeoutDiagnostic": "",
         "signalOrError": "",
         "processGroupClosed": True,
         "processGroupResidualObserved": False,
         "processGroupTermSent": False,
         "processGroupKillSent": False,
     }
+
+
+def _contained_timeout_process(phase: str) -> dict:
+    result = _clean_process(phase)
+    result.update(
+        {
+            "exitCode": -signal.SIGTERM,
+            "timedOut": True,
+            "timeoutDiagnostic": "Command '['godot']' timed out after 0.01 seconds",
+            "processGroupResidualObserved": True,
+            "processGroupTermSent": True,
+        }
+    )
+    return result
 
 
 def _tools_help() -> str:
@@ -687,7 +702,7 @@ class PetManagementOfficialLaneTest(unittest.TestCase):
             self.assertIn("native exit=7", caught.exception.evidence["originalError"])
             self.assertNotIn("cleanup", helper.calls)
 
-    def test_log_setup_and_timeout_reap_fail_closed(self) -> None:
+    def test_log_setup_fails_closed_but_fully_reaped_timeout_is_bounded(self) -> None:
         with self._run_dir() as directory:
             root = Path(directory)
             with mock.patch.object(TOOL.os, "open", side_effect=OSError("log denied")):
@@ -714,21 +729,104 @@ class PetManagementOfficialLaneTest(unittest.TestCase):
 
             states = iter((True, False))
             process = TimedThenReaped()
-            with self.assertRaises(TOOL.GodotLanePreservationError) as timed:
-                TOOL._run_godot_with_settlement(
-                    ["godot"], phase="timeout-reap", log_path=root / "timeout-reap.log",
-                    timeout_seconds=0.1, environment={},
+            timed = TOOL._run_godot_with_settlement(
+                ["godot"], phase="timeout-reap", log_path=root / "timeout-reap.log",
+                timeout_seconds=0.1, environment={},
+                dependencies={
+                    "popen": lambda *_args, **_kwargs: process,
+                    "settlement_dependencies": {
+                        "process_group_exists": lambda _pgid: next(states),
+                        "killpg": lambda _pgid, _sent: None,
+                    },
+                },
+            )
+            self.assertTrue(timed["leaderReaped"])
+            self.assertTrue(timed["processGroupClosed"])
+            self.assertTrue(timed["timedOut"])
+            self.assertEqual(timed["exitCode"], -signal.SIGTERM)
+            self.assertTrue(
+                TOOL._is_bounded_contained_timeout(timed, "timeout-reap")
+            )
+
+    def test_contained_timeout_writes_receipt_and_cleans_owner_lane(self) -> None:
+        helper = _FakeLaneHelper()
+        runs: list[str] = []
+
+        def runner(
+            command: list[str],
+            *,
+            phase: str,
+            log_path: Path,
+            **kwargs: object,
+        ) -> dict:
+            del command, kwargs
+            runs.append(phase)
+            if phase == "version":
+                log_path.write_text("4.7.stable.official\n", encoding="utf-8")
+            elif phase == "help":
+                log_path.write_text(_tools_help(), encoding="utf-8")
+            else:
+                log_path.write_text("capture timed out\n", encoding="utf-8")
+            if phase == "native":
+                return _contained_timeout_process(phase)
+            return _clean_process(phase)
+
+        with self._run_dir() as directory:
+            root = Path(directory)
+            with self.assertRaises(TOOL.PetManagementRecordingError) as caught:
+                TOOL._run_official_lane_godot_sequence(
+                    run_dir=root,
+                    godot="godot",
+                    base_environment={
+                        "HOME": "/home",
+                        "GODOT_EDITOR_CUSTOM_FEATURES": "existing_feature",
+                    },
+                    native_command=["godot", TOOL.QA_LANE_ARGUMENT],
+                    native_log=root / "native.log",
+                    timeout_seconds=0.01,
+                    native_log_validator=lambda _path: {"status": "passed"},
                     dependencies={
-                        "popen": lambda *_args, **_kwargs: process,
-                        "settlement_dependencies": {
-                            "process_group_exists": lambda _pgid: next(states),
-                            "killpg": lambda _pgid, _sent: None,
-                        },
+                        "lane_helper": helper,
+                        "godot_runner": runner,
+                        "owner_factory": lambda: "1" * 32,
                     },
                 )
-            self.assertTrue(timed.exception.evidence["leaderReaped"])
-            self.assertTrue(timed.exception.evidence["processGroupClosed"])
-            self.assertTrue(timed.exception.evidence["timedOut"])
+            self.assertNotIsInstance(
+                caught.exception,
+                TOOL.GodotLanePreservationError,
+            )
+            lifecycle = json.loads(
+                (root / "qa-lane-lifecycle.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                lifecycle["status"],
+                "cleaned_after_contained_timeout",
+            )
+            self.assertFalse(lifecycle["qaLanePreserved"])
+            self.assertEqual(lifecycle["timeoutFailure"]["phase"], "native")
+            self.assertTrue(
+                lifecycle["timeoutFailure"]["process"]["processGroupClosed"]
+            )
+            self.assertTrue(lifecycle["cleanup"]["laneAbsent"])
+            self.assertTrue(lifecycle["cleanup"]["realUnchanged"])
+            self.assertEqual(
+                lifecycle["postCleanupInspect"]["laneRootState"],
+                "absent",
+            )
+        self.assertEqual(runs, ["version", "help", "native"])
+        self.assertEqual(
+            helper.calls,
+            [
+                "source",
+                "prepare",
+                "verify",
+                "verify",
+                "verify",
+                "verify",
+                "cleanup",
+                "inspect",
+            ],
+        )
 
     def test_full_sequence_orders_four_godot_phases_then_cleans_before_media(self) -> None:
         helper = _FakeLaneHelper()
@@ -1526,6 +1624,7 @@ class PetManagementOfficialLaneTest(unittest.TestCase):
             "_build_native_godot_command", "_cleanup_automation_lane",
             "_failure_envelope", "_godot_help_has_exact_tools_options",
             "_inspect_clean_automation_lane", "_is_exact_godot_47_version",
+            "_is_bounded_contained_timeout",
             "_load_lane_helper", "_mark_active_lane_signal",
             "_parse_exact_qa_lane_attestation",
             "_prepare_automation_lane", "_record", "_record_into",

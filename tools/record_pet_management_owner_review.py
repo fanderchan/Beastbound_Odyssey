@@ -99,20 +99,21 @@ MANAGEMENT_RECORDER_CONTRACT_FUNCTION_SHA256 = {
     "_godot_help_has_exact_tools_options": "cf0dab57d2828baedf5de691d93f47f47a4da1937e75aa063b85e2ceff41d363",
     "_inspect_clean_automation_lane": "359356f99d3024941e90d2f7ae06ce6f528f09ef94809cbfc5099306ca636b8d",
     "_is_exact_godot_47_version": "0c44db57b77b46807794449b14b7272805d67b7fa7d4e9dbd09162a0da9eee0a",
+    "_is_bounded_contained_timeout": "4c37610f3fc5ffcbbe4ccdfa0117ccdfd93649a6041f04f9a318403cf2a472a8",
     "_mark_active_lane_signal": "72050cd6e9e7ce036f875591f7f00520903ad881a12c13d6146766fc7ec58fee",
     "_load_lane_helper": "a03b63e8193885134c6afd0fa63ff9473578bdfa8d9d92f3a3f692d875a4797b",
     "_parse_exact_qa_lane_attestation": "1b9968e8a74dcae7efdf5b203468e7f9fa1df9727f7ff2444131d608f9fffe59",
     "_prepare_automation_lane": "4c5c905a233de06339cb45c7966caa942a9289d7850177dc80645f34e1dea892",
     "_record": "fbef58d17cf28d7e2fc4912c59c7f99031b107eff21026778755a7ae6ed5bc32",
     "_record_into": "ee90182360a5fd9f42b66816863609444d440eed11a58ea5db85d71a4348e676",
-    "_require_contained_godot_process": "0928724c39c0920d9b161f8b95b5c814d10af8bed857b331b98fd9056328c1cc",
-    "_run_godot_with_settlement": "967586ce82ab4b2cb31d73221e6d239cdf14bfbc144de01fea1ab6696d62552e",
+    "_require_contained_godot_process": "60e6426a221aa906c0a56ad6b7104c938035510304f8f59bec4035e425a051c8",
+    "_run_godot_with_settlement": "d7ae1af11ad7f473fdf63c08f1af2b00bf6997a0c1610c6ee60b3fee467e76d7",
     "_run_official_lane_godot_sequence": "3688e2320deed6ecaa76fa5c0a8108055dbcc8991e3e2b3a756f4213a4037bf6",
-    "_run_official_lane_godot_sequence_active": "def8ed260eec89f4e9b2f9966081dd3b8a33ce5718f58ba63f3fcc03960eb73b",
-    "_settle_godot_process_group": "ea6ae64c952eaca4ff1979987eb9181b8d2c62e46dab947669142250ebc6f3a4",
+    "_run_official_lane_godot_sequence_active": "53deb578ac9e130fef7c91e9226296f3340ba9b895636ea55aa9421c7fee57b7",
+    "_settle_godot_process_group": "8b53e9f92082fa20e2c70bb07b4533f0e6b3ebd143ce87acad0c241ac13a1625",
     "_top_level_contract_source": "f3504c2c349de83e2265698249ab9e5cc1ee168b69ef3ff0b1c4c4dc727bddae",
     "_validate_lane_source_contract": "2d7c10df96186bd0792f59305528c5f8ff70b80aab9dc2a869d235c81b55906a",
-    "_validate_recorder_source_contract": "44ddd2c829fd6c99a59ee4acde412b7bacfc42f4aa13de22a5cdf9e1e46fdeb0",
+    "_validate_recorder_source_contract": "bc9d13b291a4df0087419e68d0e680c00fe2e3b536376a24695a249bf8819682",
     "_verify_automation_lane": "6f70775261a4c17e6f649f121505424c69be353704768b6dee46cd11f788b69a",
     "_write_lifecycle_authority": "0ac5249d797e93474857fe4c62abb6fdc956f877156068dbb2a93859962177ed",
     "_write_failure_summary": "e08a3a7b40e6b80133c1ca179a92add82c2502662b4107914ade28b072e562c4",
@@ -554,6 +555,7 @@ def _validate_recorder_source_contract(
         "_build_native_godot_command", "_cleanup_automation_lane",
         "_failure_envelope", "_godot_help_has_exact_tools_options",
         "_inspect_clean_automation_lane", "_is_exact_godot_47_version",
+        "_is_bounded_contained_timeout",
         "_load_lane_helper", "_mark_active_lane_signal",
         "_parse_exact_qa_lane_attestation", "_prepare_automation_lane",
         "_record", "_record_into", "_require_contained_godot_process",
@@ -1081,6 +1083,7 @@ def _settle_godot_process_group(
         "processGroupTermSent": False,
         "processGroupKillSent": False,
         "leaderReapedDuringSettlement": False,
+        "leaderExitCodeDuringSettlement": None,
     }
 
     def reap_leader(wait_seconds: float) -> None:
@@ -1094,6 +1097,17 @@ def _settle_godot_process_group(
             evidence["containmentDiagnostic"] = _safe_error_text(error)
         else:
             evidence["leaderReapedDuringSettlement"] = True
+            try:
+                evidence["leaderExitCodeDuringSettlement"] = int(
+                    leader_process.returncode
+                )
+            except (AttributeError, TypeError, ValueError):
+                try:
+                    evidence["leaderExitCodeDuringSettlement"] = int(
+                        leader_process.wait(timeout=0.01)
+                    )
+                except BaseException as error:
+                    evidence["containmentDiagnostic"] = _safe_error_text(error)
 
     try:
         exists = bool(group_exists(process_group))
@@ -1150,6 +1164,40 @@ def _settle_godot_process_group(
     return evidence
 
 
+def _is_bounded_contained_timeout(
+    process_result: Mapping[str, Any],
+    phase: str,
+) -> bool:
+    if not isinstance(process_result, Mapping):
+        return False
+    timeout_diagnostic = process_result.get("timeoutDiagnostic")
+    residual_observed = process_result.get("processGroupResidualObserved")
+    term_sent = process_result.get("processGroupTermSent")
+    kill_sent = process_result.get("processGroupKillSent")
+    exit_code = process_result.get("exitCode")
+    if (
+        process_result.get("phase") != phase
+        or process_result.get("containmentScope") != CONTAINMENT_SCOPE
+        or process_result.get("leaderReaped") is not True
+        or process_result.get("processGroupClosed") is not True
+        or process_result.get("timedOut") is not True
+        or process_result.get("signalOrError") != ""
+        or type(timeout_diagnostic) is not str
+        or timeout_diagnostic == ""
+        or type(exit_code) is not int
+        or type(residual_observed) is not bool
+        or type(term_sent) is not bool
+        or type(kill_sent) is not bool
+        or process_result.get("containmentDiagnostic") not in (None, "")
+    ):
+        return False
+    if residual_observed and not (term_sent or kill_sent):
+        return False
+    if not residual_observed and (term_sent or kill_sent):
+        return False
+    return True
+
+
 def _run_godot_with_settlement(
     command: Sequence[str],
     *,
@@ -1170,6 +1218,7 @@ def _run_godot_with_settlement(
         "exitCode": None,
         "leaderReaped": False,
         "timedOut": False,
+        "timeoutDiagnostic": "",
         "signalOrError": "",
         "processGroupClosed": False,
         "processGroupResidualObserved": False,
@@ -1221,7 +1270,7 @@ def _run_godot_with_settlement(
                     evidence["leaderReaped"] = True
                 except subprocess.TimeoutExpired as error:
                     evidence["timedOut"] = True
-                    evidence["signalOrError"] = _safe_error_text(error)
+                    evidence["timeoutDiagnostic"] = _safe_error_text(error)
                 except BaseException as error:
                     evidence["signalOrError"] = _safe_error_text(error)
             except BaseException as error:
@@ -1236,11 +1285,21 @@ def _run_godot_with_settlement(
                         timeout_seconds=min(10.0, timeout_seconds),
                     )
                     closure_evidence = dict(closure)
+                    settlement_exit_code = closure_evidence.pop(
+                        "leaderExitCodeDuringSettlement",
+                        None,
+                    )
                     if closure_evidence.pop(
                         "leaderReapedDuringSettlement",
                         False,
                     ):
                         evidence["leaderReaped"] = True
+                        if type(settlement_exit_code) is int:
+                            evidence["exitCode"] = settlement_exit_code
+                        else:
+                            evidence["containmentDiagnostic"] = (
+                                "settlement reaped leader without exact exit code"
+                            )
                     evidence.update(closure_evidence)
                 except BaseException as error:
                     evidence["signalOrError"] = (
@@ -1271,7 +1330,8 @@ def _run_godot_with_settlement(
                 pass
     unsafe_reason = ""
     if evidence["timedOut"]:
-        unsafe_reason = f"{phase}_timeout"
+        if not _is_bounded_contained_timeout(evidence, phase):
+            unsafe_reason = f"{phase}_timeout_containment_unknown"
     elif not evidence["processGroupClosed"]:
         unsafe_reason = f"{phase}_containment_unknown"
     elif evidence["processGroupResidualObserved"]:
@@ -1298,9 +1358,11 @@ def _require_contained_godot_process(
         or process_result.get("processGroupClosed") is not True
         or process_result.get("processGroupResidualObserved") is not False
         or process_result.get("timedOut") is not False
+        or process_result.get("timeoutDiagnostic", "") != ""
         or process_result.get("signalOrError") != ""
         or process_result.get("processGroupTermSent") is not False
         or process_result.get("processGroupKillSent") is not False
+        or process_result.get("containmentDiagnostic") not in (None, "")
     ):
         raise GodotLanePreservationError(
             f"Godot {phase} process containment evidence 不可信",
@@ -1633,6 +1695,45 @@ def _run_official_lane_godot_sequence_active(
         )
         raise PetManagementRecordingError(_safe_error_text(error)) from error
 
+    def cleanup_after_contained_timeout(
+        process_result: Mapping[str, Any],
+        phase: str,
+    ) -> None:
+        lifecycle["status"] = "contained_timeout_verified_before_cleanup"
+        lifecycle["timeoutFailure"] = {
+            "phase": phase,
+            "process": dict(process_result),
+        }
+        timeout_error = PetManagementRecordingError(
+            f"Godot {phase} 超时；进程组已关闭，正在清理 owner-bound QA lane"
+        )
+        _write_lifecycle_authority(
+            lifecycle_path,
+            lifecycle,
+            writer=lifecycle_writer,
+            original_error=timeout_error,
+        )
+        try:
+            lifecycle["cleanup"] = _cleanup_automation_lane(session, lane_helper)
+            lifecycle["postCleanupInspect"] = _inspect_clean_automation_lane(
+                session, lane_helper
+            )
+        except GodotRecorderSignal:
+            raise
+        except BaseException as cleanup_error:
+            preserve("cleanup_failed", cleanup_error, process_result)
+        lifecycle["status"] = "cleaned_after_contained_timeout"
+        lifecycle["qaLanePreserved"] = False
+        lifecycle["lanePreservationReason"] = None
+        _write_lifecycle_authority(
+            lifecycle_path,
+            lifecycle,
+            writer=lifecycle_writer,
+        )
+        raise PetManagementRecordingError(
+            f"Godot {phase} 超时；进程组已关闭且 QA lane 已精确清理"
+        ) from timeout_error
+
     try:
         lifecycle["initialVerification"] = _verify_automation_lane(
             session, lane_helper
@@ -1662,6 +1763,10 @@ def _run_official_lane_godot_sequence_active(
             preserve(error.reason, error, error.evidence)
         except BaseException as error:
             preserve(f"{phase}_runner_exception", error)
+        if _is_bounded_contained_timeout(process_result, phase):
+            lifecycle["phases"][phase] = {"process": process_result}
+            verify_phase(phase)
+            cleanup_after_contained_timeout(process_result, phase)
         try:
             _require_contained_godot_process(process_result, phase)
         except GodotRecorderSignal:
@@ -1715,6 +1820,10 @@ def _run_official_lane_godot_sequence_active(
             preserve(error.reason, error, error.evidence)
         except BaseException as error:
             preserve(f"{phase}_runner_exception", error)
+        if _is_bounded_contained_timeout(process_result, phase):
+            lifecycle["phases"][phase] = {"process": process_result}
+            verify_phase(phase)
+            cleanup_after_contained_timeout(process_result, phase)
         try:
             _require_contained_godot_process(process_result, phase)
         except GodotRecorderSignal:

@@ -7,11 +7,20 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOL_PATH = REPO_ROOT / "tools" / "record_firebud_v2_owner_review.py"
+CAPTURE_PATH = (
+    REPO_ROOT
+    / "client"
+    / "godot"
+    / "scripts"
+    / "qa"
+    / "map_visual_review_capture.gd"
+)
 SPEC = importlib.util.spec_from_file_location("record_firebud_v2_owner_review", TOOL_PATH)
 assert SPEC is not None and SPEC.loader is not None
 TOOL = importlib.util.module_from_spec(SPEC)
@@ -39,8 +48,12 @@ def _capture_report(*, map_id: str, mode: str) -> dict:
         "normalPlayerHud": True, "viewport": [1280, 720], "errors": [],
         "groundDrawCount": 100, "objectCount": 5,
         "runtimeCleanup": {
-            "status": "passed", "audioStopped": True,
-            "audioManagerReleased": True, "drainFrames": 4,
+            "status": "passed", "audioPlaybackDisabled": True,
+            "audioStopped": True,
+            "audioStreamsDetached": True,
+            "detachedAudioPlayerCount": 12,
+            "audioManagerReleased": True,
+            "drainSeconds": 1.5, "drainFrames": 16,
         },
         "playerCellChanged": mode == "moving",
         "input": ({"eventClass": "InputEventMouseButton", "delivery": "Input.parse_input_event", "frameSeparated": True} if mode == "moving" else {}),
@@ -236,6 +249,101 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
         self.assertIn('"coversAllRetainedEvidenceFiles": True', source)
         self.assertIn('"coversThisSummary": True', source)
         self.assertNotIn("--review-arg", source)
+
+    def test_capture_cleanup_detaches_audio_and_never_waits_for_draw_after_screenshot(self) -> None:
+        source = CAPTURE_PATH.read_text(encoding="utf-8")
+        cleanup = source[
+            source.index("func _drain_capture_runtime()"):
+            source.index("func _finish_report(")
+        ]
+        self.assertNotIn("RenderingServer.frame_post_draw", cleanup)
+        self.assertIn('"AudioStreamPlayer"', cleanup)
+        self.assertIn("player.stream = null", cleanup)
+        self.assertIn("AUDIO_DRAIN_FRAMES_BEFORE_FREE := 8", source)
+        self.assertIn("AUDIO_DRAIN_FRAMES_AFTER_FREE := 8", source)
+        self.assertIn("AUDIO_DRAIN_SECONDS_BEFORE_FREE := 0.75", source)
+        self.assertIn("AUDIO_DRAIN_SECONDS_AFTER_FREE := 0.75", source)
+        self.assertEqual(cleanup.count("create_timer("), 2)
+        self.assertIn('"audioStreamsDetached": true', cleanup)
+        self.assertIn('"audioPlaybackDisabled": true', cleanup)
+        self.assertIn('"drainSeconds": (', cleanup)
+        self.assertIn('"drainFrames": (', cleanup)
+
+        main_source = (
+            REPO_ROOT / "client" / "godot" / "scripts" / "main.gd"
+        ).read_text(encoding="utf-8")
+        audio_build = main_source[
+            main_source.index("func _build_game_audio_manager()"):
+            main_source.index("func _mount_audio_settings_panel()")
+        ]
+        self.assertIn("if map_visual_review_capture:", audio_build)
+        self.assertIn(
+            "game_audio_manager.configure_playback_enabled(false)",
+            audio_build,
+        )
+        self.assertLess(
+            audio_build.index("configure_playback_enabled(false)"),
+            audio_build.index("add_child(game_audio_manager)"),
+        )
+
+    def test_failure_summary_embeds_lane_receipt_and_gets_manifest(self) -> None:
+        evidence_root = REPO_ROOT / ".run" / "evidence"
+        evidence_root.mkdir(parents=True, exist_ok=True)
+
+        def fail_after_lane_prepare(
+            *,
+            args: object,
+            run_id: str,
+            run_dir: Path,
+        ) -> Path:
+            del args, run_id
+            lane_dir = run_dir / "segments" / "map-idle-qa-lane"
+            lane_dir.mkdir(parents=True)
+            TOOL.CORE._write_secure_json(
+                lane_dir / "qa-lane-lifecycle.json",
+                {
+                    "status": "cleaned_after_contained_timeout",
+                    "qaLanePreserved": False,
+                    "cleanup": {"laneAbsent": True, "realUnchanged": True},
+                },
+            )
+            raise TOOL.CORE.PetManagementRecordingError(
+                "contained timeout receipt"
+            )
+
+        with tempfile.TemporaryDirectory(dir=evidence_root) as output_root:
+            args = TOOL._parser().parse_args(
+                [
+                    "--output-root",
+                    output_root,
+                    "--run-id",
+                    "failure-receipt",
+                ]
+            )
+            with mock.patch.object(
+                TOOL,
+                "_record_into",
+                side_effect=fail_after_lane_prepare,
+            ):
+                with self.assertRaises(TOOL.CORE.PetManagementRecordingError):
+                    TOOL._record(args)
+            run_dir = Path(output_root) / "failure-receipt"
+            failure_path = run_dir / "failure-summary.json"
+            failure = json.loads(failure_path.read_text(encoding="utf-8"))
+            self.assertEqual(failure["status"], "failed")
+            self.assertTrue(failure["finalStatusAuthority"])
+            self.assertEqual(len(failure["qaLaneReceipts"]), 1)
+            receipt = failure["qaLaneReceipts"][0]
+            self.assertEqual(
+                receipt["lifecycle"]["status"],
+                "cleaned_after_contained_timeout",
+            )
+            self.assertFalse(receipt["lifecycle"]["qaLanePreserved"])
+            self.assertEqual(failure["qaLaneReceiptReadErrors"], [])
+            manifest = (run_dir / "SHA256SUMS").read_text(encoding="utf-8")
+            self.assertIn("failure-summary.json", manifest)
+            self.assertIn("qa-lane-lifecycle.json", manifest)
+            self.assertEqual(failure_path.stat().st_mode & 0o777, 0o600)
 
 
 if __name__ == "__main__":
