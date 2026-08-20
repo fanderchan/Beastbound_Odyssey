@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W003
+> 当前游标：R1.W004
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -561,8 +561,8 @@
 - [x] **R1.W002 AUTO｜Firebud v2 真实 Main 录片收口与 QA lane 恢复**
   依赖：R1.W001。已关闭截图后等待无 redraw 的 `frame_post_draw` 导致 600 秒超时，以及短生命周期视觉取证启动 Ogg 后的间歇资源泄漏；退出 drain 改为显式停播/断流、16 个 process frame + 1.5 秒有界释放，地图视觉录片禁用 production playback 但保留可解码 AAC 音轨。共享 runner 只在 leader reaped、进程组关闭和 owner-bound verify 全部可信时清理 contained timeout，并生成 hash-bound 失败回执。真实 Main 村口/训练场 idle/moving 连续两轮完整录片通过，8 个 lane lifecycle／32 个 phase 进程全部收尾，真实玩家目录哈希不变且无本轮候选孤儿进程。
 
-- [ ] **R1.W003 AUTO｜Firebud v2 道路、草地与广场过渡返工**
-  依赖：R1.W002。重做当前 1280×720 Main 画面中明显的矩形拼块、硬直角和锯齿边；保留 80×40 语义地砖、15 组合道路/广场过渡、碰撞、寻路、warp 和 protected 事实不变。冻结原稿、prompt、处理中间稿、atlas 与可复现哈希，并以村口/训练场同机位前后图证明主路连续、路口清楚且没有新接缝。
+- [x] **R1.W003 AUTO｜Firebud v2 道路、草地与广场过渡返工**
+  依赖：R1.W002。重做当前 1280×720 Main 画面中明显的矩形拼块、硬直角和锯齿边；保留 80×40 语义地砖、15 组合道路/广场过渡、碰撞、寻路、warp 和 protected 事实不变。冻结原稿、prompt、处理中间稿、atlas 与可复现哈希，并以村口/训练场同机位前后图证明主路连续、路口清楚且没有新接缝。完成返工：两套 v3 过渡均保留 15 个暴露边签名，80×40 草地 mask 覆盖从道路 `0.000/0.000/0.003`、广场 `0.059/0.131/0.311` 提升到 `0.087/0.156/0.341`、`0.125/0.245/0.493`，一像素扩张加 1.4px 羽化消除深锯齿；最终 42-tile atlas 可逐字节重建，同机位 Main 对照与 8 组性能矩阵通过，binding、地图、碰撞和绘制拓扑未改，候选继续 pending。
 
 - [ ] **R1.W004 AUTO｜Firebud v2 PC HUD 安全区与边缘构图返工**
   依赖：R1.W003。在正常 1280×720 PC HUD 下重新安排纯视觉物件、镜头构图或安全留白，使右侧任务栏不压住训练设施/主地标，村口右下环形地标与其他关键物件不被屏幕边缘裁切；不得靠隐藏任务 HUD、移动 warp/spawn 或扩大可走地图冒充通过。真实 Main 静止、移动、warp 与遮挡截图必须覆盖安全区。
@@ -613,7 +613,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（R1.01 已退回，当前 R1.W002） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.01 已退回，当前 R1.W004） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -652,6 +652,7 @@
 - 2026-08-21｜R1.01｜项目所有者明确退回 + docs/phase_511_production_release_r1_01_firebud_v2_owner_rejection.md + `.run/evidence/r1_01_firebud_owner_review/`｜受审提交 `23d0cf178` 的真实 Main 村口/训练场材料已展示；基础解析、展示档案及移动/寻路/NPC/切图/遇敌/战斗入口通过，性能保持 60fps；严格 runtime 复现 13 个碰撞/哈希不一致，完整录片在村口 moving native 收口 600 秒超时，画面确认道路拼块、HUD 安全区和密度比例未达冻结线｜候选继续 `owner_review_pending` 且普通玩家不可用；R1.W001–R1.W007 依次关闭碰撞/哈希、录片收口、道路过渡、构图安全区、密度比例、证据重建和 OWNER 复验，下一任务 R1.W001
 - 2026-08-21｜R1.W001｜docs/phase_512_production_release_r1_w001_firebud_collision_hash_closure.md + catalog `092a9ba229ef` + collision audit `df20cd944c4b`｜根因校正为 primary v1 与 staged v2 map data 的交叉比较；v2 两份 binding、两份 map data 哈希未改，18 个 blocking placement／47 个 footprint cell 全部命中权威阻挡，花坛保持 `[12,20]` 且不占 `(6,18)`／`(7,18)`；严格 pending preview 双层 frozen validation、Godot `9/9`、服务端 `42/42`、构建器 `16/16`、auditor `17/17` 与 bundle 结构审计通过｜v1 仍按设计 fail closed 至正式 promotion，bundle 保持 `owner_review_pending`／不可达；录片收口、道路过渡、UI 安全区、密度比例及新 OWNER 证据仍待 W002–W007，下一任务 R1.W002
 - 2026-08-21｜R1.W002｜docs/phase_513_production_release_r1_w002_firebud_main_recording_closure.md + `.run/evidence/r1_w002/`｜修复截图后无 redraw 的渲染等待与短生命周期 Ogg 泄漏，contained timeout 仅在进程组完整关闭后 owner-bound 清理并生成 hash-bound 失败回执；村口/训练场 idle+moving 连续两轮真实 Main 录片 `2/2`，8 个 lifecycle／32 个 phase 进程收尾，媒体与清单逐项通过，玩家 inventory SHA-256 全程不变；Python `205/205`、Node `56/56`、隔离解析 `1/1`、目标 Godot `4/4` 全绿｜候选仍为 `owner_review_pending`／不可达，画面未批准；道路过渡、UI 安全区、密度比例及新 OWNER 证据仍待 W003–W007，下一任务 R1.W003
+- 2026-08-21｜R1.W003｜docs/phase_514_production_release_r1_w003_firebud_surface_transition_rework.md + atlas `a86cb47204e6` + `.run/evidence/r1_w003/`｜冻结 v3 道路/广场原稿、prompt、拒绝谱系、alpha sheet 与可复现构建；15+15 签名在 80×40 下获得较浅连续草边，同机位村口/训练场前后图保持 start cell、tileCounts、672/1224 ground draws 与 18/22 objects 不变；严格 pending runtime、catalog、bundle audit、Godot `7/7`、Python `15/15 + 94/94`、Node `56/56`、真实 Main 性能 `8/8` 全绿并完成音频/车道收口｜候选仍为 `owner_review_pending`／不可达；HUD 安全区、密度比例、正式证据与 OWNER 复验仍待 W004–W007，下一任务 R1.W004
 
 ## 7. 正式上线硬门槛
 

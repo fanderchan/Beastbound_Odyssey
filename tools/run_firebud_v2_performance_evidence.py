@@ -90,6 +90,8 @@ def _build_identity() -> str:
         "project.godot",
         "scenes/Main.tscn",
         "scripts/main.gd",
+        "scripts/qa/perf_probe_exit_controller.gd",
+        "scripts/qa/runtime_exit_cleanup.gd",
         "scripts/world/map_visual_catalog.gd",
         "scripts/world/map_visual_renderer.gd",
         "scripts/world/world_presentation_profile.gd",
@@ -128,7 +130,6 @@ def _build_command(*, godot: str, map_id: str, variant: str, mode: str) -> list[
         "--fixed-fps", str(EXPECTED_FIXED_FPS),
         "--time-scale", "1.0",
         "--disable-vsync",
-        "--quit-after", "480" if mode == "idle" else "2600",
         "--",
         f"--qa-viewport={EXPECTED_WIDTH}x{EXPECTED_HEIGHT}",
         f"--map-perf-probe-map={map_id}",
@@ -138,6 +139,9 @@ def _build_command(*, godot: str, map_id: str, variant: str, mode: str) -> list[
     if mode == "moving":
         command.append("--movement-spam-click-check")
     command.append("--perf-probe")
+    command.append(
+        "--perf-probe-clean-exit-frames=" + ("480" if mode == "idle" else "2600")
+    )
     command.append(CORE.QA_LANE_ARGUMENT)
     if (
         command.count(CORE.QA_LANE_ARGUMENT) != 1
@@ -241,11 +245,24 @@ def _validate_godot_perf_log(path: Path, *, mode: str) -> dict[str, Any]:
         raise FirebudV2PerformanceError(
             "Firebud 性能运行没有使用 Metal Forward Mobile"
         )
+    clean_exit_prefix = "perf probe clean exit: "
+    clean_exit_lines = [
+        line for line in text.splitlines() if line.startswith(clean_exit_prefix)
+    ]
+    if len(clean_exit_lines) != 1:
+        raise FirebudV2PerformanceError("Firebud 性能运行缺少唯一 clean-exit 收口摘要")
+    try:
+        clean_exit = json.loads(clean_exit_lines[0][len(clean_exit_prefix) :])
+    except json.JSONDecodeError as error:
+        raise FirebudV2PerformanceError("Firebud clean-exit 摘要不是合法 JSON") from error
+    if not isinstance(clean_exit, dict) or clean_exit.get("status") != "passed":
+        raise FirebudV2PerformanceError(f"Firebud clean-exit 收口失败：{clean_exit!r}")
     output = text[text.find("\n") + 1 :] if text.startswith("$ ") else text
     return {
         "status": "passed",
         "renderer": "Metal 4.0 - Forward Mobile",
         "strictLogGate": "passed",
+        "runtimeCleanup": clean_exit,
         "inGamePerfProbe": _parse_in_game_probe(output=output, mode=mode),
     }
 

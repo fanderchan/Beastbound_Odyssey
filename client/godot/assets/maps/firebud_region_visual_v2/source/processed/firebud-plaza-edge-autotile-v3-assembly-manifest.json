@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 1,
+  "reportType": "beastbound.firebud_surface_autotile_sheet_build",
+  "scriptVersion": "1.0.0",
+  "pillowVersion": "12.2.0",
+  "surface": "plaza",
+  "signatures": [
+    "nw",
+    "ne",
+    "nw_ne",
+    "sw",
+    "nw_sw",
+    "ne_sw",
+    "nw_ne_sw",
+    "se",
+    "nw_se",
+    "ne_se",
+    "nw_ne_se",
+    "sw_se",
+    "nw_sw_se",
+    "ne_sw_se",
+    "nw_ne_sw_se"
+  ],
+  "sources": [
+    {
+      "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v3-row-1-alpha.png",
+      "sha256": "ac41a4e322c398292c4624ba156b6bf06380146fd6dc6f55f3fa0e6bebf3a576",
+      "dimensions": [
+        1774,
+        887
+      ]
+    },
+    {
+      "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v3-row-2-alpha.png",
+      "sha256": "afc31abb3463febf85babf62adf69f6b134ab6c1610900ae3f1ee496f17ae82f",
+      "dimensions": [
+        1774,
+        887
+      ]
+    },
+    {
+      "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v3-row-3-alpha.png",
+      "sha256": "612e8fe9f527c418667f9b348672fc33e1ee12b2d1d3a9dd87afa91fecbb9560",
+      "dimensions": [
+        1774,
+        887
+      ]
+    },
+    {
+      "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v3-row-4-alpha.png",
+      "sha256": "dde7d03414e3820533ebd50d5f688b0a8f51f43ac3309c48d99a7c6e8fc98e29",
+      "dimensions": [
+        1774,
+        887
+      ]
+    }
+  ],
+  "crop": {
+    "xBounds": [
+      0,
+      444,
+      887,
+      1331,
+      1774
+    ],
+    "top": 221,
+    "bottom": 665,
+    "cellSize": 444
+  },
+  "output": {
+    "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v3-alpha.png",
+    "sha256": "ecc920504daee6477b53dc1bbf2b8a1d454012cd3e56a26dc93db061774c09cb",
+    "dimensions": [
+      1776,
+      1776
+    ],
+    "grid": {
+      "rows": 4,
+      "columns": 4
+    },
+    "blankCell": [
+      3,
+      3
+    ]
+  },
+  "cells": [
+    {
+      "row": 0,
+      "column": 0,
+      "signature": "nw",
+      "sourceRect": [
+        0,
+        221,
+        444,
+        665
+      ],
+      "alphaBbox": [
+        26,
+        70,
+        438,
+        375
+      ],
+      "blank": false
+    },
+    {
+      "row": 0,
+      "column": 1,
+      "signature": "ne",
+      "sourceRect": [
+        444,
+        221,
+        887,
+        665
+      ],
+      "alphaBbox": [
+        22,
+        70,
+        429,
+        375
+      ],
+      "blank": false
+    },
+    {
+      "row": 0,
+      "column": 2,
+      "signature": "nw_ne",
+      "sourceRect": [
+        887,
+        221,
+        1331,
+        665
+      ],
+      "alphaBbox": [
+        13,
+        71,
+        424,
+        376
+      ],
+      "blank": false
+    },
+    {
+      "row": 0,
+      "column": 3,
+      "signature": "sw",
+      "sourceRect": [
+        1331,
+        221,
+        1774,
+        665
+      ],
+      "alphaBbox": [
+        9,
+        72,
+        419,
+        375
+      ],
+      "blank": false
+    },
+    {
+      "row": 1,
+      "column": 0,
+      "signature": "nw_sw",
+      "sourceRect": [
+        0,
+        221,
+        444,
+        665
+      ],
+      "alphaBbox": [
+        25,
+        71,
+        438,
+        375
+      ],
+      "blank": false
+    },
+    {
+      "row": 1,
+      "column": 1,
+      "signature": "ne_sw",
+      "sourceRect": [
+        444,
+        221,
+        887,
+        665
+      ],
+      "alphaBbox": [
+        22,
+        71,
+        429,
+        375
+      ],
+      "blank": false
+    },
+    {
+      "row": 1,
+      "column": 2,
+      "signature": "nw_ne_sw",
+      "sourceRect": [
+        887,
+        221,
+        1331,
+        665
+      ],
+      "alphaBbox": [
+        13,
+        72,
+        424,
+        376
+      ],
+      "blank": false
+    },
+    {
+      "row": 1,
+      "column": 3,
+      "signature": "se",
+      "sourceRect": [
+        1331,
+        221,
+        1774,
+        665
+      ],
+      "alphaBbox": [
+        9,
+        73,
+        419,
+        375
+      ],
+      "blank": false
+    },
+    {
+      "row": 2,
+      "column": 0,
+      "signature": "nw_se",
+      "sourceRect": [
+        0,
+        221,
+        444,
+        665
+      ],
+      "alphaBbox": [
+        25,
+        70,
+        437,
+        375
+      ],
+      "blank": false
+    },
+    {
+      "row": 2,
+      "column": 1,
+      "signature": "ne_se",
+      "sourceRect": [
+        444,
+        221,
+        887,
+        665
+      ],
+      "alphaBbox": [
+        22,
+        70,
+        428,
+        374
+      ],
+      "blank": false
+    },
+    {
+      "row": 2,
+      "column": 2,
+      "signature": "nw_ne_se",
+      "sourceRect": [
+        887,
+        221,
+        1331,
+        665
+      ],
+      "alphaBbox": [
+        13,
+        71,
+        423,
+        375
+      ],
+      "blank": false
+    },
+    {
+      "row": 2,
+      "column": 3,
+      "signature": "sw_se",
+      "sourceRect": [
+        1331,
+        221,
+        1774,
+        665
+      ],
+      "alphaBbox": [
+        8,
+        72,
+        418,
+        374
+      ],
+      "blank": false
+    },
+    {
+      "row": 3,
+      "column": 0,
+      "signature": "nw_sw_se",
+      "sourceRect": [
+        0,
+        221,
+        444,
+        665
+      ],
+      "alphaBbox": [
+        23,
+        69,
+        435,
+        380
+      ],
+      "blank": false
+    },
+    {
+      "row": 3,
+      "column": 1,
+      "signature": "ne_sw_se",
+      "sourceRect": [
+        444,
+        221,
+        887,
+        665
+      ],
+      "alphaBbox": [
+        19,
+        69,
+        427,
+        379
+      ],
+      "blank": false
+    },
+    {
+      "row": 3,
+      "column": 2,
+      "signature": "nw_ne_sw_se",
+      "sourceRect": [
+        887,
+        221,
+        1331,
+        665
+      ],
+      "alphaBbox": [
+        10,
+        70,
+        423,
+        380
+      ],
+      "blank": false
+    },
+    {
+      "row": 3,
+      "column": 3,
+      "signature": null,
+      "sourceRect": [
+        1331,
+        221,
+        1774,
+        665
+      ],
+      "alphaBbox": null,
+      "blank": true
+    }
+  ]
+}

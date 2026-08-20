@@ -5,9 +5,12 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import statistics
 import tempfile
 import unittest
 from pathlib import Path
+
+from PIL import Image, ImageEnhance
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -18,9 +21,15 @@ SEMANTICS_PATH = (
     BUNDLE_ROOT / "source/processed/firebud-semantic-variants-v1-alpha.png"
 )
 TRANSITIONS_PATH = (
-    BUNDLE_ROOT / "source/processed/firebud-path-edge-autotile-v2-alpha.png"
+    BUNDLE_ROOT / "source/processed/firebud-path-edge-autotile-v3-alpha.png"
 )
 PLAZA_TRANSITIONS_PATH = (
+    BUNDLE_ROOT / "source/processed/firebud-plaza-edge-autotile-v3-alpha.png"
+)
+PRE_REWORK_TRANSITIONS_PATH = (
+    BUNDLE_ROOT / "source/processed/firebud-path-edge-autotile-v2-alpha.png"
+)
+PRE_REWORK_PLAZA_TRANSITIONS_PATH = (
     BUNDLE_ROOT / "source/processed/firebud-plaza-edge-autotile-v2-alpha.png"
 )
 LEGACY_TRANSITIONS_PATH = (
@@ -30,10 +39,10 @@ EXPECTED_ATLAS_SHA256 = (
     "991e8c2010ade24738b8475db0549fe9dadb38874afc96ae5490a344c0638265"
 )
 EXPECTED_TRANSITION_ATLAS_SHA256 = (
-    "a5125f527f56286a78cb84a7f0ef6ab3cdf05cb6d2a488680acba0884e79498d"
+    "69483595ceacda974dccd08f541354616d9447c95b49dd08cf6e5d8f95441583"
 )
 EXPECTED_PATH_AND_PLAZA_TRANSITION_ATLAS_SHA256 = (
-    "5a57acdf761d5c3ed4a901178bc9407368f33b46e367c38c909aad3bbc80dd31"
+    "a86cb47204e6446f289d7517e623910c92228b40ff5c97dfc4c93a89765cbb85"
 )
 
 SPEC = importlib.util.spec_from_file_location("build_firebud_ground_atlas_v4", TOOL_PATH)
@@ -59,6 +68,33 @@ def _arguments(
         manifest=root / f"{name}.json",
         overwrite=overwrite,
     )
+
+
+def _grass_mask_coverages(
+    source_path: Path,
+    *,
+    saturation: float,
+    brightness: float,
+) -> list[float]:
+    with Image.open(source_path) as opened:
+        source = opened.convert("RGBA")
+    coverages: list[float] = []
+    for index in range(len(TOOL.AUTOTILE_SIGNATURES)):
+        row, column = divmod(index, TOOL.AUTOTILE_GRID_SIZE)
+        cell = TOOL.autotile_cell(source, column, row)
+        alpha_bbox = cell.getchannel("A").getbbox()
+        if alpha_bbox is None:
+            raise AssertionError(f"transition cell {column},{row} is empty")
+        tile = cell.crop(alpha_bbox).convert("RGBa").resize(
+            TOOL.TILE_SIZE,
+            Image.Resampling.LANCZOS,
+        ).convert("RGBA")
+        tile = ImageEnhance.Color(tile).enhance(saturation)
+        tile = ImageEnhance.Brightness(tile).enhance(brightness)
+        histogram = TOOL._expanded_grass_mask(tile).histogram()
+        covered = sum(histogram[128:])
+        coverages.append(covered / sum(histogram))
+    return coverages
 
 
 class BuildFirebudGroundAtlasV4Test(unittest.TestCase):
@@ -151,8 +187,48 @@ class BuildFirebudGroundAtlasV4Test(unittest.TestCase):
                 entry = entries[tile_id]
                 self.assertGreater(entry["alpha"]["opaquePixels"], 0)
                 self.assertGreater(entry["alpha"]["partialAlphaPixels"], 0)
-                self.assertGreater(entry["meanRgba"][0], 80.0)
+                # The v3 all-edge variants deliberately admit substantially more
+                # meadow into the stone footprint.  Keep a honey-stone colour floor
+                # without rejecting the intended broad transition at 80x40.
+                self.assertGreater(entry["meanRgba"][0], 70.0)
                 self.assertGreater(entry["meanRgba"][1], 75.0)
+
+    def test_reworked_transitions_survive_eighty_by_forty_downsampling(self) -> None:
+        old_path = _grass_mask_coverages(
+            PRE_REWORK_TRANSITIONS_PATH,
+            saturation=0.76,
+            brightness=0.78,
+        )
+        current_path = _grass_mask_coverages(
+            TRANSITIONS_PATH,
+            saturation=0.76,
+            brightness=0.78,
+        )
+        old_plaza = _grass_mask_coverages(
+            PRE_REWORK_PLAZA_TRANSITIONS_PATH,
+            saturation=0.72,
+            brightness=0.80,
+        )
+        current_plaza = _grass_mask_coverages(
+            PLAZA_TRANSITIONS_PATH,
+            saturation=0.72,
+            brightness=0.80,
+        )
+
+        self.assertGreaterEqual(min(current_path), 0.08)
+        self.assertGreaterEqual(statistics.median(current_path), 0.15)
+        self.assertLessEqual(max(current_path), 0.50)
+        self.assertGreater(
+            statistics.median(current_path),
+            statistics.median(old_path) + 0.14,
+        )
+        self.assertGreaterEqual(min(current_plaza), 0.12)
+        self.assertGreaterEqual(statistics.median(current_plaza), 0.24)
+        self.assertLessEqual(max(current_plaza), 0.55)
+        self.assertGreater(
+            statistics.median(current_plaza),
+            statistics.median(old_plaza) + 0.10,
+        )
 
     def test_legacy_four_single_edge_sheet_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -21,6 +21,14 @@ CAPTURE_PATH = (
     / "qa"
     / "map_visual_review_capture.gd"
 )
+RUNTIME_EXIT_CLEANUP_PATH = (
+    REPO_ROOT
+    / "client"
+    / "godot"
+    / "scripts"
+    / "qa"
+    / "runtime_exit_cleanup.gd"
+)
 SPEC = importlib.util.spec_from_file_location("record_firebud_v2_owner_review", TOOL_PATH)
 assert SPEC is not None and SPEC.loader is not None
 TOOL = importlib.util.module_from_spec(SPEC)
@@ -252,17 +260,19 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
 
     def test_capture_cleanup_detaches_audio_and_never_waits_for_draw_after_screenshot(self) -> None:
         source = CAPTURE_PATH.read_text(encoding="utf-8")
-        cleanup = source[
-            source.index("func _drain_capture_runtime()"):
-            source.index("func _finish_report(")
-        ]
+        cleanup = RUNTIME_EXIT_CLEANUP_PATH.read_text(encoding="utf-8")
+        self.assertIn(
+            "return await RuntimeExitCleanup.drain_audio(host)",
+            source,
+        )
         self.assertNotIn("RenderingServer.frame_post_draw", cleanup)
+        self.assertNotIn("configure_playback_enabled", cleanup)
         self.assertIn('"AudioStreamPlayer"', cleanup)
         self.assertIn("player.stream = null", cleanup)
-        self.assertIn("AUDIO_DRAIN_FRAMES_BEFORE_FREE := 8", source)
-        self.assertIn("AUDIO_DRAIN_FRAMES_AFTER_FREE := 8", source)
-        self.assertIn("AUDIO_DRAIN_SECONDS_BEFORE_FREE := 0.75", source)
-        self.assertIn("AUDIO_DRAIN_SECONDS_AFTER_FREE := 0.75", source)
+        self.assertIn("AUDIO_DRAIN_FRAMES_BEFORE_FREE := 8", cleanup)
+        self.assertIn("AUDIO_DRAIN_FRAMES_AFTER_FREE := 8", cleanup)
+        self.assertIn("AUDIO_DRAIN_SECONDS_BEFORE_FREE := 0.75", cleanup)
+        self.assertIn("AUDIO_DRAIN_SECONDS_AFTER_FREE := 0.75", cleanup)
         self.assertEqual(cleanup.count("create_timer("), 2)
         self.assertIn('"audioStreamsDetached": true', cleanup)
         self.assertIn('"audioPlaybackDisabled": true', cleanup)
@@ -276,7 +286,10 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
             main_source.index("func _build_game_audio_manager()"):
             main_source.index("func _mount_audio_settings_panel()")
         ]
-        self.assertIn("if map_visual_review_capture:", audio_build)
+        self.assertIn(
+            "if map_visual_review_capture or perf_probe_clean_exit_frames > 0:",
+            audio_build,
+        )
         self.assertIn(
             "game_audio_manager.configure_playback_enabled(false)",
             audio_build,

@@ -140,6 +140,7 @@ const MapVisualReviewShowcaseProfileCheck := preload(
 )
 const WorldDepthLayerCheck := preload("res://scripts/qa/world_depth_layer_check.gd")
 const MapVisualReviewCapture := preload("res://scripts/qa/map_visual_review_capture.gd")
+const PerfProbeExitController := preload("res://scripts/qa/perf_probe_exit_controller.gd")
 const NpcMainReviewCapture := preload("res://scripts/qa/npc_main_review_capture.gd")
 const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.gd")
 const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd")
@@ -1470,6 +1471,8 @@ var map_world_bounds_cache_valid: bool = false
 var runtime_target_fps_cache: int = 0
 var canvas_text_font: Font
 var perf_probe_enabled: bool = false
+var perf_probe_clean_exit_frames: int = 0
+var perf_probe_clean_exit_argument_error: String = ""
 var perf_probe_elapsed: float = 0.0
 var perf_probe_frames: int = 0
 var perf_probe_totals: Dictionary = {}
@@ -1541,10 +1544,11 @@ func _build_game_audio_manager() -> void:
 	if game_audio_manager != null:
 		return
 	game_audio_manager = GameAudioManager.new()
-	if map_visual_review_capture:
-		# The map owner-review movie validates visuals, input and isolation. Keep
-		# MovieWriter's stereo track, but never start production Ogg playback in a
-		# process that intentionally quits immediately after one screenshot.
+	if map_visual_review_capture or perf_probe_clean_exit_frames > 0:
+		# Map owner-review and visual performance probes validate rendering, input,
+		# and isolation rather than the audio mixer. Never start production Ogg
+		# playback in these short-lived evidence processes; both paths still detach
+		# every player stream through the shared clean-exit controller.
 		game_audio_manager.configure_playback_enabled(false)
 	game_audio_manager.name = "GameAudioManager"
 	add_child(game_audio_manager)
@@ -1723,6 +1727,16 @@ func _ready() -> void:
 		push_error(
 			"Phase403 battle layout arguments rejected: %s"
 			% battle_layout_owner_review_parse_error
+		)
+		get_tree().quit(2)
+		return
+	if perf_probe_clean_exit_argument_error != "":
+		print(
+			"perf probe clean exit: %s"
+			% JSON.stringify({
+				"status": "failed",
+				"reason": perf_probe_clean_exit_argument_error,
+			})
 		)
 		get_tree().quit(2)
 		return
@@ -2431,6 +2445,8 @@ func _ready() -> void:
 		call_deferred("_open_battle_combo_motion_preview")
 	elif battle_launch_preview_mode != "":
 		call_deferred("_open_battle_launch_preview", battle_launch_preview_mode)
+	if perf_probe_clean_exit_frames > 0 and not movement_spam_click_check:
+		call_deferred("_run_perf_probe_clean_exit_after_frames")
 
 
 func _notification(what: int) -> void:
@@ -2515,6 +2531,7 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized.ends_with("-demo")
 		or normalized.ends_with("-test")
 		or normalized == "--perf-probe"
+		or normalized.begins_with("--perf-probe-clean-exit-frames=")
 		or normalized == "--numeric-experiment-report"
 		or normalized == "--gm-10v10-map"
 		or normalized == "--qa-viewport"
@@ -3331,6 +3348,22 @@ func _apply_preview_window_args() -> void:
 			battle_debug_window_enabled = true
 		elif arg == "--perf-probe":
 			perf_probe_enabled = true
+		elif arg.begins_with("--perf-probe-clean-exit-frames="):
+			var frame_text := arg.substr(
+				"--perf-probe-clean-exit-frames=".length()
+			).strip_edges()
+			if not frame_text.is_valid_int():
+				perf_probe_clean_exit_argument_error = (
+					"perf probe clean-exit frames must be an integer"
+				)
+			else:
+				var requested_frames := int(frame_text)
+				if requested_frames < 180 or requested_frames > 3600:
+					perf_probe_clean_exit_argument_error = (
+						"perf probe clean-exit frames must be between 180 and 3600"
+					)
+				else:
+					perf_probe_clean_exit_frames = requested_frames
 	if map_art_review_preview and not auto_map_visual_runtime_check:
 		# Keep the review identity deterministic: local review without credentials
 		# uses the isolated debug profile, while an explicit login keeps real auth.
@@ -3693,6 +3726,13 @@ func _run_auto_party_member_follow_check() -> void:
 	await _auto_checks()._run_auto_party_member_follow_check()
 
 
+func _run_perf_probe_clean_exit_after_frames() -> void:
+	await PerfProbeExitController.new(self).finish_after_frames(
+		perf_probe_clean_exit_frames,
+		0
+	)
+
+
 func _run_movement_spam_click_check() -> void:
 	if not movement_spam_click_limit_argument_error.is_empty():
 		print("movement spam click check ready: status=failed reason=%s" % movement_spam_click_limit_argument_error)
@@ -3834,7 +3874,11 @@ func _run_movement_spam_click_check() -> void:
 		str(target_cell),
 		str(last_cell),
 	])
-	get_tree().quit(0 if status == "ok" else 1)
+	var exit_code := 0 if status == "ok" else 1
+	if perf_probe_clean_exit_frames > 0:
+		await PerfProbeExitController.new(self).finish(exit_code)
+		return
+	get_tree().quit(exit_code)
 
 
 func _run_shop_select_perf_check() -> void:

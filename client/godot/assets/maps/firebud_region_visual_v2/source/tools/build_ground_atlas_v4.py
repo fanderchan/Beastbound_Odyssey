@@ -32,7 +32,7 @@ from PIL import (
 )
 
 
-SCRIPT_VERSION = "2.0.0"
+SCRIPT_VERSION = "2.1.0"
 TILE_SIZE = (80, 40)
 ATLAS_COLUMNS = 4
 AUTOTILE_GRID_SIZE = 4
@@ -335,8 +335,12 @@ def _hue_band_mask(image: Image.Image) -> Image.Image:
 
 
 def _expanded_grass_mask(image: Image.Image) -> Image.Image:
-    return _hue_band_mask(image).filter(ImageFilter.MaxFilter(size=5)).filter(
-        ImageFilter.GaussianBlur(radius=0.55)
+    # Preserve the generated irregular boundary at the 80x40 runtime size without
+    # turning its larger meadow bays into repeated dark sawteeth.  A one-pixel
+    # expansion keeps thin grass cues alive; the wider feather then softens the
+    # colour hand-off while leaving the connected surface alpha contract intact.
+    return _hue_band_mask(image).filter(ImageFilter.MaxFilter(size=3)).filter(
+        ImageFilter.GaussianBlur(radius=1.4)
     )
 
 

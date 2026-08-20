@@ -203,6 +203,90 @@
           1774,
           887
         ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v3-row-1-pass-1.png",
+        "sha256": "bdc5123f2858d75d2f85241816950ce55e2f29e38a63418e1be95411bb1b665e",
+        "dimensions": [
+          1774,
+          887
+        ],
+        "acceptedForRuntime": false,
+        "lineageOnly": true
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v3-row-1.png",
+        "sha256": "2afcc2482c2b1d5afa62dfb4ade04e77aba8e4a9153608b76ae7bd4997982ae1",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v3-row-2.png",
+        "sha256": "34381cfd261b4c784614eb8e15304de59d3a5cc81607bb0309850d27b01c9ccd",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v3-row-3.png",
+        "sha256": "9faef1415cf5c0f34255318035d7d374ade9a75cfedbe973f5330beb5f4793c4",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v3-row-4.png",
+        "sha256": "0b7ac3e0fff176512c0cfad23dfeb939ccc99543da9be783dfc149e396743ee0",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v3-row-1-pass-1.png",
+        "sha256": "91ab563e81154ec9b101ee1514ec6e824d8cd340835fd148b236855003e11487",
+        "dimensions": [
+          1774,
+          887
+        ],
+        "acceptedForRuntime": false,
+        "lineageOnly": true
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v3-row-1.png",
+        "sha256": "f9aa9faa5d7ade260c01541e7fe9bc7f08fbe315b926105ac43f7a0ca3b08d3f",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v3-row-2.png",
+        "sha256": "3f908c02c17ed9e616310a1619ea620922aab9cd1de80d083452de0fdc916420",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v3-row-3.png",
+        "sha256": "339f0af3366c4da375c3baef2f8c552ddfb7a7a20001a74e772d0dbb1fdb93cd",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v3-row-4.png",
+        "sha256": "10a1d944a8780a58d670693596af96dcb4d3dbe0eed5844a251420b10d43dbb2",
+        "dimensions": [
+          1774,
+          887
+        ]
       }
     ],
     "buildArtifacts": [
@@ -248,7 +332,7 @@
       },
       {
         "path": "source/processed/firebud-ground-materials-v4-build-manifest.json",
-        "sha256": "b4d7dbb56cd541730a0c85ec69a2cff932c3f2cad3945e47f4507c394ce42ad6"
+        "sha256": "178840ca8aa7afe45ca0d68fb0d5a2680d7f1a5afd00bf35f243ad0d433712de"
       },
       {
         "path": "source/processed/firebud-ground-sheet-v3-combined-12tiles.png",
@@ -397,6 +481,120 @@
       {
         "path": "source/processed/firebud-plaza-edge-autotile-v2-assembly-manifest.json",
         "sha256": "597472fe0300c1fcabc4b8eeae4cf4c6980a1b9f0df1af456b590aecf7ee8cac"
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v3-row-1-pass-1-alpha.png",
+        "sha256": "6e5842c9ddc02793baf44a87900f00eb159372f93f7d3dd5dbffdaedff7ff192",
+        "dimensions": [
+          1774,
+          887
+        ],
+        "acceptedForRuntime": false,
+        "lineageOnly": true
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v3-pass-1-alpha.png",
+        "sha256": "06a4b59699168821c83835a25740d04ccf5cd9d07fa84494c8cf9e06492b04c4",
+        "dimensions": [
+          1776,
+          1776
+        ],
+        "acceptedForRuntime": false,
+        "lineageOnly": true
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v3-pass-1-assembly-manifest.json",
+        "sha256": "fc8b949ecf1a7bee142a6f7ba21bf339d26db67edeef728df6dab53776a8b678",
+        "acceptedForRuntime": false,
+        "lineageOnly": true
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v3-row-1-alpha.png",
+        "sha256": "2603487b981585531c4e0fe9c626f69cf3c1c669a7a3a51a8d51d4e038f9b35c",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v3-row-2-alpha.png",
+        "sha256": "be7dd3f2de93095feb84a970c030a71f65a34fa56f19522da6fe1328c1ccbf52",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v3-row-3-alpha.png",
+        "sha256": "a90aa9b4ca85c5233a841209bc8f7cfa7ffb906b46cfe43bcede77f405dab36c",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v3-row-4-alpha.png",
+        "sha256": "45ab7b6c29c4092be66b06e6a4898b27abd3ba87e773f7f09aa57ff06a698aea",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v3-alpha.png",
+        "sha256": "e743ff0d5148ad2db7e3c2c2c32a937726a3d5692a932264f1e6f1df7dd2ee46",
+        "dimensions": [
+          1776,
+          1776
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v3-assembly-manifest.json",
+        "sha256": "75dc8b3092096a5f31eb5683432d5b771073aac9b07a6a9d87098dd0ee766897"
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v3-row-1-alpha.png",
+        "sha256": "ac41a4e322c398292c4624ba156b6bf06380146fd6dc6f55f3fa0e6bebf3a576",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v3-row-2-alpha.png",
+        "sha256": "afc31abb3463febf85babf62adf69f6b134ab6c1610900ae3f1ee496f17ae82f",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v3-row-3-alpha.png",
+        "sha256": "612e8fe9f527c418667f9b348672fc33e1ee12b2d1d3a9dd87afa91fecbb9560",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v3-row-4-alpha.png",
+        "sha256": "dde7d03414e3820533ebd50d5f688b0a8f51f43ac3309c48d99a7c6e8fc98e29",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v3-alpha.png",
+        "sha256": "ecc920504daee6477b53dc1bbf2b8a1d454012cd3e56a26dc93db061774c09cb",
+        "dimensions": [
+          1776,
+          1776
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v3-assembly-manifest.json",
+        "sha256": "6c72cf130b366a330873ce881a593fab222aa6053e312c3ade179cdef41eb378"
       }
     ],
     "promptFiles": [
@@ -455,16 +653,20 @@
       {
         "path": "source/prompts/firebud-plaza-edge-autotile-v2.md",
         "sha256": "3b47206c111a56195af93fc5f46e41c7bbf1d3423892260528ee3a13533fb4f0"
+      },
+      {
+        "path": "source/prompts/firebud-surface-autotile-v3.md",
+        "sha256": "18a12f449186bed24c8835d77586b08ef2827114153ac88520934a3566313428"
       }
     ],
     "provenance": {
       "path": "source/provenance.json",
-      "sha256": "b23a547dd865e8682981208ec81decd70b78bdfda19f5dc95206d3e652449a15"
+      "sha256": "6a3ff1d8f4d3a4ccddf8792a56b36bfe1ea8386115573df058b358024bb9a996"
     }
   },
   "groundAtlas": {
     "path": "runtime/ground/atlas.png",
-    "sha256": "5a57acdf761d5c3ed4a901178bc9407368f33b46e367c38c909aad3bbc80dd31",
+    "sha256": "a86cb47204e6446f289d7517e623910c92228b40ff5c97dfc4c93a89765cbb85",
     "dimensions": [
       320,
       440

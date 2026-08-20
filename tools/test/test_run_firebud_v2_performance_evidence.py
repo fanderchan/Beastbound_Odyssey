@@ -38,10 +38,12 @@ class RunFirebudV2PerformanceEvidenceTest(unittest.TestCase):
         self.assertNotIn("--user-data-dir", engine)
         self.assertIn("1280x720", engine)
         self.assertEqual(engine[engine.index("--fixed-fps") + 1], "60")
+        self.assertNotIn("--quit-after", engine)
         self.assertEqual(engine[engine.index("--time-scale") + 1], "1.0")
         self.assertIn("--map-art-review-preview=firebud_village_gate", user)
         self.assertIn("--movement-spam-click-check", user)
         self.assertIn("--perf-probe", user)
+        self.assertIn("--perf-probe-clean-exit-frames=2600", user)
         self.assertEqual(command.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
         self.assertNotIn("--login", user)
         self.assertNotIn("--server-url", user)
@@ -80,7 +82,11 @@ class RunFirebudV2PerformanceEvidenceTest(unittest.TestCase):
         self.assertNotIn("--server-url", source)
 
     def test_strict_log_gate_accepts_clean_metal_and_rejects_warnings(self) -> None:
-        clean = "$ godot\nMetal 4.0 - Forward Mobile\n" + _output(moving=False)
+        clean = (
+            "$ godot\nMetal 4.0 - Forward Mobile\n"
+            + _output(moving=False)
+            + '\nperf probe clean exit: {"status":"passed","audioStreamsDetached":true}\n'
+        )
         with tempfile.TemporaryDirectory() as temporary:
             log_path = Path(temporary) / "godot.log"
             log_path.write_text(clean, encoding="utf-8")
