@@ -3305,6 +3305,18 @@ func _run_auto_battle_check() -> void:
 	var command_top_right = host._battle_command_panel_is_top_right()
 	var formation_ok = host._battle_formation_matches_reference()
 	var enemy_id = BattleModel.living_enemy_id(host.battle_state)
+	# This check proves that a submitted player attack produces real HP damage.
+	# Freeze only the fixture target's dodge chance so the production reaction
+	# roll cannot occasionally turn that assertion into a no-damage round.
+	var dodge_override_applied := false
+	var battle_actors: Array = host.battle_state.get("actors", []) if host.battle_state.get("actors", []) is Array else []
+	var enemy_index := BattleModel.actor_index(host.battle_state, enemy_id)
+	if enemy_index >= 0:
+		var deterministic_enemy := (battle_actors[enemy_index] as Dictionary).duplicate(true)
+		deterministic_enemy["dodgeRateOverride"] = 0.0
+		battle_actors[enemy_index] = deterministic_enemy
+		host.battle_state["actors"] = battle_actors
+		dodge_override_applied = float(BattleModel.actor_by_id(host.battle_state, enemy_id).get("dodgeRateOverride", -1.0)) == 0.0
 	var enemy_before = int(BattleModel.actor_by_id(host.battle_state, enemy_id).get("hp", 0)) if enemy_id != "" else 0
 	var ally_hp_before = host._battle_side_total_hp(BattleModel.SIDE_ALLY)
 	host._on_battle_command_pressed("attack")
@@ -3359,16 +3371,29 @@ func _run_auto_battle_check() -> void:
 	if victory_target_id != "":
 		for enemy_actor_id in BattleModel.living_actor_ids(host.battle_state, BattleModel.SIDE_ENEMY):
 			host.battle_state = BattleModel.set_actor_hp(host.battle_state, enemy_actor_id, 1 if enemy_actor_id == victory_target_id else 0)
+	var victory_dodge_override_applied := false
+	var victory_actors: Array = host.battle_state.get("actors", []) if host.battle_state.get("actors", []) is Array else []
+	var victory_target_index := BattleModel.actor_index(host.battle_state, victory_target_id)
+	if victory_target_index >= 0:
+		var deterministic_victory_target := (victory_actors[victory_target_index] as Dictionary).duplicate(true)
+		deterministic_victory_target["dodgeRateOverride"] = 0.0
+		victory_actors[victory_target_index] = deterministic_victory_target
+		host.battle_state["actors"] = victory_actors
+		victory_dodge_override_applied = float(BattleModel.actor_by_id(host.battle_state, victory_target_id).get("dodgeRateOverride", -1.0)) == 0.0
+	var victory_hp_before := int(BattleModel.actor_by_id(host.battle_state, victory_target_id).get("hp", 0)) if victory_target_id != "" else 0
+	var victory_hp_after := victory_hp_before
 	host._on_battle_command_pressed("attack")
 	host._auto_click_enemy_target(victory_target_id)
 	host._auto_submit_pet_attack_if_needed()
 	for _frame in range(260):
 		await host.get_tree().process_frame
+		victory_hp_after = int(BattleModel.actor_by_id(host.battle_state, victory_target_id).get("hp", 0)) if victory_target_id != "" else victory_hp_after
 		if not host.battle_active:
 			break
 	var victory_exited = not host.battle_active and host.player.visible and not host.battle_command_panel.visible
-	var status = "ok" if loaded and zone_found and no_prompt and battle_started and buttons_ok and command_top_right and formation_ok and attack_reduced_hp and attack_state_seen and player_attacked and round_resolved and escape_deferred and escaped and victory_exited else "failed"
-	print("battle check ready: status=%s loaded=%s zone_found=%s no_prompt=%s battle_started=%s buttons_ok=%s command_top_right=%s formation_ok=%s enemy_before=%d enemy_after=%d ally_hp_before=%d ally_hp_after=%d attack_state_seen=%s player_attacked=%s round_resolved=%s enemy_countered=%s escape_deferred=%s escaped=%s victory_exited=%s" % [
+	var victory_attacked := victory_hp_before == 1 and victory_hp_after == 0
+	var status = "ok" if loaded and zone_found and no_prompt and battle_started and buttons_ok and command_top_right and formation_ok and dodge_override_applied and attack_reduced_hp and attack_state_seen and player_attacked and round_resolved and escape_deferred and escaped and victory_dodge_override_applied and victory_attacked and victory_exited else "failed"
+	print("battle check ready: status=%s loaded=%s zone_found=%s no_prompt=%s battle_started=%s buttons_ok=%s command_top_right=%s formation_ok=%s dodge_override=%s enemy_before=%d enemy_after=%d ally_hp_before=%d ally_hp_after=%d attack_state_seen=%s player_attacked=%s round_resolved=%s enemy_countered=%s escape_deferred=%s escaped=%s victory_dodge_override=%s victory_before=%d victory_after=%d victory_attacked=%s victory_exited=%s" % [
 		status,
 		str(loaded),
 		str(zone_found),
@@ -3377,6 +3402,7 @@ func _run_auto_battle_check() -> void:
 		str(buttons_ok),
 		str(command_top_right),
 		str(formation_ok),
+		str(dodge_override_applied),
 		enemy_before,
 		enemy_after,
 		ally_hp_before,
@@ -3387,6 +3413,10 @@ func _run_auto_battle_check() -> void:
 		str(enemy_countered),
 		str(escape_deferred),
 		str(escaped),
+		str(victory_dodge_override_applied),
+		victory_hp_before,
+		victory_hp_after,
+		str(victory_attacked),
 		str(victory_exited),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)

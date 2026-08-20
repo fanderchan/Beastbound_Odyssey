@@ -425,9 +425,10 @@ process.stdin.on("end", () => {
       password: "test-only",
       database: "beastbound_test",
       createDatabase: false,
-      // Online DDL has its own bounded window. It must not inherit the normal
-      // transaction deadline (whose default remains 6000ms).
-      mailInboxIndexMigrationTimeoutMs: 100,
+      // Online DDL has its own bounded window. Keep normal fake-mysql process
+      // startup clear of full-suite scheduler contention; the forced hang below
+      // uses a separate 100ms option to prove the timeout contract itself.
+      mailInboxIndexMigrationTimeoutMs: 5000,
       transactionPolicy: {
         metadataLockWaitTimeoutSeconds: 2,
       },
@@ -472,8 +473,12 @@ process.stdin.on("end", () => {
     );
 
     fs.writeFileSync(statePath, JSON.stringify({mailIndex: false, alterFailure: "hang"}));
+    const timeoutOptions = {
+      ...options,
+      mailInboxIndexMigrationTimeoutMs: 100,
+    };
     assert.throws(
-      () => createMysqlAuthStore(options).load(),
+      () => createMysqlAuthStore(timeoutOptions).load(),
       (error) => error
         && error.code === "mysql_mail_inbox_page_index_migration_timeout"
         && error.timeoutMs === 100,

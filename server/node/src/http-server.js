@@ -302,6 +302,21 @@ function createHttpServer(options = {}) {
   rewardVaultDeliveryMaintenance.start();
 
   const server = applyHttpServerLimits(http.createServer(dispatchRequest), options.httpServerLimits || {});
+  server.on("connection", (socket) => {
+    // Keep one transport-level listener for the entire socket lifetime. HTTP
+    // clients and upgraded WebSocket clients may reset a connection after a
+    // route-specific cleanup has already removed its shorter-lived listeners;
+    // that per-connection network failure must never terminate the server.
+    socket.on("error", (error) => {
+      logStructured(logger, {
+        type: "http.connection_error",
+        errorCode: String(error && error.code || "connection_error"),
+      });
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
+    });
+  });
   server.on("checkContinue", (req, res) => {
     res.beastboundNetworkAdmission = networkAdmission;
     let preAdmission = null;

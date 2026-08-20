@@ -25,8 +25,11 @@ godot --path client/godot --scene res://scenes/Main.tscn -- --full-client-previe
 ## 基础解析检查
 
 ```sh
-godot --headless --path client/godot --quit
+node tools/run_godot_auto_checks.mjs --parse-only
 ```
+
+解析检查也必须经过固定 `automation` QA user-data lane；不要直接运行裸
+`godot --headless --path client/godot --quit`，后者会使用正常玩家目录并可能轮转日志或改写偏好。
 
 ## 客户端全量自动检查
 
@@ -36,11 +39,20 @@ godot --headless --path client/godot --quit
 node tools/run_godot_auto_checks.mjs
 ```
 
-带 `*-live-check` 的检查需要先启动本地 QA 服务端。位置权威校验默认开启（拒绝瞬移/非法跨图，任务 `talk` 事件还会校验玩家与 NPC 的服务端距离），部分 QA 检查会直接向服务器灌任意坐标，所以本地 QA 服务端需要显式放开位置校验（仅限本地测试，正式/LAN 试玩服务不要设置）：
+带 `*-live-check` 的检查需要先启动本地、隔离、可丢弃的 JSON QA 服务端。位置权威校验默认开启（拒绝瞬移/非法跨图，任务 `talk` 事件还会校验玩家与 NPC 的服务端距离），部分 QA 检查会直接向服务器灌任意坐标，所以该 QA 进程需要显式放开位置校验。以下开关只允许用于回环地址的隔离 QA 数据，禁止用于正常玩家、LAN 或生产服务：
 
 ```sh
-cd server/node && BEASTBOUND_ALLOW_POSITION_TELEPORT=1 npm start
+mkdir -p .run/godot_auto_checks
+QA_BACKEND_DIR="$(mktemp -d "$PWD/.run/godot_auto_checks/qa_backend.XXXXXX")"
+BEASTBOUND_AUTH_HOST=127.0.0.1 \
+BEASTBOUND_AUTH_PORT=8787 \
+BEASTBOUND_AUTH_STORE=json \
+BEASTBOUND_AUTH_STORE_PATH="$QA_BACKEND_DIR/auth-store.json" \
+BEASTBOUND_ALLOW_POSITION_TELEPORT=1 \
+npm --prefix server/node start
 ```
+
+检查结束后用 `Ctrl-C` 停止这个 QA 服务端，并确认相应端口没有残留监听。
 
 常用缩小范围 / 续跑：
 
@@ -52,11 +64,29 @@ node tools/run_godot_auto_checks.mjs --from --auto-server-battle-return-check --
 
 ## 本地 CI
 
-默认运行 diff 检查、服务端测试、客户端全量自动检查，以及 idle / 移动 / 连点 / 商店 / 属性点性能基线：
+默认发布门禁固定为 8 个顶层步骤：diff、两个脚本语法检查、完整服务端、Godot 解析加 34 个发布目标检查、隔离 QA 后端预检、Godot 解析加 7 个联机检查，以及 5 项性能套件。它不会随 `main.gd` 新增的实验或 OWNER 待审检查自动扩张；需要盘点全部发现项时仍可单独运行 `node tools/run_godot_auto_checks.mjs`。
+
+完整门禁必须连接一个健康的、回环地址上的 JSON QA 服务端，并拒绝 MySQL/共享后端。建议用独立端口，避免影响正常本地玩家服务。终端 A：
 
 ```sh
-node tools/run_local_ci.mjs
+mkdir -p .run/local_ci
+QA_BACKEND_DIR="$(mktemp -d "$PWD/.run/local_ci/qa_backend.XXXXXX")"
+BEASTBOUND_AUTH_HOST=127.0.0.1 \
+BEASTBOUND_AUTH_PORT=18787 \
+BEASTBOUND_AUTH_STORE=json \
+BEASTBOUND_AUTH_STORE_PATH="$QA_BACKEND_DIR/auth-store.json" \
+BEASTBOUND_ALLOW_POSITION_TELEPORT=1 \
+npm --prefix server/node start
 ```
+
+终端 B：
+
+```sh
+node tools/run_local_ci.mjs \
+  --auth-server-url http://127.0.0.1:18787
+```
+
+通过标准为顶层 `passed=8 failed=0 total=8`，嵌套目标 `35/35`、联机 `8/8`、性能 `5/5`，并且各 Godot summary 的 `processGroupsClosed=true`、`qaLaneCleanup.laneAbsent=true`、`qaLaneCleanup.realUnchanged=true`。完成后停止终端 A 的 QA 服务端。
 
 开发脚本本身时可用 quick 模式缩短 Godot 自动检查范围：
 

@@ -9,17 +9,59 @@ import {fileURLToPath} from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_OUTPUT_DIR = path.join(REPO_ROOT, ".run/local_ci");
+const GODOT_AUTO_OUTPUT_DIR = path.join(REPO_ROOT, ".run/godot_auto_checks");
 const DEFAULT_GODOT = process.env.GODOT_BIN || "godot";
-const SCENE_PATH = "res://scenes/Main.tscn";
+const DEFAULT_AUTH_SERVER_URL = process.env.BEASTBOUND_AUTH_SERVER_URL || "http://127.0.0.1:8787";
 const DEFAULT_TIMEOUT_MS = Number(process.env.BEASTBOUND_LOCAL_CI_TIMEOUT_MS || 240000);
-
-const PERF_LIMITS = {
-  idleMedianProcessTotalMs: Number(process.env.BEASTBOUND_CI_IDLE_MEDIAN_PROCESS_TOTAL_MS || 5),
-  idleP95ProcessTotalMs: Number(process.env.BEASTBOUND_CI_IDLE_P95_PROCESS_TOTAL_MS || 15),
-  movingMedianProcessTotalMs: Number(process.env.BEASTBOUND_CI_MOVING_MEDIAN_PROCESS_TOTAL_MS || 10),
-  movingP95ProcessTotalMs: Number(process.env.BEASTBOUND_CI_MOVING_P95_PROCESS_TOTAL_MS || 30),
-  movementSpamMaxInputUs: Number(process.env.BEASTBOUND_CI_MOVEMENT_SPAM_MAX_INPUT_US || 5000),
-};
+const RELEASE_TARGET_CHECKS = Object.freeze([
+  "--auto-world-presentation-profile-check",
+  "--auto-map-visual-review-showcase-profile-check",
+  "--auto-firebud-village-service-layout-check",
+  "--auto-movement-check",
+  "--auto-mouse-click-check",
+  "--auto-pathfinding-check",
+  "--auto-npc-interaction-check",
+  "--auto-npc-collision-check",
+  "--auto-facility-dialog-options-check",
+  "--auto-map-transfer-check",
+  "--auto-encounter-check",
+  "--auto-facility-marker-check",
+  "--auto-map-region-contract-check",
+  "--auto-audio-runtime-check",
+  "--auto-audio-impact-review-model-check",
+  "--auto-audio-music-review-model-check",
+  "--auto-pet-portrait-art-catalog-check",
+  "--auto-pet-shared-portrait-consumer-check",
+  "--auto-pet-fusion-skill-policy-check",
+  "--auto-pet-template-catalog-check",
+  "--auto-pet-management-check",
+  "--auto-pet-management-safety-check",
+  "--auto-pet-action-asset-check",
+  "--auto-pet-growth-authority-check",
+  "--auto-battle-check",
+  "--auto-battle-auto-10v10-check",
+  "--auto-battle-feedback-check",
+  "--auto-battle-action-catalog-check",
+  "--auto-battle-action-system-check",
+  "--auto-battle-visual-timing-check",
+  "--auto-battle-reaction-check",
+  "--auto-pet-battle-review-lab-check",
+  "--auto-auth-check",
+  "--auto-qa-panel-check",
+]);
+const RELEASE_LIVE_CHECKS = Object.freeze([
+  "--auto-auth-server-live-check",
+  "--auto-startup-login-check",
+  "--auto-character-entry-live-check",
+  "--auto-server-movement-live-check",
+  "--auto-server-battle-turn-live-check",
+  "--auto-server-battle-return-check",
+  "--auto-server-battle-leave-ui-live-check",
+]);
+const QUICK_TARGET_CHECKS = Object.freeze([
+  "--auto-auth-check",
+  "--auto-server-profile-sync-check",
+]);
 
 function usage() {
   return [
@@ -32,6 +74,7 @@ function usage() {
     "  --quick                Run a short Godot auto-check subset instead of the full set.",
     "  --output-dir <dir>     Override summary/log output directory.",
     "  --godot <path>         Override Godot binary path.",
+    "  --auth-server-url <url> Override the loopback JSON QA backend URL.",
     "  --timeout-ms <ms>      Per-step process timeout.",
     "  --help                 Show this help.",
   ].join("\n");
@@ -45,6 +88,7 @@ function parseArgs(argv) {
     quick: false,
     outputDir: DEFAULT_OUTPUT_DIR,
     godot: DEFAULT_GODOT,
+    authServerUrl: DEFAULT_AUTH_SERVER_URL,
     timeoutMs: DEFAULT_TIMEOUT_MS,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -70,6 +114,11 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg.startsWith("--godot=")) {
       options.godot = arg.slice("--godot=".length);
+    } else if (arg === "--auth-server-url") {
+      options.authServerUrl = argv[index + 1] || DEFAULT_AUTH_SERVER_URL;
+      index += 1;
+    } else if (arg.startsWith("--auth-server-url=")) {
+      options.authServerUrl = arg.slice("--auth-server-url=".length);
     } else if (arg === "--timeout-ms") {
       options.timeoutMs = Math.max(1000, Number.parseInt(argv[index + 1] || "0", 10));
       index += 1;
@@ -105,6 +154,7 @@ function runCommand(step, command, args, options, logStream, timeoutMs = options
       env: {
         ...process.env,
         GODOT_BIN: options.godot,
+        BEASTBOUND_AUTH_SERVER_URL: options.authServerUrl,
       },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -159,121 +209,81 @@ function runCommand(step, command, args, options, logStream, timeoutMs = options
   });
 }
 
-function godotSceneArgs(quitAfter, userArgs) {
-  return [
-    "--headless",
-    "--path",
-    "client/godot",
-    "--scene",
-    SCENE_PATH,
-    "--quit-after",
-    String(quitAfter),
-    "--",
-    ...userArgs,
-  ];
-}
-
-function parseStatusLine(output) {
-  return output
-    .split(/\r?\n/)
-    .filter((line) => line.includes("status="))
-    .at(-1) || "";
-}
-
-function parseStatusValue(statusLine) {
-  const match = statusLine.match(/\bstatus=([^\s]+)/);
-  return match ? match[1] : "";
-}
-
-function parseMetric(line, key) {
-  const match = line.match(new RegExp(`\\b${escapeRegExp(key)}=([-+0-9.]+)`));
-  return match ? Number(match[1]) : Number.NaN;
-}
-
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function perfStats(output, key = "process_total") {
-  const values = output
-    .split(/\r?\n/)
-    .filter((line) => line.startsWith("perf probe:"))
-    .map((line) => parseMetric(line, key))
-    .filter((value) => Number.isFinite(value));
-  const stableValues = values.length >= 4 ? values.slice(Math.floor(values.length / 2)) : values;
-  return {
-    key,
-    samples: values.length,
-    stableSamples: stableValues.length,
-    median: percentile(stableValues, 0.5),
-    p95: percentile(stableValues, 0.95),
-    max: stableValues.length > 0 ? Math.max(...stableValues) : 0,
-  };
-}
-
-function percentile(values, ratio) {
-  if (!values || values.length === 0) {
-    return 0;
+function validatedLocalQaBackendUrl(value) {
+  let parsed;
+  try {
+    parsed = new URL(String(value || ""));
+  } catch {
+    throw new Error("QA backend URL must be one canonical loopback HTTP origin");
   }
-  const sorted = values.slice().sort((a, b) => a - b);
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * ratio) - 1));
-  return sorted[index];
-}
-
-function parseKeyValueBoolean(statusLine, key) {
-  const match = statusLine.match(new RegExp(`\\b${escapeRegExp(key)}=(true|false)`));
-  return match ? match[1] === "true" : false;
-}
-
-function parseKeyValueNumber(statusLine, key) {
-  const match = statusLine.match(new RegExp(`\\b${escapeRegExp(key)}=([-+0-9.]+)`));
-  return match ? Number(match[1]) : Number.NaN;
-}
-
-function evaluatePerfResult(result, kind) {
-  const statusLine = parseStatusLine(result.output);
-  const status = parseStatusValue(statusLine);
-  const processTotal = perfStats(result.output, "process_total");
-  const details = {
-    statusLine,
-    status,
-    processTotal,
-    checks: [],
-  };
-  let ok = result.ok && (status === "" || status === "ok");
-  if (kind === "idle") {
-    details.checks.push(`process_total_median<=${PERF_LIMITS.idleMedianProcessTotalMs}`);
-    details.checks.push(`process_total_p95<=${PERF_LIMITS.idleP95ProcessTotalMs}`);
-    ok = ok && processTotal.samples > 0;
-    ok = ok && processTotal.median <= PERF_LIMITS.idleMedianProcessTotalMs;
-    ok = ok && processTotal.p95 <= PERF_LIMITS.idleP95ProcessTotalMs;
-  } else if (kind === "moving") {
-    details.checks.push(`process_total_median<=${PERF_LIMITS.movingMedianProcessTotalMs}`);
-    details.checks.push(`process_total_p95<=${PERF_LIMITS.movingP95ProcessTotalMs}`);
-    ok = ok && status === "ok";
-    ok = ok && processTotal.samples > 0;
-    ok = ok && processTotal.median <= PERF_LIMITS.movingMedianProcessTotalMs;
-    ok = ok && processTotal.p95 <= PERF_LIMITS.movingP95ProcessTotalMs;
-  } else if (kind === "spam") {
-    const coalesced = parseKeyValueBoolean(statusLine, "coalesced");
-    const settled = parseKeyValueBoolean(statusLine, "settled");
-    const maxInputUs = parseKeyValueNumber(statusLine, "max_input_us");
-    details.coalesced = coalesced;
-    details.settled = settled;
-    details.maxInputUs = maxInputUs;
-    details.checks.push(`max_input_us<=${PERF_LIMITS.movementSpamMaxInputUs}`);
-    ok = ok && status === "ok" && coalesced && settled;
-    ok = ok && Number.isFinite(maxInputUs) && maxInputUs <= PERF_LIMITS.movementSpamMaxInputUs;
-  } else if (kind === "status") {
-    ok = ok && status === "ok";
+  if (
+    parsed.protocol !== "http:"
+    || parsed.hostname !== "127.0.0.1"
+    || parsed.port === ""
+    || parsed.username !== ""
+    || parsed.password !== ""
+    || !["", "/"].includes(parsed.pathname)
+    || parsed.search !== ""
+    || parsed.hash !== ""
+    || parsed.origin !== String(value || "").replace(/\/$/, "")
+  ) {
+    throw new Error("QA backend URL must be one canonical 127.0.0.1 HTTP origin with an explicit port");
   }
-  return {
-    ...result,
-    ok,
-    status,
-    statusLine,
-    perf: details,
-  };
+  return parsed.origin;
+}
+
+async function verifyLocalQaBackend(options, logStream, dependencies = {}) {
+  const startedAt = Date.now();
+  const step = "qa-backend-preflight";
+  const fetchImpl = dependencies.fetch || globalThis.fetch;
+  const baseUrl = validatedLocalQaBackendUrl(options.authServerUrl);
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(new Error("QA backend health preflight timed out")),
+    Math.min(options.timeoutMs, 10000),
+  );
+  console.log(`[ci] ${step} ...`);
+  logStream.write(`\n===== ${step} =====\n`);
+  logStream.write(`$ GET ${baseUrl}/health\n`);
+  try {
+    const response = await fetchImpl(`${baseUrl}/health`, {signal: controller.signal});
+    const payload = await response.json().catch(() => ({}));
+    const storageMode = String(payload && payload.storage && payload.storage.mode || "");
+    const ok = response.status === 200
+      && payload.ok === true
+      && payload.service === "beastbound-auth"
+      && storageMode === "json";
+    const elapsedMs = Date.now() - startedAt;
+    logStream.write(`status=${response.status} ok=${ok} storage_mode=${storageMode || "missing"}\n`);
+    console.log(`[ci] ${step} ${ok ? "ok" : "failed"} (${elapsedMs}ms)`);
+    return {
+      step,
+      ok,
+      exitCode: ok ? 0 : 1,
+      signalOrError: ok ? "" : "loopback backend is not a healthy isolated JSON QA store",
+      timedOut: false,
+      elapsedMs,
+      storageMode,
+      output: "",
+    };
+  } catch (error) {
+    const elapsedMs = Date.now() - startedAt;
+    const signalOrError = error && error.message || String(error);
+    logStream.write(`failed=${signalOrError}\n`);
+    console.log(`[ci] ${step} failed (${elapsedMs}ms) ${signalOrError}`);
+    return {
+      step,
+      ok: false,
+      exitCode: null,
+      signalOrError,
+      timedOut: controller.signal.aborted,
+      elapsedMs,
+      storageMode: "",
+      output: "",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function runLocalCi(options) {
@@ -296,38 +306,61 @@ async function runLocalCi(options) {
       await pushStep(results, runCommand("server-tests", "npm", ["test", "--prefix", "server/node"], options, logStream));
     }
     if (!options.skipGodotAuto) {
-      const autoArgs = ["tools/run_godot_auto_checks.mjs", "--output-dir", path.join(options.outputDir, `${stamp}_godot_auto`)];
-      if (options.quick) {
-        autoArgs.push("--only", "--auto-auth-check,--auto-server-profile-sync-check");
+      const targetChecks = options.quick ? QUICK_TARGET_CHECKS : RELEASE_TARGET_CHECKS;
+      const autoArgs = [
+        "tools/run_godot_auto_checks.mjs",
+        "--output-dir",
+        path.join(GODOT_AUTO_OUTPUT_DIR, `${stamp}_local_ci_target`),
+        "--godot",
+        options.godot,
+        "--timeout-ms",
+        String(options.timeoutMs),
+        "--only",
+        targetChecks.join(","),
+        "--fail-fast",
+      ];
+      await pushStep(
+        results,
+        runCommand("godot-target-checks", "node", autoArgs, options, logStream, options.quick ? 300000 : 1800000),
+      );
+      if (!options.quick) {
+        await pushStep(results, verifyLocalQaBackend(options, logStream));
+        const liveArgs = [
+          "tools/run_godot_auto_checks.mjs",
+          "--output-dir",
+          path.join(GODOT_AUTO_OUTPUT_DIR, `${stamp}_local_ci_live`),
+          "--godot",
+          options.godot,
+          "--auth-server-url",
+          options.authServerUrl,
+          "--timeout-ms",
+          String(options.timeoutMs),
+          "--only",
+          RELEASE_LIVE_CHECKS.join(","),
+          "--fail-fast",
+        ];
+        await pushStep(
+          results,
+          runCommand("godot-live-checks", "node", liveArgs, options, logStream, 1800000),
+        );
       }
-      await pushStep(results, runCommand("godot-auto-checks", "node", autoArgs, options, logStream, options.quick ? 300000 : 1800000));
     }
     if (!options.skipPerf) {
-      const idle = await runCommand("perf-idle", options.godot, godotSceneArgs(1600, ["--perf-probe"]), options, logStream);
-      results.push(evaluatePerfResult(idle, "idle"));
-      if (!results.at(-1).ok) {
-        throw new Error("perf-idle failed baseline gates");
-      }
-      const moving = await runCommand("perf-moving", options.godot, godotSceneArgs(2600, ["--movement-perf-check", "--perf-probe"]), options, logStream);
-      results.push(evaluatePerfResult(moving, "moving"));
-      if (!results.at(-1).ok) {
-        throw new Error("perf-moving failed baseline gates");
-      }
-      const spam = await runCommand("perf-movement-spam", options.godot, godotSceneArgs(2600, ["--movement-spam-click-check", "--perf-probe"]), options, logStream);
-      results.push(evaluatePerfResult(spam, "spam"));
-      if (!results.at(-1).ok) {
-        throw new Error("perf-movement-spam failed baseline gates");
-      }
-      const shop = await runCommand("perf-shop-select", options.godot, godotSceneArgs(2600, ["--shop-select-perf-check"]), options, logStream);
-      results.push(evaluatePerfResult(shop, "status"));
-      if (!results.at(-1).ok) {
-        throw new Error("perf-shop-select failed");
-      }
-      const stats = await runCommand("perf-player-stat-spam", options.godot, godotSceneArgs(2600, ["--auto-player-stat-spam-perf-check"]), options, logStream);
-      results.push(evaluatePerfResult(stats, "status"));
-      if (!results.at(-1).ok) {
-        throw new Error("perf-player-stat-spam failed");
-      }
+      const performanceArgs = [
+        "tools/run_godot_auto_checks.mjs",
+        "--performance-suite",
+        "--fail-fast",
+        "--output-dir",
+        path.join(GODOT_AUTO_OUTPUT_DIR, `${stamp}_local_ci_perf`),
+        "--godot",
+        options.godot,
+        "--timeout-ms",
+        String(options.timeoutMs),
+      ];
+      await pushStep(
+        results,
+        runCommand("godot-performance-checks", "node", performanceArgs, options, logStream, 1800000),
+      );
     }
   } catch (error) {
     stopError = error.message || String(error);
@@ -397,7 +430,19 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.stack || error.message || String(error));
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error.stack || error.message || String(error));
+    process.exitCode = 1;
+  });
+}
+
+export {
+  parseArgs,
+  QUICK_TARGET_CHECKS,
+  RELEASE_LIVE_CHECKS,
+  RELEASE_TARGET_CHECKS,
+  runLocalCi,
+  validatedLocalQaBackendUrl,
+  verifyLocalQaBackend,
+};

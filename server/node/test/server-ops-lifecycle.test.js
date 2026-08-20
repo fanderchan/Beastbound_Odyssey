@@ -111,6 +111,107 @@ test("start recovers a missing pid for the verified service and restart waits fo
   assert.equal(processAlive(secondPid), true);
 });
 
+test("status settles when a health response is aborted after its headers", {timeout: 10_000}, async (t) => {
+  const fixture = await createFixture(t);
+  fs.appendFileSync(
+    path.resolve(fixture.serverRoot, ".local/mysql.env"),
+    "export BEASTBOUND_MYSQL_BIN='/usr/bin/false'\n",
+  );
+  const partialHealth = net.createServer((socket) => {
+    socket.once("data", () => {
+      socket.write([
+        "HTTP/1.1 200 OK",
+        "Content-Type: application/json",
+        "Content-Length: 128",
+        "Connection: close",
+        "",
+        '{"ok":',
+      ].join("\r\n"), () => socket.destroy());
+    });
+  });
+  await new Promise((resolve, reject) => {
+    partialHealth.once("error", reject);
+    partialHealth.listen(fixture.port, "127.0.0.1", resolve);
+  });
+
+  const startedAt = Date.now();
+  let result;
+  try {
+    result = await runOps(fixture, "status", {
+      timeout: 20_000,
+    });
+  } finally {
+    await new Promise((resolve) => partialHealth.close(resolve));
+  }
+  const elapsedMs = Date.now() - startedAt;
+
+  assert.equal(result.code, 0, result.stdout + result.stderr);
+  assert.ok(elapsedMs < 15_000, `status took ${elapsedMs}ms`);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.ok, false);
+  assert.equal(report.health.ok, false);
+  assert.match(report.health.error, /health response (?:aborted|closed before completion)/);
+});
+
+test("status uses one private MySQL option file without exposing the password in argv", {timeout: 10_000}, async (t) => {
+  const fixture = await createFixture(t);
+  const fakeMysql = path.resolve(fixture.root, "fake-mysql-status.js");
+  const capturePath = path.resolve(fixture.root, "mysql-status-calls.jsonl");
+  fs.writeFileSync(fakeMysql, [
+    "#!/usr/bin/env node",
+    '"use strict";',
+    'const fs = require("node:fs");',
+    'const args = process.argv.slice(2);',
+    'const defaultsArg = args[0] || "";',
+    'const optionPath = defaultsArg.startsWith("--defaults-extra-file=") ? defaultsArg.slice(22) : "";',
+    'fs.appendFileSync(process.env.TEST_MYSQL_STATUS_CAPTURE, JSON.stringify({',
+    '  args,',
+    '  optionPath,',
+    '  optionMode: optionPath ? fs.statSync(optionPath).mode & 0o777 : 0,',
+    '  optionText: optionPath ? fs.readFileSync(optionPath, "utf8") : "",',
+    '}) + "\\n");',
+    'if (args.some((value) => value.includes("UNION ALL"))) {',
+    '  process.stdout.write("accounts\\t1\\nprofiles\\t1\\n");',
+    '} else {',
+    '  process.stdout.write("0\\n");',
+    '}',
+    "",
+  ].join("\n"), {encoding: "utf8", mode: 0o700});
+  fs.appendFileSync(path.resolve(fixture.serverRoot, ".local/mysql.env"), [
+    `export BEASTBOUND_MYSQL_BIN='${shellSingleQuote(fakeMysql)}'`,
+    "export BEASTBOUND_MYSQL_USER='status_user'",
+    "export BEASTBOUND_MYSQL_PASSWORD='status_test_secret'",
+    "export BEASTBOUND_MYSQL_DATABASE='status_db'",
+    "",
+  ].join("\n"));
+
+  const started = await runOps(fixture, "start");
+  assert.equal(started.code, 0, started.stdout + started.stderr);
+  const backendPid = readPid(fixture.pidPath);
+  fixture.track(backendPid);
+  await waitForHealth(fixture.port);
+
+  const status = await runOps(fixture, "status", {
+    env: {TEST_MYSQL_STATUS_CAPTURE: capturePath},
+  });
+  assert.equal(status.code, 0, status.stdout + status.stderr);
+  const report = JSON.parse(status.stdout);
+  assert.deepEqual(report.mysql.counts, {accounts: 1, profiles: 1, manor_wars: 0});
+
+  const calls = fs.readFileSync(capturePath, "utf8").trim().split(/\r?\n/).map(JSON.parse);
+  assert.equal(calls.length, 2);
+  assert.equal(new Set(calls.map(({optionPath}) => optionPath)).size, 1);
+  for (const call of calls) {
+    assert.match(call.args[0], /^--defaults-extra-file=/);
+    assert.equal(call.args.some((value) => value === "-p" || value.startsWith("-pstatus_test_secret")), false);
+    assert.equal(call.args.some((value) => value.includes("status_test_secret")), false);
+    assert.equal(call.optionMode, 0o600);
+    assert.match(call.optionText, /user="status_user"/);
+    assert.match(call.optionText, /password="status_test_secret"/);
+  }
+  assert.equal(fs.existsSync(calls[0].optionPath), false);
+});
+
 test("backup creates a private single-transaction artifact and digest manifest", {timeout: 20_000}, async (t) => {
   const fixture = await createFixture(t);
   const fakeDump = path.resolve(fixture.root, "fake-mysqldump.js");

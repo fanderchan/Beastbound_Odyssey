@@ -298,6 +298,30 @@ test("main checks carry the expected fixed lane marker after the Godot separator
   assert.equal(parse.requiresQaAttestation, true);
 });
 
+test("release performance checks use Main, one fixed lane marker, and their exact probe arguments", () => {
+  const expected = new Map([
+    ["perf-idle", ["--perf-probe"]],
+    ["perf-moving", ["--movement-perf-check", "--perf-probe"]],
+    ["perf-movement-spam", ["--movement-spam-click-check", "--perf-probe"]],
+    ["perf-shop-select", ["--shop-select-perf-check"]],
+    ["perf-player-stat-spam", ["--auto-player-stat-spam-perf-check"]],
+  ]);
+  for (const [name, userArgs] of expected.entries()) {
+    const built = buildCheck(name, 1, expected.size, {godot: "godot"});
+    const separator = built.args.indexOf("--");
+    assert.ok(separator >= 0, name);
+    assert.equal(built.args.filter((arg) => arg === "--beastbound-qa-user-data-lane=automation").length, 1, name);
+    assert.deepEqual(
+      built.args.slice(separator + 1),
+      ["--beastbound-qa-user-data-lane=automation", ...userArgs],
+      name,
+    );
+    assert.equal(built.args.includes("res://scenes/Main.tscn"), true, name);
+    assert.equal(built.requiresQaAttestation, true, name);
+    assert.notEqual(built.performanceKind, "", name);
+  }
+});
+
 test("lane environment preserves HOME and existing features while adding fixed attestation markers", () => {
   const base = {
     HOME: "/Users/qa",
@@ -1434,6 +1458,94 @@ test("parse-only rejects contradictory parse and check filters", () => {
     () => parseArgs(["--parse-only", "--only=--auto-map-panel-check"]),
     /cannot be combined with check filters/,
   );
+});
+
+test("performance-suite selects an isolated fixed profile and rejects auto-check selectors", () => {
+  const options = parseArgs([
+    "--performance-suite",
+    "--fail-fast",
+    "--output-dir",
+    ".run/godot_auto_checks/performance-suite-test",
+  ]);
+  assert.equal(options.performanceSuite, true);
+  assert.equal(options.failFast, true);
+  assert.equal(
+    options.outputDir,
+    path.resolve(repoRoot, ".run/godot_auto_checks/performance-suite-test"),
+  );
+  for (const conflictingArgs of [
+    ["--performance-suite", "--list"],
+    ["--performance-suite", "--parse-only"],
+    ["--performance-suite", "--no-parse"],
+    ["--performance-suite", "--only=--auto-map-panel-check"],
+    ["--performance-suite", "--from=--auto-map-panel-check"],
+    ["--performance-suite", "--max=1"],
+  ]) {
+    assert.throws(() => parseArgs(conflictingArgs), /--performance-suite cannot be combined/);
+  }
+});
+
+test("local CI delegates auto and performance Godot work to the fixed-lane runner", () => {
+  const localCiSource = fs.readFileSync(path.join(repoRoot, "tools/run_local_ci.mjs"), "utf8");
+  assert.match(localCiSource, /const GODOT_AUTO_OUTPUT_DIR = path\.join\(REPO_ROOT, "\.run\/godot_auto_checks"\);/);
+  assert.match(localCiSource, /"--performance-suite"/);
+  assert.match(localCiSource, /runCommand\("godot-performance-checks", "node"/);
+  assert.doesNotMatch(localCiSource, /runCommand\("perf-[^"]+", options\.godot/);
+  assert.doesNotMatch(localCiSource, /function godotSceneArgs/);
+  assert.doesNotMatch(localCiSource, /path\.join\(options\.outputDir, `\$\{stamp\}_godot_auto`\)/);
+});
+
+test("performance results require exact markers, lane attestation, and bounded metrics", () => {
+  const idle = buildCheck("perf-idle", 1, 1, {godot: "godot"});
+  const idleOutput = [
+    qaAttestationMarker(),
+    "perf probe: fps=60.0 frames=60 process_total=0.00ms",
+    "perf probe: fps=60.0 frames=60 process_total=0.00ms",
+    "perf probe: fps=60.0 frames=60 process_total=0.00ms",
+    "perf probe: fps=60.0 frames=60 process_total=0.00ms",
+  ].join("\n");
+  const idleResult = makeResult(idle, 10, 0, "", idleOutput, false, preparedLane);
+  assert.equal(idleResult.ok, true);
+  assert.equal(idleResult.status, "ok");
+  assert.equal(idleResult.perf.processTotal.samples, 4);
+  assert.equal(idleResult.perf.processTotal.stableSamples, 2);
+
+  const moving = buildCheck("perf-moving", 1, 1, {godot: "godot"});
+  const validMovingOutput = [
+    qaAttestationMarker(),
+    "movement perf check ready: status=ok moved=true",
+    "perf probe: fps=60.0 frames=60 process_total=0.00ms",
+  ].join("\n");
+  assert.equal(makeResult(moving, 10, 0, "", validMovingOutput, false, preparedLane).ok, true);
+  for (const invalidMarker of [
+    "unrelated status=ok",
+    " movement perf check ready: status=ok moved=true",
+    "movement perf check ready: status=failed moved=false",
+    "movement perf check ready: status=ok status=ok",
+  ]) {
+    const result = makeResult(
+      moving,
+      10,
+      0,
+      "",
+      `${qaAttestationMarker()}\n${invalidMarker}\nperf probe: fps=60.0 frames=60 process_total=0.00ms\n`,
+      false,
+      preparedLane,
+    );
+    assert.equal(result.ok, false, invalidMarker);
+    assert.equal(result.status, "performance_failed", invalidMarker);
+    assert.notEqual(result.performanceDiagnostic, "", invalidMarker);
+  }
+
+  const spam = buildCheck("perf-movement-spam", 1, 1, {godot: "godot"});
+  const unsafeSpam = [
+    qaAttestationMarker(),
+    "movement spam click check ready: status=ok coalesced=true settled=true max_input_us=999999",
+  ].join("\n");
+  const spamResult = makeResult(spam, 10, 0, "", unsafeSpam, false, preparedLane);
+  assert.equal(spamResult.ok, false);
+  assert.equal(spamResult.status, "performance_failed");
+  assert.equal(spamResult.perf.maxInputUs, 999999);
 });
 
 test("startup account preparation logs in and preserves an existing character roster", async () => {

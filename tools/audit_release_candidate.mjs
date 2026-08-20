@@ -107,6 +107,9 @@ export function classifyCandidatePath(repoPath) {
   if (normalized.startsWith("server/node/src/") || normalized.startsWith("server/node/scripts/")) {
     return "server_product_and_ops";
   }
+  if (normalized === "start-backend.command") {
+    return "server_product_and_ops";
+  }
   if (normalized.startsWith("tools/test/")) {
     return "tool_tests";
   }

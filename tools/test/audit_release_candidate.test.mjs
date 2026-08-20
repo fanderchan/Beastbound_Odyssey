@@ -22,6 +22,7 @@ test("candidate paths are assigned to explicit release categories", () => {
     ["docs/phase_509_example.md", "release_documentation"],
     ["production_release_loop_plan.md", "release_documentation"],
     ["server/node/src/http-server.js", "server_product_and_ops"],
+    ["start-backend.command", "server_product_and_ops"],
     ["server/node/test/auth.test.js", "server_tests_and_fixtures"],
     ["tools/audit_release_candidate.mjs", "release_and_qa_tooling"],
     ["tools/test/audit_release_candidate.test.mjs", "tool_tests"],

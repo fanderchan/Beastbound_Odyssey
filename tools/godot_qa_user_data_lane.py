@@ -54,7 +54,7 @@ LANES = {
     },
 }
 RESERVED_FEATURES = frozenset(record["feature"] for record in LANES.values())
-RUNNER_SOURCE_SHA256 = "75fe8c6c8eaa3b085d2e94013b6f466345e56baef32c3061c7997a560c68b642"
+RUNNER_SOURCE_SHA256 = "3af2a5613475778c8cf0817daed76d9c5beb8ef713b5a53b8347c80734c691ea"
 HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_absent_inventory": "98f816ee9fc7b7c8eb2f1b8506a805995ad5972c8e06888a05e6f2e845e9940c",
     "_assert_no_symlink_components": "eab6e07e0cee299d46589930d37318184b88b83bd7080d02d24429d89c29b993",
@@ -116,7 +116,7 @@ HELPER_CONTRACT_FUNCTION_SHA256 = {
     "_sha256_from_descriptor": "2ad426766dd214d2c1e55cac6d1cfe31872c3df7673ef7296fd7c6e21c368b40",
     "_stable_stat_tuple": "3945f10854ad36d3ff0918caa6fcc3a3ad01553934838afe54ccd451b1310110",
     "_top_level_assignment_sources": "f5c7b66dfefb5f6553a33e599e54e631ef99306ee31fc90f7c2340d080d17ad2",
-    "_validate_helper_constant_contract": "ade5604ebbee910e312b4cf6e75092879848d812e4be7862d9507e5fe320d27e",
+    "_validate_helper_constant_contract": "93d30ae9447d2284a2b75cdfbc5667875a9636995f29376e6b0e860901890ddd",
     "_validate_helper_function_contract": "8536c2d474585b026827b36807ba6e34c8e5460a36c4b957707314c9dbcdb129",
     "_validate_named_function_contract": "babc90c421bc13a6716f008593999d7c444a3abb926c439d415e78a34647fcf5",
     "_validated_owner_token": "a8af7ed3f13ade53c4a5113b01cfd336040787c2f2fcfb703dda502a5eab5690",
@@ -161,7 +161,7 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "assertPreflightProbeContained": "18017ffeba49cb20f998d0f30aedc2c3af6d387cbebd92e75c86230ca53ab302",
     "authenticatedJson": "4178cc6f02f7030747c16ca62802ec921b2e563ba271b8a1103fd471aac28317",
     "autoCheckCompletionContract": "3ea236319b6d85c1332737c1c37722afb93a9bf9e7e09d2d7226a700940ac17d",
-    "buildCheck": "532e6de122e82e6404e9f8251597034aa818e7f5fc10418f9850b825de193a1d",
+    "buildCheck": "c4463ff58abf40ba36115f92e7d044ac544c951fac7e24b7223bdc78ceebc703",
     "buildGodotLaneEnvironment": "78b2a1f70a897f79ad94c4753ff0ab68092b13b95465e5163a9fd10d98169a60",
     "buildQaLaneSummary": "ff63ef28b280b36f6458e97aec6aad8dacdc153596ad15a71559ce0dee869a3c",
     "buildRunSummary": "096cacb8771f6a5d635e03bba44460239e6c8f419c262b4323290b5d2edae191",
@@ -173,6 +173,7 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "discoverAutoCheckFlags": "ce8b635245847d953ba649a8248356c3fc8a8e63664885c26414059d0feaa67d",
     "ensureProcessGroupClosed": "5a14bf975fdb116fdf4c47077e796fedd58b5a7deacb6aaf807564fe30e8deb3",
     "ensureStartupLoginAccount": "b4d41089f166aa8f230cb133e7e3e544f7aac938901d15fa73bccb62aa342216",
+    "evaluatePerformanceResult": "2debd33de26833289418314d2f2131f77184061cf094f67ff051cff2bf06d465",
     "escapeRegExp": "d0180bd9422ef0810aeff440514f155fd11635028932741137e77c72c13c9d15",
     "expectedAutoCompletionPrefix": "d777f3e4ef6a5c36042705863899a4e3c2e1bcd8e8244903c0d533983a512d5c",
     "extraUserArgsForFlag": "3414fab1976efee1bd133104ef82f845dad377200a7b86e56a1601de3c3b363a",
@@ -182,18 +183,24 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "godotHelpHasOption": "bbb81b32286181c0962f9f29f3eea2199bd336e79f7ccb9f6557b8afccc64f79",
     "inferQuitAfter": "d9aaa6ce8f5e685714ad27246a39f5ae0a1b31f781bad62ca589199df3c62c71",
     "isEqualOrDescendantPath": "192525d84f93ce40f74eac7e5f4b8307006ec3cef16fd861601fa680334b693c",
-    "main": "c1cd2b76f34258c35e4fcca9f54f4f04323f497ffe967dae7c9acb5c146d9395",
-    "makeResult": "23e7154257138f853c39ad56d3823ca44606091111fbcc17adef2fbe4eba66f4",
+    "main": "937a6afc85774724cb258717d339553b52255558e7a1bf3c38541d15a594a426",
+    "makeResult": "0cbd20204318c7b1546477b98da5dd9f4fbd9d4c4676df6de215aabd541e3d6b",
     "markLaneVerificationFailure": "1e8eb47178c1e2afba24cb46f9a091b0dff07a7543b58f91c4f3985dce4d4d5f",
     "markProcessGroupResidual": "bc2022a77fca3fcac9f8ee6d022efa9f73a31fe5bed858cb742ad218cef6a1f9",
     "normalizeGodotPath": "7817cb84d5d4345b130d21868172d79ba00bf0a1f05c17cc005388837c15744c",
     "nowStamp": "a1c7bc5c8023b2420b9611adb71d47ccaec657dd155ea53ec2d8a814413af5a2",
-    "parseArgs": "1a057d31eea615987ff76cc58518e526e3b976972544177f814de88bbbf39c9b",
+    "parseArgs": "b0028930c93ea0944adbbd873bfd6f4539d2c45bb86785c101c51857fb029e4a",
     "parseAutoCheckCompletion": "90fb73d0b93485979a73fcf037dbc7af03f2d6ef48e661b23f00fde9a7e8ea70",
     "parseLaneHelperOutput": "5db916aadd2932fd4883b825151906e07bb1a2b4658af0f231ba88b169a860a3",
+    "parsePerformanceBoolean": "00258b95f84c4e149daf9b52576c1dfde2128c04e63f0365610a5f1d547794f8",
+    "parsePerformanceMetric": "61ccd69fa13113f157c4d701b4fe65efbce4e2035b9cda7e4b1c902e07312b68",
+    "parsePerformanceNumber": "e2ef697d1c2aeeca3e497cd5a928dd78848105d85ec0e0fa865637f1673406f0",
     "parseQaLaneAttestation": "99dc1d415ca2532d1192c6cf80bc68012dffae7ec68f19217c3456555bf54952",
     "parseTextAutoCompletionFields": "997b2a83c656d0ff9d27fa04e8eeb3648c6f3faa4d7de270f735baf229d82649",
     "pathsIntersect": "d810dba0ae7320b0e1e96a65f8df0e2c2b505344a9ae9572fee3454cea2fa286",
+    "percentile": "c55995996017a793431e682f9ffd67d75c761aaf918392494ae0c5f7df6b35a2",
+    "performanceStats": "4afd0b1f4e73253ff9f0e3b7e10d3d85bfa731f468e037510374876f7a79a892",
+    "performanceStatusEvidence": "fe3e610f48ecba7a1ecb5e12260c4c8560ce582187e688edc1d19e63fadd8cc3",
     "postAuthJson": "53fb4e56010ee2a0b87c3238f6739fc5d86ce0b8900f7d41b7c63237753b70ff",
     "preflightGodotEditorBinary": "d0e4d1c65c9fe00157fa1d9a6c0d6b9b62930c7080cae6cfa5ffc1e262591a50",
     "prepareCheck": "b632d0dd5a6b6c7611f17c43af5a1406ca1f8549b6ed6ea630290df476f3985f",
@@ -211,7 +218,7 @@ RUNNER_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
     "splitFlags": "d7ee69b8ef6027cb94f288bd3da2bc07ead869a111b4ba8578f95024bcd1e0a8",
     "terminateProcessGroup": "2dc336ea9b5c6975ef5e9b31763f83ea0fad990b6429d3e9e7eec07782afee4a",
     "terminateWindowsProcessIds": "9485dd3d699bbaf3a915fd44027fab4d616889afa4062b94128969a172f015bc",
-    "usage": "1aadfd9accb8af37f03f60dc7dae79efce2d1520f90a565519a55cd93227d699",
+    "usage": "718999ce07d38703c86bc178268a71e22ca8b9c49483487ad39ab03ac4d76b45",
     "validateCleanedLanePayload": "96beef139205206e7f14ecfcfd385cfb9028498a502f2d62fe7f50123e285575",
     "validatePreparedLanePayload": "0ecf77e4913c5757b75f9ca140b2d7859c44098c9c3a9aa598a68bc47f4db12b",
     "validateQaOutputDirectory": "304cc9eed032830fe046dcb9a311cef80f990847f20521140ddccb2f64d25c23",
@@ -2937,7 +2944,7 @@ def _validate_helper_constant_contract(helper_text: str) -> None:
             'RESERVED_FEATURES = frozenset(record["feature"] for record in LANES.values())\n'
         ),
         "RUNNER_SOURCE_SHA256": (
-            'RUNNER_SOURCE_SHA256 = "75fe8c6c8eaa3b085d2e94013b6f466345e56baef32c3061c7997a560c68b642"\n'
+            'RUNNER_SOURCE_SHA256 = "3af2a5613475778c8cf0817daed76d9c5beb8ef713b5a53b8347c80734c691ea"\n'
         ),
     }
     for name, expected_source in expected.items():

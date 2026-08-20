@@ -2,8 +2,8 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R0.09
-> 当前发布结论：BLOCKED，不是可发布候选版
+> 当前游标：R1.01
+> 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
 ## 1. 为什么看起来还差很多
@@ -104,8 +104,8 @@
 - [x] **R0.08 AUTO｜候选源码卫生与可复现报告**
   依赖：R0.05、R0.07。确认无生成状态、密钥、绝对私有路径、孤儿服务和未分类文件进入候选；输出精确提交集合、复现命令与失败时回退路径。已新增 fail-closed 候选审计器及回归，最终严格报告精确记录 23 个线性提交、225 条已分类路径、双归档哈希、证据 SHA 闭包、脱敏秘密/私人路径扫描、QA/进程收尾和反向补丁 tree 证明；真实本机路径已从最终源码树移除，Godot 解析命令统一改用隔离 `--parse-only`。
 
-- [ ] **R0.09 GATE｜干净候选基线成立**
-  依赖：R0.08。源码、服务端、Godot 解析、目标自动检查和真实客户端基线均通过；后续所有任务只在这个可复现基线上推进。
+- [x] **R0.09 GATE｜干净候选基线成立**
+  依赖：R0.08。源码、服务端、Godot 解析、目标自动检查和真实客户端基线均通过；后续所有任务只在这个可复现基线上推进。统一门禁已冻结为 8 个顶层步骤，最终 `8/8`；完整服务端 `1981 tests / 1980 pass / 0 fail / 1 skip`，Godot 发布目标 `35/35`、隔离 JSON 后端联机 `8/8`、性能 `5/5`，QA lane、真实玩家资料哈希、后端端口和进程收尾全部通过，详见 Phase 510。
 
 ### R1 — 清空已有 owner_review_pending 候选队列
 
@@ -591,8 +591,8 @@
 
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
-| R0 干净候选基线 | 进行中（R0.01–R0.08、R0.F001–R0.F013 已完成；当前 R0.09） | R0.09 完成 |
-| R1 历史候选验收 | 未开始 | R1.19 完成 |
+| R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
+| R1 历史候选验收 | 未开始（当前 R1.01 OWNER） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -627,6 +627,7 @@
 - 2026-08-20｜R0.06｜docs/phase_507_production_release_r0_06_client_target_auto_checks.md｜修复认证自动检查对旧 GM QA 数量的陈旧断言，并保持策略模型和 SHA-256 源合同为权威；源合同、Python `78/78`、Node `48/48` 通过，Godot 解析加地图/世界/音频/融合/宠物/战斗/QA 共 34 个目标检查最终 `35/35` 通过，进程组与隔离车道完整收尾，真实玩家目录哈希不变｜严格 Firebud 普通运行时与地图面板检查须等 R1.01 所有者批准 promotion 后转绿；真实客户端和性能证据仍由 R0.07 阻塞
 - 2026-08-20｜R0.07｜docs/phase_508_production_release_r0_07_real_client_baseline.md + `.run/evidence/r0_07/`｜真实 Main 本地在线 `8/8`、Firebud v1/v2 静止/移动 `8/8`、10v10 战斗性能 `21/21` 通过；世界 HUD 44.3 秒、战斗 13.533 秒及 8 个 NPC Main 证据完成；发现裸 parse 会轮转普通玩家日志并更新音频偏好后新增隔离 `--parse-only`，Python `152/152`、Node `52/52`、安全解析 `1/1` 和源合同全绿，后端/进程/三条 QA 车道完整收尾｜Firebud v2、NPC 与战斗视觉仍为 owner review pending，正式构建与低端机/SOAK 尚未执行；发布结论保持 BLOCKED
 - 2026-08-20｜R0.08｜docs/phase_509_production_release_r0_08_candidate_hygiene_reproducibility.md + `.run/release_candidate/r0_08/candidate-audit.json`｜最终 HEAD 的 23 个线性提交与 225 条差异路径精确入表，未分类/生成状态/真实秘密/私人绝对路径/孤儿进程均为 0；Firebud 不可变证据逐层 SHA 闭合，两次源码 tar 字节一致，隔离 index 反向 full-index binary patch 精确重建 origin/main tree；Node `58/58`、QA source contract、隔离 Godot parse `1/1` 通过，车道/进程收尾｜未安装外部 secret scanner，完整历史/供应链安全仍留 R7；完整候选 CI 与跨阶段一致性留 R0.09，owner pending 状态不变，发布结论保持 BLOCKED
+- 2026-08-20｜R0.09｜docs/phase_510_production_release_r0_09_clean_candidate_baseline.md + `.run/local_ci/r0_09_full_gate_pass5/2026-08-20T15-30-29-864Z_summary.json`｜统一门禁 `8/8`；完整服务端 `1981/1980 pass/0 fail/1 skip`，Godot 发布目标 `35/35`、隔离 JSON 联机 `8/8`、性能 `5/5`；定向 Node `98/98`、候选审计器 `6/6`、Python `78/78`、战斗夹具连续十轮 `20/20`，进程组、QA lane、真实玩家资料哈希、后端端口和候选进程全部收尾｜R0 基线成立但全局发布仍 BLOCKED；Valkey 生产相似验证、全部 OWNER 候选、玩法内容、正式资产、支付、运维安全、签名制品、封测与 R10 门禁仍未完成，下一任务 R1.01
 
 ## 7. 正式上线硬门槛
 

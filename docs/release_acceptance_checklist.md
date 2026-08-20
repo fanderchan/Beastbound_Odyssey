@@ -26,7 +26,6 @@
 在仓库根目录执行：
 
 ```sh
-cd /Users/fander/projects/Beastbound_Odyssey
 git status --short --branch
 git pull --ff-only
 ```
@@ -64,22 +63,39 @@ curl -s http://127.0.0.1:8787/health
 
 ## 1. 可选自动验证
 
-如果你有时间，先跑一次完整本地 CI：
+如果你有时间，先跑一次完整本地 CI。它不能连接上面用于正常玩家检查的 MySQL 服务；请另开一个仅绑定回环地址、使用一次性 JSON 数据的 QA 服务端。终端 A：
 
 ```sh
-node tools/run_local_ci.mjs
+mkdir -p .run/local_ci
+QA_BACKEND_DIR="$(mktemp -d "$PWD/.run/local_ci/acceptance_qa.XXXXXX")"
+BEASTBOUND_AUTH_HOST=127.0.0.1 \
+BEASTBOUND_AUTH_PORT=18787 \
+BEASTBOUND_AUTH_STORE=json \
+BEASTBOUND_AUTH_STORE_PATH="$QA_BACKEND_DIR/auth-store.json" \
+BEASTBOUND_ALLOW_POSITION_TELEPORT=1 \
+npm --prefix server/node start
+```
+
+终端 B：
+
+```sh
+node tools/run_local_ci.mjs \
+  --auth-server-url http://127.0.0.1:18787
 ```
 
 期望：
 
-- `Local CI summary` 显示 `passed=10 failed=0 total=10`。
-- Godot 自动检查全过。
-- 性能段全过。
+- `Local CI summary` 显示 `passed=8 failed=0 total=8`。
+- 固定 Godot 发布目标为 `35/35`，固定联机矩阵为 `8/8`。
+- idle / moving / movement spam / shop select / player stat spam 为 `5/5`。
+- 每个 Godot summary 都确认进程组关闭、QA lane 删除、正常玩家目录未改变。
+
+完成后在终端 A 按 `Ctrl-C` 停止 QA 服务端，并确认 `18787` 没有残留监听。这个位置瞬移开关只服务隔离 QA，绝不能用于正常玩家、LAN 或生产服务。
 
 如果你暂时不想等完整 CI，可以先参考已记录证据：
 
-- `.run/local_ci/2026-07-03T07-35-59-454Z_summary.json`
-- `.run/local_ci/2026-07-03T07-35-59-454Z.log`
+- `.run/local_ci/r0_09_full_gate_pass5/2026-08-20T15-30-29-864Z_summary.json`
+- `.run/local_ci/r0_09_full_gate_pass5/2026-08-20T15-30-29-864Z.log`
 
 ## 2. 启动普通客户端
 
@@ -247,18 +263,19 @@ npm run ops --prefix server/node -- start
 
 ## 6. 阶段 D 验收：测试与 CI
 
-完整验收建议跑：
+完整验收按第 1 节先启动隔离 JSON QA 服务端，再跑：
 
 ```sh
-node tools/run_local_ci.mjs
+node tools/run_local_ci.mjs \
+  --auth-server-url http://127.0.0.1:18787
 ```
 
 期望：
 
 - `git-diff-check` 通过。
-- 服务端测试通过。
-- Godot 全量自动检查通过。
-- idle / moving / movement spam / shop select / player stat spam 性能基线通过。
+- 完整服务端测试 0 failure；已有明确理由的 skip 仍需单独记录。
+- 固定 Godot 发布目标 `35/35`、联机矩阵 `8/8`。
+- idle / moving / movement spam / shop select / player stat spam 性能套件 `5/5`。
 
 如果只想确认工具是否可用：
 

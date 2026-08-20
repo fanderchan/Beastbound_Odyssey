@@ -78,6 +78,39 @@ test("HTTP transport rejects malformed targets without an unhandled rejection", 
   assert.equal(rejection, null);
 });
 
+test("a late connection reset stays scoped to its socket and leaves HTTP healthy", async (t) => {
+  const structuredLogs = [];
+  const server = createHttpServer({
+    service: {},
+    eventHub: eventHubStub(),
+    logger: (entry) => structuredLogs.push(entry),
+  });
+  const base = await listen(server, t);
+  const acceptedSocket = new Promise((resolve) => server.once("connection", resolve));
+  const client = net.createConnection({host: "127.0.0.1", port: server.address().port});
+  await once(client, "connect");
+  const socket = await acceptedSocket;
+  client.destroy();
+  await once(client, "close");
+
+  const reset = new Error("peer reset after route cleanup");
+  reset.code = "ECONNRESET";
+  assert.doesNotThrow(() => socket.emit("error", reset));
+  assert.equal(server.listening, true);
+  assert.equal(socket.destroyed, true);
+  assert.deepEqual(
+    structuredLogs.filter((entry) => entry.type === "http.connection_error").map((entry) => entry.errorCode),
+    ["ECONNRESET"],
+  );
+
+  const health = await fetch(`${base}/health/live`);
+  assert.equal(health.status, 200);
+  const healthPayload = await health.json();
+  assert.equal(healthPayload.ok, true);
+  assert.equal(healthPayload.service, "beastbound-auth");
+  assert.equal(healthPayload.protocolVersion, PROTOCOL_VERSION);
+});
+
 test("HTTP JSON parser enforces auth body and content-type boundaries", async (t) => {
   const service = {
     login(payload) { return {ok: true, observedBytes: Buffer.byteLength(JSON.stringify(payload))}; },
@@ -189,7 +222,7 @@ test("HTTP trusted TLS proxy mode keeps health private but rejects direct produc
   assert.equal((await forwarded.json()).observedClientIp, "198.51.100.18");
 });
 
-test("HTTP bearer boundary forwards only canonical 43-byte base64url session tokens", async (t) => {
+test("HTTP authorization boundary forwards only canonical 43-byte base64url session tokens", async (t) => {
   const server = createHttpServer({
     service: {getSession(token) { return {ok: true, observedToken: token}; }},
     eventHub: eventHubStub(),

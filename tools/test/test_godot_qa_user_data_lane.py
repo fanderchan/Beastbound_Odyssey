@@ -92,12 +92,14 @@ assertHex assertJsonKeysUnique assertNonNegativeInteger assertPreflightProbeCont
 authenticatedJson autoCheckCompletionContract buildCheck buildGodotLaneEnvironment buildQaLaneSummary
 buildRunSummary cleanupQaLane createLanePreservationError createSynchronousLog delay descendantProcessIds
 discoverAutoCheckFlags ensureProcessGroupClosed ensureStartupLoginAccount escapeRegExp
+evaluatePerformanceResult
 expectedAutoCompletionPrefix extraUserArgsForFlag filterFlags gitSha
 godotCompileFailureDiagnostic godotHelpHasOption inferQuitAfter isEqualOrDescendantPath
 main makeResult markLaneVerificationFailure markProcessGroupResidual normalizeGodotPath
 nowStamp parseArgs parseAutoCheckCompletion parseLaneHelperOutput parseQaLaneAttestation
-parseTextAutoCompletionFields
-pathsIntersect postAuthJson preflightGodotEditorBinary prepareCheck prepareQaLane
+parsePerformanceBoolean parsePerformanceMetric parsePerformanceNumber parseTextAutoCompletionFields
+pathsIntersect percentile performanceStats performanceStatusEvidence postAuthJson
+preflightGodotEditorBinary prepareCheck prepareQaLane
 printSummary processGroupClosureEvidence processGroupExists requestGracefulShutdown
 reclaimStaleQaLane runCheck runGodotPreflightProbe runQaLaneHelper safeErrorText safeThrowableProperty splitFlags terminateProcessGroup
 terminateWindowsProcessIds usage validateCleanedLanePayload validatePreparedLanePayload
@@ -1528,7 +1530,7 @@ class GodotQaLaneSourceContractTests(unittest.TestCase):
         }))
         self.assertEqual(
             RUNNER_SOURCE_SHA256,
-            "75fe8c6c8eaa3b085d2e94013b6f466345e56baef32c3061c7997a560c68b642",
+            "3af2a5613475778c8cf0817daed76d9c5beb8ef713b5a53b8347c80734c691ea",
         )
 
     def test_lane_paths_class_and_helper_entrypoint_bindings_are_exact(self) -> None:

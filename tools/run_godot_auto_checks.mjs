@@ -35,6 +35,53 @@ const QA_LANE_CUSTOM_USER_DIR_NAME = "BeastboundOdysseyQA_Automation";
 const QA_LANE_ARG = "--beastbound-qa-user-data-lane=automation";
 const QA_ATTESTATION_PREFIX = "BEASTBOUND_QA_USER_DATA_ATTESTATION: ";
 const QA_LANE_HELPER = path.join(REPO_ROOT, "tools/godot_qa_user_data_lane.py");
+const PERFORMANCE_CHECK_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    name: "perf-idle",
+    kind: "idle",
+    quitAfter: 1600,
+    statusPrefix: "",
+    userArgs: Object.freeze(["--perf-probe"]),
+  }),
+  Object.freeze({
+    name: "perf-moving",
+    kind: "moving",
+    quitAfter: 2600,
+    statusPrefix: "movement perf check ready:",
+    userArgs: Object.freeze(["--movement-perf-check", "--perf-probe"]),
+  }),
+  Object.freeze({
+    name: "perf-movement-spam",
+    kind: "spam",
+    quitAfter: 2600,
+    statusPrefix: "movement spam click check ready:",
+    userArgs: Object.freeze(["--movement-spam-click-check", "--perf-probe"]),
+  }),
+  Object.freeze({
+    name: "perf-shop-select",
+    kind: "status",
+    quitAfter: 2600,
+    statusPrefix: "shop select perf check ready:",
+    userArgs: Object.freeze(["--shop-select-perf-check"]),
+  }),
+  Object.freeze({
+    name: "perf-player-stat-spam",
+    kind: "status",
+    quitAfter: 2600,
+    statusPrefix: "player stat spam perf check ready:",
+    userArgs: Object.freeze(["--auto-player-stat-spam-perf-check"]),
+  }),
+]);
+const PERFORMANCE_CHECK_BY_NAME = new Map(
+  PERFORMANCE_CHECK_DEFINITIONS.map((definition) => [definition.name, definition]),
+);
+const PERF_LIMITS = Object.freeze({
+  idleMedianProcessTotalMs: Number(process.env.BEASTBOUND_CI_IDLE_MEDIAN_PROCESS_TOTAL_MS || 5),
+  idleP95ProcessTotalMs: Number(process.env.BEASTBOUND_CI_IDLE_P95_PROCESS_TOTAL_MS || 15),
+  movingMedianProcessTotalMs: Number(process.env.BEASTBOUND_CI_MOVING_MEDIAN_PROCESS_TOTAL_MS || 10),
+  movingP95ProcessTotalMs: Number(process.env.BEASTBOUND_CI_MOVING_P95_PROCESS_TOTAL_MS || 30),
+  movementSpamMaxInputUs: Number(process.env.BEASTBOUND_CI_MOVEMENT_SPAM_MAX_INPUT_US || 5000),
+});
 let activeGodotChild = null;
 let activeGodotSettlementRequest = null;
 let activePreparationAbortController = null;
@@ -70,6 +117,7 @@ function usage() {
     "  --max <count>          Run at most count checks after filters.",
     "  --fail-fast           Stop after the first failed check.",
     "  --parse-only          Run only the base parse check in the fixed QA lane.",
+    "  --performance-suite   Run the five release performance probes in the fixed QA lane.",
     "  --no-parse            Skip the base godot --headless --quit parse check.",
     "  --output-dir <dir>     Override summary/log output directory.",
     "  --godot <path>         Override Godot binary path.",
@@ -88,6 +136,7 @@ function parseArgs(argv) {
     max: 0,
     failFast: false,
     parseOnly: false,
+    performanceSuite: false,
     includeParse: true,
     outputDir: DEFAULT_OUTPUT_DIR,
     godot: DEFAULT_GODOT,
@@ -127,6 +176,8 @@ function parseArgs(argv) {
       options.failFast = true;
     } else if (arg === "--parse-only") {
       options.parseOnly = true;
+    } else if (arg === "--performance-suite") {
+      options.performanceSuite = true;
     } else if (arg === "--no-parse") {
       options.includeParse = false;
     } else if (arg === "--output-dir") {
@@ -161,6 +212,20 @@ function parseArgs(argv) {
     && (options.only.length > 0 || options.exclude.size > 0 || options.from !== "" || options.max > 0)
   ) {
     throw new Error("--parse-only cannot be combined with check filters");
+  }
+  if (
+    options.performanceSuite
+    && (
+      options.list
+      || options.parseOnly
+      || !options.includeParse
+      || options.only.length > 0
+      || options.exclude.size > 0
+      || options.from !== ""
+      || options.max > 0
+    )
+  ) {
+    throw new Error("--performance-suite cannot be combined with --list, parse selection, or check filters");
   }
   return options;
 }
@@ -771,6 +836,32 @@ function inferQuitAfter(flag) {
 }
 
 function buildCheck(flag, index, total, options) {
+  const performanceDefinition = PERFORMANCE_CHECK_BY_NAME.get(flag);
+  if (performanceDefinition) {
+    return {
+      index,
+      total,
+      name: performanceDefinition.name,
+      flag: "",
+      performanceKind: performanceDefinition.kind,
+      performanceStatusPrefix: performanceDefinition.statusPrefix,
+      quitAfter: performanceDefinition.quitAfter,
+      command: options.godot,
+      args: [
+        "--headless",
+        "--path",
+        "client/godot",
+        "--scene",
+        SCENE_PATH,
+        "--quit-after",
+        String(performanceDefinition.quitAfter),
+        "--",
+        QA_LANE_ARG,
+        ...performanceDefinition.userArgs,
+      ],
+      requiresQaAttestation: true,
+    };
+  }
   if (flag === PARSE_CHECK_NAME) {
     return {
       index,
@@ -1942,6 +2033,164 @@ function parseAutoCheckCompletion(output, flag) {
   };
 }
 
+function parsePerformanceMetric(line, key) {
+  const match = String(line || "").match(new RegExp(`\\b${escapeRegExp(key)}=([-+0-9.]+)`));
+  return match ? Number(match[1]) : Number.NaN;
+}
+
+function percentile(values, ratio) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return 0;
+  }
+  const sorted = values.slice().sort((left, right) => left - right);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * ratio) - 1));
+  return sorted[index];
+}
+
+function performanceStats(output, key = "process_total") {
+  const values = String(output || "")
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("perf probe:"))
+    .map((line) => parsePerformanceMetric(line, key))
+    .filter((value) => Number.isFinite(value));
+  const stableValues = values.length >= 4 ? values.slice(Math.floor(values.length / 2)) : values;
+  return {
+    key,
+    samples: values.length,
+    stableSamples: stableValues.length,
+    median: percentile(stableValues, 0.5),
+    p95: percentile(stableValues, 0.95),
+    max: stableValues.length > 0 ? Math.max(...stableValues) : 0,
+  };
+}
+
+function parsePerformanceBoolean(statusLine, key) {
+  const match = String(statusLine || "").match(new RegExp(`\\b${escapeRegExp(key)}=(true|false)`));
+  return match ? match[1] === "true" : false;
+}
+
+function parsePerformanceNumber(statusLine, key) {
+  const match = String(statusLine || "").match(new RegExp(`\\b${escapeRegExp(key)}=([-+0-9.]+)`));
+  return match ? Number(match[1]) : Number.NaN;
+}
+
+function performanceStatusEvidence(output, expectedPrefix) {
+  if (expectedPrefix === "") {
+    return {diagnostic: "", status: "", statusLine: ""};
+  }
+  const lines = String(output || "")
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith(`${expectedPrefix} `));
+  if (lines.length !== 1) {
+    return {
+      diagnostic: `expected exactly one column-zero performance marker ${expectedPrefix}, found ${lines.length}`,
+      status: "",
+      statusLine: lines.at(-1) || "",
+    };
+  }
+  const statusMatches = [...lines[0].matchAll(/\bstatus=([^\s]+)/g)];
+  if (statusMatches.length !== 1) {
+    return {
+      diagnostic: `performance marker must contain exactly one status field: ${expectedPrefix}`,
+      status: "",
+      statusLine: lines[0],
+    };
+  }
+  return {diagnostic: "", status: statusMatches[0][1], statusLine: lines[0]};
+}
+
+function evaluatePerformanceResult(result, check, output) {
+  if (!check.performanceKind) {
+    return result;
+  }
+  const marker = performanceStatusEvidence(output, check.performanceStatusPrefix || "");
+  const processTotal = performanceStats(output, "process_total");
+  const checks = [];
+  const failures = [];
+  if (marker.diagnostic !== "") {
+    failures.push(marker.diagnostic);
+  }
+  let performanceOk = marker.diagnostic === "" && (marker.status === "" || marker.status === "ok");
+  if (check.performanceKind === "idle") {
+    checks.push(`process_total_median<=${PERF_LIMITS.idleMedianProcessTotalMs}`);
+    checks.push(`process_total_p95<=${PERF_LIMITS.idleP95ProcessTotalMs}`);
+    if (processTotal.samples === 0) {
+      failures.push("missing perf probe process_total samples");
+    }
+    if (processTotal.median > PERF_LIMITS.idleMedianProcessTotalMs) {
+      failures.push(`process_total median ${processTotal.median} exceeded ${PERF_LIMITS.idleMedianProcessTotalMs}`);
+    }
+    if (processTotal.p95 > PERF_LIMITS.idleP95ProcessTotalMs) {
+      failures.push(`process_total p95 ${processTotal.p95} exceeded ${PERF_LIMITS.idleP95ProcessTotalMs}`);
+    }
+    performanceOk = performanceOk
+      && processTotal.samples > 0
+      && processTotal.median <= PERF_LIMITS.idleMedianProcessTotalMs
+      && processTotal.p95 <= PERF_LIMITS.idleP95ProcessTotalMs;
+  } else if (check.performanceKind === "moving") {
+    checks.push(`process_total_median<=${PERF_LIMITS.movingMedianProcessTotalMs}`);
+    checks.push(`process_total_p95<=${PERF_LIMITS.movingP95ProcessTotalMs}`);
+    if (marker.status !== "ok") {
+      failures.push(`movement status was ${marker.status || "missing"}`);
+    }
+    if (processTotal.samples === 0) {
+      failures.push("missing perf probe process_total samples");
+    }
+    if (processTotal.median > PERF_LIMITS.movingMedianProcessTotalMs) {
+      failures.push(`process_total median ${processTotal.median} exceeded ${PERF_LIMITS.movingMedianProcessTotalMs}`);
+    }
+    if (processTotal.p95 > PERF_LIMITS.movingP95ProcessTotalMs) {
+      failures.push(`process_total p95 ${processTotal.p95} exceeded ${PERF_LIMITS.movingP95ProcessTotalMs}`);
+    }
+    performanceOk = performanceOk
+      && marker.status === "ok"
+      && processTotal.samples > 0
+      && processTotal.median <= PERF_LIMITS.movingMedianProcessTotalMs
+      && processTotal.p95 <= PERF_LIMITS.movingP95ProcessTotalMs;
+  }
+  const details = {
+    statusLine: marker.statusLine,
+    status: marker.status,
+    processTotal,
+    checks,
+  };
+  if (check.performanceKind === "spam") {
+    const coalesced = parsePerformanceBoolean(marker.statusLine, "coalesced");
+    const settled = parsePerformanceBoolean(marker.statusLine, "settled");
+    const maxInputUs = parsePerformanceNumber(marker.statusLine, "max_input_us");
+    details.coalesced = coalesced;
+    details.settled = settled;
+    details.maxInputUs = maxInputUs;
+    details.checks.push(`max_input_us<=${PERF_LIMITS.movementSpamMaxInputUs}`);
+    if (marker.status !== "ok" || !coalesced || !settled) {
+      failures.push(`movement spam status=${marker.status || "missing"} coalesced=${coalesced} settled=${settled}`);
+    }
+    if (!Number.isFinite(maxInputUs) || maxInputUs > PERF_LIMITS.movementSpamMaxInputUs) {
+      failures.push(`movement spam max_input_us=${Number.isFinite(maxInputUs) ? maxInputUs : "missing"}`);
+    }
+    performanceOk = performanceOk
+      && marker.status === "ok"
+      && coalesced
+      && settled
+      && Number.isFinite(maxInputUs)
+      && maxInputUs <= PERF_LIMITS.movementSpamMaxInputUs;
+  } else if (check.performanceKind === "status") {
+    if (marker.status !== "ok") {
+      failures.push(`performance status was ${marker.status || "missing"}`);
+    }
+    performanceOk = performanceOk && marker.status === "ok";
+  }
+  const ok = result.ok && performanceOk;
+  return {
+    ...result,
+    ok,
+    status: ok ? "ok" : (result.ok ? "performance_failed" : result.status),
+    statusLine: marker.statusLine,
+    perf: details,
+    performanceDiagnostic: failures.join("; "),
+  };
+}
+
 function makeResult(check, elapsedMs, exitCode, signalOrError, output, timedOut, qaLane = null) {
   const outputLines = String(output || "").split(/\r?\n/);
   const compileDiagnostic = godotCompileFailureDiagnostic(output);
@@ -1997,7 +2246,7 @@ function makeResult(check, elapsedMs, exitCode, signalOrError, output, timedOut,
           : (exitCode !== 0
             ? (exitCode === null ? "signal_exit" : "exit_nonzero")
             : completionStatus))));
-  return {
+  const result = {
     name: check.name,
     flag: check.flag,
     command: [check.command, ...check.args].join(" "),
@@ -2016,6 +2265,7 @@ function makeResult(check, elapsedMs, exitCode, signalOrError, output, timedOut,
     timedOut,
     elapsedMs,
   };
+  return evaluatePerformanceResult(result, check, output);
 }
 
 function godotCompileFailureDiagnostic(output) {
@@ -2761,8 +3011,10 @@ async function main() {
     }
     return;
   }
-  const selectedFlags = options.parseOnly ? [] : filterFlags(allFlags, options);
-  const names = options.includeParse ? [PARSE_CHECK_NAME, ...selectedFlags] : selectedFlags;
+  const selectedFlags = options.parseOnly || options.performanceSuite ? [] : filterFlags(allFlags, options);
+  const names = options.performanceSuite
+    ? PERFORMANCE_CHECK_DEFINITIONS.map((definition) => definition.name)
+    : (options.includeParse ? [PARSE_CHECK_NAME, ...selectedFlags] : selectedFlags);
   if (names.length === 0) {
     console.log("No Godot checks selected.");
     return;
@@ -2992,12 +3244,15 @@ export {
   discoverAutoCheckFlags,
   ensureStartupLoginAccount,
   ensureProcessGroupClosed,
+  evaluatePerformanceResult,
   expectedAutoCompletionPrefix,
   godotCompileFailureDiagnostic,
   makeResult,
   parseArgs,
   parseAutoCheckCompletion,
   parseLaneHelperOutput,
+  performanceStats,
+  performanceStatusEvidence,
   parseQaLaneAttestation,
   postAuthJson,
   preflightGodotEditorBinary,

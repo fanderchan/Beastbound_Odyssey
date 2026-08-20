@@ -442,22 +442,33 @@ health_ready() {
   node - "$AUTH_PORT" <<'NODE'
 const http = require("node:http");
 const port = Number(process.argv[2] || 8787);
+let settled = false;
+const finish = (code) => {
+  if (settled) return;
+  settled = true;
+  process.exit(code);
+};
 const req = http.request({host: "127.0.0.1", port, path: "/health", method: "GET", timeout: 1000}, (res) => {
   const chunks = [];
   res.on("data", (chunk) => chunks.push(chunk));
+  res.once("aborted", () => finish(1));
+  res.once("error", () => finish(1));
+  res.once("close", () => {
+    if (!res.complete) finish(1);
+  });
   res.on("end", () => {
     try {
       const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-      process.exit(body && body.ok === true
+      finish(body && body.ok === true
         && body.service === "beastbound-auth"
         && body.storage && body.storage.ok === true ? 0 : 1);
     } catch (_error) {
-      process.exit(1);
+      finish(1);
     }
   });
 });
 req.on("timeout", () => req.destroy(new Error("health timeout")));
-req.on("error", () => process.exit(1));
+req.on("error", () => finish(1));
 req.end();
 NODE
 }

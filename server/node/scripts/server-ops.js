@@ -473,13 +473,12 @@ function mysqlOptionFileValue(value) {
 }
 
 function mysqlCounts(env) {
+  let authOptionPath = "";
   try {
+    authOptionPath = createMysqlStatusAuthOption(env);
     const output = execFileSync(env.BEASTBOUND_MYSQL_BIN || "mysql", [
+      `--defaults-extra-file=${authOptionPath}`,
       "--protocol=tcp",
-      "-h", env.BEASTBOUND_MYSQL_HOST || "127.0.0.1",
-      "-P", env.BEASTBOUND_MYSQL_PORT || "3306",
-      "-u", env.BEASTBOUND_MYSQL_USER || "beastbound_app",
-      `-p${env.BEASTBOUND_MYSQL_PASSWORD || ""}`,
       "--batch",
       "--raw",
       "--skip-column-names",
@@ -494,21 +493,39 @@ function mysqlCounts(env) {
         counts[key] = Number(value || 0);
       }
     }
-    counts.manor_wars = mysqlTableCount(env, "manor_wars");
+    counts.manor_wars = mysqlTableCount(env, "manor_wars", authOptionPath);
     return counts;
   } catch (error) {
     return {"error": error.message};
+  } finally {
+    if (authOptionPath) {
+      fs.rmSync(authOptionPath, {force: true});
+    }
   }
 }
 
-function mysqlTableCount(env, tableName) {
+function createMysqlStatusAuthOption(env) {
+  fs.mkdirSync(localDir, {recursive: true, mode: 0o700});
+  const authOptionPath = path.resolve(
+    localDir,
+    `.mysql-status-auth-${process.pid}-${Date.now()}.cnf`,
+  );
+  fs.writeFileSync(authOptionPath, [
+    "[client]",
+    `user=${mysqlOptionFileValue(env.BEASTBOUND_MYSQL_USER || "beastbound_app")}`,
+    `host=${mysqlOptionFileValue(env.BEASTBOUND_MYSQL_HOST || "127.0.0.1")}`,
+    `port=${mysqlPortOptionValue(env.BEASTBOUND_MYSQL_PORT)}`,
+    `password=${mysqlOptionFileValue(env.BEASTBOUND_MYSQL_PASSWORD || "")}`,
+    "",
+  ].join("\n"), {encoding: "utf8", mode: 0o600, flag: "wx"});
+  return authOptionPath;
+}
+
+function mysqlTableCount(env, tableName, authOptionPath) {
   try {
     const output = execFileSync(env.BEASTBOUND_MYSQL_BIN || "mysql", [
+      `--defaults-extra-file=${authOptionPath}`,
       "--protocol=tcp",
-      "-h", env.BEASTBOUND_MYSQL_HOST || "127.0.0.1",
-      "-P", env.BEASTBOUND_MYSQL_PORT || "3306",
-      "-u", env.BEASTBOUND_MYSQL_USER || "beastbound_app",
-      `-p${env.BEASTBOUND_MYSQL_PASSWORD || ""}`,
       "--batch",
       "--raw",
       "--skip-column-names",
@@ -525,21 +542,40 @@ function mysqlTableCount(env, tableName) {
 function requestHealth(env) {
   const port = Number(env.BEASTBOUND_AUTH_PORT || 8787);
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (handler, value) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      handler(value);
+    };
+    const fail = (error) => settle(
+      reject,
+      error instanceof Error ? error : new Error(String(error || "health response failed")),
+    );
     const req = http.request({"host": "127.0.0.1", port, "path": "/health", "method": "GET", "timeout": 1500}, (res) => {
       const chunks = [];
       res.on("data", (chunk) => chunks.push(chunk));
+      res.once("aborted", () => fail(new Error("health response aborted")));
+      res.once("error", fail);
+      res.once("close", () => {
+        if (!res.complete) {
+          fail(new Error("health response closed before completion"));
+        }
+      });
       res.on("end", () => {
         try {
-          resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+          settle(resolve, JSON.parse(Buffer.concat(chunks).toString("utf8")));
         } catch (error) {
-          reject(error);
+          fail(error);
         }
       });
     });
     req.on("timeout", () => {
       req.destroy(new Error("health timeout"));
     });
-    req.on("error", reject);
+    req.on("error", fail);
     req.end();
   });
 }
