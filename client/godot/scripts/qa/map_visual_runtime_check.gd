@@ -59,9 +59,10 @@ func _initialize() -> void:
 	var generate_review_contract := review_generation_bundle_id != ""
 	var overwrite_contract := args.has(OVERWRITE_CATALOG_CONTRACT_FLAG)
 	var preview_contract := args.has(PREVIEW_CATALOG_CONTRACT_FLAG)
+	var run_options := _catalog_contract_run_options(args)
 	var report := run(
-		not generate_contract and not generate_review_contract and not preview_contract,
-		preview_contract or generate_review_contract
+		bool(run_options.get("validateFrozenCatalogContract", false)),
+		bool(run_options.get("pendingCatalogPreview", false))
 	)
 	if preview_contract:
 		report["mode"] = "catalog_contract_preview"
@@ -195,13 +196,16 @@ static func run(
 		binding_hashes[map_id] = binding_hash
 		map_data_hashes[map_id] = map_data_hash
 		if validate_frozen_catalog_contract:
+			var primary_frozen_errors := (
+				staged_primary_errors if staged_review_candidate else errors
+			)
 			_validate_frozen_catalog_contract(
 				map_id,
 				manifest_path,
 				manifest,
 				binding_hash,
 				map_data_hash,
-				errors
+				primary_frozen_errors
 			)
 		var before := map_data.duplicate(true)
 		var normal := MapVisualCatalog.prepare_map(map_id, map_data, false)
@@ -734,6 +738,18 @@ static func _review_generation_bundle_id(args: PackedStringArray) -> String:
 		if arg.begins_with(GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX):
 			return arg.substr(GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX.length()).strip_edges()
 	return ""
+
+
+static func _catalog_contract_run_options(args: PackedStringArray) -> Dictionary:
+	var generate_contract := args.has(GENERATE_CATALOG_CONTRACT_FLAG)
+	var generate_review_contract := _review_generation_bundle_id(args) != ""
+	var preview_contract := args.has(PREVIEW_CATALOG_CONTRACT_FLAG)
+	return {
+		"validateFrozenCatalogContract": (
+			not generate_contract and not generate_review_contract
+		),
+		"pendingCatalogPreview": preview_contract or generate_review_contract,
+	}
 
 
 static func _is_safe_bundle_id(value: String) -> bool:

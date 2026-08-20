@@ -3,7 +3,7 @@
   "reportType": "beastbound_map_collision_audit",
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
-  "generatedAtUtc": "2026-08-19T18:52:08Z",
+  "generatedAtUtc": "2026-08-20T18:29:07Z",
   "scene": "res://scenes/Main.tscn",
   "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd -- --preview-map-visual-catalog-contract",
   "testedMapIds": [
@@ -35,7 +35,7 @@
     }
   ],
   "authoritySnapshot": {
-    "catalogContractSha256": "46429126f35245a2fac8c7b466a473fb4b2f0af505d256596f4e4e5679e4a90d",
+    "catalogContractSha256": "092a9ba229efab36ff03888cd164f1d55972c052371684733adcb3e08239e90c",
     "bindingHashes": {
       "firebud_training_yard": "2775987fa144e2a7f337a03d871bcd835d176e9af7a5461024997a0e3aaed073",
       "firebud_village_gate": "0a97650b8a8781f4831881cbf99adbc76d3a2287bdd08ef7aeaf17a15fb33252"
@@ -50,11 +50,11 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:ddcb4ff770093d0ae1533631f6371b11e1ce4f30+beastbound-map-runtime-surface-v2:1a56d7efa28971545f01962c7c0d2287437aa9f911ced5791c46dc97b12a5532"
+    "buildIdentity": "git:36a85217b8d6da1f49facc14fb4fe10e84b594c4+beastbound-map-runtime-surface-v2:78a6232908b40e82d6f12b02758e35b8fb3c137713d53e478fd8c2eff2c4fbd8"
   },
   "rawRunnerReceipt": {
     "path": "evidence/collision-runner-receipt.log",
-    "sha256": "27c92a338c60664c192320a11209ad27a2b4b64d1bb897294c95c279d272fce1"
+    "sha256": "e0cd7f950b838ce5654131486950691910ab5f30214f4efbfa7b8851c5cf2c2d"
   },
   "notes": [
     "This report covers authoritative map, collision, protected-cell and exact-path contracts.",

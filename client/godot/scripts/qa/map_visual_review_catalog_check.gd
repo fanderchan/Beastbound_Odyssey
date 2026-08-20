@@ -3,12 +3,14 @@ extends SceneTree
 const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
+const MapVisualRuntimeCheck := preload("res://scripts/qa/map_visual_runtime_check.gd")
 
 
 func _initialize() -> void:
 	var errors: Array[String] = []
 	_validate_review_catalog_file(errors)
 	_validate_catalog_selection(errors)
+	_validate_runtime_check_mode_contract(errors)
 	_validate_review_lifecycle(errors)
 	_validate_edge_tile_contract(errors)
 	_validate_deterministic_tile_variants(errors)
@@ -22,6 +24,9 @@ func _initialize() -> void:
 		"checks": {
 			"normalCatalogUnaffected": not errors.any(
 				func(error: String) -> bool: return error.begins_with("catalog selection")
+			),
+			"strictPendingReviewFreeze": not errors.any(
+				func(error: String) -> bool: return error.begins_with("runtime check mode")
 			),
 			"pendingReviewOnly": not errors.any(
 				func(error: String) -> bool: return error.begins_with("review lifecycle")
@@ -46,6 +51,59 @@ func _initialize() -> void:
 	}
 	print("map visual review catalog check: %s" % JSON.stringify(report))
 	quit(0 if errors.is_empty() else 1)
+
+
+static func _validate_runtime_check_mode_contract(errors: Array[String]) -> void:
+	var cases := [
+		{
+			"label": "default strict",
+			"args": PackedStringArray(),
+			"expected": {
+				"validateFrozenCatalogContract": true,
+				"pendingCatalogPreview": false,
+			},
+		},
+		{
+			"label": "pending strict preview",
+			"args": PackedStringArray(["--preview-map-visual-catalog-contract"]),
+			"expected": {
+				"validateFrozenCatalogContract": true,
+				"pendingCatalogPreview": true,
+			},
+		},
+		{
+			"label": "primary generation",
+			"args": PackedStringArray(["--generate-map-visual-catalog-contract"]),
+			"expected": {
+				"validateFrozenCatalogContract": false,
+				"pendingCatalogPreview": false,
+			},
+		},
+		{
+			"label": "review generation",
+			"args": PackedStringArray([
+				"--generate-map-visual-review-catalog-contract=firebud_region_visual_v2",
+			]),
+			"expected": {
+				"validateFrozenCatalogContract": false,
+				"pendingCatalogPreview": true,
+			},
+		},
+	]
+	for value in cases:
+		var fixture := value as Dictionary
+		var actual := MapVisualRuntimeCheck._catalog_contract_run_options(
+			fixture.get("args", PackedStringArray()) as PackedStringArray
+		)
+		if actual != fixture.get("expected", {}):
+			errors.append(
+				"runtime check mode drift: %s expected=%s actual=%s"
+				% [
+					str(fixture.get("label", "")),
+					str(fixture.get("expected", {})),
+					str(actual),
+				]
+			)
 
 
 static func _validate_edge_scenery_anchor_contract(errors: Array[String]) -> void:

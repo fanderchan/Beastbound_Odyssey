@@ -119,12 +119,19 @@ class CollisionReceiptTests(unittest.TestCase):
         )
 
     def _preview_stdout(self, report: dict) -> str:
+        runtime_report = dict(report)
+        runtime_report["checks"] = {
+            "frozenReportValidationSkippedForGeneration": False,
+        }
         payload = {
             "mode": "catalog_contract_preview",
             "result": "PASS",
             "errors": [],
+            "checks": {
+                "frozenReportValidationSkippedForGeneration": False,
+            },
             "bundleReports": {
-                "firebud_region_visual_v2": report,
+                "firebud_region_visual_v2": runtime_report,
             },
         }
         return (
@@ -211,6 +218,9 @@ class CollisionReceiptTests(unittest.TestCase):
                         "protectedCells": 6,
                     },
                 ],
+                "checks": {
+                    "frozenReportValidationSkippedForGeneration": True,
+                },
             }
             (evidence / "catalog-contract-check.json").write_text(
                 json.dumps(report),
@@ -240,6 +250,84 @@ class CollisionReceiptTests(unittest.TestCase):
                     runner=runner,
                 )
             self.assertEqual(output.read_text(encoding="utf-8"), stdout)
+
+    def test_pending_preview_rejects_skipped_frozen_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            godot_root = root / "client/godot"
+            bundle_root = (
+                godot_root / "assets/maps/firebud_region_visual_v2"
+            )
+            evidence = bundle_root / "evidence"
+            evidence.mkdir(parents=True)
+            (bundle_root / "map-visual-bundle.json").write_text(
+                json.dumps(
+                    {
+                        "status": "owner_review_pending",
+                        "ownerReviewStatus": "pending",
+                        "releaseApproved": False,
+                        "runtimeEnabled": False,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            frozen_report = {
+                "bundleId": "firebud_region_visual_v2",
+                "result": "PASS",
+                "errors": [],
+                "testedMapIds": [
+                    "firebud_training_yard",
+                    "firebud_village_gate",
+                ],
+                "catalogSha256": "a" * 64,
+                "bindingHashes": {},
+                "mapDataHashes": {},
+                "maps": [],
+            }
+            (evidence / "catalog-contract-check.json").write_text(
+                json.dumps(frozen_report),
+                encoding="utf-8",
+            )
+            payload = {
+                "mode": "catalog_contract_preview",
+                "result": "PASS",
+                "errors": [],
+                "checks": {
+                    "frozenReportValidationSkippedForGeneration": True,
+                },
+                "bundleReports": {
+                    "firebud_region_visual_v2": {
+                        **frozen_report,
+                        "checks": {
+                            "frozenReportValidationSkippedForGeneration": True,
+                        },
+                    }
+                },
+            }
+            stdout = (
+                "map visual runtime check: "
+                + json.dumps(payload)
+                + "\n"
+            )
+
+            def runner(args, **_kwargs):
+                return subprocess.CompletedProcess(
+                    args=args,
+                    returncode=0,
+                    stdout=stdout,
+                    stderr="",
+                )
+
+            with (
+                mock.patch.object(builder, "REPO_ROOT", root),
+                mock.patch.object(builder, "GODOT_ROOT", godot_root),
+                self.assertRaises(builder.EvidenceError),
+            ):
+                builder.capture_collision_receipt(
+                    "firebud_region_visual_v2",
+                    allow_pending_catalog_preview=True,
+                    runner=runner,
+                )
 
     def test_pending_preview_rejects_released_manifest_before_runner(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

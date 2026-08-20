@@ -445,6 +445,23 @@ def capture_collision_receipt(
     ):
         raise EvidenceError(f"runtime receipt lacks PASS bundle report: {bundle_id}")
     if allow_pending_catalog_preview:
+        runtime_checks = payload.get("checks")
+        report_checks = report.get("checks")
+        if (
+            not isinstance(runtime_checks, dict)
+            or runtime_checks.get(
+                "frozenReportValidationSkippedForGeneration"
+            )
+            is not False
+            or not isinstance(report_checks, dict)
+            or report_checks.get(
+                "frozenReportValidationSkippedForGeneration"
+            )
+            is not False
+        ):
+            raise EvidenceError(
+                "catalog preview runner did not strictly validate the frozen report"
+            )
         frozen_catalog = _read_json(
             bundle_root / "evidence/catalog-contract-check.json"
         )
