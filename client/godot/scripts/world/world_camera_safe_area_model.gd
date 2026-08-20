@@ -82,6 +82,79 @@ static func player_anchor(
 	)
 
 
+static func horizontal_anchor_avoiding_rects(
+	base_anchor_x: float,
+	safe_rect: Rect2,
+	blocking_hud_rect: Rect2,
+	subject_rects_at_base: Array[Rect2],
+	interaction_clearance_px: float = DEFAULT_INTERACTION_CLEARANCE_PX,
+	visual_gap_px: float = 12.0
+) -> float:
+	if (
+		safe_rect.size.x <= 0.0
+		or blocking_hud_rect.size.x <= 0.0
+		or blocking_hud_rect.size.y <= 0.0
+	):
+		return base_anchor_x
+	var clearance := maxf(0.0, interaction_clearance_px)
+	var clearance_x := minf(clearance, maxf(0.0, safe_rect.size.x * 0.5 - 1.0))
+	var min_anchor_x := safe_rect.position.x + clearance_x
+	var max_anchor_x := safe_rect.end.x - clearance_x
+	var clamped_base := clampf(base_anchor_x, min_anchor_x, max_anchor_x)
+	var gap := maxf(0.0, visual_gap_px)
+	var blocked := blocking_hud_rect.grow(gap)
+	var candidates: Array[float] = [clamped_base, min_anchor_x, max_anchor_x]
+	for rect in subject_rects_at_base:
+		if rect.size.x <= 0.0 or rect.size.y <= 0.0:
+			continue
+		if rect.end.y <= blocked.position.y or rect.position.y >= blocked.end.y:
+			continue
+		candidates.append(clampf(
+			clamped_base + blocked.position.x - rect.end.x,
+			min_anchor_x,
+			max_anchor_x
+		))
+		candidates.append(clampf(
+			clamped_base + blocked.end.x - rect.position.x,
+			min_anchor_x,
+			max_anchor_x
+		))
+
+	var best_anchor := clamped_base
+	var best_overlap_count := 1 << 30
+	var best_overlap_area := INF
+	var best_distance := INF
+	for candidate in candidates:
+		var shift := candidate - clamped_base
+		var overlap_count := 0
+		var overlap_area := 0.0
+		for rect in subject_rects_at_base:
+			var shifted := Rect2(rect.position + Vector2(shift, 0.0), rect.size)
+			var overlap := shifted.intersection(blocked)
+			if overlap.size.x <= 0.0 or overlap.size.y <= 0.0:
+				continue
+			overlap_count += 1
+			overlap_area += overlap.size.x * overlap.size.y
+		var distance := absf(candidate - clamped_base)
+		if (
+			overlap_count < best_overlap_count
+			or (
+				overlap_count == best_overlap_count
+				and overlap_area < best_overlap_area - 0.01
+			)
+			or (
+				overlap_count == best_overlap_count
+				and absf(overlap_area - best_overlap_area) <= 0.01
+				and distance < best_distance - 0.01
+			)
+		):
+			best_anchor = candidate
+			best_overlap_count = overlap_count
+			best_overlap_area = overlap_area
+			best_distance = distance
+	return best_anchor
+
+
 static func camera_center_for_anchor(
 	world_target: Vector2,
 	viewport_size: Vector2,
@@ -94,8 +167,8 @@ static func camera_center_for_anchor(
 		maxf(1.0, viewport_size.y) * 0.5
 	)
 	return world_target + Vector2(
-		(viewport_center.x - screen_anchor.x) * zoom.x,
-		(viewport_center.y - screen_anchor.y) * zoom.y
+		(viewport_center.x - screen_anchor.x) / zoom.x,
+		(viewport_center.y - screen_anchor.y) / zoom.y
 	)
 
 
@@ -115,10 +188,10 @@ static func camera_limit_bounds(
 		clampf(safe_rect.end.x, safe_start.x, safe_size.x),
 		clampf(safe_rect.end.y, safe_start.y, safe_size.y)
 	)
-	var before := Vector2(safe_start.x * zoom.x, safe_start.y * zoom.y)
+	var before := Vector2(safe_start.x / zoom.x, safe_start.y / zoom.y)
 	var after := Vector2(
-		(safe_size.x - safe_end.x) * zoom.x,
-		(safe_size.y - safe_end.y) * zoom.y
+		(safe_size.x - safe_end.x) / zoom.x,
+		(safe_size.y - safe_end.y) / zoom.y
 	)
 	return Rect2(
 		world_bounds.position - before,
@@ -134,8 +207,8 @@ static func clamp_camera_center(
 ) -> Vector2:
 	var zoom := _safe_zoom(camera_zoom)
 	var half_view := Vector2(
-		maxf(1.0, viewport_size.x) * 0.5 * zoom.x,
-		maxf(1.0, viewport_size.y) * 0.5 * zoom.y
+		maxf(1.0, viewport_size.x) * 0.5 / zoom.x,
+		maxf(1.0, viewport_size.y) * 0.5 / zoom.y
 	)
 	var min_center := limit_bounds.position + half_view
 	var max_center := limit_bounds.end - half_view
@@ -159,8 +232,8 @@ static func world_to_screen(
 ) -> Vector2:
 	var zoom := _safe_zoom(camera_zoom)
 	return Vector2(maxf(1.0, viewport_size.x), maxf(1.0, viewport_size.y)) * 0.5 + Vector2(
-		(world_point.x - camera_center.x) / zoom.x,
-		(world_point.y - camera_center.y) / zoom.y
+		(world_point.x - camera_center.x) * zoom.x,
+		(world_point.y - camera_center.y) * zoom.y
 	)
 
 
@@ -175,7 +248,7 @@ static func screen_to_world(
 		maxf(1.0, viewport_size.x) * 0.5,
 		maxf(1.0, viewport_size.y) * 0.5
 	)
-	return camera_center + Vector2(offset.x * zoom.x, offset.y * zoom.y)
+	return camera_center + Vector2(offset.x / zoom.x, offset.y / zoom.y)
 
 
 static func _safe_zoom(camera_zoom: Vector2) -> Vector2:

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
+const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
@@ -308,6 +309,40 @@ func run(request: Dictionary) -> Dictionary:
 	report["viewport"] = [viewport_size.x, viewport_size.y]
 	if viewport_size != EXPECTED_VIEWPORT:
 		errors.append("Main viewport 必须为 1280x720，实际 %s" % str(viewport_size))
+	var camera_composition := _camera_composition_report()
+	report["cameraComposition"] = camera_composition
+	if not bool(camera_composition.get("taskHudVisible", false)):
+		errors.append("地图安全区取证不得隐藏右侧任务 HUD")
+	if not bool(camera_composition.get("playerInsideSafeRect", false)):
+		errors.append("玩家没有落在 World HUD 安全区内")
+	if not bool(camera_composition.get("playerClearOfTaskHud", false)):
+		errors.append("玩家与右侧任务 HUD 相交")
+	if not bool(camera_composition.get("playerAtEffectiveAnchor", false)):
+		errors.append("玩家实际屏幕位置没有收敛到动态地标安全锚点")
+	var overlapping_objects := camera_composition.get(
+		"taskHudOverlappingBlockingObjectIds",
+		[]
+	) as Array
+	if not overlapping_objects.is_empty():
+		errors.append(
+			"右侧任务 HUD 覆盖 blocking/interaction 地图物件：%s"
+			% ",".join(_string_array(overlapping_objects))
+		)
+	if str(prepared.get("bundleId", "")) == "firebud_region_visual_v2":
+		var configured_anchor := camera_composition.get("configuredAnchor", []) as Array
+		if (
+			configured_anchor.size() != 2
+			or absf(float(configured_anchor[0]) - 390.0) > 0.5
+			or absf(float(configured_anchor[1]) - 360.0) > 0.5
+		):
+			errors.append("Firebud v2 1280x720 没有应用冻结的 40/60 安全锚点")
+		if map_id == "firebud_village_gate":
+			var nearby_warp := camera_composition.get("nearestWarp", {}) as Dictionary
+			if (
+				str(nearby_warp.get("id", "")) != "warp_to_training_yard"
+				or not bool(nearby_warp.get("edgeClear", false))
+			):
+				errors.append("村口相邻圆形 warp 地标被屏幕边缘裁切")
 	var screenshot: Image = await _capture_complete_image()
 	if screenshot == null:
 		errors.append("Metal/viewport 未得到完整稳定画面")
@@ -497,6 +532,125 @@ func _network_request_state() -> Dictionary:
 		"active": active,
 		"allDisconnected": active.is_empty(),
 	}
+
+
+func _camera_composition_report() -> Dictionary:
+	var safe_rect: Rect2 = host.world_camera_safe_viewport_rect
+	var configured_anchor: Vector2 = host.world_camera_safe_anchor_screen
+	var effective_anchor: Vector2 = host._world_camera_anchor(
+		host.get_viewport_rect().size
+	)
+	var player_screen: Vector2 = host._world_to_screen(host.player.global_position)
+	var task_hud: Control = host.side_panel as Control
+	var task_hud_visible := task_hud != null and task_hud.is_visible_in_tree()
+	var task_hud_rect := task_hud.get_global_rect() if task_hud_visible else Rect2()
+	var player_probe := Rect2(player_screen - Vector2(34.0, 48.0), Vector2(68.0, 96.0))
+	var overlapping_blocking_ids: Array[String] = []
+	var opaque_rect_cache: Dictionary = {}
+	var by_layer := host.map_visual_render_state.get("objectDrawsByLayer", {}) as Dictionary
+	for layer_value in by_layer.values():
+		if not (layer_value is Array):
+			continue
+		for command_value in layer_value as Array:
+			if not (command_value is Dictionary):
+				continue
+			var command := command_value as Dictionary
+			var collision_role := str(command.get("collisionRole", ""))
+			if collision_role != "blocking" and collision_role != "interaction":
+				continue
+			var visual_world_rect := _command_opaque_world_rect(
+				command,
+				opaque_rect_cache
+			)
+			if visual_world_rect.size.x <= 0.0 or visual_world_rect.size.y <= 0.0:
+				continue
+			var screen_start: Vector2 = host._world_to_screen(visual_world_rect.position)
+			var screen_end: Vector2 = host._world_to_screen(visual_world_rect.end)
+			var screen_rect := Rect2(
+				Vector2(minf(screen_start.x, screen_end.x), minf(screen_start.y, screen_end.y)),
+				Vector2(absf(screen_end.x - screen_start.x), absf(screen_end.y - screen_start.y))
+			)
+			if task_hud_visible and task_hud_rect.intersects(screen_rect):
+				overlapping_blocking_ids.append(str(command.get("instanceId", "")))
+	var nearest_warp := {}
+	var nearest_warp_distance := INF
+	for interaction_value in host.map_data.get("interactionPoints", []):
+		if not (interaction_value is Dictionary):
+			continue
+		var interaction := interaction_value as Dictionary
+		if str(interaction.get("kind", "")) != "warp":
+			continue
+		var cell_value := interaction.get("cell", []) as Array
+		if cell_value.size() != 2:
+			continue
+		var cell := Vector2i(int(cell_value[0]), int(cell_value[1]))
+		var world_point: Vector2 = InteractionModel.marker_world_position(
+			host.map_data,
+			interaction
+		)
+		var distance: float = host.player.global_position.distance_to(world_point)
+		if distance >= nearest_warp_distance:
+			continue
+		nearest_warp_distance = distance
+		var screen_point: Vector2 = host._world_to_screen(world_point)
+		nearest_warp = {
+			"id": str(interaction.get("id", "")),
+			"cell": [cell.x, cell.y],
+			"screenPoint": [screen_point.x, screen_point.y],
+			"edgeClear": Rect2(Vector2(24.0, 24.0), Vector2(1232.0, 672.0)).has_point(
+				screen_point
+			),
+			"insideSafeRect": safe_rect.has_point(screen_point),
+		}
+	return {
+		"safeRect": [safe_rect.position.x, safe_rect.position.y, safe_rect.size.x, safe_rect.size.y],
+		"configuredAnchor": [configured_anchor.x, configured_anchor.y],
+		"effectiveAnchor": [effective_anchor.x, effective_anchor.y],
+		"playerScreenPoint": [player_screen.x, player_screen.y],
+		"playerAtEffectiveAnchor": player_screen.distance_to(effective_anchor) <= 8.0,
+		"taskHudVisible": task_hud_visible,
+		"taskHudRect": [task_hud_rect.position.x, task_hud_rect.position.y, task_hud_rect.size.x, task_hud_rect.size.y],
+		"playerInsideSafeRect": safe_rect.has_point(player_screen),
+		"playerClearOfTaskHud": not task_hud_visible or not task_hud_rect.intersects(player_probe),
+		"taskHudOverlappingBlockingObjectIds": overlapping_blocking_ids,
+		"nearestWarp": nearest_warp,
+	}
+
+
+static func _command_opaque_world_rect(
+	command: Dictionary,
+	opaque_rect_cache: Dictionary
+) -> Rect2:
+	var draw_rect_value: Variant = command.get("drawRect")
+	var texture_value: Variant = command.get("texture")
+	if not (draw_rect_value is Rect2) or not (texture_value is Texture2D):
+		return Rect2()
+	var draw_rect := draw_rect_value as Rect2
+	var texture := texture_value as Texture2D
+	var cache_key := str(command.get("objectId", command.get("instanceId", "")))
+	var opaque_rect := Rect2i()
+	if opaque_rect_cache.has(cache_key):
+		opaque_rect = opaque_rect_cache.get(cache_key, Rect2i()) as Rect2i
+	else:
+		var image: Image = texture.get_image()
+		if image != null and not image.is_empty():
+			opaque_rect = image.get_used_rect()
+		opaque_rect_cache[cache_key] = opaque_rect
+	if opaque_rect.size.x <= 0 or opaque_rect.size.y <= 0:
+		return draw_rect
+	var texture_size := Vector2(texture.get_size())
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return draw_rect
+	return Rect2(
+		draw_rect.position + Vector2(
+			float(opaque_rect.position.x) / texture_size.x * draw_rect.size.x,
+			float(opaque_rect.position.y) / texture_size.y * draw_rect.size.y
+		),
+		Vector2(
+			float(opaque_rect.size.x) / texture_size.x * draw_rect.size.x,
+			float(opaque_rect.size.y) / texture_size.y * draw_rect.size.y
+		)
+	)
 
 
 func _find_reachable_visible_target(
@@ -707,6 +861,7 @@ static func _base_report(request: Dictionary) -> Dictionary:
 		"debugUiVisible": false,
 		"normalPlayerHud": false,
 		"viewport": [],
+		"cameraComposition": {},
 		"mapArtActive": false,
 		"mapArtQaPreview": false,
 		"mapArtStatus": "",

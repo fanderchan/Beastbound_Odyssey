@@ -338,6 +338,42 @@ def _read_capture_report(
         mismatches.append("groundDrawCount<=0")
     if int(report.get("objectCount", 0)) <= 0:
         mismatches.append("objectCount<=0")
+    camera_composition = report.get("cameraComposition")
+    if not isinstance(camera_composition, dict):
+        mismatches.append("cameraComposition 不是对象")
+    else:
+        for key, expected in {
+            "taskHudVisible": True,
+            "playerInsideSafeRect": True,
+            "playerClearOfTaskHud": True,
+            "playerAtEffectiveAnchor": True,
+            "taskHudOverlappingBlockingObjectIds": [],
+        }.items():
+            if camera_composition.get(key) != expected:
+                mismatches.append(
+                    f"cameraComposition.{key}={camera_composition.get(key)!r}"
+                )
+        if EXPECTED_BUNDLE_ID == "firebud_region_visual_v2":
+            anchor = camera_composition.get("configuredAnchor")
+            if (
+                not isinstance(anchor, list)
+                or len(anchor) != 2
+                or abs(float(anchor[0]) - 390.0) > 0.5
+                or abs(float(anchor[1]) - 360.0) > 0.5
+            ):
+                mismatches.append(
+                    f"cameraComposition.configuredAnchor={anchor!r}"
+                )
+            if map_id == "firebud_village_gate":
+                nearest_warp = camera_composition.get("nearestWarp")
+                if (
+                    not isinstance(nearest_warp, dict)
+                    or nearest_warp.get("id") != "warp_to_training_yard"
+                    or nearest_warp.get("edgeClear") is not True
+                ):
+                    mismatches.append(
+                        f"cameraComposition.nearestWarp={nearest_warp!r}"
+                    )
     cleanup = report.get("runtimeCleanup")
     if not isinstance(cleanup, dict):
         mismatches.append("runtimeCleanup 不是对象")

@@ -38,6 +38,44 @@ static func run(host: Node) -> Dictionary:
 		"groundRenderMode": WorldPresentationProfile.LAYERED_SEMANTIC_OVERLAY,
 	}
 	var forged_v2 := {"bundleId": WorldPresentationProfile.FIREBUD_REVIEW_BUNDLE_ID}
+	var reference_viewport := Vector2(1280.0, 720.0)
+	var reference_safe_rect := Rect2(Vector2(8.0, 206.0), Vector2(955.0, 288.0))
+	var default_anchor := WorldPresentationProfile.camera_anchor_for(
+		reference_viewport,
+		reference_safe_rect,
+		false,
+		v1
+	)
+	var firebud_anchor := WorldPresentationProfile.camera_anchor_for(
+		reference_viewport,
+		reference_safe_rect,
+		true,
+		v2
+	)
+	var forged_anchor := WorldPresentationProfile.camera_anchor_for(
+		reference_viewport,
+		reference_safe_rect,
+		true,
+		forged_v2
+	)
+	_expect_vector(
+		default_anchor,
+		reference_viewport * 0.5,
+		"普通地图必须保留 Phase400 整屏中心锚点",
+		errors
+	)
+	_expect_vector(
+		firebud_anchor,
+		Vector2(390.0, 360.0),
+		"Firebud v2 必须在未被 HUD 遮挡的世界区使用 40/60 水平构图",
+		errors
+	)
+	_expect_vector(
+		forged_anchor,
+		reference_viewport * 0.5,
+		"仅伪造 v2 bundleId 不得启用安全区构图",
+		errors
+	)
 
 	_expect_vector(
 		WorldPresentationProfile.camera_zoom_for(false, v1),
@@ -105,10 +143,24 @@ static func run(host: Node) -> Dictionary:
 	host.set("map_art_review_preview", true)
 	host.set("map_visual_render_state", v2.duplicate(true))
 	host.call("_apply_world_presentation_profile")
+	host.call("_refresh_world_camera_safe_area", host.get_viewport_rect().size)
 	_expect_vector(
 		host.get("game_camera").zoom,
 		Vector2(1.55, 1.55),
 		"Main 未应用 v2 canary 相机",
+		errors
+	)
+	var live_v2_anchor: Vector2 = host.get("world_camera_safe_anchor_screen")
+	var expected_live_v2_anchor := WorldPresentationProfile.camera_anchor_for(
+		host.get_viewport_rect().size,
+		host.get("world_camera_safe_viewport_rect"),
+		true,
+		v2
+	)
+	_expect_vector(
+		live_v2_anchor,
+		expected_live_v2_anchor,
+		"Main 未应用 Firebud v2 HUD 安全区构图",
 		errors
 	)
 	var v2_sample_world: Vector2 = host.get("player").global_position + Vector2(73.0, -41.0)
@@ -158,6 +210,7 @@ static func run(host: Node) -> Dictionary:
 	host.set("map_visual_render_state", original_prepared)
 	host.set("battle_active", original_battle_active)
 	host.call("_apply_world_presentation_profile")
+	host.call("_refresh_world_camera_safe_area", host.get_viewport_rect().size)
 
 	var current_zoom: Vector2 = host.get("game_camera").zoom
 	var expected_current_zoom := WorldPresentationProfile.camera_zoom_for(

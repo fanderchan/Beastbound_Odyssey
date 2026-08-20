@@ -75,6 +75,7 @@ class RunFirebudV2PerformanceEvidenceTest(unittest.TestCase):
     def test_source_records_ps_and_fails_closed_on_extra_arguments(self) -> None:
         source = TOOL_PATH.read_text(encoding="utf-8")
         self.assertIn('["ps", "-o", "%cpu=", "-o", "rss="', source)
+        self.assertIn('"scripts/world/world_camera_safe_area_model.gd"', source)
         self.assertIn("officialAutomationQaLanePerRun", source)
         self.assertNotIn("freshUserDataDirectoryPerRun", source)
         self.assertIn("loginOrServerArgumentsAccepted", source)

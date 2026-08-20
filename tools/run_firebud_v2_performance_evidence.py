@@ -94,6 +94,7 @@ def _build_identity() -> str:
         "scripts/qa/runtime_exit_cleanup.gd",
         "scripts/world/map_visual_catalog.gd",
         "scripts/world/map_visual_renderer.gd",
+        "scripts/world/world_camera_safe_area_model.gd",
         "scripts/world/world_presentation_profile.gd",
         "scripts/qa/map_visual_runtime_check.gd",
         "data/map_visual_catalog.json",

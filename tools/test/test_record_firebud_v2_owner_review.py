@@ -54,6 +54,25 @@ def _capture_report(*, map_id: str, mode: str) -> dict:
         "serverAccountSession": False, "networkRequestAttempted": False,
         "networkRequestsDisconnected": True,
         "normalPlayerHud": True, "viewport": [1280, 720], "errors": [],
+        "cameraComposition": {
+            "safeRect": [8.0, 206.0, 955.0, 288.0],
+            "configuredAnchor": [390.0, 360.0],
+            "effectiveAnchor": [390.0, 360.0],
+            "playerScreenPoint": [390.0, 360.0],
+            "playerAtEffectiveAnchor": True,
+            "taskHudVisible": True,
+            "taskHudRect": [999.0, 13.0, 206.0, 465.0],
+            "playerInsideSafeRect": True,
+            "playerClearOfTaskHud": True,
+            "taskHudOverlappingBlockingObjectIds": [],
+            "nearestWarp": {
+                "id": "warp_to_training_yard",
+                "cell": [2, 15],
+                "screenPoint": [328.0, 360.0],
+                "edgeClear": True,
+                "insideSafeRect": True,
+            },
+        },
         "groundDrawCount": 100, "objectCount": 5,
         "runtimeCleanup": {
             "status": "passed", "audioPlaybackDisabled": True,
@@ -195,6 +214,38 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
                 with self.subTest(key=key):
                     with self.assertRaises(TOOL.FirebudV2RecordingError):
                         TOOL._read_capture_report(path, map_id="firebud_training_yard", mode="moving")
+
+    def test_capture_report_rejects_hud_occlusion_and_cropped_gate_landmark(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "capture.json"
+            invalid_cases = (
+                ("taskHudVisible", False),
+                ("playerInsideSafeRect", False),
+                ("playerClearOfTaskHud", False),
+                ("playerAtEffectiveAnchor", False),
+                ("taskHudOverlappingBlockingObjectIds", ["service_pavilion"]),
+            )
+            for key, value in invalid_cases:
+                report = _capture_report(map_id="firebud_village_gate", mode="idle")
+                report["cameraComposition"][key] = value
+                path.write_text(json.dumps(report), encoding="utf-8")
+                with self.subTest(key=key):
+                    with self.assertRaises(TOOL.FirebudV2RecordingError):
+                        TOOL._read_capture_report(
+                            path,
+                            map_id="firebud_village_gate",
+                            mode="idle",
+                        )
+
+            report = _capture_report(map_id="firebud_village_gate", mode="idle")
+            report["cameraComposition"]["nearestWarp"]["edgeClear"] = False
+            path.write_text(json.dumps(report), encoding="utf-8")
+            with self.assertRaises(TOOL.FirebudV2RecordingError):
+                TOOL._read_capture_report(
+                    path,
+                    map_id="firebud_village_gate",
+                    mode="idle",
+                )
 
     def test_short_individual_clip_is_allowed_but_must_keep_real_movie_contract(self) -> None:
         probe = {

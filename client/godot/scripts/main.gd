@@ -917,6 +917,14 @@ var game_camera: Camera2D
 var world_camera_safe_viewport_rect: Rect2
 var world_camera_safe_anchor_screen: Vector2
 var world_camera_hud_blocker_rects: Array[Rect2] = []
+var world_camera_landmark_anchor_cache_valid: bool = false
+var world_camera_landmark_anchor_screen_cache: Vector2
+var world_camera_landmark_anchor_cell_cache: Vector2i
+var world_camera_landmark_anchor_revision_cache: int = -1
+var world_camera_landmark_anchor_viewport_cache: Vector2
+var world_camera_landmark_anchor_zoom_cache: Vector2
+var world_camera_landmark_anchor_base_cache: Vector2
+var world_camera_landmark_anchor_task_rect_cache: Rect2
 var auto_movement_check: bool = false
 var movement_perf_check: bool = false
 var movement_spam_click_check: bool = false
@@ -15722,10 +15730,13 @@ func _refresh_world_camera_safe_area(viewport_size: Vector2) -> void:
 		viewport_size,
 		world_camera_hud_blocker_rects
 	)
-	world_camera_safe_anchor_screen = WorldCameraSafeAreaModel.player_anchor(
+	world_camera_safe_anchor_screen = WorldPresentationProfile.camera_anchor_for(
 		viewport_size,
-		world_camera_safe_viewport_rect
+		world_camera_safe_viewport_rect,
+		map_art_review_preview and not battle_active,
+		map_visual_render_state
 	)
+	world_camera_landmark_anchor_cache_valid = false
 
 
 func _world_camera_anchor(viewport_size: Vector2) -> Vector2:
@@ -15734,7 +15745,111 @@ func _world_camera_anchor(viewport_size: Vector2) -> Vector2:
 		or world_camera_safe_viewport_rect.size.y <= 0.0
 	):
 		return viewport_size * 0.5
-	return world_camera_safe_anchor_screen
+	var base_anchor := world_camera_safe_anchor_screen
+	if not WorldPresentationProfile.uses_hud_landmark_composition(
+		map_art_review_preview and not battle_active,
+		map_visual_render_state
+	):
+		return base_anchor
+	return _world_camera_landmark_safe_anchor(viewport_size, base_anchor)
+
+
+func _world_camera_landmark_safe_anchor(
+	viewport_size: Vector2,
+	base_anchor: Vector2
+) -> Vector2:
+	if player == null or game_camera == null or map_data.is_empty():
+		return base_anchor
+	var task_hud := side_panel as Control
+	if (
+		task_hud == null
+		or not task_hud.is_visible_in_tree()
+		or task_hud.mouse_filter == Control.MOUSE_FILTER_IGNORE
+	):
+		return base_anchor
+	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
+	var task_rect := task_hud.get_global_rect()
+	var zoom := game_camera.zoom
+	if (
+		world_camera_landmark_anchor_cache_valid
+		and player_cell == world_camera_landmark_anchor_cell_cache
+		and map_visual_render_revision == world_camera_landmark_anchor_revision_cache
+		and viewport_size.is_equal_approx(world_camera_landmark_anchor_viewport_cache)
+		and zoom.is_equal_approx(world_camera_landmark_anchor_zoom_cache)
+		and base_anchor.is_equal_approx(world_camera_landmark_anchor_base_cache)
+		and task_rect == world_camera_landmark_anchor_task_rect_cache
+	):
+		return world_camera_landmark_anchor_screen_cache
+
+	var composition_target := IsoMapModel.grid_to_world(map_data, player_cell)
+	var base_center := WorldCameraSafeAreaModel.camera_center_for_anchor(
+		composition_target,
+		viewport_size,
+		zoom,
+		base_anchor
+	)
+	base_center = WorldCameraSafeAreaModel.clamp_camera_center(
+		base_center,
+		_camera_limit_bounds(),
+		viewport_size,
+		zoom
+	)
+	var subject_rects: Array[Rect2] = []
+	var by_layer := map_visual_render_state.get("objectDrawsByLayer", {}) as Dictionary
+	for layer_value in by_layer.values():
+		if not (layer_value is Array):
+			continue
+		for command_value in layer_value as Array:
+			if not (command_value is Dictionary):
+				continue
+			var command := command_value as Dictionary
+			var collision_role := str(command.get("collisionRole", ""))
+			if collision_role != "blocking" and collision_role != "interaction":
+				continue
+			var draw_rect_value: Variant = command.get("drawRect")
+			if not (draw_rect_value is Rect2):
+				continue
+			var draw_rect := draw_rect_value as Rect2
+			var screen_start := WorldCameraSafeAreaModel.world_to_screen(
+				draw_rect.position,
+				base_center,
+				viewport_size,
+				zoom
+			)
+			var screen_end := WorldCameraSafeAreaModel.world_to_screen(
+				draw_rect.end,
+				base_center,
+				viewport_size,
+				zoom
+			)
+			subject_rects.append(Rect2(
+				Vector2(
+					minf(screen_start.x, screen_end.x),
+					minf(screen_start.y, screen_end.y)
+				),
+				Vector2(
+					absf(screen_end.x - screen_start.x),
+					absf(screen_end.y - screen_start.y)
+				)
+			))
+	var composed_anchor := Vector2(
+		WorldCameraSafeAreaModel.horizontal_anchor_avoiding_rects(
+			base_anchor.x,
+			world_camera_safe_viewport_rect,
+			task_rect,
+			subject_rects
+		),
+		base_anchor.y
+	)
+	world_camera_landmark_anchor_screen_cache = composed_anchor
+	world_camera_landmark_anchor_cell_cache = player_cell
+	world_camera_landmark_anchor_revision_cache = map_visual_render_revision
+	world_camera_landmark_anchor_viewport_cache = viewport_size
+	world_camera_landmark_anchor_zoom_cache = zoom
+	world_camera_landmark_anchor_base_cache = base_anchor
+	world_camera_landmark_anchor_task_rect_cache = task_rect
+	world_camera_landmark_anchor_cache_valid = true
+	return composed_anchor
 
 
 func _world_camera_safe_rect(viewport_size: Vector2) -> Rect2:

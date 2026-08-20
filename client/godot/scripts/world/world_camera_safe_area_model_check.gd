@@ -141,6 +141,65 @@ func _run() -> void:
 		"安全区相机的世界/屏幕坐标换算必须可逆",
 		errors
 	)
+	var zoomed_target := Vector2(500.0, 420.0)
+	var zoomed_anchor := Vector2(390.0, 360.0)
+	var zoomed_camera := WorldCameraSafeAreaModel.camera_center_for_anchor(
+		zoomed_target,
+		REFERENCE_VIEWPORT,
+		Vector2(2.0, 2.0),
+		zoomed_anchor
+	)
+	_expect(
+		zoomed_camera.is_equal_approx(Vector2(625.0, 420.0)),
+		"Camera2D zoom 位移必须按缩放倒数换算，不能再次乘 zoom",
+		errors
+	)
+	_expect(
+		WorldCameraSafeAreaModel.world_to_screen(
+			zoomed_target,
+			zoomed_camera,
+			REFERENCE_VIEWPORT,
+			Vector2(2.0, 2.0)
+		).is_equal_approx(zoomed_anchor),
+		"2x Camera2D 下玩家必须精确落到请求的屏幕锚点",
+		errors
+	)
+	var task_hud := Rect2(999.0, 13.0, 206.0, 465.0)
+	var landmark_safe := WorldCameraSafeAreaModel.horizontal_anchor_avoiding_rects(
+		390.0,
+		reference_safe,
+		task_hud,
+		[
+			Rect2(1088.0, 231.0, 341.0, 343.0),
+			Rect2(1165.0, 376.0, 558.0, 450.0),
+		]
+	)
+	_expect(
+		landmark_safe >= 518.0 and landmark_safe <= 520.0,
+		"远处东侧地标应平移到任务 HUD 右侧，而不是从面板后探出",
+		errors
+	)
+	var nearby_landmark_safe := WorldCameraSafeAreaModel.horizontal_anchor_avoiding_rects(
+		390.0,
+		reference_safe,
+		task_hud,
+		[Rect2(669.0, -120.0, 558.0, 450.0)]
+	)
+	_expect(
+		nearby_landmark_safe >= 150.0 and nearby_landmark_safe <= 156.0,
+		"附近大地标应移到任务 HUD 左侧完整构图",
+		errors
+	)
+	_expect(
+		WorldCameraSafeAreaModel.horizontal_anchor_avoiding_rects(
+			390.0,
+			reference_safe,
+			task_hud,
+			[Rect2(420.0, 180.0, 180.0, 140.0)]
+		) == 390.0,
+		"本来不与任务 HUD 相交的构图不得漂移",
+		errors
+	)
 
 	var report := {
 		"ok": errors.is_empty(),
@@ -154,6 +213,10 @@ func _run() -> void:
 		"edgeCamera": edge_camera,
 		"edgePlayerScreen": edge_player_screen,
 		"edgeInteractionScreen": edge_interaction_screen,
+		"zoomedCamera": zoomed_camera,
+		"zoomedAnchor": zoomed_anchor,
+		"landmarkSafeAnchorX": landmark_safe,
+		"nearbyLandmarkSafeAnchorX": nearby_landmark_safe,
 	}
 	print("WORLD_CAMERA_SAFE_AREA_MODEL_CHECK: %s" % JSON.stringify(report))
 	quit(0 if errors.is_empty() else 1)
