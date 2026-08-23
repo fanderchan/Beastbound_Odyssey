@@ -34,7 +34,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +46,15 @@ if CORE_SPEC is None or CORE_SPEC.loader is None:
     raise RuntimeError(f"无法加载媒体录制核心：{CORE_PATH}")
 CORE = importlib.util.module_from_spec(CORE_SPEC)
 CORE_SPEC.loader.exec_module(CORE)
+
+HUD_GLYPH_PATH = REPO_ROOT / "tools" / "audit_firebud_hud_glyph_stability.py"
+HUD_GLYPH_SPEC = importlib.util.spec_from_file_location(
+    "_beastbound_firebud_hud_glyph_stability", HUD_GLYPH_PATH
+)
+if HUD_GLYPH_SPEC is None or HUD_GLYPH_SPEC.loader is None:
+    raise RuntimeError(f"无法加载 Firebud HUD 字形门禁：{HUD_GLYPH_PATH}")
+HUD_GLYPH = importlib.util.module_from_spec(HUD_GLYPH_SPEC)
+HUD_GLYPH_SPEC.loader.exec_module(HUD_GLYPH)
 
 GODOT_PROJECT = REPO_ROOT / "client" / "godot"
 MAIN_SCENE = "res://scenes/Main.tscn"
@@ -66,6 +75,7 @@ MIN_DURATION_SECONDS = 4.0
 MAX_DURATION_SECONDS = 90.0
 DEFAULT_SAMPLE_COUNT = 8
 MAX_SAMPLE_COUNT = 16
+HUD_GLYPH_STABILITY_FRAME_COUNT = 6
 SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SAFE_MAP_ID = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 REVIEW_MAPS = ("firebud_village_gate", "firebud_training_yard")
@@ -367,41 +377,47 @@ def _read_capture_report(
                     f"cameraComposition.configuredAnchor={anchor!r}"
                 )
             if map_id == "firebud_village_gate":
-                for key in (
-                    "hudOverlappingNpcIds",
-                    "hudOverlappingKeyEnvironmentIds",
-                    "viewportClippedNpcIds",
-                    "viewportClippedKeyEnvironmentIds",
-                ):
-                    if camera_composition.get(key) != []:
-                        mismatches.append(
-                            f"cameraComposition.{key}="
-                            f"{camera_composition.get(key)!r}"
-                        )
                 if camera_composition.get("npcAlphaSubjectCount") != 14:
                     mismatches.append(
                         "cameraComposition.npcAlphaSubjectCount="
                         f"{camera_composition.get('npcAlphaSubjectCount')!r}"
-                    )
-                if camera_composition.get("visibleNpcCount") != 14:
-                    mismatches.append(
-                        "cameraComposition.visibleNpcCount="
-                        f"{camera_composition.get('visibleNpcCount')!r}"
                     )
                 if camera_composition.get("keyEnvironmentSubjectCount") != 7:
                     mismatches.append(
                         "cameraComposition.keyEnvironmentSubjectCount="
                         f"{camera_composition.get('keyEnvironmentSubjectCount')!r}"
                     )
-                nearest_warp = camera_composition.get("nearestWarp")
-                if (
-                    not isinstance(nearest_warp, dict)
-                    or nearest_warp.get("id") != "warp_to_training_yard"
-                    or nearest_warp.get("edgeClear") is not True
-                ):
-                    mismatches.append(
-                        f"cameraComposition.nearestWarp={nearest_warp!r}"
-                    )
+                requires_full_village_composition = capture_variant in (
+                    "",
+                    "default",
+                    "pointer",
+                )
+                if requires_full_village_composition:
+                    for key in (
+                        "hudOverlappingNpcIds",
+                        "hudOverlappingKeyEnvironmentIds",
+                        "viewportClippedNpcIds",
+                        "viewportClippedKeyEnvironmentIds",
+                    ):
+                        if camera_composition.get(key) != []:
+                            mismatches.append(
+                                f"cameraComposition.{key}="
+                                f"{camera_composition.get(key)!r}"
+                            )
+                    if camera_composition.get("visibleNpcCount") != 14:
+                        mismatches.append(
+                            "cameraComposition.visibleNpcCount="
+                            f"{camera_composition.get('visibleNpcCount')!r}"
+                        )
+                    nearest_warp = camera_composition.get("nearestWarp")
+                    if (
+                        not isinstance(nearest_warp, dict)
+                        or nearest_warp.get("id") != "warp_to_training_yard"
+                        or nearest_warp.get("edgeClear") is not True
+                    ):
+                        mismatches.append(
+                            f"cameraComposition.nearestWarp={nearest_warp!r}"
+                        )
     cleanup = report.get("runtimeCleanup")
     if not isinstance(cleanup, dict):
         mismatches.append("runtimeCleanup 不是对象")
@@ -442,14 +458,129 @@ def _read_capture_report(
                     mismatches.append(f"input.{key}={input_report.get(key)!r}")
         if report.get("playerCellChanged") is not True:
             mismatches.append("playerCellChanged!=true")
+        if capture_variant and report.get("targetClearance") not in {
+            "two_cell",
+            "exact_cell",
+        }:
+            mismatches.append(
+                f"targetClearance={report.get('targetClearance')!r}"
+            )
     elif report.get("playerCellChanged") is not False:
         mismatches.append("idle.playerCellChanged!=false")
+    if EXPECTED_BUNDLE_ID == "firebud_region_visual_v2":
+        _append_hud_glyph_capture_mismatches(report, mismatches)
     if mismatches:
         raise FirebudV2RecordingError(
             "地图 capture 合同失败（%s/%s）：%s"
             % (map_id, mode, "; ".join(mismatches))
         )
     return report
+
+
+def _append_hud_glyph_capture_mismatches(
+    report: Mapping[str, Any],
+    mismatches: list[str],
+) -> None:
+    stability = report.get("hudGlyphStability")
+    if not isinstance(stability, dict):
+        mismatches.append("hudGlyphStability 不是对象")
+        return
+    for key, expected in {
+        "status": "passed",
+        "passed": True,
+        "method": "independent_viewport_rgb_readback_edge_energy",
+        "consecutiveFrames": True,
+        "frameCount": HUD_GLYPH_STABILITY_FRAME_COUNT,
+        "requiredFrameCount": HUD_GLYPH_STABILITY_FRAME_COUNT,
+        "errors": [],
+    }.items():
+        if stability.get(key) != expected:
+            mismatches.append(f"hudGlyphStability.{key}={stability.get(key)!r}")
+    text_source = stability.get("textSource")
+    if not isinstance(text_source, dict):
+        mismatches.append("hudGlyphStability.textSource 不是对象")
+    else:
+        for key, expected in {
+            "passed": True,
+            "taskTabText": "任务",
+            "partyTabText": "组队",
+            "titleText": "任务追踪",
+            "routeButtonText": "自动寻路",
+            "emptyTaskEntryLabelCount": 0,
+            "errors": [],
+        }.items():
+            if text_source.get(key) != expected:
+                mismatches.append(
+                    f"hudGlyphStability.textSource.{key}="
+                    f"{text_source.get(key)!r}"
+                )
+        task_entry_count = text_source.get("taskEntryCount")
+        if type(task_entry_count) is not int or task_entry_count < 4:
+            mismatches.append("hudGlyphStability.textSource.taskEntryCount<4")
+        task_entry_label_count = text_source.get("taskEntryLabelCount")
+        if type(task_entry_label_count) is not int or task_entry_label_count < 8:
+            mismatches.append("hudGlyphStability.textSource.taskEntryLabelCount<8")
+    regions = stability.get("regions")
+    if not isinstance(regions, dict) or set(regions) != set(HUD_GLYPH.REGIONS):
+        mismatches.append("hudGlyphStability.regions 覆盖不完整")
+    frames = stability.get("frames")
+    if not isinstance(frames, list) or len(frames) != HUD_GLYPH_STABILITY_FRAME_COUNT:
+        mismatches.append("hudGlyphStability.frames 数量不正确")
+        return
+    process_frames: list[int] = []
+    for index, frame in enumerate(frames):
+        if not isinstance(frame, dict):
+            mismatches.append(f"hudGlyphStability.frames[{index}] 不是对象")
+            continue
+        if frame.get("frameIndex") != index:
+            mismatches.append(
+                f"hudGlyphStability.frames[{index}].frameIndex="
+                f"{frame.get('frameIndex')!r}"
+            )
+        if frame.get("passed") is not True or frame.get("failedRegions") != []:
+            mismatches.append(f"hudGlyphStability.frames[{index}] 未通过")
+        digest = str(frame.get("taskHudDecodedPixelSha256", ""))
+        if re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            mismatches.append(
+                f"hudGlyphStability.frames[{index}] 缺少像素 SHA-256"
+            )
+        process_frame = frame.get("processFrame")
+        if type(process_frame) is not int:
+            mismatches.append(
+                f"hudGlyphStability.frames[{index}].processFrame 不是整数"
+            )
+        else:
+            process_frames.append(process_frame)
+        frame_regions = frame.get("regions")
+        if not isinstance(frame_regions, dict) or set(frame_regions) != set(
+            HUD_GLYPH.REGIONS
+        ):
+            mismatches.append(
+                f"hudGlyphStability.frames[{index}].regions 覆盖不完整"
+            )
+            continue
+        for region_id, contract in HUD_GLYPH.REGIONS.items():
+            region = frame_regions.get(region_id)
+            if not isinstance(region, dict):
+                continue
+            minimum = int(contract["minimumEdgeEnergy"])
+            observed_minimum = region.get("minimumEdgeEnergy")
+            edge_energy = region.get("edgeEnergy")
+            if (
+                region.get("passed") is not True
+                or type(observed_minimum) is not int
+                or observed_minimum != minimum
+                or type(edge_energy) is not int
+                or edge_energy < minimum
+            ):
+                mismatches.append(
+                    f"hudGlyphStability.frames[{index}].{region_id} 未通过"
+                )
+    if len(process_frames) == HUD_GLYPH_STABILITY_FRAME_COUNT and any(
+        current <= previous
+        for previous, current in zip(process_frames, process_frames[1:])
+    ):
+        mismatches.append("hudGlyphStability.processFrame 不是连续递增取样")
 
 
 def _transcode_segment(
@@ -699,6 +830,22 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
                 native_report_path, map_id=map_id, mode=mode
             )
             capture_report = _read_capture_report(report_path, map_id=map_id, mode=mode)
+            if EXPECTED_BUNDLE_ID == "firebud_region_visual_v2":
+                native_hud_glyphs = HUD_GLYPH.analyze_image(
+                    native_screenshot_path,
+                    label=f"native:{map_id}:{mode}",
+                )
+                movie_hud_glyphs = HUD_GLYPH.analyze_image(
+                    screenshot_path,
+                    label=f"movie:{map_id}:{mode}",
+                )
+            else:
+                native_hud_glyphs = {
+                    "status": "not_applicable",
+                    "passed": True,
+                    "reason": "Firebud v2 fixed HUD glyph contract only",
+                }
+                movie_hud_glyphs = dict(native_hud_glyphs)
             _transcode_segment(
                 ffmpeg=ffmpeg,
                 avi_path=avi_path,
@@ -709,6 +856,20 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
             )
             segment_probe_path = segment_dir / f"{prefix}-ffprobe.json"
             segment_media = _validate_segment_probe(CORE._write_probe(ffprobe, video_path, segment_probe_path))
+            if EXPECTED_BUNDLE_ID == "firebud_region_visual_v2":
+                continuous_hud_glyphs = HUD_GLYPH.analyze_video(
+                    ffmpeg,
+                    video_path,
+                    expected_frame_count=int(segment_media["frameCount"]),
+                    environment=environment,
+                )
+            else:
+                continuous_hud_glyphs = {
+                    "status": "not_applicable",
+                    "passed": True,
+                    "reason": "Firebud v2 fixed HUD glyph contract only",
+                    "frameCount": 0,
+                }
             segments.append(
                 {
                     "mapId": map_id,
@@ -724,11 +885,14 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
                     "nativeScreenshot": CORE._artifact_record(
                         native_screenshot_path
                     ),
+                    "nativeHudGlyphStability": native_hud_glyphs,
                     "captureReport": CORE._artifact_record(report_path),
                     "capture": capture_report,
                     "screenshot": CORE._artifact_record(screenshot_path),
+                    "movieHudGlyphStability": movie_hud_glyphs,
                     "rawMovie": CORE._artifact_record(avi_path),
                     "video": {**CORE._artifact_record(video_path), **segment_media, "playbackSpeed": 1.0},
+                    "continuousHudGlyphStability": continuous_hud_glyphs,
                     "probe": CORE._artifact_record(segment_probe_path),
                     "qaLane": {
                         "lane": CORE.QA_LANE,
@@ -835,6 +999,12 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
             "realCrossFrameMouseMovement": True,
             "explicitCandidatePreview": True,
             "normalHudVisible": True,
+            "selfContainedHudGlyphFrames": True,
+            "continuousHudGlyphFrameCount": sum(
+                int(entry["continuousHudGlyphStability"].get("frameCount", 0))
+                for entry in segments
+            ),
+            "incrementalPreviewAcceptedAsPixelAuthority": False,
             "landmarkDepthVisualReview": "owner_video_frames",
             "hudCollapseRestore": "not_automated_by_existing_map_capture_controller",
         },
@@ -849,6 +1019,16 @@ def _record_into(*, args: argparse.Namespace, run_id: str, run_dir: Path) -> Pat
         "scene": MAIN_SCENE,
         "captureContract": metadata,
         "segments": segments,
+        "hudGlyphStability": {
+            "status": "passed",
+            "presentationMode": "single_precomposed_contact_sheet",
+            "incrementalPreviewAcceptedAsPixelAuthority": False,
+            "continuousFrameCount": sum(
+                int(entry["continuousHudGlyphStability"].get("frameCount", 0))
+                for entry in segments
+            ),
+            "segmentCount": len(segments),
+        },
         "video": {**CORE._artifact_record(final_video_path), **media, "playbackSpeed": 1.0, "decodeStatus": "passed"},
         "probe": CORE._artifact_record(probe_path),
         "fullDecode": {"status": "passed", "videoStreamDecoded": True, "audioStreamDecoded": True, "log": CORE._artifact_record(decode_log)},

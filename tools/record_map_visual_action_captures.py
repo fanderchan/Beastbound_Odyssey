@@ -19,7 +19,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -71,7 +71,7 @@ def _default_run_id() -> str:
     return f"map-actions-{timestamp}-{uuid.uuid4().hex[:8]}"
 
 
-def _parse_args() -> argparse.Namespace:
+def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--bundle-id",
@@ -97,7 +97,15 @@ def _parse_args() -> argparse.Namespace:
             "旧字节归档到本次 .run，任一步失败恢复全部旧字节"
         ),
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--scratch-only",
+        action="store_true",
+        help=(
+            "只写入本次 .run 的 scratch-actions，不读取、覆盖或刷新正式动作证据；"
+            "用于提交前验证完整动作矩阵"
+        ),
+    )
+    return parser.parse_args(argv)
 
 
 def _portable(path: Path) -> str:
@@ -261,7 +269,7 @@ def _capture_pair(
     map_id: str,
     action_kind: str,
     mode: str,
-) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     capture = RECORDER._read_capture_report(
         report,
         map_id=map_id,
@@ -283,7 +291,16 @@ def _capture_pair(
             "动作截图与 capture 报告哈希/尺寸不一致："
             f"{map_id}/{action_kind}"
         )
-    return capture, screenshot_artifact, report_artifact
+    try:
+        hud_glyph_stability = RECORDER.HUD_GLYPH.analyze_image(
+            screenshot,
+            label=f"runtime-action:{map_id}:{action_kind}",
+        )
+    except RECORDER.HUD_GLYPH.HudGlyphAuditError as error:
+        raise MapActionCaptureError(
+            f"动作截图 HUD 字形不完整：{map_id}/{action_kind}: {error}"
+        ) from error
+    return capture, screenshot_artifact, report_artifact, hud_glyph_stability
 
 
 def _find_successful_action_run(action_root: Path) -> Path:
@@ -345,7 +362,12 @@ def _record_entry(
     resumed: bool,
     archived_failed_report: Path | None = None,
 ) -> dict[str, Any]:
-    capture, screenshot_artifact, report_artifact = _capture_pair(
+    (
+        capture,
+        screenshot_artifact,
+        report_artifact,
+        hud_glyph_stability,
+    ) = _capture_pair(
         screenshot,
         report,
         map_id=map_id,
@@ -361,6 +383,8 @@ def _record_entry(
         "screenshot": screenshot_artifact,
         "captureReport": report_artifact,
         "captureResult": capture.get("result"),
+        "targetClearance": capture.get("targetClearance", ""),
+        "hudGlyphStability": hud_glyph_stability,
         "qaLane": _qa_lane_record(action_run),
         "godotLog": CORE._artifact_record(action_run / "godot.log"),
     }
@@ -379,15 +403,20 @@ def _record(args: argparse.Namespace) -> Path:
     if not RECORDER.SAFE_RUN_ID.fullmatch(run_id):
         raise MapActionCaptureError("--run-id 含不安全字符")
 
-    RECORDER._activate_bundle(str(args.bundle_id))
-    godot = CORE._require_executable(str(args.godot), label="Godot")
-    run_root = (REPO_ROOT / DEFAULT_RUN_ROOT / args.bundle_id / run_id).resolve()
     resume = bool(args.resume)
     replace_pending = bool(args.replace_pending_evidence)
+    scratch_only = bool(args.scratch_only)
     if resume and replace_pending:
         raise MapActionCaptureError(
             "--resume 与 --replace-pending-evidence 不能同用"
         )
+    if scratch_only and (resume or replace_pending):
+        raise MapActionCaptureError(
+            "--scratch-only 不能与 --resume 或 --replace-pending-evidence 同用"
+        )
+    RECORDER._activate_bundle(str(args.bundle_id))
+    godot = CORE._require_executable(str(args.godot), label="Godot")
+    run_root = (REPO_ROOT / DEFAULT_RUN_ROOT / args.bundle_id / run_id).resolve()
     if resume:
         if not run_root.is_dir():
             raise MapActionCaptureError(
@@ -411,7 +440,11 @@ def _record(args: argparse.Namespace) -> Path:
         raise MapActionCaptureError(f"地图 bundle 不存在：{bundle_root}")
     if replace_pending:
         _validate_pending_replacement(manifest_path, str(args.bundle_id))
-    output_root = bundle_root / "evidence" / "runtime-actions"
+    output_root = (
+        run_root / "scratch-actions"
+        if scratch_only
+        else bundle_root / "evidence" / "runtime-actions"
+    )
     output_root.mkdir(parents=True, exist_ok=True)
 
     targets: list[tuple[str, str, str, Path, Path, str]] = []
@@ -421,11 +454,15 @@ def _record(args: argparse.Namespace) -> Path:
             map_output = output_root / map_id
             screenshot = map_output / f"{action_kind}.png"
             report = map_output / f"{action_kind}-capture.json"
-            target_state = _target_state(
-                screenshot,
-                report,
-                resume=resume,
-                replace_pending=replace_pending,
+            target_state = (
+                "record"
+                if scratch_only
+                else _target_state(
+                    screenshot,
+                    report,
+                    resume=resume,
+                    replace_pending=replace_pending,
+                )
             )
             targets.append(
                 (map_id, action_kind, mode, screenshot, report, target_state)
@@ -491,6 +528,21 @@ def _record(args: argparse.Namespace) -> Path:
                 )
             )
 
+        try:
+            board = RECORDER.HUD_GLYPH.build_task_hud_board(
+                [
+                    {
+                        "label": f"{record['mapId']} {record['actionKind']}",
+                        "source": REPO_ROOT / record["screenshot"]["path"],
+                    }
+                    for record in records
+                ],
+                run_root / "runtime-action-hud-glyph-board.png",
+            )
+        except RECORDER.HUD_GLYPH.HudGlyphAuditError as error:
+            raise MapActionCaptureError(
+                f"动作 HUD 单图审片板生成失败：{error}"
+            ) from error
         summary = {
             "schemaVersion": 1,
             "reportType": "beastbound_map_visual_action_capture_matrix",
@@ -500,11 +552,18 @@ def _record(args: argparse.Namespace) -> Path:
             "maps": list(RECORDER.REVIEW_MAPS),
             "actionKinds": list(ACTION_KINDS),
             "captureCount": len(records),
+            "scratchOnly": scratch_only,
             "resumed": resume,
             "replacedPendingEvidence": replace_pending,
             "supersededEvidence": [
                 CORE._artifact_record(backup) for _destination, backup in backups
             ],
+            "hudGlyphStability": {
+                "status": "passed",
+                "selfContainedImageCount": len(records),
+                "incrementalPreviewAcceptedAsPixelAuthority": False,
+                "board": board,
+            },
             "records": records,
         }
         summary_path = run_root / "capture-matrix.json"

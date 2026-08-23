@@ -54,6 +54,7 @@ def _capture_report(*, map_id: str, mode: str) -> dict:
         "serverAccountSession": False, "networkRequestAttempted": False,
         "networkRequestsDisconnected": True,
         "normalPlayerHud": True, "viewport": [1280, 720], "errors": [],
+        "hudGlyphStability": _hud_glyph_stability(),
         "cameraComposition": {
             "safeRect": [8.0, 206.0, 955.0, 288.0],
             "configuredAnchor": [390.0, 360.0],
@@ -97,7 +98,63 @@ def _capture_report(*, map_id: str, mode: str) -> dict:
             "drainSeconds": 1.5, "drainFrames": 16,
         },
         "playerCellChanged": mode == "moving",
+        "targetClearance": "two_cell" if mode == "moving" else "",
         "input": ({"eventClass": "InputEventMouseButton", "delivery": "Input.parse_input_event", "frameSeparated": True} if mode == "moving" else {}),
+    }
+
+
+def _hud_glyph_stability() -> dict:
+    regions = {
+        region_id: {
+            "rect": [
+                int(contract["rect"][0]),
+                int(contract["rect"][1]),
+                int(contract["rect"][2]) - int(contract["rect"][0]),
+                int(contract["rect"][3]) - int(contract["rect"][1]),
+            ],
+            "minimumEdgeEnergy": int(contract["minimumEdgeEnergy"]),
+            "meaning": contract["meaning"],
+        }
+        for region_id, contract in TOOL.HUD_GLYPH.REGIONS.items()
+    }
+    frames = []
+    for index in range(TOOL.HUD_GLYPH_STABILITY_FRAME_COUNT):
+        frames.append({
+            "frameIndex": index,
+            "processFrame": 100 + index,
+            "taskHudDecodedPixelSha256": f"{index + 1:064x}",
+            "regions": {
+                region_id: {
+                    "edgeEnergy": int(contract["minimumEdgeEnergy"]) + 1,
+                    "minimumEdgeEnergy": int(contract["minimumEdgeEnergy"]),
+                    "passed": True,
+                }
+                for region_id, contract in TOOL.HUD_GLYPH.REGIONS.items()
+            },
+            "failedRegions": [],
+            "passed": True,
+        })
+    return {
+        "status": "passed",
+        "passed": True,
+        "method": "independent_viewport_rgb_readback_edge_energy",
+        "consecutiveFrames": True,
+        "frameCount": TOOL.HUD_GLYPH_STABILITY_FRAME_COUNT,
+        "requiredFrameCount": TOOL.HUD_GLYPH_STABILITY_FRAME_COUNT,
+        "textSource": {
+            "passed": True,
+            "taskTabText": "任务",
+            "partyTabText": "组队",
+            "titleText": "任务追踪",
+            "routeButtonText": "自动寻路",
+            "taskEntryCount": 4,
+            "taskEntryLabelCount": 8,
+            "emptyTaskEntryLabelCount": 0,
+            "errors": [],
+        },
+        "regions": regions,
+        "frames": frames,
+        "errors": [],
     }
 
 
@@ -229,6 +286,33 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
                     with self.assertRaises(TOOL.FirebudV2RecordingError):
                         TOOL._read_capture_report(path, map_id="firebud_training_yard", mode="moving")
 
+    def test_capture_report_rejects_missing_source_text_or_blank_consecutive_frame(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "capture.json"
+            for mutate in ("title_source", "body_pixels", "frame_order"):
+                report = _capture_report(
+                    map_id="firebud_training_yard",
+                    mode="moving",
+                )
+                if mutate == "title_source":
+                    report["hudGlyphStability"]["textSource"]["titleText"] = ""
+                elif mutate == "body_pixels":
+                    frame = report["hudGlyphStability"]["frames"][3]
+                    frame["regions"]["body"]["edgeEnergy"] = 0
+                    frame["regions"]["body"]["passed"] = False
+                    frame["failedRegions"] = ["body"]
+                    frame["passed"] = False
+                else:
+                    report["hudGlyphStability"]["frames"][4]["processFrame"] = 102
+                path.write_text(json.dumps(report), encoding="utf-8")
+                with self.subTest(mutate=mutate):
+                    with self.assertRaises(TOOL.FirebudV2RecordingError):
+                        TOOL._read_capture_report(
+                            path,
+                            map_id="firebud_training_yard",
+                            mode="moving",
+                        )
+
     def test_capture_report_rejects_hud_occlusion_and_cropped_gate_landmark(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "capture.json"
@@ -282,6 +366,46 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
                     map_id="firebud_village_gate",
                     mode="idle",
                 )
+
+    def test_formal_moving_action_owns_hud_but_not_full_village_composition(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "capture.json"
+            report = _capture_report(
+                map_id="firebud_village_gate",
+                mode="moving",
+            )
+            report["captureVariant"] = "occlusion"
+            report["cameraComposition"].update({
+                "visibleNpcCount": 5,
+                "hudOverlappingNpcIds": ["firebud_stable_keeper"],
+                "viewportClippedNpcIds": ["firebud_storyteller"],
+                "viewportClippedKeyEnvironmentIds": ["village_record_totem_interaction_01"],
+                "nearestWarp": {
+                    "id": "warp_to_training_yard",
+                    "cell": [2, 15],
+                    "screenPoint": [338.0, -221.0],
+                    "edgeClear": False,
+                    "insideSafeRect": False,
+                },
+            })
+            path.write_text(json.dumps(report), encoding="utf-8")
+            parsed = TOOL._read_capture_report(
+                path,
+                map_id="firebud_village_gate",
+                mode="moving",
+                capture_variant="occlusion",
+            )
+            self.assertEqual(parsed["captureVariant"], "occlusion")
+
+            report["targetClearance"] = "exact_cell"
+            path.write_text(json.dumps(report), encoding="utf-8")
+            parsed = TOOL._read_capture_report(
+                path,
+                map_id="firebud_village_gate",
+                mode="moving",
+                capture_variant="occlusion",
+            )
+            self.assertEqual(parsed["targetClearance"], "exact_cell")
 
     def test_short_individual_clip_is_allowed_but_must_keep_real_movie_contract(self) -> None:
         probe = {

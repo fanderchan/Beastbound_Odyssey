@@ -55,6 +55,16 @@ class InstallFirebudComputerUseEvidenceTest(unittest.TestCase):
             self.assertEqual(old.read_bytes(), b"old")
             self.assertFalse(new.exists())
 
+    def test_installer_embeds_pixel_gate_and_single_precomposed_board(self) -> None:
+        source = TOOL_PATH.read_text(encoding="utf-8")
+        self.assertIn("HUD_GLYPH.analyze_image", source)
+        self.assertIn("runtime_reference", source)
+        self.assertIn("reference=(", source)
+        self.assertIn("action_kind != \"pointer\"", source)
+        self.assertIn("HUD_GLYPH.build_task_hud_board_bytes", source)
+        self.assertIn("incrementalPreviewAcceptedAsPixelAuthority", source)
+        self.assertIn("HUD_GLYPH_BOARD_PATH", source)
+
 
 if __name__ == "__main__":
     unittest.main()

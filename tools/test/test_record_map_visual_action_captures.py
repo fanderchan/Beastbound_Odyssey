@@ -18,6 +18,20 @@ SPEC.loader.exec_module(TOOL)
 
 
 class RecordMapVisualActionCapturesTest(unittest.TestCase):
+    def test_scratch_only_is_an_explicit_non_formal_mode(self) -> None:
+        args = TOOL._parse_args([
+            "--bundle-id",
+            "firebud_region_visual_v2",
+            "--run-id",
+            "scratch-contract",
+            "--scratch-only",
+        ])
+        self.assertTrue(args.scratch_only)
+        self.assertFalse(args.replace_pending_evidence)
+        source = TOOL_PATH.read_text(encoding="utf-8")
+        self.assertIn('run_root / "scratch-actions"', source)
+        self.assertIn('"scratchOnly": scratch_only', source)
+
     def test_fresh_run_refuses_any_existing_formal_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

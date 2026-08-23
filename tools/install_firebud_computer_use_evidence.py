@@ -33,12 +33,24 @@ if REFRESH_SPEC is None or REFRESH_SPEC.loader is None:
 REFRESH = importlib.util.module_from_spec(REFRESH_SPEC)
 REFRESH_SPEC.loader.exec_module(REFRESH)
 
+HUD_GLYPH_PATH = REPO_ROOT / "tools" / "audit_firebud_hud_glyph_stability.py"
+HUD_GLYPH_SPEC = importlib.util.spec_from_file_location(
+    "_beastbound_firebud_hud_glyph_stability_installer", HUD_GLYPH_PATH
+)
+if HUD_GLYPH_SPEC is None or HUD_GLYPH_SPEC.loader is None:
+    raise RuntimeError(f"无法加载 Firebud HUD 字形门禁：{HUD_GLYPH_PATH}")
+HUD_GLYPH = importlib.util.module_from_spec(HUD_GLYPH_SPEC)
+HUD_GLYPH_SPEC.loader.exec_module(HUD_GLYPH)
+
 BUNDLE_ID = "firebud_region_visual_v2"
 BUNDLE_ROOT = (
     REPO_ROOT / "client" / "godot" / "assets" / "maps" / BUNDLE_ID
 )
 MANIFEST_PATH = BUNDLE_ROOT / "map-visual-bundle.json"
 REPORT_PATH = BUNDLE_ROOT / "evidence" / "computer-use-review.json"
+HUD_GLYPH_BOARD_PATH = (
+    BUNDLE_ROOT / "evidence" / "computer-use-hud-glyph-board.png"
+)
 RAW_ROOT = BUNDLE_ROOT / "evidence" / "computer-use-actions" / "raw"
 RECEIPT_ROOT = BUNDLE_ROOT / "evidence" / "computer-use-actions"
 ALLOWED_STAGE_ROOT = (REPO_ROOT / ".run" / "evidence").resolve()
@@ -304,6 +316,8 @@ def install(raw_root: Path, generated_at_utc: str, *, replace: bool) -> dict[str
     )
 
     staged: dict[tuple[str, str, str], bytes] = {}
+    hud_glyph_by_action: dict[tuple[str, str], dict[str, Any]] = {}
+    hud_board_items: list[dict[str, Any]] = []
     for map_id in MAP_IDS:
         for action_kind in ACTION_KINDS:
             pair: dict[str, bytes] = {}
@@ -319,6 +333,37 @@ def install(raw_root: Path, generated_at_utc: str, *, replace: bool) -> dict[str
                 staged[(map_id, action_kind, phase)] = payload
             if pair["before"] == pair["after"]:
                 raise FirebudEvidenceInstallError(f"动作前后原图相同：{map_id}/{action_kind}")
+            try:
+                runtime_reference = (
+                    BUNDLE_ROOT
+                    / "evidence"
+                    / "runtime-actions"
+                    / map_id
+                    / f"{action_kind}.png"
+                )
+                HUD_GLYPH.analyze_image(
+                    runtime_reference,
+                    label=f"runtime-reference:{map_id}:{action_kind}",
+                )
+                hud_glyph_by_action[(map_id, action_kind)] = HUD_GLYPH.analyze_image(
+                    pair["after"],
+                    label=f"computer-use:{map_id}:{action_kind}:after",
+                    require_task_hud=action_kind != "pointer",
+                    reference=(
+                        runtime_reference if action_kind != "pointer" else None
+                    ),
+                )
+            except HUD_GLYPH.HudGlyphAuditError as error:
+                raise FirebudEvidenceInstallError(
+                    f"Computer Use after 帧 HUD 字形不完整：{map_id}/{action_kind}: {error}"
+                ) from error
+            if action_kind != "pointer":
+                hud_board_items.append(
+                    {
+                        "label": f"{map_id} {action_kind}",
+                        "source": pair["after"],
+                    }
+                )
 
     report = _load_json(REPORT_PATH, "Computer Use review")
     actions = report.get("actions")
@@ -366,6 +411,7 @@ def install(raw_root: Path, generated_at_utc: str, *, replace: bool) -> dict[str
                 "observations": action_config["observations"],
                 "before": before_ref,
                 "after": after_ref,
+                "hudGlyphStability": hud_glyph_by_action[(map_id, action_kind)],
                 "result": "PASS",
             }
             receipt_payload = _json_bytes(receipt, compact=True)
@@ -377,13 +423,35 @@ def install(raw_root: Path, generated_at_utc: str, *, replace: bool) -> dict[str
             action["result"] = "PASS"
             action["evidence"] = [before_ref, after_ref]
             action["actionReceipt"] = _file_ref_from_bytes(receipt_path, receipt_payload)
+            action["hudGlyphStability"] = hud_glyph_by_action[(map_id, action_kind)]
             refreshed_actions.append(action)
+
+    try:
+        hud_board_payload = HUD_GLYPH.build_task_hud_board_bytes(
+            hud_board_items,
+            columns=4,
+        )
+    except HUD_GLYPH.HudGlyphAuditError as error:
+        raise FirebudEvidenceInstallError(
+            f"Computer Use HUD 单图审片板生成失败：{error}"
+        ) from error
+    writes[HUD_GLYPH_BOARD_PATH] = hud_board_payload
 
     refreshed_report = dict(report)
     refreshed_report["generatedAtUtc"] = generated_at_utc
     refreshed_report["result"] = "PASS"
     refreshed_report["testedMapIds"] = list(MAP_IDS)
     refreshed_report["blockers"] = []
+    refreshed_report["hudGlyphStability"] = {
+        "status": "passed",
+        "taskHudAfterImageCount": len(hud_board_items),
+        "pointerImageCount": len(MAP_IDS),
+        "incrementalPreviewAcceptedAsPixelAuthority": False,
+        "board": _file_ref_from_bytes(
+            HUD_GLYPH_BOARD_PATH,
+            hud_board_payload,
+        ),
+    }
     refreshed_report["actions"] = refreshed_actions
     writes[REPORT_PATH] = _json_bytes(refreshed_report)
 
@@ -408,6 +476,11 @@ def install(raw_root: Path, generated_at_utc: str, *, replace: bool) -> dict[str
             ) from error
         raise
     result["rawPairCount"] = len(MAP_IDS) * len(ACTION_KINDS)
+    result["hudGlyphTaskImageCount"] = len(hud_board_items)
+    result["hudGlyphBoard"] = _file_ref_from_bytes(
+        HUD_GLYPH_BOARD_PATH,
+        hud_board_payload,
+    )
     result["transaction"] = "committed"
     return result
 

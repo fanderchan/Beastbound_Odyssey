@@ -44,7 +44,32 @@ const MOVING_CAPTURE_VARIANTS: Array[String] = [
 ]
 const SETTLE_FRAMES := 10
 const COMPLETE_FRAME_ATTEMPTS := 10
+const HUD_GLYPH_STABILITY_FRAME_COUNT := 6
 const MOVE_FRAME_LIMIT := 240
+const FIREBUD_BUNDLE_ID := "firebud_region_visual_v2"
+const HUD_GLYPH_REGIONS := {
+	"tabs": {
+		"rect": Rect2i(1020, 136, 166, 24),
+		"minimumEdgeEnergy": 25000,
+		"meaning": "任务/组队页签字形",
+	},
+	"title": {
+		"rect": Rect2i(1020, 193, 90, 25),
+		"minimumEdgeEnergy": 15000,
+		"meaning": "任务追踪标题字形",
+	},
+	"body": {
+		"rect": Rect2i(1027, 225, 148, 200),
+		"minimumEdgeEnergy": 200000,
+		"meaning": "任务条目标题与正文",
+	},
+	"routeButton": {
+		"rect": Rect2i(1068, 453, 70, 19),
+		"minimumEdgeEnergy": 7000,
+		"meaning": "自动寻路按钮字形",
+	},
+}
+const TASK_HUD_PIXEL_CROP := Rect2i(999, 121, 206, 401)
 const VALUE_FLAGS := {
 	ARG_MAP_ID: "mapId",
 	ARG_OUTPUT: "outputPath",
@@ -244,6 +269,7 @@ func run(request: Dictionary) -> Dictionary:
 	var end_cell := start_cell
 	var target_cell := start_cell
 	var mode := str(request.get("mode", ""))
+	var capture_variant := str(request.get("captureVariant", "default"))
 	var input_report := {
 		"eventClass": "",
 		"delivery": "none",
@@ -255,13 +281,14 @@ func run(request: Dictionary) -> Dictionary:
 	if mode == "moving":
 		var target := _find_reachable_visible_target(
 			start_cell,
-			str(request.get("captureVariant", "default"))
+			capture_variant
 		)
 		if target.is_empty():
 			errors.append("找不到可由真实鼠标点击到达且不被 UI 遮挡的目标格")
 		else:
 			report["targetCandidateCount"] = int(target.get("candidateCount", 0))
 			report["targetVariantIndex"] = int(target.get("variantIndex", -1))
+			report["targetClearance"] = str(target.get("clearance", ""))
 			target_cell = target.get("cell", start_cell) as Vector2i
 			input_report = await _send_real_mouse_click(target.get("screenPoint", Vector2.ZERO) as Vector2)
 			var changed := false
@@ -342,6 +369,7 @@ func run(request: Dictionary) -> Dictionary:
 	var requires_village_full_alpha_gate := (
 		str(prepared.get("bundleId", "")) == "firebud_region_visual_v2"
 		and map_id == "firebud_village_gate"
+		and capture_variant in ["default", "pointer"]
 	)
 	if requires_village_full_alpha_gate and not overlapping_npcs.is_empty():
 		errors.append(
@@ -383,19 +411,29 @@ func run(request: Dictionary) -> Dictionary:
 		if map_id == "firebud_village_gate":
 			if int(camera_composition.get("npcAlphaSubjectCount", 0)) != 14:
 				errors.append("村口完整 NPC alpha 门禁没有覆盖全部 14 名 NPC")
-			if int(camera_composition.get("visibleNpcCount", 0)) != 14:
-				errors.append("村口没有在同一安全画幅完整呈现全部 14 名 NPC")
 			if int(camera_composition.get("keyEnvironmentSubjectCount", 0)) != 7:
 				errors.append("村口关键环境 alpha 门禁没有覆盖冻结的 7 个物件")
-			var nearby_warp := camera_composition.get("nearestWarp", {}) as Dictionary
-			if (
-				str(nearby_warp.get("id", "")) != "warp_to_training_yard"
-				or not bool(nearby_warp.get("edgeClear", false))
-			):
-				errors.append("村口相邻圆形 warp 地标被屏幕边缘裁切")
-	var screenshot: Image = await _capture_complete_image()
+			if requires_village_full_alpha_gate:
+				if int(camera_composition.get("visibleNpcCount", 0)) != 14:
+					errors.append("村口没有在同一安全画幅完整呈现全部 14 名 NPC")
+				var nearby_warp := camera_composition.get("nearestWarp", {}) as Dictionary
+				if (
+					str(nearby_warp.get("id", "")) != "warp_to_training_yard"
+					or not bool(nearby_warp.get("edgeClear", false))
+				):
+					errors.append("村口相邻圆形 warp 地标被屏幕边缘裁切")
+	var hud_glyph_capture := await _capture_hud_glyph_stability_sequence(
+		str(prepared.get("bundleId", ""))
+	)
+	var screenshot: Image = hud_glyph_capture.get("image") as Image
+	var hud_glyph_report := hud_glyph_capture.duplicate(true)
+	hud_glyph_report.erase("image")
+	report["hudGlyphStability"] = hud_glyph_report
+	if str(hud_glyph_report.get("status", "failed")) == "failed":
+		errors.append_array(_string_array(hud_glyph_report.get("errors", [])))
 	if screenshot == null:
-		errors.append("Metal/viewport 未得到完整稳定画面")
+		if errors.is_empty():
+			errors.append("Metal/viewport 未得到完整稳定画面")
 		return await _finish_capture(report, errors, report_path)
 	if screenshot.get_width() != EXPECTED_VIEWPORT.x or screenshot.get_height() != EXPECTED_VIEWPORT.y:
 		errors.append("截图不是 1280x720")
@@ -839,7 +877,7 @@ func _find_reachable_visible_target(
 			not _near_visual_collision(candidate, 0)
 			and not _near_interaction_source(candidate, 0)
 		)
-		if not strict_clear and (capture_variant != "default" or not exact_clear):
+		if not strict_clear and not exact_clear:
 			continue
 		var path: Array[Vector2i] = IsoMapModel.find_path(host.map_data, start_cell, candidate)
 		if path.size() < 2 or path[0] != start_cell or path[path.size() - 1] != candidate:
@@ -851,6 +889,7 @@ func _find_reachable_visible_target(
 			"cell": candidate,
 			"screenPoint": screen_point,
 			"pathLength": path.size(),
+			"clearance": "two_cell" if strict_clear else "exact_cell",
 		}
 		if strict_clear:
 			candidates.append(target_record)
@@ -864,6 +903,18 @@ func _find_reachable_visible_target(
 	# movement/warp/collision/occlusion variants keep the strict margin above.
 	if capture_variant == "default" and not relaxed_default_candidates.is_empty():
 		candidates = relaxed_default_candidates
+	elif (
+		capture_variant != "default"
+		and candidates.size() < MOVING_CAPTURE_VARIANTS.size()
+	):
+		# W009's denser service layout can leave fewer than four two-cell-clear
+		# destinations in the initial clickable viewport. Formal action captures
+		# still need distinct real mouse movements, so retain every strict target
+		# first, then fill only from destinations whose exact cell is clear of
+		# blocking and interaction sources. This changes QA framing only; runtime
+		# collision, pathfinding and the authority map remain untouched.
+		for relaxed_candidate in relaxed_default_candidates:
+			candidates.append(relaxed_candidate)
 	if candidates.is_empty():
 		return {}
 	var variant_index := MOVING_CAPTURE_VARIANTS.find(capture_variant)
@@ -972,6 +1023,227 @@ func _capture_complete_image() -> Image:
 	return null
 
 
+func _capture_hud_glyph_stability_sequence(bundle_id: String) -> Dictionary:
+	if bundle_id != FIREBUD_BUNDLE_ID:
+		var fallback_image: Image = await _capture_complete_image()
+		return {
+			"status": "not_applicable",
+			"passed": true,
+			"reason": "只对 Firebud v2 固定 HUD 几何启用字形像素门禁",
+			"image": fallback_image,
+			"errors": [],
+		}
+	var source_contract := _task_hud_text_source_contract()
+	var errors: Array[String] = _string_array(source_contract.get("errors", []))
+	if not errors.is_empty():
+		return {
+			"status": "failed",
+			"passed": false,
+			"consecutiveFrames": true,
+			"frameCount": 0,
+			"requiredFrameCount": HUD_GLYPH_STABILITY_FRAME_COUNT,
+			"textSource": source_contract,
+			"frames": [],
+			"image": null,
+			"errors": errors,
+		}
+	var frames: Array[Dictionary] = []
+	var screenshot: Image
+	for frame_index in range(HUD_GLYPH_STABILITY_FRAME_COUNT):
+		host.queue_redraw()
+		await host.get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var image: Image = host.get_viewport().get_texture().get_image()
+		if (
+			image == null
+			or image.get_width() != EXPECTED_VIEWPORT.x
+			or image.get_height() != EXPECTED_VIEWPORT.y
+		):
+			errors.append("HUD 字形连续帧 %d 不是完整 1280x720" % frame_index)
+			break
+		var sample := _hud_glyph_pixel_sample(image, frame_index)
+		frames.append(sample)
+		if not bool(sample.get("passed", false)):
+			errors.append(
+				"HUD 字形连续帧 %d 缺少页签、标题、正文或按钮像素：%s"
+				% [frame_index, JSON.stringify(sample.get("failedRegions", []))]
+			)
+			break
+		screenshot = image
+	var passed := (
+		errors.is_empty()
+		and frames.size() == HUD_GLYPH_STABILITY_FRAME_COUNT
+		and screenshot != null
+	)
+	return {
+		"status": "passed" if passed else "failed",
+		"passed": passed,
+		"method": "independent_viewport_rgb_readback_edge_energy",
+		"consecutiveFrames": true,
+		"frameCount": frames.size(),
+		"requiredFrameCount": HUD_GLYPH_STABILITY_FRAME_COUNT,
+		"textSource": source_contract,
+		"regions": _hud_glyph_region_contract_report(),
+		"frames": frames,
+		"image": screenshot,
+		"errors": errors,
+	}
+
+
+func _task_hud_text_source_contract() -> Dictionary:
+	var errors: Array[String] = []
+	var task_tab: Button
+	var party_tab: Button
+	if host.world_hud_party_roster_view != null:
+		task_tab = host.world_hud_party_roster_view.task_tab_button as Button
+		party_tab = host.world_hud_party_roster_view.party_tab_button as Button
+	var side_title := (
+		host.side_panel.find_child("WorldHudSideTitle", true, false) as Label
+		if host.side_panel != null
+		else null
+	)
+	var task_entries := (
+		host.side_panel.find_child("WorldHudTaskEntries", true, false) as Control
+		if host.side_panel != null
+		else null
+	)
+	var route_button := host.task_route_button as Button
+	if task_tab == null or not task_tab.is_visible_in_tree() or task_tab.text != "任务":
+		errors.append("任务页签源文字不可见或不是任务")
+	if party_tab == null or not party_tab.is_visible_in_tree() or party_tab.text != "组队":
+		errors.append("组队页签源文字不可见或不是组队")
+	if (
+		side_title == null
+		or not side_title.is_visible_in_tree()
+		or side_title.text != "任务追踪"
+	):
+		errors.append("任务追踪标题源文字不可见")
+	if (
+		route_button == null
+		or not route_button.is_visible_in_tree()
+		or route_button.text != "自动寻路"
+	):
+		errors.append("自动寻路按钮源文字不可见")
+	var entry_count := 0
+	var entry_label_count := 0
+	var empty_entry_label_count := 0
+	if task_entries != null:
+		for child_value in task_entries.get_children():
+			if not (child_value is Button):
+				continue
+			var entry := child_value as Button
+			if not entry.is_visible_in_tree():
+				continue
+			entry_count += 1
+			for label_value in entry.get_children():
+				if not (label_value is Label):
+					continue
+				var label := label_value as Label
+				if not label.is_visible_in_tree():
+					continue
+				entry_label_count += 1
+				if label.text.strip_edges() == "":
+					empty_entry_label_count += 1
+	if entry_count < 4 or entry_label_count < 8 or empty_entry_label_count > 0:
+		errors.append(
+			"任务正文源节点不完整：entries=%d labels=%d empty=%d"
+			% [entry_count, entry_label_count, empty_entry_label_count]
+		)
+	return {
+		"passed": errors.is_empty(),
+		"taskTabText": task_tab.text if task_tab != null else "",
+		"partyTabText": party_tab.text if party_tab != null else "",
+		"titleText": side_title.text if side_title != null else "",
+		"routeButtonText": route_button.text if route_button != null else "",
+		"taskEntryCount": entry_count,
+		"taskEntryLabelCount": entry_label_count,
+		"emptyTaskEntryLabelCount": empty_entry_label_count,
+		"errors": errors,
+	}
+
+
+func _hud_glyph_pixel_sample(image: Image, frame_index: int) -> Dictionary:
+	var regions := {}
+	var failed_regions: Array[String] = []
+	for region_id_value in HUD_GLYPH_REGIONS.keys():
+		var region_id := str(region_id_value)
+		var contract := HUD_GLYPH_REGIONS[region_id] as Dictionary
+		var rect: Rect2i = contract.get("rect", Rect2i())
+		var edge_energy := _image_edge_energy(image, rect)
+		var minimum := int(contract.get("minimumEdgeEnergy", 0))
+		var region_passed := edge_energy >= minimum
+		regions[region_id] = {
+			"edgeEnergy": edge_energy,
+			"minimumEdgeEnergy": minimum,
+			"passed": region_passed,
+		}
+		if not region_passed:
+			failed_regions.append(region_id)
+	return {
+		"frameIndex": frame_index,
+		"processFrame": Engine.get_process_frames(),
+		"taskHudDecodedPixelSha256": _image_region_sha256(
+			image,
+			TASK_HUD_PIXEL_CROP
+		),
+		"regions": regions,
+		"failedRegions": failed_regions,
+		"passed": failed_regions.is_empty(),
+	}
+
+
+func _image_edge_energy(image: Image, rect: Rect2i) -> int:
+	var clipped := rect.intersection(Rect2i(Vector2i.ZERO, image.get_size()))
+	if clipped.size.x < 2 or clipped.size.y < 2:
+		return 0
+	var energy := 0
+	for y in range(clipped.position.y, clipped.end.y):
+		var previous_luminance := -1
+		for x in range(clipped.position.x, clipped.end.x):
+			var color := image.get_pixel(x, y)
+			var luminance := roundi(
+				255.0 * (color.r * 0.299 + color.g * 0.587 + color.b * 0.114)
+			)
+			if previous_luminance >= 0:
+				energy += absi(luminance - previous_luminance)
+			if y > clipped.position.y:
+				var above := image.get_pixel(x, y - 1)
+				var above_luminance := roundi(
+					255.0 * (above.r * 0.299 + above.g * 0.587 + above.b * 0.114)
+				)
+				energy += absi(luminance - above_luminance)
+			previous_luminance = luminance
+	return energy
+
+
+func _image_region_sha256(image: Image, rect: Rect2i) -> String:
+	var clipped := rect.intersection(Rect2i(Vector2i.ZERO, image.get_size()))
+	if clipped.size.x <= 0 or clipped.size.y <= 0:
+		return ""
+	var region := image.get_region(clipped)
+	var context := HashingContext.new()
+	context.start(HashingContext.HASH_SHA256)
+	context.update(
+		("%dx%d:%d\n" % [region.get_width(), region.get_height(), region.get_format()]).to_utf8_buffer()
+	)
+	context.update(region.get_data())
+	return context.finish().hex_encode()
+
+
+func _hud_glyph_region_contract_report() -> Dictionary:
+	var result := {}
+	for region_id_value in HUD_GLYPH_REGIONS.keys():
+		var region_id := str(region_id_value)
+		var contract := HUD_GLYPH_REGIONS[region_id] as Dictionary
+		var rect: Rect2i = contract.get("rect", Rect2i())
+		result[region_id] = {
+			"rect": [rect.position.x, rect.position.y, rect.size.x, rect.size.y],
+			"minimumEdgeEnergy": int(contract.get("minimumEdgeEnergy", 0)),
+			"meaning": str(contract.get("meaning", "")),
+		}
+	return result
+
+
 static func _base_report(request: Dictionary) -> Dictionary:
 	return {
 		"schemaVersion": REPORT_SCHEMA_VERSION,
@@ -1022,6 +1294,7 @@ static func _base_report(request: Dictionary) -> Dictionary:
 		"targetCell": [],
 		"targetCandidateCount": 0,
 		"targetVariantIndex": -1,
+		"targetClearance": "",
 		"endCell": [],
 		"playerCellChanged": false,
 		"input": {},
