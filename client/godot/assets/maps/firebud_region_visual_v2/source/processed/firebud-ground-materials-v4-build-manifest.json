@@ -21,7 +21,7 @@
   },
   "atlas": {
     "path": "client/godot/assets/maps/firebud_region_visual_v2/runtime/ground/atlas.png",
-    "sha256": "a86cb47204e6446f289d7517e623910c92228b40ff5c97dfc4c93a89765cbb85",
+    "sha256": "a8a0c29837da41e7267d5c1d355373227aad5ddc9625b5a5f0aa4071d1bb0ed3",
     "dimensions": [
       320,
       440
@@ -399,15 +399,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1368,
-        "opaquePixels": 1337,
-        "partialAlphaPixels": 495
+        "transparentPixels": 1374,
+        "opaquePixels": 1332,
+        "partialAlphaPixels": 494
       },
       "meanRgba": [
-        95.512,
-        66.461,
-        41.617,
-        125.675
+        90.097,
+        67.033,
+        42.333,
+        125.878
       ]
     },
     {
@@ -419,15 +419,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1385,
-        "opaquePixels": 1335,
-        "partialAlphaPixels": 480
+        "transparentPixels": 1379,
+        "opaquePixels": 1334,
+        "partialAlphaPixels": 487
       },
       "meanRgba": [
-        95.374,
-        66.361,
-        41.486,
-        125.203
+        89.408,
+        67.093,
+        42.357,
+        125.647
       ]
     },
     {
@@ -439,15 +439,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1381,
-        "opaquePixels": 1325,
-        "partialAlphaPixels": 494
+        "transparentPixels": 1366,
+        "opaquePixels": 1334,
+        "partialAlphaPixels": 500
       },
       "meanRgba": [
-        87.692,
-        66.301,
-        42.097,
-        125.381
+        84.823,
+        67.374,
+        42.954,
+        126.264
       ]
     },
     {
@@ -459,15 +459,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1387,
-        "opaquePixels": 1318,
-        "partialAlphaPixels": 495
+        "transparentPixels": 1392,
+        "opaquePixels": 1330,
+        "partialAlphaPixels": 478
       },
       "meanRgba": [
-        95.927,
-        66.511,
-        41.527,
-        124.834
+        92.203,
+        66.842,
+        41.985,
+        125.075
       ]
     },
     {
@@ -479,15 +479,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1361,
-        "opaquePixels": 1345,
-        "partialAlphaPixels": 494
+        "transparentPixels": 1374,
+        "opaquePixels": 1325,
+        "partialAlphaPixels": 501
       },
       "meanRgba": [
-        98.521,
-        71.251,
-        44.474,
-        127.07
+        88.054,
+        68.291,
+        43.273,
+        126.052
       ]
     },
     {
@@ -499,15 +499,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1345,
-        "opaquePixels": 1344,
-        "partialAlphaPixels": 511
+        "transparentPixels": 1355,
+        "opaquePixels": 1341,
+        "partialAlphaPixels": 504
       },
       "meanRgba": [
-        99.317,
-        71.618,
-        44.638,
-        127.569
+        92.106,
+        68.665,
+        43.121,
+        126.858
       ]
     },
     {
@@ -520,14 +520,14 @@
       ],
       "alpha": {
         "transparentPixels": 1350,
-        "opaquePixels": 1351,
-        "partialAlphaPixels": 499
+        "opaquePixels": 1338,
+        "partialAlphaPixels": 512
       },
       "meanRgba": [
-        93.448,
-        71.482,
-        45.087,
-        127.792
+        82.006,
+        68.414,
+        43.911,
+        126.905
       ]
     },
     {
@@ -539,15 +539,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1377,
-        "opaquePixels": 1327,
-        "partialAlphaPixels": 496
+        "transparentPixels": 1369,
+        "opaquePixels": 1332,
+        "partialAlphaPixels": 499
       },
       "meanRgba": [
-        103.4,
-        71.17,
-        43.915,
-        125.625
+        97.192,
+        68.114,
+        42.258,
+        126.3
       ]
     },
     {
@@ -560,14 +560,14 @@
       ],
       "alpha": {
         "transparentPixels": 1376,
-        "opaquePixels": 1312,
-        "partialAlphaPixels": 512
+        "opaquePixels": 1333,
+        "partialAlphaPixels": 491
       },
       "meanRgba": [
-        100.151,
-        68.86,
-        42.561,
-        125.046
+        87.253,
+        67.66,
+        42.764,
+        126.013
       ]
     },
     {
@@ -579,15 +579,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1376,
-        "opaquePixels": 1325,
-        "partialAlphaPixels": 499
+        "transparentPixels": 1354,
+        "opaquePixels": 1331,
+        "partialAlphaPixels": 515
       },
       "meanRgba": [
-        100.478,
-        68.951,
-        42.534,
-        125.908
+        92.106,
+        68.688,
+        42.955,
+        126.448
       ]
     },
     {
@@ -599,15 +599,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1378,
-        "opaquePixels": 1346,
-        "partialAlphaPixels": 476
+        "transparentPixels": 1357,
+        "opaquePixels": 1342,
+        "partialAlphaPixels": 501
       },
       "meanRgba": [
-        96.589,
-        69.18,
-        42.959,
-        126.005
+        84.948,
+        67.967,
+        43.189,
+        126.606
       ]
     },
     {
@@ -619,15 +619,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1377,
-        "opaquePixels": 1313,
-        "partialAlphaPixels": 510
+        "transparentPixels": 1372,
+        "opaquePixels": 1328,
+        "partialAlphaPixels": 500
       },
       "meanRgba": [
-        101.257,
-        69.06,
-        42.588,
-        124.97
+        94.363,
+        67.548,
+        42.065,
+        125.662
       ]
     },
     {
@@ -639,15 +639,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1384,
-        "opaquePixels": 1327,
-        "partialAlphaPixels": 489
+        "transparentPixels": 1376,
+        "opaquePixels": 1328,
+        "partialAlphaPixels": 496
       },
       "meanRgba": [
-        93.921,
-        70.867,
-        44.268,
-        125.508
+        83.223,
+        69.521,
+        44.358,
+        125.885
       ]
     },
     {
@@ -660,14 +660,14 @@
       ],
       "alpha": {
         "transparentPixels": 1376,
-        "opaquePixels": 1329,
-        "partialAlphaPixels": 495
+        "opaquePixels": 1331,
+        "partialAlphaPixels": 493
       },
       "meanRgba": [
-        94.028,
-        71.349,
-        44.517,
-        125.611
+        89.288,
+        69.305,
+        43.732,
+        126.01
       ]
     },
     {
@@ -679,15 +679,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1384,
-        "opaquePixels": 1334,
-        "partialAlphaPixels": 482
+        "transparentPixels": 1366,
+        "opaquePixels": 1328,
+        "partialAlphaPixels": 506
       },
       "meanRgba": [
-        89.645,
-        70.772,
-        44.591,
-        125.469
+        81.143,
+        69.188,
+        44.358,
+        125.808
       ]
     },
     {
@@ -699,15 +699,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1369,
-        "opaquePixels": 1332,
-        "partialAlphaPixels": 499
+        "transparentPixels": 1371,
+        "opaquePixels": 1327,
+        "partialAlphaPixels": 502
       },
       "meanRgba": [
-        94.262,
-        91.851,
-        64.363,
-        126.032
+        89.882,
+        88.993,
+        62.07,
+        125.619
       ]
     },
     {
@@ -719,15 +719,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1360,
-        "opaquePixels": 1345,
-        "partialAlphaPixels": 495
+        "transparentPixels": 1380,
+        "opaquePixels": 1329,
+        "partialAlphaPixels": 491
       },
       "meanRgba": [
-        96.038,
-        92.742,
-        65.034,
-        126.808
+        88.363,
+        88.099,
+        61.331,
+        125.144
       ]
     },
     {
@@ -739,15 +739,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1357,
-        "opaquePixels": 1349,
-        "partialAlphaPixels": 494
+        "transparentPixels": 1362,
+        "opaquePixels": 1339,
+        "partialAlphaPixels": 499
       },
       "meanRgba": [
-        90.063,
-        89.565,
-        62.51,
-        127.527
+        81.684,
+        84.682,
+        58.602,
+        126.49
       ]
     },
     {
@@ -759,15 +759,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1374,
-        "opaquePixels": 1340,
-        "partialAlphaPixels": 486
+        "transparentPixels": 1372,
+        "opaquePixels": 1335,
+        "partialAlphaPixels": 493
       },
       "meanRgba": [
-        98.102,
-        93.749,
-        65.944,
-        125.861
+        94.627,
+        91.743,
+        64.211,
+        126.174
       ]
     },
     {
@@ -779,15 +779,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1373,
-        "opaquePixels": 1331,
-        "partialAlphaPixels": 496
+        "transparentPixels": 1360,
+        "opaquePixels": 1338,
+        "partialAlphaPixels": 502
       },
       "meanRgba": [
-        86.769,
-        87.677,
-        60.913,
-        126.124
+        87.652,
+        87.701,
+        60.925,
+        126.448
       ]
     },
     {
@@ -799,15 +799,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1348,
-        "opaquePixels": 1349,
-        "partialAlphaPixels": 503
+        "transparentPixels": 1375,
+        "opaquePixels": 1346,
+        "partialAlphaPixels": 479
       },
       "meanRgba": [
-        88.557,
-        88.547,
-        61.622,
-        127.209
+        85.16,
+        86.488,
+        59.895,
+        126.017
       ]
     },
     {
@@ -819,15 +819,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1351,
-        "opaquePixels": 1354,
-        "partialAlphaPixels": 495
+        "transparentPixels": 1347,
+        "opaquePixels": 1345,
+        "partialAlphaPixels": 508
       },
       "meanRgba": [
-        82.861,
-        85.539,
-        59.262,
-        127.998
+        80.146,
+        84.11,
+        57.865,
+        127.24
       ]
     },
     {
@@ -839,15 +839,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1374,
-        "opaquePixels": 1339,
-        "partialAlphaPixels": 487
+        "transparentPixels": 1360,
+        "opaquePixels": 1345,
+        "partialAlphaPixels": 495
       },
       "meanRgba": [
-        92.82,
-        90.946,
-        63.502,
-        126.195
+        97.541,
+        92.842,
+        65.182,
+        127.178
       ]
     },
     {
@@ -859,15 +859,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1370,
-        "opaquePixels": 1325,
-        "partialAlphaPixels": 505
+        "transparentPixels": 1362,
+        "opaquePixels": 1346,
+        "partialAlphaPixels": 492
       },
       "meanRgba": [
-        92.244,
-        90.198,
-        63.254,
-        125.688
+        89.563,
+        88.942,
+        61.804,
+        126.814
       ]
     },
     {
@@ -879,15 +879,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1352,
+        "transparentPixels": 1348,
         "opaquePixels": 1349,
-        "partialAlphaPixels": 499
+        "partialAlphaPixels": 503
       },
       "meanRgba": [
-        93.372,
-        90.737,
-        63.655,
-        127.237
+        88.007,
+        88.332,
+        61.203,
+        126.926
       ]
     },
     {
@@ -899,15 +899,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1353,
+        "transparentPixels": 1356,
         "opaquePixels": 1350,
-        "partialAlphaPixels": 497
+        "partialAlphaPixels": 494
       },
       "meanRgba": [
-        88.512,
-        88.339,
-        61.698,
-        127.819
+        78.303,
+        83.331,
+        57.132,
+        127.517
       ]
     },
     {
@@ -919,15 +919,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1375,
-        "opaquePixels": 1338,
-        "partialAlphaPixels": 487
+        "transparentPixels": 1365,
+        "opaquePixels": 1342,
+        "partialAlphaPixels": 493
       },
       "meanRgba": [
-        99.357,
-        94.074,
-        66.329,
-        126.002
+        93.031,
+        90.823,
+        63.274,
+        126.34
       ]
     },
     {
@@ -939,15 +939,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1363,
-        "opaquePixels": 1334,
-        "partialAlphaPixels": 503
+        "transparentPixels": 1362,
+        "opaquePixels": 1341,
+        "partialAlphaPixels": 497
       },
       "meanRgba": [
-        87.709,
-        87.927,
-        61.205,
-        126.343
+        80.041,
+        83.534,
+        57.85,
+        126.54
       ]
     },
     {
@@ -959,15 +959,15 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1361,
-        "opaquePixels": 1343,
-        "partialAlphaPixels": 496
+        "transparentPixels": 1372,
+        "opaquePixels": 1346,
+        "partialAlphaPixels": 482
       },
       "meanRgba": [
-        93.522,
-        91.112,
-        63.665,
-        126.627
+        73.728,
+        80.265,
+        55.111,
+        126.237
       ]
     },
     {
@@ -979,21 +979,21 @@
         40
       ],
       "alpha": {
-        "transparentPixels": 1361,
-        "opaquePixels": 1340,
-        "partialAlphaPixels": 499
+        "transparentPixels": 1355,
+        "opaquePixels": 1342,
+        "partialAlphaPixels": 503
       },
       "meanRgba": [
-        77.937,
-        82.658,
-        57.014,
-        126.816
+        73.705,
+        80.541,
+        55.258,
+        127.398
       ]
     }
   ],
   "pathTransitionSource": {
-    "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v3-alpha.png",
-    "sha256": "e743ff0d5148ad2db7e3c2c2c32a937726a3d5692a932264f1e6f1df7dd2ee46",
+    "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-path-edge-autotile-v4-alpha.png",
+    "sha256": "e982ced8079e69816081726fc0153263f57213e6ff73d1418e4d0576630213d0",
     "dimensions": [
       1776,
       1776
@@ -1025,8 +1025,8 @@
     ]
   },
   "plazaTransitionSource": {
-    "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v3-alpha.png",
-    "sha256": "ecc920504daee6477b53dc1bbf2b8a1d454012cd3e56a26dc93db061774c09cb",
+    "path": "client/godot/assets/maps/firebud_region_visual_v2/source/processed/firebud-plaza-edge-autotile-v4-alpha.png",
+    "sha256": "ebe90e6ab7eaf2d29296a30a9b4e84521c9090d3b8958b35a69c4bffb81a8b40",
     "dimensions": [
       1776,
       1776

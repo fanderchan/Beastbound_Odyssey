@@ -21,16 +21,16 @@ SEMANTICS_PATH = (
     BUNDLE_ROOT / "source/processed/firebud-semantic-variants-v1-alpha.png"
 )
 TRANSITIONS_PATH = (
-    BUNDLE_ROOT / "source/processed/firebud-path-edge-autotile-v3-alpha.png"
+    BUNDLE_ROOT / "source/processed/firebud-path-edge-autotile-v4-alpha.png"
 )
 PLAZA_TRANSITIONS_PATH = (
-    BUNDLE_ROOT / "source/processed/firebud-plaza-edge-autotile-v3-alpha.png"
+    BUNDLE_ROOT / "source/processed/firebud-plaza-edge-autotile-v4-alpha.png"
 )
 PRE_REWORK_TRANSITIONS_PATH = (
-    BUNDLE_ROOT / "source/processed/firebud-path-edge-autotile-v2-alpha.png"
+    BUNDLE_ROOT / "source/processed/firebud-path-edge-autotile-v3-alpha.png"
 )
 PRE_REWORK_PLAZA_TRANSITIONS_PATH = (
-    BUNDLE_ROOT / "source/processed/firebud-plaza-edge-autotile-v2-alpha.png"
+    BUNDLE_ROOT / "source/processed/firebud-plaza-edge-autotile-v3-alpha.png"
 )
 LEGACY_TRANSITIONS_PATH = (
     BUNDLE_ROOT / "source/processed/firebud-path-edge-transitions-v1-alpha.png"
@@ -39,10 +39,10 @@ EXPECTED_ATLAS_SHA256 = (
     "991e8c2010ade24738b8475db0549fe9dadb38874afc96ae5490a344c0638265"
 )
 EXPECTED_TRANSITION_ATLAS_SHA256 = (
-    "69483595ceacda974dccd08f541354616d9447c95b49dd08cf6e5d8f95441583"
+    "b540dd3fafe56fd70f2d247d12113fbbe38f1f2b575be79f3d86854c6112d801"
 )
 EXPECTED_PATH_AND_PLAZA_TRANSITION_ATLAS_SHA256 = (
-    "a86cb47204e6446f289d7517e623910c92228b40ff5c97dfc4c93a89765cbb85"
+    "a8a0c29837da41e7267d5c1d355373227aad5ddc9625b5a5f0aa4071d1bb0ed3"
 )
 
 SPEC = importlib.util.spec_from_file_location("build_firebud_ground_atlas_v4", TOOL_PATH)
@@ -187,13 +187,13 @@ class BuildFirebudGroundAtlasV4Test(unittest.TestCase):
                 entry = entries[tile_id]
                 self.assertGreater(entry["alpha"]["opaquePixels"], 0)
                 self.assertGreater(entry["alpha"]["partialAlphaPixels"], 0)
-                # The v3 all-edge variants deliberately admit substantially more
+                # The v4 all-edge variants deliberately admit substantially more
                 # meadow into the stone footprint.  Keep a honey-stone colour floor
                 # without rejecting the intended broad transition at 80x40.
                 self.assertGreater(entry["meanRgba"][0], 70.0)
                 self.assertGreater(entry["meanRgba"][1], 75.0)
 
-    def test_reworked_transitions_survive_eighty_by_forty_downsampling(self) -> None:
+    def test_reauthored_low_frequency_transitions_survive_downsampling(self) -> None:
         old_path = _grass_mask_coverages(
             PRE_REWORK_TRANSITIONS_PATH,
             saturation=0.76,
@@ -215,19 +215,19 @@ class BuildFirebudGroundAtlasV4Test(unittest.TestCase):
             brightness=0.80,
         )
 
-        self.assertGreaterEqual(min(current_path), 0.08)
-        self.assertGreaterEqual(statistics.median(current_path), 0.15)
-        self.assertLessEqual(max(current_path), 0.50)
+        self.assertGreaterEqual(min(current_path), 0.14)
+        self.assertGreaterEqual(statistics.median(current_path), 0.29)
+        self.assertLessEqual(max(current_path), 0.48)
         self.assertGreater(
             statistics.median(current_path),
-            statistics.median(old_path) + 0.14,
+            statistics.median(old_path) + 0.12,
         )
-        self.assertGreaterEqual(min(current_plaza), 0.12)
-        self.assertGreaterEqual(statistics.median(current_plaza), 0.24)
-        self.assertLessEqual(max(current_plaza), 0.55)
+        self.assertGreaterEqual(min(current_plaza), 0.13)
+        self.assertGreaterEqual(statistics.median(current_plaza), 0.30)
+        self.assertLessEqual(max(current_plaza), 0.60)
         self.assertGreater(
             statistics.median(current_plaza),
-            statistics.median(old_plaza) + 0.10,
+            statistics.median(old_plaza) + 0.04,
         )
 
     def test_legacy_four_single_edge_sheet_fails_closed(self) -> None:

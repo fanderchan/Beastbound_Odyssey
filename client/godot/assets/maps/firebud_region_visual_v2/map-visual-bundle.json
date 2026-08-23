@@ -287,6 +287,100 @@
           1774,
           887
         ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v4-row-1.png",
+        "sha256": "9fae804f8f5abc4ab1ea030b204220920a73247d507db7164920415ae9af8e6c",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v4-row-2.png",
+        "sha256": "01854c30908746f7c2b3bce7e8e1dc0ec631ca54dcce15e35965a8b969ba66a1",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v4-row-3.png",
+        "sha256": "d6baf8158fe242418e11f55e2b022c68606397d1b1e7a8445078cf48696fabf1",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-path-edge-autotile-v4-row-4.png",
+        "sha256": "8cce511403ff9b3111a480400373e13acec0316d35c38da2627f628c9f7ccfd6",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v4-row-1-pass-1.png",
+        "sha256": "0db8b03b2030a1a8db16334309f8bc634d2d70da4a016af1bd321f2a59a7d78c",
+        "dimensions": [
+          1774,
+          887
+        ],
+        "acceptedForRuntime": false,
+        "lineageOnly": true
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v4-row-1.png",
+        "sha256": "90ef40fbfcb982ede58529f730f6144f89c3f80f6f117c313ed9142dec687e24",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v4-row-2-pass-1.png",
+        "sha256": "9b1d508a3f846f9bacfc7670daa3b4ff7bf6e02ed4fc6439df48515a60763af6",
+        "dimensions": [
+          1774,
+          887
+        ],
+        "acceptedForRuntime": false,
+        "lineageOnly": true
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v4-row-2.png",
+        "sha256": "7d6f9187289171621a0f53dba2c493f53ff677fe2e7d7af12ce01de87ed60739",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v4-row-3.png",
+        "sha256": "6cb5e312e402c2093ef1a177e144efe036f6839e4b8c386d52f6bb9563a4b874",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v4-row-4-pass-1.png",
+        "sha256": "e6e2a2168ef31e562c9d837ee2bd21f7e6947290592187eb2e577116433402d0",
+        "dimensions": [
+          1774,
+          887
+        ],
+        "acceptedForRuntime": false,
+        "lineageOnly": true
+      },
+      {
+        "path": "source/raw/firebud-plaza-edge-autotile-v4-row-4.png",
+        "sha256": "d5c6142dea2a2f40bc56b670079c4acf618f58ddcb2f181269e3601af38927c4",
+        "dimensions": [
+          1774,
+          887
+        ]
       }
     ],
     "buildArtifacts": [
@@ -332,7 +426,7 @@
       },
       {
         "path": "source/processed/firebud-ground-materials-v4-build-manifest.json",
-        "sha256": "178840ca8aa7afe45ca0d68fb0d5a2680d7f1a5afd00bf35f243ad0d433712de"
+        "sha256": "db01365f5c8b0ce62c4a4d04ada1e5524e0bc207e7ed1008a3fef1fd54031393"
       },
       {
         "path": "source/processed/firebud-ground-sheet-v3-combined-12tiles.png",
@@ -595,6 +689,94 @@
       {
         "path": "source/processed/firebud-plaza-edge-autotile-v3-assembly-manifest.json",
         "sha256": "6c72cf130b366a330873ce881a593fab222aa6053e312c3ade179cdef41eb378"
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v4-row-1-alpha.png",
+        "sha256": "060ed245049a14019103753f056742ff05e6dcd1df11a1d1fd223fd1a59b86a8",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v4-row-2-alpha.png",
+        "sha256": "af48c41a8a7c4a2f1c0ad2a74da07f4dbb16ab3112fbd9d6583ce317decdbf42",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v4-row-3-alpha.png",
+        "sha256": "ccb5aa56073fe19391fd0b4ef4ea1f47ceaf34346356f8ad835481b34f7c7b6a",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v4-row-4-alpha.png",
+        "sha256": "46582eb98f4f5eb2f6f83d1f0331b180432e17e1b83b7c86ef7346762825444c",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v4-alpha.png",
+        "sha256": "e982ced8079e69816081726fc0153263f57213e6ff73d1418e4d0576630213d0",
+        "dimensions": [
+          1776,
+          1776
+        ]
+      },
+      {
+        "path": "source/processed/firebud-path-edge-autotile-v4-assembly-manifest.json",
+        "sha256": "3093296cc2c7f7621dedeed986570c6458246e991254ab11be1e717c6e3c8699"
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v4-row-1-alpha.png",
+        "sha256": "83ee5edd029df93010cad2f32ebf7ab071017f3ce741fc044fb401e64ab02cae",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v4-row-2-alpha.png",
+        "sha256": "734258ec00d001ff3ebb27a2018c921c2ed1cd0b77db9444e2b9f57af4121da5",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v4-row-3-alpha.png",
+        "sha256": "ee54d4777e823854c452996bfc0e5a783e7e04a373c8864066fb05b346b41d53",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v4-row-4-alpha.png",
+        "sha256": "1f9c0a0c84c279741a3fe8a3dfdb5a2766fcd3c5da6e0174e1d9231066e57620",
+        "dimensions": [
+          1774,
+          887
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v4-alpha.png",
+        "sha256": "ebe90e6ab7eaf2d29296a30a9b4e84521c9090d3b8958b35a69c4bffb81a8b40",
+        "dimensions": [
+          1776,
+          1776
+        ]
+      },
+      {
+        "path": "source/processed/firebud-plaza-edge-autotile-v4-assembly-manifest.json",
+        "sha256": "6fcdfbfe28b3f6b2d872b3a8db17d41637aa4885b45728f9603dd739ff45cf62"
       }
     ],
     "promptFiles": [
@@ -657,16 +839,20 @@
       {
         "path": "source/prompts/firebud-surface-autotile-v3.md",
         "sha256": "18a12f449186bed24c8835d77586b08ef2827114153ac88520934a3566313428"
+      },
+      {
+        "path": "source/prompts/firebud-surface-autotile-v4.md",
+        "sha256": "539b293f24f71d4450bb5ea87aa6d8b573f14b1603be6c499e8be27e72e5900b"
       }
     ],
     "provenance": {
       "path": "source/provenance.json",
-      "sha256": "6a3ff1d8f4d3a4ccddf8792a56b36bfe1ea8386115573df058b358024bb9a996"
+      "sha256": "21c5f82ff678f8d04d72a807c31b1cefd1168ab0083e69e5086d56abd7f8bd82"
     }
   },
   "groundAtlas": {
     "path": "runtime/ground/atlas.png",
-    "sha256": "a86cb47204e6446f289d7517e623910c92228b40ff5c97dfc4c93a89765cbb85",
+    "sha256": "a8a0c29837da41e7267d5c1d355373227aad5ddc9625b5a5f0aa4071d1bb0ed3",
     "dimensions": [
       320,
       440
@@ -1978,7 +2164,13 @@
     }
   ],
   "evidence": {
-    "dressedReference": {
+    "dressedReference": null,
+    "layeredPreview": null,
+    "runtimeScreenshots": [],
+    "computerUseReport": null,
+    "collisionAudit": null,
+    "performanceReport": null,
+    "supersededDressedReference": {
       "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
       "sha256": "88f1411f3781a79e312315d6d1d1bde6bdcc914baa38b998aea33aa1782b5965",
       "dimensions": [
@@ -1987,7 +2179,7 @@
       ],
       "alphaMode": "opaque"
     },
-    "layeredPreview": {
+    "supersededLayeredPreview": {
       "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
       "sha256": "50866c5681b585bf83229f1c287a18f84a50d81d8cec496e30a83b5ff68007cc",
       "dimensions": [
@@ -1996,7 +2188,7 @@
       ],
       "alphaMode": "opaque"
     },
-    "runtimeScreenshots": [
+    "supersededRuntimeScreenshots": [
       {
         "mapId": "firebud_training_yard",
         "mode": "idle",
@@ -2168,219 +2360,17 @@
         }
       }
     ],
-    "computerUseReport": {
+    "supersededComputerUseReport": {
       "path": "evidence/computer-use-review.json",
       "sha256": "5e293878cf70f121f0e6c3e694c246f9a362b1acaeaca9d30e3190f94e92c613"
     },
-    "collisionAudit": {
+    "supersededCollisionAudit": {
       "path": "evidence/collision-audit.json",
       "sha256": "ec794b32b75599b00caadb48f117b0222c2442e3925f27815abe6bab2dd1a889"
     },
-    "performanceReport": {
-      "path": "evidence/performance-report.json",
-      "sha256": "b9ae1c47590e5e231d2e533c85de0807b16342b07c2fb6d88ee10e2f7d5ba5b2"
-    },
-    "supersededDressedReference": {
-      "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
-      "sha256": "ec3097b99ded84d4cfbfe413f252654c8fe43af32790e5b4de78b840349247a5",
-      "dimensions": [
-        1280,
-        720
-      ],
-      "alphaMode": "opaque"
-    },
-    "supersededLayeredPreview": {
-      "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
-      "sha256": "380376878d8b4c55afde488a9f456ccda9b2082a8ea6ab2c96d2e4ee47ae8fa8",
-      "dimensions": [
-        1280,
-        720
-      ],
-      "alphaMode": "opaque"
-    },
-    "supersededRuntimeScreenshots": [
-      {
-        "mapId": "firebud_training_yard",
-        "mode": "idle",
-        "image": {
-          "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
-          "sha256": "380376878d8b4c55afde488a9f456ccda9b2082a8ea6ab2c96d2e4ee47ae8fa8",
-          "dimensions": [
-            1280,
-            720
-          ],
-          "alphaMode": "opaque"
-        },
-        "captureReport": {
-          "path": "evidence/runtime-actions/firebud_training_yard/pointer-capture.json",
-          "sha256": "830a3a2b4d04d5d1f1a3228642d3d284010c9afd0ddf3a1513de9dab69587b55"
-        }
-      },
-      {
-        "mapId": "firebud_training_yard",
-        "mode": "moving",
-        "image": {
-          "path": "evidence/runtime-actions/firebud_training_yard/movement_path.png",
-          "sha256": "533ba8938f7b0064ca95d41bcbeba303006156642bd02b78604e681905dd85ca",
-          "dimensions": [
-            1280,
-            720
-          ],
-          "alphaMode": "opaque"
-        },
-        "captureReport": {
-          "path": "evidence/runtime-actions/firebud_training_yard/movement_path-capture.json",
-          "sha256": "062d94940cb23fa2980a9130546235c4f0e405ccf4cb342009de8e673b7b9ecc"
-        }
-      },
-      {
-        "mapId": "firebud_training_yard",
-        "mode": "moving",
-        "image": {
-          "path": "evidence/runtime-actions/firebud_training_yard/warp.png",
-          "sha256": "1fce54124434e53a5e9579a8949a173498ba19c04b154995c6e49a11482c368d",
-          "dimensions": [
-            1280,
-            720
-          ],
-          "alphaMode": "opaque"
-        },
-        "captureReport": {
-          "path": "evidence/runtime-actions/firebud_training_yard/warp-capture.json",
-          "sha256": "f9f1aeec30063fd5ef860080b9d91a35e914aaf25c3b314f25e43ce2a5542d2b"
-        }
-      },
-      {
-        "mapId": "firebud_training_yard",
-        "mode": "moving",
-        "image": {
-          "path": "evidence/runtime-actions/firebud_training_yard/collision.png",
-          "sha256": "ae0c7e59fd2c488561e6b35b80b98b4a523e42be2efb22936dd5eb73cddeea9c",
-          "dimensions": [
-            1280,
-            720
-          ],
-          "alphaMode": "opaque"
-        },
-        "captureReport": {
-          "path": "evidence/runtime-actions/firebud_training_yard/collision-capture.json",
-          "sha256": "f8f958cd1a82a707c21e8766481efb12c407f4e5628c2b1b9bce9d2b25762da1"
-        }
-      },
-      {
-        "mapId": "firebud_training_yard",
-        "mode": "moving",
-        "image": {
-          "path": "evidence/runtime-actions/firebud_training_yard/occlusion.png",
-          "sha256": "1c1ac74cf6af001f20077fa9158e7c6d252c0731d31a4b4d4821f22a61471166",
-          "dimensions": [
-            1280,
-            720
-          ],
-          "alphaMode": "opaque"
-        },
-        "captureReport": {
-          "path": "evidence/runtime-actions/firebud_training_yard/occlusion-capture.json",
-          "sha256": "703c3c127c48a39fc53b7f90678cc9187bd6fa8d2864158939519cfc8bb490c5"
-        }
-      },
-      {
-        "mapId": "firebud_village_gate",
-        "mode": "idle",
-        "image": {
-          "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
-          "sha256": "ec3097b99ded84d4cfbfe413f252654c8fe43af32790e5b4de78b840349247a5",
-          "dimensions": [
-            1280,
-            720
-          ],
-          "alphaMode": "opaque"
-        },
-        "captureReport": {
-          "path": "evidence/runtime-actions/firebud_village_gate/pointer-capture.json",
-          "sha256": "8b7f896c357b38c18042c77a24f8f8b0d462b766e7448ad3e916b19ed2c6661b"
-        }
-      },
-      {
-        "mapId": "firebud_village_gate",
-        "mode": "moving",
-        "image": {
-          "path": "evidence/runtime-actions/firebud_village_gate/movement_path.png",
-          "sha256": "afa972f5448a5d89a76a38ce2c956cd0c853f2c5905cb18627ae39cae72ddb26",
-          "dimensions": [
-            1280,
-            720
-          ],
-          "alphaMode": "opaque"
-        },
-        "captureReport": {
-          "path": "evidence/runtime-actions/firebud_village_gate/movement_path-capture.json",
-          "sha256": "6a178ac58962ab661cbd6c3753783875b72fa880516d880a8dfc67e13d6cf6a8"
-        }
-      },
-      {
-        "mapId": "firebud_village_gate",
-        "mode": "moving",
-        "image": {
-          "path": "evidence/runtime-actions/firebud_village_gate/warp.png",
-          "sha256": "11d1e9c84f8e4a5512c9f448b524ffbec7544ad5e4d9b1eccbee1bb69bb8652f",
-          "dimensions": [
-            1280,
-            720
-          ],
-          "alphaMode": "opaque"
-        },
-        "captureReport": {
-          "path": "evidence/runtime-actions/firebud_village_gate/warp-capture.json",
-          "sha256": "3dc5977d5b8d0b3bf92555e046c1d02b8afe9b593023273631b4b323bd376507"
-        }
-      },
-      {
-        "mapId": "firebud_village_gate",
-        "mode": "moving",
-        "image": {
-          "path": "evidence/runtime-actions/firebud_village_gate/collision.png",
-          "sha256": "45146e180ebce9b785dc1522cbd2fe17064cf7e916bbf379bf683c748015cf2e",
-          "dimensions": [
-            1280,
-            720
-          ],
-          "alphaMode": "opaque"
-        },
-        "captureReport": {
-          "path": "evidence/runtime-actions/firebud_village_gate/collision-capture.json",
-          "sha256": "f7c64966d4573da9cf4b85be25db6bedd7cc1a45e0b62ca020d8b096bcaa5eed"
-        }
-      },
-      {
-        "mapId": "firebud_village_gate",
-        "mode": "moving",
-        "image": {
-          "path": "evidence/runtime-actions/firebud_village_gate/occlusion.png",
-          "sha256": "172eb42bfeb3e22fe3d82b162f0cdbdae5c5db4f5ace3b2fe080afd841e8d8fc",
-          "dimensions": [
-            1280,
-            720
-          ],
-          "alphaMode": "opaque"
-        },
-        "captureReport": {
-          "path": "evidence/runtime-actions/firebud_village_gate/occlusion-capture.json",
-          "sha256": "130238153d4e7116cc8b6b7730b7bacf828a336ac603f0ead782b85db226262b"
-        }
-      }
-    ],
-    "supersededComputerUseReport": {
-      "path": "evidence/computer-use-review.json",
-      "sha256": "f26afdb5c96ddbf2dd3b2e57cfeab941fce0821bffadd7c29046917fb47340f4"
-    },
-    "supersededCollisionAudit": {
-      "path": "evidence/collision-audit.json",
-      "sha256": "419e3ac33e913811b2bffe555244a6c1dcb830bfb958c35fc8e174f0cf2dcf0a"
-    },
     "supersededPerformanceReport": {
       "path": "evidence/performance-report.json",
-      "sha256": "44e900afa9fe9592383dc77c93ae3b74ffa995d1042e3f89b05241e17f50cf19"
+      "sha256": "b9ae1c47590e5e231d2e533c85de0807b16342b07c2fb6d88ee10e2f7d5ba5b2"
     },
     "ownerAcceptance": null
   }
