@@ -13,7 +13,7 @@ const MAIN_PROMENADE_X_MAX := 10
 const REVIEW_ZOOM := 1.55
 const REVIEW_ANCHOR := Vector2(390, 360)
 const REVIEW_SAFE_RECT := Rect2(8, 8, 955, 486)
-const MAX_INITIAL_SAFE_NPC_FOOTPOINTS := 5
+const MAX_INITIAL_SAFE_NPC_FOOTPOINTS := 6
 
 const EXPECTED_NPCS := {
 	"village_guard": {
@@ -22,17 +22,17 @@ const EXPECTED_NPCS := {
 		"appearanceId": "npc_village_guard_m_v1",
 	},
 	"firebud_welfare_clerk": {
-		"cell": Vector2i(7, 8),
+		"cell": Vector2i(6, 9),
 		"facing": "south",
 		"appearanceId": "npc_welfare_clerk_f_v1",
 	},
 	"firebud_pet_mm_stage2_keeper": {
-		"cell": Vector2i(11, 11),
+		"cell": Vector2i(11, 14),
 		"facing": "south",
 		"appearanceId": "npc_pet_mm_stage2_keeper_f_v1",
 	},
 	"firebud_shopkeeper": {
-		"cell": Vector2i(3, 14),
+		"cell": Vector2i(5, 16),
 		"facing": "south",
 		"appearanceId": "npc_item_shopkeeper_f_v1",
 	},
@@ -52,12 +52,12 @@ const EXPECTED_NPCS := {
 		"appearanceId": "npc_bank_keeper_f_v1",
 	},
 	"firebud_rebirth_mentor": {
-		"cell": Vector2i(12, 13),
+		"cell": Vector2i(9, 14),
 		"facing": "south",
 		"appearanceId": "npc_player_rebirth_mentor_f_v1",
 	},
 	"firebud_pet_mm_trial_mentor": {
-		"cell": Vector2i(14, 11),
+		"cell": Vector2i(8, 12),
 		"facing": "south",
 		"appearanceId": "npc_pet_mm_trial_mentor_m_v1",
 	},
@@ -72,7 +72,7 @@ const EXPECTED_NPCS := {
 		"appearanceId": "npc_pet_skill_trainer_m_v1",
 	},
 	"firebud_storyteller": {
-		"cell": Vector2i(14, 15),
+		"cell": Vector2i(8, 17),
 		"facing": "north",
 		"appearanceId": "npc_storyteller_m_v1",
 	},

@@ -6,6 +6,7 @@ const DEFAULT_OUTER_MARGIN_PX := 8.0
 const DEFAULT_BLOCKER_MARGIN_PX := 36.0
 const DEFAULT_EDGE_SNAP_PX := 96.0
 const DEFAULT_INTERACTION_CLEARANCE_PX := 112.0
+const DEFAULT_VISUAL_GAP_PX := 12.0
 
 
 static func safe_viewport_rect(
@@ -153,6 +154,303 @@ static func horizontal_anchor_avoiding_rects(
 			best_overlap_area = overlap_area
 			best_distance = distance
 	return best_anchor
+
+
+static func composition_anchor_avoiding_rects(
+	base_anchor: Vector2,
+	safe_rect: Rect2,
+	blocking_hud_rects: Array[Rect2],
+	subject_rects_at_base: Array[Rect2],
+	viewport_rect: Rect2,
+	interaction_clearance_px: float = DEFAULT_INTERACTION_CLEARANCE_PX,
+	visual_gap_px: float = DEFAULT_VISUAL_GAP_PX
+) -> Vector2:
+	if safe_rect.size.x <= 0.0 or safe_rect.size.y <= 0.0:
+		return base_anchor
+	var clearance := maxf(0.0, interaction_clearance_px)
+	var clearance_x := minf(clearance, maxf(0.0, safe_rect.size.x * 0.5 - 1.0))
+	var clearance_y := minf(clearance, maxf(0.0, safe_rect.size.y * 0.5 - 1.0))
+	var min_anchor := safe_rect.position + Vector2(clearance_x, clearance_y)
+	var max_anchor := safe_rect.end - Vector2(clearance_x, clearance_y)
+	var clamped_base := Vector2(
+		clampf(base_anchor.x, min_anchor.x, max_anchor.x),
+		clampf(base_anchor.y, min_anchor.y, max_anchor.y)
+	)
+	if blocking_hud_rects.is_empty() or subject_rects_at_base.is_empty():
+		return clamped_base
+
+	var blocked_rects: Array[Rect2] = []
+	var gap := maxf(0.0, visual_gap_px)
+	for blocker in blocking_hud_rects:
+		if blocker.size.x > 0.0 and blocker.size.y > 0.0:
+			blocked_rects.append(blocker.grow(gap))
+	if blocked_rects.is_empty():
+		return clamped_base
+
+	var composition_viewport := viewport_rect
+	if composition_viewport.size.x > gap * 2.0 and composition_viewport.size.y > gap * 2.0:
+		composition_viewport = composition_viewport.grow(-gap)
+	var composition_min_anchor := min_anchor
+	var composition_max_anchor := max_anchor
+	var tall_left_blocker := false
+	var tall_right_blocker := false
+	var viewport_center := composition_viewport.get_center()
+	for blocked in blocked_rects:
+		if blocked.size.y <= blocked.size.x:
+			continue
+		if blocked.get_center().x < viewport_center.x:
+			tall_left_blocker = true
+		else:
+			tall_right_blocker = true
+	if tall_right_blocker and not tall_left_blocker:
+		composition_max_anchor.x = minf(composition_max_anchor.x, clamped_base.x)
+	elif tall_left_blocker and not tall_right_blocker:
+		composition_min_anchor.x = maxf(composition_min_anchor.x, clamped_base.x)
+	var x_candidates := _composition_axis_candidates(
+		0,
+		clamped_base,
+		composition_min_anchor,
+		composition_max_anchor,
+		blocked_rects,
+		subject_rects_at_base,
+		composition_viewport
+	)
+	var y_candidates := _composition_axis_candidates(
+		1,
+		clamped_base,
+		composition_min_anchor,
+		composition_max_anchor,
+		blocked_rects,
+		subject_rects_at_base,
+		composition_viewport
+	)
+	var best_anchor := clamped_base
+	var best_score := _composition_score(
+		best_anchor,
+		clamped_base,
+		blocked_rects,
+		subject_rects_at_base,
+		composition_viewport
+	)
+	# Candidate coordinates come only from a visible subject touching the inward
+	# edge of a fixed HUD or viewport boundary. The resulting grid is small for
+	# the formal 14-NPC scene, deterministic, and avoids coordinate-descent traps
+	# where clearing the bottom bar can pull a right-edge NPC under the task HUD.
+	for candidate_x in x_candidates:
+		for candidate_y in y_candidates:
+			var candidate_anchor := Vector2(candidate_x, candidate_y)
+			var score := _composition_score(
+				candidate_anchor,
+				clamped_base,
+				blocked_rects,
+				subject_rects_at_base,
+				composition_viewport
+			)
+			if _composition_score_is_better(score, best_score):
+				best_anchor = candidate_anchor
+				best_score = score
+	return best_anchor
+
+
+static func opaque_world_rect(
+	command: Dictionary,
+	opaque_rect_cache: Dictionary
+) -> Rect2:
+	var draw_rect_value: Variant = command.get("drawRect")
+	var texture_value: Variant = command.get("texture")
+	if not (draw_rect_value is Rect2) or not (texture_value is Texture2D):
+		return Rect2()
+	var draw_rect := draw_rect_value as Rect2
+	var texture := texture_value as Texture2D
+	var cache_key := texture.resource_path
+	if cache_key == "":
+		cache_key = str(texture.get_rid())
+	var opaque_rect := Rect2i()
+	if opaque_rect_cache.has(cache_key):
+		opaque_rect = opaque_rect_cache.get(cache_key, Rect2i()) as Rect2i
+	else:
+		var image: Image = texture.get_image()
+		if image != null and not image.is_empty():
+			opaque_rect = image.get_used_rect()
+		opaque_rect_cache[cache_key] = opaque_rect
+	if opaque_rect.size.x <= 0 or opaque_rect.size.y <= 0:
+		return draw_rect
+	var texture_size := Vector2(texture.get_size())
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return draw_rect
+	return Rect2(
+		draw_rect.position + Vector2(
+			float(opaque_rect.position.x) / texture_size.x * draw_rect.size.x,
+			float(opaque_rect.position.y) / texture_size.y * draw_rect.size.y
+		),
+		Vector2(
+			float(opaque_rect.size.x) / texture_size.x * draw_rect.size.x,
+			float(opaque_rect.size.y) / texture_size.y * draw_rect.size.y
+		)
+	)
+
+
+static func _composition_axis_candidates(
+	axis: int,
+	base_anchor: Vector2,
+	min_anchor: Vector2,
+	max_anchor: Vector2,
+	blocked_rects: Array[Rect2],
+	subject_rects_at_base: Array[Rect2],
+	viewport_rect: Rect2
+) -> Array[float]:
+	var min_value := min_anchor.x if axis == 0 else min_anchor.y
+	var max_value := max_anchor.x if axis == 0 else max_anchor.y
+	var base_value := base_anchor.x if axis == 0 else base_anchor.y
+	var candidates: Array[float] = [base_value]
+	var candidate_keys := {int(roundf(base_value * 100.0)): true}
+	var viewport_center := viewport_rect.get_center()
+	for rect in subject_rects_at_base:
+		if rect.size.x <= 0.0 or rect.size.y <= 0.0:
+			continue
+		for blocked in blocked_rects:
+			if axis == 1 and blocked.size.y > blocked.size.x:
+				# Tall edge panels have a single honest escape direction: inward on X.
+				# Moving the whole village above/below the task HUD hides services.
+				continue
+			var orthogonal_overlap := (
+				rect.end.y > blocked.position.y
+				and rect.position.y < blocked.end.y
+			) if axis == 0 else (
+				rect.end.x > blocked.position.x
+				and rect.position.x < blocked.end.x
+			)
+			if not orthogonal_overlap:
+				continue
+			var candidate := base_value
+			if axis == 0:
+				candidate += (
+					blocked.position.x - rect.end.x
+					if blocked.get_center().x >= viewport_center.x
+					else blocked.end.x - rect.position.x
+				)
+			else:
+				candidate += (
+					blocked.position.y - rect.end.y
+					if blocked.get_center().y >= viewport_center.y
+					else blocked.end.y - rect.position.y
+				)
+			_append_unique_candidate(
+				candidates,
+				candidate_keys,
+				clampf(candidate, min_value, max_value)
+			)
+		if viewport_rect.size.x <= 0.0 or viewport_rect.size.y <= 0.0:
+			continue
+		var visible := rect.intersection(viewport_rect)
+		if visible.size.x <= 0.0 or visible.size.y <= 0.0 or viewport_rect.encloses(rect):
+			continue
+		if axis == 0:
+			if rect.position.x < viewport_rect.position.x:
+				_append_unique_candidate(
+					candidates,
+					candidate_keys,
+					clampf(
+						base_anchor.x + viewport_rect.position.x - rect.position.x,
+						min_value,
+						max_value
+					)
+				)
+			if rect.end.x > viewport_rect.end.x:
+				_append_unique_candidate(
+					candidates,
+					candidate_keys,
+					clampf(
+						base_anchor.x + viewport_rect.end.x - rect.end.x,
+						min_value,
+						max_value
+					)
+				)
+		else:
+			if rect.position.y < viewport_rect.position.y:
+				_append_unique_candidate(
+					candidates,
+					candidate_keys,
+					clampf(
+						base_anchor.y + viewport_rect.position.y - rect.position.y,
+						min_value,
+						max_value
+					)
+				)
+			if rect.end.y > viewport_rect.end.y:
+				_append_unique_candidate(
+					candidates,
+					candidate_keys,
+					clampf(
+						base_anchor.y + viewport_rect.end.y - rect.end.y,
+						min_value,
+						max_value
+					)
+				)
+	return candidates
+
+
+static func _append_unique_candidate(
+	candidates: Array[float],
+	candidate_keys: Dictionary,
+	value: float
+) -> void:
+	var key := int(roundf(value * 100.0))
+	if candidate_keys.has(key):
+		return
+	candidate_keys[key] = true
+	candidates.append(value)
+
+
+static func _composition_score(
+	anchor: Vector2,
+	base_anchor: Vector2,
+	blocked_rects: Array[Rect2],
+	subject_rects_at_base: Array[Rect2],
+	viewport_rect: Rect2
+) -> Array[float]:
+	var shift := anchor - base_anchor
+	var overlap_count := 0.0
+	var overlap_area := 0.0
+	var clipped_count := 0.0
+	var visible_count := 0.0
+	for rect in subject_rects_at_base:
+		if rect.size.x <= 0.0 or rect.size.y <= 0.0:
+			continue
+		var shifted := Rect2(rect.position + shift, rect.size)
+		for blocked in blocked_rects:
+			var overlap := shifted.intersection(blocked)
+			if overlap.size.x <= 0.0 or overlap.size.y <= 0.0:
+				continue
+			overlap_count += 1.0
+			overlap_area += overlap.size.x * overlap.size.y
+		if viewport_rect.size.x <= 0.0 or viewport_rect.size.y <= 0.0:
+			continue
+		var visible := shifted.intersection(viewport_rect)
+		if visible.size.x <= 0.0 or visible.size.y <= 0.0:
+			continue
+		visible_count += 1.0
+		if not viewport_rect.encloses(shifted):
+			clipped_count += 1.0
+	return [
+		overlap_count,
+		overlap_area,
+		clipped_count,
+		-visible_count,
+		anchor.distance_squared_to(base_anchor),
+	]
+
+
+static func _composition_score_is_better(
+	candidate: Array[float],
+	current: Array[float]
+) -> bool:
+	for index in range(mini(candidate.size(), current.size())):
+		if candidate[index] < current[index] - 0.01:
+			return true
+		if candidate[index] > current[index] + 0.01:
+			return false
+	return false
 
 
 static func camera_center_for_anchor(

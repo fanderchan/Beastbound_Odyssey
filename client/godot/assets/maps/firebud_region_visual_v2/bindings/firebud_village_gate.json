@@ -106,11 +106,11 @@
     {
       "instanceId": "village_service_pavilion_blocked_cluster_01",
       "objectId": "firebud_service_pavilion",
-      "grid": [10, 5],
+      "grid": [11, 5],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[8, 4], [9, 4], [10, 5]]
+      "collisionFootprint": [[9, 4], [10, 4], [11, 5]]
     },
     {
       "instanceId": "village_ancient_tree_blocked_cluster_01",
@@ -178,11 +178,11 @@
     {
       "instanceId": "village_planter_blocked_cluster_02",
       "objectId": "firebud_low_planter",
-      "grid": [12, 20],
+      "grid": [11, 20],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[11, 20], [12, 20]]
+      "collisionFootprint": [[10, 20], [11, 20]]
     },
     {
       "instanceId": "village_honey_rocks_blocked_cluster_01",

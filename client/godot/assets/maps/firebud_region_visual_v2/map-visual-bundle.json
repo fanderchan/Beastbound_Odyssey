@@ -17,7 +17,7 @@
   ],
   "catalogContractCheck": {
     "path": "evidence/catalog-contract-check.json",
-    "sha256": "3f09be532a8fd9df7c43fda803af4b2a3530fa5e8ba1e3e0eac700bd4440a6eb"
+    "sha256": "b997d23bca7235d487af8139d0e4593f16902fca34efd55767e439e46375e9f9"
   },
   "source": {
     "origin": "AI-generated original",
@@ -2159,7 +2159,7 @@
       "mapId": "firebud_village_gate",
       "binding": {
         "path": "bindings/firebud_village_gate.json",
-        "sha256": "0a97650b8a8781f4831881cbf99adbc76d3a2287bdd08ef7aeaf17a15fb33252"
+        "sha256": "571a65eaa75888488883c9a9b00cf2ba40ec17e1aefc408cabd06b7718f27afa"
       }
     }
   ],

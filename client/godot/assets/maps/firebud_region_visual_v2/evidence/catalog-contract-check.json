@@ -1,7 +1,7 @@
 {
 	"bindingHashes": {
 		"firebud_training_yard": "2775987fa144e2a7f337a03d871bcd835d176e9af7a5461024997a0e3aaed073",
-		"firebud_village_gate": "0a97650b8a8781f4831881cbf99adbc76d3a2287bdd08ef7aeaf17a15fb33252"
+		"firebud_village_gate": "571a65eaa75888488883c9a9b00cf2ba40ec17e1aefc408cabd06b7718f27afa"
 	},
 	"bundleId": "firebud_region_visual_v2",
 	"catalogSha256": "662fa235c072f295aed084f2163934cb69a41ec0f8083801649242b1c47dbc3f",
@@ -18,10 +18,10 @@
 		"unknownMapFailedClosed": true
 	},
 	"errors": [],
-	"generatedAtUtc": "2026-08-21T00:20:26Z",
+	"generatedAtUtc": "2026-08-23T15:22:23Z",
 	"mapDataHashes": {
 		"firebud_training_yard": "37279c76ff265927ef8eb042ed0b8460e34aa91687070aff14029307adc71c51",
-		"firebud_village_gate": "c27d3aff3791ececc7e0cf9ec952dd37361e23a358fa8b111d6939bc88f0fe05"
+		"firebud_village_gate": "0056603ae7b9b748858ec2d800a684b504af2a24c3dd9c4b7dd85436482dbc1f"
 	},
 	"maps": [
 		{
@@ -34,7 +34,7 @@
 			"groundDraws": 672,
 			"mapId": "firebud_village_gate",
 			"objects": 18,
-			"protectedCells": 227
+			"protectedCells": 221
 		}
 	],
 	"reportType": "beastbound.map_visual_catalog_contract",

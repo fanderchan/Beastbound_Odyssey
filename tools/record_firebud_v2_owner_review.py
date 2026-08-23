@@ -344,8 +344,10 @@ def _read_capture_report(
     else:
         for key, expected in {
             "taskHudVisible": True,
+            "bottomHudVisible": True,
             "playerInsideSafeRect": True,
             "playerClearOfTaskHud": True,
+            "playerClearOfFixedHud": True,
             "playerAtEffectiveAnchor": True,
             "taskHudOverlappingBlockingObjectIds": [],
         }.items():
@@ -365,6 +367,32 @@ def _read_capture_report(
                     f"cameraComposition.configuredAnchor={anchor!r}"
                 )
             if map_id == "firebud_village_gate":
+                for key in (
+                    "hudOverlappingNpcIds",
+                    "hudOverlappingKeyEnvironmentIds",
+                    "viewportClippedNpcIds",
+                    "viewportClippedKeyEnvironmentIds",
+                ):
+                    if camera_composition.get(key) != []:
+                        mismatches.append(
+                            f"cameraComposition.{key}="
+                            f"{camera_composition.get(key)!r}"
+                        )
+                if camera_composition.get("npcAlphaSubjectCount") != 14:
+                    mismatches.append(
+                        "cameraComposition.npcAlphaSubjectCount="
+                        f"{camera_composition.get('npcAlphaSubjectCount')!r}"
+                    )
+                if camera_composition.get("visibleNpcCount") != 14:
+                    mismatches.append(
+                        "cameraComposition.visibleNpcCount="
+                        f"{camera_composition.get('visibleNpcCount')!r}"
+                    )
+                if camera_composition.get("keyEnvironmentSubjectCount") != 7:
+                    mismatches.append(
+                        "cameraComposition.keyEnvironmentSubjectCount="
+                        f"{camera_composition.get('keyEnvironmentSubjectCount')!r}"
+                    )
                 nearest_warp = camera_composition.get("nearestWarp")
                 if (
                     not isinstance(nearest_warp, dict)

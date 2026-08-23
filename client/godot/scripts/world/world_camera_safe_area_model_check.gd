@@ -200,6 +200,46 @@ func _run() -> void:
 		"本来不与任务 HUD 相交的构图不得漂移",
 		errors
 	)
+	var bottom_hud := Rect2(665.0, 616.0, 597.0, 86.0)
+	var full_alpha_subjects: Array[Rect2] = [
+		Rect2(980.0, 250.0, 72.0, 150.0),
+		Rect2(850.0, 570.0, 72.0, 140.0),
+		Rect2(730.0, 170.0, 204.0, 205.0),
+		Rect2(180.0, 340.0, 60.0, 150.0),
+	]
+	var village_review_safe := Rect2(8.0, 8.0, 955.0, 486.0)
+	var composition_anchor := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects(
+		Vector2(390.0, 360.0),
+		village_review_safe,
+		[task_hud, bottom_hud],
+		full_alpha_subjects,
+		Rect2(Vector2.ZERO, REFERENCE_VIEWPORT)
+	)
+	var composition_shift := composition_anchor - Vector2(390.0, 360.0)
+	var shifted_subjects: Array[Rect2] = []
+	for subject in full_alpha_subjects:
+		shifted_subjects.append(Rect2(subject.position + composition_shift, subject.size))
+	_expect(
+		composition_anchor.x < 390.0 and composition_anchor.y < 360.0,
+		"完整 NPC alpha 同时争抢任务栏与底栏时必须二维收敛",
+		errors
+	)
+	_expect(
+		_rects_clear(shifted_subjects, [task_hud, bottom_hud]),
+		"二维构图后完整 NPC/关键环境轮廓不得落入任务栏或底栏",
+		errors
+	)
+	_expect(
+		WorldCameraSafeAreaModel.composition_anchor_avoiding_rects(
+			Vector2(390.0, 360.0),
+			village_review_safe,
+			[task_hud, bottom_hud],
+			[Rect2(420.0, 180.0, 180.0, 140.0)],
+			Rect2(Vector2.ZERO, REFERENCE_VIEWPORT)
+		).is_equal_approx(Vector2(390.0, 360.0)),
+		"完整轮廓本来远离固定 HUD 时不得制造镜头漂移",
+		errors
+	)
 
 	var report := {
 		"ok": errors.is_empty(),
@@ -217,6 +257,7 @@ func _run() -> void:
 		"zoomedAnchor": zoomed_anchor,
 		"landmarkSafeAnchorX": landmark_safe,
 		"nearbyLandmarkSafeAnchorX": nearby_landmark_safe,
+		"compositionAnchor": composition_anchor,
 	}
 	print("WORLD_CAMERA_SAFE_AREA_MODEL_CHECK: %s" % JSON.stringify(report))
 	quit(0 if errors.is_empty() else 1)
@@ -238,6 +279,14 @@ func _point_clear(point: Vector2, blockers: Array[Rect2], radius: float) -> bool
 	for blocker in blockers:
 		if blocker.intersects(probe):
 			return false
+	return true
+
+
+func _rects_clear(rects: Array[Rect2], blockers: Array[Rect2]) -> bool:
+	for rect in rects:
+		for blocker in blockers:
+			if rect.intersects(blocker):
+				return false
 	return true
 
 

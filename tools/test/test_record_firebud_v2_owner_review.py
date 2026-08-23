@@ -62,9 +62,23 @@ def _capture_report(*, map_id: str, mode: str) -> dict:
             "playerAtEffectiveAnchor": True,
             "taskHudVisible": True,
             "taskHudRect": [999.0, 13.0, 206.0, 465.0],
+            "bottomHudVisible": True,
+            "bottomHudRect": [665.0, 616.0, 597.0, 86.0],
+            "fixedHudBlockerCount": 4,
             "playerInsideSafeRect": True,
             "playerClearOfTaskHud": True,
+            "playerClearOfFixedHud": True,
             "taskHudOverlappingBlockingObjectIds": [],
+            "npcAlphaSubjectCount": 14,
+            "visibleNpcCount": 14,
+            "visibleNpcIds": ["village_guard"],
+            "hudOverlappingNpcIds": [],
+            "viewportClippedNpcIds": [],
+            "keyEnvironmentSubjectCount": 7,
+            "visibleKeyEnvironmentCount": 4,
+            "visibleKeyEnvironmentIds": ["village_trade_counter_blocked_cluster_01"],
+            "hudOverlappingKeyEnvironmentIds": [],
+            "viewportClippedKeyEnvironmentIds": [],
             "nearestWarp": {
                 "id": "warp_to_training_yard",
                 "cell": [2, 15],
@@ -220,12 +234,34 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
             path = Path(temp) / "capture.json"
             invalid_cases = (
                 ("taskHudVisible", False),
+                ("bottomHudVisible", False),
                 ("playerInsideSafeRect", False),
                 ("playerClearOfTaskHud", False),
+                ("playerClearOfFixedHud", False),
                 ("playerAtEffectiveAnchor", False),
                 ("taskHudOverlappingBlockingObjectIds", ["service_pavilion"]),
+                ("hudOverlappingNpcIds", ["firebud_doctor"]),
+                ("hudOverlappingKeyEnvironmentIds", ["service_pavilion"]),
+                ("viewportClippedNpcIds", ["firebud_stable_keeper"]),
+                ("viewportClippedKeyEnvironmentIds", ["ancient_tree"]),
             )
             for key, value in invalid_cases:
+                report = _capture_report(map_id="firebud_village_gate", mode="idle")
+                report["cameraComposition"][key] = value
+                path.write_text(json.dumps(report), encoding="utf-8")
+                with self.subTest(key=key):
+                    with self.assertRaises(TOOL.FirebudV2RecordingError):
+                        TOOL._read_capture_report(
+                            path,
+                            map_id="firebud_village_gate",
+                            mode="idle",
+                        )
+
+            for key, value in (
+                ("npcAlphaSubjectCount", 13),
+                ("visibleNpcCount", 13),
+                ("keyEnvironmentSubjectCount", 6),
+            ):
                 report = _capture_report(map_id="firebud_village_gate", mode="idle")
                 report["cameraComposition"][key] = value
                 path.write_text(json.dumps(report), encoding="utf-8")

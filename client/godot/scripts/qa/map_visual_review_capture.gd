@@ -4,6 +4,9 @@ const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
+const WorldCameraSafeAreaModel := preload(
+	"res://scripts/world/world_camera_safe_area_model.gd"
+)
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const ShowcaseProfile := preload(
 	"res://scripts/qa/map_visual_review_showcase_profile.gd"
@@ -313,10 +316,14 @@ func run(request: Dictionary) -> Dictionary:
 	report["cameraComposition"] = camera_composition
 	if not bool(camera_composition.get("taskHudVisible", false)):
 		errors.append("地图安全区取证不得隐藏右侧任务 HUD")
+	if not bool(camera_composition.get("bottomHudVisible", false)):
+		errors.append("地图安全区取证不得隐藏正常底栏 HUD")
 	if not bool(camera_composition.get("playerInsideSafeRect", false)):
 		errors.append("玩家没有落在 World HUD 安全区内")
 	if not bool(camera_composition.get("playerClearOfTaskHud", false)):
 		errors.append("玩家与右侧任务 HUD 相交")
+	if not bool(camera_composition.get("playerClearOfFixedHud", false)):
+		errors.append("玩家与固定 World HUD 相交")
 	if not bool(camera_composition.get("playerAtEffectiveAnchor", false)):
 		errors.append("玩家实际屏幕位置没有收敛到动态地标安全锚点")
 	var overlapping_objects := camera_composition.get(
@@ -328,6 +335,43 @@ func run(request: Dictionary) -> Dictionary:
 			"右侧任务 HUD 覆盖 blocking/interaction 地图物件：%s"
 			% ",".join(_string_array(overlapping_objects))
 		)
+	var overlapping_npcs := camera_composition.get(
+		"hudOverlappingNpcIds",
+		[]
+	) as Array
+	var requires_village_full_alpha_gate := (
+		str(prepared.get("bundleId", "")) == "firebud_region_visual_v2"
+		and map_id == "firebud_village_gate"
+	)
+	if requires_village_full_alpha_gate and not overlapping_npcs.is_empty():
+		errors.append(
+			"固定 HUD 覆盖完整 NPC alpha：%s"
+			% ",".join(_string_array(overlapping_npcs))
+		)
+	var overlapping_key_environment := camera_composition.get(
+		"hudOverlappingKeyEnvironmentIds",
+		[]
+	) as Array
+	if requires_village_full_alpha_gate and not overlapping_key_environment.is_empty():
+		errors.append(
+			"固定 HUD 覆盖关键环境 alpha：%s"
+			% ",".join(_string_array(overlapping_key_environment))
+		)
+	var clipped_npcs := camera_composition.get("viewportClippedNpcIds", []) as Array
+	if requires_village_full_alpha_gate and not clipped_npcs.is_empty():
+		errors.append(
+			"可见 NPC 完整 alpha 被视口边缘裁切：%s"
+			% ",".join(_string_array(clipped_npcs))
+		)
+	var clipped_key_environment := camera_composition.get(
+		"viewportClippedKeyEnvironmentIds",
+		[]
+	) as Array
+	if requires_village_full_alpha_gate and not clipped_key_environment.is_empty():
+		errors.append(
+			"可见关键环境 alpha 被视口边缘裁切：%s"
+			% ",".join(_string_array(clipped_key_environment))
+		)
 	if str(prepared.get("bundleId", "")) == "firebud_region_visual_v2":
 		var configured_anchor := camera_composition.get("configuredAnchor", []) as Array
 		if (
@@ -337,6 +381,12 @@ func run(request: Dictionary) -> Dictionary:
 		):
 			errors.append("Firebud v2 1280x720 没有应用冻结的 40/60 安全锚点")
 		if map_id == "firebud_village_gate":
+			if int(camera_composition.get("npcAlphaSubjectCount", 0)) != 14:
+				errors.append("村口完整 NPC alpha 门禁没有覆盖全部 14 名 NPC")
+			if int(camera_composition.get("visibleNpcCount", 0)) != 14:
+				errors.append("村口没有在同一安全画幅完整呈现全部 14 名 NPC")
+			if int(camera_composition.get("keyEnvironmentSubjectCount", 0)) != 7:
+				errors.append("村口关键环境 alpha 门禁没有覆盖冻结的 7 个物件")
 			var nearby_warp := camera_composition.get("nearestWarp", {}) as Dictionary
 			if (
 				str(nearby_warp.get("id", "")) != "warp_to_training_yard"
@@ -544,9 +594,30 @@ func _camera_composition_report() -> Dictionary:
 	var task_hud: Control = host.side_panel as Control
 	var task_hud_visible := task_hud != null and task_hud.is_visible_in_tree()
 	var task_hud_rect := task_hud.get_global_rect() if task_hud_visible else Rect2()
+	var bottom_hud: Control = host.action_bar as Control
+	var bottom_hud_visible := bottom_hud != null and bottom_hud.is_visible_in_tree()
+	var bottom_hud_rect := bottom_hud.get_global_rect() if bottom_hud_visible else Rect2()
+	var top_hud: Control = host.top_panel as Control
+	var top_hud_visible := top_hud != null and top_hud.is_visible_in_tree()
+	var top_hud_rect := top_hud.get_global_rect() if top_hud_visible else Rect2()
+	var message_hud: Control = host.battle_message_panel as Control
+	var message_hud_visible := message_hud != null and message_hud.is_visible_in_tree()
+	var message_hud_rect := message_hud.get_global_rect() if message_hud_visible else Rect2()
 	var player_probe := Rect2(player_screen - Vector2(34.0, 48.0), Vector2(68.0, 96.0))
-	var overlapping_blocking_ids: Array[String] = []
+	var fixed_hud_rects: Array[Rect2] = []
+	for rect in host.world_camera_hud_blocker_rects:
+		if rect.size.x > 0.0 and rect.size.y > 0.0:
+			fixed_hud_rects.append(rect)
 	var opaque_rect_cache: Dictionary = {}
+	var npc_commands: Array[Dictionary] = host._world_depth_npc_commands()
+	var npc_subject_report := _composition_subject_report(
+		npc_commands,
+		fixed_hud_rects,
+		task_hud_rect,
+		task_hud_visible,
+		opaque_rect_cache
+	)
+	var key_environment_commands: Array[Dictionary] = []
 	var by_layer := host.map_visual_render_state.get("objectDrawsByLayer", {}) as Dictionary
 	for layer_value in by_layer.values():
 		if not (layer_value is Array):
@@ -558,20 +629,14 @@ func _camera_composition_report() -> Dictionary:
 			var collision_role := str(command.get("collisionRole", ""))
 			if collision_role != "blocking" and collision_role != "interaction":
 				continue
-			var visual_world_rect := _command_opaque_world_rect(
-				command,
-				opaque_rect_cache
-			)
-			if visual_world_rect.size.x <= 0.0 or visual_world_rect.size.y <= 0.0:
-				continue
-			var screen_start: Vector2 = host._world_to_screen(visual_world_rect.position)
-			var screen_end: Vector2 = host._world_to_screen(visual_world_rect.end)
-			var screen_rect := Rect2(
-				Vector2(minf(screen_start.x, screen_end.x), minf(screen_start.y, screen_end.y)),
-				Vector2(absf(screen_end.x - screen_start.x), absf(screen_end.y - screen_start.y))
-			)
-			if task_hud_visible and task_hud_rect.intersects(screen_rect):
-				overlapping_blocking_ids.append(str(command.get("instanceId", "")))
+			key_environment_commands.append(command)
+	var key_environment_report := _composition_subject_report(
+		key_environment_commands,
+		fixed_hud_rects,
+		task_hud_rect,
+		task_hud_visible,
+		opaque_rect_cache
+	)
 	var nearest_warp := {}
 	var nearest_warp_distance := INF
 	for interaction_value in host.map_data.get("interactionPoints", []):
@@ -610,47 +675,109 @@ func _camera_composition_report() -> Dictionary:
 		"playerAtEffectiveAnchor": player_screen.distance_to(effective_anchor) <= 8.0,
 		"taskHudVisible": task_hud_visible,
 		"taskHudRect": [task_hud_rect.position.x, task_hud_rect.position.y, task_hud_rect.size.x, task_hud_rect.size.y],
+		"bottomHudVisible": bottom_hud_visible,
+		"bottomHudRect": [bottom_hud_rect.position.x, bottom_hud_rect.position.y, bottom_hud_rect.size.x, bottom_hud_rect.size.y],
+		"topHudVisible": top_hud_visible,
+		"topHudRect": [top_hud_rect.position.x, top_hud_rect.position.y, top_hud_rect.size.x, top_hud_rect.size.y],
+		"messageHudVisible": message_hud_visible,
+		"messageHudRect": [message_hud_rect.position.x, message_hud_rect.position.y, message_hud_rect.size.x, message_hud_rect.size.y],
+		"fixedHudBlockerCount": fixed_hud_rects.size(),
 		"playerInsideSafeRect": safe_rect.has_point(player_screen),
 		"playerClearOfTaskHud": not task_hud_visible or not task_hud_rect.intersects(player_probe),
-		"taskHudOverlappingBlockingObjectIds": overlapping_blocking_ids,
+		"playerClearOfFixedHud": _rect_clear_of_rects(player_probe, fixed_hud_rects),
+		"taskHudOverlappingBlockingObjectIds": key_environment_report.get("taskOverlapIds", []),
+		"npcAlphaSubjectCount": int(npc_subject_report.get("subjectCount", 0)),
+		"visibleNpcCount": int(npc_subject_report.get("visibleCount", 0)),
+		"visibleNpcIds": npc_subject_report.get("visibleIds", []),
+		"npcAlphaScreenRects": npc_subject_report.get("screenRects", {}),
+		"hudOverlappingNpcIds": npc_subject_report.get("hudOverlapIds", []),
+		"viewportClippedNpcIds": npc_subject_report.get("viewportClippedIds", []),
+		"keyEnvironmentSubjectCount": int(key_environment_report.get("subjectCount", 0)),
+		"visibleKeyEnvironmentCount": int(key_environment_report.get("visibleCount", 0)),
+		"visibleKeyEnvironmentIds": key_environment_report.get("visibleIds", []),
+		"keyEnvironmentAlphaScreenRects": key_environment_report.get("screenRects", {}),
+		"hudOverlappingKeyEnvironmentIds": key_environment_report.get("hudOverlapIds", []),
+		"viewportClippedKeyEnvironmentIds": key_environment_report.get("viewportClippedIds", []),
 		"nearestWarp": nearest_warp,
 	}
+
+
+func _composition_subject_report(
+	commands: Array[Dictionary],
+	fixed_hud_rects: Array[Rect2],
+	task_hud_rect: Rect2,
+	task_hud_visible: bool,
+	opaque_rect_cache: Dictionary
+) -> Dictionary:
+	var viewport_rect := Rect2(Vector2.ZERO, host.get_viewport_rect().size)
+	var edge_safe_rect := viewport_rect.grow(-WorldCameraSafeAreaModel.DEFAULT_VISUAL_GAP_PX)
+	var subject_count := 0
+	var visible_ids: Array[String] = []
+	var hud_overlap_ids: Array[String] = []
+	var task_overlap_ids: Array[String] = []
+	var viewport_clipped_ids: Array[String] = []
+	var screen_rects: Dictionary = {}
+	for command in commands:
+		var visual_world_rect := _command_opaque_world_rect(command, opaque_rect_cache)
+		if visual_world_rect.size.x <= 0.0 or visual_world_rect.size.y <= 0.0:
+			continue
+		subject_count += 1
+		var subject_id := str(command.get(
+			"stableId",
+			command.get("instanceId", command.get("objectId", ""))
+		)).strip_edges()
+		if subject_id.begins_with("npc:"):
+			subject_id = subject_id.trim_prefix("npc:")
+		var screen_start: Vector2 = host._world_to_screen(visual_world_rect.position)
+		var screen_end: Vector2 = host._world_to_screen(visual_world_rect.end)
+		var screen_rect := Rect2(
+			Vector2(minf(screen_start.x, screen_end.x), minf(screen_start.y, screen_end.y)),
+			Vector2(absf(screen_end.x - screen_start.x), absf(screen_end.y - screen_start.y))
+		)
+		screen_rects[subject_id] = [
+			screen_rect.position.x,
+			screen_rect.position.y,
+			screen_rect.size.x,
+			screen_rect.size.y,
+		]
+		if not viewport_rect.intersects(screen_rect):
+			continue
+		visible_ids.append(subject_id)
+		if not edge_safe_rect.encloses(screen_rect):
+			viewport_clipped_ids.append(subject_id)
+		if task_hud_visible and task_hud_rect.intersects(screen_rect):
+			task_overlap_ids.append(subject_id)
+		for blocker in fixed_hud_rects:
+			if blocker.intersects(screen_rect):
+				hud_overlap_ids.append(subject_id)
+				break
+	visible_ids.sort()
+	hud_overlap_ids.sort()
+	task_overlap_ids.sort()
+	viewport_clipped_ids.sort()
+	return {
+		"subjectCount": subject_count,
+		"visibleCount": visible_ids.size(),
+		"visibleIds": visible_ids,
+		"hudOverlapIds": hud_overlap_ids,
+		"taskOverlapIds": task_overlap_ids,
+		"viewportClippedIds": viewport_clipped_ids,
+		"screenRects": screen_rects,
+	}
+
+
+static func _rect_clear_of_rects(probe: Rect2, blockers: Array[Rect2]) -> bool:
+	for blocker in blockers:
+		if blocker.intersects(probe):
+			return false
+	return true
 
 
 static func _command_opaque_world_rect(
 	command: Dictionary,
 	opaque_rect_cache: Dictionary
 ) -> Rect2:
-	var draw_rect_value: Variant = command.get("drawRect")
-	var texture_value: Variant = command.get("texture")
-	if not (draw_rect_value is Rect2) or not (texture_value is Texture2D):
-		return Rect2()
-	var draw_rect := draw_rect_value as Rect2
-	var texture := texture_value as Texture2D
-	var cache_key := str(command.get("objectId", command.get("instanceId", "")))
-	var opaque_rect := Rect2i()
-	if opaque_rect_cache.has(cache_key):
-		opaque_rect = opaque_rect_cache.get(cache_key, Rect2i()) as Rect2i
-	else:
-		var image: Image = texture.get_image()
-		if image != null and not image.is_empty():
-			opaque_rect = image.get_used_rect()
-		opaque_rect_cache[cache_key] = opaque_rect
-	if opaque_rect.size.x <= 0 or opaque_rect.size.y <= 0:
-		return draw_rect
-	var texture_size := Vector2(texture.get_size())
-	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
-		return draw_rect
-	return Rect2(
-		draw_rect.position + Vector2(
-			float(opaque_rect.position.x) / texture_size.x * draw_rect.size.x,
-			float(opaque_rect.position.y) / texture_size.y * draw_rect.size.y
-		),
-		Vector2(
-			float(opaque_rect.size.x) / texture_size.x * draw_rect.size.x,
-			float(opaque_rect.size.y) / texture_size.y * draw_rect.size.y
-		)
-	)
+	return WorldCameraSafeAreaModel.opaque_world_rect(command, opaque_rect_cache)
 
 
 func _find_reachable_visible_target(
@@ -699,13 +826,20 @@ func _find_reachable_visible_target(
 					offsets.append(offset)
 	var viewport_rect := Rect2(Vector2(48, 48), Vector2(EXPECTED_VIEWPORT - Vector2i(96, 96)))
 	var candidates: Array[Dictionary] = []
+	var relaxed_default_candidates: Array[Dictionary] = []
 	for offset in offsets:
 		var candidate := start_cell + offset
 		if not IsoMapModel.is_walkable(host.map_data, candidate):
 			continue
-		if _near_visual_collision(candidate):
-			continue
-		if _near_interaction_source(candidate):
+		var strict_clear := (
+			not _near_visual_collision(candidate)
+			and not _near_interaction_source(candidate)
+		)
+		var exact_clear := (
+			not _near_visual_collision(candidate, 0)
+			and not _near_interaction_source(candidate, 0)
+		)
+		if not strict_clear and (capture_variant != "default" or not exact_clear):
 			continue
 		var path: Array[Vector2i] = IsoMapModel.find_path(host.map_data, start_cell, candidate)
 		if path.size() < 2 or path[0] != start_cell or path[path.size() - 1] != candidate:
@@ -713,11 +847,23 @@ func _find_reachable_visible_target(
 		var screen_point: Vector2 = host._world_to_screen(IsoMapModel.grid_to_world(host.map_data, candidate))
 		if not viewport_rect.has_point(screen_point) or host._is_ui_point(screen_point):
 			continue
-		candidates.append({
+		var target_record := {
 			"cell": candidate,
 			"screenPoint": screen_point,
 			"pathLength": path.size(),
-		})
+		}
+		if strict_clear:
+			candidates.append(target_record)
+		else:
+			relaxed_default_candidates.append(target_record)
+	# The W009 village layout deliberately surrounds the spawn with service
+	# actors. For the generic idle/moving reel, prefer the first exact-clear
+	# nearby ground cell over an eight-cell detour selected solely to preserve the
+	# stricter two-cell action-evidence margin. The post-move assertions still
+	# fail if the real click opens an interaction, battle or menu. Formal
+	# movement/warp/collision/occlusion variants keep the strict margin above.
+	if capture_variant == "default" and not relaxed_default_candidates.is_empty():
+		candidates = relaxed_default_candidates
 	if candidates.is_empty():
 		return {}
 	var variant_index := MOVING_CAPTURE_VARIANTS.find(capture_variant)
@@ -731,7 +877,7 @@ func _find_reachable_visible_target(
 	return selected
 
 
-func _near_visual_collision(candidate: Vector2i) -> bool:
+func _near_visual_collision(candidate: Vector2i, margin_cells: int = 2) -> bool:
 	var by_layer := host.map_visual_render_state.get("objectDrawsByLayer", {}) as Dictionary
 	for layer_value in by_layer.values():
 		if not (layer_value is Array):
@@ -749,8 +895,9 @@ func _near_visual_collision(candidate: Vector2i) -> bool:
 			# even when the requested destination is two cells beyond the frozen
 			# logical footprint. Keep review movement targets clear of that visual
 			# margin so the recorder measures traversal instead of edge contact.
-			for delta_x in range(-2, 3):
-				for delta_y in range(-2, 3):
+			var margin := maxi(0, margin_cells)
+			for delta_x in range(-margin, margin + 1):
+				for delta_y in range(-margin, margin + 1):
 					var neighbor_key := IsoMapModel.cell_key(
 						candidate + Vector2i(delta_x, delta_y)
 					)
@@ -759,12 +906,13 @@ func _near_visual_collision(candidate: Vector2i) -> bool:
 	return false
 
 
-func _near_interaction_source(candidate: Vector2i) -> bool:
+func _near_interaction_source(candidate: Vector2i, margin_cells: int = 2) -> bool:
+	var margin := maxi(0, margin_cells)
 	for value in host.map_data.get("interactionPoints", []):
 		if not (value is Dictionary):
 			continue
 		var source := _cell((value as Dictionary).get("cell"))
-		if maxi(absi(candidate.x - source.x), absi(candidate.y - source.y)) <= 2:
+		if maxi(absi(candidate.x - source.x), absi(candidate.y - source.y)) <= margin:
 			return true
 	return false
 
