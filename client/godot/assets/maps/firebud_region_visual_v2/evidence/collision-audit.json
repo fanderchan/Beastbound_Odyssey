@@ -3,7 +3,7 @@
   "reportType": "beastbound_map_collision_audit",
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
-  "generatedAtUtc": "2026-08-23T10:56:35Z",
+  "generatedAtUtc": "2026-08-23T11:38:28Z",
   "scene": "res://scenes/Main.tscn",
   "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd -- --preview-map-visual-catalog-contract",
   "testedMapIds": [
@@ -50,11 +50,11 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:d94e95e9d2d0910ad525c8ed9f59ea09507338b6+beastbound-map-runtime-surface-v2:113c6955df37a42f9c7765b129bc25403c25f2f9fa2b15e1b8f6430090a043e4"
+    "buildIdentity": "git:dbfa838053e4da818648ac5ea19e4cbc074261ae+beastbound-map-runtime-surface-v2:113c6955df37a42f9c7765b129bc25403c25f2f9fa2b15e1b8f6430090a043e4"
   },
   "rawRunnerReceipt": {
     "path": "evidence/collision-runner-receipt.log",
-    "sha256": "cce452f9ecdf0fd7d75c59f05b3f447e01d1bcd52f21bc884e1158270f46382a"
+    "sha256": "59b17dde7dac2dfc3f13d2b0123929c04ea890806dc563392440686af08d9ea5"
   },
   "notes": [
     "This report covers authoritative map, collision, protected-cell and exact-path contracts.",

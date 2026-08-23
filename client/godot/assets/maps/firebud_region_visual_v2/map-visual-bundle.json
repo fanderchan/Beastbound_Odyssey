@@ -1978,15 +1978,208 @@
     }
   ],
   "evidence": {
-    "dressedReference": null,
-    "layeredPreview": null,
-    "runtimeScreenshots": [],
-    "computerUseReport": null,
+    "dressedReference": {
+      "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
+      "sha256": "88f1411f3781a79e312315d6d1d1bde6bdcc914baa38b998aea33aa1782b5965",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "alphaMode": "opaque"
+    },
+    "layeredPreview": {
+      "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
+      "sha256": "50866c5681b585bf83229f1c287a18f84a50d81d8cec496e30a83b5ff68007cc",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "alphaMode": "opaque"
+    },
+    "runtimeScreenshots": [
+      {
+        "mapId": "firebud_training_yard",
+        "mode": "idle",
+        "image": {
+          "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
+          "sha256": "50866c5681b585bf83229f1c287a18f84a50d81d8cec496e30a83b5ff68007cc",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-actions/firebud_training_yard/pointer-capture.json",
+          "sha256": "b1af34bc2cf9173283da9bb6c0433cc1baf29873200474c80fa3cc7bb7f6ad60"
+        }
+      },
+      {
+        "mapId": "firebud_training_yard",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-actions/firebud_training_yard/movement_path.png",
+          "sha256": "d9aa021be8db3b2a6fdbab3159729babfa8bbf9b7ae076b2858de0a67a54b664",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-actions/firebud_training_yard/movement_path-capture.json",
+          "sha256": "62851a8cbec3a8c58e6d79e6768137138722db58f716e7febc824bb890476cd7"
+        }
+      },
+      {
+        "mapId": "firebud_training_yard",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-actions/firebud_training_yard/warp.png",
+          "sha256": "22f40392a8bc1ccd590604a78879b4e6f46a791deecac9f6c4796ff9996f1e84",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-actions/firebud_training_yard/warp-capture.json",
+          "sha256": "37d56cbe2cc64c85aacc4f16c7c79322516f6979c8ad0a8fe965a4ac26810f72"
+        }
+      },
+      {
+        "mapId": "firebud_training_yard",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-actions/firebud_training_yard/collision.png",
+          "sha256": "6b35fb5ce7cfece0cb355ce2102dff510de0b111b460fdeb6cb25e4c585d26ca",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-actions/firebud_training_yard/collision-capture.json",
+          "sha256": "f5a5c0531bf106f467b125f5392da5ba99248a3d19bcbf10b63845f11dde6fc8"
+        }
+      },
+      {
+        "mapId": "firebud_training_yard",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-actions/firebud_training_yard/occlusion.png",
+          "sha256": "d68c4603f3436482428659904c327ca4ae9a316c92bd6960130996b5bc247fcf",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-actions/firebud_training_yard/occlusion-capture.json",
+          "sha256": "94d7231234c38fe5fe35f77c9392cb891a16ffa8f42a10658362c45633296a36"
+        }
+      },
+      {
+        "mapId": "firebud_village_gate",
+        "mode": "idle",
+        "image": {
+          "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
+          "sha256": "88f1411f3781a79e312315d6d1d1bde6bdcc914baa38b998aea33aa1782b5965",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-actions/firebud_village_gate/pointer-capture.json",
+          "sha256": "fc1fcdd8434aafe8ac46c27dd6766b4200d40133ef5590bd8a6243eed5250f27"
+        }
+      },
+      {
+        "mapId": "firebud_village_gate",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-actions/firebud_village_gate/movement_path.png",
+          "sha256": "70346010bff9d7c049df370ae1a99e55d0b8ff3ef92e1ecf8d4510288b0f60c7",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-actions/firebud_village_gate/movement_path-capture.json",
+          "sha256": "a9b661aa2be7fa42ec7535a08491fdf42b0c48bcfc2526e303919628dc7dda5f"
+        }
+      },
+      {
+        "mapId": "firebud_village_gate",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-actions/firebud_village_gate/warp.png",
+          "sha256": "3cef2c14d8f6589a25171bfbd5e894743baa16ff6f3de99143f8bab7b38b479a",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-actions/firebud_village_gate/warp-capture.json",
+          "sha256": "ac6b831421593d56803f1dd9f3ba6ce6cee13ece15fcdee318dd9b92f2d3208b"
+        }
+      },
+      {
+        "mapId": "firebud_village_gate",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-actions/firebud_village_gate/collision.png",
+          "sha256": "92e72315fc11a2ad27a5ec741770f40b052a551cb7b293bc5050eeaf1074ae51",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-actions/firebud_village_gate/collision-capture.json",
+          "sha256": "006d16d36af4044abaec774efc9363aa3213860c02ad4e8e271c4566b4c3ce77"
+        }
+      },
+      {
+        "mapId": "firebud_village_gate",
+        "mode": "moving",
+        "image": {
+          "path": "evidence/runtime-actions/firebud_village_gate/occlusion.png",
+          "sha256": "a4d55afdf978ea053479ced058a2c5d6db692dfb705ac4f4920e01aaa99807bb",
+          "dimensions": [
+            1280,
+            720
+          ],
+          "alphaMode": "opaque"
+        },
+        "captureReport": {
+          "path": "evidence/runtime-actions/firebud_village_gate/occlusion-capture.json",
+          "sha256": "cfab253fd2c663534d4c296d7ad03f478923daa9b07bc4db7f1a633e60aaaef0"
+        }
+      }
+    ],
+    "computerUseReport": {
+      "path": "evidence/computer-use-review.json",
+      "sha256": "5e293878cf70f121f0e6c3e694c246f9a362b1acaeaca9d30e3190f94e92c613"
+    },
     "collisionAudit": {
       "path": "evidence/collision-audit.json",
-      "sha256": "583113fbaa9c99abf6dfe0a74955ee58762c566bcdb3a8e585d47fdb0d78f670"
+      "sha256": "ec794b32b75599b00caadb48f117b0222c2442e3925f27815abe6bab2dd1a889"
     },
-    "performanceReport": null,
+    "performanceReport": {
+      "path": "evidence/performance-report.json",
+      "sha256": "b9ae1c47590e5e231d2e533c85de0807b16342b07c2fb6d88ee10e2f7d5ba5b2"
+    },
     "supersededDressedReference": {
       "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
       "sha256": "ec3097b99ded84d4cfbfe413f252654c8fe43af32790e5b4de78b840349247a5",

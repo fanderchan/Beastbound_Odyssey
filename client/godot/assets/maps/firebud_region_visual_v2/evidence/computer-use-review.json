@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportType": "beastbound_map_computer_use_review",
-  "generatedAtUtc": "2026-08-18T19:46:28Z",
+  "generatedAtUtc": "2026-08-23T11:38:14Z",
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
   "testedMapIds": [
@@ -27,24 +27,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
-          "sha256": "380376878d8b4c55afde488a9f456ccda9b2082a8ea6ab2c96d2e4ee47ae8fa8"
+          "sha256": "50866c5681b585bf83229f1c287a18f84a50d81d8cec496e30a83b5ff68007cc"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/pointer-capture.json",
-          "sha256": "830a3a2b4d04d5d1f1a3228642d3d284010c9afd0ddf3a1513de9dab69587b55"
+          "sha256": "b1af34bc2cf9173283da9bb6c0433cc1baf29873200474c80fa3cc7bb7f6ad60"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-before.jpeg",
-          "sha256": "197fde09d13b8353e962d55cbb9e8c75b1e8b1808c752849d3d270ff710c37e5"
+          "sha256": "116d6674f487637a62c1a5bae7b95da7ce1e72866213ec6583f16edc9a7f8c23"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-after.jpeg",
-          "sha256": "2809e66aedf37a19ebab12f9f8980deb3d4e000f60f1162f43085f0697660d6b"
+          "sha256": "af468f54382623937e4c86145ed180b126c800bb12807b1e6d3f7e354dea5bf4"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_pointer.jsonl",
-        "sha256": "75352d893d221d1073c9a08e316079244b788fc4b66a4dab8121502002ac8fc2"
+        "sha256": "b799293b8e9fcf6ed486103830ef2d8482d9b1e7a512e1d2fca0a600801f1b4a"
       }
     },
     {
@@ -56,24 +56,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/movement_path.png",
-          "sha256": "533ba8938f7b0064ca95d41bcbeba303006156642bd02b78604e681905dd85ca"
+          "sha256": "d9aa021be8db3b2a6fdbab3159729babfa8bbf9b7ae076b2858de0a67a54b664"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/movement_path-capture.json",
-          "sha256": "062d94940cb23fa2980a9130546235c4f0e405ccf4cb342009de8e673b7b9ecc"
+          "sha256": "62851a8cbec3a8c58e6d79e6768137138722db58f716e7febc824bb890476cd7"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-before.jpeg",
-          "sha256": "197fde09d13b8353e962d55cbb9e8c75b1e8b1808c752849d3d270ff710c37e5"
+          "sha256": "116d6674f487637a62c1a5bae7b95da7ce1e72866213ec6583f16edc9a7f8c23"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-after.jpeg",
-          "sha256": "6accb243e4a3772e9782b896f1ad408963e18c414e8ae14ea48c754e8ff7311d"
+          "sha256": "bc19b373703555244ad18ff379803f0cb39fb2d2d685e2de51f5825c383fde01"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_movement_path.jsonl",
-        "sha256": "c1b2d4cf48ac24af4ec0e1bfd2255e73d247c8722010a809e23a05a7ba738bf9"
+        "sha256": "963ae1e8ba2f2184fdadf82f7fa7a314f9d60cae444ab4c88a004e895547d8ec"
       }
     },
     {
@@ -85,24 +85,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/warp.png",
-          "sha256": "1fce54124434e53a5e9579a8949a173498ba19c04b154995c6e49a11482c368d"
+          "sha256": "22f40392a8bc1ccd590604a78879b4e6f46a791deecac9f6c4796ff9996f1e84"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/warp-capture.json",
-          "sha256": "f9f1aeec30063fd5ef860080b9d91a35e914aaf25c3b314f25e43ce2a5542d2b"
+          "sha256": "37d56cbe2cc64c85aacc4f16c7c79322516f6979c8ad0a8fe965a4ac26810f72"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-before.jpeg",
-          "sha256": "197fde09d13b8353e962d55cbb9e8c75b1e8b1808c752849d3d270ff710c37e5"
+          "sha256": "116d6674f487637a62c1a5bae7b95da7ce1e72866213ec6583f16edc9a7f8c23"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-after.jpeg",
-          "sha256": "1b1838040d568a57357f1eb13d325fa117cf3f84492565334509b16b5dc03970"
+          "sha256": "fabd3c22b5e980bad8329525c505e42544938861d43742832f36a52ed1642fc1"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_warp.jsonl",
-        "sha256": "17c631a075a7ccba0918fc4b19384cb621ffbd1541d91f771d5ef0826b630756"
+        "sha256": "6225ff3fba4118f679e5a4c8da01f31e64b1f03d88996565fb14692fe3a33623"
       }
     },
     {
@@ -114,24 +114,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/collision.png",
-          "sha256": "ae0c7e59fd2c488561e6b35b80b98b4a523e42be2efb22936dd5eb73cddeea9c"
+          "sha256": "6b35fb5ce7cfece0cb355ce2102dff510de0b111b460fdeb6cb25e4c585d26ca"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/collision-capture.json",
-          "sha256": "f8f958cd1a82a707c21e8766481efb12c407f4e5628c2b1b9bce9d2b25762da1"
+          "sha256": "f5a5c0531bf106f467b125f5392da5ba99248a3d19bcbf10b63845f11dde6fc8"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-before.jpeg",
-          "sha256": "197fde09d13b8353e962d55cbb9e8c75b1e8b1808c752849d3d270ff710c37e5"
+          "sha256": "116d6674f487637a62c1a5bae7b95da7ce1e72866213ec6583f16edc9a7f8c23"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-after.jpeg",
-          "sha256": "7143f274a5b4250e79cddb7fc581d20bef5cba7852bec3c3454189b84af26add"
+          "sha256": "91a57b1dd18fb10d9dd5c8e6f7141bcff617e945e6c0437d3bc9de79cdd032c9"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_collision.jsonl",
-        "sha256": "520a63c436a15c4e4972cc999a78d788c29e481611fe05f394d5e5b214baf093"
+        "sha256": "d0e59eee5874c15058e01f853b2d6f90d16b6ed85bc1b95ff7ebd38decfeb3c7"
       }
     },
     {
@@ -143,24 +143,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/occlusion.png",
-          "sha256": "1c1ac74cf6af001f20077fa9158e7c6d252c0731d31a4b4d4821f22a61471166"
+          "sha256": "d68c4603f3436482428659904c327ca4ae9a316c92bd6960130996b5bc247fcf"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/occlusion-capture.json",
-          "sha256": "703c3c127c48a39fc53b7f90678cc9187bd6fa8d2864158939519cfc8bb490c5"
+          "sha256": "94d7231234c38fe5fe35f77c9392cb891a16ffa8f42a10658362c45633296a36"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-before.jpeg",
-          "sha256": "197fde09d13b8353e962d55cbb9e8c75b1e8b1808c752849d3d270ff710c37e5"
+          "sha256": "116d6674f487637a62c1a5bae7b95da7ce1e72866213ec6583f16edc9a7f8c23"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-after.jpeg",
-          "sha256": "d6d50ba50ef2bba8f28e5b902a3f28e43a9fc0b9f801fe33cfa6448b8cfe462b"
+          "sha256": "b0df121a59225ebf5c7478d0831c52f6248501466f8eead51a8125d078c27b64"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_occlusion.jsonl",
-        "sha256": "57d2efc3fe1399229966356d39c48fcf419235b6fd766fad2d4224ab20ab4069"
+        "sha256": "b95440c372acb0bcb65b706f167cd23fdfc01c1b364dc25b743ab4630539bef7"
       }
     },
     {
@@ -172,24 +172,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
-          "sha256": "ec3097b99ded84d4cfbfe413f252654c8fe43af32790e5b4de78b840349247a5"
+          "sha256": "88f1411f3781a79e312315d6d1d1bde6bdcc914baa38b998aea33aa1782b5965"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/pointer-capture.json",
-          "sha256": "8b7f896c357b38c18042c77a24f8f8b0d462b766e7448ad3e916b19ed2c6661b"
+          "sha256": "fc1fcdd8434aafe8ac46c27dd6766b4200d40133ef5590bd8a6243eed5250f27"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-before.jpeg",
-          "sha256": "ba5d6d68694ffa39945f9ca6cdea702c5668fb1bd7cfc92ca11606175bc5c54b"
+          "sha256": "76f258532d5556085967e81aed6539b2eb5326b4f79ec0de7932452c4ac61e8d"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-after.jpeg",
-          "sha256": "fece8e02703b1a31f005003967bb992db9fe658bd352d8720c67cf84a99e4e6c"
+          "sha256": "f2e4930966c37e2cc7dbb5a6ee4bcec86d79582aace0273eda909727aade6b8b"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_pointer.jsonl",
-        "sha256": "7f9cdadbb6ff57c9599059afd9173312393b358c5d236968103c6fa3f4fec12c"
+        "sha256": "7df2d4c4205bca0ca8857cb560a3d491607769051ae06df27d14b78faca289db"
       }
     },
     {
@@ -201,24 +201,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/movement_path.png",
-          "sha256": "afa972f5448a5d89a76a38ce2c956cd0c853f2c5905cb18627ae39cae72ddb26"
+          "sha256": "70346010bff9d7c049df370ae1a99e55d0b8ff3ef92e1ecf8d4510288b0f60c7"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/movement_path-capture.json",
-          "sha256": "6a178ac58962ab661cbd6c3753783875b72fa880516d880a8dfc67e13d6cf6a8"
+          "sha256": "a9b661aa2be7fa42ec7535a08491fdf42b0c48bcfc2526e303919628dc7dda5f"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-before.jpeg",
-          "sha256": "ba5d6d68694ffa39945f9ca6cdea702c5668fb1bd7cfc92ca11606175bc5c54b"
+          "sha256": "76f258532d5556085967e81aed6539b2eb5326b4f79ec0de7932452c4ac61e8d"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-after.jpeg",
-          "sha256": "9ba325c444efa4b917fa67cb4ebfc2c6ca9254cce53d870df38b7cd21171671a"
+          "sha256": "4391a0dacda15bd373011b5fc44aa5a414438f8e1d6d16756cb796fa282ea98e"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_movement_path.jsonl",
-        "sha256": "d540af93e7d18e18ecdced4fbe21e3149aad18700aa481db5c0e4b2c7436a476"
+        "sha256": "78109af3ca2002742e45c4dcf34d2ea02956a2c88b0eb1a79e4185933f0e14d3"
       }
     },
     {
@@ -230,82 +230,82 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/warp.png",
-          "sha256": "11d1e9c84f8e4a5512c9f448b524ffbec7544ad5e4d9b1eccbee1bb69bb8652f"
+          "sha256": "3cef2c14d8f6589a25171bfbd5e894743baa16ff6f3de99143f8bab7b38b479a"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/warp-capture.json",
-          "sha256": "3dc5977d5b8d0b3bf92555e046c1d02b8afe9b593023273631b4b323bd376507"
+          "sha256": "ac6b831421593d56803f1dd9f3ba6ce6cee13ece15fcdee318dd9b92f2d3208b"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-before.jpeg",
-          "sha256": "ba5d6d68694ffa39945f9ca6cdea702c5668fb1bd7cfc92ca11606175bc5c54b"
+          "sha256": "76f258532d5556085967e81aed6539b2eb5326b4f79ec0de7932452c4ac61e8d"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-after.jpeg",
-          "sha256": "54c230d78edf0064888ebc5795e8a53e2d82664d820a32418335f6301e45aaf0"
+          "sha256": "96c28a8c264e9b749f2790a070840e07c2c045af78380b4fbf849afd8d98fb31"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_warp.jsonl",
-        "sha256": "439e23261ed8cf5c7b8d7e4a0ccaf4bfc588b3956d0c02abfaf8c8935bb7d9cb"
+        "sha256": "925ef3c131507c1768408f6839717cc265f2093a69c820ecca338ca5763696af"
       }
     },
     {
       "actionId": "firebud_village_gate_collision",
       "actionKind": "collision",
       "mapId": "firebud_village_gate",
-      "description": "点击古树树冠阻挡区，核对大地标视觉范围与不可行走 footprint。",
+      "description": "点击贸易柜台基座，核对两格阻挡 footprint 与邻格改落。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/collision.png",
-          "sha256": "45146e180ebce9b785dc1522cbd2fe17064cf7e916bbf379bf683c748015cf2e"
+          "sha256": "92e72315fc11a2ad27a5ec741770f40b052a551cb7b293bc5050eeaf1074ae51"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/collision-capture.json",
-          "sha256": "f7c64966d4573da9cf4b85be25db6bedd7cc1a45e0b62ca020d8b096bcaa5eed"
+          "sha256": "006d16d36af4044abaec774efc9363aa3213860c02ad4e8e271c4566b4c3ce77"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-before.jpeg",
-          "sha256": "ba5d6d68694ffa39945f9ca6cdea702c5668fb1bd7cfc92ca11606175bc5c54b"
+          "sha256": "76f258532d5556085967e81aed6539b2eb5326b4f79ec0de7932452c4ac61e8d"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-after.jpeg",
-          "sha256": "abcbaaa3a3ef667ae0544d1cfea24b359a64a86915104442c905b1313ce812bf"
+          "sha256": "14df5aa787cfc5f407f45a2deef271159d53eac9ca8ed6321d15dd9f9d737535"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_collision.jsonl",
-        "sha256": "16f2fbf577a06f2da714054875fe65a540bc9bae70f48e0117d0171aa1ddbfa5"
+        "sha256": "77e6a3bd3a4c0942d6954bd0fdfe1db97d35a2395a24f96b77cc2af912d94106"
       }
     },
     {
       "actionId": "firebud_village_gate_occlusion",
       "actionKind": "occlusion",
       "mapId": "firebud_village_gate",
-      "description": "走入火芽古树后侧，核对大型树冠与树干的前景遮挡。",
+      "description": "走到贸易柜台后侧，核对摊位前景与角色局部遮挡。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/occlusion.png",
-          "sha256": "172eb42bfeb3e22fe3d82b162f0cdbdae5c5db4f5ace3b2fe080afd841e8d8fc"
+          "sha256": "a4d55afdf978ea053479ced058a2c5d6db692dfb705ac4f4920e01aaa99807bb"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/occlusion-capture.json",
-          "sha256": "130238153d4e7116cc8b6b7730b7bacf828a336ac603f0ead782b85db226262b"
+          "sha256": "cfab253fd2c663534d4c296d7ad03f478923daa9b07bc4db7f1a633e60aaaef0"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-before.jpeg",
-          "sha256": "ba5d6d68694ffa39945f9ca6cdea702c5668fb1bd7cfc92ca11606175bc5c54b"
+          "sha256": "76f258532d5556085967e81aed6539b2eb5326b4f79ec0de7932452c4ac61e8d"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-after.jpeg",
-          "sha256": "b6836ffe72145e22d995cb233bd945198b56659773a293c76d6d48e7ba051568"
+          "sha256": "446f5edb38934496c3bdd45b27b45275e39cb446da5818ba8a6910f29738c789"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_occlusion.jsonl",
-        "sha256": "53863051c620a080c10374f999d3245fb7d5cdbd4fd5aa231a3855cf46544004"
+        "sha256": "1f5c2cbcb7e01757185c34651d77ee2aa58c03e710a90350e7d40b44320da3fe"
       }
     }
   ]

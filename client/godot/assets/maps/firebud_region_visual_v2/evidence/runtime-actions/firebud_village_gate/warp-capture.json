@@ -48,6 +48,50 @@
 		1280,
 		720
 	],
+	"cameraComposition": {
+		"safeRect": [
+			8.0,
+			8.0,
+			955.0,
+			486.0
+		],
+		"configuredAnchor": [
+			390.0,
+			360.0
+		],
+		"effectiveAnchor": [
+			390.0,
+			360.0
+		],
+		"playerScreenPoint": [
+			391.079315185547,
+			356.222351074219
+		],
+		"playerAtEffectiveAnchor": true,
+		"taskHudVisible": true,
+		"taskHudRect": [
+			999.0,
+			13.0,
+			206.0,
+			465.0
+		],
+		"playerInsideSafeRect": true,
+		"playerClearOfTaskHud": true,
+		"taskHudOverlappingBlockingObjectIds": [],
+		"nearestWarp": {
+			"id": "warp_to_training_yard",
+			"cell": [
+				2,
+				15
+			],
+			"screenPoint": [
+				267.079315185547,
+				514.322326660156
+			],
+			"edgeClear": true,
+			"insideSafeRect": false
+		}
+	},
 	"mapArtActive": true,
 	"mapArtQaPreview": true,
 	"mapArtStatus": "owner_review_pending",
@@ -66,14 +110,21 @@
 		"firebud_honey_stone_moss_b": 13,
 		"firebud_honey_stone_a": 10,
 		"firebud_tall_grass_encounter": 25,
-		"firebud_ochre_path_edge_nw": 3,
-		"firebud_ochre_path_edge_ne": 16,
-		"firebud_ochre_path_edge_se": 6,
-		"firebud_ochre_path_edge_sw": 20,
-		"firebud_honey_stone_edge_ne": 8,
-		"firebud_honey_stone_edge_se": 2,
-		"firebud_honey_stone_edge_nw": 6,
-		"firebud_honey_stone_edge_sw": 3
+		"firebud_ochre_path_edge_nw_ne": 8,
+		"firebud_ochre_path_edge_ne": 7,
+		"firebud_ochre_path_edge_ne_se": 3,
+		"firebud_ochre_path_edge_se": 2,
+		"firebud_ochre_path_edge_sw_se": 8,
+		"firebud_ochre_path_edge_sw": 12,
+		"firebud_ochre_path_edge_nw_sw": 5,
+		"firebud_honey_stone_edge_nw_ne": 2,
+		"firebud_honey_stone_edge_ne": 6,
+		"firebud_honey_stone_edge_ne_se": 2,
+		"firebud_honey_stone_edge_nw": 5,
+		"firebud_honey_stone_edge_se": 1,
+		"firebud_honey_stone_edge_nw_sw": 1,
+		"firebud_honey_stone_edge_sw": 1,
+		"firebud_honey_stone_edge_sw_se": 1
 	},
 	"startCell": [
 		3,
@@ -81,13 +132,13 @@
 	],
 	"targetCell": [
 		0,
-		18
+		11
 	],
-	"targetCandidateCount": 38,
+	"targetCandidateCount": 10,
 	"targetVariantIndex": 1,
 	"endCell": [
 		0,
-		18
+		11
 	],
 	"playerCellChanged": true,
 	"input": {
@@ -97,26 +148,30 @@
 		"releaseProcessFrame": 11,
 		"frameSeparated": true,
 		"screenPoint": [
-			214.451599121094,
-			304.774200439453
+			452.0,
+			143.0
 		]
 	},
 	"screenshotPath": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_village_gate/warp.png",
-	"screenshotSha256": "11d1e9c84f8e4a5512c9f448b524ffbec7544ad5e4d9b1eccbee1bb69bb8652f",
+	"screenshotSha256": "3cef2c14d8f6589a25171bfbd5e894743baa16ff6f3de99143f8bab7b38b479a",
 	"screenshot": {
 		"path": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_village_gate/warp.png",
-		"sha256": "11d1e9c84f8e4a5512c9f448b524ffbec7544ad5e4d9b1eccbee1bb69bb8652f",
+		"sha256": "3cef2c14d8f6589a25171bfbd5e894743baa16ff6f3de99143f8bab7b38b479a",
 		"width": 1280,
 		"height": 720
 	},
 	"runtimeCleanup": {
 		"status": "passed",
+		"audioPlaybackDisabled": true,
 		"audioStopped": true,
+		"audioStreamsDetached": true,
+		"detachedAudioPlayerCount": 16,
 		"audioManagerReleased": true,
-		"drainFrames": 4
+		"drainSeconds": 1.5,
+		"drainFrames": 16
 	},
 	"errors": [],
 	"result": "PASS",
 	"ok": true,
-	"generatedAtUtc": "2026-08-18T19:20:56Z"
+	"generatedAtUtc": "2026-08-23T11:16:55Z"
 }

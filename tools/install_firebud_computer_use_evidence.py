@@ -152,27 +152,27 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "collision": {
-            "description": "点击古树树冠阻挡区，核对大地标视觉范围与不可行走 footprint。",
+            "description": "点击贸易柜台基座，核对两格阻挡 footprint 与邻格改落。",
             "steps": [
-                {"action": "left_click", "windowPoint": [470, 100], "target": "火芽古树树冠与树干投影"},
-                {"action": "get_app_state", "fresh": True, "afterSettleMs": 1000},
-            ],
-            "observations": [
-                "白色指针落在古树阻挡投影内",
-                "角色保持在 3,15 且没有生成穿树路线",
-                "古树视觉基座、树干和实际阻挡范围没有出现穿帮",
-            ],
-        },
-        "occlusion": {
-            "description": "走入火芽古树后侧，核对大型树冠与树干的前景遮挡。",
-            "steps": [
-                {"action": "left_click", "windowPoint": [390, 180], "target": "古树树冠左缘后方可行走点"},
+                {"action": "left_click", "windowPoint": [425, 165], "target": "贸易柜台基座与两格阻挡 footprint"},
                 {"action": "get_app_state", "fresh": True, "afterSettleMs": 1800},
             ],
             "observations": [
-                "角色沿真实路线抵达古树后侧可行走点",
-                "角色被树冠和树干正确压在后层，只保留合理的局部轮廓",
-                "古树没有遮挡任务 HUD，前景边缘也没有角色残片",
+                "黄色路线自动改落到贸易柜台右侧可行走邻格",
+                "角色没有进入 4,10 与 5,10 两格阻挡 footprint",
+                "柜台基座、货筐和角色轮廓没有相互穿透，任务 HUD 也没有消费点击",
+            ],
+        },
+        "occlusion": {
+            "description": "走到贸易柜台后侧，核对摊位前景与角色局部遮挡。",
+            "steps": [
+                {"action": "left_click", "windowPoint": [390, 120], "target": "贸易柜台左后侧可行走点"},
+                {"action": "get_app_state", "fresh": True, "afterSettleMs": 2200},
+            ],
+            "observations": [
+                "角色沿真实路线抵达贸易柜台后侧可行走点",
+                "柜台与货筐正确盖住角色下半身，头部和肩部仍清晰可辨",
+                "遮挡只改变世界层绘制顺序，没有角色残片，也没有侵入任务 HUD",
             ],
         },
     },

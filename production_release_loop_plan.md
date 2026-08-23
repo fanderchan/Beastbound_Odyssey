@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W006
+> 当前游标：R1.W007
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -570,8 +570,8 @@
 - [x] **R1.W005 AUTO｜Firebud v2 密度、比例、光照与生活感统一**
   依赖：R1.W004。收敛村口同屏 NPC/标记/道具拥挤、角色与物件比例及清晰度/光照不一致，让服务区、中央通行带和训练层级自然可读；NPC 仍由 actor catalog 独立渲染，禁止烘焙进地图。任何命名 NPC 或服务格变更都必须显式列出并回归交互/接近距离，不能静默改变玩法拓扑。完成返工：福利员阿檀 `[7,10]→[7,8]`、装备商阿石 `[6,12]→[8,10]`、钻石商阿璨 `[9,13]→[10,12]` 显式移入东侧台地，初始安全画幅 NPC 脚点由 `7` 降至 `4`，14 名 NPC 的身份／服务／appearance／朝向及接近可达性保持；关键／选中任务标记常显、普通环境标记至多两个，15 类场景物件统一比例与中性调光且无 PNG、binding、碰撞或 warp/spawn 改动。真实 Main 四段录片、性能 `8/8`、Godot `10/10`、服务端 `42/42`、严格 runtime/catalog 与 112 文件审计通过，候选继续 pending。
 
-- [ ] **R1.W006 AUTO｜Firebud v2 精确返工证据重新冻结**
-  依赖：R1.W001、R1.W002、R1.W003、R1.W004、R1.W005。将旧 Phase 481 与本次退回材料明确 supersede，基于同一精确候选重新生成两张地图各 `pointer / movement_path / warp / collision / occlusion` 的独立 Main pair 与 Computer Use receipt、完整 1280×720/30fps/1× 视频、collision/catalog/performance 原始 runner 回执、来源与 build identity。离线 auditor 必须结构 PASS，除 owner acceptance、release attestation 和 released lifecycle 外不再有证据缺口；候选仍不得进入普通玩家运行时。
+- [x] **R1.W006 AUTO｜Firebud v2 精确返工证据重新冻结**
+  依赖：R1.W001、R1.W002、R1.W003、R1.W004、R1.W005。完成冻结：旧 Phase 481、Phase 511 退回材料和 W003–W005 阶段性材料已明确 supersede；同一 build identity 上重建两图各 `pointer / movement_path / warp / collision / occlusion` 的独立 Main pair、真实 `@oai/sky` Computer Use 前后帧／回执、1280×720／30fps／1× 四段视频，以及 collision/catalog/performance 原始 runner 和 manifest-bound 报告。村口失效的古树动作点改为当前可见贸易柜台，真实证明两格 footprint 邻格改落和前后层级。离线审计 `165 files / 91 PNG / 17 JSON / PASS`，证据缺口精确只剩 owner acceptance、release attestation 和 released+enabled lifecycle；候选继续 pending、普通玩家不可达。
 
 - [ ] **R1.W007 OWNER｜Firebud v2 返工后人眼复验**
   依赖：R1.W006。向项目所有者展示精确冻结的村口/训练场静止、移动、寻路、NPC、warp、遮挡、战斗切入与性能材料，并再次明确选择批准、退回或首发延期；未明确批准不得执行 R1.02 promotion。
@@ -613,7 +613,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（R1.01 已退回，当前 R1.W006） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.01 已退回，当前 R1.W007 OWNER） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -655,6 +655,7 @@
 - 2026-08-21｜R1.W003｜docs/phase_514_production_release_r1_w003_firebud_surface_transition_rework.md + atlas `a86cb47204e6` + `.run/evidence/r1_w003/`｜冻结 v3 道路/广场原稿、prompt、拒绝谱系、alpha sheet 与可复现构建；15+15 签名在 80×40 下获得较浅连续草边，同机位村口/训练场前后图保持 start cell、tileCounts、672/1224 ground draws 与 18/22 objects 不变；严格 pending runtime、catalog、bundle audit、Godot `7/7`、Python `15/15 + 94/94`、Node `56/56`、真实 Main 性能 `8/8` 全绿并完成音频/车道收口｜候选仍为 `owner_review_pending`／不可达；HUD 安全区、密度比例、正式证据与 OWNER 复验仍待 W004–W007，下一任务 R1.W004
 - 2026-08-21｜R1.W004｜docs/phase_515_production_release_r1_w004_firebud_pc_hud_safe_area.md + `.run/evidence/r1_w004/`｜精确 v2 canary 使用 `[390,360]` 基础锚点和缓存的主地标避让，修正 Godot 4 非 1× zoom 换算；正常任务 HUD 始终可见，玩家在安全区/生效锚点，村口圆形 warp 边缘完整，blocking/interaction overlap 为空；真实 Main 录片、warp/occlusion `4/4`、性能 `8/8`、Godot `8/8`、Python `103/103`、Node `56/56`、严格 runtime/catalog 与 112 文件 bundle 审计全绿，三套证据清单 `81/81 + 29/29 + 49/49` 闭合｜binding、地图、碰撞、warp/spawn 与玩法拓扑未改，候选仍 `owner_review_pending`／不可达；密度比例、正式证据与 OWNER 复验仍待 W005–W007，下一任务 R1.W005
 - 2026-08-23｜R1.W005｜docs/phase_516_production_release_r1_w005_firebud_density_scale_lighting.md + catalog `3f09be532a8f` + collision `583113fbaa9c` + `.run/evidence/r1_w005/`｜三名进阶／商业服务 NPC 显式移入东侧台地，初始安全画幅 NPC 脚点 `7→4` 且 14 名 NPC、服务身份、最小 `72.11px` 间距、中央主路和 approach 可达保持；普通任务标记至多两个，15 类物件比例／中性调光跨 renderer 冻结且源 PNG 未改；最终真实 Main `840` 帧／28 秒、性能 `8/8 @ 60fps`、Godot `10/10`、Node `42/42`、Python `17+16+6`、严格 runtime/catalog 与 112 文件审计全绿｜候选仍 `owner_review_pending`／不可达；W006 尚需同一精确候选的十动作、Computer Use 与 manifest-bound 正式证据，W007 尚需 OWNER 复验，下一任务 R1.W006
+- 2026-08-23｜R1.W006｜docs/phase_517_production_release_r1_w006_firebud_exact_evidence_refreeze.md + Computer Use `5e293878cf70` + collision `ec794b32b755` + performance `b9ae1c47590e` + `.run/evidence/r1_w006/`｜同一精确 build identity 重建两图十动作 Main pair、20 张真实 `@oai/sky` 前后帧与逐动作 receipt；村口 collision/occlusion 从已失效古树点改为当前贸易柜台，证明两格 footprint 邻格改落和下半身遮挡；28 秒／840 帧视频、性能 `8/8 @ 60fps`、Godot `10/10`、Node `42/42`、Python `37+17` 与 `165 files / 91 PNG / 17 JSON` 离线审计全绿｜候选仍 `owner_review_pending`／不可达；缺口精确只剩 OWNER acceptance、release attestation、released+enabled lifecycle，下一任务 R1.W007 OWNER
 
 ## 7. 正式上线硬门槛
 

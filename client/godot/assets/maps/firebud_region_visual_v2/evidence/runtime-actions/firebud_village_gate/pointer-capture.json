@@ -48,6 +48,50 @@
 		1280,
 		720
 	],
+	"cameraComposition": {
+		"safeRect": [
+			8.0,
+			8.0,
+			955.0,
+			486.0
+		],
+		"configuredAnchor": [
+			390.0,
+			360.0
+		],
+		"effectiveAnchor": [
+			390.0,
+			360.0
+		],
+		"playerScreenPoint": [
+			390.0,
+			360.0
+		],
+		"playerAtEffectiveAnchor": true,
+		"taskHudVisible": true,
+		"taskHudRect": [
+			999.0,
+			13.0,
+			206.0,
+			465.0
+		],
+		"playerInsideSafeRect": true,
+		"playerClearOfTaskHud": true,
+		"taskHudOverlappingBlockingObjectIds": [],
+		"nearestWarp": {
+			"id": "warp_to_training_yard",
+			"cell": [
+				2,
+				15
+			],
+			"screenPoint": [
+				328.0,
+				301.100006103516
+			],
+			"edgeClear": true,
+			"insideSafeRect": true
+		}
+	},
 	"mapArtActive": true,
 	"mapArtQaPreview": true,
 	"mapArtStatus": "owner_review_pending",
@@ -66,14 +110,21 @@
 		"firebud_honey_stone_moss_b": 13,
 		"firebud_honey_stone_a": 10,
 		"firebud_tall_grass_encounter": 25,
-		"firebud_ochre_path_edge_nw": 3,
-		"firebud_ochre_path_edge_ne": 16,
-		"firebud_ochre_path_edge_se": 6,
-		"firebud_ochre_path_edge_sw": 20,
-		"firebud_honey_stone_edge_ne": 8,
-		"firebud_honey_stone_edge_se": 2,
-		"firebud_honey_stone_edge_nw": 6,
-		"firebud_honey_stone_edge_sw": 3
+		"firebud_ochre_path_edge_nw_ne": 8,
+		"firebud_ochre_path_edge_ne": 7,
+		"firebud_ochre_path_edge_ne_se": 3,
+		"firebud_ochre_path_edge_se": 2,
+		"firebud_ochre_path_edge_sw_se": 8,
+		"firebud_ochre_path_edge_sw": 12,
+		"firebud_ochre_path_edge_nw_sw": 5,
+		"firebud_honey_stone_edge_nw_ne": 2,
+		"firebud_honey_stone_edge_ne": 6,
+		"firebud_honey_stone_edge_ne_se": 2,
+		"firebud_honey_stone_edge_nw": 5,
+		"firebud_honey_stone_edge_se": 1,
+		"firebud_honey_stone_edge_nw_sw": 1,
+		"firebud_honey_stone_edge_sw": 1,
+		"firebud_honey_stone_edge_sw_se": 1
 	},
 	"startCell": [
 		3,
@@ -99,21 +150,25 @@
 		"screenPoint": []
 	},
 	"screenshotPath": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_village_gate/pointer.png",
-	"screenshotSha256": "ec3097b99ded84d4cfbfe413f252654c8fe43af32790e5b4de78b840349247a5",
+	"screenshotSha256": "88f1411f3781a79e312315d6d1d1bde6bdcc914baa38b998aea33aa1782b5965",
 	"screenshot": {
 		"path": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_village_gate/pointer.png",
-		"sha256": "ec3097b99ded84d4cfbfe413f252654c8fe43af32790e5b4de78b840349247a5",
+		"sha256": "88f1411f3781a79e312315d6d1d1bde6bdcc914baa38b998aea33aa1782b5965",
 		"width": 1280,
 		"height": 720
 	},
 	"runtimeCleanup": {
 		"status": "passed",
+		"audioPlaybackDisabled": true,
 		"audioStopped": true,
+		"audioStreamsDetached": true,
+		"detachedAudioPlayerCount": 16,
 		"audioManagerReleased": true,
-		"drainFrames": 4
+		"drainSeconds": 1.5,
+		"drainFrames": 16
 	},
 	"errors": [],
 	"result": "PASS",
 	"ok": true,
-	"generatedAtUtc": "2026-08-18T19:20:43Z"
+	"generatedAtUtc": "2026-08-23T11:16:38Z"
 }
