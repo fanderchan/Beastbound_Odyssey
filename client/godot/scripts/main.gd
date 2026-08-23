@@ -81,6 +81,9 @@ const BattleAudioTimelineController := preload(
 )
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
+const QuestMarkerVisibilityModel := preload(
+	"res://scripts/world/quest_marker_visibility_model.gd"
+)
 const WorldPresentationProfile := preload("res://scripts/world/world_presentation_profile.gd")
 const WorldDepthLayer := preload("res://scripts/world/world_depth_layer.gd")
 const WorldOverlayLayer := preload("res://scripts/world/world_overlay_layer.gd")
@@ -3746,6 +3749,27 @@ func _run_movement_spam_click_check() -> void:
 		print("movement spam click check ready: status=failed reason=%s" % movement_spam_click_limit_argument_error)
 		get_tree().quit(1)
 		return
+	# Camera2D only publishes its effective screen center after rendered frames.
+	# The v2 review zoom and HUD-safe anchor can otherwise make every synthetic
+	# target look off-screen when this deferred probe runs before the first draw.
+	var viewport_rect := Rect2(Vector2.ZERO, _layout_size())
+	var camera_projection_ready := false
+	var camera_projection_wait_frames := 0
+	var previous_player_screen := Vector2.ZERO
+	var has_previous_player_screen := false
+	while camera_projection_wait_frames < 8:
+		await get_tree().process_frame
+		camera_projection_wait_frames += 1
+		var player_screen := _world_to_screen(player.global_position)
+		if (
+			has_previous_player_screen
+			and viewport_rect.has_point(player_screen)
+			and player_screen.distance_to(previous_player_screen) <= 0.25
+		):
+			camera_projection_ready = true
+			break
+		previous_player_screen = player_screen
+		has_previous_player_screen = true
 	# Keep this probe deterministic and isolate input/movement cost. Encounter
 	# behavior has its own auto check and must not switch the probe into battle.
 	encounter_grace_remaining = 3600.0
@@ -3765,7 +3789,6 @@ func _run_movement_spam_click_check() -> void:
 	var ui_skipped_count := 0
 	var interaction_skipped_count := 0
 	var mouse_event_count := 0
-	var viewport_rect := Rect2(Vector2.ZERO, _layout_size())
 	for frame_index in range(40):
 		if movement_spam_click_limit > 0 and click_count >= movement_spam_click_limit:
 			break
@@ -3851,8 +3874,8 @@ func _run_movement_spam_click_check() -> void:
 		and not player.is_auto_moving()
 	)
 	var final_target_matches := final_player_cell == last_cell
-	var status := "ok" if click_count > 0 and moved and coalesced and input_fast and input_screen_roundtrip and settled and final_target_matches else "failed"
-	print("movement spam click check ready: status=%s clicks=%d click_limit=%d ui_skipped=%d interaction_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d screen_matches=%d screen_mismatches=%d screen_roundtrip=%s avg_input_us=%d max_input_us=%d settle_frames=%d moved=%s coalesced=%s settled=%s final_match=%s auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
+	var status := "ok" if camera_projection_ready and click_count > 0 and moved and coalesced and input_fast and input_screen_roundtrip and settled and final_target_matches else "failed"
+	print("movement spam click check ready: status=%s clicks=%d click_limit=%d ui_skipped=%d interaction_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d screen_matches=%d screen_mismatches=%d screen_roundtrip=%s avg_input_us=%d max_input_us=%d settle_frames=%d moved=%s coalesced=%s settled=%s final_match=%s projection_ready=%s projection_wait_frames=%d auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
 		status,
 		click_count,
 		movement_spam_click_limit,
@@ -3874,6 +3897,8 @@ func _run_movement_spam_click_check() -> void:
 		str(coalesced),
 		str(settled),
 		str(final_target_matches),
+		str(camera_projection_ready),
+		camera_projection_wait_frames,
 		str(account_authenticated),
 		str(auth_auto_bypass),
 		str(battle_active),
@@ -9433,6 +9458,7 @@ func _online_remote_player_world_state(
 func _world_overlay_commands() -> Array[Dictionary]:
 	var commands := MapVisualRenderer.foreground_overlay_commands(map_visual_render_state)
 	var font := _canvas_text_font()
+	var visible_quest_marker_ids := _visible_quest_marker_ids()
 	for value in map_data.get("interactionPoints", []):
 		if not (value is Dictionary):
 			continue
@@ -9455,7 +9481,11 @@ func _world_overlay_commands() -> Array[Dictionary]:
 				"kind": "selection",
 				"position": marker,
 			})
-		var marker_state := _quest_marker_state_for_item(item, false)
+		var marker_state := (
+			_quest_marker_state_for_item(item, false)
+			if visible_quest_marker_ids.has(item_id)
+			else QUEST_MARKER_NONE
+		)
 		var marker_visual := _quest_marker_visual_for_state(marker_state)
 		if not marker_visual.is_empty():
 			commands.append({
@@ -9500,8 +9530,47 @@ func _world_overlay_commands() -> Array[Dictionary]:
 	return commands
 
 
+func _visible_quest_marker_ids() -> Dictionary:
+	var entries: Array[Dictionary] = []
+	for value in map_data.get("interactionPoints", []):
+		if not (value is Dictionary):
+			continue
+		var item := value as Dictionary
+		var item_id := str(item.get("id", "")).strip_edges()
+		if item_id == "":
+			continue
+		var state := _quest_marker_state_for_item(item, false)
+		if state == QUEST_MARKER_NONE:
+			continue
+		entries.append({
+			"itemId": item_id,
+			"state": state,
+			"cell": InteractionModel.cell_for(item),
+		})
+	var player_cell := (
+		IsoMapModel.world_to_grid(map_data, player.global_position)
+		if player != null and not map_data.is_empty()
+		else IsoMapModel.spawn_cell(map_data)
+	)
+	var selected_item_id := ""
+	if has_pending_interaction:
+		selected_item_id = str(pending_interaction.get("id", "")).strip_edges()
+	if _dialog_is_open():
+		selected_item_id = str(active_dialog_interaction.get("id", "")).strip_edges()
+	return QuestMarkerVisibilityModel.visible_item_ids(
+		entries,
+		player_cell,
+		selected_item_id
+	)
+
+
 func _world_overlay_signature() -> String:
-	return "%s|bundle:%s|active:%s|preview:%s|pending:%s,%s,%s,%s|dialog:%s,%s|drops:%s|quest:%s|foreground:%d" % [
+	var player_cell := (
+		IsoMapModel.world_to_grid(map_data, player.global_position)
+		if player != null and not map_data.is_empty()
+		else Vector2i.ZERO
+	)
+	return "%s|bundle:%s|active:%s|preview:%s|pending:%s,%s,%s,%s|dialog:%s,%s|drops:%s|quest:%s|markerCell:%d,%d|foreground:%d" % [
 		current_map_id,
 		str(map_visual_render_state.get("bundleId", "")),
 		str(map_visual_render_state.get("active", false)),
@@ -9514,6 +9583,8 @@ func _world_overlay_signature() -> String:
 		str(active_dialog_interaction.get("id", "")),
 		_ground_pet_drop_depth_signature_cached(),
 		_quest_marker_signature(),
+		player_cell.x,
+		player_cell.y,
 		MapVisualRenderer.object_draw_count(map_visual_render_state, "foreground"),
 	]
 

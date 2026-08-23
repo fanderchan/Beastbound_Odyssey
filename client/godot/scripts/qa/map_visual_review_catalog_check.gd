@@ -3,7 +3,29 @@ extends SceneTree
 const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
+const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const MapVisualRuntimeCheck := preload("res://scripts/qa/map_visual_runtime_check.gd")
+
+const FIREBUD_V2_MANIFEST := (
+	"res://assets/maps/firebud_region_visual_v2/map-visual-bundle.json"
+)
+const FIREBUD_OBJECT_PRESENTATION := {
+	"firebud_training_target": {"size": Vector2(96, 88), "grade": 0.82},
+	"firebud_supply_pots": {"size": Vector2(98, 84), "grade": 0.80},
+	"firebud_low_planter": {"size": Vector2(102, 82), "grade": 0.84},
+	"firebud_low_fence": {"size": Vector2(112, 97), "grade": 0.88},
+	"firebud_service_pavilion": {"size": Vector2(204, 205), "grade": 0.82},
+	"firebud_ancient_tree": {"size": Vector2(340, 274), "grade": 0.85},
+	"firebud_ancient_tree_scenery": {"size": Vector2(288, 232), "grade": 0.85},
+	"firebud_ember_shrub": {"size": Vector2(100, 77), "grade": 0.76},
+	"firebud_honey_rock_cluster": {"size": Vector2(100, 89), "grade": 0.74},
+	"firebud_flower_meadow_decal": {"size": Vector2(88, 57), "grade": 0.72},
+	"firebud_stone_totem": {"size": Vector2(66, 72), "grade": 0.86},
+	"firebud_training_rack": {"size": Vector2(108, 115), "grade": 0.82},
+	"firebud_practice_cluster": {"size": Vector2(102, 120), "grade": 0.80},
+	"firebud_trade_counter": {"size": Vector2(112, 96), "grade": 0.84},
+	"firebud_grass_scatter_decal": {"size": Vector2(92, 60), "grade": 0.74},
+}
 
 
 func _initialize() -> void:
@@ -17,6 +39,7 @@ func _initialize() -> void:
 	_validate_path_transition_contract(errors)
 	_validate_plaza_transition_contract(errors)
 	_validate_edge_scenery_anchor_contract(errors)
+	_validate_firebud_visual_hierarchy(errors)
 	var report := {
 		"schemaVersion": 1,
 		"reportType": "beastbound.map_visual_review_catalog_check",
@@ -46,11 +69,96 @@ func _initialize() -> void:
 			"edgeSceneryAnchorsBounded": not errors.any(
 				func(error: String) -> bool: return error.begins_with("edge scenery")
 			),
+			"firebudVisualHierarchyFrozen": not errors.any(
+				func(error: String) -> bool: return error.begins_with("firebud hierarchy")
+			),
 		},
 		"errors": errors,
 	}
 	print("map visual review catalog check: %s" % JSON.stringify(report))
 	quit(0 if errors.is_empty() else 1)
+
+
+static func _validate_firebud_visual_hierarchy(errors: Array[String]) -> void:
+	if not FileAccess.file_exists(FIREBUD_V2_MANIFEST):
+		errors.append("firebud hierarchy manifest missing")
+		return
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(FIREBUD_V2_MANIFEST))
+	if not (parsed is Dictionary):
+		errors.append("firebud hierarchy manifest is not JSON")
+		return
+	var manifest := parsed as Dictionary
+	var source_value: Variant = manifest.get("source", {})
+	if (
+		not (source_value is Dictionary)
+		or not ((source_value as Dictionary).get("bakedActors") is bool)
+		or bool((source_value as Dictionary).get("bakedActors", true))
+	):
+		errors.append("firebud hierarchy actor separation drifted")
+	var objects_value: Variant = manifest.get("objects", [])
+	if not (objects_value is Array):
+		errors.append("firebud hierarchy objects missing")
+		return
+	var seen: Dictionary = {}
+	for value in objects_value as Array:
+		if not (value is Dictionary):
+			errors.append("firebud hierarchy object is not a dictionary")
+			continue
+		var definition := value as Dictionary
+		var object_id := str(definition.get("objectId", ""))
+		if not FIREBUD_OBJECT_PRESENTATION.has(object_id):
+			errors.append("firebud hierarchy unexpected object: %s" % object_id)
+			continue
+		seen[object_id] = true
+		var expected := FIREBUD_OBJECT_PRESENTATION[object_id] as Dictionary
+		var size := MapVisualCatalog._vector2_from_value(
+			definition.get("displaySize"),
+			Vector2.ZERO
+		)
+		if not size.is_equal_approx(expected.get("size", Vector2.ZERO) as Vector2):
+			errors.append("firebud hierarchy display size drifted: %s" % object_id)
+		var grade := float(expected.get("grade", 1.0))
+		var expected_color := Color(grade, grade, grade, 1.0)
+		var actual_color := MapVisualCatalog._color_from_value(
+			definition.get("colorModulate"),
+			Color(-1, -1, -1, -1)
+		)
+		if not actual_color.is_equal_approx(expected_color):
+			errors.append("firebud hierarchy lighting grade drifted: %s" % object_id)
+	if seen.size() != FIREBUD_OBJECT_PRESENTATION.size():
+		errors.append(
+			"firebud hierarchy object coverage drifted: expected=%d actual=%d"
+			% [FIREBUD_OBJECT_PRESENTATION.size(), seen.size()]
+		)
+	var renderer_fixture := {
+		"active": true,
+		"objectDrawsByLayer": {
+			"world": [{
+				"instanceId": "tone_probe",
+				"texture": ImageTexture.create_from_image(Image.create(1, 1, false, Image.FORMAT_RGBA8)),
+				"drawRect": Rect2(0, 0, 1, 1),
+				"contactPoint": Vector2.ZERO,
+				"sortKey": 0.0,
+				"collisionRole": "none",
+				"interactionLink": null,
+				"colorModulate": Color(0.75, 0.75, 0.75, 1.0),
+			}],
+		},
+	}
+	var renderer_commands := MapVisualRenderer.world_depth_commands(renderer_fixture)
+	var propagated_modulate: Variant = (
+		(renderer_commands[0] as Dictionary).get("colorModulate")
+		if renderer_commands.size() == 1
+		else null
+	)
+	if (
+		renderer_commands.size() != 1
+		or not (propagated_modulate is Color)
+		or not (propagated_modulate as Color).is_equal_approx(
+			Color(0.75, 0.75, 0.75, 1.0)
+		)
+	):
+		errors.append("firebud hierarchy renderer dropped lighting grade")
 
 
 static func _validate_runtime_check_mode_contract(errors: Array[String]) -> void:

@@ -267,7 +267,13 @@ func _add_map_object(root: Node2D, command: Dictionary) -> void:
 	var draw_rect: Variant = command.get("drawRect")
 	if not (texture is Texture2D) or not (draw_rect is Rect2):
 		return
-	_add_texture_rect(root, texture as Texture2D, draw_rect as Rect2)
+	var color_modulate: Variant = command.get("colorModulate", Color.WHITE)
+	_add_texture_rect(
+		root,
+		texture as Texture2D,
+		draw_rect as Rect2,
+		color_modulate as Color if color_modulate is Color else Color.WHITE
+	)
 
 
 func _add_npc(root: Node2D, command: Dictionary) -> void:
@@ -466,7 +472,12 @@ func _add_ground_pet_drop(root: Node2D, command: Dictionary) -> void:
 	)
 
 
-func _add_texture_rect(root: Node2D, texture: Texture2D, world_rect: Rect2) -> void:
+func _add_texture_rect(
+	root: Node2D,
+	texture: Texture2D,
+	world_rect: Rect2,
+	color_modulate: Color = Color.WHITE
+) -> void:
 	if texture == null or world_rect.size.x <= 0.0 or world_rect.size.y <= 0.0:
 		return
 	var texture_size := texture.get_size()
@@ -480,6 +491,7 @@ func _add_texture_rect(root: Node2D, texture: Texture2D, world_rect: Rect2) -> v
 		world_rect.size.x / texture_size.x,
 		world_rect.size.y / texture_size.y
 	)
+	sprite.self_modulate = color_modulate
 	root.add_child(sprite)
 
 

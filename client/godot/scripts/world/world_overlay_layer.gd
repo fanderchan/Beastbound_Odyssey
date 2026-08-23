@@ -216,6 +216,10 @@ func _add_texture(root: Node2D, command: Dictionary) -> void:
 		(draw_rect as Rect2).size.x / texture_size.x,
 		(draw_rect as Rect2).size.y / texture_size.y
 	)
+	var color_modulate: Variant = command.get("colorModulate", Color.WHITE)
+	sprite.self_modulate = (
+		color_modulate as Color if color_modulate is Color else Color.WHITE
+	)
 	root.add_child(sprite)
 
 

@@ -84,6 +84,9 @@ const MapRoutePlanner := preload("res://scripts/world/map_route_planner.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
+const QuestMarkerVisibilityModel := preload(
+	"res://scripts/world/quest_marker_visibility_model.gd"
+)
 const WorldOverlayLayer := preload("res://scripts/world/world_overlay_layer.gd")
 const MailCenterModel := preload("res://scripts/progression/mail_center_model.gd")
 const MailboxPageModel := preload("res://scripts/progression/mailbox_page_model.gd")
@@ -21379,9 +21382,34 @@ func _run_auto_npc_quest_marker_check() -> void:
 		and int(available_geometry.get("fontSize", 0)) == 16
 		and int(blocked_geometry.get("fontSize", 0)) == 14
 	)
+	var density_fixture: Array[Dictionary] = [
+		{"itemId": "critical", "state": QUEST_MARKER_READY, "cell": Vector2i(18, 18)},
+		{"itemId": "available_near", "state": QUEST_MARKER_AVAILABLE, "cell": Vector2i(4, 4)},
+		{"itemId": "available_mid", "state": QUEST_MARKER_AVAILABLE, "cell": Vector2i(6, 6)},
+		{"itemId": "available_far", "state": QUEST_MARKER_AVAILABLE, "cell": Vector2i(9, 9)},
+		{"itemId": "blocked_far", "state": QUEST_MARKER_BLOCKED, "cell": Vector2i(12, 12)},
+	]
+	var density_visible := QuestMarkerVisibilityModel.visible_item_ids(
+		density_fixture,
+		Vector2i(3, 3)
+	)
+	var density_selected := QuestMarkerVisibilityModel.visible_item_ids(
+		density_fixture,
+		Vector2i(3, 3),
+		"blocked_far"
+	)
+	var density_ok := (
+		density_visible.size() == 3
+		and density_visible.has("critical")
+		and density_visible.has("available_near")
+		and density_visible.has("available_mid")
+		and not density_visible.has("available_far")
+		and not density_visible.has("blocked_far")
+		and density_selected.has("blocked_far")
+	)
 
-	var status = "ok" if available_ok and accepted_talk_ok and in_progress_ok and ready_ok and blocked_ok and completed_hidden_ok and rebirth_marker_ok and signature_ok and visual_ok else "failed"
-	print("npc quest marker check ready: status=%s available=%s accepted_talk=%s in_progress=%s ready=%s blocked=%s hidden=%s rebirth=%s rebirth_steps=%s/%s/%s/%s/%s visual=%s signature=%s active=%s" % [
+	var status = "ok" if available_ok and accepted_talk_ok and in_progress_ok and ready_ok and blocked_ok and completed_hidden_ok and rebirth_marker_ok and signature_ok and visual_ok and density_ok else "failed"
+	print("npc quest marker check ready: status=%s available=%s accepted_talk=%s in_progress=%s ready=%s blocked=%s hidden=%s rebirth=%s rebirth_steps=%s/%s/%s/%s/%s visual=%s density=%s signature=%s active=%s" % [
 		status,
 		str(available_ok),
 		str(accepted_talk_ok),
@@ -21396,6 +21424,7 @@ func _run_auto_npc_quest_marker_check() -> void:
 		str(rebirth_ready_marker_ok),
 		str(rebirth_after_marker_ok),
 		str(visual_ok),
+		str(density_ok),
 		completed_signature,
 		PlayerProgressModel.active_quest_id(host.player_profile),
 	])

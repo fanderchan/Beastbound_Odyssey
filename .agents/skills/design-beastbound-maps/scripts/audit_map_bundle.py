@@ -524,6 +524,26 @@ def validate_number_pair(
     return value
 
 
+def validate_color_modulate(
+    audit: Audit,
+    value: Any,
+    field_name: str,
+) -> list[int | float] | None:
+    if not isinstance(value, list) or len(value) != 4:
+        audit.error(field_name, "expected a four-value RGBA array")
+        return None
+    for part in value:
+        if (
+            not isinstance(part, (int, float))
+            or isinstance(part, bool)
+            or not math.isfinite(part)
+            or not 0.0 < part <= 1.0
+        ):
+            audit.error(field_name, "RGBA values must be finite and in (0, 1]")
+            return None
+    return value
+
+
 def validate_grid_cell(
     audit: Audit,
     value: Any,
@@ -1324,6 +1344,12 @@ def validate_objects(
             f"{field_name}.displaySize",
             positive=True,
         )
+        if "colorModulate" in obj:
+            validate_color_modulate(
+                audit,
+                obj.get("colorModulate"),
+                f"{field_name}.colorModulate",
+            )
         render_layer = obj.get("renderLayer")
         if render_layer not in VALID_RENDER_LAYERS:
             audit.error(

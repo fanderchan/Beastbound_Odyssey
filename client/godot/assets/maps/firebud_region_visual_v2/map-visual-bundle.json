@@ -17,7 +17,7 @@
   ],
   "catalogContractCheck": {
     "path": "evidence/catalog-contract-check.json",
-    "sha256": "092a9ba229efab36ff03888cd164f1d55972c052371684733adcb3e08239e90c"
+    "sha256": "3f09be532a8fd9df7c43fda803af4b2a3530fa5e8ba1e3e0eac700bd4440a6eb"
   },
   "source": {
     "origin": "AI-generated original",
@@ -1108,8 +1108,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        112,
-        102
+        96,
+        88
+      ],
+      "colorModulate": [
+        0.82,
+        0.82,
+        0.82,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1163,8 +1169,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        112,
-        96
+        98,
+        84
+      ],
+      "colorModulate": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1218,8 +1230,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        120,
-        96
+        102,
+        82
+      ],
+      "colorModulate": [
+        0.84,
+        0.84,
+        0.84,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1273,8 +1291,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        128,
-        111
+        112,
+        97
+      ],
+      "colorModulate": [
+        0.88,
+        0.88,
+        0.88,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1328,8 +1352,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        220,
-        221
+        204,
+        205
+      ],
+      "colorModulate": [
+        0.82,
+        0.82,
+        0.82,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1383,8 +1413,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        360,
-        290
+        340,
+        274
+      ],
+      "colorModulate": [
+        0.85,
+        0.85,
+        0.85,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1438,8 +1474,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        300,
-        242
+        288,
+        232
+      ],
+      "colorModulate": [
+        0.85,
+        0.85,
+        0.85,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "decorative",
@@ -1476,8 +1518,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        120,
-        92
+        100,
+        77
+      ],
+      "colorModulate": [
+        0.76,
+        0.76,
+        0.76,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1531,8 +1579,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        120,
-        107
+        100,
+        89
+      ],
+      "colorModulate": [
+        0.74,
+        0.74,
+        0.74,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1586,8 +1640,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        104,
-        67
+        88,
+        57
+      ],
+      "colorModulate": [
+        0.72,
+        0.72,
+        0.72,
+        1.0
       ],
       "renderLayer": "ground_decal",
       "collisionRole": "decorative",
@@ -1624,8 +1684,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        70,
-        76
+        66,
+        72
+      ],
+      "colorModulate": [
+        0.86,
+        0.86,
+        0.86,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "interaction",
@@ -1679,8 +1745,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        126,
-        134
+        108,
+        115
+      ],
+      "colorModulate": [
+        0.82,
+        0.82,
+        0.82,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1734,8 +1806,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        120,
-        141
+        102,
+        120
+      ],
+      "colorModulate": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1789,8 +1867,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        132,
-        113
+        112,
+        96
+      ],
+      "colorModulate": [
+        0.84,
+        0.84,
+        0.84,
+        1.0
       ],
       "renderLayer": "world",
       "collisionRole": "blocking",
@@ -1844,8 +1928,14 @@
         "alphaMode": "mixed"
       },
       "displaySize": [
-        112,
-        73
+        92,
+        60
+      ],
+      "colorModulate": [
+        0.74,
+        0.74,
+        0.74,
+        1.0
       ],
       "renderLayer": "ground_decal",
       "collisionRole": "decorative",
@@ -1894,7 +1984,7 @@
     "computerUseReport": null,
     "collisionAudit": {
       "path": "evidence/collision-audit.json",
-      "sha256": "df20cd944c4b72717ec06ccbb129f9892fae3bd8c349736aa616a4b1ae786e76"
+      "sha256": "583113fbaa9c99abf6dfe0a74955ee58762c566bcdb3a8e585d47fdb0d78f670"
     },
     "performanceReport": null,
     "supersededDressedReference": {

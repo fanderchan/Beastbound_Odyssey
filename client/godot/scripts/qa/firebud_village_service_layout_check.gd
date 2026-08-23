@@ -10,6 +10,10 @@ const MIN_FOOTPOINT_SPACING_PX := 72.0
 const MAIN_PROMENADE_Y := 15
 const MAIN_PROMENADE_X_MIN := 3
 const MAIN_PROMENADE_X_MAX := 10
+const REVIEW_ZOOM := 1.55
+const REVIEW_ANCHOR := Vector2(390, 360)
+const REVIEW_SAFE_RECT := Rect2(8, 8, 955, 486)
+const MAX_INITIAL_SAFE_NPC_FOOTPOINTS := 5
 
 const EXPECTED_NPCS := {
 	"village_guard": {
@@ -18,7 +22,7 @@ const EXPECTED_NPCS := {
 		"appearanceId": "npc_village_guard_m_v1",
 	},
 	"firebud_welfare_clerk": {
-		"cell": Vector2i(7, 10),
+		"cell": Vector2i(7, 8),
 		"facing": "south",
 		"appearanceId": "npc_welfare_clerk_f_v1",
 	},
@@ -33,12 +37,12 @@ const EXPECTED_NPCS := {
 		"appearanceId": "npc_item_shopkeeper_f_v1",
 	},
 	"firebud_equipment_keeper": {
-		"cell": Vector2i(6, 12),
+		"cell": Vector2i(8, 10),
 		"facing": "south",
 		"appearanceId": "npc_equipment_artisan_m_v1",
 	},
 	"firebud_diamond_keeper": {
-		"cell": Vector2i(9, 13),
+		"cell": Vector2i(10, 12),
 		"facing": "south",
 		"appearanceId": "npc_diamond_merchant_m_v1",
 	},
@@ -95,11 +99,18 @@ static func run() -> Dictionary:
 	var npc_items: Array[Dictionary] = []
 	var layout_items: Array[Dictionary] = []
 	var occupied_cells: Dictionary = {}
+	var initial_safe_npc_ids: Array[String] = []
 	for value in InteractionModel.interaction_points(map_data):
 		var item := value as Dictionary
 		var item_id := str(item.get("id", ""))
 		if str(item.get("kind", "")) == "npc":
 			npc_items.append(item)
+			var screen_footpoint := REVIEW_ANCHOR + (
+				IsoMapModel.grid_to_world(map_data, InteractionModel.cell_for(item))
+				- IsoMapModel.grid_to_world(map_data, IsoMapModel.spawn_cell(map_data))
+			) * REVIEW_ZOOM
+			if REVIEW_SAFE_RECT.has_point(screen_footpoint):
+				initial_safe_npc_ids.append(str(item.get("id", "")))
 		if EXPECTED_NPCS.has(item_id) or item_id == RECORD_POINT_ID:
 			layout_items.append(item)
 			var cell := InteractionModel.cell_for(item)
@@ -116,6 +127,15 @@ static func run() -> Dictionary:
 		errors.append(
 			"火芽村正式 NPC 数量漂移：expected=%d actual=%d"
 			% [EXPECTED_NPCS.size(), npc_items.size()]
+		)
+	if initial_safe_npc_ids.size() > MAX_INITIAL_SAFE_NPC_FOOTPOINTS:
+		errors.append(
+			"火芽村初始安全画幅 NPC 过密：max=%d actual=%d ids=%s"
+			% [
+				MAX_INITIAL_SAFE_NPC_FOOTPOINTS,
+				initial_safe_npc_ids.size(),
+				",".join(initial_safe_npc_ids),
+			]
 		)
 
 	var default_spawn := IsoMapModel.spawn_cell(map_data, "default")
@@ -218,6 +238,8 @@ static func run() -> Dictionary:
 		"mainPromenadeClear": true,
 		"encounterZoneNpcCount": 0,
 		"allNpcApproachesReachable": true,
+		"initialSafeNpcFootpointCount": initial_safe_npc_ids.size(),
+		"initialSafeNpcIds": initial_safe_npc_ids,
 		"facingContract": "north-south-inward",
 	})
 

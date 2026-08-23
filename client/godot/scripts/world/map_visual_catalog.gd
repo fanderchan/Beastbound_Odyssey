@@ -1996,12 +1996,28 @@ static func _build_object_draws(
 		var anchor := _vector2_from_value(definition.get("anchor"), Vector2(-1, -1))
 		var sort_point := _vector2_from_value(definition.get("sortPoint"), Vector2(-1, -1))
 		var offset := _vector2_from_value(placement.get("offset"), Vector2.ZERO)
+		var color_modulate := _color_from_value(
+			definition.get("colorModulate", [1.0, 1.0, 1.0, 1.0]),
+			Color(-1.0, -1.0, -1.0, -1.0)
+		)
 		var render_layer := str(definition.get("renderLayer", ""))
 		if display_size.x <= 0.0 or display_size.y <= 0.0 or scale.x <= 0.0 or scale.y <= 0.0:
 			errors.append("地图视觉物件 displaySize/scale 无效：%s" % instance_id)
 			continue
 		if not _normalized_point(anchor) or not _normalized_point(sort_point):
 			errors.append("地图视觉物件 anchor/sortPoint 无效：%s" % instance_id)
+			continue
+		if (
+			color_modulate.r <= 0.0
+			or color_modulate.g <= 0.0
+			or color_modulate.b <= 0.0
+			or color_modulate.a <= 0.0
+			or color_modulate.r > 1.0
+			or color_modulate.g > 1.0
+			or color_modulate.b > 1.0
+			or color_modulate.a > 1.0
+		):
+			errors.append("地图视觉物件 colorModulate 必须是 0..1 内的正 RGBA：%s" % instance_id)
 			continue
 		if not RENDER_LAYERS.has(render_layer):
 			errors.append("地图视觉物件 renderLayer 无效：%s" % instance_id)
@@ -2027,6 +2043,7 @@ static func _build_object_draws(
 			"grid": cell,
 			"texture": texture,
 			"drawRect": draw_rect,
+			"colorModulate": color_modulate,
 			"contactPoint": contact_point,
 			"sortKey": source_sort_y + float(sort_offset),
 			"renderLayer": render_layer,
@@ -2176,6 +2193,21 @@ static func _vector2_from_value(value: Variant, fallback: Vector2) -> Vector2:
 	if not (parts[0] is int or parts[0] is float) or not (parts[1] is int or parts[1] is float):
 		return fallback
 	return Vector2(float(parts[0]), float(parts[1]))
+
+
+static func _color_from_value(value: Variant, fallback: Color) -> Color:
+	if not (value is Array) or (value as Array).size() != 4:
+		return fallback
+	var parts := value as Array
+	for part in parts:
+		if part is bool or not (part is int or part is float) or not is_finite(float(part)):
+			return fallback
+	return Color(
+		float(parts[0]),
+		float(parts[1]),
+		float(parts[2]),
+		float(parts[3])
+	)
 
 
 static func _rect2i_from_value(value: Variant) -> Rect2i:

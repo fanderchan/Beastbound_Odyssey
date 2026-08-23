@@ -3,7 +3,7 @@
   "reportType": "beastbound_map_collision_audit",
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
-  "generatedAtUtc": "2026-08-20T18:29:07Z",
+  "generatedAtUtc": "2026-08-23T10:56:35Z",
   "scene": "res://scenes/Main.tscn",
   "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd -- --preview-map-visual-catalog-contract",
   "testedMapIds": [
@@ -35,14 +35,14 @@
     }
   ],
   "authoritySnapshot": {
-    "catalogContractSha256": "092a9ba229efab36ff03888cd164f1d55972c052371684733adcb3e08239e90c",
+    "catalogContractSha256": "3f09be532a8fd9df7c43fda803af4b2a3530fa5e8ba1e3e0eac700bd4440a6eb",
     "bindingHashes": {
       "firebud_training_yard": "2775987fa144e2a7f337a03d871bcd835d176e9af7a5461024997a0e3aaed073",
       "firebud_village_gate": "0a97650b8a8781f4831881cbf99adbc76d3a2287bdd08ef7aeaf17a15fb33252"
     },
     "mapDataHashes": {
       "firebud_training_yard": "37279c76ff265927ef8eb042ed0b8460e34aa91687070aff14029307adc71c51",
-      "firebud_village_gate": "19bbdcbb7856f47f57d80883cf06bb83efab8abc05315eadf41e23fb2a409eac"
+      "firebud_village_gate": "c27d3aff3791ececc7e0cf9ec952dd37361e23a358fa8b111d6939bc88f0fe05"
     }
   },
   "excludedReleaseGate": null,
@@ -50,11 +50,11 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:36a85217b8d6da1f49facc14fb4fe10e84b594c4+beastbound-map-runtime-surface-v2:78a6232908b40e82d6f12b02758e35b8fb3c137713d53e478fd8c2eff2c4fbd8"
+    "buildIdentity": "git:d94e95e9d2d0910ad525c8ed9f59ea09507338b6+beastbound-map-runtime-surface-v2:113c6955df37a42f9c7765b129bc25403c25f2f9fa2b15e1b8f6430090a043e4"
   },
   "rawRunnerReceipt": {
     "path": "evidence/collision-runner-receipt.log",
-    "sha256": "e0cd7f950b838ce5654131486950691910ab5f30214f4efbfa7b8851c5cf2c2d"
+    "sha256": "cce452f9ecdf0fd7d75c59f05b3f447e01d1bcd52f21bc884e1158270f46382a"
   },
   "notes": [
     "This report covers authoritative map, collision, protected-cell and exact-path contracts.",

@@ -81,7 +81,15 @@ static func draw_objects(
 		var draw_rect: Variant = command.get("drawRect")
 		if not (texture is Texture2D) or not (draw_rect is Rect2):
 			continue
-		canvas.draw_texture_rect(texture as Texture2D, draw_rect as Rect2, false)
+		var color_modulate: Variant = command.get("colorModulate", Color.WHITE)
+		if not (color_modulate is Color):
+			color_modulate = Color.WHITE
+		canvas.draw_texture_rect(
+			texture as Texture2D,
+			draw_rect as Rect2,
+			false,
+			color_modulate as Color
+		)
 		count += 1
 	return count
 
@@ -117,6 +125,7 @@ static func world_depth_commands(prepared: Dictionary) -> Array[Dictionary]:
 			"tiePriority": 20,
 			"texture": texture,
 			"drawRect": draw_rect,
+			"colorModulate": command.get("colorModulate", Color.WHITE),
 			"collisionRole": str(command.get("collisionRole", "")),
 			"interactionLink": command.get("interactionLink"),
 		})
@@ -164,6 +173,7 @@ static func foreground_overlay_commands(prepared: Dictionary) -> Array[Dictionar
 			"position": contact_point as Vector2,
 			"texture": texture,
 			"drawRect": draw_rect,
+			"colorModulate": command.get("colorModulate", Color.WHITE),
 		})
 	return commands
 

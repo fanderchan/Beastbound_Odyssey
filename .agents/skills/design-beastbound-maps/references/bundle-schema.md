@@ -281,6 +281,9 @@ runtime objects into one object image or reuse an atlas crop as a purported
 independent prop. Every object declares all of these runtime fields:
 
 - `displaySize`: positive intended display width and height in pixels;
+- optional `colorModulate`: four finite positive RGBA multipliers in `(0, 1]`;
+  use it only for an explicit runtime palette/lighting grade, never to hide an
+  unfinished or unlicensed source asset;
 - `renderLayer`: `ground_decal`, `world`, or `foreground`;
 - `collisionRole`: `none`, `decorative`, `blocking`, or `interaction`;
 - `scale`: two positive finite values; negative scale is forbidden because it
