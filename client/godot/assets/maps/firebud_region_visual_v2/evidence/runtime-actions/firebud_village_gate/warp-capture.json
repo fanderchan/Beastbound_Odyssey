@@ -60,12 +60,12 @@
 			360.0
 		],
 		"effectiveAnchor": [
-			390.0,
-			360.0
+			202.890625,
+			378.295989990234
 		],
 		"playerScreenPoint": [
-			391.079315185547,
-			356.222351074219
+			203.026306152344,
+			379.374237060547
 		],
 		"playerAtEffectiveAnchor": true,
 		"taskHudVisible": true,
@@ -75,9 +75,191 @@
 			206.0,
 			465.0
 		],
+		"bottomHudVisible": true,
+		"bottomHudRect": [
+			599.0,
+			530.0,
+			597.0,
+			181.0
+		],
+		"topHudVisible": true,
+		"topHudRect": [
+			80.0,
+			0.0,
+			330.0,
+			145.0
+		],
+		"messageHudVisible": false,
+		"messageHudRect": [
+			0.0,
+			0.0,
+			0.0,
+			0.0
+		],
+		"fixedHudBlockerCount": 3,
 		"playerInsideSafeRect": true,
 		"playerClearOfTaskHud": true,
+		"playerClearOfFixedHud": true,
 		"taskHudOverlappingBlockingObjectIds": [],
+		"npcAlphaSubjectCount": 14,
+		"visibleNpcCount": 14,
+		"visibleNpcIds": [
+			"firebud_bank_keeper",
+			"firebud_diamond_keeper",
+			"firebud_doctor",
+			"firebud_equipment_keeper",
+			"firebud_pet_mm_stage2_keeper",
+			"firebud_pet_mm_trial_mentor",
+			"firebud_pet_skill_trainer",
+			"firebud_rebirth_mentor",
+			"firebud_riding_trainer",
+			"firebud_shopkeeper",
+			"firebud_stable_keeper",
+			"firebud_storyteller",
+			"firebud_welfare_clerk",
+			"village_guard"
+		],
+		"npcAlphaScreenRects": {
+			"village_guard": [
+				546.568298339844,
+				13.0782470703125,
+				56.9159545898438,
+				113.832000732422
+			],
+			"firebud_rebirth_mentor": [
+				734.80029296875,
+				290.404235839844,
+				52.4519653320312,
+				115.505981445312
+			],
+			"firebud_pet_mm_trial_mentor": [
+				799.032287597656,
+				196.846237182617,
+				47.9879760742188,
+				116.064010620117
+			],
+			"firebud_pet_mm_stage2_keeper": [
+				856.568237304688,
+				352.404205322266,
+				56.3580322265625,
+				115.506011962891
+			],
+			"firebud_doctor": [
+				430.380310058594,
+				445.962188720703,
+				41.8499755859375,
+				114.948028564453
+			],
+			"firebud_shopkeeper": [
+				361.126312255859,
+				231.194244384766,
+				55.7999877929688,
+				112.716003417969
+			],
+			"firebud_diamond_keeper": [
+				923.590209960938,
+				262.752258300781,
+				46.8720092773438,
+				112.157989501953
+			],
+			"firebud_stable_keeper": [
+				112.568298339844,
+				355.194183349609,
+				57.4740295410156,
+				112.716033935547
+			],
+			"firebud_riding_trainer": [
+				121.496337890625,
+				233.426239013672,
+				38.5019836425781,
+				110.484008789062
+			],
+			"firebud_pet_skill_trainer": [
+				368.938293457031,
+				354.636199951172,
+				40.176025390625,
+				113.274017333984
+			],
+			"firebud_equipment_keeper": [
+				919.126281738281,
+				134.846237182617,
+				55.7999877929688,
+				116.064010620117
+			],
+			"firebud_welfare_clerk": [
+				858.242248535156,
+				42.4042663574219,
+				53.010009765625,
+				115.505981445312
+			],
+			"firebud_storyteller": [
+				490.148315429688,
+				351.846221923828,
+				45.7559814453125,
+				116.063995361328
+			],
+			"firebud_bank_keeper": [
+				490.148315429688,
+				166.404251098633,
+				45.197998046875,
+				115.505996704102
+			]
+		},
+		"hudOverlappingNpcIds": [],
+		"viewportClippedNpcIds": [],
+		"keyEnvironmentSubjectCount": 7,
+		"visibleKeyEnvironmentCount": 3,
+		"visibleKeyEnvironmentIds": [
+			"village_planter_blocked_cluster_02",
+			"village_record_totem_interaction_01",
+			"village_trade_counter_blocked_cluster_01"
+		],
+		"keyEnvironmentAlphaScreenRects": {
+			"village_trade_counter_blocked_cluster_01": [
+				679.651306152344,
+				18.9851684570312,
+				162.75,
+				137.978179931641
+			],
+			"village_service_pavilion_blocked_cluster_01": [
+				1292.85595703125,
+				-91.0119934082031,
+				300.340454101562,
+				301.862487792969
+			],
+			"village_ancient_tree_blocked_cluster_01": [
+				1311.7607421875,
+				24.9208374023438,
+				510.531127929688,
+				408.206726074219
+			],
+			"village_record_totem_interaction_01": [
+				651.358825683594,
+				395.261749267578,
+				95.3348999023438,
+				104.624969482422
+			],
+			"village_planter_blocked_cluster_02": [
+				438.916931152344,
+				546.426574707031,
+				148.21875,
+				117.131286621094
+			],
+			"village_fence_blocked_cluster_01": [
+				1609.65124511719,
+				618.47021484375,
+				162.75,
+				139.514038085938
+			],
+			"village_honey_rocks_blocked_cluster_01": [
+				1246.3701171875,
+				866.264526367188,
+				145.312377929688,
+				128.269348144531
+			]
+		},
+		"hudOverlappingKeyEnvironmentIds": [],
+		"viewportClippedKeyEnvironmentIds": [],
 		"nearestWarp": {
 			"id": "warp_to_training_yard",
 			"cell": [
@@ -85,11 +267,11 @@
 				15
 			],
 			"screenPoint": [
-				267.079315185547,
-				514.322326660156
+				265.026306152344,
+				196.474243164062
 			],
 			"edgeClear": true,
-			"insideSafeRect": false
+			"insideSafeRect": true
 		}
 	},
 	"mapArtActive": true,
@@ -131,14 +313,15 @@
 		15
 	],
 	"targetCell": [
-		0,
-		11
+		4,
+		18
 	],
-	"targetCandidateCount": 10,
+	"targetCandidateCount": 107,
 	"targetVariantIndex": 1,
+	"targetClearance": "exact_cell",
 	"endCell": [
-		0,
-		11
+		4,
+		18
 	],
 	"playerCellChanged": true,
 	"input": {
@@ -148,15 +331,15 @@
 		"releaseProcessFrame": 11,
 		"frameSeparated": true,
 		"screenPoint": [
-			452.0,
-			143.0
+			202.890655517578,
+			397.487487792969
 		]
 	},
 	"screenshotPath": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_village_gate/warp.png",
-	"screenshotSha256": "3cef2c14d8f6589a25171bfbd5e894743baa16ff6f3de99143f8bab7b38b479a",
+	"screenshotSha256": "c8b10ddab0af281ae6cb86c4241db5e87d13951728bccbd2f0dab9a98c7b1ea1",
 	"screenshot": {
 		"path": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_village_gate/warp.png",
-		"sha256": "3cef2c14d8f6589a25171bfbd5e894743baa16ff6f3de99143f8bab7b38b479a",
+		"sha256": "c8b10ddab0af281ae6cb86c4241db5e87d13951728bccbd2f0dab9a98c7b1ea1",
 		"width": 1280,
 		"height": 720
 	},
@@ -173,5 +356,243 @@
 	"errors": [],
 	"result": "PASS",
 	"ok": true,
-	"generatedAtUtc": "2026-08-23T11:16:55Z"
+	"generatedAtUtc": "2026-08-25T14:26:41Z",
+	"hudGlyphStability": {
+		"status": "passed",
+		"passed": true,
+		"method": "independent_viewport_rgb_readback_edge_energy",
+		"consecutiveFrames": true,
+		"frameCount": 6,
+		"requiredFrameCount": 6,
+		"textSource": {
+			"passed": true,
+			"taskTabText": "任务",
+			"partyTabText": "组队",
+			"titleText": "任务追踪",
+			"routeButtonText": "自动寻路",
+			"taskEntryCount": 4,
+			"taskEntryLabelCount": 8,
+			"emptyTaskEntryLabelCount": 0,
+			"errors": []
+		},
+		"regions": {
+			"tabs": {
+				"rect": [
+					1020,
+					136,
+					166,
+					24
+				],
+				"minimumEdgeEnergy": 25000,
+				"meaning": "任务/组队页签字形"
+			},
+			"title": {
+				"rect": [
+					1020,
+					193,
+					90,
+					25
+				],
+				"minimumEdgeEnergy": 15000,
+				"meaning": "任务追踪标题字形"
+			},
+			"body": {
+				"rect": [
+					1027,
+					225,
+					148,
+					200
+				],
+				"minimumEdgeEnergy": 200000,
+				"meaning": "任务条目标题与正文"
+			},
+			"routeButton": {
+				"rect": [
+					1068,
+					453,
+					70,
+					19
+				],
+				"minimumEdgeEnergy": 7000,
+				"meaning": "自动寻路按钮字形"
+			}
+		},
+		"frames": [
+			{
+				"frameIndex": 0,
+				"processFrame": 51,
+				"taskHudDecodedPixelSha256": "35c6e3ce3448b8343c2f4110f9a868dcf5ca1b11b486aa485792120927ed3967",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111968,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 1,
+				"processFrame": 52,
+				"taskHudDecodedPixelSha256": "779ccb37d705365ffda7f7d50c455712a20cf8fd48a45d2a6ad4bca5f49a474e",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111970,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 2,
+				"processFrame": 53,
+				"taskHudDecodedPixelSha256": "c8b12b32a87e35e414ce89a0e42bf6d5d206a9a99c12cefdf55cc6fb1a8d9525",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111970,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 3,
+				"processFrame": 54,
+				"taskHudDecodedPixelSha256": "468096782b3d18ef563242afcc2062a1d8b6e2bd4fa120e8cb2ae52a0d9594bf",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111973,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 4,
+				"processFrame": 55,
+				"taskHudDecodedPixelSha256": "5ae66b72443daacf0bd4d02917e6079fead174565ec76eedf61b9ba77da466fe",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111975,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 5,
+				"processFrame": 56,
+				"taskHudDecodedPixelSha256": "ba7c9cbcf5e96e8fd22e84c88481286af46ce62c68aa81bcaf3d80d933dce199",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111975,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			}
+		],
+		"errors": []
+	}
 }

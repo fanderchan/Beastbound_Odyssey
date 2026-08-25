@@ -4,7 +4,7 @@
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
   "comparisonMode": "legacy_fallback_vs_candidate",
-  "generatedAtUtc": "2026-08-23T11:40:35.380Z",
+  "generatedAtUtc": "2026-08-25T15:07:03.539Z",
   "scene": "res://scenes/Main.tscn",
   "viewport": [
     1280,
@@ -30,14 +30,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.2,
-            0.21,
-            0.22
+            0.17,
+            0.196,
+            0.21
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.116,
-            0.93
+            0.119,
+            0.95
           ]
         },
         "moving": {
@@ -48,21 +48,21 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.15,
-            0.293,
-            0.5
+            0.16,
+            0.29,
+            0.48
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            1.817,
-            4.19
+            1.807,
+            4.16
           ],
           "clicks": 34,
           "accepted": 34,
           "resolved": 11,
           "applied": 11,
           "avgInputUs": 1,
-          "maxInputUs": 2,
+          "maxInputUs": 3,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -81,14 +81,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.26,
-            0.294,
-            0.32
+            0.21,
+            0.269,
+            0.31
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.007,
-            0.06
+            0.006,
+            0.05
           ]
         },
         "moving": {
@@ -99,21 +99,21 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.33,
-            0.4,
+            0.34,
+            0.405,
             0.47
           ],
           "drawWorldMsMinMeanMax": [
-            0.17,
-            0.355,
-            0.54
+            0.45,
+            0.485,
+            0.52
           ],
-          "clicks": 35,
-          "accepted": 35,
-          "resolved": 11,
-          "applied": 11,
-          "avgInputUs": 2,
-          "maxInputUs": 16,
+          "clicks": 48,
+          "accepted": 48,
+          "resolved": 15,
+          "applied": 15,
+          "avgInputUs": 1,
+          "maxInputUs": 2,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -124,8 +124,8 @@
       },
       "comparison": {
         "processTotalMeanDeltaMs": {
-          "idle": 0.084,
-          "moving": 0.107
+          "idle": 0.073,
+          "moving": 0.115
         },
         "thresholds": {
           "candidateIdleProcessMeanMaxMs": 0.5,
@@ -153,39 +153,39 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.17,
-            0.242,
-            0.26
+            0.19,
+            0.22,
+            0.27
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.069,
-            0.55
+            0.072,
+            0.58
           ]
         },
         "moving": {
-          "samples": 4,
+          "samples": 3,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.21,
-            0.265,
-            0.39
+            0.12,
+            0.227,
+            0.29
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.787,
-            2.59
+            1.02,
+            2.81
           ],
-          "clicks": 31,
-          "accepted": 31,
-          "resolved": 10,
-          "applied": 10,
+          "clicks": 27,
+          "accepted": 27,
+          "resolved": 9,
+          "applied": 9,
           "avgInputUs": 1,
-          "maxInputUs": 1,
+          "maxInputUs": 4,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -204,39 +204,39 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.25,
-            0.281,
-            0.32
+            0.21,
+            0.244,
+            0.28
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.007,
-            0.06
+            0.006,
+            0.05
           ]
         },
         "moving": {
-          "samples": 3,
+          "samples": 2,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.28,
-            0.363,
-            0.41
+            0.34,
+            0.42,
+            0.5
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.133,
-            0.4
+            0.21,
+            0.42
           ],
-          "clicks": 22,
-          "accepted": 22,
+          "clicks": 24,
+          "accepted": 24,
           "resolved": 8,
           "applied": 8,
           "avgInputUs": 1,
-          "maxInputUs": 2,
+          "maxInputUs": 3,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -247,8 +247,8 @@
       },
       "comparison": {
         "processTotalMeanDeltaMs": {
-          "idle": 0.039,
-          "moving": 0.098
+          "idle": 0.024,
+          "moving": 0.193
         },
         "thresholds": {
           "candidateIdleProcessMeanMaxMs": 0.5,
@@ -270,11 +270,11 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:dbfa838053e4da818648ac5ea19e4cbc074261ae+beastbound-map-runtime-surface-v2:113c6955df37a42f9c7765b129bc25403c25f2f9fa2b15e1b8f6430090a043e4"
+    "buildIdentity": "git:2d10a1ea4940e862d4076c98602536694741967a+beastbound-map-runtime-surface-v2:54e808197de5909227febeff931d631551c76b4ab48af7238dd11e59320b140d"
   },
   "rawRunnerReceipt": {
     "path": "evidence/performance-runner-receipt.jsonl",
-    "sha256": "aa36d0f86adc14932806e21b42e74b417f0dd635b1443f3badd84592381338df"
+    "sha256": "a1a9251ede850097efcefcdb356b3fc9f791cd09e4d213ad50172ff548dc1109"
   },
   "notes": [
     "All 8 variants ran through the real Main.tscn non-headless Metal path.",

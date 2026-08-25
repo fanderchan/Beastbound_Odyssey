@@ -25,17 +25,34 @@ class InstallFirebudComputerUseEvidenceTest(unittest.TestCase):
                 set(TOOL.ACTION_KINDS),
             )
 
-    def test_village_collision_and_occlusion_target_current_trade_counter(self) -> None:
+    def test_village_actions_match_current_safe_composition(self) -> None:
         village = TOOL.ACTION_CONFIG["firebud_village_gate"]
+        movement = village["movement_path"]
+        warp = village["warp"]
         collision = village["collision"]
         occlusion = village["occlusion"]
 
-        self.assertEqual(collision["steps"][0]["windowPoint"], [425, 165])
-        self.assertIn("贸易柜台", collision["description"])
-        self.assertIn("4,10 与 5,10", "\n".join(collision["observations"]))
-        self.assertEqual(occlusion["steps"][0]["windowPoint"], [390, 120])
-        self.assertIn("贸易柜台", occlusion["description"])
-        self.assertNotIn("古树", str(collision) + str(occlusion))
+        self.assertEqual(movement["steps"][0]["windowPoint"], [39, 355])
+        self.assertIn("西南侧草地", movement["description"])
+        self.assertEqual(warp["steps"][2]["windowPoint"], [430, 297])
+        self.assertIn("恢复正常 HUD", warp["description"])
+        self.assertEqual(collision["steps"][0]["windowPoint"], [132, 246])
+        self.assertIn("记录图腾", "\n".join(collision["observations"]))
+        self.assertEqual(occlusion["steps"][0]["windowPoint"], [323, 250])
+        self.assertIn("记录图腾后侧", occlusion["description"])
+        self.assertNotIn("贸易柜台", str(collision) + str(occlusion))
+
+    def test_training_collision_and_occlusion_use_current_fence_cells(self) -> None:
+        training = TOOL.ACTION_CONFIG["firebud_training_yard"]
+        collision = training["collision"]
+        occlusion = training["occlusion"]
+
+        self.assertEqual(collision["steps"][0]["windowPoint"], [102, 146])
+        self.assertIn("低木栅栏", collision["description"])
+        self.assertIn("阻挡 footprint", "\n".join(collision["observations"]))
+        self.assertEqual(occlusion["steps"][0]["windowPoint"], [133, 130])
+        self.assertIn("低木栅栏后侧", occlusion["description"])
+        self.assertIn("围栏横杆与立柱", "\n".join(occlusion["observations"]))
 
     def test_raw_root_rejects_paths_outside_run_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

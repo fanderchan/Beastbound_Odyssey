@@ -102,26 +102,26 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "collision": {
-            "description": "点击木栅栏另一侧草地，核对路线绕过显式阻挡 footprint。",
+            "description": "点击低木栅栏左侧邻格，核对角色停在显式阻挡 footprint 外。",
             "steps": [
-                {"action": "left_click", "windowPoint": [450, 220], "target": "木栅栏右侧可行走草地"},
-                {"action": "get_app_state", "fresh": True, "afterSettleMs": 1000},
+                {"action": "left_click", "windowPoint": [102, 146], "target": "低木栅栏左侧可行走邻格"},
+                {"action": "get_app_state", "fresh": True, "afterSettleMs": 1800},
             ],
             "observations": [
-                "黄色路线从木栅栏下端绕到右侧且没有把角色画进栅栏基座",
-                "角色与低木栅栏保持可辨识的安全间距",
+                "角色停在低木栅栏左侧可行走邻格，没有进入栅栏阻挡 footprint",
+                "围栏与角色脚点保持明确阻挡边界，没有发生穿透",
                 "阻挡物仍按世界层级覆盖路线，HUD 没有消费这次点击",
             ],
         },
         "occlusion": {
-            "description": "走到补给陶罐后侧，核对角色前后层级和局部遮挡。",
+            "description": "走到低木栅栏后侧，核对角色前后层级和局部遮挡。",
             "steps": [
-                {"action": "left_click", "windowPoint": [401, 181], "target": "补给陶罐左后侧可行走邻格"},
-                {"action": "get_app_state", "fresh": True, "afterSettleMs": 1800},
+                {"action": "left_click", "windowPoint": [133, 130], "target": "低木栅栏后侧可行走格"},
+                {"action": "get_app_state", "fresh": True, "afterSettleMs": 2200},
             ],
             "observations": [
-                "角色从出生点走到补给陶罐后侧",
-                "陶罐正确盖住角色腿部而上半身仍清晰可见",
+                "角色从出生点走到低木栅栏后侧",
+                "围栏横杆与立柱正确盖住角色下半身，上半身仍清晰可见",
                 "遮挡只改变绘制层级，没有把角色错误裁掉或改成碰撞",
             ],
         },
@@ -140,50 +140,52 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "movement_path": {
-            "description": "点击服务区右侧草地，核对路线穿过主通道而不穿 NPC。",
+            "description": "点击村口西南侧草地，核对真实跨帧移动与服务区碰撞回避。",
             "steps": [
-                {"action": "left_click", "windowPoint": [430, 220], "target": "服务区右侧可行走草地"},
-                {"action": "get_app_state", "fresh": True, "afterSettleMs": 1000},
+                {"action": "left_click", "windowPoint": [39, 355], "target": "村口西南侧可行走草地"},
+                {"action": "get_app_state", "fresh": True, "afterSettleMs": 1800},
             ],
             "observations": [
-                "角色从 3,15 出生区进入服务区主通道",
-                "黄色路线从 NPC 间的保留通道通过且没有穿进人物轮廓",
-                "新布局下任务感叹号、记录图腾和路径仍可同时辨认",
+                "角色从 3,15 出生区跨越多个格子抵达西南侧草地",
+                "路径绕开服务 NPC、记录图腾和下方花箱，没有打开对话或服务面板",
+                "镜头跟随稳定，任务 HUD 与底部操作栏保持完整",
             ],
         },
         "warp": {
-            "description": "点击主线自动寻路，从火芽村返回训练场并打开训练师对话。",
+            "description": "点击主线自动寻路，从火芽村返回训练场，再离开训练师对话恢复正常 HUD。",
             "steps": [
                 {"action": "left_click", "windowPoint": [550, 262], "target": "主线任务自动寻路按钮"},
-                {"action": "get_app_state", "fresh": True, "afterTravelMs": 8000},
+                {"action": "get_app_state", "fresh": True, "afterTravelMs": 5000},
+                {"action": "left_click", "windowPoint": [430, 297], "target": "训练师对话离开按钮"},
+                {"action": "get_app_state", "fresh": True, "afterSettleMs": 1200},
             ],
             "observations": [
                 "自动寻路穿过村口传送点并返回火芽训练场",
                 "切图后角色抵达训练师阿土的可交互邻格",
-                "正常训练师对话打开，证明落点与后续交互都可达",
+                "训练师对话可正常打开和离开，最终任务正文与自动寻路按钮完整可见",
             ],
         },
         "collision": {
-            "description": "点击贸易柜台基座，核对两格阻挡 footprint 与邻格改落。",
+            "description": "点击服务簇西南侧可行走格，核对路线绕开 NPC、图腾和下方花箱。",
             "steps": [
-                {"action": "left_click", "windowPoint": [425, 165], "target": "贸易柜台基座与两格阻挡 footprint"},
-                {"action": "get_app_state", "fresh": True, "afterSettleMs": 1800},
-            ],
-            "observations": [
-                "黄色路线自动改落到贸易柜台右侧可行走邻格",
-                "角色没有进入 4,10 与 5,10 两格阻挡 footprint",
-                "柜台基座、货筐和角色轮廓没有相互穿透，任务 HUD 也没有消费点击",
-            ],
-        },
-        "occlusion": {
-            "description": "走到贸易柜台后侧，核对摊位前景与角色局部遮挡。",
-            "steps": [
-                {"action": "left_click", "windowPoint": [390, 120], "target": "贸易柜台左后侧可行走点"},
+                {"action": "left_click", "windowPoint": [132, 246], "target": "服务簇西南侧可行走格"},
                 {"action": "get_app_state", "fresh": True, "afterSettleMs": 2200},
             ],
             "observations": [
-                "角色沿真实路线抵达贸易柜台后侧可行走点",
-                "柜台与货筐正确盖住角色下半身，头部和肩部仍清晰可辨",
+                "角色沿中央保留通道抵达服务簇西南侧，没有穿进任何 NPC 轮廓",
+                "记录图腾与下方花箱的显式 footprint 保持阻挡，角色停在可行走格",
+                "没有打开对话、服务面板或记录界面，任务 HUD 也没有消费点击",
+            ],
+        },
+        "occlusion": {
+            "description": "走到记录图腾后侧，核对石柱、标牌与角色的局部遮挡。",
+            "steps": [
+                {"action": "left_click", "windowPoint": [323, 250], "target": "记录图腾后侧可行走点"},
+                {"action": "get_app_state", "fresh": True, "afterSettleMs": 2400},
+            ],
+            "observations": [
+                "角色沿真实路线从图腾西北侧通行到记录图腾后侧",
+                "石柱与记录标牌正确盖住靠近侧下半身，头部和肩部仍清晰可辨",
                 "遮挡只改变世界层绘制顺序，没有角色残片，也没有侵入任务 HUD",
             ],
         },

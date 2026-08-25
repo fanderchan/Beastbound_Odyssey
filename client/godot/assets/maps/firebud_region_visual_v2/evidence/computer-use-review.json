@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportType": "beastbound_map_computer_use_review",
-  "generatedAtUtc": "2026-08-23T11:38:14Z",
+  "generatedAtUtc": "2026-08-25T15:00:38Z",
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
   "testedMapIds": [
@@ -27,24 +27,36 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
-          "sha256": "50866c5681b585bf83229f1c287a18f84a50d81d8cec496e30a83b5ff68007cc"
+          "sha256": "b36aee1650f272cf79738178767c6d158d81ecdec766ef2f323ec6245d712feb"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/pointer-capture.json",
-          "sha256": "b1af34bc2cf9173283da9bb6c0433cc1baf29873200474c80fa3cc7bb7f6ad60"
+          "sha256": "7d88c124dc5688d2be0677ae38fce5a549ccb00c98f2f2730085af958b20d6ec"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-before.jpeg",
-          "sha256": "116d6674f487637a62c1a5bae7b95da7ce1e72866213ec6583f16edc9a7f8c23"
+          "sha256": "18febd6ce89edb3cace1567f34562c82a4f4395525166a542946061fa660c094"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-after.jpeg",
-          "sha256": "af468f54382623937e4c86145ed180b126c800bb12807b1e6d3f7e354dea5bf4"
+          "sha256": "303b2c905ca349974611fe75cb6e64e48d64ef770d4d14bb425a16c5a99539c0"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_pointer.jsonl",
-        "sha256": "b799293b8e9fcf6ed486103830ef2d8482d9b1e7a512e1d2fca0a600801f1b4a"
+        "sha256": "2e355ed285a78b3b6d556d13e7e78b56d142f1f07902cbd7f5f7abd93cedb698"
+      },
+      "hudGlyphStability": {
+        "label": "computer-use:firebud_training_yard:pointer:after",
+        "sourceFormat": "computer_use_640x392_titlebar_normalized",
+        "normalizedViewport": [
+          1280,
+          720
+        ],
+        "taskHudRequired": false,
+        "status": "not_applicable",
+        "passed": true,
+        "reason": "pointer action owns the full map panel instead of the task HUD"
       }
     },
     {
@@ -56,24 +68,101 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/movement_path.png",
-          "sha256": "d9aa021be8db3b2a6fdbab3159729babfa8bbf9b7ae076b2858de0a67a54b664"
+          "sha256": "6fbc76c9f942545e0e2de4d3775679f221df427667fc1641a52569012967d944"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/movement_path-capture.json",
-          "sha256": "62851a8cbec3a8c58e6d79e6768137138722db58f716e7febc824bb890476cd7"
+          "sha256": "f41c72f1953e4d777123da417c70659b2de34e7ef767f625cdec605987b950a9"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-before.jpeg",
-          "sha256": "116d6674f487637a62c1a5bae7b95da7ce1e72866213ec6583f16edc9a7f8c23"
+          "sha256": "18febd6ce89edb3cace1567f34562c82a4f4395525166a542946061fa660c094"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-after.jpeg",
-          "sha256": "bc19b373703555244ad18ff379803f0cb39fb2d2d685e2de51f5825c383fde01"
+          "sha256": "e66dddf531219bca32f8199eba3eebe74b84a7481cfee6cd70cde45b4a50d150"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_movement_path.jsonl",
-        "sha256": "963ae1e8ba2f2184fdadf82f7fa7a314f9d60cae444ab4c88a004e895547d8ec"
+        "sha256": "2fb6bee5374f8dea470d12fe801cbdf97a79b16afb3dbdd3097bf6ea8a2a47d5"
+      },
+      "hudGlyphStability": {
+        "label": "computer-use:firebud_training_yard:movement_path:after",
+        "sourceFormat": "computer_use_640x392_titlebar_normalized",
+        "normalizedViewport": [
+          1280,
+          720
+        ],
+        "taskHudRequired": true,
+        "status": "passed",
+        "passed": true,
+        "regions": {
+          "tabs": {
+            "edgeEnergy": 30958,
+            "minimumEdgeEnergy": 25000,
+            "passed": true,
+            "meaning": "任务/组队页签字形"
+          },
+          "title": {
+            "edgeEnergy": 19914,
+            "minimumEdgeEnergy": 15000,
+            "passed": true,
+            "meaning": "任务追踪标题字形"
+          },
+          "body": {
+            "edgeEnergy": 266174,
+            "minimumEdgeEnergy": 200000,
+            "passed": true,
+            "meaning": "任务条目标题与正文"
+          },
+          "routeButton": {
+            "edgeEnergy": 9034,
+            "minimumEdgeEnergy": 7000,
+            "passed": true,
+            "meaning": "自动寻路按钮字形"
+          }
+        },
+        "taskHudDecodedRgbSha256": "f05bc4d005580f33bf369be44f9207f932ac6cb7e7eb95066ce76f27a076489a",
+        "taskHudSize": [
+          206,
+          401
+        ],
+        "referenceComparison": {
+          "method": "normalized_region_luminance_mae_and_correlation",
+          "passed": true,
+          "regions": {
+            "tabs": {
+              "meanAbsoluteLuminanceError": 15.5696,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.737376,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "title": {
+              "meanAbsoluteLuminanceError": 18.1485,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.65669,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "body": {
+              "meanAbsoluteLuminanceError": 20.4759,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.606154,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "routeButton": {
+              "meanAbsoluteLuminanceError": 16.0312,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.620986,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            }
+          },
+          "referenceFormat": "native_1280x720"
+        }
       }
     },
     {
@@ -85,82 +174,313 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/warp.png",
-          "sha256": "22f40392a8bc1ccd590604a78879b4e6f46a791deecac9f6c4796ff9996f1e84"
+          "sha256": "16d0ee2ba9de86827f655b5d533462f2c748d14518d6d4edb5091e9fc13ca0b6"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/warp-capture.json",
-          "sha256": "37d56cbe2cc64c85aacc4f16c7c79322516f6979c8ad0a8fe965a4ac26810f72"
+          "sha256": "69a7697bde745e545398c1e429ab1106367bdefb8d7541864206f12bb317ef8c"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-before.jpeg",
-          "sha256": "116d6674f487637a62c1a5bae7b95da7ce1e72866213ec6583f16edc9a7f8c23"
+          "sha256": "18febd6ce89edb3cace1567f34562c82a4f4395525166a542946061fa660c094"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-after.jpeg",
-          "sha256": "fabd3c22b5e980bad8329525c505e42544938861d43742832f36a52ed1642fc1"
+          "sha256": "40a1c78b532d7f4b614b2f19b6c0e63ff1d1fbc0941063b624412d4323944c6f"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_warp.jsonl",
-        "sha256": "6225ff3fba4118f679e5a4c8da01f31e64b1f03d88996565fb14692fe3a33623"
+        "sha256": "ec97c4721177bf844fe96dec0434700d9e411eb2e9351687d8f1d8a563a41e3f"
+      },
+      "hudGlyphStability": {
+        "label": "computer-use:firebud_training_yard:warp:after",
+        "sourceFormat": "computer_use_640x392_titlebar_normalized",
+        "normalizedViewport": [
+          1280,
+          720
+        ],
+        "taskHudRequired": true,
+        "status": "passed",
+        "passed": true,
+        "regions": {
+          "tabs": {
+            "edgeEnergy": 30897,
+            "minimumEdgeEnergy": 25000,
+            "passed": true,
+            "meaning": "任务/组队页签字形"
+          },
+          "title": {
+            "edgeEnergy": 19908,
+            "minimumEdgeEnergy": 15000,
+            "passed": true,
+            "meaning": "任务追踪标题字形"
+          },
+          "body": {
+            "edgeEnergy": 266174,
+            "minimumEdgeEnergy": 200000,
+            "passed": true,
+            "meaning": "任务条目标题与正文"
+          },
+          "routeButton": {
+            "edgeEnergy": 9034,
+            "minimumEdgeEnergy": 7000,
+            "passed": true,
+            "meaning": "自动寻路按钮字形"
+          }
+        },
+        "taskHudDecodedRgbSha256": "ec68df0fa090fe6a61a9b709a98bd231d72eaa4d2ff4f165555699f55aceead2",
+        "taskHudSize": [
+          206,
+          401
+        ],
+        "referenceComparison": {
+          "method": "normalized_region_luminance_mae_and_correlation",
+          "passed": true,
+          "regions": {
+            "tabs": {
+              "meanAbsoluteLuminanceError": 15.6101,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.737322,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "title": {
+              "meanAbsoluteLuminanceError": 18.1468,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.656691,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "body": {
+              "meanAbsoluteLuminanceError": 20.4759,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.606154,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "routeButton": {
+              "meanAbsoluteLuminanceError": 16.0312,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.620986,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            }
+          },
+          "referenceFormat": "native_1280x720"
+        }
       }
     },
     {
       "actionId": "firebud_training_yard_collision",
       "actionKind": "collision",
       "mapId": "firebud_training_yard",
-      "description": "点击木栅栏另一侧草地，核对路线绕过显式阻挡 footprint。",
+      "description": "点击低木栅栏左侧邻格，核对角色停在显式阻挡 footprint 外。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/collision.png",
-          "sha256": "6b35fb5ce7cfece0cb355ce2102dff510de0b111b460fdeb6cb25e4c585d26ca"
+          "sha256": "883db736b5f83252d3e58457d0fb8b9dfcde45054f6ea56a499aa707ff4cbcfd"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/collision-capture.json",
-          "sha256": "f5a5c0531bf106f467b125f5392da5ba99248a3d19bcbf10b63845f11dde6fc8"
+          "sha256": "284715fc3cf51d3bfba1ffb77e5bbafb22519f166ca7356929846893f8c66b07"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-before.jpeg",
-          "sha256": "116d6674f487637a62c1a5bae7b95da7ce1e72866213ec6583f16edc9a7f8c23"
+          "sha256": "18febd6ce89edb3cace1567f34562c82a4f4395525166a542946061fa660c094"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-after.jpeg",
-          "sha256": "91a57b1dd18fb10d9dd5c8e6f7141bcff617e945e6c0437d3bc9de79cdd032c9"
+          "sha256": "bb3b8a6e38294eb41e38d35105133d0c195c9d0c535d804b886f270fc8c1ede1"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_collision.jsonl",
-        "sha256": "d0e59eee5874c15058e01f853b2d6f90d16b6ed85bc1b95ff7ebd38decfeb3c7"
+        "sha256": "85bdc2ce90c61e17f91e50df15111ae468e7977119511f3294ecd4825bdb3066"
+      },
+      "hudGlyphStability": {
+        "label": "computer-use:firebud_training_yard:collision:after",
+        "sourceFormat": "computer_use_640x392_titlebar_normalized",
+        "normalizedViewport": [
+          1280,
+          720
+        ],
+        "taskHudRequired": true,
+        "status": "passed",
+        "passed": true,
+        "regions": {
+          "tabs": {
+            "edgeEnergy": 30899,
+            "minimumEdgeEnergy": 25000,
+            "passed": true,
+            "meaning": "任务/组队页签字形"
+          },
+          "title": {
+            "edgeEnergy": 19926,
+            "minimumEdgeEnergy": 15000,
+            "passed": true,
+            "meaning": "任务追踪标题字形"
+          },
+          "body": {
+            "edgeEnergy": 266174,
+            "minimumEdgeEnergy": 200000,
+            "passed": true,
+            "meaning": "任务条目标题与正文"
+          },
+          "routeButton": {
+            "edgeEnergy": 9034,
+            "minimumEdgeEnergy": 7000,
+            "passed": true,
+            "meaning": "自动寻路按钮字形"
+          }
+        },
+        "taskHudDecodedRgbSha256": "2a9083de9c33254d4ffd5bd01cf2979d5eb0d17b52420c1e71b1c79595e18f6f",
+        "taskHudSize": [
+          206,
+          401
+        ],
+        "referenceComparison": {
+          "method": "normalized_region_luminance_mae_and_correlation",
+          "passed": true,
+          "regions": {
+            "tabs": {
+              "meanAbsoluteLuminanceError": 15.607,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.737359,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "title": {
+              "meanAbsoluteLuminanceError": 18.1515,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.656674,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "body": {
+              "meanAbsoluteLuminanceError": 20.4759,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.606154,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "routeButton": {
+              "meanAbsoluteLuminanceError": 16.0312,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.620986,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            }
+          },
+          "referenceFormat": "native_1280x720"
+        }
       }
     },
     {
       "actionId": "firebud_training_yard_occlusion",
       "actionKind": "occlusion",
       "mapId": "firebud_training_yard",
-      "description": "走到补给陶罐后侧，核对角色前后层级和局部遮挡。",
+      "description": "走到低木栅栏后侧，核对角色前后层级和局部遮挡。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/occlusion.png",
-          "sha256": "d68c4603f3436482428659904c327ca4ae9a316c92bd6960130996b5bc247fcf"
+          "sha256": "285c945cd0a9be442ba68be33ab23883e541117eebb54cd3bedeb1308c551900"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/occlusion-capture.json",
-          "sha256": "94d7231234c38fe5fe35f77c9392cb891a16ffa8f42a10658362c45633296a36"
+          "sha256": "ec62d3bb8bd6f4b4c603a479d87aea476fca3f783c1ddba32429229db62713a1"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-before.jpeg",
-          "sha256": "116d6674f487637a62c1a5bae7b95da7ce1e72866213ec6583f16edc9a7f8c23"
+          "sha256": "18febd6ce89edb3cace1567f34562c82a4f4395525166a542946061fa660c094"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-after.jpeg",
-          "sha256": "b0df121a59225ebf5c7478d0831c52f6248501466f8eead51a8125d078c27b64"
+          "sha256": "82586d3a34cc6d83711869b0393ca2b0d11e3f93a4365859d5edc2e9acb5528e"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_occlusion.jsonl",
-        "sha256": "b95440c372acb0bcb65b706f167cd23fdfc01c1b364dc25b743ab4630539bef7"
+        "sha256": "515c51a7a0ab86b33e4d0aaae80f4e95f34e42f58b13aff58f529d9e548c1079"
+      },
+      "hudGlyphStability": {
+        "label": "computer-use:firebud_training_yard:occlusion:after",
+        "sourceFormat": "computer_use_640x392_titlebar_normalized",
+        "normalizedViewport": [
+          1280,
+          720
+        ],
+        "taskHudRequired": true,
+        "status": "passed",
+        "passed": true,
+        "regions": {
+          "tabs": {
+            "edgeEnergy": 30905,
+            "minimumEdgeEnergy": 25000,
+            "passed": true,
+            "meaning": "任务/组队页签字形"
+          },
+          "title": {
+            "edgeEnergy": 19925,
+            "minimumEdgeEnergy": 15000,
+            "passed": true,
+            "meaning": "任务追踪标题字形"
+          },
+          "body": {
+            "edgeEnergy": 266174,
+            "minimumEdgeEnergy": 200000,
+            "passed": true,
+            "meaning": "任务条目标题与正文"
+          },
+          "routeButton": {
+            "edgeEnergy": 9034,
+            "minimumEdgeEnergy": 7000,
+            "passed": true,
+            "meaning": "自动寻路按钮字形"
+          }
+        },
+        "taskHudDecodedRgbSha256": "a0c62972b20d2febf16d1e6b39168bfcbfbc41c90c5e2c6ef47a734296e2031a",
+        "taskHudSize": [
+          206,
+          401
+        ],
+        "referenceComparison": {
+          "method": "normalized_region_luminance_mae_and_correlation",
+          "passed": true,
+          "regions": {
+            "tabs": {
+              "meanAbsoluteLuminanceError": 15.6175,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.737132,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "title": {
+              "meanAbsoluteLuminanceError": 18.1514,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.656675,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "body": {
+              "meanAbsoluteLuminanceError": 20.4759,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.606154,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "routeButton": {
+              "meanAbsoluteLuminanceError": 16.0312,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.620986,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            }
+          },
+          "referenceFormat": "native_1280x720"
+        }
       }
     },
     {
@@ -172,141 +492,471 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
-          "sha256": "88f1411f3781a79e312315d6d1d1bde6bdcc914baa38b998aea33aa1782b5965"
+          "sha256": "6dd2f124c4e9c0b406692a44a0ff95242f607098460007ff433c780101eaa95e"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/pointer-capture.json",
-          "sha256": "fc1fcdd8434aafe8ac46c27dd6766b4200d40133ef5590bd8a6243eed5250f27"
+          "sha256": "6d05158a3943e07120a46c9225b815dcff5ac868ddec47c39c9a78857129852c"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-before.jpeg",
-          "sha256": "76f258532d5556085967e81aed6539b2eb5326b4f79ec0de7932452c4ac61e8d"
+          "sha256": "7acddff70e9adf4ac38b517be5310c6b9cbb6574b943ec36ead8ec6522ca9891"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-after.jpeg",
-          "sha256": "f2e4930966c37e2cc7dbb5a6ee4bcec86d79582aace0273eda909727aade6b8b"
+          "sha256": "19aa1e7a8fe7458265600a28c64b78b78c11d1e584e14d67bd35dec83ee8aa16"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_pointer.jsonl",
-        "sha256": "7df2d4c4205bca0ca8857cb560a3d491607769051ae06df27d14b78faca289db"
+        "sha256": "3a1953ccdc0e468348bec61a5ed1fd66a2e1268ea1d089b6aa67390c5ee9c166"
+      },
+      "hudGlyphStability": {
+        "label": "computer-use:firebud_village_gate:pointer:after",
+        "sourceFormat": "computer_use_640x392_titlebar_normalized",
+        "normalizedViewport": [
+          1280,
+          720
+        ],
+        "taskHudRequired": false,
+        "status": "not_applicable",
+        "passed": true,
+        "reason": "pointer action owns the full map panel instead of the task HUD"
       }
     },
     {
       "actionId": "firebud_village_gate_movement_path",
       "actionKind": "movement_path",
       "mapId": "firebud_village_gate",
-      "description": "点击服务区右侧草地，核对路线穿过主通道而不穿 NPC。",
+      "description": "点击村口西南侧草地，核对真实跨帧移动与服务区碰撞回避。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/movement_path.png",
-          "sha256": "70346010bff9d7c049df370ae1a99e55d0b8ff3ef92e1ecf8d4510288b0f60c7"
+          "sha256": "b6e9a5846028713db54a0acbde63f44cdee3cfaeb5a67726a6a2950728af45dc"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/movement_path-capture.json",
-          "sha256": "a9b661aa2be7fa42ec7535a08491fdf42b0c48bcfc2526e303919628dc7dda5f"
+          "sha256": "80bda45b928b0d1d13f133981a80eb31a032315abf8cba5f885c078ea680849b"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-before.jpeg",
-          "sha256": "76f258532d5556085967e81aed6539b2eb5326b4f79ec0de7932452c4ac61e8d"
+          "sha256": "7acddff70e9adf4ac38b517be5310c6b9cbb6574b943ec36ead8ec6522ca9891"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-after.jpeg",
-          "sha256": "4391a0dacda15bd373011b5fc44aa5a414438f8e1d6d16756cb796fa282ea98e"
+          "sha256": "05391d337c98199421ecb4933422886feb170a86f8e1a9699faeba0cb61eaf5f"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_movement_path.jsonl",
-        "sha256": "78109af3ca2002742e45c4dcf34d2ea02956a2c88b0eb1a79e4185933f0e14d3"
+        "sha256": "1c08ab24ab76bbce5cf65629fc716eca1e96f14c5d370e5d9215092a79580512"
+      },
+      "hudGlyphStability": {
+        "label": "computer-use:firebud_village_gate:movement_path:after",
+        "sourceFormat": "computer_use_640x392_titlebar_normalized",
+        "normalizedViewport": [
+          1280,
+          720
+        ],
+        "taskHudRequired": true,
+        "status": "passed",
+        "passed": true,
+        "regions": {
+          "tabs": {
+            "edgeEnergy": 30891,
+            "minimumEdgeEnergy": 25000,
+            "passed": true,
+            "meaning": "任务/组队页签字形"
+          },
+          "title": {
+            "edgeEnergy": 19901,
+            "minimumEdgeEnergy": 15000,
+            "passed": true,
+            "meaning": "任务追踪标题字形"
+          },
+          "body": {
+            "edgeEnergy": 266174,
+            "minimumEdgeEnergy": 200000,
+            "passed": true,
+            "meaning": "任务条目标题与正文"
+          },
+          "routeButton": {
+            "edgeEnergy": 9034,
+            "minimumEdgeEnergy": 7000,
+            "passed": true,
+            "meaning": "自动寻路按钮字形"
+          }
+        },
+        "taskHudDecodedRgbSha256": "6a3565f9ca2838a06543c37ac9ad1936e72a752e34385797a671d8cd80312ff2",
+        "taskHudSize": [
+          206,
+          401
+        ],
+        "referenceComparison": {
+          "method": "normalized_region_luminance_mae_and_correlation",
+          "passed": true,
+          "regions": {
+            "tabs": {
+              "meanAbsoluteLuminanceError": 15.6234,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.737409,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "title": {
+              "meanAbsoluteLuminanceError": 18.1474,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.656698,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "body": {
+              "meanAbsoluteLuminanceError": 20.4759,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.606154,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "routeButton": {
+              "meanAbsoluteLuminanceError": 16.0312,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.620986,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            }
+          },
+          "referenceFormat": "native_1280x720"
+        }
       }
     },
     {
       "actionId": "firebud_village_gate_warp",
       "actionKind": "warp",
       "mapId": "firebud_village_gate",
-      "description": "点击主线自动寻路，从火芽村返回训练场并打开训练师对话。",
+      "description": "点击主线自动寻路，从火芽村返回训练场，再离开训练师对话恢复正常 HUD。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/warp.png",
-          "sha256": "3cef2c14d8f6589a25171bfbd5e894743baa16ff6f3de99143f8bab7b38b479a"
+          "sha256": "c8b10ddab0af281ae6cb86c4241db5e87d13951728bccbd2f0dab9a98c7b1ea1"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/warp-capture.json",
-          "sha256": "ac6b831421593d56803f1dd9f3ba6ce6cee13ece15fcdee318dd9b92f2d3208b"
+          "sha256": "0c8ad0233a15990f3246323a6f46cf1b87fe7da72dc1922c44f8b73b0772a5ea"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-before.jpeg",
-          "sha256": "76f258532d5556085967e81aed6539b2eb5326b4f79ec0de7932452c4ac61e8d"
+          "sha256": "7acddff70e9adf4ac38b517be5310c6b9cbb6574b943ec36ead8ec6522ca9891"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-after.jpeg",
-          "sha256": "96c28a8c264e9b749f2790a070840e07c2c045af78380b4fbf849afd8d98fb31"
+          "sha256": "078b2a27587ff36ac1c015000fcb326deb552e5a7ad7e47169c420529c3835ca"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_warp.jsonl",
-        "sha256": "925ef3c131507c1768408f6839717cc265f2093a69c820ecca338ca5763696af"
+        "sha256": "9f1d8cba67746152a19999214ea1a750c88b47749da5f1330ad7c8f6d643c29f"
+      },
+      "hudGlyphStability": {
+        "label": "computer-use:firebud_village_gate:warp:after",
+        "sourceFormat": "computer_use_640x392_titlebar_normalized",
+        "normalizedViewport": [
+          1280,
+          720
+        ],
+        "taskHudRequired": true,
+        "status": "passed",
+        "passed": true,
+        "regions": {
+          "tabs": {
+            "edgeEnergy": 30899,
+            "minimumEdgeEnergy": 25000,
+            "passed": true,
+            "meaning": "任务/组队页签字形"
+          },
+          "title": {
+            "edgeEnergy": 19926,
+            "minimumEdgeEnergy": 15000,
+            "passed": true,
+            "meaning": "任务追踪标题字形"
+          },
+          "body": {
+            "edgeEnergy": 266174,
+            "minimumEdgeEnergy": 200000,
+            "passed": true,
+            "meaning": "任务条目标题与正文"
+          },
+          "routeButton": {
+            "edgeEnergy": 9034,
+            "minimumEdgeEnergy": 7000,
+            "passed": true,
+            "meaning": "自动寻路按钮字形"
+          }
+        },
+        "taskHudDecodedRgbSha256": "7003cc1872135c12d80209e07e0a8cca1427c187b231d5c8b58a4fe016b0ae25",
+        "taskHudSize": [
+          206,
+          401
+        ],
+        "referenceComparison": {
+          "method": "normalized_region_luminance_mae_and_correlation",
+          "passed": true,
+          "regions": {
+            "tabs": {
+              "meanAbsoluteLuminanceError": 15.6012,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.73734,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "title": {
+              "meanAbsoluteLuminanceError": 18.1515,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.656674,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "body": {
+              "meanAbsoluteLuminanceError": 20.4759,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.606154,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "routeButton": {
+              "meanAbsoluteLuminanceError": 16.0312,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.620986,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            }
+          },
+          "referenceFormat": "native_1280x720"
+        }
       }
     },
     {
       "actionId": "firebud_village_gate_collision",
       "actionKind": "collision",
       "mapId": "firebud_village_gate",
-      "description": "点击贸易柜台基座，核对两格阻挡 footprint 与邻格改落。",
+      "description": "点击服务簇西南侧可行走格，核对路线绕开 NPC、图腾和下方花箱。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/collision.png",
-          "sha256": "92e72315fc11a2ad27a5ec741770f40b052a551cb7b293bc5050eeaf1074ae51"
+          "sha256": "64c421a3262a2d6931e467b04bcb4d869413acb62159edfe908ceac5b0a8ff91"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/collision-capture.json",
-          "sha256": "006d16d36af4044abaec774efc9363aa3213860c02ad4e8e271c4566b4c3ce77"
+          "sha256": "112fb6346c1b63bc993da8fe7f837730518e8f3d6816a688889d9a761d5f3279"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-before.jpeg",
-          "sha256": "76f258532d5556085967e81aed6539b2eb5326b4f79ec0de7932452c4ac61e8d"
+          "sha256": "7acddff70e9adf4ac38b517be5310c6b9cbb6574b943ec36ead8ec6522ca9891"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-after.jpeg",
-          "sha256": "14df5aa787cfc5f407f45a2deef271159d53eac9ca8ed6321d15dd9f9d737535"
+          "sha256": "a75ebbd703776e55e1eaef4f24b045018d157940928d68a4680efe6aa45e637a"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_collision.jsonl",
-        "sha256": "77e6a3bd3a4c0942d6954bd0fdfe1db97d35a2395a24f96b77cc2af912d94106"
+        "sha256": "af709570b2ec31268fd6a2eed99294d02b60887dec4423643c27cb82265864c2"
+      },
+      "hudGlyphStability": {
+        "label": "computer-use:firebud_village_gate:collision:after",
+        "sourceFormat": "computer_use_640x392_titlebar_normalized",
+        "normalizedViewport": [
+          1280,
+          720
+        ],
+        "taskHudRequired": true,
+        "status": "passed",
+        "passed": true,
+        "regions": {
+          "tabs": {
+            "edgeEnergy": 30958,
+            "minimumEdgeEnergy": 25000,
+            "passed": true,
+            "meaning": "任务/组队页签字形"
+          },
+          "title": {
+            "edgeEnergy": 19917,
+            "minimumEdgeEnergy": 15000,
+            "passed": true,
+            "meaning": "任务追踪标题字形"
+          },
+          "body": {
+            "edgeEnergy": 266174,
+            "minimumEdgeEnergy": 200000,
+            "passed": true,
+            "meaning": "任务条目标题与正文"
+          },
+          "routeButton": {
+            "edgeEnergy": 9034,
+            "minimumEdgeEnergy": 7000,
+            "passed": true,
+            "meaning": "自动寻路按钮字形"
+          }
+        },
+        "taskHudDecodedRgbSha256": "85ff9cf4d039ee84e866fcaac486b5429e17e7fad9b06a19fa99730054b2c32d",
+        "taskHudSize": [
+          206,
+          401
+        ],
+        "referenceComparison": {
+          "method": "normalized_region_luminance_mae_and_correlation",
+          "passed": true,
+          "regions": {
+            "tabs": {
+              "meanAbsoluteLuminanceError": 15.6136,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.737594,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "title": {
+              "meanAbsoluteLuminanceError": 18.1507,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.65668,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "body": {
+              "meanAbsoluteLuminanceError": 20.4759,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.606154,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "routeButton": {
+              "meanAbsoluteLuminanceError": 16.0312,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.620986,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            }
+          },
+          "referenceFormat": "native_1280x720"
+        }
       }
     },
     {
       "actionId": "firebud_village_gate_occlusion",
       "actionKind": "occlusion",
       "mapId": "firebud_village_gate",
-      "description": "走到贸易柜台后侧，核对摊位前景与角色局部遮挡。",
+      "description": "走到记录图腾后侧，核对石柱、标牌与角色的局部遮挡。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/occlusion.png",
-          "sha256": "a4d55afdf978ea053479ced058a2c5d6db692dfb705ac4f4920e01aaa99807bb"
+          "sha256": "3e954bf37786174cf31dc0c6e75af13af82e5feda526157e1f7aa8adf729f81c"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/occlusion-capture.json",
-          "sha256": "cfab253fd2c663534d4c296d7ad03f478923daa9b07bc4db7f1a633e60aaaef0"
+          "sha256": "69472e533834ea40c8af53925927e12652796d5821527d674d300fdfa6bf7c44"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-before.jpeg",
-          "sha256": "76f258532d5556085967e81aed6539b2eb5326b4f79ec0de7932452c4ac61e8d"
+          "sha256": "7acddff70e9adf4ac38b517be5310c6b9cbb6574b943ec36ead8ec6522ca9891"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-after.jpeg",
-          "sha256": "446f5edb38934496c3bdd45b27b45275e39cb446da5818ba8a6910f29738c789"
+          "sha256": "06320618fe05a7eb09444d2fd4df4abbe896a5a5fabb0f32e091ba91b748fd80"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_occlusion.jsonl",
-        "sha256": "1f5c2cbcb7e01757185c34651d77ee2aa58c03e710a90350e7d40b44320da3fe"
+        "sha256": "5eef744a1db34496f5a8c88e53d4dd62e03d971c405b3c430f4185fc2cc2b1f8"
+      },
+      "hudGlyphStability": {
+        "label": "computer-use:firebud_village_gate:occlusion:after",
+        "sourceFormat": "computer_use_640x392_titlebar_normalized",
+        "normalizedViewport": [
+          1280,
+          720
+        ],
+        "taskHudRequired": true,
+        "status": "passed",
+        "passed": true,
+        "regions": {
+          "tabs": {
+            "edgeEnergy": 30944,
+            "minimumEdgeEnergy": 25000,
+            "passed": true,
+            "meaning": "任务/组队页签字形"
+          },
+          "title": {
+            "edgeEnergy": 19904,
+            "minimumEdgeEnergy": 15000,
+            "passed": true,
+            "meaning": "任务追踪标题字形"
+          },
+          "body": {
+            "edgeEnergy": 266174,
+            "minimumEdgeEnergy": 200000,
+            "passed": true,
+            "meaning": "任务条目标题与正文"
+          },
+          "routeButton": {
+            "edgeEnergy": 9034,
+            "minimumEdgeEnergy": 7000,
+            "passed": true,
+            "meaning": "自动寻路按钮字形"
+          }
+        },
+        "taskHudDecodedRgbSha256": "72896ab5b72364cd0576efe29aee7aa1546efb4ba33ccfee329fd2de0cf767f6",
+        "taskHudSize": [
+          206,
+          401
+        ],
+        "referenceComparison": {
+          "method": "normalized_region_luminance_mae_and_correlation",
+          "passed": true,
+          "regions": {
+            "tabs": {
+              "meanAbsoluteLuminanceError": 15.562,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.73722,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "title": {
+              "meanAbsoluteLuminanceError": 18.1513,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.656672,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "body": {
+              "meanAbsoluteLuminanceError": 20.4759,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.606154,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            },
+            "routeButton": {
+              "meanAbsoluteLuminanceError": 16.0312,
+              "maximumMeanAbsoluteLuminanceError": 35.0,
+              "luminanceCorrelation": 0.620986,
+              "minimumLuminanceCorrelation": 0.45,
+              "passed": true
+            }
+          },
+          "referenceFormat": "native_1280x720"
+        }
       }
     }
-  ]
+  ],
+  "hudGlyphStability": {
+    "status": "passed",
+    "taskHudAfterImageCount": 8,
+    "pointerImageCount": 2,
+    "incrementalPreviewAcceptedAsPixelAuthority": false,
+    "board": {
+      "path": "evidence/computer-use-hud-glyph-board.png",
+      "sha256": "f77b4a967955af7ab3386e1137ed46953b3d5b029a9ade355aa2f9b4cce25843"
+    }
+  }
 }

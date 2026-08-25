@@ -60,12 +60,12 @@
 			360.0
 		],
 		"effectiveAnchor": [
-			390.0,
-			360.0
+			255.375,
+			382.0
 		],
 		"playerScreenPoint": [
-			388.919494628906,
-			362.701232910156
+			258.203521728516,
+			383.111694335938
 		],
 		"playerAtEffectiveAnchor": true,
 		"taskHudVisible": true,
@@ -75,9 +75,156 @@
 			206.0,
 			465.0
 		],
+		"bottomHudVisible": true,
+		"bottomHudRect": [
+			599.0,
+			530.0,
+			597.0,
+			181.0
+		],
+		"topHudVisible": true,
+		"topHudRect": [
+			80.0,
+			0.0,
+			330.0,
+			145.0
+		],
+		"messageHudVisible": false,
+		"messageHudRect": [
+			0.0,
+			0.0,
+			0.0,
+			0.0
+		],
+		"fixedHudBlockerCount": 3,
 		"playerInsideSafeRect": true,
 		"playerClearOfTaskHud": true,
+		"playerClearOfFixedHud": true,
 		"taskHudOverlappingBlockingObjectIds": [],
+		"npcAlphaSubjectCount": 3,
+		"visibleNpcCount": 2,
+		"visibleNpcIds": [
+			"block_tester",
+			"overlap_tester"
+		],
+		"npcAlphaScreenRects": {
+			"overlap_tester": [
+				239.231536865234,
+				80.4896240234375,
+				37.385986328125,
+				112.157974243164
+			],
+			"block_tester": [
+				423.557495117188,
+				171.815689086914,
+				41.2920532226562,
+				113.831985473633
+			],
+			"trainer": [
+				-137.790466308594,
+				-232.30029296875,
+				47.4299926757812,
+				114.947998046875
+			]
+		},
+		"hudOverlappingNpcIds": [
+			"overlap_tester"
+		],
+		"viewportClippedNpcIds": [],
+		"keyEnvironmentSubjectCount": 12,
+		"visibleKeyEnvironmentCount": 7,
+		"visibleKeyEnvironmentIds": [
+			"training_ancient_tree_blocked_cluster_01",
+			"training_fence_blocked_cluster_02",
+			"training_honey_rocks_blocked_cluster_02",
+			"training_planter_blocked_cluster_01",
+			"training_practice_cluster_blocked_01",
+			"training_supplies_blocked_cluster_01",
+			"training_target_blocked_cluster_02"
+		],
+		"keyEnvironmentAlphaScreenRects": {
+			"training_honey_rocks_blocked_cluster_01": [
+				61.5473022460938,
+				-431.997924804688,
+				145.312469482422,
+				128.269287109375
+			],
+			"training_ember_shrub_blocked_cluster_01": [
+				-186.452697753906,
+				-351.3916015625,
+				145.3125,
+				109.656555175781
+			],
+			"training_fence_blocked_cluster_01": [
+				300.828521728516,
+				-307.792297363281,
+				162.75,
+				139.513977050781
+			],
+			"training_target_blocked_cluster_01": [
+				64.4535522460938,
+				-295.693054199219,
+				139.499969482422,
+				127.033508300781
+			],
+			"training_rack_blocked_cluster_01": [
+				304.08349609375,
+				-223.567993164062,
+				156.239990234375,
+				167.109375
+			],
+			"training_practice_cluster_blocked_01": [
+				556.955322265625,
+				-107.075805664062,
+				146.496276855469,
+				174.375
+			],
+			"training_supplies_blocked_cluster_01": [
+				683.000366210938,
+				82.0622253417969,
+				142.40625,
+				120.730941772461
+			],
+			"training_fence_blocked_cluster_02": [
+				424.828521728516,
+				126.207702636719,
+				162.749969482422,
+				139.514007568359
+			],
+			"training_target_blocked_cluster_02": [
+				-59.5464477539062,
+				200.30696105957,
+				139.5,
+				127.033493041992
+			],
+			"training_honey_rocks_blocked_cluster_02": [
+				681.547241210938,
+				374.002044677734,
+				145.3125,
+				128.269317626953
+			],
+			"training_planter_blocked_cluster_01": [
+				-125.905822753906,
+				612.164001464844,
+				148.21875,
+				117.13134765625
+			],
+			"training_ancient_tree_blocked_cluster_01": [
+				498.937896728516,
+				586.658264160156,
+				510.531219482422,
+				408.206726074219
+			]
+		},
+		"hudOverlappingKeyEnvironmentIds": [
+			"training_ancient_tree_blocked_cluster_01"
+		],
+		"viewportClippedKeyEnvironmentIds": [
+			"training_ancient_tree_blocked_cluster_01",
+			"training_planter_blocked_cluster_01",
+			"training_practice_cluster_blocked_01",
+			"training_target_blocked_cluster_02"
+		],
 		"nearestWarp": {
 			"id": "warp_to_village_gate",
 			"cell": [
@@ -85,8 +232,8 @@
 				28
 			],
 			"screenPoint": [
-				450.919494628906,
-				1171.80126953125
+				320.203521728516,
+				1192.21166992188
 			],
 			"edgeClear": false,
 			"insideSafeRect": false
@@ -133,8 +280,9 @@
 		16,
 		15
 	],
-	"targetCandidateCount": 24,
+	"targetCandidateCount": 22,
 	"targetVariantIndex": 0,
+	"targetClearance": "two_cell",
 	"endCell": [
 		16,
 		15
@@ -148,14 +296,14 @@
 		"frameSeparated": true,
 		"screenPoint": [
 			327.999969482422,
-			515.0
+			537.0
 		]
 	},
 	"screenshotPath": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_training_yard/movement_path.png",
-	"screenshotSha256": "d9aa021be8db3b2a6fdbab3159729babfa8bbf9b7ae076b2858de0a67a54b664",
+	"screenshotSha256": "6fbc76c9f942545e0e2de4d3775679f221df427667fc1641a52569012967d944",
 	"screenshot": {
 		"path": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_training_yard/movement_path.png",
-		"sha256": "d9aa021be8db3b2a6fdbab3159729babfa8bbf9b7ae076b2858de0a67a54b664",
+		"sha256": "6fbc76c9f942545e0e2de4d3775679f221df427667fc1641a52569012967d944",
 		"width": 1280,
 		"height": 720
 	},
@@ -172,5 +320,243 @@
 	"errors": [],
 	"result": "PASS",
 	"ok": true,
-	"generatedAtUtc": "2026-08-23T11:17:30Z"
+	"generatedAtUtc": "2026-08-25T14:27:26Z",
+	"hudGlyphStability": {
+		"status": "passed",
+		"passed": true,
+		"method": "independent_viewport_rgb_readback_edge_energy",
+		"consecutiveFrames": true,
+		"frameCount": 6,
+		"requiredFrameCount": 6,
+		"textSource": {
+			"passed": true,
+			"taskTabText": "任务",
+			"partyTabText": "组队",
+			"titleText": "任务追踪",
+			"routeButtonText": "自动寻路",
+			"taskEntryCount": 4,
+			"taskEntryLabelCount": 8,
+			"emptyTaskEntryLabelCount": 0,
+			"errors": []
+		},
+		"regions": {
+			"tabs": {
+				"rect": [
+					1020,
+					136,
+					166,
+					24
+				],
+				"minimumEdgeEnergy": 25000,
+				"meaning": "任务/组队页签字形"
+			},
+			"title": {
+				"rect": [
+					1020,
+					193,
+					90,
+					25
+				],
+				"minimumEdgeEnergy": 15000,
+				"meaning": "任务追踪标题字形"
+			},
+			"body": {
+				"rect": [
+					1027,
+					225,
+					148,
+					200
+				],
+				"minimumEdgeEnergy": 200000,
+				"meaning": "任务条目标题与正文"
+			},
+			"routeButton": {
+				"rect": [
+					1068,
+					453,
+					70,
+					19
+				],
+				"minimumEdgeEnergy": 7000,
+				"meaning": "自动寻路按钮字形"
+			}
+		},
+		"frames": [
+			{
+				"frameIndex": 0,
+				"processFrame": 42,
+				"taskHudDecodedPixelSha256": "b51eec2db72da87624b9fd60023d7fc7c37d50406cc9f3233580c47a34885abe",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111970,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 1,
+				"processFrame": 43,
+				"taskHudDecodedPixelSha256": "902ba8ef2c255fe6152d7ed76536e28edecd043310dd824ccf299d8e1a0d277c",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111978,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 2,
+				"processFrame": 44,
+				"taskHudDecodedPixelSha256": "f42cb1b2a9f22dffbf7d555c8e5ab31631de7e70446bcfcb9aa9fc7b374f867e",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111974,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1100159,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 3,
+				"processFrame": 45,
+				"taskHudDecodedPixelSha256": "1585d4ed4668570aa36edb9a1d65a752c28218afa6f2924f5fdebc37544e9886",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111974,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 4,
+				"processFrame": 46,
+				"taskHudDecodedPixelSha256": "58669c616930f6bcdc1cbfa35f906441f2c095687ebe62fe012b2390e63524aa",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111976,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 5,
+				"processFrame": 47,
+				"taskHudDecodedPixelSha256": "b80df85eb30dbb2d6800b95d732c6ec2016d38482b8f08a4cc280e3cf035629b",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111976,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			}
+		],
+		"errors": []
+	}
 }

@@ -60,12 +60,12 @@
 			360.0
 		],
 		"effectiveAnchor": [
-			353.050048828125,
-			360.0
+			318.35400390625,
+			205.0
 		],
 		"playerScreenPoint": [
-			352.340850830078,
-			357.506134033203
+			318.689575195312,
+			205.13623046875
 		],
 		"playerAtEffectiveAnchor": true,
 		"taskHudVisible": true,
@@ -75,9 +75,153 @@
 			206.0,
 			465.0
 		],
+		"bottomHudVisible": true,
+		"bottomHudRect": [
+			599.0,
+			530.0,
+			597.0,
+			181.0
+		],
+		"topHudVisible": true,
+		"topHudRect": [
+			80.0,
+			0.0,
+			330.0,
+			145.0
+		],
+		"messageHudVisible": false,
+		"messageHudRect": [
+			0.0,
+			0.0,
+			0.0,
+			0.0
+		],
+		"fixedHudBlockerCount": 3,
 		"playerInsideSafeRect": true,
 		"playerClearOfTaskHud": true,
+		"playerClearOfFixedHud": true,
 		"taskHudOverlappingBlockingObjectIds": [],
+		"npcAlphaSubjectCount": 3,
+		"visibleNpcCount": 3,
+		"visibleNpcIds": [
+			"block_tester",
+			"overlap_tester",
+			"trainer"
+		],
+		"npcAlphaScreenRects": {
+			"overlap_tester": [
+				361.717590332031,
+				243.51416015625,
+				37.385986328125,
+				112.157958984375
+			],
+			"block_tester": [
+				546.043579101562,
+				334.840209960938,
+				41.2919921875,
+				113.832000732422
+			],
+			"trainer": [
+				-15.304443359375,
+				-69.2757568359375,
+				47.4299926757812,
+				114.947998046875
+			]
+		},
+		"hudOverlappingNpcIds": [],
+		"viewportClippedNpcIds": [
+			"trainer"
+		],
+		"keyEnvironmentSubjectCount": 12,
+		"visibleKeyEnvironmentCount": 6,
+		"visibleKeyEnvironmentIds": [
+			"training_fence_blocked_cluster_02",
+			"training_honey_rocks_blocked_cluster_02",
+			"training_practice_cluster_blocked_01",
+			"training_rack_blocked_cluster_01",
+			"training_supplies_blocked_cluster_01",
+			"training_target_blocked_cluster_02"
+		],
+		"keyEnvironmentAlphaScreenRects": {
+			"training_honey_rocks_blocked_cluster_01": [
+				184.033325195312,
+				-268.973388671875,
+				145.3125,
+				128.269287109375
+			],
+			"training_ember_shrub_blocked_cluster_01": [
+				-63.9666748046875,
+				-188.367065429688,
+				145.3125,
+				109.656585693359
+			],
+			"training_fence_blocked_cluster_01": [
+				423.314575195312,
+				-144.767730712891,
+				162.75,
+				139.513946533203
+			],
+			"training_target_blocked_cluster_01": [
+				186.939575195312,
+				-132.668487548828,
+				139.5,
+				127.033477783203
+			],
+			"training_rack_blocked_cluster_01": [
+				426.569519042969,
+				-60.54345703125,
+				156.239990234375,
+				167.109390258789
+			],
+			"training_practice_cluster_blocked_01": [
+				679.441345214844,
+				55.94873046875,
+				146.496276855469,
+				174.375
+			],
+			"training_supplies_blocked_cluster_01": [
+				805.486450195312,
+				245.086761474609,
+				142.40625,
+				120.730926513672
+			],
+			"training_fence_blocked_cluster_02": [
+				547.314575195312,
+				289.232238769531,
+				162.75,
+				139.514007568359
+			],
+			"training_target_blocked_cluster_02": [
+				62.9395751953125,
+				363.331481933594,
+				139.5,
+				127.033508300781
+			],
+			"training_honey_rocks_blocked_cluster_02": [
+				804.033325195312,
+				537.026550292969,
+				145.3125,
+				128.269348144531
+			],
+			"training_planter_blocked_cluster_01": [
+				-3.4197998046875,
+				775.188537597656,
+				148.21875,
+				117.13134765625
+			],
+			"training_ancient_tree_blocked_cluster_01": [
+				621.423950195312,
+				749.682800292969,
+				510.53125,
+				408.206726074219
+			]
+		},
+		"hudOverlappingKeyEnvironmentIds": [
+			"training_honey_rocks_blocked_cluster_02"
+		],
+		"viewportClippedKeyEnvironmentIds": [
+			"training_rack_blocked_cluster_01"
+		],
 		"nearestWarp": {
 			"id": "warp_to_village_gate",
 			"cell": [
@@ -85,8 +229,8 @@
 				28
 			],
 			"screenPoint": [
-				476.340850830078,
-				1507.60607910156
+				442.689575195312,
+				1355.23620605469
 			],
 			"edgeClear": false,
 			"insideSafeRect": false
@@ -133,8 +277,9 @@
 		10,
 		10
 	],
-	"targetCandidateCount": 24,
+	"targetCandidateCount": 22,
 	"targetVariantIndex": 3,
+	"targetClearance": "two_cell",
 	"endCell": [
 		10,
 		10
@@ -148,14 +293,14 @@
 		"frameSeparated": true,
 		"screenPoint": [
 			265.999969482422,
-			174.0
+			196.0
 		]
 	},
 	"screenshotPath": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_training_yard/occlusion.png",
-	"screenshotSha256": "d68c4603f3436482428659904c327ca4ae9a316c92bd6960130996b5bc247fcf",
+	"screenshotSha256": "285c945cd0a9be442ba68be33ab23883e541117eebb54cd3bedeb1308c551900",
 	"screenshot": {
 		"path": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_training_yard/occlusion.png",
-		"sha256": "d68c4603f3436482428659904c327ca4ae9a316c92bd6960130996b5bc247fcf",
+		"sha256": "285c945cd0a9be442ba68be33ab23883e541117eebb54cd3bedeb1308c551900",
 		"width": 1280,
 		"height": 720
 	},
@@ -172,5 +317,243 @@
 	"errors": [],
 	"result": "PASS",
 	"ok": true,
-	"generatedAtUtc": "2026-08-23T11:17:56Z"
+	"generatedAtUtc": "2026-08-25T14:27:58Z",
+	"hudGlyphStability": {
+		"status": "passed",
+		"passed": true,
+		"method": "independent_viewport_rgb_readback_edge_energy",
+		"consecutiveFrames": true,
+		"frameCount": 6,
+		"requiredFrameCount": 6,
+		"textSource": {
+			"passed": true,
+			"taskTabText": "任务",
+			"partyTabText": "组队",
+			"titleText": "任务追踪",
+			"routeButtonText": "自动寻路",
+			"taskEntryCount": 4,
+			"taskEntryLabelCount": 8,
+			"emptyTaskEntryLabelCount": 0,
+			"errors": []
+		},
+		"regions": {
+			"tabs": {
+				"rect": [
+					1020,
+					136,
+					166,
+					24
+				],
+				"minimumEdgeEnergy": 25000,
+				"meaning": "任务/组队页签字形"
+			},
+			"title": {
+				"rect": [
+					1020,
+					193,
+					90,
+					25
+				],
+				"minimumEdgeEnergy": 15000,
+				"meaning": "任务追踪标题字形"
+			},
+			"body": {
+				"rect": [
+					1027,
+					225,
+					148,
+					200
+				],
+				"minimumEdgeEnergy": 200000,
+				"meaning": "任务条目标题与正文"
+			},
+			"routeButton": {
+				"rect": [
+					1068,
+					453,
+					70,
+					19
+				],
+				"minimumEdgeEnergy": 7000,
+				"meaning": "自动寻路按钮字形"
+			}
+		},
+		"frames": [
+			{
+				"frameIndex": 0,
+				"processFrame": 43,
+				"taskHudDecodedPixelSha256": "fd63d71f682674bef9dd054bd1041192711dfe50ca120f0ee351528dd56b9836",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111948,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 1,
+				"processFrame": 44,
+				"taskHudDecodedPixelSha256": "ac3f96ab4d6cbf25ccbec896208b5b32a2e2e10f96c62f868bbd801893d07f9b",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111948,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 2,
+				"processFrame": 45,
+				"taskHudDecodedPixelSha256": "dbc6a9349cb2518e316e06c9bb44fff69dd50c5d32d21f9f60242a723de4839c",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111948,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 3,
+				"processFrame": 46,
+				"taskHudDecodedPixelSha256": "51e989e02f17ab68ad030bc89dad77cea68563d0c810766fec3449028850c601",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111946,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 4,
+				"processFrame": 47,
+				"taskHudDecodedPixelSha256": "666ff4bd1b44269335625bd966f4e8acac2d4c8e467a6768f70f1d194f91b9ad",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111946,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			},
+			{
+				"frameIndex": 5,
+				"processFrame": 48,
+				"taskHudDecodedPixelSha256": "666ff4bd1b44269335625bd966f4e8acac2d4c8e467a6768f70f1d194f91b9ad",
+				"regions": {
+					"tabs": {
+						"edgeEnergy": 111946,
+						"minimumEdgeEnergy": 25000,
+						"passed": true
+					},
+					"title": {
+						"edgeEnergy": 79506,
+						"minimumEdgeEnergy": 15000,
+						"passed": true
+					},
+					"body": {
+						"edgeEnergy": 1110929,
+						"minimumEdgeEnergy": 200000,
+						"passed": true
+					},
+					"routeButton": {
+						"edgeEnergy": 39072,
+						"minimumEdgeEnergy": 7000,
+						"passed": true
+					}
+				},
+				"failedRegions": [],
+				"passed": true
+			}
+		],
+		"errors": []
+	}
 }

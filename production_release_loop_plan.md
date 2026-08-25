@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W011
+> 当前游标：R1.W012
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -586,8 +586,8 @@
   依赖：R1.W009。稳定复现 W006 部分 warp／occlusion 正式 PNG 和 Computer Use 后帧中的页签、任务正文或按钮缺字，区分真实 runtime 字体／Canvas 重绘、截图时机与 Computer Use 增量帧合成；修复实际根因或取证链，但不得伪造文本、静态贴字或隐藏任务栏。新增连续帧／视频门禁，证明移动、warp、遮挡和镜头重定位后任务栏标题、正文与按钮完整稳定。
   完成根因闭包：旧 W009 视频 `840/840` 与 runtime action PNG `10/10` 独立解码完整，未发现字体／Canvas 回归；旧 Computer Use 村口 warp after 的按钮帧则由模板 MAE/相关性门禁真实拒绝。Godot capture 现同时验证源文字和连续 `6` 个 viewport RGB 帧，录片器逐帧检查 MP4，Computer Use installer 要求与 runtime 模板相似并生成单一预合成审片板。最终代码真实 Main `860/860` 视频帧、两图十动作 `60/60` 连续读回、性能 `5/5` 与目标回归通过；正式 evidence 未改，候选继续 pending，详见 Phase 521。
 
-- [ ] **R1.W011 AUTO｜Firebud v2 二次返工精确证据重新冻结**
-  依赖：R1.W008、R1.W009、R1.W010。在同一最终候选上明确 supersede W006，重新冻结两图各 `pointer / movement_path / warp / collision / occlusion` 的独立 Main pair、真实 Computer Use 前后帧／receipt、完整 1280×720／30fps／1× 视频，以及 collision/catalog/performance 原始 runner 和 manifest-bound 报告；离线审计必须结构全绿且只保留 OWNER acceptance、release attestation、released+enabled 生命周期门禁，候选继续不可达。
+- [x] **R1.W011 AUTO｜Firebud v2 二次返工精确证据重新冻结**
+  依赖：R1.W008、R1.W009、R1.W010。完成冻结：同一最终候选已明确 supersede W006；两图各 `pointer / movement_path / warp / collision / occlusion` 的独立 Main pair、真实 Computer Use 前后帧／receipt、完整 1280×720／30fps／1× 四段视频，以及 collision/catalog/performance 原始 runner 和 manifest-bound 报告均重建。十动作／十唯一正式图、任务 HUD 连续读回 `60/60`、Computer Use `10/10` 与 `20` 张原始前后帧、视频 `860/860` 帧及 `81/81` 清单、性能 `8/8 @ 60fps` 均通过；离线审计 `189 files / 112 PNG / 17 JSON / PASS`，只剩 OWNER acceptance、release attestation、released+enabled lifecycle。候选继续 pending、普通玩家不可达。
 
 - [ ] **R1.W012 OWNER｜Firebud v2 二次返工后人眼复验**
   依赖：R1.W011。向项目所有者展示新冻结哈希的两图静止、移动、道路／广场过渡、NPC／服务区构图、完整任务 HUD、warp、碰撞、遮挡、战斗切入和性能材料，并明确选择批准、退回或首发延期；旧 R1.01／W007 决定和 W006 哈希不得复用，未明确批准不得执行 R1.02 promotion。
@@ -629,7 +629,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（R1.W010 完成，当前 R1.W011 AUTO） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.W011 完成，当前 R1.W012 OWNER） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -676,6 +676,7 @@
 - 2026-08-23｜R1.W008｜docs/phase_519_production_release_r1_w008_firebud_surface_transition_reauthor.md + atlas `a8a0c29837da` + `.run/evidence/r1_w008/`｜11 个原始生成完整冻结、8 个采纳原稿构成道路／广场各 15 组合；真实 Main 28 秒视频与同机位 W006 before/W008 after 确认大草湾、圆钝凹口和不等宽材质舌替代矩形边框／硬直角／同深阶梯且无新接缝，玩法四文件精确不变，性能 `8/8 @ 60fps`，Godot `7/7`、Node `42/42`、Python `15+17` 与 `134 files / errors=[]` 审计通过｜atlas 改变使 W006 正式证据已显式 supersede；候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W009
 - 2026-08-23｜R1.W009｜docs/phase_520_production_release_r1_w009_firebud_service_hud_composition.md + catalog `b997d23bca72` + `.run/evidence/r1_w009/`｜六名既有服务 NPC 与服务亭／花箱显式局部重排，视觉 footprint／blockedCells／binding／mapData／catalog 哈希闭合；二维完整 alpha 安全构图与 recorder 门禁证明村口 idle/moving 均 `14/14` NPC 同屏完整、HUD 交叠和视口裁边为空，真实 Main `840` 帧／28 秒、性能 `8/8 @ 60fps`、Godot `11/11`、Node `42/42`、Python `27+17` 与 `134 files / errors=[]` 审计通过｜W006 正式证据继续 superseded，W011 才重冻正式证据；任务 HUD 字形缺失留给 W010，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W010
 - 2026-08-24｜R1.W010｜docs/phase_521_production_release_r1_w010_firebud_hud_glyph_stability.md + `.run/evidence/r1_w010/` + scratch action matrix `r1-w010-action-matrix-20260824-d`｜根因拆为连续预览增量式呈现与旧 Computer Use 村口 warp after 的真实不完整按钮帧；旧视频 `840/840`、runtime PNG `10/10` 证明无字体／Canvas 回归，新模板门禁准确拒绝旧坏帧。Godot 源文字+连续 6 帧、MP4 全帧、runtime/Computer Use 模板相似度与单图审片板全部 fail closed；最终 Main 视频 `860/860`、十动作 `60/60`、性能 `5/5` 通过｜W011 正式证据未启动，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W011
+- 2026-08-25｜R1.W011｜docs/phase_522_production_release_r1_w011_firebud_second_exact_evidence_refreeze.md + Computer Use `6d3134bb5fdb` + collision `0fb6b79e683c` + performance `c2b55eb24b19` + `.run/evidence/r1_w011/`｜同一最终候选明确 supersede W006；两图十动作 Main pair／十唯一正式图、真实 Computer Use `10/10` 与 20 张原始前后 JPEG、任务 HUD `60/60` 连续读回、28.67 秒／860 帧视频及 81 项清单全部重冻；性能 `8/8 @ 60fps`、Godot `10/10`、Node `42/42`、Python `64+17` 与 `189 files / 112 PNG / 17 JSON / errors=[]` 审计全绿｜候选仍 `owner_review_pending / pending / false / false` 且普通玩家不可达；缺口精确只剩 OWNER acceptance、release attestation、released+enabled lifecycle，下一任务 R1.W012 OWNER
 
 ## 7. 正式上线硬门槛
 
