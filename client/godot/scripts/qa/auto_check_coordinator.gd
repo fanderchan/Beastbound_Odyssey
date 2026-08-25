@@ -103,6 +103,9 @@ const PetGrowthScreeningModel := preload("res://scripts/progression/pet_growth_s
 const PetFusionSkillPolicyCheck := preload(
 	"res://scripts/progression/pet_fusion_skill_policy_check.gd"
 )
+const PetFusionOutcomeModelCheck := preload(
+	"res://scripts/progression/pet_fusion_outcome_model_check.gd"
+)
 const PetFusionSelectionModel := preload(
 	"res://scripts/progression/pet_fusion_selection_model.gd"
 )
@@ -31924,6 +31927,16 @@ func _run_auto_pet_instance_passive_check() -> void:
 func _run_auto_pet_fusion_skill_policy_check() -> void:
 	var result := PetFusionSkillPolicyCheck.run()
 	print("pet fusion skill policy check ready: status=%s cases=%d errors=%s" % [
+		"ok" if bool(result.get("ok", false)) else "failed",
+		int(result.get("cases", 0)),
+		str(result.get("errors", [])),
+	])
+	host.get_tree().quit(0 if bool(result.get("ok", false)) else 1)
+
+
+func _run_auto_pet_fusion_outcome_check() -> void:
+	var result := PetFusionOutcomeModelCheck.run()
+	print("pet fusion outcome check ready: status=%s cases=%d errors=%s" % [
 		"ok" if bool(result.get("ok", false)) else "failed",
 		int(result.get("cases", 0)),
 		str(result.get("errors", [])),

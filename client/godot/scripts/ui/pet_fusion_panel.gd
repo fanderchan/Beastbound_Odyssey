@@ -3,6 +3,7 @@ extends Control
 signal close_requested
 signal quote_requested(selection_state: Dictionary)
 signal fusion_requested(quote: Dictionary)
+signal outcome_action_requested(action: String)
 
 const BattleActionCatalog := preload(
 	"res://scripts/battle/battle_action_catalog.gd"
@@ -12,6 +13,9 @@ const PetFusionClientModel := preload(
 )
 const PetFusionPresentationModel := preload(
 	"res://scripts/progression/pet_fusion_presentation_model.gd"
+)
+const PetFusionOutcomeModel := preload(
+	"res://scripts/progression/pet_fusion_outcome_model.gd"
 )
 const PetFusionRecipeCatalogModel := preload(
 	"res://scripts/progression/pet_fusion_recipe_catalog_model.gd"
@@ -45,6 +49,8 @@ var _runtime_interaction_enabled := false
 var _quote_pending := false
 var _mutation_pending := false
 var _runtime_status_message := ""
+var _outcome_view: Dictionary = {}
+var _outcome_action_dispatched := false
 var _preview_fixture_valid := false
 var _focused_role_id := "core"
 var _armed_fingerprint := ""
@@ -78,6 +84,22 @@ var _candidate_buttons: Array[Button] = []
 var _candidate_formal_portrait_count := 0
 var _candidate_placeholder_count := 0
 var _candidate_row: HBoxContainer
+var _outcome_layer: Control
+var _outcome_card: PanelContainer
+var _outcome_title_label: Label
+var _outcome_status_label: Label
+var _outcome_portrait: TextureRect
+var _outcome_placeholder: Label
+var _outcome_portrait_status := "none"
+var _outcome_name_label: Label
+var _outcome_level_label: Label
+var _outcome_active_label: Label
+var _outcome_passive_label: Label
+var _outcome_binding_label: Label
+var _outcome_terminal_label: Label
+var _outcome_consumption_label: Label
+var _outcome_detail_label: Label
+var _outcome_action_button: Button
 
 
 func _init() -> void:
@@ -112,6 +134,8 @@ func configure_closed(
 	_quote_pending = false
 	_mutation_pending = false
 	_runtime_status_message = ""
+	_outcome_view = {}
+	_outcome_action_dispatched = false
 	_preview_fixture_valid = false
 	_armed_fingerprint = ""
 	_second_confirmation_count = 0
@@ -170,6 +194,8 @@ func configure_qa_preview(
 	_quote_pending = false
 	_mutation_pending = false
 	_runtime_status_message = ""
+	_outcome_view = {}
+	_outcome_action_dispatched = false
 	_preview_fixture_valid = true
 	_armed_fingerprint = ""
 	_second_confirmation_count = 0
@@ -189,7 +215,8 @@ func configure_runtime(
 	quote_pending: bool = false,
 	mutation_pending: bool = false,
 	status_message: String = "",
-	interaction_enabled: bool = true
+	interaction_enabled: bool = true,
+	outcome_view: Dictionary = {}
 ) -> bool:
 	if (
 		not (catalog_document is Dictionary)
@@ -226,6 +253,10 @@ func configure_runtime(
 		quote,
 		catalog
 	)
+	var normalized_outcome := PetFusionOutcomeModel.normalized_view(outcome_view)
+	var outcome_changed := (
+		JSON.stringify(normalized_outcome) != JSON.stringify(_outcome_view)
+	)
 	var entering_runtime := not _runtime_mode
 	_catalog_document = catalog
 	_selection = selections
@@ -238,6 +269,9 @@ func configure_runtime(
 	_quote_pending = quote_pending
 	_mutation_pending = mutation_pending
 	_runtime_status_message = status_message.strip_edges()
+	_outcome_view = normalized_outcome
+	if outcome_changed:
+		_outcome_action_dispatched = false
 	_preview_fixture_valid = false
 	if entering_runtime:
 		_quote_request_count = 0
@@ -321,6 +355,28 @@ func snapshot() -> Dictionary:
 		"networkRequestCount": _quote_request_count + _fusion_request_count,
 		"quotePending": _quote_pending,
 		"mutationPending": _mutation_pending,
+		"outcomeVisible": (
+			_outcome_layer != null and _outcome_layer.visible
+		),
+		"outcomeKind": str(_outcome_view.get("kind", "")),
+		"outcomeAction": str(_outcome_view.get("action", "")),
+		"outcomeActionDisabled": (
+			_outcome_action_button.disabled
+			if _outcome_action_button != null
+			else true
+		),
+		"outcomeActionDispatched": _outcome_action_dispatched,
+		"outcomePortraitStatus": _outcome_portrait_status,
+		"outcomeTitleText": (
+			_outcome_title_label.text
+			if _outcome_title_label != null
+			else ""
+		),
+		"outcomeConsumptionText": (
+			_outcome_consumption_label.text
+			if _outcome_consumption_label != null
+			else ""
+		),
 		"authorityText": (
 			_authority_label.text
 			if _authority_label != null
@@ -332,7 +388,10 @@ func snapshot() -> Dictionary:
 
 func visible_text() -> String:
 	var texts: Array[String] = []
-	_collect_visible_text(self, texts)
+	if _outcome_layer != null and _outcome_layer.visible:
+		_collect_visible_text(_outcome_layer, texts)
+	else:
+		_collect_visible_text(self, texts)
 	return "\n".join(texts)
 
 
@@ -351,6 +410,7 @@ func _build_ui() -> void:
 	_build_rules_panel()
 	_build_step_rail()
 	_build_candidate_bar()
+	_build_outcome_layer()
 
 
 func _build_header() -> void:
@@ -797,6 +857,122 @@ func _build_candidate_bar() -> void:
 	scroll.add_child(_candidate_row)
 
 
+func _build_outcome_layer() -> void:
+	_outcome_layer = Control.new()
+	_outcome_layer.name = "OutcomeLayer"
+	_outcome_layer.visible = false
+	_outcome_layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_outcome_layer)
+	_place(_outcome_layer, Rect2(Vector2.ZERO, VIEWPORT_SIZE))
+
+	var dim := ColorRect.new()
+	dim.name = "OutcomeBackdrop"
+	dim.color = Color(0.018, 0.014, 0.010, 0.94)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_outcome_layer.add_child(dim)
+	_place(dim, Rect2(Vector2.ZERO, VIEWPORT_SIZE))
+
+	_outcome_card = PanelContainer.new()
+	_outcome_card.name = "OutcomeCard"
+	_outcome_card.add_theme_stylebox_override(
+		"panel",
+		_outcome_card_style(PetFusionOutcomeModel.KIND_PENDING)
+	)
+	_outcome_layer.add_child(_outcome_card)
+	_place(_outcome_card, Rect2(235.0, 66.0, 810.0, 588.0))
+	var content := Control.new()
+	content.mouse_filter = Control.MOUSE_FILTER_PASS
+	_outcome_card.add_child(content)
+
+	_outcome_title_label = _label(
+		"融合结果",
+		30,
+		PetManagementVisualSkin.CREAM_TEXT,
+		HORIZONTAL_ALIGNMENT_CENTER
+	)
+	PetManagementVisualSkin.apply_title(_outcome_title_label, 30)
+	content.add_child(_outcome_title_label)
+	_place(_outcome_title_label, Rect2(34.0, 18.0, 742.0, 44.0))
+
+	_outcome_status_label = _label(
+		"",
+		14,
+		PetManagementVisualSkin.GOLD_TEXT,
+		HORIZONTAL_ALIGNMENT_CENTER
+	)
+	content.add_child(_outcome_status_label)
+	_place(_outcome_status_label, Rect2(54.0, 65.0, 702.0, 30.0))
+
+	var portrait_frame := PanelContainer.new()
+	portrait_frame.name = "OutcomePortraitFrame"
+	portrait_frame.add_theme_stylebox_override(
+		"panel",
+		_target_frame_style(true)
+	)
+	content.add_child(portrait_frame)
+	_place(portrait_frame, Rect2(42.0, 116.0, 238.0, 238.0))
+	_outcome_portrait = TextureRect.new()
+	_outcome_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_outcome_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_outcome_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_outcome_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_frame.add_child(_outcome_portrait)
+	_outcome_placeholder = _label(
+		"…",
+		48,
+		PetManagementVisualSkin.GOLD_TEXT,
+		HORIZONTAL_ALIGNMENT_CENTER
+	)
+	_outcome_placeholder.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_outcome_placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_frame.add_child(_outcome_placeholder)
+
+	_outcome_name_label = _outcome_text_label(25, PetManagementVisualSkin.CREAM_TEXT)
+	content.add_child(_outcome_name_label)
+	_place(_outcome_name_label, Rect2(310.0, 111.0, 454.0, 42.0))
+	_outcome_level_label = _outcome_text_label(15, PetManagementVisualSkin.GOLD_TEXT)
+	content.add_child(_outcome_level_label)
+	_place(_outcome_level_label, Rect2(310.0, 151.0, 454.0, 30.0))
+	_outcome_active_label = _outcome_text_label(14, PetManagementVisualSkin.CREAM_TEXT)
+	content.add_child(_outcome_active_label)
+	_place(_outcome_active_label, Rect2(310.0, 190.0, 454.0, 58.0))
+	_outcome_passive_label = _outcome_text_label(14, Color(0.82, 0.72, 0.95, 1.0))
+	content.add_child(_outcome_passive_label)
+	_place(_outcome_passive_label, Rect2(310.0, 248.0, 454.0, 42.0))
+	_outcome_binding_label = _outcome_text_label(14, Color(0.68, 0.88, 0.75, 1.0))
+	content.add_child(_outcome_binding_label)
+	_place(_outcome_binding_label, Rect2(310.0, 292.0, 454.0, 42.0))
+	_outcome_terminal_label = _outcome_text_label(13, Color(0.98, 0.64, 0.48, 1.0))
+	content.add_child(_outcome_terminal_label)
+	_place(_outcome_terminal_label, Rect2(310.0, 334.0, 454.0, 56.0))
+
+	_outcome_consumption_label = _outcome_text_label(
+		15,
+		PetManagementVisualSkin.GOLD_TEXT,
+		HORIZONTAL_ALIGNMENT_CENTER
+	)
+	_outcome_consumption_label.add_theme_stylebox_override(
+		"normal",
+		_notice_style(Color(0.38, 0.19, 0.08, 0.80))
+	)
+	content.add_child(_outcome_consumption_label)
+	_place(_outcome_consumption_label, Rect2(42.0, 403.0, 722.0, 56.0))
+	_outcome_detail_label = _outcome_text_label(
+		13,
+		PetManagementVisualSkin.MUTED_TEXT,
+		HORIZONTAL_ALIGNMENT_CENTER
+	)
+	content.add_child(_outcome_detail_label)
+	_place(_outcome_detail_label, Rect2(64.0, 466.0, 678.0, 42.0))
+
+	_outcome_action_button = Button.new()
+	_outcome_action_button.name = "OutcomeActionButton"
+	PetManagementVisualSkin.apply_action_button(_outcome_action_button, false)
+	_outcome_action_button.pressed.connect(_outcome_action_pressed)
+	content.add_child(_outcome_action_button)
+	_place(_outcome_action_button, Rect2(280.0, 519.0, 250.0, 48.0))
+
+
 func _refresh() -> void:
 	_selection_state = PetFusionSelectionModel.selection_state(
 		_selection,
@@ -837,11 +1013,69 @@ func _refresh() -> void:
 		)
 	)
 	if _close_button != null:
-		_close_button.disabled = _runtime_mode and _mutation_pending
+		_close_button.disabled = (
+			_runtime_mode
+			and (
+				_mutation_pending
+				or str(_outcome_view.get("kind", ""))
+					== PetFusionOutcomeModel.KIND_PENDING
+			)
+		)
 	_refresh_material_slots()
 	_refresh_candidate_buttons()
 	_refresh_quote_and_target()
+	_refresh_outcome()
 	queue_redraw()
+
+
+func _refresh_outcome() -> void:
+	if _outcome_layer == null:
+		return
+	var view := PetFusionOutcomeModel.normalized_view(_outcome_view)
+	_outcome_layer.visible = not view.is_empty()
+	if view.is_empty():
+		_outcome_portrait_status = "none"
+		return
+	if _confirm_button != null:
+		_confirm_button.disabled = true
+	var kind := str(view.get("kind", ""))
+	_outcome_card.add_theme_stylebox_override(
+		"panel",
+		_outcome_card_style(kind)
+	)
+	_outcome_title_label.text = str(view.get("titleText", ""))
+	_outcome_status_label.text = str(view.get("statusText", ""))
+	_outcome_name_label.text = str(view.get("nameText", ""))
+	_outcome_level_label.text = str(view.get("levelText", ""))
+	_outcome_active_label.text = str(view.get("activeText", ""))
+	_outcome_passive_label.text = str(view.get("passiveText", ""))
+	_outcome_binding_label.text = str(view.get("bindingText", ""))
+	_outcome_terminal_label.text = str(view.get("terminalText", ""))
+	_outcome_consumption_label.text = str(view.get("consumptionText", ""))
+	_outcome_detail_label.text = str(view.get("detailText", ""))
+	var texture: Texture2D = null
+	if kind == PetFusionOutcomeModel.KIND_SUCCESS:
+		texture = PetPortraitArtCatalog.texture_for_form(
+			str(view.get("portraitFormId", ""))
+		)
+	_outcome_portrait.texture = texture
+	_outcome_placeholder.visible = texture == null
+	_outcome_placeholder.text = (
+		"画像\n加载失败"
+		if kind == PetFusionOutcomeModel.KIND_SUCCESS
+		else ("!" if kind == PetFusionOutcomeModel.KIND_FAILURE else "…")
+	)
+	_outcome_portrait_status = (
+		"formal"
+		if texture != null
+		else ("missing" if kind == PetFusionOutcomeModel.KIND_SUCCESS else "symbol")
+	)
+	_outcome_action_button.text = str(view.get("actionText", ""))
+	_outcome_action_button.disabled = (
+		str(view.get("action", "")) == ""
+		or _outcome_action_dispatched
+		or _mutation_pending
+	)
 
 
 func _refresh_material_slots() -> void:
@@ -1256,6 +1490,7 @@ func _candidate_pressed(instance: Dictionary) -> void:
 func _confirm_pressed() -> void:
 	if (
 		(not _qa_preview and not _runtime_mode)
+		or not _outcome_view.is_empty()
 		or _quote.is_empty()
 		or _confirm_button == null
 		or _confirm_button.disabled
@@ -1295,7 +1530,7 @@ func _confirmation_armed() -> bool:
 
 
 func _close_pressed() -> void:
-	if _runtime_mode and _mutation_pending:
+	if _runtime_mode and (_mutation_pending or not _outcome_view.is_empty()):
 		return
 	if get_signal_connection_list("close_requested").is_empty():
 		visible = false
@@ -1311,7 +1546,19 @@ func _can_select_materials() -> bool:
 		and _runtime_interaction_enabled
 		and not _quote_pending
 		and not _mutation_pending
+		and _outcome_view.is_empty()
 	)
+
+
+func _outcome_action_pressed() -> void:
+	if _outcome_view.is_empty() or _outcome_action_dispatched:
+		return
+	var action := str(_outcome_view.get("action", ""))
+	if action == "" or _outcome_action_button == null:
+		return
+	_outcome_action_dispatched = true
+	_outcome_action_button.disabled = true
+	outcome_action_requested.emit(action)
 
 
 func _runtime_banner_text() -> String:
@@ -1452,6 +1699,34 @@ func _target_frame_style(active: bool) -> StyleBoxFlat:
 	style.shadow_color = Color(0.0, 0.0, 0.0, 0.72)
 	style.shadow_size = 9
 	return style
+
+
+func _outcome_card_style(kind: String) -> StyleBoxFlat:
+	var style := PetManagementVisualSkin.dark_inset_style(0.98, 18)
+	var border_color := Color(0.84, 0.62, 0.24, 0.94)
+	if kind == PetFusionOutcomeModel.KIND_SUCCESS:
+		border_color = Color(0.42, 0.86, 0.54, 0.96)
+	elif kind == PetFusionOutcomeModel.KIND_FAILURE:
+		border_color = Color(0.94, 0.42, 0.28, 0.96)
+	style.border_color = border_color
+	style.border_width_left = 3
+	style.border_width_top = 3
+	style.border_width_right = 3
+	style.border_width_bottom = 3
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.86)
+	style.shadow_size = 18
+	return style
+
+
+func _outcome_text_label(
+	font_size: int,
+	color: Color,
+	horizontal_alignment: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT
+) -> Label:
+	var label := _label("", font_size, color, horizontal_alignment)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	return label
 
 
 func _duplicate_pet_array(value: Array[Dictionary]) -> Array[Dictionary]:

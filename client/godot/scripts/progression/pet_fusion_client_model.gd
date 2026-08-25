@@ -12,11 +12,45 @@ const RESULT_BINDING_BOUND := "bound"
 const RESULT_BINDING_UNBOUND := "unbound"
 const TRADE_ELIGIBILITY_NOT_ELIGIBLE := "not_eligible"
 const UNCERTAIN_RESULT_CODES := [
+	"bad_json",
 	"network_failed",
 	"network_retry_failed",
+	"server_error",
 	"storage_commit_timeout",
 	"storage_outcome_unknown",
 	"storage_write_failed",
+]
+const DEFINITIVE_NO_CONSUMPTION_CODES := [
+	"battle_profile_mutation_locked",
+	"idempotency_key_invalid",
+	"idempotency_key_required",
+	"offline_hang_active",
+	"pet_capture_overflow_pending",
+	"pet_fusion_asset_gate",
+	"pet_fusion_catalog_conflict",
+	"pet_fusion_catalog_invalid",
+	"pet_fusion_context_invalid",
+	"pet_fusion_disabled",
+	"pet_fusion_gene_profile_invalid",
+	"pet_fusion_material_conflict",
+	"pet_fusion_material_cultivation_invalid",
+	"pet_fusion_material_duplicate",
+	"pet_fusion_material_growth_unsupported",
+	"pet_fusion_material_invalid",
+	"pet_fusion_random_context_invalid",
+	"pet_fusion_recipe_missing",
+	"pet_fusion_release_gate",
+	"pet_fusion_request_invalid",
+	"pet_fusion_result_invalid",
+	"pet_fusion_target_invalid",
+	"pet_locked",
+	"pet_missing",
+	"pet_profile_pet_container_conflict",
+	"pet_profile_pet_container_invalid",
+	"pet_required_by_quest",
+	"pet_riding",
+	"profile_missing",
+	"revision_conflict",
 ]
 
 
@@ -75,7 +109,18 @@ static func normalized_material_instance_ids(value) -> Dictionary:
 
 
 static func operation_id_must_be_retained(code: String) -> bool:
-	return UNCERTAIN_RESULT_CODES.has(code.strip_edges())
+	var normalized_code := code.strip_edges()
+	return (
+		normalized_code != ""
+		and (
+			UNCERTAIN_RESULT_CODES.has(normalized_code)
+			or not definitive_failure_guarantees_no_consumption(normalized_code)
+		)
+	)
+
+
+static func definitive_failure_guarantees_no_consumption(code: String) -> bool:
+	return DEFINITIVE_NO_CONSUMPTION_CODES.has(code.strip_edges())
 
 
 static func normalized_quote(value, catalog_document) -> Dictionary:

@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W018
+> 当前游标：R1.W019
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -607,8 +607,8 @@
 - [x] **R1.W017 OWNER｜Firebud v2 第三次返工后发布决定**
   依赖：R1.W016。项目所有者继续委托 Codex 自行验证，但没有亲自接受精确像素或授权伪造签名。受委托美术总监逐格审看 W016 当前 32.43 秒／973 帧真实 Main、八帧联系表、十动作和 Computer Use 后确认 W012 的角色展板、训练场围合、视觉权重三项根因已实质关闭，没有新缺陷支持继续退回；建议“首发延期并冻结当前候选”，停止无证据 Firebud 返工。该建议不创建 owner acceptance／attestation，不允许 promotion；R1.02 只执行延期分支并证明 v2 继续不可达、旧正式版本有效。
 
-- [ ] **R1.W018 AUTO｜融合权威成功／失败结果态**
-  依赖：R1.03。新增 focused outcome model/view：成功只展示严格解析且 profile/revision 已应用的服务器结果，包含正式结果画像、名称、`一转 Lv1`、实际继承主动／被动、绑定／交易、终局／不可骑与三宠已消耗；失败只使用玩家错误映射，明确本次零消耗并提供重新报价或重新选择。pending／成功／失败均不得重复提交，不显示 raw code，不改变配方、概率、经济或原子事务。
+- [x] **R1.W018 AUTO｜融合权威成功／失败结果态**
+  依赖：R1.03。已新增 focused outcome model/view：成功只在严格结果、profile revision 和新宠实例全部应用后展示正式画像、名称、一转 Lv1、实际主动／被动、绑定／交易、不可骑终局和三宠永久消耗；明确拒绝才显示零消耗并提供重新报价／重新选择；网络、存储、坏 JSON 和未知错误保留同一幂等操作并明确不判断消耗。请求中、成功、失败、未知和档案同步态均锁住重复提交，玩家面不显示 raw code；配方、概率、经济、事务、画像像素和生产开关均未改变。模型 `8/8`、面板 1280×720、客户端合同、Node `89/89`、宠物 `36 forms / errors=0`、QA lane `78/78` 与性能 `5/5` 通过，详见 Phase 531。
 
 - [ ] **R1.W019 AUTO｜融合当前 Main 精确证据重冻**
   依赖：R1.W018。在隔离 QA lane 和关闭生产目录上，以真实 Main、真实左键重录两路线来源／结果画像、报价、双确认、成功结果、失败恢复、关闭态与不可骑边界；验证布局、视频完整解码、零真实网络／档案写入、零 raw ID、性能和 lifecycle。
@@ -653,7 +653,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（R1.03 委托审查退回流程，当前 R1.W018 AUTO） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.03 委托审查退回流程，R1.W018 已完成，当前 R1.W019 AUTO） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -709,6 +709,7 @@
 - 2026-08-26｜R1.W017｜受委托美术总监建议首发延期 + docs/phase_528_production_release_r1_w017_firebud_delegated_release_deferral.md｜项目所有者继续委托 Codex 自行审片但未签署接受；逐格审看 W016 当前视频／联系表／动作帧后确认局部镜头已消除角色展板、村口三簇和训练段落建立空间层级、人物／地表／物件视觉权重收敛，没有新根因支持第四次 Firebud 返工。全游戏正式美术与其他生产门禁仍未完成，且 owner acceptance 缺失，因此建议首发延期、冻结候选、停止无证据返工｜不伪造批准／签名／attestation，不执行 promotion；v2 继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.02 AUTO 延期分支
 - 2026-08-26｜R1.02｜docs/phase_529_production_release_r1_02_firebud_deferred_runtime_enforcement.md + `.run/evidence/r1_02/`｜执行首发延期分支：普通 catalog 仍绑定历史 v1，review catalog 才绑定 v2；v2 精确保持 `owner_review_pending / pending / false / false`，无 acceptance／attestation／promotion。严格普通运行时以 `qaPreviewEnabled=false / normalPendingDisabled=true` 拒绝陈旧 v1 binding，显式 preview 才以 `1224/672` ground draws 准备 v2；正常 Main 的解析、跨帧点击移动、阻挡寻路和双向 warp `4/4` 通过，QA lane 与真实玩家目录收尾｜旧 v1 已发布制品和证明保持不可变，但因当前权威 map data 漂移不冒充仍在运行；玩家使用既有程序化回退，v2 普通玩家不可达，下一任务 R1.03 OWNER
 - 2026-08-26｜R1.03｜受委托宠物美术总监退回流程 + docs/phase_530_production_release_r1_03_fusion_delegated_flow_rejection.md｜原尺寸审看两张 1024 透明 master、48/64/96/128 小图和 Phase445/479 当前 1280×720 Main 片；曜冠的紫金攻击轮廓与苔垒 V4E 的岩甲防御轮廓可冻结，首批不可骑范围合理。Pet Inspector `0/0`、关闭 verifier `2 forms / 1350 copied / 22 portrait / 2 QA controls`，promoter 继续只被 owner 产物按预期阻断｜权威片只有关闭／报价／第一次确认，当前产品也只有一行成功／失败消息，缺少 R1.03 明列的权威结果页和失败恢复；不生成批准或 promotion，返工拆为 R1.W018–R1.W020，下一任务 R1.W018
+- 2026-08-26｜R1.W018｜docs/phase_531_production_release_r1_w018_fusion_authoritative_outcomes.md｜新增严格融合 outcome model 和 1280×720 overlay；成功只在服务器结果、profile revision 与新宠实例全成立后展示正式画像／实际技能／绑定交易／不可骑终局／三宠消耗，明确拒绝才显示零消耗，未知回执保留同一幂等操作且不猜消耗。模型 `8/8`、面板、客户端域／合同、Node `89/89`、宠物 `36 forms / errors=0 warnings=0`、QA lane `78/78`、性能 `5/5` 全绿｜完整 portrait catalog 仍诚实暴露候选 worktree 缺 Phase371 忽略旧片，不改写历史证明；生产与 owner 门继续全关，下一任务 R1.W019
 
 ## 7. 正式上线硬门槛
 

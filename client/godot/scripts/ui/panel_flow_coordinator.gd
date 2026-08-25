@@ -56,6 +56,9 @@ const PetFusionClientModel := preload("res://scripts/progression/pet_fusion_clie
 const PetFusionPresentationModel := preload(
 	"res://scripts/progression/pet_fusion_presentation_model.gd"
 )
+const PetFusionOutcomeModel := preload(
+	"res://scripts/progression/pet_fusion_outcome_model.gd"
+)
 const PetFusionRecipeCatalogModel := preload(
 	"res://scripts/progression/pet_fusion_recipe_catalog_model.gd"
 )
@@ -427,6 +430,10 @@ var _pet_fusion_mutation_pending: bool = false
 var _pet_fusion_quote_generation: int = 0
 var _pet_fusion_status_message: String = ""
 var _pet_fusion_pending_operations: Dictionary = {}
+var _pet_fusion_outcome_view: Dictionary = {}
+var _pet_fusion_pending_success_result: Dictionary = {}
+var _pet_fusion_pending_success_revision: int = -1
+var _pet_fusion_result_instance_id: String = ""
 var _battle_outcome_float_overlay
 var _pet_growth_radar_row: HBoxContainer
 var _pet_level_one_radar: Control
@@ -7090,6 +7097,9 @@ func _build_hud() -> void:
 	_pet_fusion_panel.close_requested.connect(_close_pet_fusion_panel)
 	_pet_fusion_panel.quote_requested.connect(_on_pet_fusion_quote_requested)
 	_pet_fusion_panel.fusion_requested.connect(_on_pet_fusion_confirm_requested)
+	_pet_fusion_panel.outcome_action_requested.connect(
+		_on_pet_fusion_outcome_action_requested
+	)
 	hud_root.add_child(_pet_fusion_panel)
 	pet_context_menu = PopupMenu.new()
 	pet_context_menu.name = "PetContextMenu"
@@ -10814,7 +10824,12 @@ func _apply_server_profile_summary(summary: Dictionary) -> void:
 	host._server_sync().apply_server_profile_summary(summary)
 
 func _apply_server_profile_payload(parsed: Dictionary) -> bool:
-	return host._server_sync().apply_server_profile_payload(parsed)
+	var applied: bool = host._server_sync().apply_server_profile_payload(parsed)
+	if applied and not _pet_fusion_pending_success_result.is_empty():
+		_try_finalize_pet_fusion_success_outcome()
+		if _pet_fusion_panel != null and _pet_fusion_panel.visible:
+			call_deferred("_refresh_pet_fusion_panel")
+	return applied
 
 func _apply_auth_profile_metadata_fields(display_name: String) -> void:
 	var name = display_name.strip_edges()
@@ -17790,6 +17805,10 @@ func _open_pet_fusion_panel() -> void:
 	_pet_fusion_mutation_pending = false
 	_pet_fusion_quote_generation += 1
 	_pet_fusion_status_message = ""
+	_pet_fusion_outcome_view.clear()
+	_pet_fusion_pending_success_result.clear()
+	_pet_fusion_pending_success_revision = -1
+	_pet_fusion_result_instance_id = ""
 	_pet_fusion_panel.visible = true
 	_refresh_pet_fusion_panel({})
 	host._layout_hud()
@@ -17804,6 +17823,10 @@ func _close_pet_fusion_panel(return_to_pet_panel: bool = true) -> void:
 	_pet_fusion_quote_generation += 1
 	_pet_fusion_quote_pending = false
 	_pet_fusion_status_message = ""
+	_pet_fusion_outcome_view.clear()
+	_pet_fusion_pending_success_result.clear()
+	_pet_fusion_pending_success_revision = -1
+	_pet_fusion_result_instance_id = ""
 	_pet_fusion_panel.visible = false
 	_pet_fusion_panel.reset_confirmation()
 	if return_to_pet_panel and was_visible and not battle_active:
@@ -17815,6 +17838,7 @@ func _close_pet_fusion_panel(return_to_pet_panel: bool = true) -> void:
 func _refresh_pet_fusion_panel(selection_override = null) -> void:
 	if _pet_fusion_panel == null:
 		return
+	_try_finalize_pet_fusion_success_outcome()
 	var catalog := BalanceCatalogModel.pet_fusion_recipes()
 	var candidate_pets := PlayerProgressModel.all_pet_instances(player_profile)
 	if not PetFusionRecipeCatalogModel.runtime_available(catalog):
@@ -17850,7 +17874,8 @@ func _refresh_pet_fusion_panel(selection_override = null) -> void:
 		_pet_fusion_quote_pending,
 		_pet_fusion_mutation_pending,
 		status_message,
-		has_server_session and not profile_action_request_pending
+		has_server_session and not profile_action_request_pending,
+		_pet_fusion_outcome_view
 	)
 
 
@@ -17883,6 +17908,7 @@ func _on_pet_fusion_quote_requested(selection_state: Dictionary) -> void:
 		or not PetFusionRecipeCatalogModel.runtime_available(catalog)
 		or not _is_server_account_session()
 		or _pet_fusion_mutation_pending
+		or not _pet_fusion_outcome_view.is_empty()
 		or profile_action_request_pending
 	):
 		_pet_fusion_quote_pending = false
@@ -17909,6 +17935,7 @@ func _on_pet_fusion_quote_requested(selection_state: Dictionary) -> void:
 		return
 	_pet_fusion_quote_generation += 1
 	var generation := _pet_fusion_quote_generation
+	_pet_fusion_outcome_view.clear()
 	_pet_fusion_quote_pending = true
 	_pet_fusion_quote.clear()
 	_pet_fusion_status_message = ""
@@ -17977,6 +18004,7 @@ func _on_pet_fusion_confirm_requested(quote_value: Dictionary) -> void:
 		or not PetFusionRecipeCatalogModel.runtime_available(catalog)
 		or not _is_server_account_session()
 		or _pet_fusion_mutation_pending
+		or not _pet_fusion_outcome_view.is_empty()
 		or profile_action_request_pending
 		or int(quote.get("profileRevision", -1))
 			!= server_profile_sync_expected_revision
@@ -18038,6 +18066,7 @@ func _on_pet_fusion_confirm_requested(quote_value: Dictionary) -> void:
 	profile_action_request_pending = true
 	_pet_fusion_mutation_pending = true
 	_pet_fusion_status_message = "服务器正在确认材料、血脉与融合结果……"
+	_pet_fusion_outcome_view = PetFusionOutcomeModel.request_pending_view()
 	_refresh_pet_fusion_panel()
 	var response: Dictionary = await host._auto_http_request_spec(spec)
 	var parsed := ServerAuthClientModel.parse_pet_fusion_response(
@@ -18059,15 +18088,33 @@ func _on_pet_fusion_confirm_requested(quote_value: Dictionary) -> void:
 		_pet_paid_reset_quote_generation += 1
 		_pet_evolution_quote.clear()
 		_pet_evolution_quote_generation += 1
-		var profile_applied := _apply_server_profile_payload(parsed)
 		var result := parsed.get("petFusion", {}) as Dictionary
-		if profile_applied:
-			_pet_fusion_status_message = str(
-				result.get("message", "宠物融合成功。")
+		_pet_fusion_pending_success_result = result.duplicate(true)
+		_pet_fusion_pending_success_revision = int(
+			(parsed.get("profileSummary", {}) as Dictionary).get(
+				"profileRevision",
+				-1
+			)
+		) if parsed.get("profileSummary", {}) is Dictionary else -1
+		_pet_fusion_result_instance_id = str(
+			result.get("resultInstanceId", "")
+		).strip_edges()
+		var profile_applied := _apply_server_profile_payload(parsed)
+		var success_outcome_ready := (
+			str(_pet_fusion_outcome_view.get("kind", ""))
+				== PetFusionOutcomeModel.KIND_SUCCESS
+			or _try_finalize_pet_fusion_success_outcome()
+		)
+		if profile_applied and success_outcome_ready:
+			_pet_fusion_status_message = "%s融合完成，角色档案已同步。" % str(
+				result.get("targetFormName", "宠物")
 			)
 			_set_world_log_message(_pet_fusion_status_message)
 		else:
-			_pet_fusion_status_message = "融合已提交，但档案刷新失败；正在重新拉取。"
+			_pet_fusion_status_message = "融合结果已返回，但档案尚未同步；正在重新拉取。"
+			_pet_fusion_outcome_view = (
+				PetFusionOutcomeModel.profile_sync_pending_view()
+			)
 			_set_world_log_message(_pet_fusion_status_message)
 			_queue_server_profile_pull()
 		_refresh_pet_panel()
@@ -18076,18 +18123,109 @@ func _on_pet_fusion_confirm_requested(quote_value: Dictionary) -> void:
 	if _handle_session_invalid_response(parsed):
 		return
 	var code := str(parsed.get("code", ""))
-	if not PetFusionClientModel.operation_id_must_be_retained(code):
-		_pet_fusion_pending_operations.erase(fingerprint)
-	_pet_fusion_panel.reset_confirmation()
-	_pet_fusion_status_message = _server_player_message(
+	var player_message := _server_player_message(
 		parsed,
 		"宠物融合失败，请稍后重试。"
 	)
-	if ["revision_conflict", "pet_fusion_catalog_conflict"].has(code):
-		_pet_fusion_quote.clear()
+	var definitive_failure := (
+		PetFusionClientModel.definitive_failure_guarantees_no_consumption(code)
+	)
+	if definitive_failure:
+		_pet_fusion_pending_operations.erase(fingerprint)
+	_pet_fusion_panel.reset_confirmation()
+	_pet_fusion_status_message = player_message
+	if definitive_failure:
+		var recovery_action := (
+			PetFusionOutcomeModel.ACTION_REQUOTE
+			if ["revision_conflict", "pet_fusion_catalog_conflict"].has(code)
+			else PetFusionOutcomeModel.ACTION_RESELECT
+		)
+		_pet_fusion_outcome_view = (
+			PetFusionOutcomeModel.definitive_failure_view(
+				player_message,
+				recovery_action
+			)
+		)
+		if recovery_action == PetFusionOutcomeModel.ACTION_REQUOTE:
+			_pet_fusion_quote.clear()
+	else:
+		_pet_fusion_outcome_view = (
+			PetFusionOutcomeModel.uncertain_result_view(player_message)
+		)
 	_refresh_pet_fusion_panel()
-	if ["revision_conflict", "pet_fusion_catalog_conflict"].has(code):
+
+
+func _try_finalize_pet_fusion_success_outcome() -> bool:
+	if _pet_fusion_pending_success_result.is_empty():
+		return false
+	var result_instance_id := str(
+		_pet_fusion_pending_success_result.get("resultInstanceId", "")
+	).strip_edges()
+	if (
+		result_instance_id == ""
+		or server_profile_sync_expected_revision
+			< _pet_fusion_pending_success_revision
+		or PlayerProgressModel.pet_instance_by_id(
+			player_profile,
+			result_instance_id
+		).is_empty()
+	):
+		return false
+	var outcome := PetFusionOutcomeModel.success_view(
+		_pet_fusion_pending_success_result,
+		BalanceCatalogModel.pet_fusion_recipes()
+	)
+	if outcome.is_empty():
+		return false
+	_pet_fusion_outcome_view = outcome
+	_pet_fusion_result_instance_id = result_instance_id
+	_pet_fusion_pending_success_result.clear()
+	_pet_fusion_pending_success_revision = -1
+	return true
+
+
+func _on_pet_fusion_outcome_action_requested(action: String) -> void:
+	if (
+		_pet_fusion_panel == null
+		or not _pet_fusion_panel.visible
+		or _pet_fusion_outcome_view.is_empty()
+	):
+		return
+	if action == PetFusionOutcomeModel.ACTION_VIEW_PET:
+		var result_instance_id := _pet_fusion_result_instance_id
+		_pet_fusion_outcome_view.clear()
+		if not PlayerProgressModel.pet_instance_by_id(
+			player_profile,
+			result_instance_id
+		).is_empty():
+			pet_selected_instance_id = result_instance_id
+		_close_pet_fusion_panel(true)
+		return
+	if action == PetFusionOutcomeModel.ACTION_REQUOTE:
+		_pet_fusion_outcome_view.clear()
+		_pet_fusion_quote.clear()
+		_pet_fusion_status_message = "正在重新获取当前三宠组合的报价。"
+		_pet_fusion_panel.reset_confirmation()
+		_refresh_pet_fusion_panel()
 		call_deferred("_request_pet_fusion_quote_from_current_selection")
+		return
+	if action == PetFusionOutcomeModel.ACTION_RESELECT:
+		_pet_fusion_outcome_view.clear()
+		_pet_fusion_quote.clear()
+		_pet_fusion_status_message = "请重新核对或更换三只材料宠。"
+		_pet_fusion_panel.reset_confirmation()
+		_refresh_pet_fusion_panel()
+		return
+	if action == PetFusionOutcomeModel.ACTION_RETRY_OPERATION:
+		var retained_quote := _pet_fusion_quote.duplicate(true)
+		_pet_fusion_outcome_view.clear()
+		_pet_fusion_status_message = "正在使用同一操作标识核对融合结果。"
+		_refresh_pet_fusion_panel()
+		call_deferred("_on_pet_fusion_confirm_requested", retained_quote)
+		return
+	if action == PetFusionOutcomeModel.ACTION_REFRESH_PROFILE:
+		_pet_fusion_status_message = "正在同步服务器角色档案。"
+		_queue_server_profile_pull()
 
 
 func _request_pet_fusion_quote_from_current_selection() -> void:
@@ -18105,6 +18243,10 @@ func _reset_pet_fusion_state(close_panel: bool = true) -> void:
 	_pet_fusion_quote_generation += 1
 	_pet_fusion_status_message = ""
 	_pet_fusion_pending_operations.clear()
+	_pet_fusion_outcome_view.clear()
+	_pet_fusion_pending_success_result.clear()
+	_pet_fusion_pending_success_revision = -1
+	_pet_fusion_result_instance_id = ""
 	if _pet_fusion_panel != null:
 		_pet_fusion_panel.reset_confirmation()
 		if close_panel:

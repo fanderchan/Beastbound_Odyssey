@@ -6,6 +6,9 @@ const BalanceCatalogModel := preload(
 const PetFusionClientModel := preload(
 	"res://scripts/progression/pet_fusion_client_model.gd"
 )
+const PetFusionOutcomeModel := preload(
+	"res://scripts/progression/pet_fusion_outcome_model.gd"
+)
 const PetFusionPanel := preload(
 	"res://scripts/ui/pet_fusion_panel.gd"
 )
@@ -102,6 +105,7 @@ func _run() -> void:
 	for route_key in [ROUTE_SOLAR, ROUTE_MOSS]:
 		await _append_preview_route_errors(route_key)
 	await _append_runtime_interaction_errors()
+	await _append_outcome_state_errors()
 
 	_append_source_boundary_errors()
 	var report := {
@@ -471,6 +475,193 @@ func _append_runtime_interaction_errors() -> void:
 	await process_frame
 
 
+func _append_outcome_state_errors() -> void:
+	var fixture := preview_fixture(ROUTE_SOLAR)
+	var catalog := fixture.get("catalog", {}) as Dictionary
+	var candidates: Array[Dictionary] = fixture.get("candidates", [])
+	var selections := fixture.get("selections", {}) as Dictionary
+	var quote := fixture.get("quote", {}) as Dictionary
+	var panel := PetFusionPanel.new()
+	root.add_child(panel)
+	var outcome_actions: Array[String] = []
+	panel.outcome_action_requested.connect(func(action: String) -> void:
+		outcome_actions.append(action)
+	)
+	var success_result := outcome_result_fixture(catalog)
+	var success_view := PetFusionOutcomeModel.success_view(
+		success_result,
+		catalog
+	)
+	var configured := panel.configure_runtime(
+		catalog,
+		selections,
+		quote,
+		candidates,
+		false,
+		false,
+		"",
+		true,
+		success_view
+	)
+	await process_frame
+	await process_frame
+	var success_snapshot := panel.snapshot()
+	var success_text := str(success_snapshot.get("visibleText", ""))
+	_expect(configured, "成功结果态不能装载", _errors)
+	_expect(
+		bool(success_snapshot.get("outcomeVisible", false))
+			and str(success_snapshot.get("outcomeKind", ""))
+				== PetFusionOutcomeModel.KIND_SUCCESS
+			and str(success_snapshot.get("outcomePortraitStatus", ""))
+				== "formal"
+			and success_text.contains("曜冠角兽")
+			and success_text.contains("一转 Lv1")
+			and success_text.contains("血脉遗传")
+			and success_text.contains("被动技能")
+			and success_text.contains("未绑定")
+			and success_text.contains("不可骑乘")
+			and success_text.contains("三只材料宠已永久消耗"),
+		"成功结果没有完整展示权威成品与三宠消耗",
+		_errors
+	)
+	_expect(
+		int(success_snapshot.get("materialDisabledCount", -1)) == 3
+			and int(success_snapshot.get("candidateDisabledCount", -1))
+				== candidates.size()
+			and bool(success_snapshot.get("confirmDisabled", false)),
+		"成功结果态仍可选择材料或重复提交",
+		_errors
+	)
+	for raw_token in fixture.get("rawTokens", []) as Array:
+		_expect(
+			str(raw_token) == "" or not success_text.contains(str(raw_token)),
+			"成功结果泄露 raw token：%s" % str(raw_token),
+			_errors
+		)
+	panel.call("_confirm_pressed")
+	panel.call("_outcome_action_pressed")
+	panel.call("_outcome_action_pressed")
+	var success_dispatched := panel.snapshot()
+	_expect(
+		int(success_dispatched.get("fusionRequestCount", -1)) == 0
+			and outcome_actions == [PetFusionOutcomeModel.ACTION_VIEW_PET]
+			and bool(
+				success_dispatched.get("outcomeActionDispatched", false)
+			),
+		"成功结果可重复提交融合或重复触发结果动作",
+		_errors
+	)
+	for layout_error in layout_errors(panel):
+		_errors.append("成功结果态布局：%s" % layout_error)
+
+	var failure_view := PetFusionOutcomeModel.definitive_failure_view(
+		"角色档案已经变化，请刷新三只材料宠和融合条件后重试。",
+		PetFusionOutcomeModel.ACTION_REQUOTE
+	)
+	panel.configure_runtime(
+		catalog,
+		selections,
+		{},
+		candidates,
+		false,
+		false,
+		"",
+		true,
+		failure_view
+	)
+	await process_frame
+	var failure_snapshot := panel.snapshot()
+	var failure_text := str(failure_snapshot.get("visibleText", ""))
+	_expect(
+		str(failure_snapshot.get("outcomeKind", ""))
+			== PetFusionOutcomeModel.KIND_FAILURE
+			and failure_text.contains("本次没有消耗任何宠物")
+			and failure_text.contains("重新获取报价")
+			and not failure_text.contains("revision_conflict")
+			and bool(failure_snapshot.get("confirmDisabled", false)),
+		"明确失败结果缺少零消耗、恢复动作或泄露 raw code",
+		_errors
+	)
+	for layout_error in layout_errors(panel):
+		_errors.append("失败结果态布局：%s" % layout_error)
+
+	var request_pending := PetFusionOutcomeModel.request_pending_view()
+	panel.configure_runtime(
+		catalog,
+		selections,
+		quote,
+		candidates,
+		false,
+		true,
+		"",
+		true,
+		request_pending
+	)
+	await process_frame
+	var request_pending_snapshot := panel.snapshot()
+	var pending_action_count := outcome_actions.size()
+	panel.call("_outcome_action_pressed")
+	_expect(
+		str(request_pending_snapshot.get("outcomeKind", ""))
+			== PetFusionOutcomeModel.KIND_PENDING
+			and bool(
+				request_pending_snapshot.get("outcomeActionDisabled", false)
+			)
+			and str(
+				request_pending_snapshot.get("outcomeConsumptionText", "")
+			).contains("不判断")
+			and outcome_actions.size() == pending_action_count,
+		"请求 pending 态可重复动作或错误判断材料消耗",
+		_errors
+	)
+
+	var uncertain := PetFusionOutcomeModel.uncertain_result_view(
+		"网络不稳定，已重试，请稍后再试。"
+	)
+	panel.configure_runtime(
+		catalog,
+		selections,
+		quote,
+		candidates,
+		false,
+		false,
+		"",
+		true,
+		uncertain
+	)
+	await process_frame
+	var uncertain_snapshot := panel.snapshot()
+	var uncertain_text := str(uncertain_snapshot.get("visibleText", ""))
+	_expect(
+		str(uncertain_snapshot.get("outcomeAction", ""))
+			== PetFusionOutcomeModel.ACTION_RETRY_OPERATION
+			and uncertain_text.contains("当前不能判断材料是否已消耗")
+			and not uncertain_text.contains("本次没有消耗")
+			and bool(uncertain_snapshot.get("confirmDisabled", false)),
+		"未知结果错误冒充明确失败或仍允许重复确认",
+		_errors
+	)
+	for layout_error in layout_errors(panel):
+		_errors.append("待确认结果态布局：%s" % layout_error)
+
+	_runtime_report["outcomes"] = {
+		"successFormalPortrait": (
+			str(success_snapshot.get("outcomePortraitStatus", "")) == "formal"
+		),
+		"successActionExactlyOnce": outcome_actions.count(
+			PetFusionOutcomeModel.ACTION_VIEW_PET
+		) == 1,
+		"failureZeroConsumption": failure_text.contains(
+			"本次没有消耗任何宠物"
+		),
+		"pendingNoConsumptionGuess": uncertain_text.contains(
+			"当前不能判断材料是否已消耗"
+		),
+	}
+	panel.queue_free()
+	await process_frame
+
+
 func _append_source_boundary_errors() -> void:
 	var panel_source := _read_text("res://scripts/ui/pet_fusion_panel.gd")
 	for marker in [
@@ -499,6 +690,9 @@ func _append_source_boundary_errors() -> void:
 		"_pet_fusion_open_button.text = \"融合\"",
 		"_pet_fusion_panel.quote_requested.connect(_on_pet_fusion_quote_requested)",
 		"_pet_fusion_panel.fusion_requested.connect(_on_pet_fusion_confirm_requested)",
+		"_pet_fusion_panel.outcome_action_requested.connect(",
+		"PetFusionOutcomeModel.success_view(",
+		"PetFusionOutcomeModel.definitive_failure_view(",
 		"ServerAuthClientModel.pet_fusion_quote_request(",
 		"ServerAuthClientModel.pet_fusion_request(",
 	]:
@@ -696,6 +890,69 @@ static func preview_fixture(route_key: String) -> Dictionary:
 		"targetName": target_name,
 		"bindingNeedle": binding_needle,
 		"rawTokens": raw_tokens,
+	}
+
+
+static func outcome_result_fixture(catalog_document: Dictionary) -> Dictionary:
+	var material_specs := [
+		["core", "outcome_core", "emberhorn_red_fire8_earth2", "赤角兽"],
+		[
+			"resonance_one",
+			"outcome_resonance_one",
+			"emberhorn_gale_fire5_wind5",
+			"岚角兽",
+		],
+		[
+			"resonance_two",
+			"outcome_resonance_two",
+			"emberhorn_ash_fire6_wind4",
+			"灰烬角兽",
+		],
+	]
+	var consumed: Array[Dictionary] = []
+	var inherited_active_ids: Array[String] = []
+	for spec_value in material_specs:
+		var spec := spec_value as Array
+		var form_id := str(spec[2])
+		var gene := PetFusionRecipeCatalogModel.gene_profile_by_form_id(
+			catalog_document,
+			form_id
+		)
+		consumed.append({
+			"roleId": str(spec[0]),
+			"instanceId": str(spec[1]),
+			"formId": form_id,
+			"formName": str(spec[3]),
+		})
+		inherited_active_ids.append(str(gene.get("specialActiveSkillId", "")))
+	var core_gene := PetFusionRecipeCatalogModel.gene_profile_by_form_id(
+		catalog_document,
+		"emberhorn_red_fire8_earth2"
+	)
+	return {
+		"schemaVersion": 1,
+		"catalogId": PetFusionRecipeCatalogModel.CATALOG_ID,
+		"recipeId": "emberhorn_solar_crown_fusion_v1",
+		"resultInstanceId": "outcome_result_pet",
+		"targetFormId": "emberhorn_fusion_solar_crown_fire7_wind3",
+		"targetFormName": "曜冠角兽",
+		"level": 1,
+		"rebirthCount": 1,
+		"terminalStage": 2,
+		"consumedMaterials": consumed,
+		"baseActiveSkillIds": ["pet_attack", "pet_defend"],
+		"inheritedActiveSkillIds": inherited_active_ids,
+		"inheritedPassiveSkillId": str(core_gene.get("passiveSkillId", "")),
+		"passiveSourceRoleId": "core",
+		"numericSource": "target_profile_only_v1",
+		"materialNumericInheritance": false,
+		"rideable": false,
+		"additionalCostPolicy": "materials_only",
+		"resultBinding": PetFusionClientModel.RESULT_BINDING_UNBOUND,
+		"tradeEligibility": (
+			PetFusionRecipeCatalogModel.UNBOUND_RESULT_TRADE_POLICY
+		),
+		"message": "曜冠角兽融合完成；三只材料宠已消耗，成品技能与独立成长已生成。",
 	}
 
 
