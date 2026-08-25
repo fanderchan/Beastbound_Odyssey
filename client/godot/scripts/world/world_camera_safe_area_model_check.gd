@@ -289,6 +289,40 @@ func _run() -> void:
 		"训练终点完整人物 alpha 不得继续钻入小地图 HUD",
 		errors
 	)
+	var clamped_endpoint_anchor := Vector2(390.0, 197.0)
+	var clamped_endpoint_alpha := Rect2(356.0, 107.0, 66.0, 136.0)
+	var clamped_endpoint_safe_anchor := (
+		WorldCameraSafeAreaModel.composition_anchor_avoiding_rects_in_range(
+			clamped_endpoint_anchor,
+			Vector2(120.0, 196.0),
+			Vector2(851.0, 198.0),
+			[Rect2(80.0, 0.0, 330.0, 145.0)],
+			[clamped_endpoint_alpha],
+			Rect2(Vector2.ZERO, REFERENCE_VIEWPORT)
+		)
+	)
+	var clamped_endpoint_shifted := Rect2(
+		clamped_endpoint_alpha.position
+			+ clamped_endpoint_safe_anchor - clamped_endpoint_anchor,
+		clamped_endpoint_alpha.size
+	)
+	_expect(
+		clamped_endpoint_safe_anchor.x > clamped_endpoint_anchor.x,
+		"纵向镜头已被地图边界夹紧时必须改走可实现的横向安全锚点",
+		errors
+	)
+	_expect(
+		clamped_endpoint_safe_anchor.y <= 198.0,
+		"镜头求解不得返回边界夹紧后无法实现的纵向安全锚点",
+		errors
+	)
+	_expect(
+		not Rect2(80.0, 0.0, 330.0, 145.0).grow(
+			WorldCameraSafeAreaModel.DEFAULT_VISUAL_GAP_PX
+		).intersects(clamped_endpoint_shifted),
+		"边界夹紧终点必须用真实可实现锚点清除完整人物与小地图 HUD 的交叠",
+		errors
+	)
 
 	var report := {
 		"ok": errors.is_empty(),
@@ -309,6 +343,7 @@ func _run() -> void:
 		"compositionAnchor": composition_anchor,
 		"localCompositionSubjectCount": local_composition_subjects.size(),
 		"endpointPlayerSafeAnchor": endpoint_player_safe_anchor,
+		"clampedEndpointPlayerSafeAnchor": clamped_endpoint_safe_anchor,
 	}
 	print("WORLD_CAMERA_SAFE_AREA_MODEL_CHECK: %s" % JSON.stringify(report))
 	quit(0 if errors.is_empty() else 1)

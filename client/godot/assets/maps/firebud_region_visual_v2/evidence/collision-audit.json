@@ -3,7 +3,7 @@
   "reportType": "beastbound_map_collision_audit",
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
-  "generatedAtUtc": "2026-08-25T15:02:32Z",
+  "generatedAtUtc": "2026-08-25T19:07:29Z",
   "scene": "res://scenes/Main.tscn",
   "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd -- --preview-map-visual-catalog-contract",
   "testedMapIds": [
@@ -24,25 +24,25 @@
     {
       "mapId": "firebud_training_yard",
       "groundDraws": 1224,
-      "objectCount": 22,
-      "protectedCells": 148
+      "objectCount": 28,
+      "protectedCells": 150
     },
     {
       "mapId": "firebud_village_gate",
       "groundDraws": 672,
-      "objectCount": 18,
-      "protectedCells": 221
+      "objectCount": 21,
+      "protectedCells": 218
     }
   ],
   "authoritySnapshot": {
-    "catalogContractSha256": "b997d23bca7235d487af8139d0e4593f16902fca34efd55767e439e46375e9f9",
+    "catalogContractSha256": "ee5192125d6f20d756651c000f7b4bee4ebacbd116389161deebe0d8abe5dbdc",
     "bindingHashes": {
-      "firebud_training_yard": "2775987fa144e2a7f337a03d871bcd835d176e9af7a5461024997a0e3aaed073",
-      "firebud_village_gate": "571a65eaa75888488883c9a9b00cf2ba40ec17e1aefc408cabd06b7718f27afa"
+      "firebud_training_yard": "8210409fe8974d7e8c0d56d1b3a550adae26a728251edae930bcca42eb4f7753",
+      "firebud_village_gate": "66f9afe1cf13563fa59fe34b63aa4c3374cbdb7adbaf222e34a1ce2bf1816052"
     },
     "mapDataHashes": {
-      "firebud_training_yard": "37279c76ff265927ef8eb042ed0b8460e34aa91687070aff14029307adc71c51",
-      "firebud_village_gate": "0056603ae7b9b748858ec2d800a684b504af2a24c3dd9c4b7dd85436482dbc1f"
+      "firebud_training_yard": "d713e75774335c5c1dba27bf55cc7c903289fa05597ee808f8cd67b75e5cbd91",
+      "firebud_village_gate": "88c3684c87e513ec93f0cd7c769524c38325bfbc2aecb5786a88538a6346d9e7"
     }
   },
   "excludedReleaseGate": null,
@@ -50,11 +50,11 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:2d10a1ea4940e862d4076c98602536694741967a+beastbound-map-runtime-surface-v2:54e808197de5909227febeff931d631551c76b4ab48af7238dd11e59320b140d"
+    "buildIdentity": "git:b654c3f8631a4775f1e541ab86b0b48f9696fc92+beastbound-map-runtime-surface-v2:63f1bb9ab334e9033a00eda7951226c37b13c88ce97726f45765c61683bb0fd2"
   },
   "rawRunnerReceipt": {
     "path": "evidence/collision-runner-receipt.log",
-    "sha256": "b502f4e119b1b4b1862f73dc0939386c73bad99b3eab7241e6e3ceec83f22dad"
+    "sha256": "91c79f64aaa283eb403764ddb9aa74990c745afcaafca389d555c55fe765e10f"
   },
   "notes": [
     "This report covers authoritative map, collision, protected-cell and exact-path contracts.",

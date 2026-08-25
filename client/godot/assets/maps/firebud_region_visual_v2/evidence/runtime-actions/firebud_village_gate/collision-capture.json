@@ -60,12 +60,12 @@
 			360.0
 		],
 		"effectiveAnchor": [
-			264.890625,
-			379.969970703125
+			337.805603027344,
+			360.0
 		],
 		"playerScreenPoint": [
-			264.972381591797,
-			381.771331787109
+			337.888946533203,
+			359.902038574219
 		],
 		"playerAtEffectiveAnchor": true,
 		"taskHudVisible": true,
@@ -100,168 +100,213 @@
 		"playerInsideSafeRect": true,
 		"playerClearOfTaskHud": true,
 		"playerClearOfFixedHud": true,
+		"playerAlphaBoundsSource": "formal_action_alpha_union",
+		"playerAlphaScreenRect": [
+			301.852935791016,
+			259.510803222656,
+			72.0719909667969,
+			139.5576171875
+		],
+		"playerAlphaInsideSafeRect": true,
+		"playerAlphaClearOfTaskHud": true,
+		"playerAlphaClearOfFixedHud": true,
+		"playerAlphaViewportEdgeClear": true,
+		"worldSubjectScale": {
+			"playerHeightPx": 139.5576171875,
+			"npcMedianHeightPx": 135.626403808594,
+			"playerToNpcHeightRatio": 1.02898560507771,
+			"targetHeightRangePx": [
+				120.0,
+				150.0
+			],
+			"targetRatioRange": [
+				0.88,
+				1.12
+			],
+			"passed": true
+		},
 		"taskHudOverlappingBlockingObjectIds": [],
 		"npcAlphaSubjectCount": 14,
-		"visibleNpcCount": 14,
+		"visibleNpcCount": 6,
 		"visibleNpcIds": [
 			"firebud_bank_keeper",
-			"firebud_diamond_keeper",
-			"firebud_doctor",
 			"firebud_equipment_keeper",
-			"firebud_pet_mm_stage2_keeper",
-			"firebud_pet_mm_trial_mentor",
-			"firebud_pet_skill_trainer",
-			"firebud_rebirth_mentor",
-			"firebud_riding_trainer",
 			"firebud_shopkeeper",
-			"firebud_stable_keeper",
 			"firebud_storyteller",
 			"firebud_welfare_clerk",
 			"village_guard"
 		],
+		"safeNpcCount": 0,
+		"safeNpcIds": [],
 		"npcAlphaScreenRects": {
 			"village_guard": [
-				546.514404296875,
-				-15.524658203125,
-				56.9159545898438,
-				113.832000732422
+				450.07373046875,
+				366.599609375,
+				66.8303833007812,
+				133.660827636719
 			],
 			"firebud_rebirth_mentor": [
-				734.746337890625,
-				261.801330566406,
-				52.4520263671875,
-				115.505981445312
+				1107.89453125,
+				765.033996582031,
+				61.5888671875,
+				135.626403808594
 			],
 			"firebud_pet_mm_trial_mentor": [
-				798.978332519531,
-				168.243316650391,
-				47.9879760742188,
-				116.063995361328
+				1328.91528320312,
+				800.77880859375,
+				56.34716796875,
+				136.281616210938
 			],
 			"firebud_pet_mm_stage2_keeper": [
-				856.514343261719,
-				323.801300048828,
-				56.3580322265625,
-				115.506011962891
+				1396.47387695312,
+				910.633972167969,
+				66.175048828125,
+				135.626525878906
 			],
 			"firebud_doctor": [
-				430.326354980469,
-				417.359252929688,
-				41.8500061035156,
-				114.948059082031
+				313.646514892578,
+				874.88916015625,
+				49.1400146484375,
+				134.971252441406
 			],
 			"firebud_shopkeeper": [
-				361.072387695312,
-				202.591323852539,
-				55.7999877929688,
-				112.71598815918
+				230.363342285156,
+				618.77880859375,
+				68.7959899902344,
+				136.281616210938
 			],
 			"firebud_diamond_keeper": [
-				923.536315917969,
-				234.149353027344,
-				46.8720092773438,
-				112.157958984375
+				1402.37060546875,
+				696.165283203125,
+				55.0367431640625,
+				131.695190429688
 			],
 			"firebud_stable_keeper": [
-				112.514404296875,
-				326.591278076172,
-				57.4739990234375,
-				112.716033935547
+				13.2737426757812,
+				877.509948730469,
+				67.485595703125,
+				132.350463867188
 			],
 			"firebud_riding_trainer": [
-				121.4423828125,
-				204.823333740234,
-				38.5020141601562,
-				110.483978271484
+				242.156921386719,
+				770.930786132812,
+				45.2088012695312,
+				129.729614257812
 			],
 			"firebud_pet_skill_trainer": [
-				368.884368896484,
-				326.033294677734,
-				40.176025390625,
-				113.274017333984
+				387.101745605469,
+				986.054809570312,
+				47.1744079589844,
+				133.005615234375
 			],
 			"firebud_equipment_keeper": [
-				919.072387695312,
-				106.24333190918,
-				55.7999877929688,
-				116.063995361328
+				1251.52893066406,
+				618.77880859375,
+				65.52001953125,
+				136.281616210938
 			],
 			"firebud_welfare_clerk": [
-				858.188354492188,
-				13.8013610839844,
-				53.010009765625,
-				115.505966186523
+				524.83935546875,
+				473.834045410156,
+				62.2440185546875,
+				135.626403808594
 			],
 			"firebud_storyteller": [
-				490.094390869141,
-				323.243316650391,
-				45.7560119628906,
-				116.063995361328
+				92.625732421875,
+				691.578857421875,
+				53.7264099121094,
+				136.281616210938
 			],
 			"firebud_bank_keeper": [
-				490.094390869141,
-				137.801345825195,
-				45.1979675292969,
-				115.505981445312
+				383.825744628906,
+				546.634033203125,
+				53.0712280273438,
+				135.626403808594
 			]
 		},
 		"hudOverlappingNpcIds": [],
 		"viewportClippedNpcIds": [
-			"village_guard"
+			"firebud_equipment_keeper",
+			"firebud_shopkeeper",
+			"firebud_storyteller"
 		],
-		"keyEnvironmentSubjectCount": 7,
+		"keyEnvironmentSubjectCount": 10,
 		"visibleKeyEnvironmentCount": 3,
 		"visibleKeyEnvironmentIds": [
-			"village_planter_blocked_cluster_02",
-			"village_record_totem_interaction_01",
+			"village_advanced_planter_blocked_cluster_01",
+			"village_growth_rack_blocked_cluster_01",
 			"village_trade_counter_blocked_cluster_01"
 		],
+		"safeKeyEnvironmentCount": 0,
+		"safeKeyEnvironmentIds": [],
 		"keyEnvironmentAlphaScreenRects": {
+			"village_growth_rack_blocked_cluster_01": [
+				1265.36083984375,
+				448.342651367188,
+				183.4560546875,
+				196.21875
+			],
+			"village_advanced_planter_blocked_cluster_01": [
+				1197.27026367188,
+				556.053833007812,
+				174.037475585938,
+				137.534912109375
+			],
 			"village_trade_counter_blocked_cluster_01": [
-				679.597351074219,
-				-9.61776733398438,
-				162.75,
-				137.97819519043
+				1043.13891601562,
+				591.935485839844,
+				191.10009765625,
+				162.013122558594
 			],
-			"village_service_pavilion_blocked_cluster_01": [
-				1292.80212402344,
-				-119.614898681641,
-				300.340454101562,
-				301.862487792969
-			],
-			"village_ancient_tree_blocked_cluster_01": [
-				1311.70678710938,
-				-3.68206787109375,
-				510.531127929688,
-				408.206726074219
+			"village_trial_practice_cluster_blocked_01": [
+				1343.88134765625,
+				548.72705078125,
+				172.01513671875,
+				204.75
 			],
 			"village_record_totem_interaction_01": [
-				651.304931640625,
-				366.658843994141,
-				95.3348388671875,
-				104.624969482422
+				573.118103027344,
+				815.357055664062,
+				111.941589355469,
+				122.849975585938
+			],
+			"village_pet_care_supplies_blocked_cluster_01": [
+				35.8826904296875,
+				989.211669921875,
+				167.212493896484,
+				141.761474609375
+			],
+			"village_trial_target_blocked_cluster_01": [
+				1347.98901367188,
+				1055.25390625,
+				163.799926757812,
+				149.161865234375
 			],
 			"village_planter_blocked_cluster_02": [
-				438.863006591797,
-				517.823669433594,
-				148.218719482422,
-				117.131286621094
+				396.470184326172,
+				1102.05383300781,
+				174.037506103516,
+				137.534790039062
 			],
 			"village_fence_blocked_cluster_01": [
-				1609.59741210938,
-				589.867309570312,
-				162.749877929688,
-				139.514038085938
+				1843.93896484375,
+				1150.2470703125,
+				191.099975585938,
+				163.81640625
 			],
 			"village_honey_rocks_blocked_cluster_01": [
-				1246.31616210938,
-				837.66162109375,
-				145.3125,
-				128.269348144531
+				1271.77648925781,
+				1368.40551757812,
+				170.625,
+				150.613037109375
 			]
 		},
-		"hudOverlappingKeyEnvironmentIds": [],
+		"hudOverlappingKeyEnvironmentIds": [
+			"village_trade_counter_blocked_cluster_01"
+		],
 		"viewportClippedKeyEnvironmentIds": [
+			"village_advanced_planter_blocked_cluster_01",
+			"village_growth_rack_blocked_cluster_01",
 			"village_trade_counter_blocked_cluster_01"
 		],
 		"nearestWarp": {
@@ -271,11 +316,11 @@
 				15
 			],
 			"screenPoint": [
-				264.972381591797,
-				167.871337890625
+				119.488952636719,
+				581.942016601562
 			],
 			"edgeClear": true,
-			"insideSafeRect": true
+			"insideSafeRect": false
 		}
 	},
 	"mapArtActive": true,
@@ -284,66 +329,67 @@
 	"bundleId": "firebud_region_visual_v2",
 	"mapStyleId": "firebud_warm_stone_v2",
 	"groundDrawCount": 672,
-	"objectCount": 18,
+	"objectCount": 21,
 	"tileCounts": {
-		"firebud_meadow_dry_b": 122,
-		"firebud_meadow_clover_c": 110,
-		"firebud_meadow_a": 127,
-		"firebud_meadow_b": 133,
-		"firebud_ochre_path_worn_b": 27,
-		"firebud_ochre_path_a": 22,
+		"firebud_meadow_dry_b": 103,
+		"firebud_meadow_clover_c": 102,
+		"firebud_meadow_a": 124,
+		"firebud_meadow_b": 117,
+		"firebud_ochre_path_worn_b": 19,
+		"firebud_ochre_path_a": 9,
 		"firebud_warp_stone": 19,
-		"firebud_honey_stone_moss_b": 13,
-		"firebud_honey_stone_a": 10,
+		"firebud_honey_stone_a": 39,
+		"firebud_honey_stone_moss_b": 35,
 		"firebud_tall_grass_encounter": 25,
-		"firebud_ochre_path_edge_nw_ne": 8,
-		"firebud_ochre_path_edge_ne": 7,
+		"firebud_ochre_path_edge_nw_ne": 5,
+		"firebud_ochre_path_edge_ne": 6,
 		"firebud_ochre_path_edge_ne_se": 3,
 		"firebud_ochre_path_edge_se": 2,
-		"firebud_ochre_path_edge_sw_se": 8,
-		"firebud_ochre_path_edge_sw": 12,
-		"firebud_ochre_path_edge_nw_sw": 5,
+		"firebud_ochre_path_edge_sw_se": 6,
+		"firebud_ochre_path_edge_sw": 7,
+		"firebud_ochre_path_edge_nw_sw": 2,
 		"firebud_honey_stone_edge_nw_ne": 2,
-		"firebud_honey_stone_edge_ne": 6,
-		"firebud_honey_stone_edge_ne_se": 2,
-		"firebud_honey_stone_edge_nw": 5,
-		"firebud_honey_stone_edge_se": 1,
-		"firebud_honey_stone_edge_nw_sw": 1,
-		"firebud_honey_stone_edge_sw": 1,
-		"firebud_honey_stone_edge_sw_se": 1
+		"firebud_honey_stone_edge_ne": 14,
+		"firebud_honey_stone_edge_nw": 10,
+		"firebud_honey_stone_edge_ne_se": 1,
+		"firebud_honey_stone_edge_se": 4,
+		"firebud_honey_stone_edge_sw": 12,
+		"firebud_honey_stone_edge_sw_se": 2,
+		"firebud_honey_stone_edge_nw_sw": 3,
+		"firebud_honey_stone_edge_nw_se": 1
 	},
 	"startCell": [
 		3,
 		15
 	],
 	"targetCell": [
-		5,
-		18
+		0,
+		10
 	],
-	"targetCandidateCount": 107,
+	"targetCandidateCount": 9,
 	"targetVariantIndex": 2,
-	"targetClearance": "exact_cell",
+	"targetClearance": "two_cell",
 	"endCell": [
-		5,
-		18
+		0,
+		10
 	],
 	"playerCellChanged": true,
 	"input": {
 		"eventClass": "InputEventMouseButton",
 		"delivery": "Input.parse_input_event",
-		"pressProcessFrame": 9,
-		"releaseProcessFrame": 11,
+		"pressProcessFrame": 23,
+		"releaseProcessFrame": 25,
 		"frameSeparated": true,
 		"screenPoint": [
-			264.890655517578,
-			428.487487792969
+			535.599975585938,
+			68.7999877929688
 		]
 	},
 	"screenshotPath": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_village_gate/collision.png",
-	"screenshotSha256": "64c421a3262a2d6931e467b04bcb4d869413acb62159edfe908ceac5b0a8ff91",
+	"screenshotSha256": "78c0a8349afcfd88e9024da8e92d35784dfb2bf215c90b3c8ee5ecbb8cc70e70",
 	"screenshot": {
 		"path": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_village_gate/collision.png",
-		"sha256": "64c421a3262a2d6931e467b04bcb4d869413acb62159edfe908ceac5b0a8ff91",
+		"sha256": "78c0a8349afcfd88e9024da8e92d35784dfb2bf215c90b3c8ee5ecbb8cc70e70",
 		"width": 1280,
 		"height": 720
 	},
@@ -360,7 +406,7 @@
 	"errors": [],
 	"result": "PASS",
 	"ok": true,
-	"generatedAtUtc": "2026-08-25T14:26:52Z",
+	"generatedAtUtc": "2026-08-25T18:40:52Z",
 	"hudGlyphStability": {
 		"status": "passed",
 		"passed": true,
@@ -424,11 +470,11 @@
 		"frames": [
 			{
 				"frameIndex": 0,
-				"processFrame": 50,
-				"taskHudDecodedPixelSha256": "61a68f74d801841c58a4c06f9f15c174cf9d1a722a17fb5c92350006feaf069a",
+				"processFrame": 102,
+				"taskHudDecodedPixelSha256": "01a2e8e2c01a9616a59c7718e4a73ee8dacf750a85fe0bd26a5ea925ab276799",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 112435,
+						"edgeEnergy": 111956,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},
@@ -453,11 +499,11 @@
 			},
 			{
 				"frameIndex": 1,
-				"processFrame": 51,
-				"taskHudDecodedPixelSha256": "f4136d22d6d96450f30b9a32d1064a1182894a37440de347cda0b1c31ba4475c",
+				"processFrame": 103,
+				"taskHudDecodedPixelSha256": "baf9ef6730c7b58ea12b18376204b86b3841c6a07399e5ed8b73e1aceb93e59f",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 112479,
+						"edgeEnergy": 111956,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},
@@ -482,11 +528,11 @@
 			},
 			{
 				"frameIndex": 2,
-				"processFrame": 52,
-				"taskHudDecodedPixelSha256": "bc4c5ac711383af6fb6dcc0a606e93d9fc0e4f86c60bd7a1282a551a70a9d03c",
+				"processFrame": 104,
+				"taskHudDecodedPixelSha256": "baf9ef6730c7b58ea12b18376204b86b3841c6a07399e5ed8b73e1aceb93e59f",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 112474,
+						"edgeEnergy": 111956,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},
@@ -511,11 +557,11 @@
 			},
 			{
 				"frameIndex": 3,
-				"processFrame": 53,
-				"taskHudDecodedPixelSha256": "782277a7159769a9e2b388fc08b5203324dbdf1fff41e9fa8f0d975037afe408",
+				"processFrame": 105,
+				"taskHudDecodedPixelSha256": "bbd88305115a11c7125c1513a579c77fab7922c22983c5f4f4324c9905c1b2de",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 112469,
+						"edgeEnergy": 111956,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},
@@ -540,11 +586,11 @@
 			},
 			{
 				"frameIndex": 4,
-				"processFrame": 54,
-				"taskHudDecodedPixelSha256": "5d6c15b32fb6084cfb9f47478b41298480fe3ddeab7e6db1aa3aaabd7517f637",
+				"processFrame": 106,
+				"taskHudDecodedPixelSha256": "bbd88305115a11c7125c1513a579c77fab7922c22983c5f4f4324c9905c1b2de",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 112476,
+						"edgeEnergy": 111956,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},
@@ -569,11 +615,11 @@
 			},
 			{
 				"frameIndex": 5,
-				"processFrame": 55,
-				"taskHudDecodedPixelSha256": "c86c33ecc6b11d1f4ff023b0c7bd7c453a15d014a03f4068f27a585827c9166f",
+				"processFrame": 107,
+				"taskHudDecodedPixelSha256": "0e25f56c171280a42b5c1103ff4df6f3da3b4f69d48f3e1b3f1d45b34f7a107e",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 112478,
+						"edgeEnergy": 111956,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},

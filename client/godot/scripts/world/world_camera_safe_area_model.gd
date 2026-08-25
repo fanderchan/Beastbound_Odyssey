@@ -189,6 +189,29 @@ static func composition_anchor_avoiding_rects(
 	var clearance_y := minf(clearance, maxf(0.0, safe_rect.size.y * 0.5 - 1.0))
 	var min_anchor := safe_rect.position + Vector2(clearance_x, clearance_y)
 	var max_anchor := safe_rect.end - Vector2(clearance_x, clearance_y)
+	return composition_anchor_avoiding_rects_in_range(
+		base_anchor,
+		min_anchor,
+		max_anchor,
+		blocking_hud_rects,
+		subject_rects_at_base,
+		viewport_rect,
+		visual_gap_px
+	)
+
+
+static func composition_anchor_avoiding_rects_in_range(
+	base_anchor: Vector2,
+	min_anchor: Vector2,
+	max_anchor: Vector2,
+	blocking_hud_rects: Array[Rect2],
+	subject_rects_at_base: Array[Rect2],
+	viewport_rect: Rect2,
+	visual_gap_px: float = DEFAULT_VISUAL_GAP_PX,
+	priority_subject_count: int = 0
+) -> Vector2:
+	if min_anchor.x > max_anchor.x or min_anchor.y > max_anchor.y:
+		return base_anchor
 	var clamped_base := Vector2(
 		clampf(base_anchor.x, min_anchor.x, max_anchor.x),
 		clampf(base_anchor.y, min_anchor.y, max_anchor.y)
@@ -247,7 +270,8 @@ static func composition_anchor_avoiding_rects(
 		clamped_base,
 		blocked_rects,
 		subject_rects_at_base,
-		composition_viewport
+		composition_viewport,
+		priority_subject_count
 	)
 	# Candidate coordinates come only from a visible subject touching the inward
 	# edge of a fixed HUD or viewport boundary. The resulting grid is small for
@@ -261,7 +285,8 @@ static func composition_anchor_avoiding_rects(
 				clamped_base,
 				blocked_rects,
 				subject_rects_at_base,
-				composition_viewport
+				composition_viewport,
+				priority_subject_count
 			)
 			if _composition_score_is_better(score, best_score):
 				best_anchor = candidate_anchor
@@ -424,14 +449,19 @@ static func _composition_score(
 	base_anchor: Vector2,
 	blocked_rects: Array[Rect2],
 	subject_rects_at_base: Array[Rect2],
-	viewport_rect: Rect2
+	viewport_rect: Rect2,
+	priority_subject_count: int = 0
 ) -> Array[float]:
 	var shift := anchor - base_anchor
+	var required_count := mini(maxi(0, priority_subject_count), subject_rects_at_base.size())
+	var priority_overlap_count := 0.0
+	var priority_overlap_area := 0.0
 	var overlap_count := 0.0
 	var overlap_area := 0.0
 	var clipped_count := 0.0
 	var visible_count := 0.0
-	for rect in subject_rects_at_base:
+	for subject_index in range(subject_rects_at_base.size()):
+		var rect := subject_rects_at_base[subject_index]
 		if rect.size.x <= 0.0 or rect.size.y <= 0.0:
 			continue
 		var shifted := Rect2(rect.position + shift, rect.size)
@@ -441,6 +471,9 @@ static func _composition_score(
 				continue
 			overlap_count += 1.0
 			overlap_area += overlap.size.x * overlap.size.y
+			if subject_index < required_count:
+				priority_overlap_count += 1.0
+				priority_overlap_area += overlap.size.x * overlap.size.y
 		if viewport_rect.size.x <= 0.0 or viewport_rect.size.y <= 0.0:
 			continue
 		var visible := shifted.intersection(viewport_rect)
@@ -450,6 +483,8 @@ static func _composition_score(
 		if not viewport_rect.encloses(shifted):
 			clipped_count += 1.0
 	return [
+		priority_overlap_count,
+		priority_overlap_area,
 		overlap_count,
 		overlap_area,
 		clipped_count,

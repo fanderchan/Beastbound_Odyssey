@@ -42,7 +42,10 @@ const MOVING_CAPTURE_VARIANTS: Array[String] = [
 	"collision",
 	"occlusion",
 ]
-const SETTLE_FRAMES := 10
+# The full-alpha landmark anchor can change once a moving player returns to its
+# idle action. Give the real smoothed camera enough frames to reach that final
+# anchor; the <= 8 px assertion below remains unchanged.
+const SETTLE_FRAMES := 24
 const COMPLETE_FRAME_ATTEMPTS := 10
 const HUD_GLYPH_STABILITY_FRAME_COUNT := 6
 const MOVE_FRAME_LIMIT := 240

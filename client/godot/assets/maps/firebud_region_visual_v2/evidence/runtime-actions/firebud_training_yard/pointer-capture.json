@@ -60,12 +60,12 @@
 			360.0
 		],
 		"effectiveAnchor": [
-			390.0,
-			382.0
+			144.007568359375,
+			291.838562011719
 		],
 		"playerScreenPoint": [
-			389.999969482422,
-			382.0
+			144.007537841797,
+			291.838531494141
 		],
 		"playerAtEffectiveAnchor": true,
 		"taskHudVisible": true,
@@ -100,6 +100,31 @@
 		"playerInsideSafeRect": true,
 		"playerClearOfTaskHud": true,
 		"playerClearOfFixedHud": true,
+		"playerAlphaBoundsSource": "formal_action_alpha_union",
+		"playerAlphaScreenRect": [
+			110.592407226562,
+			196.033706665039,
+			66.1751403808594,
+			135.626449584961
+		],
+		"playerAlphaInsideSafeRect": true,
+		"playerAlphaClearOfTaskHud": true,
+		"playerAlphaClearOfFixedHud": true,
+		"playerAlphaViewportEdgeClear": true,
+		"worldSubjectScale": {
+			"playerHeightPx": 135.626449584961,
+			"npcMedianHeightPx": 133.660797119141,
+			"playerToNpcHeightRatio": 1.01470627519951,
+			"targetHeightRangePx": [
+				120.0,
+				150.0
+			],
+			"targetRatioRange": [
+				0.88,
+				1.12
+			],
+			"passed": true
+		},
 		"taskHudOverlappingBlockingObjectIds": [],
 		"npcAlphaSubjectCount": 3,
 		"visibleNpcCount": 2,
@@ -107,119 +132,166 @@
 			"block_tester",
 			"overlap_tester"
 		],
+		"safeNpcCount": 2,
+		"safeNpcIds": [
+			"block_tester",
+			"overlap_tester"
+		],
 		"npcAlphaScreenRects": {
 			"overlap_tester": [
-				309.027984619141,
-				234.377914428711,
-				37.385986328125,
-				112.157974243164
+				48.9307861328125,
+				118.50163269043,
+				43.8983764648438,
+				131.695175170898
 			],
 			"block_tester": [
-				493.353942871094,
-				325.703979492188,
-				41.2920532226562,
-				113.832000732422
+				265.365142822266,
+				225.736114501953,
+				48.4848327636719,
+				133.660797119141
 			],
 			"trainer": [
-				-67.9940185546875,
-				-78.4120178222656,
-				47.4299926757812,
-				114.947998046875
+				-393.76611328125,
+				-248.774291992188,
+				55.6920166015625,
+				134.97119140625
 			]
 		},
-		"hudOverlappingNpcIds": [],
+		"hudOverlappingNpcIds": [
+			"overlap_tester"
+		],
 		"viewportClippedNpcIds": [],
-		"keyEnvironmentSubjectCount": 12,
+		"keyEnvironmentSubjectCount": 18,
 		"visibleKeyEnvironmentCount": 6,
 		"visibleKeyEnvironmentIds": [
 			"training_fence_blocked_cluster_02",
+			"training_fence_blocked_cluster_04",
 			"training_honey_rocks_blocked_cluster_02",
 			"training_practice_cluster_blocked_01",
-			"training_rack_blocked_cluster_01",
 			"training_supplies_blocked_cluster_01",
-			"training_target_blocked_cluster_02"
+			"training_target_blocked_cluster_03"
+		],
+		"safeKeyEnvironmentCount": 2,
+		"safeKeyEnvironmentIds": [
+			"training_fence_blocked_cluster_02",
+			"training_supplies_blocked_cluster_01"
 		],
 		"keyEnvironmentAlphaScreenRects": {
 			"training_honey_rocks_blocked_cluster_01": [
-				131.343719482422,
-				-278.109619140625,
-				145.3125,
-				128.269287109375
+				-159.704956054688,
+				-483.257995605469,
+				170.625,
+				150.613037109375
 			],
 			"training_ember_shrub_blocked_cluster_01": [
-				-116.65625,
-				-197.503295898438,
-				145.3125,
-				109.656585693359
+				-450.904907226562,
+				-388.610534667969,
+				170.624938964844,
+				128.758056640625
 			],
 			"training_fence_blocked_cluster_01": [
-				370.624969482422,
-				-153.903991699219,
-				162.750030517578,
-				139.513977050781
+				121.257568359375,
+				-337.41650390625,
+				191.099975585938,
+				163.81640625
 			],
 			"training_target_blocked_cluster_01": [
-				134.249969482422,
-				-141.804718017578,
-				139.5,
-				127.033477783203
+				-156.29248046875,
+				-323.209594726562,
+				163.800048828125,
+				149.161865234375
 			],
 			"training_rack_blocked_cluster_01": [
-				373.879943847656,
-				-69.6796875,
-				156.239990234375,
-				167.109375
+				125.079528808594,
+				-238.520874023438,
+				183.455963134766,
+				196.218780517578
 			],
 			"training_practice_cluster_blocked_01": [
-				626.751770019531,
-				46.8125,
-				146.496276855469,
-				174.375
+				422.0,
+				-101.736480712891,
+				172.015014648438,
+				204.75
+			],
+			"training_fence_blocked_cluster_03": [
+				-315.54248046875,
+				26.5835266113281,
+				191.100036621094,
+				163.816436767578
 			],
 			"training_supplies_blocked_cluster_01": [
-				752.796813964844,
-				235.950531005859,
-				142.40625,
-				120.730926513672
-			],
-			"training_fence_blocked_cluster_02": [
-				494.624969482422,
-				280.096008300781,
-				162.749969482422,
-				139.514007568359
-			],
-			"training_target_blocked_cluster_02": [
-				10.25,
-				354.195251464844,
-				139.499969482422,
-				127.033508300781
-			],
-			"training_honey_rocks_blocked_cluster_02": [
-				751.343688964844,
-				527.890319824219,
-				145.312561035156,
-				128.269348144531
-			],
-			"training_planter_blocked_cluster_01": [
-				-56.109375,
-				766.052307128906,
-				148.21875,
-				117.13134765625
+				570.001342773438,
+				120.348190307617,
+				167.212463378906,
+				141.761489868164
 			],
 			"training_ancient_tree_blocked_cluster_01": [
-				568.734375,
-				740.546569824219,
-				510.53125,
-				408.206726074219
+				-1247.72375488281,
+				-160.758422851562,
+				599.462524414062,
+				479.313781738281
+			],
+			"training_fence_blocked_cluster_02": [
+				266.857543945312,
+				172.183532714844,
+				191.100036621094,
+				163.816436767578
+			],
+			"training_target_blocked_cluster_02": [
+				-301.892456054688,
+				259.190399169922,
+				163.799987792969,
+				149.161895751953
+			],
+			"training_fence_blocked_cluster_04": [
+				339.657562255859,
+				354.183532714844,
+				191.100006103516,
+				163.816467285156
+			],
+			"training_honey_rocks_blocked_cluster_02": [
+				568.295043945312,
+				463.142028808594,
+				170.625,
+				150.612976074219
+			],
+			"training_target_blocked_cluster_03": [
+				426.107543945312,
+				623.1904296875,
+				163.800048828125,
+				149.161865234375
+			],
+			"training_route_rack_blocked_cluster_02": [
+				489.079528808594,
+				744.279174804688,
+				183.455993652344,
+				196.21875
+			],
+			"training_planter_blocked_cluster_01": [
+				275.388793945312,
+				1288.79052734375,
+				174.037536621094,
+				137.534790039062
+			],
+			"training_village_gate_pavilion_blocked_01": [
+				477.278625488281,
+				1159.11401367188,
+				352.657897949219,
+				354.445068359375
+			],
+			"training_village_gate_fence_blocked_01": [
+				266.857543945312,
+				1482.58361816406,
+				191.100036621094,
+				163.81640625
 			]
 		},
 		"hudOverlappingKeyEnvironmentIds": [
-			"training_honey_rocks_blocked_cluster_02",
-			"training_rack_blocked_cluster_01"
+			"training_honey_rocks_blocked_cluster_02"
 		],
 		"viewportClippedKeyEnvironmentIds": [
-			"training_rack_blocked_cluster_01",
-			"training_target_blocked_cluster_02"
+			"training_practice_cluster_blocked_01",
+			"training_target_blocked_cluster_03"
 		],
 		"nearestWarp": {
 			"id": "warp_to_village_gate",
@@ -228,8 +300,8 @@
 				28
 			],
 			"screenPoint": [
-				389.999969482422,
-				1346.09997558594
+				144.007537841797,
+				1423.87854003906
 			],
 			"edgeClear": false,
 			"insideSafeRect": false
@@ -241,32 +313,33 @@
 	"bundleId": "firebud_region_visual_v2",
 	"mapStyleId": "firebud_warm_stone_v2",
 	"groundDrawCount": 1224,
-	"objectCount": 22,
+	"objectCount": 28,
 	"tileCounts": {
-		"firebud_meadow_a": 268,
-		"firebud_meadow_b": 282,
-		"firebud_meadow_dry_b": 246,
-		"firebud_meadow_clover_c": 231,
-		"firebud_honey_stone_moss_b": 32,
-		"firebud_honey_stone_a": 20,
-		"firebud_ochre_path_a": 30,
-		"firebud_ochre_path_worn_b": 32,
+		"firebud_meadow_a": 259,
+		"firebud_meadow_b": 274,
+		"firebud_meadow_dry_b": 243,
+		"firebud_meadow_clover_c": 230,
+		"firebud_honey_stone_moss_b": 43,
+		"firebud_honey_stone_a": 35,
+		"firebud_ochre_path_a": 18,
+		"firebud_ochre_path_worn_b": 25,
 		"firebud_warp_stone": 1,
-		"firebud_ochre_path_edge_ne": 2,
-		"firebud_ochre_path_edge_nw_sw": 12,
-		"firebud_ochre_path_edge_sw": 10,
-		"firebud_ochre_path_edge_ne_se": 14,
+		"firebud_ochre_path_edge_ne": 4,
+		"firebud_ochre_path_edge_nw_sw": 8,
+		"firebud_ochre_path_edge_sw": 12,
+		"firebud_ochre_path_edge_ne_se": 9,
 		"firebud_ochre_path_edge_nw": 5,
 		"firebud_ochre_path_edge_nw_ne": 2,
-		"firebud_ochre_path_edge_sw_se": 4,
-		"firebud_ochre_path_edge_se": 3,
+		"firebud_ochre_path_edge_se": 1,
+		"firebud_ochre_path_edge_sw_se": 2,
 		"firebud_honey_stone_edge_nw_ne": 2,
-		"firebud_honey_stone_edge_ne": 9,
-		"firebud_honey_stone_edge_ne_se": 2,
-		"firebud_honey_stone_edge_nw": 6,
-		"firebud_honey_stone_edge_se": 6,
-		"firebud_honey_stone_edge_nw_sw": 2,
-		"firebud_honey_stone_edge_sw": 3
+		"firebud_honey_stone_edge_ne": 14,
+		"firebud_honey_stone_edge_ne_se": 4,
+		"firebud_honey_stone_edge_nw": 9,
+		"firebud_honey_stone_edge_se": 11,
+		"firebud_honey_stone_edge_nw_sw": 3,
+		"firebud_honey_stone_edge_sw": 8,
+		"firebud_honey_stone_edge_sw_se": 2
 	},
 	"startCell": [
 		14,
@@ -293,10 +366,10 @@
 		"screenPoint": []
 	},
 	"screenshotPath": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_training_yard/pointer.png",
-	"screenshotSha256": "b36aee1650f272cf79738178767c6d158d81ecdec766ef2f323ec6245d712feb",
+	"screenshotSha256": "0cbb4b0262a618fbbc56c1d66ae0c10cb0ab101b0f2d893397697d5ce5fc80f1",
 	"screenshot": {
 		"path": "res://assets/maps/firebud_region_visual_v2/evidence/runtime-actions/firebud_training_yard/pointer.png",
-		"sha256": "b36aee1650f272cf79738178767c6d158d81ecdec766ef2f323ec6245d712feb",
+		"sha256": "0cbb4b0262a618fbbc56c1d66ae0c10cb0ab101b0f2d893397697d5ce5fc80f1",
 		"width": 1280,
 		"height": 720
 	},
@@ -313,7 +386,7 @@
 	"errors": [],
 	"result": "PASS",
 	"ok": true,
-	"generatedAtUtc": "2026-08-25T14:27:14Z",
+	"generatedAtUtc": "2026-08-25T18:41:13Z",
 	"hudGlyphStability": {
 		"status": "passed",
 		"passed": true,
@@ -377,11 +450,11 @@
 		"frames": [
 			{
 				"frameIndex": 0,
-				"processFrame": 20,
-				"taskHudDecodedPixelSha256": "50cdca4e8287afbdf770391d401b3d3f6392b602e6a95b5ca652d982598baa38",
+				"processFrame": 48,
+				"taskHudDecodedPixelSha256": "5467605e819be3d5a3665334f16b0b0e64b86d076f0dadd966cdfaa7fdd9e095",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 111916,
+						"edgeEnergy": 111959,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},
@@ -406,11 +479,11 @@
 			},
 			{
 				"frameIndex": 1,
-				"processFrame": 21,
-				"taskHudDecodedPixelSha256": "50cdca4e8287afbdf770391d401b3d3f6392b602e6a95b5ca652d982598baa38",
+				"processFrame": 49,
+				"taskHudDecodedPixelSha256": "5467605e819be3d5a3665334f16b0b0e64b86d076f0dadd966cdfaa7fdd9e095",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 111916,
+						"edgeEnergy": 111959,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},
@@ -435,11 +508,11 @@
 			},
 			{
 				"frameIndex": 2,
-				"processFrame": 22,
-				"taskHudDecodedPixelSha256": "50cdca4e8287afbdf770391d401b3d3f6392b602e6a95b5ca652d982598baa38",
+				"processFrame": 50,
+				"taskHudDecodedPixelSha256": "5467605e819be3d5a3665334f16b0b0e64b86d076f0dadd966cdfaa7fdd9e095",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 111916,
+						"edgeEnergy": 111959,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},
@@ -464,11 +537,11 @@
 			},
 			{
 				"frameIndex": 3,
-				"processFrame": 23,
-				"taskHudDecodedPixelSha256": "50cdca4e8287afbdf770391d401b3d3f6392b602e6a95b5ca652d982598baa38",
+				"processFrame": 51,
+				"taskHudDecodedPixelSha256": "5467605e819be3d5a3665334f16b0b0e64b86d076f0dadd966cdfaa7fdd9e095",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 111916,
+						"edgeEnergy": 111959,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},
@@ -493,11 +566,11 @@
 			},
 			{
 				"frameIndex": 4,
-				"processFrame": 24,
-				"taskHudDecodedPixelSha256": "50cdca4e8287afbdf770391d401b3d3f6392b602e6a95b5ca652d982598baa38",
+				"processFrame": 52,
+				"taskHudDecodedPixelSha256": "5467605e819be3d5a3665334f16b0b0e64b86d076f0dadd966cdfaa7fdd9e095",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 111916,
+						"edgeEnergy": 111959,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},
@@ -522,11 +595,11 @@
 			},
 			{
 				"frameIndex": 5,
-				"processFrame": 25,
-				"taskHudDecodedPixelSha256": "50cdca4e8287afbdf770391d401b3d3f6392b602e6a95b5ca652d982598baa38",
+				"processFrame": 53,
+				"taskHudDecodedPixelSha256": "5467605e819be3d5a3665334f16b0b0e64b86d076f0dadd966cdfaa7fdd9e095",
 				"regions": {
 					"tabs": {
-						"edgeEnergy": 111916,
+						"edgeEnergy": 111959,
 						"minimumEdgeEnergy": 25000,
 						"passed": true
 					},

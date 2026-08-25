@@ -178,14 +178,17 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "occlusion": {
-            "description": "走到记录图腾后侧，核对石柱、标牌与角色的局部遮挡。",
+            "description": "先走到记录图腾西北侧，再点击木牌任务点并离开对话，核对告示牌与角色的局部遮挡。",
             "steps": [
-                {"action": "left_click", "windowPoint": [323, 250], "target": "记录图腾后侧可行走点"},
-                {"action": "get_app_state", "fresh": True, "afterSettleMs": 2400},
+                {"action": "left_click", "windowPoint": [410, 270], "target": "记录图腾西北侧可行走格"},
+                {"action": "left_click", "windowPoint": [280, 270], "target": "木牌任务点"},
+                {"action": "get_app_state", "fresh": True, "afterTravelMs": 4000},
+                {"action": "left_click", "windowPoint": [430, 297], "target": "木牌任务对话离开按钮"},
+                {"action": "get_app_state", "fresh": True, "afterSettleMs": 1800},
             ],
             "observations": [
-                "角色沿真实路线从图腾西北侧通行到记录图腾后侧",
-                "石柱与记录标牌正确盖住靠近侧下半身，头部和肩部仍清晰可辨",
+                "角色先沿真实路线抵达记录图腾西北侧，再接近木牌任务点并正常打开、离开任务对话",
+                "木牌牌面正确盖住角色下半身，头部和肩部仍清晰可辨",
                 "遮挡只改变世界层绘制顺序，没有角色残片，也没有侵入任务 HUD",
             ],
         },

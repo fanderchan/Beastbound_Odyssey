@@ -38,8 +38,11 @@ class InstallFirebudComputerUseEvidenceTest(unittest.TestCase):
         self.assertIn("恢复正常 HUD", warp["description"])
         self.assertEqual(collision["steps"][0]["windowPoint"], [132, 246])
         self.assertIn("记录图腾", "\n".join(collision["observations"]))
-        self.assertEqual(occlusion["steps"][0]["windowPoint"], [323, 250])
-        self.assertIn("记录图腾后侧", occlusion["description"])
+        self.assertEqual(occlusion["steps"][0]["windowPoint"], [410, 270])
+        self.assertEqual(occlusion["steps"][1]["windowPoint"], [280, 270])
+        self.assertEqual(occlusion["steps"][3]["windowPoint"], [430, 297])
+        self.assertIn("木牌任务点", occlusion["description"])
+        self.assertIn("盖住角色下半身", "\n".join(occlusion["observations"]))
         self.assertNotIn("贸易柜台", str(collision) + str(occlusion))
 
     def test_training_collision_and_occlusion_use_current_fence_cells(self) -> None:

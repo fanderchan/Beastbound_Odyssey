@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportType": "beastbound_map_computer_use_review",
-  "generatedAtUtc": "2026-08-25T15:00:38Z",
+  "generatedAtUtc": "2026-08-25T19:00:41Z",
   "bundleId": "firebud_region_visual_v2",
   "result": "PASS",
   "testedMapIds": [
@@ -27,24 +27,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/pointer.png",
-          "sha256": "b36aee1650f272cf79738178767c6d158d81ecdec766ef2f323ec6245d712feb"
+          "sha256": "0cbb4b0262a618fbbc56c1d66ae0c10cb0ab101b0f2d893397697d5ce5fc80f1"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/pointer-capture.json",
-          "sha256": "7d88c124dc5688d2be0677ae38fce5a549ccb00c98f2f2730085af958b20d6ec"
+          "sha256": "9568225d16f83a807ba8bc8b17c78421c3b076f40f365d3ef922026c0ef77c35"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-before.jpeg",
-          "sha256": "18febd6ce89edb3cace1567f34562c82a4f4395525166a542946061fa660c094"
+          "sha256": "10edd6a0bf9a35822ed6627bb8e51a14136432f5aea39976b3655fb0a69e22c3"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_pointer-after.jpeg",
-          "sha256": "303b2c905ca349974611fe75cb6e64e48d64ef770d4d14bb425a16c5a99539c0"
+          "sha256": "17d1b782b18a4957596ed393c8f4c997fd15f6402f84c650575a9e53d0edcd50"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_pointer.jsonl",
-        "sha256": "2e355ed285a78b3b6d556d13e7e78b56d142f1f07902cbd7f5f7abd93cedb698"
+        "sha256": "5edf978f9053be7ad0ad4cfcb73c21b6e4673558affad903df13ea37a98fe8b3"
       },
       "hudGlyphStability": {
         "label": "computer-use:firebud_training_yard:pointer:after",
@@ -68,24 +68,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/movement_path.png",
-          "sha256": "6fbc76c9f942545e0e2de4d3775679f221df427667fc1641a52569012967d944"
+          "sha256": "c3f5a0ce900e8d667248f2d61daaa494f1860ff154a12ef084aa1b9ba4850ca1"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/movement_path-capture.json",
-          "sha256": "f41c72f1953e4d777123da417c70659b2de34e7ef767f625cdec605987b950a9"
+          "sha256": "1124f3506829251d2ef9ae93d33bf8740d22466ff6ef28036c40f2778c27e244"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-before.jpeg",
-          "sha256": "18febd6ce89edb3cace1567f34562c82a4f4395525166a542946061fa660c094"
+          "sha256": "10edd6a0bf9a35822ed6627bb8e51a14136432f5aea39976b3655fb0a69e22c3"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_movement_path-after.jpeg",
-          "sha256": "e66dddf531219bca32f8199eba3eebe74b84a7481cfee6cd70cde45b4a50d150"
+          "sha256": "564dbe145f294b04b1385e786e849fc3e05d35010a5f7ad5fd6390458db86495"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_movement_path.jsonl",
-        "sha256": "2fb6bee5374f8dea470d12fe801cbdf97a79b16afb3dbdd3097bf6ea8a2a47d5"
+        "sha256": "2d91bb1a11caf58b9fd91c2338b1b321521cb8545c8218b88abec1662f850f1f"
       },
       "hudGlyphStability": {
         "label": "computer-use:firebud_training_yard:movement_path:after",
@@ -99,13 +99,13 @@
         "passed": true,
         "regions": {
           "tabs": {
-            "edgeEnergy": 30958,
+            "edgeEnergy": 30905,
             "minimumEdgeEnergy": 25000,
             "passed": true,
             "meaning": "任务/组队页签字形"
           },
           "title": {
-            "edgeEnergy": 19914,
+            "edgeEnergy": 19913,
             "minimumEdgeEnergy": 15000,
             "passed": true,
             "meaning": "任务追踪标题字形"
@@ -123,7 +123,7 @@
             "meaning": "自动寻路按钮字形"
           }
         },
-        "taskHudDecodedRgbSha256": "f05bc4d005580f33bf369be44f9207f932ac6cb7e7eb95066ce76f27a076489a",
+        "taskHudDecodedRgbSha256": "b5efabf906a17458768ded17520964bcf3384613b8c7c6b97094059bf77cf9c6",
         "taskHudSize": [
           206,
           401
@@ -133,16 +133,16 @@
           "passed": true,
           "regions": {
             "tabs": {
-              "meanAbsoluteLuminanceError": 15.5696,
+              "meanAbsoluteLuminanceError": 15.6055,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.737376,
+              "luminanceCorrelation": 0.737338,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
             "title": {
-              "meanAbsoluteLuminanceError": 18.1485,
+              "meanAbsoluteLuminanceError": 18.1546,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.65669,
+              "luminanceCorrelation": 0.65665,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
@@ -174,24 +174,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/warp.png",
-          "sha256": "16d0ee2ba9de86827f655b5d533462f2c748d14518d6d4edb5091e9fc13ca0b6"
+          "sha256": "c845c11622315c1c7402773ed80f84e3322be3b4b9c9652017bba6a3a7c8072a"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/warp-capture.json",
-          "sha256": "69a7697bde745e545398c1e429ab1106367bdefb8d7541864206f12bb317ef8c"
+          "sha256": "2a862ef9897a120e557a67f971a9b539e6a2c9e012ddceacc47f59bd1c7bd254"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-before.jpeg",
-          "sha256": "18febd6ce89edb3cace1567f34562c82a4f4395525166a542946061fa660c094"
+          "sha256": "10edd6a0bf9a35822ed6627bb8e51a14136432f5aea39976b3655fb0a69e22c3"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_warp-after.jpeg",
-          "sha256": "40a1c78b532d7f4b614b2f19b6c0e63ff1d1fbc0941063b624412d4323944c6f"
+          "sha256": "8780d4153957306e8ec36d5df6f5c8c8fea86c64d79e524966333da951592ac9"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_warp.jsonl",
-        "sha256": "ec97c4721177bf844fe96dec0434700d9e411eb2e9351687d8f1d8a563a41e3f"
+        "sha256": "60bcc28a744f28e456fcc7bd5e050da1f3aaed96c42cb51b3931e074f293cf56"
       },
       "hudGlyphStability": {
         "label": "computer-use:firebud_training_yard:warp:after",
@@ -205,13 +205,13 @@
         "passed": true,
         "regions": {
           "tabs": {
-            "edgeEnergy": 30897,
+            "edgeEnergy": 30910,
             "minimumEdgeEnergy": 25000,
             "passed": true,
             "meaning": "任务/组队页签字形"
           },
           "title": {
-            "edgeEnergy": 19908,
+            "edgeEnergy": 19922,
             "minimumEdgeEnergy": 15000,
             "passed": true,
             "meaning": "任务追踪标题字形"
@@ -229,7 +229,7 @@
             "meaning": "自动寻路按钮字形"
           }
         },
-        "taskHudDecodedRgbSha256": "ec68df0fa090fe6a61a9b709a98bd231d72eaa4d2ff4f165555699f55aceead2",
+        "taskHudDecodedRgbSha256": "d0d26a38729a3454af90a563eaadf13cf385b81bf9f5a4e5fde91bda59d64e37",
         "taskHudSize": [
           206,
           401
@@ -239,16 +239,16 @@
           "passed": true,
           "regions": {
             "tabs": {
-              "meanAbsoluteLuminanceError": 15.6101,
+              "meanAbsoluteLuminanceError": 15.6139,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.737322,
+              "luminanceCorrelation": 0.737068,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
             "title": {
-              "meanAbsoluteLuminanceError": 18.1468,
+              "meanAbsoluteLuminanceError": 18.1535,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.656691,
+              "luminanceCorrelation": 0.656625,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
@@ -280,24 +280,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/collision.png",
-          "sha256": "883db736b5f83252d3e58457d0fb8b9dfcde45054f6ea56a499aa707ff4cbcfd"
+          "sha256": "bdf77142f8709d4aaae67346c55bb9a197b3f37c71d2636a2da6988f6fcf626b"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/collision-capture.json",
-          "sha256": "284715fc3cf51d3bfba1ffb77e5bbafb22519f166ca7356929846893f8c66b07"
+          "sha256": "e7c2e2ca057082ecffb008f693e027b98b5e8be61f55d143788f46547a6eeff1"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-before.jpeg",
-          "sha256": "18febd6ce89edb3cace1567f34562c82a4f4395525166a542946061fa660c094"
+          "sha256": "10edd6a0bf9a35822ed6627bb8e51a14136432f5aea39976b3655fb0a69e22c3"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_collision-after.jpeg",
-          "sha256": "bb3b8a6e38294eb41e38d35105133d0c195c9d0c535d804b886f270fc8c1ede1"
+          "sha256": "bc7b9336978ea99eb3f64e2c2575373c822d49826cd5dc8fa98683f4e8f9fddd"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_collision.jsonl",
-        "sha256": "85bdc2ce90c61e17f91e50df15111ae468e7977119511f3294ecd4825bdb3066"
+        "sha256": "8696371d5847633de406e8df1f2a0237bf9618aad8f81b409a107bebe371d857"
       },
       "hudGlyphStability": {
         "label": "computer-use:firebud_training_yard:collision:after",
@@ -311,13 +311,13 @@
         "passed": true,
         "regions": {
           "tabs": {
-            "edgeEnergy": 30899,
+            "edgeEnergy": 30926,
             "minimumEdgeEnergy": 25000,
             "passed": true,
             "meaning": "任务/组队页签字形"
           },
           "title": {
-            "edgeEnergy": 19926,
+            "edgeEnergy": 19922,
             "minimumEdgeEnergy": 15000,
             "passed": true,
             "meaning": "任务追踪标题字形"
@@ -335,7 +335,7 @@
             "meaning": "自动寻路按钮字形"
           }
         },
-        "taskHudDecodedRgbSha256": "2a9083de9c33254d4ffd5bd01cf2979d5eb0d17b52420c1e71b1c79595e18f6f",
+        "taskHudDecodedRgbSha256": "f5531870245416e0e7cb1a274fb6862b2a288da8ee54a0b379ce5b073b148909",
         "taskHudSize": [
           206,
           401
@@ -345,16 +345,16 @@
           "passed": true,
           "regions": {
             "tabs": {
-              "meanAbsoluteLuminanceError": 15.607,
+              "meanAbsoluteLuminanceError": 15.6007,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.737359,
+              "luminanceCorrelation": 0.73731,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
             "title": {
-              "meanAbsoluteLuminanceError": 18.1515,
+              "meanAbsoluteLuminanceError": 18.1521,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.656674,
+              "luminanceCorrelation": 0.656672,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
@@ -386,24 +386,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_training_yard/occlusion.png",
-          "sha256": "285c945cd0a9be442ba68be33ab23883e541117eebb54cd3bedeb1308c551900"
+          "sha256": "21e305b854c676e96a0d22a50256a920ef4d4d267280bacb3fd9d9a7c52f0715"
         },
         {
           "path": "evidence/runtime-actions/firebud_training_yard/occlusion-capture.json",
-          "sha256": "ec62d3bb8bd6f4b4c603a479d87aea476fca3f783c1ddba32429229db62713a1"
+          "sha256": "008a8ad3dc483a605ebc3de080dc2cf1560456723b2914018bb262f89f75fd9f"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-before.jpeg",
-          "sha256": "18febd6ce89edb3cace1567f34562c82a4f4395525166a542946061fa660c094"
+          "sha256": "10edd6a0bf9a35822ed6627bb8e51a14136432f5aea39976b3655fb0a69e22c3"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_training_yard_occlusion-after.jpeg",
-          "sha256": "82586d3a34cc6d83711869b0393ca2b0d11e3f93a4365859d5edc2e9acb5528e"
+          "sha256": "9d01fe8cd01c2b97b06c1b4ec64ce582788b1209f845e748219f4fd4ac61012e"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_training_yard_occlusion.jsonl",
-        "sha256": "515c51a7a0ab86b33e4d0aaae80f4e95f34e42f58b13aff58f529d9e548c1079"
+        "sha256": "b371d1477722a27d93e88569926fc6a5401150be2c450ba03fd6c358b6f52d95"
       },
       "hudGlyphStability": {
         "label": "computer-use:firebud_training_yard:occlusion:after",
@@ -417,13 +417,13 @@
         "passed": true,
         "regions": {
           "tabs": {
-            "edgeEnergy": 30905,
+            "edgeEnergy": 30930,
             "minimumEdgeEnergy": 25000,
             "passed": true,
             "meaning": "任务/组队页签字形"
           },
           "title": {
-            "edgeEnergy": 19925,
+            "edgeEnergy": 19914,
             "minimumEdgeEnergy": 15000,
             "passed": true,
             "meaning": "任务追踪标题字形"
@@ -441,7 +441,7 @@
             "meaning": "自动寻路按钮字形"
           }
         },
-        "taskHudDecodedRgbSha256": "a0c62972b20d2febf16d1e6b39168bfcbfbc41c90c5e2c6ef47a734296e2031a",
+        "taskHudDecodedRgbSha256": "19d0ea9636c264cb3f9bbef9db332e686d67827528232dc6f8d05ddc1e51d4a4",
         "taskHudSize": [
           206,
           401
@@ -451,16 +451,16 @@
           "passed": true,
           "regions": {
             "tabs": {
-              "meanAbsoluteLuminanceError": 15.6175,
+              "meanAbsoluteLuminanceError": 15.5862,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.737132,
+              "luminanceCorrelation": 0.737424,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
             "title": {
-              "meanAbsoluteLuminanceError": 18.1514,
+              "meanAbsoluteLuminanceError": 18.1503,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.656675,
+              "luminanceCorrelation": 0.65668,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
@@ -492,24 +492,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/pointer.png",
-          "sha256": "6dd2f124c4e9c0b406692a44a0ff95242f607098460007ff433c780101eaa95e"
+          "sha256": "426df55bac65ff593f27e34d397d3d03395f220c0353c8af99a27f61971e98ac"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/pointer-capture.json",
-          "sha256": "6d05158a3943e07120a46c9225b815dcff5ac868ddec47c39c9a78857129852c"
+          "sha256": "86a105c0926cc1e7daa152a978b31c0abf1cd6ed56df5fc2848eb772dbb35b98"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-before.jpeg",
-          "sha256": "7acddff70e9adf4ac38b517be5310c6b9cbb6574b943ec36ead8ec6522ca9891"
+          "sha256": "e92976d3858aa9e86a68701769c39a393016f83688d3d74db12afcedd72256de"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_pointer-after.jpeg",
-          "sha256": "19aa1e7a8fe7458265600a28c64b78b78c11d1e584e14d67bd35dec83ee8aa16"
+          "sha256": "acba95817b0a4bf7cafae1c873fcb46fad7bf87064d9fb755de99c1f08a94dda"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_pointer.jsonl",
-        "sha256": "3a1953ccdc0e468348bec61a5ed1fd66a2e1268ea1d089b6aa67390c5ee9c166"
+        "sha256": "f69c35f42d284ca145d30242f94acc331263a8eb255c273861b3d58451100204"
       },
       "hudGlyphStability": {
         "label": "computer-use:firebud_village_gate:pointer:after",
@@ -533,24 +533,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/movement_path.png",
-          "sha256": "b6e9a5846028713db54a0acbde63f44cdee3cfaeb5a67726a6a2950728af45dc"
+          "sha256": "3bc7422c8bc8bb85e4d054544e99462f194dd6f3b01a7446dc51ce2df3df27f6"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/movement_path-capture.json",
-          "sha256": "80bda45b928b0d1d13f133981a80eb31a032315abf8cba5f885c078ea680849b"
+          "sha256": "05cbb8f2f4be2349817e0d362b9645dd18b721c2bcd51c2667bc665f534e28db"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-before.jpeg",
-          "sha256": "7acddff70e9adf4ac38b517be5310c6b9cbb6574b943ec36ead8ec6522ca9891"
+          "sha256": "e92976d3858aa9e86a68701769c39a393016f83688d3d74db12afcedd72256de"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_movement_path-after.jpeg",
-          "sha256": "05391d337c98199421ecb4933422886feb170a86f8e1a9699faeba0cb61eaf5f"
+          "sha256": "f40eae6341c4778c1b6bc6daa1e02c05b4b02eac4e7ec83f716c8dc064b4d1f3"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_movement_path.jsonl",
-        "sha256": "1c08ab24ab76bbce5cf65629fc716eca1e96f14c5d370e5d9215092a79580512"
+        "sha256": "75ac19046da13d5dadc9f6ec6ee1dc84152d6fc28c8e0569996067aac0e9cf82"
       },
       "hudGlyphStability": {
         "label": "computer-use:firebud_village_gate:movement_path:after",
@@ -564,13 +564,13 @@
         "passed": true,
         "regions": {
           "tabs": {
-            "edgeEnergy": 30891,
+            "edgeEnergy": 30962,
             "minimumEdgeEnergy": 25000,
             "passed": true,
             "meaning": "任务/组队页签字形"
           },
           "title": {
-            "edgeEnergy": 19901,
+            "edgeEnergy": 19912,
             "minimumEdgeEnergy": 15000,
             "passed": true,
             "meaning": "任务追踪标题字形"
@@ -588,7 +588,7 @@
             "meaning": "自动寻路按钮字形"
           }
         },
-        "taskHudDecodedRgbSha256": "6a3565f9ca2838a06543c37ac9ad1936e72a752e34385797a671d8cd80312ff2",
+        "taskHudDecodedRgbSha256": "9a6e770e6382cfbf08db0088d5c7a2a6e8674c6c531e204cbdb5c9a33929dcf1",
         "taskHudSize": [
           206,
           401
@@ -598,16 +598,16 @@
           "passed": true,
           "regions": {
             "tabs": {
-              "meanAbsoluteLuminanceError": 15.6234,
+              "meanAbsoluteLuminanceError": 15.6071,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.737409,
+              "luminanceCorrelation": 0.737193,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
             "title": {
-              "meanAbsoluteLuminanceError": 18.1474,
+              "meanAbsoluteLuminanceError": 18.1509,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.656698,
+              "luminanceCorrelation": 0.656677,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
@@ -639,24 +639,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/warp.png",
-          "sha256": "c8b10ddab0af281ae6cb86c4241db5e87d13951728bccbd2f0dab9a98c7b1ea1"
+          "sha256": "d290e5131aa30d70ea1ea5bc814ea80ea81c266f918ce98df4532e0946ead58d"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/warp-capture.json",
-          "sha256": "0c8ad0233a15990f3246323a6f46cf1b87fe7da72dc1922c44f8b73b0772a5ea"
+          "sha256": "91a7cfb84ba5f4edf642578bc4841040b000156d2716e317500726bd82dbcdab"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-before.jpeg",
-          "sha256": "7acddff70e9adf4ac38b517be5310c6b9cbb6574b943ec36ead8ec6522ca9891"
+          "sha256": "e92976d3858aa9e86a68701769c39a393016f83688d3d74db12afcedd72256de"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_warp-after.jpeg",
-          "sha256": "078b2a27587ff36ac1c015000fcb326deb552e5a7ad7e47169c420529c3835ca"
+          "sha256": "f0d497f0832b5daf276edb9c4b571dda8e1b243e0e2ef821bb2569606c2eb300"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_warp.jsonl",
-        "sha256": "9f1d8cba67746152a19999214ea1a750c88b47749da5f1330ad7c8f6d643c29f"
+        "sha256": "ddf4b72b71196d06bf6df245d836ac16a6483f9100c2ddf6fa3c187f650ae23f"
       },
       "hudGlyphStability": {
         "label": "computer-use:firebud_village_gate:warp:after",
@@ -670,13 +670,13 @@
         "passed": true,
         "regions": {
           "tabs": {
-            "edgeEnergy": 30899,
+            "edgeEnergy": 30910,
             "minimumEdgeEnergy": 25000,
             "passed": true,
             "meaning": "任务/组队页签字形"
           },
           "title": {
-            "edgeEnergy": 19926,
+            "edgeEnergy": 19919,
             "minimumEdgeEnergy": 15000,
             "passed": true,
             "meaning": "任务追踪标题字形"
@@ -694,7 +694,7 @@
             "meaning": "自动寻路按钮字形"
           }
         },
-        "taskHudDecodedRgbSha256": "7003cc1872135c12d80209e07e0a8cca1427c187b231d5c8b58a4fe016b0ae25",
+        "taskHudDecodedRgbSha256": "f4f42732b18033db228051b142b5023dc69003148b57830a76105f85dfde016b",
         "taskHudSize": [
           206,
           401
@@ -704,16 +704,16 @@
           "passed": true,
           "regions": {
             "tabs": {
-              "meanAbsoluteLuminanceError": 15.6012,
+              "meanAbsoluteLuminanceError": 15.6088,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.73734,
+              "luminanceCorrelation": 0.737335,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
             "title": {
-              "meanAbsoluteLuminanceError": 18.1515,
+              "meanAbsoluteLuminanceError": 18.152,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.656674,
+              "luminanceCorrelation": 0.656673,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
@@ -745,24 +745,24 @@
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/collision.png",
-          "sha256": "64c421a3262a2d6931e467b04bcb4d869413acb62159edfe908ceac5b0a8ff91"
+          "sha256": "78c0a8349afcfd88e9024da8e92d35784dfb2bf215c90b3c8ee5ecbb8cc70e70"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/collision-capture.json",
-          "sha256": "112fb6346c1b63bc993da8fe7f837730518e8f3d6816a688889d9a761d5f3279"
+          "sha256": "c82d69a8ce94608d51cc0e62669501ada03f110c24011e0e9a3814c6f3c5191d"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-before.jpeg",
-          "sha256": "7acddff70e9adf4ac38b517be5310c6b9cbb6574b943ec36ead8ec6522ca9891"
+          "sha256": "e92976d3858aa9e86a68701769c39a393016f83688d3d74db12afcedd72256de"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_collision-after.jpeg",
-          "sha256": "a75ebbd703776e55e1eaef4f24b045018d157940928d68a4680efe6aa45e637a"
+          "sha256": "181b2d5e5e6c9e12f99dadc8712ed366bc66fb423797739cc0ca5acc47803667"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_collision.jsonl",
-        "sha256": "af709570b2ec31268fd6a2eed99294d02b60887dec4423643c27cb82265864c2"
+        "sha256": "d259678e2d410be8162911676fa05d9d271b52edd1a336fb788248756413bc46"
       },
       "hudGlyphStability": {
         "label": "computer-use:firebud_village_gate:collision:after",
@@ -776,13 +776,13 @@
         "passed": true,
         "regions": {
           "tabs": {
-            "edgeEnergy": 30958,
+            "edgeEnergy": 30892,
             "minimumEdgeEnergy": 25000,
             "passed": true,
             "meaning": "任务/组队页签字形"
           },
           "title": {
-            "edgeEnergy": 19917,
+            "edgeEnergy": 19911,
             "minimumEdgeEnergy": 15000,
             "passed": true,
             "meaning": "任务追踪标题字形"
@@ -800,7 +800,7 @@
             "meaning": "自动寻路按钮字形"
           }
         },
-        "taskHudDecodedRgbSha256": "85ff9cf4d039ee84e866fcaac486b5429e17e7fad9b06a19fa99730054b2c32d",
+        "taskHudDecodedRgbSha256": "48512a671ced415e90c2e4783ceda5cd1f7cc58b9b1bb311c3c96a47e450d69e",
         "taskHudSize": [
           206,
           401
@@ -810,16 +810,16 @@
           "passed": true,
           "regions": {
             "tabs": {
-              "meanAbsoluteLuminanceError": 15.6136,
+              "meanAbsoluteLuminanceError": 15.6006,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.737594,
+              "luminanceCorrelation": 0.737322,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
             "title": {
-              "meanAbsoluteLuminanceError": 18.1507,
+              "meanAbsoluteLuminanceError": 18.149,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.65668,
+              "luminanceCorrelation": 0.656688,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
@@ -846,29 +846,29 @@
       "actionId": "firebud_village_gate_occlusion",
       "actionKind": "occlusion",
       "mapId": "firebud_village_gate",
-      "description": "走到记录图腾后侧，核对石柱、标牌与角色的局部遮挡。",
+      "description": "先走到记录图腾西北侧，再点击木牌任务点并离开对话，核对告示牌与角色的局部遮挡。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/firebud_village_gate/occlusion.png",
-          "sha256": "3e954bf37786174cf31dc0c6e75af13af82e5feda526157e1f7aa8adf729f81c"
+          "sha256": "8cb64764f9d0c20295b4952c4be57d9b0a438aac64b0f4e9726b3d8d8643ab17"
         },
         {
           "path": "evidence/runtime-actions/firebud_village_gate/occlusion-capture.json",
-          "sha256": "69472e533834ea40c8af53925927e12652796d5821527d674d300fdfa6bf7c44"
+          "sha256": "9305196be9decebe505ce7dba288d58f003e527f9dc1c7ef8e6b63e99b461698"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-before.jpeg",
-          "sha256": "7acddff70e9adf4ac38b517be5310c6b9cbb6574b943ec36ead8ec6522ca9891"
+          "sha256": "e92976d3858aa9e86a68701769c39a393016f83688d3d74db12afcedd72256de"
         },
         {
           "path": "evidence/computer-use-actions/raw/firebud_village_gate_occlusion-after.jpeg",
-          "sha256": "06320618fe05a7eb09444d2fd4df4abbe896a5a5fabb0f32e091ba91b748fd80"
+          "sha256": "2f9adf0b565cc1315a0752f8ba79aa9c940a725781d85d0c51ed832a0c066c86"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/firebud_village_gate_occlusion.jsonl",
-        "sha256": "5eef744a1db34496f5a8c88e53d4dd62e03d971c405b3c430f4185fc2cc2b1f8"
+        "sha256": "8d1c4786f900028fae772878cb3b3abbf90ea7e5b90a5e1c2a903bc493bd2707"
       },
       "hudGlyphStability": {
         "label": "computer-use:firebud_village_gate:occlusion:after",
@@ -882,7 +882,7 @@
         "passed": true,
         "regions": {
           "tabs": {
-            "edgeEnergy": 30944,
+            "edgeEnergy": 30888,
             "minimumEdgeEnergy": 25000,
             "passed": true,
             "meaning": "任务/组队页签字形"
@@ -906,7 +906,7 @@
             "meaning": "自动寻路按钮字形"
           }
         },
-        "taskHudDecodedRgbSha256": "72896ab5b72364cd0576efe29aee7aa1546efb4ba33ccfee329fd2de0cf767f6",
+        "taskHudDecodedRgbSha256": "0dcc8eb3a40a97f67886ccc8c7e5efb8dd1c43e77a205920afe3ca6be1f414b7",
         "taskHudSize": [
           206,
           401
@@ -916,16 +916,16 @@
           "passed": true,
           "regions": {
             "tabs": {
-              "meanAbsoluteLuminanceError": 15.562,
+              "meanAbsoluteLuminanceError": 15.6099,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.73722,
+              "luminanceCorrelation": 0.737324,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
             "title": {
-              "meanAbsoluteLuminanceError": 18.1513,
+              "meanAbsoluteLuminanceError": 18.1577,
               "maximumMeanAbsoluteLuminanceError": 35.0,
-              "luminanceCorrelation": 0.656672,
+              "luminanceCorrelation": 0.656623,
               "minimumLuminanceCorrelation": 0.45,
               "passed": true
             },
@@ -956,7 +956,7 @@
     "incrementalPreviewAcceptedAsPixelAuthority": false,
     "board": {
       "path": "evidence/computer-use-hud-glyph-board.png",
-      "sha256": "f77b4a967955af7ab3386e1137ed46953b3d5b029a9ade355aa2f9b4cce25843"
+      "sha256": "c7909e4fdac5e2b90ec081c21af00a0368d42600ecbcebe22464cbf182904a85"
     }
   }
 }

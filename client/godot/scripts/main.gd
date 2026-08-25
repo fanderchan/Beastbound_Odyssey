@@ -15901,6 +15901,7 @@ func _world_camera_landmark_safe_anchor(
 		return world_camera_landmark_anchor_screen_cache
 
 	var composition_target := IsoMapModel.grid_to_world(map_data, player_cell)
+	var camera_limit_bounds := _camera_limit_bounds()
 	var base_center := WorldCameraSafeAreaModel.camera_center_for_anchor(
 		composition_target,
 		viewport_size,
@@ -15909,11 +15910,82 @@ func _world_camera_landmark_safe_anchor(
 	)
 	base_center = WorldCameraSafeAreaModel.clamp_camera_center(
 		base_center,
-		_camera_limit_bounds(),
+		camera_limit_bounds,
 		viewport_size,
 		zoom
 	)
+	var effective_base_anchor := WorldCameraSafeAreaModel.world_to_screen(
+		composition_target,
+		base_center,
+		viewport_size,
+		zoom
+	)
+	# A map endpoint can clamp the camera before the requested HUD-safe anchor is
+	# reached. Solve only inside the anchor range the clamped camera can actually
+	# produce; otherwise the composition model may choose a smaller vertical move
+	# that disappears when the camera center is clamped again, leaving the full
+	# player alpha under the top HUD.
+	var clearance := WorldCameraSafeAreaModel.DEFAULT_INTERACTION_CLEARANCE_PX
+	var clearance_x := minf(
+		clearance,
+		maxf(0.0, world_camera_safe_viewport_rect.size.x * 0.5 - 1.0)
+	)
+	var clearance_y := minf(
+		clearance,
+		maxf(0.0, world_camera_safe_viewport_rect.size.y * 0.5 - 1.0)
+	)
+	var safe_min_anchor := (
+		world_camera_safe_viewport_rect.position
+		+ Vector2(clearance_x, clearance_y)
+	)
+	var safe_max_anchor := (
+		world_camera_safe_viewport_rect.end
+		- Vector2(clearance_x, clearance_y)
+	)
+	var min_requested_center := WorldCameraSafeAreaModel.clamp_camera_center(
+		WorldCameraSafeAreaModel.camera_center_for_anchor(
+			composition_target,
+			viewport_size,
+			zoom,
+			safe_min_anchor
+		),
+		camera_limit_bounds,
+		viewport_size,
+		zoom
+	)
+	var max_requested_center := WorldCameraSafeAreaModel.clamp_camera_center(
+		WorldCameraSafeAreaModel.camera_center_for_anchor(
+			composition_target,
+			viewport_size,
+			zoom,
+			safe_max_anchor
+		),
+		camera_limit_bounds,
+		viewport_size,
+		zoom
+	)
+	var effective_at_min := WorldCameraSafeAreaModel.world_to_screen(
+		composition_target,
+		min_requested_center,
+		viewport_size,
+		zoom
+	)
+	var effective_at_max := WorldCameraSafeAreaModel.world_to_screen(
+		composition_target,
+		max_requested_center,
+		viewport_size,
+		zoom
+	)
+	var achievable_min_anchor := Vector2(
+		maxf(safe_min_anchor.x, minf(effective_at_min.x, effective_at_max.x)),
+		maxf(safe_min_anchor.y, minf(effective_at_min.y, effective_at_max.y))
+	)
+	var achievable_max_anchor := Vector2(
+		minf(safe_max_anchor.x, maxf(effective_at_min.x, effective_at_max.x)),
+		minf(safe_max_anchor.y, maxf(effective_at_min.y, effective_at_max.y))
+	)
 	var subject_rects: Array[Rect2] = []
+	var player_screen_rect := Rect2()
 	# Use the complete opaque union for the current appearance/direction/action.
 	# The old 68x96 interaction probe covered the feet but could still place a
 	# 136px-tall head under the minimap when a nearby landmark pulled the camera.
@@ -15923,17 +15995,19 @@ func _world_camera_landmark_safe_anchor(
 		if player_visual_value is Rect2:
 			player_visual_world_rect = player_visual_value as Rect2
 	if player_visual_world_rect.size.x > 0.0 and player_visual_world_rect.size.y > 0.0:
-		var player_relative_start := player_visual_world_rect.position - player.global_position
-		var player_relative_end := player_visual_world_rect.end - player.global_position
-		var player_screen_start := base_anchor + Vector2(
-			player_relative_start.x * zoom.x,
-			player_relative_start.y * zoom.y
+		var player_screen_start := WorldCameraSafeAreaModel.world_to_screen(
+			player_visual_world_rect.position,
+			base_center,
+			viewport_size,
+			zoom
 		)
-		var player_screen_end := base_anchor + Vector2(
-			player_relative_end.x * zoom.x,
-			player_relative_end.y * zoom.y
+		var player_screen_end := WorldCameraSafeAreaModel.world_to_screen(
+			player_visual_world_rect.end,
+			base_center,
+			viewport_size,
+			zoom
 		)
-		subject_rects.append(Rect2(
+		player_screen_rect = Rect2(
 			Vector2(
 				minf(player_screen_start.x, player_screen_end.x),
 				minf(player_screen_start.y, player_screen_end.y)
@@ -15942,12 +16016,13 @@ func _world_camera_landmark_safe_anchor(
 				absf(player_screen_end.x - player_screen_start.x),
 				absf(player_screen_end.y - player_screen_start.y)
 			)
-		))
+		)
 	else:
-		subject_rects.append(Rect2(
-			base_anchor - Vector2(34.0, 48.0),
+		player_screen_rect = Rect2(
+			effective_base_anchor - Vector2(34.0, 48.0),
 			Vector2(68.0, 96.0)
-		))
+		)
+	subject_rects.append(player_screen_rect)
 	for draw_rect in _world_camera_composition_subject_world_rects():
 		var screen_start := WorldCameraSafeAreaModel.world_to_screen(
 			draw_rect.position,
@@ -15982,13 +16057,35 @@ func _world_camera_landmark_safe_anchor(
 		subject_rects,
 		world_camera_safe_viewport_rect
 	)
-	var composed_anchor := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects(
-		base_anchor,
-		world_camera_safe_viewport_rect,
+	var player_subject_rects: Array[Rect2] = [player_screen_rect]
+	var player_safe_anchor := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects_in_range(
+		effective_base_anchor,
+		achievable_min_anchor,
+		achievable_max_anchor,
 		world_camera_hud_blocker_rects,
-		subject_rects,
+		player_subject_rects,
 		Rect2(Vector2.ZERO, viewport_size)
 	)
+	var composed_anchor := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects_in_range(
+		effective_base_anchor,
+		achievable_min_anchor,
+		achievable_max_anchor,
+		world_camera_hud_blocker_rects,
+		subject_rects,
+		Rect2(Vector2.ZERO, viewport_size),
+		WorldCameraSafeAreaModel.DEFAULT_VISUAL_GAP_PX,
+		1
+	)
+	var composed_player_rect := Rect2(
+		player_screen_rect.position + composed_anchor - effective_base_anchor,
+		player_screen_rect.size
+	)
+	for blocker in world_camera_hud_blocker_rects:
+		if blocker.grow(
+			WorldCameraSafeAreaModel.DEFAULT_VISUAL_GAP_PX
+		).intersects(composed_player_rect):
+			composed_anchor = player_safe_anchor
+			break
 	world_camera_landmark_anchor_screen_cache = composed_anchor
 	world_camera_landmark_anchor_cell_cache = player_cell
 	world_camera_landmark_anchor_revision_cache = map_visual_render_revision
