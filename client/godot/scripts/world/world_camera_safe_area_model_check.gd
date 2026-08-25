@@ -263,6 +263,32 @@ func _run() -> void:
 		"全图远处主体不得把玩家镜头拉成全员展板",
 		errors
 	)
+	var endpoint_player_anchor := Vector2(120.0, 207.0)
+	var endpoint_player_alpha := Rect2(84.0, 111.0, 72.0, 136.0)
+	var endpoint_player_safe_anchor := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects(
+		endpoint_player_anchor,
+		Rect2(8.0, 8.0, 955.0, 486.0),
+		[Rect2(80.0, 0.0, 330.0, 145.0)],
+		[endpoint_player_alpha],
+		Rect2(Vector2.ZERO, REFERENCE_VIEWPORT)
+	)
+	var endpoint_player_shifted := Rect2(
+		endpoint_player_alpha.position
+			+ endpoint_player_safe_anchor - endpoint_player_anchor,
+		endpoint_player_alpha.size
+	)
+	_expect(
+		endpoint_player_safe_anchor.y > endpoint_player_anchor.y,
+		"训练终点完整人物 alpha 靠近小地图时必须向下收敛镜头锚点",
+		errors
+	)
+	_expect(
+		not Rect2(80.0, 0.0, 330.0, 145.0).grow(
+			WorldCameraSafeAreaModel.DEFAULT_VISUAL_GAP_PX
+		).intersects(endpoint_player_shifted),
+		"训练终点完整人物 alpha 不得继续钻入小地图 HUD",
+		errors
+	)
 
 	var report := {
 		"ok": errors.is_empty(),
@@ -282,6 +308,7 @@ func _run() -> void:
 		"nearbyLandmarkSafeAnchorX": nearby_landmark_safe,
 		"compositionAnchor": composition_anchor,
 		"localCompositionSubjectCount": local_composition_subjects.size(),
+		"endpointPlayerSafeAnchor": endpoint_player_safe_anchor,
 	}
 	print("WORLD_CAMERA_SAFE_AREA_MODEL_CHECK: %s" % JSON.stringify(report))
 	quit(0 if errors.is_empty() else 1)

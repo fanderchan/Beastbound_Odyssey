@@ -3,6 +3,7 @@ extends CharacterBody2D
 const CharacterActionAssetCatalog := preload("res://scripts/player/character_action_asset_catalog.gd")
 const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
+const WorldVisualGrade := preload("res://scripts/world/world_visual_grade.gd")
 
 @export var walk_speed: float = 160.0
 @export var sprint_speed: float = 260.0
@@ -52,6 +53,8 @@ var appearance_id: String = CharacterActionAssetCatalog.CHARACTER_ID
 var riding_form_id: String = ""
 var last_formal_texture: Texture2D
 var last_formal_flip_h: bool = false
+var visual_source_bounds_cache: Dictionary = {}
+var world_visual_grade_signature: String = "disabled"
 
 
 func _ready() -> void:
@@ -320,6 +323,148 @@ func get_riding_form_id() -> String:
 
 func uses_formal_character_art() -> bool:
 	return formal_asset_enabled
+
+
+func set_world_visual_grade(grade: Dictionary) -> void:
+	var next_signature := WorldVisualGrade.grade_signature(grade)
+	if next_signature == world_visual_grade_signature:
+		return
+	world_visual_grade_signature = next_signature
+	var material: ShaderMaterial = WorldVisualGrade.material_for_grade(grade)
+	if formal_sprite != null:
+		formal_sprite.material = material
+		formal_sprite.texture_filter = (
+			CanvasItem.TEXTURE_FILTER_LINEAR
+			if WorldVisualGrade.uses_linear_filter(grade)
+			else CanvasItem.TEXTURE_FILTER_NEAREST
+		)
+	if mounted_character != null:
+		mounted_character.material = material
+		mounted_character.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+
+
+func get_visual_bounds_signature() -> String:
+	return "%s|%s|%s|%s" % [
+		appearance_id,
+		riding_form_id,
+		facing_key,
+		animation_state,
+	]
+
+
+func get_visual_bounds_source() -> String:
+	if riding_form_id != "":
+		return "mounted_frame_envelope"
+	if formal_asset_enabled and formal_sprite != null and formal_sprite.texture != null:
+		return "formal_action_alpha_union"
+	return "placeholder_geometry"
+
+
+func get_visual_world_rect() -> Rect2:
+	if riding_form_id != "" and mounted_character != null:
+		var mounted_scale := clampf(
+			float(mounted_character.get("presentation_scale")),
+			0.1,
+			3.0
+		)
+		var ground_anchor_y := MountedCharacterAssetCatalog.world_ground_anchor_y(
+			MountVisualProfileCatalog.character_id_for_form(riding_form_id),
+			riding_form_id
+		)
+		return _node_local_rect_to_world(
+			mounted_character,
+			Rect2(
+				Vector2(-128.0 * mounted_scale, -ground_anchor_y * mounted_scale),
+				Vector2(256.0, 256.0) * mounted_scale
+			)
+		)
+	if formal_asset_enabled and formal_sprite != null and formal_sprite.texture != null:
+		return _sprite_source_rect_to_world(
+			formal_sprite,
+			_formal_action_source_bounds()
+		)
+	return _node_local_rect_to_world(
+		self,
+		Rect2(Vector2(-22.0, -21.0), Vector2(44.0, 54.0))
+	)
+
+
+func _formal_action_source_bounds() -> Rect2i:
+	var cache_key := "%s|%s|%s" % [appearance_id, facing_key, animation_state]
+	if visual_source_bounds_cache.has(cache_key):
+		return visual_source_bounds_cache.get(cache_key, Rect2i()) as Rect2i
+	var combined := Rect2i()
+	var has_opaque_pixels := false
+	var frame_count := CharacterActionAssetCatalog.world_frame_count_for_action(
+		animation_state,
+		appearance_id
+	)
+	for frame_index in range(1, frame_count + 1):
+		var texture := CharacterActionAssetCatalog.world_texture_for_frame(
+			facing_key,
+			animation_state,
+			frame_index,
+			appearance_id
+		)
+		if texture == null:
+			continue
+		var image := texture.get_image()
+		if image == null or image.is_empty():
+			continue
+		var used_rect := image.get_used_rect()
+		if used_rect.size.x <= 0 or used_rect.size.y <= 0:
+			continue
+		combined = used_rect if not has_opaque_pixels else combined.merge(used_rect)
+		has_opaque_pixels = true
+	if not has_opaque_pixels:
+		combined = Rect2i(Vector2i.ZERO, Vector2i(formal_sprite.texture.get_size()))
+	visual_source_bounds_cache[cache_key] = combined
+	return combined
+
+
+static func _sprite_source_rect_to_world(
+	sprite: Sprite2D,
+	source_rect: Rect2i
+) -> Rect2:
+	if sprite == null or sprite.texture == null:
+		return Rect2()
+	var texture_size := Vector2(sprite.texture.get_size())
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return Rect2()
+	var draw_rect := sprite.get_rect()
+	var normalized_source_position := Vector2(source_rect.position) / texture_size
+	if sprite.flip_h:
+		normalized_source_position.x = (
+			texture_size.x - float(source_rect.end.x)
+		) / texture_size.x
+	if sprite.flip_v:
+		normalized_source_position.y = (
+			texture_size.y - float(source_rect.end.y)
+		) / texture_size.y
+	var local_rect := Rect2(
+		draw_rect.position + normalized_source_position * draw_rect.size,
+		Vector2(source_rect.size) / texture_size * draw_rect.size
+	)
+	return _node_local_rect_to_world(sprite, local_rect)
+
+
+static func _node_local_rect_to_world(node: Node2D, local_rect: Rect2) -> Rect2:
+	if node == null or local_rect.size.x <= 0.0 or local_rect.size.y <= 0.0:
+		return Rect2()
+	var corners: Array[Vector2] = [
+		node.to_global(local_rect.position),
+		node.to_global(local_rect.position + Vector2(local_rect.size.x, 0.0)),
+		node.to_global(local_rect.end),
+		node.to_global(local_rect.position + Vector2(0.0, local_rect.size.y)),
+	]
+	var min_point := corners[0]
+	var max_point := corners[0]
+	for corner in corners:
+		min_point.x = minf(min_point.x, corner.x)
+		min_point.y = minf(min_point.y, corner.y)
+		max_point.x = maxf(max_point.x, corner.x)
+		max_point.y = maxf(max_point.y, corner.y)
+	return Rect2(min_point, max_point - min_point)
 
 
 func _facing_index_for_direction(direction: Vector2) -> int:

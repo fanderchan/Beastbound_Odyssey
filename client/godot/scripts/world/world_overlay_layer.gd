@@ -1,5 +1,7 @@
 extends Node2D
 
+const WorldVisualGrade := preload("res://scripts/world/world_visual_grade.gd")
+
 const KIND_TARGET := "target"
 const KIND_SELECTION := "selection"
 const KIND_NPC_QUEST := "npc_quest"
@@ -220,6 +222,11 @@ func _add_texture(root: Node2D, command: Dictionary) -> void:
 	sprite.self_modulate = (
 		color_modulate as Color if color_modulate is Color else Color.WHITE
 	)
+	var visual_grade := command.get("visualGrade", {}) as Dictionary
+	if not visual_grade.is_empty():
+		sprite.material = WorldVisualGrade.material_for_grade(visual_grade)
+		if WorldVisualGrade.uses_linear_filter(visual_grade):
+			sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	root.add_child(sprite)
 
 

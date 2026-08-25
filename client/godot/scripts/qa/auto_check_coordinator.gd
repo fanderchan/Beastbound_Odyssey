@@ -237,6 +237,7 @@ const ACTIVE_TARGET_FPS := 60
 const IDLE_TARGET_FPS := 30
 const WORLD_HUD_REFRESH_INTERVAL_SECONDS := 0.20
 const CLICK_MOVE_REPATH_INTERVAL_SECONDS := 0.10
+const WORLD_REDRAW_TEST_FLUSH_SECONDS := 1.0
 const BACKPACK_HEAL_POPUP_DURATION_SECONDS := 2.0
 const DIALOG_ACTION_ACK := "ack"
 const DIALOG_ACTION_CLAIM_QUEST := "claim_quest"
@@ -1741,18 +1742,18 @@ func _run_auto_camera_check() -> void:
 		IsoMapModel.nearest_walkable_cell(host.map_data, spawn_cell + Vector2i(2, 0)),
 	])
 	host.current_path_is_direct = false
-	host._queue_world_redraw_if_needed()
+	host._queue_world_redraw_if_needed(WORLD_REDRAW_TEST_FLUSH_SECONDS)
 	var path_only_keeps_overlay: bool = (
 		host._world_overlay_signature() == overlay_signature_before_path
 		and int(host.world_overlay_layer.call("replace_count")) == overlay_replace_count_before_path
 	)
 	host.has_target_marker = true
 	host.target_marker = IsoMapModel.grid_to_world(host.map_data, spawn_cell + Vector2i(1, 0))
-	host._queue_world_redraw_if_needed()
+	host._queue_world_redraw_if_needed(WORLD_REDRAW_TEST_FLUSH_SECONDS)
 	var target_replace_count := int(host.world_overlay_layer.call("replace_count"))
 	var first_target_position: Vector2 = host.world_overlay_layer.call("target_marker_position")
 	host.target_marker = IsoMapModel.grid_to_world(host.map_data, spawn_cell + Vector2i(2, 0))
-	host._queue_world_redraw_if_needed()
+	host._queue_world_redraw_if_needed(WORLD_REDRAW_TEST_FLUSH_SECONDS)
 	var target_marker_updates_in_place: bool = (
 		int(host.world_overlay_layer.call("replace_count")) == target_replace_count
 		and first_target_position != host.target_marker
@@ -1764,7 +1765,7 @@ func _run_auto_camera_check() -> void:
 			continue
 		host.has_pending_interaction = true
 		host.pending_interaction = (value as Dictionary).duplicate(true)
-		host._queue_world_redraw_if_needed()
+		host._queue_world_redraw_if_needed(WORLD_REDRAW_TEST_FLUSH_SECONDS)
 		pending_change_refreshes_overlay = (
 			int(host.world_overlay_layer.call("replace_count")) > target_replace_count
 			and int(host.world_overlay_layer.call("command_count", "selection")) > 0
@@ -1776,7 +1777,7 @@ func _run_auto_camera_check() -> void:
 	host.target_marker = original_target_marker
 	host.has_pending_interaction = original_has_pending_interaction
 	host.pending_interaction = original_pending_interaction
-	host._queue_world_redraw_if_needed()
+	host._queue_world_redraw_if_needed(WORLD_REDRAW_TEST_FLUSH_SECONDS)
 	var left_cell = Vector2i(0, 33)
 	var right_cell = Vector2i(35, 0)
 	var top_cell = Vector2i(0, 0)

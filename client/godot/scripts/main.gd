@@ -81,6 +81,7 @@ const BattleAudioTimelineController := preload(
 )
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
+const WorldVisualGrade := preload("res://scripts/world/world_visual_grade.gd")
 const QuestMarkerVisibilityModel := preload(
 	"res://scripts/world/quest_marker_visibility_model.gd"
 )
@@ -929,6 +930,7 @@ var world_camera_landmark_anchor_viewport_cache: Vector2
 var world_camera_landmark_anchor_zoom_cache: Vector2
 var world_camera_landmark_anchor_base_cache: Vector2
 var world_camera_landmark_anchor_hud_signature_cache: String = ""
+var world_camera_landmark_anchor_player_visual_signature_cache: String = ""
 var world_camera_composition_subject_rects_cache: Array[Rect2] = []
 var world_camera_composition_subject_map_cache: String = ""
 var world_camera_composition_subject_revision_cache: int = -1
@@ -9234,12 +9236,23 @@ func _sync_world_visual_layers(
 ) -> void:
 	if world_depth_layer == null or world_overlay_layer == null or map_data.is_empty():
 		return
-	var map_signature := "%s|%s|%s|%d|%s" % [
+	var npc_visual_grade_signature := WorldVisualGrade.grade_signature(
+		WorldVisualGrade.role_grade(map_visual_render_state, WorldVisualGrade.ROLE_NPC)
+	)
+	var object_visual_grade_signature := WorldVisualGrade.grade_signature(
+		WorldVisualGrade.role_grade(
+			map_visual_render_state,
+			WorldVisualGrade.ROLE_MAP_OBJECT
+		)
+	)
+	var map_signature := "%s|%s|%s|%d|%s|%s|%s" % [
 		current_map_id,
 		str(map_visual_render_state.get("bundleId", "")),
 		str(map_visual_render_state.get("active", false)),
 		MapVisualRenderer.object_draw_count(map_visual_render_state),
 		str(npc_art_review_preview),
+		npc_visual_grade_signature,
+		object_visual_grade_signature,
 	]
 	if force or map_signature != world_depth_map_signature_cache:
 		world_depth_map_signature_cache = map_signature
@@ -9290,6 +9303,10 @@ func _sync_world_visual_layers(
 
 func _world_depth_npc_commands() -> Array[Dictionary]:
 	var commands: Array[Dictionary] = []
+	var npc_visual_grade := WorldVisualGrade.role_grade(
+		map_visual_render_state,
+		WorldVisualGrade.ROLE_NPC
+	)
 	var index := 0
 	for value in map_data.get("interactionPoints", []):
 		if not (value is Dictionary):
@@ -9318,6 +9335,7 @@ func _world_depth_npc_commands() -> Array[Dictionary]:
 				"drawRect": npc_rect,
 				"shadowCenter": marker + Vector2(0, 4),
 				"shadowRadius": shadow_radius,
+				"visualGrade": npc_visual_grade,
 			})
 		else:
 			commands.append({
@@ -15722,6 +15740,14 @@ func _apply_world_presentation_profile() -> void:
 		map_art_review_preview and not battle_active,
 		map_visual_render_state
 	)
+	if player != null and player.has_method("set_world_visual_grade"):
+		player.call(
+			"set_world_visual_grade",
+			WorldVisualGrade.role_grade(
+				map_visual_render_state,
+				WorldVisualGrade.ROLE_PLAYER
+			)
+		)
 
 
 func _update_camera_position(force: bool) -> void:
@@ -15855,6 +15881,11 @@ func _world_camera_landmark_safe_anchor(
 		return base_anchor
 	var player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
 	var hud_signature := world_camera_hud_blocker_signature_cache
+	var player_visual_signature := (
+		str(player.call("get_visual_bounds_signature"))
+		if player.has_method("get_visual_bounds_signature")
+		else "fallback"
+	)
 	var zoom := game_camera.zoom
 	if (
 		world_camera_landmark_anchor_cache_valid
@@ -15864,6 +15895,8 @@ func _world_camera_landmark_safe_anchor(
 		and zoom.is_equal_approx(world_camera_landmark_anchor_zoom_cache)
 		and base_anchor.is_equal_approx(world_camera_landmark_anchor_base_cache)
 		and hud_signature == world_camera_landmark_anchor_hud_signature_cache
+		and player_visual_signature
+			== world_camera_landmark_anchor_player_visual_signature_cache
 	):
 		return world_camera_landmark_anchor_screen_cache
 
@@ -15881,12 +15914,40 @@ func _world_camera_landmark_safe_anchor(
 		zoom
 	)
 	var subject_rects: Array[Rect2] = []
-	# The player interaction body participates in the same fixed-HUD solver so a
-	# successful landmark composition cannot place the avatar under the minimap.
-	subject_rects.append(Rect2(
-		base_anchor - Vector2(34.0, 48.0),
-		Vector2(68.0, 96.0)
-	))
+	# Use the complete opaque union for the current appearance/direction/action.
+	# The old 68x96 interaction probe covered the feet but could still place a
+	# 136px-tall head under the minimap when a nearby landmark pulled the camera.
+	var player_visual_world_rect := Rect2()
+	if player.has_method("get_visual_world_rect"):
+		var player_visual_value: Variant = player.call("get_visual_world_rect")
+		if player_visual_value is Rect2:
+			player_visual_world_rect = player_visual_value as Rect2
+	if player_visual_world_rect.size.x > 0.0 and player_visual_world_rect.size.y > 0.0:
+		var player_relative_start := player_visual_world_rect.position - player.global_position
+		var player_relative_end := player_visual_world_rect.end - player.global_position
+		var player_screen_start := base_anchor + Vector2(
+			player_relative_start.x * zoom.x,
+			player_relative_start.y * zoom.y
+		)
+		var player_screen_end := base_anchor + Vector2(
+			player_relative_end.x * zoom.x,
+			player_relative_end.y * zoom.y
+		)
+		subject_rects.append(Rect2(
+			Vector2(
+				minf(player_screen_start.x, player_screen_end.x),
+				minf(player_screen_start.y, player_screen_end.y)
+			),
+			Vector2(
+				absf(player_screen_end.x - player_screen_start.x),
+				absf(player_screen_end.y - player_screen_start.y)
+			)
+		))
+	else:
+		subject_rects.append(Rect2(
+			base_anchor - Vector2(34.0, 48.0),
+			Vector2(68.0, 96.0)
+		))
 	for draw_rect in _world_camera_composition_subject_world_rects():
 		var screen_start := WorldCameraSafeAreaModel.world_to_screen(
 			draw_rect.position,
@@ -15935,6 +15996,7 @@ func _world_camera_landmark_safe_anchor(
 	world_camera_landmark_anchor_zoom_cache = zoom
 	world_camera_landmark_anchor_base_cache = base_anchor
 	world_camera_landmark_anchor_hud_signature_cache = hud_signature
+	world_camera_landmark_anchor_player_visual_signature_cache = player_visual_signature
 	world_camera_landmark_anchor_cache_valid = true
 	return composed_anchor
 

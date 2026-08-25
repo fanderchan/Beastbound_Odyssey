@@ -50,6 +50,10 @@ const FIREBUD_BUNDLE_ID := "firebud_region_visual_v2"
 const FIREBUD_VILLAGE_SAFE_NPC_MIN := 4
 const FIREBUD_VILLAGE_SAFE_NPC_MAX := 7
 const FIREBUD_VILLAGE_KEY_ENVIRONMENT_COUNT := 10
+const FIREBUD_SUBJECT_HEIGHT_MIN_PX := 120.0
+const FIREBUD_SUBJECT_HEIGHT_MAX_PX := 150.0
+const FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MIN := 0.88
+const FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MAX := 1.12
 const HUD_GLYPH_REGIONS := {
 	"tabs": {
 		"rect": Rect2i(1020, 136, 166, 24),
@@ -379,6 +383,22 @@ func run(request: Dictionary) -> Dictionary:
 		[]
 	) as Array
 	if str(prepared.get("bundleId", "")) == "firebud_region_visual_v2":
+		if str(camera_composition.get("playerAlphaBoundsSource", "")) != "formal_action_alpha_union":
+			errors.append("Firebud v2 玩家安全区没有使用完整动作 alpha 包围盒")
+		for alpha_clear_key in [
+			"playerAlphaInsideSafeRect",
+			"playerAlphaClearOfTaskHud",
+			"playerAlphaClearOfFixedHud",
+			"playerAlphaViewportEdgeClear",
+		]:
+			if not bool(camera_composition.get(alpha_clear_key, false)):
+				errors.append("Firebud v2 完整玩家 alpha 安全门禁失败：%s" % alpha_clear_key)
+		var subject_scale := camera_composition.get("worldSubjectScale", {}) as Dictionary
+		if not bool(subject_scale.get("passed", false)):
+			errors.append(
+				"Firebud v2 玩家/NPC 世界像素密度比例越界：%s"
+				% JSON.stringify(subject_scale)
+			)
 		var configured_anchor := camera_composition.get("configuredAnchor", []) as Array
 		if (
 			configured_anchor.size() != 2
@@ -681,6 +701,18 @@ func _camera_composition_report() -> Dictionary:
 	var message_hud_visible := message_hud != null and message_hud.is_visible_in_tree()
 	var message_hud_rect := message_hud.get_global_rect() if message_hud_visible else Rect2()
 	var player_probe := Rect2(player_screen - Vector2(34.0, 48.0), Vector2(68.0, 96.0))
+	var player_bounds_source := "fallback_interaction_probe"
+	if host.player.has_method("get_visual_world_rect"):
+		var player_visual_value: Variant = host.player.call("get_visual_world_rect")
+		if player_visual_value is Rect2:
+			var player_visual_world_rect := player_visual_value as Rect2
+			if player_visual_world_rect.size.x > 0.0 and player_visual_world_rect.size.y > 0.0:
+				player_probe = _world_rect_to_screen_rect(player_visual_world_rect)
+				player_bounds_source = (
+					str(host.player.call("get_visual_bounds_source"))
+					if host.player.has_method("get_visual_bounds_source")
+					else "runtime_visual_bounds"
+				)
 	var fixed_hud_rects: Array[Rect2] = []
 	for rect in host.world_camera_hud_blocker_rects:
 		if rect.size.x > 0.0 and rect.size.y > 0.0:
@@ -716,6 +748,29 @@ func _camera_composition_report() -> Dictionary:
 		task_hud_visible,
 		opaque_rect_cache
 	)
+	var npc_alpha_heights: Array[float] = []
+	var npc_screen_rects := npc_subject_report.get("screenRects", {}) as Dictionary
+	for rect_value in npc_screen_rects.values():
+		if not (rect_value is Array) or (rect_value as Array).size() != 4:
+			continue
+		var rect_height := float((rect_value as Array)[3])
+		if rect_height > 0.0 and is_finite(rect_height):
+			npc_alpha_heights.append(rect_height)
+	npc_alpha_heights.sort()
+	var npc_median_height := _median_float(npc_alpha_heights)
+	var player_npc_height_ratio := (
+		player_probe.size.y / npc_median_height
+		if npc_median_height > 0.0
+		else 0.0
+	)
+	var world_subject_scale_passed := (
+		player_probe.size.y >= FIREBUD_SUBJECT_HEIGHT_MIN_PX
+		and player_probe.size.y <= FIREBUD_SUBJECT_HEIGHT_MAX_PX
+		and npc_median_height >= FIREBUD_SUBJECT_HEIGHT_MIN_PX
+		and npc_median_height <= FIREBUD_SUBJECT_HEIGHT_MAX_PX
+		and player_npc_height_ratio >= FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MIN
+		and player_npc_height_ratio <= FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MAX
+	)
 	var nearest_warp := {}
 	var nearest_warp_distance := INF
 	for interaction_value in host.map_data.get("interactionPoints", []):
@@ -746,6 +801,17 @@ func _camera_composition_report() -> Dictionary:
 			),
 			"insideSafeRect": safe_rect.has_point(screen_point),
 		}
+	var player_clear_of_task_hud := (
+		not task_hud_visible or not task_hud_rect.intersects(player_probe)
+	)
+	var player_clear_of_fixed_hud := _rect_clear_of_rects(
+		player_probe,
+		fixed_hud_rects
+	)
+	var player_edge_safe_rect := Rect2(
+		Vector2.ZERO,
+		host.get_viewport_rect().size
+	).grow(-WorldCameraSafeAreaModel.DEFAULT_VISUAL_GAP_PX)
 	return {
 		"safeRect": [safe_rect.position.x, safe_rect.position.y, safe_rect.size.x, safe_rect.size.y],
 		"configuredAnchor": [configured_anchor.x, configured_anchor.y],
@@ -761,9 +827,34 @@ func _camera_composition_report() -> Dictionary:
 		"messageHudVisible": message_hud_visible,
 		"messageHudRect": [message_hud_rect.position.x, message_hud_rect.position.y, message_hud_rect.size.x, message_hud_rect.size.y],
 		"fixedHudBlockerCount": fixed_hud_rects.size(),
-		"playerInsideSafeRect": safe_rect.has_point(player_screen),
-		"playerClearOfTaskHud": not task_hud_visible or not task_hud_rect.intersects(player_probe),
-		"playerClearOfFixedHud": _rect_clear_of_rects(player_probe, fixed_hud_rects),
+		"playerInsideSafeRect": safe_rect.encloses(player_probe),
+		"playerClearOfTaskHud": player_clear_of_task_hud,
+		"playerClearOfFixedHud": player_clear_of_fixed_hud,
+		"playerAlphaBoundsSource": player_bounds_source,
+		"playerAlphaScreenRect": [
+			player_probe.position.x,
+			player_probe.position.y,
+			player_probe.size.x,
+			player_probe.size.y,
+		],
+		"playerAlphaInsideSafeRect": safe_rect.encloses(player_probe),
+		"playerAlphaClearOfTaskHud": player_clear_of_task_hud,
+		"playerAlphaClearOfFixedHud": player_clear_of_fixed_hud,
+		"playerAlphaViewportEdgeClear": player_edge_safe_rect.encloses(player_probe),
+		"worldSubjectScale": {
+			"playerHeightPx": player_probe.size.y,
+			"npcMedianHeightPx": npc_median_height,
+			"playerToNpcHeightRatio": player_npc_height_ratio,
+			"targetHeightRangePx": [
+				FIREBUD_SUBJECT_HEIGHT_MIN_PX,
+				FIREBUD_SUBJECT_HEIGHT_MAX_PX,
+			],
+			"targetRatioRange": [
+				FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MIN,
+				FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MAX,
+			],
+			"passed": world_subject_scale_passed,
+		},
 		"taskHudOverlappingBlockingObjectIds": key_environment_report.get("taskOverlapIds", []),
 		"npcAlphaSubjectCount": int(npc_subject_report.get("subjectCount", 0)),
 		"visibleNpcCount": int(npc_subject_report.get("visibleCount", 0)),
@@ -856,11 +947,35 @@ func _composition_subject_report(
 	}
 
 
+static func _median_float(values: Array[float]) -> float:
+	if values.is_empty():
+		return 0.0
+	var middle := values.size() / 2
+	if values.size() % 2 == 1:
+		return values[middle]
+	return (values[middle - 1] + values[middle]) * 0.5
+
+
 static func _rect_clear_of_rects(probe: Rect2, blockers: Array[Rect2]) -> bool:
 	for blocker in blockers:
 		if blocker.intersects(probe):
 			return false
 	return true
+
+
+func _world_rect_to_screen_rect(world_rect: Rect2) -> Rect2:
+	var screen_start: Vector2 = host._world_to_screen(world_rect.position)
+	var screen_end: Vector2 = host._world_to_screen(world_rect.end)
+	return Rect2(
+		Vector2(
+			minf(screen_start.x, screen_end.x),
+			minf(screen_start.y, screen_end.y)
+		),
+		Vector2(
+			absf(screen_end.x - screen_start.x),
+			absf(screen_end.y - screen_start.y)
+		)
+	)
 
 
 static func _command_opaque_world_rect(

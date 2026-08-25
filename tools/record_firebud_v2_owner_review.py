@@ -79,6 +79,10 @@ HUD_GLYPH_STABILITY_FRAME_COUNT = 6
 FIREBUD_VILLAGE_SAFE_NPC_MIN = 4
 FIREBUD_VILLAGE_SAFE_NPC_MAX = 7
 FIREBUD_VILLAGE_KEY_ENVIRONMENT_COUNT = 10
+FIREBUD_SUBJECT_HEIGHT_MIN_PX = 120.0
+FIREBUD_SUBJECT_HEIGHT_MAX_PX = 150.0
+FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MIN = 0.88
+FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MAX = 1.12
 SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SAFE_MAP_ID = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 REVIEW_MAPS = ("firebud_village_gate", "firebud_training_yard")
@@ -369,6 +373,97 @@ def _read_capture_report(
                     f"cameraComposition.{key}={camera_composition.get(key)!r}"
                 )
         if EXPECTED_BUNDLE_ID == "firebud_region_visual_v2":
+            for key, expected in {
+                "playerAlphaBoundsSource": "formal_action_alpha_union",
+                "playerAlphaInsideSafeRect": True,
+                "playerAlphaClearOfTaskHud": True,
+                "playerAlphaClearOfFixedHud": True,
+                "playerAlphaViewportEdgeClear": True,
+            }.items():
+                if camera_composition.get(key) != expected:
+                    mismatches.append(
+                        f"cameraComposition.{key}={camera_composition.get(key)!r}"
+                    )
+            player_alpha_rect = camera_composition.get("playerAlphaScreenRect")
+            if (
+                not isinstance(player_alpha_rect, list)
+                or len(player_alpha_rect) != 4
+                or not all(
+                    isinstance(value, (int, float)) and math.isfinite(float(value))
+                    for value in player_alpha_rect
+                )
+                or float(player_alpha_rect[2]) <= 0.0
+                or not (
+                    FIREBUD_SUBJECT_HEIGHT_MIN_PX
+                    <= float(player_alpha_rect[3])
+                    <= FIREBUD_SUBJECT_HEIGHT_MAX_PX
+                )
+            ):
+                mismatches.append(
+                    f"cameraComposition.playerAlphaScreenRect={player_alpha_rect!r}"
+                )
+            subject_scale = camera_composition.get("worldSubjectScale")
+            if not isinstance(subject_scale, dict):
+                mismatches.append("cameraComposition.worldSubjectScale 不是对象")
+            else:
+                for key, expected in {
+                    "targetHeightRangePx": [
+                        FIREBUD_SUBJECT_HEIGHT_MIN_PX,
+                        FIREBUD_SUBJECT_HEIGHT_MAX_PX,
+                    ],
+                    "targetRatioRange": [
+                        FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MIN,
+                        FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MAX,
+                    ],
+                    "passed": True,
+                }.items():
+                    if subject_scale.get(key) != expected:
+                        mismatches.append(
+                            "cameraComposition.worldSubjectScale."
+                            f"{key}={subject_scale.get(key)!r}"
+                        )
+                player_height = subject_scale.get("playerHeightPx")
+                npc_height = subject_scale.get("npcMedianHeightPx")
+                ratio = subject_scale.get("playerToNpcHeightRatio")
+                if (
+                    not isinstance(player_height, (int, float))
+                    or not math.isfinite(float(player_height))
+                    or not (
+                        FIREBUD_SUBJECT_HEIGHT_MIN_PX
+                        <= float(player_height)
+                        <= FIREBUD_SUBJECT_HEIGHT_MAX_PX
+                    )
+                ):
+                    mismatches.append(
+                        "cameraComposition.worldSubjectScale.playerHeightPx="
+                        f"{player_height!r}"
+                    )
+                if (
+                    not isinstance(npc_height, (int, float))
+                    or not math.isfinite(float(npc_height))
+                    or not (
+                        FIREBUD_SUBJECT_HEIGHT_MIN_PX
+                        <= float(npc_height)
+                        <= FIREBUD_SUBJECT_HEIGHT_MAX_PX
+                    )
+                ):
+                    mismatches.append(
+                        "cameraComposition.worldSubjectScale.npcMedianHeightPx="
+                        f"{npc_height!r}"
+                    )
+                if (
+                    not isinstance(ratio, (int, float))
+                    or not math.isfinite(float(ratio))
+                    or not (
+                        FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MIN
+                        <= float(ratio)
+                        <= FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MAX
+                    )
+                ):
+                    mismatches.append(
+                        "cameraComposition.worldSubjectScale.playerToNpcHeightRatio="
+                        f"{ratio!r}"
+                    )
             anchor = camera_composition.get("configuredAnchor")
             if (
                 not isinstance(anchor, list)

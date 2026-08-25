@@ -15,9 +15,44 @@
     80,
     40
   ],
+  "visualGrade": {
+    "profileId": "firebud_world_subject_grade_v1",
+    "textureFilter": "linear",
+    "groundRole": "authored_low_contrast_anchor",
+    "player": {
+      "saturation": 0.7,
+      "contrast": 0.94,
+      "brightness": 0.99,
+      "tint": [
+        1.0,
+        0.98,
+        0.95
+      ]
+    },
+    "npc": {
+      "saturation": 0.92,
+      "contrast": 0.94,
+      "brightness": 1.02,
+      "tint": [
+        1.0,
+        0.99,
+        0.96
+      ]
+    },
+    "mapObject": {
+      "saturation": 0.8,
+      "contrast": 0.92,
+      "brightness": 1.06,
+      "tint": [
+        1.0,
+        0.99,
+        0.96
+      ]
+    }
+  },
   "catalogContractCheck": {
     "path": "evidence/catalog-contract-check.json",
-    "sha256": "ae37c2288765922b99ea94c37775419e1427e576a235c3f63d32b6dbf692b61e"
+    "sha256": "ee5192125d6f20d756651c000f7b4bee4ebacbd116389161deebe0d8abe5dbdc"
   },
   "source": {
     "origin": "AI-generated original",

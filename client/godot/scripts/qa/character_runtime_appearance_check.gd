@@ -99,6 +99,19 @@ static func _append_live_player_errors(errors: Array[String], host: Node) -> voi
 		errors.append("运行时玩家无法加载所选曜石斥候世界本体")
 	if str(player_node.call("get_appearance_id")) != "obsidian_scout_v1":
 		errors.append("运行时玩家没有保留显式选择的 appearanceId")
+	if (
+		not player_node.has_method("get_visual_world_rect")
+		or not player_node.has_method("get_visual_bounds_signature")
+	):
+		errors.append("运行时玩家缺少完整视觉轮廓合同")
+	else:
+		var visual_rect_value: Variant = player_node.call("get_visual_world_rect")
+		if not (visual_rect_value is Rect2):
+			errors.append("运行时玩家视觉轮廓不是 Rect2")
+		else:
+			var visual_rect := visual_rect_value as Rect2
+			if visual_rect.size.x < 24.0 or visual_rect.size.y < 60.0:
+				errors.append("运行时玩家视觉轮廓错误退回脚点交互探针")
 	if bool(player_node.call("set_riding_form", LEGACY_MOUNT_FORM_ID)):
 		errors.append("曜石斥候错误显示了见习猎人骑乘整图")
 	if str(player_node.call("get_riding_form_id")) != "":

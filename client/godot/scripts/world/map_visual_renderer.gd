@@ -1,5 +1,7 @@
 extends RefCounted
 
+const WorldVisualGrade := preload("res://scripts/world/world_visual_grade.gd")
+
 const RENDER_LAYERS: Array[String] = ["ground_decal", "world", "foreground"]
 const GROUND_RENDER_MODE_LAYERED := "layered_semantic_overlay"
 
@@ -98,6 +100,10 @@ static func world_depth_commands(prepared: Dictionary) -> Array[Dictionary]:
 	if not bool(prepared.get("active", false)):
 		return []
 	var commands: Array[Dictionary] = []
+	var visual_grade := WorldVisualGrade.role_grade(
+		prepared,
+		WorldVisualGrade.ROLE_MAP_OBJECT
+	)
 	var by_layer := prepared.get("objectDrawsByLayer", {}) as Dictionary
 	var values: Variant = by_layer.get("world", [])
 	if not (values is Array):
@@ -126,6 +132,7 @@ static func world_depth_commands(prepared: Dictionary) -> Array[Dictionary]:
 			"texture": texture,
 			"drawRect": draw_rect,
 			"colorModulate": command.get("colorModulate", Color.WHITE),
+			"visualGrade": visual_grade,
 			"collisionRole": str(command.get("collisionRole", "")),
 			"interactionLink": command.get("interactionLink"),
 		})
@@ -148,6 +155,10 @@ static func foreground_overlay_commands(prepared: Dictionary) -> Array[Dictionar
 	if not bool(prepared.get("active", false)):
 		return []
 	var commands: Array[Dictionary] = []
+	var visual_grade := WorldVisualGrade.role_grade(
+		prepared,
+		WorldVisualGrade.ROLE_MAP_OBJECT
+	)
 	var by_layer := prepared.get("objectDrawsByLayer", {}) as Dictionary
 	var values: Variant = by_layer.get("foreground", [])
 	if not (values is Array):
@@ -174,6 +185,7 @@ static func foreground_overlay_commands(prepared: Dictionary) -> Array[Dictionar
 			"texture": texture,
 			"drawRect": draw_rect,
 			"colorModulate": command.get("colorModulate", Color.WHITE),
+			"visualGrade": visual_grade,
 		})
 	return commands
 

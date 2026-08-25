@@ -3,6 +3,7 @@ extends RefCounted
 const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const EncounterModel := preload("res://scripts/world/encounter_model.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const WorldVisualGrade := preload("res://scripts/world/world_visual_grade.gd")
 
 const DATA_PATH := "res://data/map_visual_catalog.json"
 const REVIEW_DATA_PATH := "res://data/map_visual_review_catalog.json"
@@ -327,6 +328,7 @@ static func _prepare_map(
 		"manifestPath": str((contract.get("entry", {}) as Dictionary).get("bundleManifest", "")),
 		"bindingPath": str((contract.get("entry", {}) as Dictionary).get("bindingPath", "")),
 		"tileSize": TILE_SIZE,
+		"visualGrade": (manifest.get("visualGrade", {}) as Dictionary).duplicate(true),
 		"gridSize": grid_size,
 		"atlasTexture": atlas_texture,
 		"groundDraws": ground_draws,
@@ -521,6 +523,12 @@ static func _validate_manifest_for_map(manifest: Dictionary, map_id: String, err
 	var source := manifest.get("source", {}) as Dictionary
 	if bool(source.get("mirrored", false)) or bool(source.get("bakedActors", false)):
 		errors.append("地图视觉禁止镜像或烘焙角色：%s" % map_id)
+	# Visual grading is an opt-in presentation extension.  Existing released and
+	# pending bundles without it retain their authored rendering; once a bundle
+	# declares the profile, every field is validated fail-closed.
+	if manifest.has("visualGrade"):
+		for grade_error in WorldVisualGrade.profile_errors(manifest.get("visualGrade")):
+			errors.append("地图视觉 %s：%s" % [map_id, grade_error])
 
 
 static func _validate_binding_identity(

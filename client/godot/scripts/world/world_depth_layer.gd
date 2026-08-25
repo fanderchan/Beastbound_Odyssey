@@ -1,5 +1,7 @@
 extends Node2D
 
+const WorldVisualGrade := preload("res://scripts/world/world_visual_grade.gd")
+
 const GROUP_META := &"world_depth_group"
 const STABLE_ID_META := &"world_depth_stable_id"
 const DEPTH_Y_META := &"world_depth_y"
@@ -272,7 +274,8 @@ func _add_map_object(root: Node2D, command: Dictionary) -> void:
 		root,
 		texture as Texture2D,
 		draw_rect as Rect2,
-		color_modulate as Color if color_modulate is Color else Color.WHITE
+		color_modulate as Color if color_modulate is Color else Color.WHITE,
+		command.get("visualGrade", {}) as Dictionary
 	)
 
 
@@ -295,7 +298,13 @@ func _add_npc(root: Node2D, command: Dictionary) -> void:
 		Color(0.02, 0.03, 0.025, 0.34),
 		28
 	)
-	_add_texture_rect(root, texture as Texture2D, draw_rect as Rect2)
+	_add_texture_rect(
+		root,
+		texture as Texture2D,
+		draw_rect as Rect2,
+		Color.WHITE,
+		command.get("visualGrade", {}) as Dictionary
+	)
 
 
 func _add_npc_placeholder(root: Node2D, command: Dictionary) -> void:
@@ -476,7 +485,8 @@ func _add_texture_rect(
 	root: Node2D,
 	texture: Texture2D,
 	world_rect: Rect2,
-	color_modulate: Color = Color.WHITE
+	color_modulate: Color = Color.WHITE,
+	visual_grade: Dictionary = {}
 ) -> void:
 	if texture == null or world_rect.size.x <= 0.0 or world_rect.size.y <= 0.0:
 		return
@@ -492,6 +502,10 @@ func _add_texture_rect(
 		world_rect.size.y / texture_size.y
 	)
 	sprite.self_modulate = color_modulate
+	if not visual_grade.is_empty():
+		sprite.material = WorldVisualGrade.material_for_grade(visual_grade)
+		if WorldVisualGrade.uses_linear_filter(visual_grade):
+			sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	root.add_child(sprite)
 
 

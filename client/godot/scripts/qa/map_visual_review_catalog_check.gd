@@ -5,6 +5,7 @@ const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
 const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const MapVisualRuntimeCheck := preload("res://scripts/qa/map_visual_runtime_check.gd")
+const WorldVisualGrade := preload("res://scripts/world/world_visual_grade.gd")
 
 const FIREBUD_V2_MANIFEST := (
 	"res://assets/maps/firebud_region_visual_v2/map-visual-bundle.json"
@@ -26,6 +27,29 @@ const FIREBUD_OBJECT_PRESENTATION := {
 	"firebud_trade_counter": {"size": Vector2(112, 96), "grade": 0.84},
 	"firebud_grass_scatter_decal": {"size": Vector2(92, 60), "grade": 0.74},
 }
+const FIREBUD_WORLD_VISUAL_GRADE := {
+	"profileId": "firebud_world_subject_grade_v1",
+	"textureFilter": "linear",
+	"groundRole": "authored_low_contrast_anchor",
+	"player": {
+		"saturation": 0.70,
+		"contrast": 0.94,
+		"brightness": 0.99,
+		"tint": [1.0, 0.98, 0.95],
+	},
+	"npc": {
+		"saturation": 0.92,
+		"contrast": 0.94,
+		"brightness": 1.02,
+		"tint": [1.0, 0.99, 0.96],
+	},
+	"mapObject": {
+		"saturation": 0.80,
+		"contrast": 0.92,
+		"brightness": 1.06,
+		"tint": [1.0, 0.99, 0.96],
+	},
+}
 
 
 func _initialize() -> void:
@@ -39,6 +63,7 @@ func _initialize() -> void:
 	_validate_path_transition_contract(errors)
 	_validate_plaza_transition_contract(errors)
 	_validate_edge_scenery_anchor_contract(errors)
+	_validate_firebud_world_visual_grade(errors)
 	_validate_firebud_visual_hierarchy(errors)
 	var report := {
 		"schemaVersion": 1,
@@ -69,6 +94,9 @@ func _initialize() -> void:
 			"edgeSceneryAnchorsBounded": not errors.any(
 				func(error: String) -> bool: return error.begins_with("edge scenery")
 			),
+			"firebudWorldVisualGradeFrozen": not errors.any(
+				func(error: String) -> bool: return error.begins_with("firebud visual grade")
+			),
 			"firebudVisualHierarchyFrozen": not errors.any(
 				func(error: String) -> bool: return error.begins_with("firebud hierarchy")
 			),
@@ -77,6 +105,86 @@ func _initialize() -> void:
 	}
 	print("map visual review catalog check: %s" % JSON.stringify(report))
 	quit(0 if errors.is_empty() else 1)
+
+
+static func _validate_firebud_world_visual_grade(errors: Array[String]) -> void:
+	if not FileAccess.file_exists(FIREBUD_V2_MANIFEST):
+		errors.append("firebud visual grade manifest missing")
+		return
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(FIREBUD_V2_MANIFEST))
+	if not (parsed is Dictionary):
+		errors.append("firebud visual grade manifest is not JSON")
+		return
+	var manifest := parsed as Dictionary
+	var profile_value: Variant = manifest.get("visualGrade")
+	for profile_error in WorldVisualGrade.profile_errors(profile_value):
+		errors.append("firebud visual grade profile: %s" % profile_error)
+	if not (profile_value is Dictionary):
+		return
+	var profile := profile_value as Dictionary
+	for key in ["profileId", "textureFilter", "groundRole"]:
+		if profile.get(key) != FIREBUD_WORLD_VISUAL_GRADE.get(key):
+			errors.append("firebud visual grade %s drifted" % key)
+	for role in WorldVisualGrade.ROLES:
+		var actual_value: Variant = profile.get(role)
+		var expected_value: Variant = FIREBUD_WORLD_VISUAL_GRADE.get(role)
+		if not (actual_value is Dictionary) or not (expected_value is Dictionary):
+			errors.append("firebud visual grade %s missing" % role)
+			continue
+		var actual := actual_value as Dictionary
+		var expected := expected_value as Dictionary
+		for key in ["saturation", "contrast", "brightness"]:
+			if not is_equal_approx(float(actual.get(key, -1.0)), float(expected.get(key, -2.0))):
+				errors.append("firebud visual grade %s.%s drifted" % [role, key])
+		var actual_tint_value: Variant = actual.get("tint", [])
+		var expected_tint_value: Variant = expected.get("tint", [])
+		if not (actual_tint_value is Array) or not (expected_tint_value is Array):
+			errors.append("firebud visual grade %s.tint missing" % role)
+			continue
+		var actual_tint := actual_tint_value as Array
+		var expected_tint := expected_tint_value as Array
+		if actual_tint.size() != 3 or expected_tint.size() != 3:
+			errors.append("firebud visual grade %s.tint missing" % role)
+			continue
+		for index in range(3):
+			if not is_equal_approx(float(actual_tint[index]), float(expected_tint[index])):
+				errors.append("firebud visual grade %s.tint drifted" % role)
+				break
+	var renderer_fixture := {
+		"active": true,
+		"visualGrade": profile.duplicate(true),
+		"objectDrawsByLayer": {
+			"world": [{
+				"instanceId": "visual_grade_probe",
+				"texture": ImageTexture.create_from_image(
+					Image.create(1, 1, false, Image.FORMAT_RGBA8)
+				),
+				"drawRect": Rect2(0, 0, 1, 1),
+				"contactPoint": Vector2.ZERO,
+				"sortKey": 0.0,
+				"collisionRole": "none",
+				"interactionLink": null,
+			}],
+		},
+	}
+	var commands := MapVisualRenderer.world_depth_commands(renderer_fixture)
+	var propagated_grade: Dictionary = (
+		(commands[0] as Dictionary).get("visualGrade", {}) as Dictionary
+		if commands.size() == 1
+		else {}
+	)
+	var expected_grade := WorldVisualGrade.role_grade(
+		renderer_fixture,
+		WorldVisualGrade.ROLE_MAP_OBJECT
+	)
+	if (
+		commands.size() != 1
+		or WorldVisualGrade.grade_signature(propagated_grade)
+		!= WorldVisualGrade.grade_signature(expected_grade)
+		or not WorldVisualGrade.uses_linear_filter(propagated_grade)
+		or WorldVisualGrade.material_for_grade(propagated_grade) == null
+	):
+		errors.append("firebud visual grade renderer propagation drifted")
 
 
 static func _validate_firebud_visual_hierarchy(errors: Array[String]) -> void:
