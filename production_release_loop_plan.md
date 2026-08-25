@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.09
+> 当前游标：R1.W021
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -135,11 +135,26 @@
 - [x] **R1.08 AUTO｜执行 Bui 蓄力 VFX 验收结论**
   依赖：R1.07。已执行首发延期：新增精确绑定 bundle、provenance 与八张 runtime PNG hash 的 fail-closed 发布门，保持 `deferred / pending / releaseApproved=false / runtimeEnabled=false`。普通事件保留反馈计划但 `assetReady=false`，自动走现有叶／土程序化回退；只有专用宠物战斗审片场显式 override，关闭或录片退出即关门并清纹理。目录／生命周期 `3/3`、权威结算／时序 `5/5`、性能 `5/5` 与当前真实 Main 隔离复审均通过，玩家目录哈希稳定，详见 Phase 538。
 
-- [ ] **R1.09 OWNER｜Earth Vein Cave v1 地图人眼验收**
-  依赖：R0.09。展示完整可玩路线、入口/出口、遮挡、碰撞、NPC、遭遇、战斗切换和移动性能。
+- [x] **R1.09 OWNER｜Earth Vein Cave v1 地图人眼验收**
+  依赖：R0.09。项目所有者委托 Codex 自行验证但未亲签；当前分支重录在一层第一张真实 Main idle 帧即被新版硬门拒绝：玩家实际点 `(408,360)` 未收敛到 `(640,360)` 动态安全锚点，右侧任务 HUD 覆盖四个 blocking 物件，人物完整动作 alpha 高度仅 `82.080px`，当前帧也没有证明 NPC／主体比例。F4 两座共鸣台可读且真实跨帧移动完成，但专用控制器因 `audio_playback_not_disabled` 未通过资源收口。bundle 结构仍为 `158 files / 29 JSON / 47 PNG / errors=[]`，Node 路线／遭遇 `21/21`，客户端任务／寻路／移动／切图／遭遇等仍绿；共享地图门另暴露陈旧 Firebud v1 released 目录与当前权威碰撞/hash 不一致，八方向 canary 右路也不再平直。结论为受委托退回，不生成 owner decision／digest／attestation，不执行 promotion；返工拆为 R1.W021–R1.W025，详见 Phase 539。
+
+- [ ] **R1.W021 AUTO｜共享地图运行目录与八方向基线收口**
+  来源：R1.09。保持历史 Firebud v1 制品和证明不可变，但普通运行目录不得继续把已与当前权威 map data 不一致的 v1 冒充可用 released 地图；修复或明确退役其 catalog 路由，让 `--auto-map-visual-runtime-check` 在 pending Earth Vein 仍 review-only 时通过。同步定位八方向 canary 是测试坐标漂移还是实际寻路回归，保持真八方向规则并恢复稳定门禁。
+
+- [ ] **R1.W022 AUTO｜Earth Vein 四层 HUD 安全相机与端点构图**
+  依赖：R1.W021。按真实 1280×720 Main 的任务栏、顶栏、底栏和 camera limits 为四层 spawn、上下楼、出口及 F4 双共鸣台求解可达安全锚点；玩家完整 alpha、关键阻挡和交互地标不得被 HUD 或视口裁边覆盖，不改权威 warp／blockedCells／玩法拓扑。
+
+- [ ] **R1.W023 AUTO｜Earth Vein 主体比例、密度与逐层层级重做**
+  依赖：R1.W022。把真实 Main 玩家主体提升到当前 PC 世界 `120..150px` 目标区间并验证地图物件相对比例；复用已有原创 cave kit 拉开一至三层的路线密度和地标节奏。明确洞穴常驻 NPC 是否 non-applicable；若需要 NPC，只能复用正式 appearance 或走 NPC 生产管线，禁止占位。
+
+- [ ] **R1.W024 AUTO｜Earth Vein 录片资源收口与精确证据重冻**
+  依赖：R1.W023。让四层与 F4 控制器按当前 AudioManager 生命周期停播、解绑并清播放器；在同一精确候选重录完整路线、入口/出口、遮挡、碰撞、交互/NPC 边界、遭遇、战斗切换和真实跨帧移动性能，所有片段、回执、hash、lane 与玩家目录收口必须一致。
+
+- [ ] **R1.W025 OWNER｜Earth Vein v1 受委托复验**
+  依赖：R1.W024。受委托美术总监逐帧审看当前 Main 四层连续片、F4 地标片和动作证据；有具体缺陷则只按根因返工，无新增缺陷则建议内部冻结／首发延期。项目所有者未亲签时仍不得伪造 owner acceptance。
 
 - [ ] **R1.10 AUTO｜执行 Earth Vein Cave v1 验收结论**
-  依赖：R1.09。批准则通过地图提升工具发布并验证 hash/provenance/运行时；延期则保证不可达且不混用占位。
+  依赖：R1.W025。批准则通过地图提升工具发布并验证 hash/provenance/运行时；延期则保证不可达且不混用占位。
 
 - [ ] **R1.11 OWNER｜Ember pressure Boss 表现验收**
   依赖：R0.09。展示 Boss 压力阶段、蓄力提示、反制窗口、命中反馈、音效和低端性能。
@@ -653,7 +668,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（Bui VFX 延期运行时 R1.08 已完成，当前 R1.09 OWNER Earth Vein Cave v1 地图验收） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（Earth Vein R1.09 已受委托退回，当前 R1.W021 修复共享地图运行目录与八方向基线） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -717,6 +732,7 @@
 - 2026-08-26｜R1.06｜docs/phase_536_production_release_r1_06_ambience_deferred_runtime_enforcement.md + gate `f53ae89c…` + final Main `691cc305…` + perf `1f71eb7d…`｜环境门精确绑定三轨 hash 与 `deferred / false / false` 生命周期；普通 Main `warmedAmbience=0 / activeCue="" / ducked=false`，直接 cue 不可绕过，四首 BGM、27 SFX、设置／静音不受影响；隔离 review override 七步可用且退出零缓存／零孤儿轨。bundle `34/34`、Godot 定向、Main `2/2`、性能 `5/5` 全绿｜首轮裸 Godot 如实造成普通日志轮转和音频设置时间戳／文件写入，未读内容／未恢复；最终固定 QA 摘要 `d6b1961e…` 前后一致、lane absent、无残留进程。无 owner／digest／attestation，下一任务 R1.07 OWNER
 - 2026-08-26｜R1.07｜docs/phase_537_production_release_r1_07_bui_vfx_delegated_visual_review.md + 四背景 Main MP4 `1efbc76e… / 41377a65… / 28b1d28e… / e261bc58…`｜当前 bundle／provenance／八帧逐 hash 复核无漂移；四支 `1280×720 / 30 FPS / 1× / 223 frames` 在 20 actor 下连续覆盖普通、闪避、暴击，人眼确认方向、接触、无伪命中和暴击重量在草甸／砂岩／暗石／赤土均可读，未发现具体素材返工项；分段最坏 `process_total=4.565ms`，月影石坪 54–56.8 FPS 短波动留待 R1.08｜受委托建议内部冻结、首发延期；无 owner acceptance／digest／attestation，真实目录四轮均 `d6b1961e…` 前后不变且 lane absent，下一任务 R1.08 AUTO
 - 2026-08-26｜R1.08｜docs/phase_538_production_release_r1_08_bui_vfx_deferred_runtime_enforcement.md + gate `bb6d2fc0…` + isolated Main `3bff1316…`｜发布门逐 hash 绑定 bundle／provenance／八张运行帧；普通事件 `planAttached=true / assetReady=false` 且候选纹理不可读，审片 override 三段 `assetReady=true`，退出后 `override=false / access=false / cache=false`；权威结算与时序 `5/5`、通用性能 `5/5`，隔离战斗原生三段最大 `1.253ms`｜无 owner／digest／attestation／promotion；真实目录始终 `d6b1961e…`、lane absent，下一任务 R1.09 OWNER
+- 2026-08-26｜R1.09｜docs/phase_539_production_release_r1_09_earth_vein_delegated_rejection.md + current Main `7429949e…` + F4 `67db3c43…`｜当前 bundle 仍为 `158 files / 29 JSON / 47 PNG / errors=[]`，Node 路线／遭遇 `21/21`，移动／切图／遭遇／面板 `5/5`；但一层 Main 硬门复现动态锚点未收敛、任务 HUD 覆盖四个 blocking 物件和人物仅 `82.080px`，F4 控制器又因音频未停未能收口。共享门另复现陈旧 Firebud v1 released 目录与当前碰撞/hash 不一致及八方向右路绕行｜受委托退回；无 owner decision／digest／attestation／promotion，Earth Vein 继续 review-only，返工拆为 W021–W025，下一任务 R1.W021
 
 ## 7. 正式上线硬门槛
 
