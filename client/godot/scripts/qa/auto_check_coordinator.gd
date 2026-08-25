@@ -8029,12 +8029,14 @@ func _run_auto_battle_action_catalog_check() -> void:
 	var bui_bundle_path := str(
 		bui_feedback_plan.get("assetBundlePath", "")
 	).strip_edges()
+	BattleSkillFeedbackAssetCatalog.configure_review_override_enabled(false)
 	var bui_bundle_errors := BattleSkillFeedbackAssetCatalog.validation_errors(
 		bui_bundle_path,
 		BattleModel.PET_SKILL_BUI_CHARGE,
 		BattleSkillFeedbackPresentationModel.STYLE_LEAF_EARTH_CHARGE
 	)
-	var bui_bundle_prepared := BattleSkillFeedbackAssetCatalog.prepare(
+	var closed_gate_before := BattleSkillFeedbackAssetCatalog.release_gate_snapshot()
+	var normal_bundle_prepared := BattleSkillFeedbackAssetCatalog.prepare(
 		bui_bundle_path,
 		BattleModel.PET_SKILL_BUI_CHARGE,
 		BattleSkillFeedbackPresentationModel.STYLE_LEAF_EARTH_CHARGE
@@ -8056,18 +8058,30 @@ func _run_auto_battle_action_catalog_check() -> void:
 		"dodged": false,
 		"critical": false,
 	})
-	var prepared_plain_event := BattleSkillFeedbackRenderer.prepare_event({
-		"type": "attack",
-		"attackerId": "ally_player",
+	var normal_texture_blocked := (
+		BattleSkillFeedbackAssetCatalog.texture_for(
+			bui_bundle_path,
+			"charge",
+			0
+		) == null
+	)
+	BattleSkillFeedbackAssetCatalog.configure_review_override_enabled(true)
+	var review_gate := BattleSkillFeedbackAssetCatalog.release_gate_snapshot()
+	var review_bundle_prepared := BattleSkillFeedbackAssetCatalog.prepare(
+		bui_bundle_path,
+		BattleModel.PET_SKILL_BUI_CHARGE,
+		BattleSkillFeedbackPresentationModel.STYLE_LEAF_EARTH_CHARGE
+	)
+	var review_prepared_bui_event := BattleSkillFeedbackRenderer.prepare_event({
+		"type": "skill_attack",
+		"attackerId": "ally_pet",
 		"targetId": "enemy_pet",
+		"skillId": BattleModel.PET_SKILL_BUI_CHARGE,
+		"dodged": false,
+		"critical": false,
 	})
-	var feedback_asset_bundle_ok := (
-		bui_bundle_path
-		== "res://assets/effects/pet_bui_charge_vfx_v1/vfx-bundle.json"
-		and bui_bundle_errors.is_empty()
-		and bui_bundle_prepared
-		and bool(prepared_bui_event.get("skillFeedbackAssetReady", false))
-		and BattleSkillFeedbackAssetCatalog.texture_for(
+	var review_textures_ready := (
+		BattleSkillFeedbackAssetCatalog.texture_for(
 			bui_bundle_path,
 			"charge",
 			0
@@ -8077,6 +8091,48 @@ func _run_auto_battle_action_catalog_check() -> void:
 			"impact",
 			3
 		) != null
+	)
+	BattleSkillFeedbackAssetCatalog.configure_review_override_enabled(false)
+	var closed_gate_after := BattleSkillFeedbackAssetCatalog.release_gate_snapshot()
+	var prepared_plain_event := BattleSkillFeedbackRenderer.prepare_event({
+		"type": "attack",
+		"attackerId": "ally_player",
+		"targetId": "enemy_pet",
+	})
+	var feedback_release_gate_ok := (
+		bool(closed_gate_before.get("valid", false))
+		and (closed_gate_before.get("errors", []) as Array).is_empty()
+		and str(closed_gate_before.get("decision", "")) == "deferred"
+		and not bool(closed_gate_before.get("runtimeEnabled", true))
+		and not bool(closed_gate_before.get("reviewOverrideEnabled", true))
+		and not bool(closed_gate_before.get("runtimeAccessAvailable", true))
+		and not bool(closed_gate_before.get("candidateTextureCached", true))
+		and not normal_bundle_prepared
+		and not bool(prepared_bui_event.get("skillFeedbackAssetReady", true))
+		and normal_texture_blocked
+		and bool(review_gate.get("valid", false))
+		and not bool(review_gate.get("runtimeEnabled", true))
+		and bool(review_gate.get("reviewOverrideEnabled", false))
+		and bool(review_gate.get("runtimeAccessAvailable", false))
+		and review_bundle_prepared
+		and bool(
+			review_prepared_bui_event.get("skillFeedbackAssetReady", false)
+		)
+		and review_textures_ready
+		and bool(closed_gate_after.get("valid", false))
+		and not bool(closed_gate_after.get("reviewOverrideEnabled", true))
+		and not bool(closed_gate_after.get("runtimeAccessAvailable", true))
+		and not bool(closed_gate_after.get("candidateTextureCached", true))
+		and BattleSkillFeedbackAssetCatalog.texture_for(
+			bui_bundle_path,
+			"impact",
+			0
+		) == null
+	)
+	var feedback_asset_bundle_ok := (
+		bui_bundle_path
+		== "res://assets/effects/pet_bui_charge_vfx_v1/vfx-bundle.json"
+		and bui_bundle_errors.is_empty()
 		and BattleSkillFeedbackAssetCatalog.frame_index_for(
 			bui_bundle_path,
 			"charge",
@@ -8229,11 +8285,12 @@ func _run_auto_battle_action_catalog_check() -> void:
 		and BattleActionCatalog.effect_type_for(BattleModel.SPIRIT_WIND_FIELD_1) == "field_effect"
 		and BattleActionCatalog.effect_element_for(BattleModel.SPIRIT_WIND_FIELD_1, "") == "wind"
 	)
-	var status = "ok" if errors.is_empty() and feedback_contract_ok and feedback_asset_bundle_ok and spirit_rules_ok and pet_rules_ok and item_rules_ok and pet_slot_ok and weapon_rule_ok and field_rule_ok else "failed"
-	print("battle action catalog check ready: status=%s errors=%d feedback=%s feedback_assets=%s spirit_rules=%s pet_rules=%s item_rules=%s pet_slot=%s weapon=%s field=%s" % [
+	var status = "ok" if errors.is_empty() and feedback_contract_ok and feedback_release_gate_ok and feedback_asset_bundle_ok and spirit_rules_ok and pet_rules_ok and item_rules_ok and pet_slot_ok and weapon_rule_ok and field_rule_ok else "failed"
+	print("battle action catalog check ready: status=%s errors=%d feedback=%s feedback_gate=%s feedback_assets=%s spirit_rules=%s pet_rules=%s item_rules=%s pet_slot=%s weapon=%s field=%s" % [
 		status,
 		errors.size(),
 		str(feedback_contract_ok),
+		str(feedback_release_gate_ok),
 		str(feedback_asset_bundle_ok),
 		str(spirit_rules_ok),
 		str(pet_rules_ok),

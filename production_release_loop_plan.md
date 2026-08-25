@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.08
+> 当前游标：R1.09
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -132,8 +132,8 @@
 - [x] **R1.07 OWNER｜Bui 蓄力 VFX 人眼验收**
   依赖：R0.09。已在当前提交重新录制四支真实 Main：苔光草甸、琥珀砂岩、月影石坪、赤土高原均为 `1280×720 / 30 FPS / 1.00× / 223 frames / 7.433333s`，每支连续覆盖普通命中、闪避和暴击且 `planAttached=true / assetReady=true`。受委托人眼审片确认冲锋方向、局部接触爆点、闪避无伪命中、暴击额外重量与 20 actor 遮挡均可读，四背景无需要新增返工任务的素材缺陷；当前分段 `process_total` 最坏 `4.565ms`，月影石坪两次 54–56.8 FPS 短波动留给 R1.08 定向复证。项目所有者未亲自观看／签署，故建议内部冻结、首发延期，继续 `owner_review_pending / pending`，不生成 acceptance／digest／attestation，详见 Phase 537。
 
-- [ ] **R1.08 AUTO｜执行 Bui 蓄力 VFX 验收结论**
-  依赖：R1.07。批准则精确提升并验证时序、锚点、性能和回退；退回则按一个视觉问题一个任务返工；延期则令待审位图在普通运行时不可达，只保留隔离复审与不改变权威结算的安全回退。
+- [x] **R1.08 AUTO｜执行 Bui 蓄力 VFX 验收结论**
+  依赖：R1.07。已执行首发延期：新增精确绑定 bundle、provenance 与八张 runtime PNG hash 的 fail-closed 发布门，保持 `deferred / pending / releaseApproved=false / runtimeEnabled=false`。普通事件保留反馈计划但 `assetReady=false`，自动走现有叶／土程序化回退；只有专用宠物战斗审片场显式 override，关闭或录片退出即关门并清纹理。目录／生命周期 `3/3`、权威结算／时序 `5/5`、性能 `5/5` 与当前真实 Main 隔离复审均通过，玩家目录哈希稳定，详见 Phase 538。
 
 - [ ] **R1.09 OWNER｜Earth Vein Cave v1 地图人眼验收**
   依赖：R0.09。展示完整可玩路线、入口/出口、遮挡、碰撞、NPC、遭遇、战斗切换和移动性能。
@@ -653,7 +653,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（Bui VFX 受委托审片 R1.07 已完成，当前 R1.08 AUTO 执行首发延期） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（Bui VFX 延期运行时 R1.08 已完成，当前 R1.09 OWNER Earth Vein Cave v1 地图验收） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -716,6 +716,7 @@
 - 2026-08-26｜R1.05｜docs/phase_535_production_release_r1_05_ambience_delegated_listening_deferral.md + Phase 475 唯一权威有声片 `c4b80736…`｜当前三轨 runtime 哈希与 Phase 475 精确一致，来源／许可／重建账本、bundle `34/34`、流水线 `8/8`、三处循环边界、Main 七步路由与完整音轨均通过工程复核；执行环境明确不支持音频输入，没有把机器指标冒充底噪／混音／疲劳听感｜受委托建议工程冻结、首发延期；无具体单轨缺陷故不造返工，`reviewState=owner_listening_pending` 且无 acceptance／digest／attestation，下一任务 R1.06 AUTO 关闭普通运行时
 - 2026-08-26｜R1.06｜docs/phase_536_production_release_r1_06_ambience_deferred_runtime_enforcement.md + gate `f53ae89c…` + final Main `691cc305…` + perf `1f71eb7d…`｜环境门精确绑定三轨 hash 与 `deferred / false / false` 生命周期；普通 Main `warmedAmbience=0 / activeCue="" / ducked=false`，直接 cue 不可绕过，四首 BGM、27 SFX、设置／静音不受影响；隔离 review override 七步可用且退出零缓存／零孤儿轨。bundle `34/34`、Godot 定向、Main `2/2`、性能 `5/5` 全绿｜首轮裸 Godot 如实造成普通日志轮转和音频设置时间戳／文件写入，未读内容／未恢复；最终固定 QA 摘要 `d6b1961e…` 前后一致、lane absent、无残留进程。无 owner／digest／attestation，下一任务 R1.07 OWNER
 - 2026-08-26｜R1.07｜docs/phase_537_production_release_r1_07_bui_vfx_delegated_visual_review.md + 四背景 Main MP4 `1efbc76e… / 41377a65… / 28b1d28e… / e261bc58…`｜当前 bundle／provenance／八帧逐 hash 复核无漂移；四支 `1280×720 / 30 FPS / 1× / 223 frames` 在 20 actor 下连续覆盖普通、闪避、暴击，人眼确认方向、接触、无伪命中和暴击重量在草甸／砂岩／暗石／赤土均可读，未发现具体素材返工项；分段最坏 `process_total=4.565ms`，月影石坪 54–56.8 FPS 短波动留待 R1.08｜受委托建议内部冻结、首发延期；无 owner acceptance／digest／attestation，真实目录四轮均 `d6b1961e…` 前后不变且 lane absent，下一任务 R1.08 AUTO
+- 2026-08-26｜R1.08｜docs/phase_538_production_release_r1_08_bui_vfx_deferred_runtime_enforcement.md + gate `bb6d2fc0…` + isolated Main `3bff1316…`｜发布门逐 hash 绑定 bundle／provenance／八张运行帧；普通事件 `planAttached=true / assetReady=false` 且候选纹理不可读，审片 override 三段 `assetReady=true`，退出后 `override=false / access=false / cache=false`；权威结算与时序 `5/5`、通用性能 `5/5`，隔离战斗原生三段最大 `1.253ms`｜无 owner／digest／attestation／promotion；真实目录始终 `d6b1961e…`、lane absent，下一任务 R1.09 OWNER
 
 ## 7. 正式上线硬门槛
 

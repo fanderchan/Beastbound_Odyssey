@@ -4,6 +4,9 @@ const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleArenaVisualCatalog := preload(
 	"res://scripts/battle/battle_arena_visual_catalog.gd"
 )
+const BattleSkillFeedbackAssetCatalog := preload(
+	"res://scripts/battle/battle_skill_feedback_asset_catalog.gd"
+)
 const BattleSpectatorAiModel := preload("res://scripts/battle/battle_spectator_ai_model.gd")
 const MountedBattlePresentationModel := preload(
 	"res://scripts/battle/mounted_battle_presentation_model.gd"
@@ -75,6 +78,7 @@ func _enable_preview_assets() -> void:
 	_preview_pet_form_ids.clear()
 	_preview_mount_form_ids.clear()
 	_random_mount_form_ids.clear()
+	BattleSkillFeedbackAssetCatalog.configure_review_override_enabled(true)
 	if standalone_pet_only_review:
 		return
 	var character_id := MountedCharacterAssetCatalog.DEFAULT_CHARACTER_ID
@@ -234,6 +238,7 @@ func close(restore_world: bool = true) -> void:
 	_preview_pet_form_ids.clear()
 	_preview_mount_form_ids.clear()
 	_random_mount_form_ids.clear()
+	BattleSkillFeedbackAssetCatalog.configure_review_override_enabled(false)
 	standalone_pet_only_review = false
 	if disable_standalone_overlay:
 		PetActionAssetCatalog.disable_standalone_review_overlay(
@@ -626,6 +631,7 @@ func _finish_single_loop_recording(token: int) -> void:
 		PetActionAssetCatalog.disable_standalone_review_overlay(
 			focus_form_id
 		)
+	BattleSkillFeedbackAssetCatalog.configure_review_override_enabled(false)
 	print(CAPTURE_RECEIPT_PREFIX + JSON.stringify(_single_loop_capture_receipt()))
 	tree.quit()
 

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "gateId": "pet_bui_charge_vfx_release_v1",
+  "bundleId": "pet_bui_charge_vfx_v1",
+  "actionId": "pet_bui_charge",
+  "scope": "skill_feedback_bitmap_vfx",
+  "decision": "deferred",
+  "decisionSource": "docs/phase_537_production_release_r1_07_bui_vfx_delegated_visual_review.md",
+  "ownerReviewStatus": "pending",
+  "releaseApproved": false,
+  "runtimeEnabled": false,
+  "ownerAcceptance": null,
+  "ownerDecisionDigest": null,
+  "releaseAttestation": null,
+  "reviewOverride": "dedicated_isolated_pet_battle_review_only",
+  "binding": {
+    "bundlePath": "res://assets/effects/pet_bui_charge_vfx_v1/vfx-bundle.json",
+    "bundleSha256": "ee05bbe4bffc6daa3c3e10c1e3b1c49611d4c574c15e12053401c190fc96d03b",
+    "provenancePath": "res://assets/effects/pet_bui_charge_vfx_v1/source/provenance.json",
+    "provenanceSha256": "d4563d43dde5aa75440a2ca0b287379e89b22d529b93e7d537f7f38379d0d898",
+    "runtimeFrameSha256": {
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-1.png": "b974a173498c2cde36e567c7e417545a63e4f10a359f809bd1b66ee7e7c4a9cc",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-2.png": "1c3d560f77caf9534b760c602caf901ed6e8f76e910dc22f3a8ece0adf9807a7",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-3.png": "d8f083ffb399a43422223a8b24f8b45220280ebb49f7496985746db82279561d",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/charge/charge-4.png": "98ce33c55a4c19b3dd625e6354a82bb12c54433f1e8890368c9e2c0ee3c314c3",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-1.png": "2cf18defcf8268c6b8db0a6427e028d214c7a72e12987d136d8a493b37cc6248",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-2.png": "91e10f3cef3bee29cdbfa006ec06e23e45aebd9b59fd46221f49c5fdbe771127",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-3.png": "b0e89d6d0a20f138658d5b41ee81d7387b070d975bdeb1483be645ff26125093",
+      "res://assets/effects/pet_bui_charge_vfx_v1/runtime/impact/impact-4.png": "c10dca6c1fb47f621290ad0901520f90707e9bcc8dbcb387b4206679db95310f"
+    }
+  }
+}

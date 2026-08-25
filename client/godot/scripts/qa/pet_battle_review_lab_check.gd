@@ -1,6 +1,9 @@
 extends RefCounted
 
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const BattleSkillFeedbackAssetCatalog := preload(
+	"res://scripts/battle/battle_skill_feedback_asset_catalog.gd"
+)
 const MountedCharacterAssetCatalog := preload("res://scripts/player/mounted_character_asset_catalog.gd")
 const MountVisualProfileCatalog := preload("res://scripts/player/mount_visual_profile_catalog.gd")
 const PetActionAssetCatalog := preload("res://scripts/pet/pet_action_asset_catalog.gd")
@@ -24,6 +27,13 @@ func run() -> void:
 	)
 	lab.open(form_id, PetBattleReviewModel.MODE_BRAWL, 424242, false)
 	await host.get_tree().process_frame
+	var vfx_review_gate := BattleSkillFeedbackAssetCatalog.release_gate_snapshot()
+	if (
+		not bool(vfx_review_gate.get("valid", false))
+		or not bool(vfx_review_gate.get("reviewOverrideEnabled", false))
+		or not bool(vfx_review_gate.get("runtimeAccessAvailable", false))
+	):
+		errors.append("GM宠物验收场没有显式开启待审Bui VFX隔离入口")
 	var first_signature := PetBattleReviewModel.state_signature(host.battle_state)
 	if not lab.is_active() or not lab.is_root_visible():
 		errors.append("验收场控制面板没有打开")
@@ -261,6 +271,13 @@ func run() -> void:
 	await host.get_tree().process_frame
 	if lab.is_active() or host.battle_active:
 		errors.append("退出验收场后仍残留战斗或控制面板")
+	var vfx_closed_gate := BattleSkillFeedbackAssetCatalog.release_gate_snapshot()
+	if (
+		bool(vfx_closed_gate.get("reviewOverrideEnabled", true))
+		or bool(vfx_closed_gate.get("runtimeAccessAvailable", true))
+		or bool(vfx_closed_gate.get("candidateTextureCached", true))
+	):
+		errors.append("退出GM宠物验收场后待审Bui VFX入口或纹理缓存未关闭")
 	if (
 		host.game_audio_manager != null
 		and (

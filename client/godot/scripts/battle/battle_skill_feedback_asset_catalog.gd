@@ -6,6 +6,14 @@ extends RefCounted
 
 const SCHEMA_VERSION := 1
 const EXPECTED_FRAME_COUNT := 4
+const CANONICAL_BUNDLE_PATH := (
+	"res://assets/effects/pet_bui_charge_vfx_v1/vfx-bundle.json"
+)
+const CANONICAL_BUNDLE_ID := "pet_bui_charge_vfx_v1"
+const CANONICAL_ACTION_ID := "pet_bui_charge"
+const RELEASE_GATE_PATH := "res://data/pet_bui_charge_vfx_release_gate_v1.json"
+const RELEASE_GATE_ID := "pet_bui_charge_vfx_release_v1"
+const REVIEW_OVERRIDE_MODE := "dedicated_isolated_pet_battle_review_only"
 const FRAME_GROUPS := {
 	"charge": "chargeFrames",
 	"impact": "impactFrames",
@@ -17,6 +25,43 @@ const FRAME_THRESHOLDS := {
 
 static var _bundle_cache: Dictionary = {}
 static var _texture_cache: Dictionary = {}
+static var _review_override_enabled := false
+static var _release_gate_loaded := false
+static var _release_gate_valid := false
+static var _release_gate_runtime_enabled := false
+static var _release_gate_decision := "unresolved"
+static var _release_gate_errors: Array[String] = []
+
+
+static func configure_review_override_enabled(value: bool) -> void:
+	_review_override_enabled = value
+	if not value:
+		# Closing the isolated review lane must release the candidate textures.
+		# A previously prepared event can therefore never keep drawing them in a
+		# later normal battle merely because this process shares static caches.
+		_texture_cache.erase(CANONICAL_BUNDLE_PATH)
+
+
+static func release_gate_snapshot() -> Dictionary:
+	_load_release_gate_once()
+	return {
+		"path": RELEASE_GATE_PATH,
+		"valid": _release_gate_valid,
+		"errors": _release_gate_errors.duplicate(),
+		"decision": _release_gate_decision,
+		"runtimeEnabled": _release_gate_runtime_enabled,
+		"reviewOverrideEnabled": _review_override_enabled,
+		"runtimeAccessAvailable": _canonical_runtime_access_available(),
+		"candidateTextureCached": _texture_cache.has(CANONICAL_BUNDLE_PATH),
+	}
+
+
+static func runtime_access_available(bundle_path: String) -> bool:
+	var normalized_path := bundle_path.strip_edges()
+	if normalized_path != CANONICAL_BUNDLE_PATH:
+		return true
+	_load_release_gate_once()
+	return _canonical_runtime_access_available()
 
 
 static func validation_errors(
@@ -79,6 +124,9 @@ static func validation_errors(
 	var provenance_path := str(source.get("provenancePath", "")).strip_edges()
 	if not provenance_path.begins_with("res://") or not FileAccess.file_exists(provenance_path):
 		errors.append("%s.source.provenancePath 不存在" % normalized_path)
+	if normalized_path == CANONICAL_BUNDLE_PATH:
+		_load_release_gate_once()
+		errors.append_array(_release_gate_errors)
 	return errors
 
 
@@ -93,6 +141,9 @@ static func prepare(
 		expected_action_id,
 		expected_style
 	).is_empty():
+		return false
+	if not runtime_access_available(normalized_path):
+		_texture_cache.erase(normalized_path)
 		return false
 	if _texture_cache.has(normalized_path):
 		return bool((_texture_cache[normalized_path] as Dictionary).get("valid", false))
@@ -119,7 +170,13 @@ static func texture_for(
 	group: String,
 	frame_index: int
 ) -> Texture2D:
-	var prepared := _texture_cache.get(bundle_path.strip_edges(), {}) as Dictionary
+	var normalized_path := bundle_path.strip_edges()
+	if (
+		normalized_path == CANONICAL_BUNDLE_PATH
+		and not _cached_canonical_runtime_access_available()
+	):
+		return null
+	var prepared := _texture_cache.get(normalized_path, {}) as Dictionary
 	if not bool(prepared.get("valid", false)):
 		return null
 	var textures = prepared.get(group, [])
@@ -184,6 +241,170 @@ static func _load_bundle(bundle_path: String) -> Dictionary:
 	var bundle := (parsed as Dictionary).duplicate(true)
 	_bundle_cache[bundle_path] = bundle
 	return bundle
+
+
+static func _load_release_gate_once() -> void:
+	if _release_gate_loaded:
+		return
+	_release_gate_loaded = true
+	_release_gate_valid = false
+	_release_gate_runtime_enabled = false
+	_release_gate_decision = "unresolved"
+	_release_gate_errors.clear()
+	if not FileAccess.file_exists(RELEASE_GATE_PATH):
+		_release_gate_errors.append("Bui VFX 发布门不存在")
+		return
+	var file := FileAccess.open(RELEASE_GATE_PATH, FileAccess.READ)
+	if file == null:
+		_release_gate_errors.append("Bui VFX 发布门无法读取")
+		return
+	var parsed = JSON.parse_string(file.get_as_text())
+	if not (parsed is Dictionary):
+		_release_gate_errors.append("Bui VFX 发布门不是有效 JSON 对象")
+		return
+	var gate := parsed as Dictionary
+	if int(gate.get("schemaVersion", 0)) != 1:
+		_release_gate_errors.append("Bui VFX 发布门 schemaVersion 必须是 1")
+	if str(gate.get("gateId", "")) != RELEASE_GATE_ID:
+		_release_gate_errors.append("Bui VFX 发布门 gateId 不匹配")
+	if str(gate.get("bundleId", "")) != CANONICAL_BUNDLE_ID:
+		_release_gate_errors.append("Bui VFX 发布门 bundleId 不匹配")
+	if str(gate.get("actionId", "")) != CANONICAL_ACTION_ID:
+		_release_gate_errors.append("Bui VFX 发布门 actionId 不匹配")
+	if str(gate.get("scope", "")) != "skill_feedback_bitmap_vfx":
+		_release_gate_errors.append("Bui VFX 发布门 scope 不匹配")
+	if not str(gate.get("decisionSource", "")).begins_with("docs/phase_"):
+		_release_gate_errors.append("Bui VFX 发布门 decisionSource 无效")
+	if str(gate.get("reviewOverride", "")) != REVIEW_OVERRIDE_MODE:
+		_release_gate_errors.append("Bui VFX 发布门 reviewOverride 无效")
+	if typeof(gate.get("releaseApproved", null)) != TYPE_BOOL:
+		_release_gate_errors.append("Bui VFX 发布门 releaseApproved 必须是布尔值")
+	if typeof(gate.get("runtimeEnabled", null)) != TYPE_BOOL:
+		_release_gate_errors.append("Bui VFX 发布门 runtimeEnabled 必须是布尔值")
+
+	var decision := str(gate.get("decision", "")).strip_edges().to_lower()
+	var owner_status := str(
+		gate.get("ownerReviewStatus", "")
+	).strip_edges().to_lower()
+	var release_approved: bool = gate.get("releaseApproved", null) == true
+	var runtime_enabled: bool = gate.get("runtimeEnabled", null) == true
+	if runtime_enabled:
+		if (
+			decision != "approved"
+			or owner_status != "approved"
+			or not release_approved
+			or not (gate.get("ownerAcceptance", null) is Dictionary)
+			or str(gate.get("ownerDecisionDigest", "")).strip_edges() == ""
+			or not (gate.get("releaseAttestation", null) is Dictionary)
+		):
+			_release_gate_errors.append("Bui VFX 批准态缺少所有者发布合同")
+	else:
+		if decision not in ["deferred", "returned"]:
+			_release_gate_errors.append("Bui VFX 关闭态 decision 无效")
+		if release_approved:
+			_release_gate_errors.append("Bui VFX 关闭态禁止 releaseApproved=true")
+		if (
+			(decision == "deferred" and owner_status != "pending")
+			or (decision == "returned" and owner_status != "returned")
+		):
+			_release_gate_errors.append("Bui VFX 关闭态 ownerReviewStatus 不匹配")
+		if (
+			gate.get("ownerAcceptance", null) != null
+			or gate.get("ownerDecisionDigest", null) != null
+			or gate.get("releaseAttestation", null) != null
+		):
+			_release_gate_errors.append("Bui VFX 关闭态禁止发布签收产物")
+
+	_validate_release_binding(gate.get("binding", null))
+	if not _release_gate_errors.is_empty():
+		return
+	_release_gate_valid = true
+	_release_gate_runtime_enabled = runtime_enabled
+	_release_gate_decision = decision
+
+
+static func _validate_release_binding(binding_value) -> void:
+	if not (binding_value is Dictionary):
+		_release_gate_errors.append("Bui VFX 发布门 binding 必须是对象")
+		return
+	var binding := binding_value as Dictionary
+	var bundle_path := str(binding.get("bundlePath", "")).strip_edges()
+	var provenance_path := str(binding.get("provenancePath", "")).strip_edges()
+	_validate_bound_file(
+		bundle_path,
+		CANONICAL_BUNDLE_PATH,
+		str(binding.get("bundleSha256", "")),
+		"bundle"
+	)
+	_validate_bound_file(
+		provenance_path,
+		"res://assets/effects/pet_bui_charge_vfx_v1/source/provenance.json",
+		str(binding.get("provenanceSha256", "")),
+		"provenance"
+	)
+	var frame_hash_value = binding.get("runtimeFrameSha256", null)
+	if not (frame_hash_value is Dictionary):
+		_release_gate_errors.append("Bui VFX 发布门 runtimeFrameSha256 必须是对象")
+		return
+	var frame_hashes := frame_hash_value as Dictionary
+	var expected_paths: Array[String] = []
+	for group_name in ["chargeFrames", "impactFrames"]:
+		var bundle := _load_bundle(CANONICAL_BUNDLE_PATH)
+		var runtime := bundle.get("runtime", {}) as Dictionary
+		for value in runtime.get(group_name, []) as Array:
+			expected_paths.append(str(value).strip_edges())
+	if expected_paths.size() != EXPECTED_FRAME_COUNT * 2:
+		_release_gate_errors.append("Bui VFX bundle 没有八张可绑定运行帧")
+		return
+	if frame_hashes.size() != expected_paths.size():
+		_release_gate_errors.append("Bui VFX 发布门运行帧绑定数量不等于八")
+	for frame_path in expected_paths:
+		_validate_bound_file(
+			frame_path,
+			frame_path,
+			str(frame_hashes.get(frame_path, "")),
+			frame_path
+		)
+
+
+static func _validate_bound_file(
+	actual_path: String,
+	expected_path: String,
+	expected_sha256: String,
+	context: String
+) -> void:
+	if actual_path != expected_path:
+		_release_gate_errors.append("Bui VFX 发布门 %s 路径不匹配" % context)
+		return
+	if not _is_lowercase_sha256(expected_sha256):
+		_release_gate_errors.append("Bui VFX 发布门 %s SHA-256 无效" % context)
+		return
+	if not FileAccess.file_exists(actual_path):
+		_release_gate_errors.append("Bui VFX 发布门 %s 文件不存在" % context)
+		return
+	if FileAccess.get_sha256(actual_path).to_lower() != expected_sha256:
+		_release_gate_errors.append("Bui VFX 发布门 %s SHA-256 漂移" % context)
+
+
+static func _canonical_runtime_access_available() -> bool:
+	return (
+		_release_gate_valid
+		and (_release_gate_runtime_enabled or _review_override_enabled)
+	)
+
+
+static func _cached_canonical_runtime_access_available() -> bool:
+	return _release_gate_loaded and _canonical_runtime_access_available()
+
+
+static func _is_lowercase_sha256(value: String) -> bool:
+	if value.length() != 64:
+		return false
+	for index in value.length():
+		var code := value.unicode_at(index)
+		if not ((code >= 48 and code <= 57) or (code >= 97 and code <= 102)):
+			return false
+	return true
 
 
 static func _validate_frame_size(
