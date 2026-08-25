@@ -1989,8 +1989,23 @@ def _validate_performance_sample(
         audit.error(f"{field_name}.resolved", "must be a positive integer")
     if not isinstance(applied, int) or isinstance(applied, bool) or applied <= 0:
         audit.error(f"{field_name}.applied", "must be a positive integer")
-    elif applied != resolved:
-        audit.error(f"{field_name}.applied", "must equal resolved")
+    elif (
+        isinstance(resolved, int)
+        and not isinstance(resolved, bool)
+        and resolved > 0
+        and applied > resolved
+    ):
+        audit.error(f"{field_name}.applied", "must be <= resolved")
+    if (
+        isinstance(resolved, int)
+        and not isinstance(resolved, bool)
+        and resolved > 0
+        and isinstance(accepted, int)
+        and not isinstance(accepted, bool)
+        and accepted > 0
+        and resolved >= accepted
+    ):
+        audit.error(f"{field_name}.resolved", "must be < accepted")
     for metric in ("avgInputUs", "maxInputUs"):
         if not _is_finite_number(sample.get(metric)):
             audit.error(f"{field_name}.{metric}", "expected a finite non-negative number")

@@ -57,6 +57,64 @@ const FIREBUD_SUBJECT_HEIGHT_MIN_PX := 120.0
 const FIREBUD_SUBJECT_HEIGHT_MAX_PX := 150.0
 const FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MIN := 0.88
 const FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MAX := 1.12
+const EARTH_VEIN_BUNDLE_ID := "earth_vein_cave_visual_v1"
+const EARTH_VEIN_RESIDENT_NPC_POLICY := "not_applicable_environmental_interactions"
+const EARTH_VEIN_COMPACT_OBJECT_IDS: Array[String] = [
+	"earth_cave_rock_pile",
+	"earth_cave_crystal_cluster",
+	"earth_cave_fungus_cluster",
+	"earth_cave_cairn",
+]
+const EARTH_VEIN_ARCHITECTURE_OBJECT_IDS: Array[String] = [
+	"earth_cave_vein_pillar",
+	"earth_cave_stair_arch",
+	"earth_cave_wall_ridge",
+	"earth_cave_wall_buttress",
+]
+const EARTH_VEIN_TERMINAL_OBJECT_IDS: Array[String] = [
+	"earth_cave_resonance_plinth",
+]
+const EARTH_VEIN_EXPECTED_OBJECT_IDS := {
+	"earth_vein_cave": [
+		"earth_cave_rock_pile",
+		"earth_cave_crystal_cluster",
+		"earth_cave_cairn",
+		"earth_cave_vein_pillar",
+		"earth_cave_stair_arch",
+		"earth_cave_wall_ridge",
+		"earth_cave_wall_buttress",
+	],
+	"earth_vein_cave_f2": [
+		"earth_cave_rock_pile",
+		"earth_cave_crystal_cluster",
+		"earth_cave_fungus_cluster",
+		"earth_cave_cairn",
+		"earth_cave_vein_pillar",
+		"earth_cave_stair_arch",
+		"earth_cave_wall_ridge",
+		"earth_cave_wall_buttress",
+	],
+	"earth_vein_cave_f3": [
+		"earth_cave_rock_pile",
+		"earth_cave_crystal_cluster",
+		"earth_cave_fungus_cluster",
+		"earth_cave_cairn",
+		"earth_cave_vein_pillar",
+		"earth_cave_stair_arch",
+		"earth_cave_wall_ridge",
+		"earth_cave_wall_buttress",
+	],
+	"earth_vein_cave_f4": [
+		"earth_cave_rock_pile",
+		"earth_cave_crystal_cluster",
+		"earth_cave_cairn",
+		"earth_cave_vein_pillar",
+		"earth_cave_stair_arch",
+		"earth_cave_resonance_plinth",
+		"earth_cave_wall_ridge",
+		"earth_cave_wall_buttress",
+	],
+}
 const HUD_GLYPH_REGIONS := {
 	"tabs": {
 		"rect": Rect2i(1020, 136, 166, 24),
@@ -731,6 +789,7 @@ func _camera_composition_report() -> Dictionary:
 		opaque_rect_cache
 	)
 	var key_environment_commands: Array[Dictionary] = []
+	var all_map_object_commands: Array[Dictionary] = []
 	var by_layer := host.map_visual_render_state.get("objectDrawsByLayer", {}) as Dictionary
 	for layer_value in by_layer.values():
 		if not (layer_value is Array):
@@ -739,6 +798,7 @@ func _camera_composition_report() -> Dictionary:
 			if not (command_value is Dictionary):
 				continue
 			var command := command_value as Dictionary
+			all_map_object_commands.append(command)
 			var collision_role := str(command.get("collisionRole", ""))
 			if collision_role != "blocking" and collision_role != "interaction":
 				continue
@@ -774,6 +834,27 @@ func _camera_composition_report() -> Dictionary:
 		and player_npc_height_ratio >= FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MIN
 		and player_npc_height_ratio <= FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MAX
 	)
+	var world_subject_scale := {
+		"playerHeightPx": player_probe.size.y,
+		"npcMedianHeightPx": npc_median_height,
+		"playerToNpcHeightRatio": player_npc_height_ratio,
+		"targetHeightRangePx": [
+			FIREBUD_SUBJECT_HEIGHT_MIN_PX,
+			FIREBUD_SUBJECT_HEIGHT_MAX_PX,
+		],
+		"targetRatioRange": [
+			FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MIN,
+			FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MAX,
+		],
+		"passed": world_subject_scale_passed,
+	}
+	if str(host.map_visual_render_state.get("bundleId", "")) == EARTH_VEIN_BUNDLE_ID:
+		world_subject_scale = _earth_vein_world_subject_scale_report(
+			player_probe.size.y,
+			int(npc_subject_report.get("subjectCount", 0)),
+			all_map_object_commands,
+			opaque_rect_cache
+		)
 	var nearest_warp := {}
 	var nearest_warp_distance := INF
 	for interaction_value in host.map_data.get("interactionPoints", []):
@@ -844,20 +925,7 @@ func _camera_composition_report() -> Dictionary:
 		"playerAlphaClearOfTaskHud": player_clear_of_task_hud,
 		"playerAlphaClearOfFixedHud": player_clear_of_fixed_hud,
 		"playerAlphaViewportEdgeClear": player_edge_safe_rect.encloses(player_probe),
-		"worldSubjectScale": {
-			"playerHeightPx": player_probe.size.y,
-			"npcMedianHeightPx": npc_median_height,
-			"playerToNpcHeightRatio": player_npc_height_ratio,
-			"targetHeightRangePx": [
-				FIREBUD_SUBJECT_HEIGHT_MIN_PX,
-				FIREBUD_SUBJECT_HEIGHT_MAX_PX,
-			],
-			"targetRatioRange": [
-				FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MIN,
-				FIREBUD_PLAYER_NPC_HEIGHT_RATIO_MAX,
-			],
-			"passed": world_subject_scale_passed,
-		},
+		"worldSubjectScale": world_subject_scale,
 		"taskHudOverlappingBlockingObjectIds": key_environment_report.get("taskOverlapIds", []),
 		"npcAlphaSubjectCount": int(npc_subject_report.get("subjectCount", 0)),
 		"visibleNpcCount": int(npc_subject_report.get("visibleCount", 0)),
@@ -947,6 +1015,153 @@ func _composition_subject_report(
 		"taskOverlapIds": task_overlap_ids,
 		"viewportClippedIds": viewport_clipped_ids,
 		"screenRects": screen_rects,
+	}
+
+
+func _earth_vein_world_subject_scale_report(
+	player_height_px: float,
+	npc_subject_count: int,
+	commands: Array[Dictionary],
+	opaque_rect_cache: Dictionary
+) -> Dictionary:
+	var object_type_counts: Dictionary = {}
+	var object_type_alpha_heights: Dictionary = {}
+	var object_type_player_ratios: Dictionary = {}
+	var compact_ratios: Array[float] = []
+	var architecture_ratios: Array[float] = []
+	var terminal_ratios: Array[float] = []
+	for command in commands:
+		var object_id := str(command.get("objectId", "")).strip_edges()
+		if object_id == "":
+			continue
+		var opaque_world_rect := _command_opaque_world_rect(command, opaque_rect_cache)
+		if opaque_world_rect.size.x <= 0.0 or opaque_world_rect.size.y <= 0.0:
+			continue
+		var alpha_height_px := _world_rect_to_screen_rect(opaque_world_rect).size.y
+		if alpha_height_px <= 0.0 or not is_finite(alpha_height_px):
+			continue
+		var ratio := alpha_height_px / player_height_px if player_height_px > 0.0 else 0.0
+		object_type_counts[object_id] = int(object_type_counts.get(object_id, 0)) + 1
+		object_type_alpha_heights[object_id] = alpha_height_px
+		object_type_player_ratios[object_id] = ratio
+		if EARTH_VEIN_COMPACT_OBJECT_IDS.has(object_id):
+			compact_ratios.append(ratio)
+		elif EARTH_VEIN_ARCHITECTURE_OBJECT_IDS.has(object_id):
+			architecture_ratios.append(ratio)
+		elif EARTH_VEIN_TERMINAL_OBJECT_IDS.has(object_id):
+			terminal_ratios.append(ratio)
+	var expected_object_ids := _string_array(
+		EARTH_VEIN_EXPECTED_OBJECT_IDS.get(str(host.current_map_id), [])
+	)
+	var missing_object_type_ids: Array[String] = []
+	for object_id in expected_object_ids:
+		if not object_type_counts.has(object_id):
+			missing_object_type_ids.append(object_id)
+	var unexpected_terminal_object_ids: Array[String] = []
+	if str(host.current_map_id) != "earth_vein_cave_f4":
+		for object_id in EARTH_VEIN_TERMINAL_OBJECT_IDS:
+			if object_type_counts.has(object_id):
+				unexpected_terminal_object_ids.append(object_id)
+	var compact_report := _scale_ratio_group_report(
+		compact_ratios,
+		0.80,
+		1.10,
+		true
+	)
+	var architecture_report := _scale_ratio_group_report(
+		architecture_ratios,
+		1.25,
+		2.75,
+		true
+	)
+	var terminal_required := str(host.current_map_id) == "earth_vein_cave_f4"
+	var terminal_report := _scale_ratio_group_report(
+		terminal_ratios,
+		1.25,
+		1.45,
+		terminal_required
+	)
+	var player_height_passed := (
+		player_height_px >= FIREBUD_SUBJECT_HEIGHT_MIN_PX
+		and player_height_px <= FIREBUD_SUBJECT_HEIGHT_MAX_PX
+	)
+	var map_object_scale_passed := (
+		bool(compact_report.get("passed", false))
+		and bool(architecture_report.get("passed", false))
+		and bool(terminal_report.get("passed", false))
+		and missing_object_type_ids.is_empty()
+		and unexpected_terminal_object_ids.is_empty()
+	)
+	var passed := (
+		player_height_passed
+		and npc_subject_count == 0
+		and map_object_scale_passed
+	)
+	return {
+		"status": "passed" if passed else "failed",
+		"residentNpcPolicy": EARTH_VEIN_RESIDENT_NPC_POLICY,
+		"residentNpcReason": (
+			"isolated training dungeon; traversal and guardian roles use formal environment interactions"
+		),
+		"npcRatioStatus": "not_applicable",
+		"npcSubjectCount": npc_subject_count,
+		"npcMedianHeightPx": 0.0,
+		"playerToNpcHeightRatio": 0.0,
+		"playerHeightPx": player_height_px,
+		"playerHeightPassed": player_height_passed,
+		"targetHeightRangePx": [
+			FIREBUD_SUBJECT_HEIGHT_MIN_PX,
+			FIREBUD_SUBJECT_HEIGHT_MAX_PX,
+		],
+		"targetRatioRange": [],
+		"mapObjectScale": {
+			"objectTypeCounts": object_type_counts,
+			"objectTypeAlphaHeightPx": object_type_alpha_heights,
+			"objectTypeToPlayerRatio": object_type_player_ratios,
+			"expectedObjectTypeIds": expected_object_ids,
+			"missingObjectTypeIds": missing_object_type_ids,
+			"unexpectedTerminalObjectIds": unexpected_terminal_object_ids,
+			"compact": compact_report,
+			"architecture": architecture_report,
+			"terminal": terminal_report,
+			"passed": map_object_scale_passed,
+		},
+		"passed": passed,
+	}
+
+
+static func _scale_ratio_group_report(
+	values: Array[float],
+	minimum: float,
+	maximum: float,
+	required: bool
+) -> Dictionary:
+	if values.is_empty():
+		return {
+			"status": "failed" if required else "not_applicable",
+			"required": required,
+			"count": 0,
+			"ratioRange": [minimum, maximum],
+			"minimumRatio": 0.0,
+			"maximumRatio": 0.0,
+			"passed": not required,
+		}
+	var minimum_ratio := values[0]
+	var maximum_ratio := values[0]
+	var passed := true
+	for ratio in values:
+		minimum_ratio = minf(minimum_ratio, ratio)
+		maximum_ratio = maxf(maximum_ratio, ratio)
+		if ratio < minimum or ratio > maximum:
+			passed = false
+	return {
+		"status": "passed" if passed else "failed",
+		"required": required,
+		"count": values.size(),
+		"ratioRange": [minimum, maximum],
+		"minimumRatio": minimum_ratio,
+		"maximumRatio": maximum_ratio,
+		"passed": passed,
 	}
 
 

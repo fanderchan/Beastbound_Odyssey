@@ -161,6 +161,58 @@ class CollisionCommandContractTests(unittest.TestCase):
         )
 
 
+class PerformanceSampleContractTests(unittest.TestCase):
+    @staticmethod
+    def _moving_sample() -> dict:
+        return {
+            "samples": 2,
+            "fpsMinMeanMax": [60.0, 60.0, 60.0],
+            "processTotalMsMinMeanMax": [0.2, 0.3, 0.4],
+            "drawWorldMsMinMeanMax": [0.0, 0.1, 0.2],
+            "clicks": 12,
+            "accepted": 12,
+            "resolved": 3,
+            "applied": 2,
+            "avgInputUs": 1,
+            "maxInputUs": 2,
+            "moved": True,
+            "coalesced": True,
+            "settled": True,
+            "finalTargetMatched": True,
+            "battle": False,
+            "encounter": False,
+        }
+
+    def _audit(self, sample: dict) -> AUDITOR.Audit:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            audit = AUDITOR.Audit(root / AUDITOR.MANIFEST_NAME, root)
+            AUDITOR._validate_performance_sample(
+                audit,
+                sample,
+                "performance.moving",
+                moving=True,
+            )
+            return audit
+
+    def test_resolved_target_may_be_superseded_before_path_apply(self) -> None:
+        self.assertEqual([], self._audit(self._moving_sample()).errors)
+
+    def test_path_apply_without_resolved_target_fails_closed(self) -> None:
+        sample = self._moving_sample()
+        sample["applied"] = 4
+        self.assertTrue(
+            any("applied: must be <= resolved" in error for error in self._audit(sample).errors)
+        )
+
+    def test_click_burst_must_collapse_before_accepted_count(self) -> None:
+        sample = self._moving_sample()
+        sample["resolved"] = sample["accepted"]
+        self.assertTrue(
+            any("resolved: must be < accepted" in error for error in self._audit(sample).errors)
+        )
+
+
 class ReleaseAttestationTests(unittest.TestCase):
     def _write_attestation(
         self,

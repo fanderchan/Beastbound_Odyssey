@@ -3,6 +3,18 @@
   "bundleId": "earth_vein_cave_visual_v1",
   "mapId": "earth_vein_cave",
   "mapGridSize": [28, 24],
+  "presentationProfile": {
+    "hierarchyStage": 1,
+    "floorRole": "threshold_gallery",
+    "routeDensityRank": 1,
+    "residentNpcPolicy": "not_applicable_environmental_interactions",
+    "dominantMotifObjectId": "earth_cave_cairn",
+    "dominantMotifCount": 3,
+    "compactDecorativeCount": 4,
+    "blockingLandmarkCount": 4,
+    "interactionLandmarkCount": 2,
+    "boundarySceneryCount": 4
+  },
   "ground": {
     "edgePaddingCells": 16,
     "edgeTileId": "earth_cave_edge_a",
@@ -84,8 +96,8 @@
       "collisionFootprint": []
     },
     {
-      "instanceId": "f1_fungus_decor_01",
-      "objectId": "earth_cave_fungus_cluster",
+      "instanceId": "f1_cairn_decor_01",
+      "objectId": "earth_cave_cairn",
       "grid": [8, 17],
       "offset": [8, 0],
       "mirrored": false,
@@ -93,7 +105,7 @@
       "collisionFootprint": []
     },
     {
-      "instanceId": "f1_cairn_decor_01",
+      "instanceId": "f1_cairn_decor_02",
       "objectId": "earth_cave_cairn",
       "grid": [12, 14],
       "offset": [-4, 0],
@@ -102,16 +114,7 @@
       "collisionFootprint": []
     },
     {
-      "instanceId": "f1_crystal_decor_02",
-      "objectId": "earth_cave_crystal_cluster",
-      "grid": [16, 10],
-      "offset": [6, 0],
-      "mirrored": false,
-      "interactionLink": null,
-      "collisionFootprint": []
-    },
-    {
-      "instanceId": "f1_cairn_decor_02",
+      "instanceId": "f1_cairn_decor_03",
       "objectId": "earth_cave_cairn",
       "grid": [20, 8],
       "offset": [0, 0],

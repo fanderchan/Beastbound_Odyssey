@@ -3,6 +3,18 @@
   "bundleId": "earth_vein_cave_visual_v1",
   "mapId": "earth_vein_cave_f2",
   "mapGridSize": [28, 24],
+  "presentationProfile": {
+    "hierarchyStage": 2,
+    "floorRole": "damp_fungus_seam",
+    "routeDensityRank": 2,
+    "residentNpcPolicy": "not_applicable_environmental_interactions",
+    "dominantMotifObjectId": "earth_cave_fungus_cluster",
+    "dominantMotifCount": 4,
+    "compactDecorativeCount": 7,
+    "blockingLandmarkCount": 4,
+    "interactionLandmarkCount": 2,
+    "boundarySceneryCount": 4
+  },
   "ground": {
     "edgePaddingCells": 16,
     "edgeTileId": "earth_cave_edge_a",
@@ -88,10 +100,28 @@
       "collisionFootprint": []
     },
     {
+      "instanceId": "f2_fungus_decor_02",
+      "objectId": "earth_cave_fungus_cluster",
+      "grid": [6, 18],
+      "offset": [-18, -6],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
       "instanceId": "f2_crystal_decor_01",
       "objectId": "earth_cave_crystal_cluster",
       "grid": [9, 15],
       "offset": [8, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f2_crystal_decor_02",
+      "objectId": "earth_cave_crystal_cluster",
+      "grid": [10, 14],
+      "offset": [-22, -8],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
@@ -106,7 +136,7 @@
       "collisionFootprint": []
     },
     {
-      "instanceId": "f2_fungus_decor_02",
+      "instanceId": "f2_fungus_decor_03",
       "objectId": "earth_cave_fungus_cluster",
       "grid": [17, 9],
       "offset": [-8, 0],
@@ -115,10 +145,10 @@
       "collisionFootprint": []
     },
     {
-      "instanceId": "f2_cairn_decor_02",
-      "objectId": "earth_cave_cairn",
+      "instanceId": "f2_fungus_decor_04",
+      "objectId": "earth_cave_fungus_cluster",
       "grid": [20, 8],
-      "offset": [0, 0],
+      "offset": [-10, -4],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []

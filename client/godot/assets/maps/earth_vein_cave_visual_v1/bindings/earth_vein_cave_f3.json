@@ -3,6 +3,18 @@
   "bundleId": "earth_vein_cave_visual_v1",
   "mapId": "earth_vein_cave_f3",
   "mapGridSize": [28, 24],
+  "presentationProfile": {
+    "hierarchyStage": 3,
+    "floorRole": "compressed_crystal_vein",
+    "routeDensityRank": 3,
+    "residentNpcPolicy": "not_applicable_environmental_interactions",
+    "dominantMotifObjectId": "earth_cave_crystal_cluster",
+    "dominantMotifCount": 6,
+    "compactDecorativeCount": 9,
+    "blockingLandmarkCount": 4,
+    "interactionLandmarkCount": 2,
+    "boundarySceneryCount": 4
+  },
   "ground": {
     "edgePaddingCells": 16,
     "edgeTileId": "earth_cave_edge_a",
@@ -88,10 +100,28 @@
       "collisionFootprint": []
     },
     {
+      "instanceId": "f3_crystal_decor_02",
+      "objectId": "earth_cave_crystal_cluster",
+      "grid": [7, 18],
+      "offset": [24, -6],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
       "instanceId": "f3_fungus_decor_01",
       "objectId": "earth_cave_fungus_cluster",
       "grid": [10, 15],
       "offset": [8, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f3_crystal_decor_03",
+      "objectId": "earth_cave_crystal_cluster",
+      "grid": [11, 15],
+      "offset": [-20, -7],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
@@ -106,10 +136,19 @@
       "collisionFootprint": []
     },
     {
-      "instanceId": "f3_crystal_decor_02",
+      "instanceId": "f3_crystal_decor_04",
       "objectId": "earth_cave_crystal_cluster",
       "grid": [18, 9],
       "offset": [-8, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f3_crystal_decor_05",
+      "objectId": "earth_cave_crystal_cluster",
+      "grid": [19, 8],
+      "offset": [-24, -8],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
@@ -119,6 +158,15 @@
       "objectId": "earth_cave_cairn",
       "grid": [20, 8],
       "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": []
+    },
+    {
+      "instanceId": "f3_crystal_decor_06",
+      "objectId": "earth_cave_crystal_cluster",
+      "grid": [21, 7],
+      "offset": [-30, -9],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []

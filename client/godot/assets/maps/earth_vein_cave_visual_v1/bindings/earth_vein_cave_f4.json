@@ -3,6 +3,18 @@
   "bundleId": "earth_vein_cave_visual_v1",
   "mapId": "earth_vein_cave_f4",
   "mapGridSize": [30, 26],
+  "presentationProfile": {
+    "hierarchyStage": 4,
+    "floorRole": "dual_resonance_sanctum",
+    "routeDensityRank": 1,
+    "residentNpcPolicy": "not_applicable_environmental_interactions",
+    "dominantMotifObjectId": "earth_cave_resonance_plinth",
+    "dominantMotifCount": 2,
+    "compactDecorativeCount": 4,
+    "blockingLandmarkCount": 3,
+    "interactionLandmarkCount": 3,
+    "boundarySceneryCount": 4
+  },
   "ground": {
     "edgePaddingCells": 16,
     "edgeTileId": "earth_cave_edge_a",
@@ -81,8 +93,8 @@
       "collisionFootprint": [[24, 18], [25, 19]]
     },
     {
-      "instanceId": "f4_fungus_decor_01",
-      "objectId": "earth_cave_fungus_cluster",
+      "instanceId": "f4_cairn_decor_01",
+      "objectId": "earth_cave_cairn",
       "grid": [6, 21],
       "offset": [-8, 0],
       "mirrored": false,
@@ -90,7 +102,7 @@
       "collisionFootprint": []
     },
     {
-      "instanceId": "f4_cairn_decor_01",
+      "instanceId": "f4_cairn_decor_02",
       "objectId": "earth_cave_cairn",
       "grid": [9, 18],
       "offset": [4, 0],
@@ -99,28 +111,10 @@
       "collisionFootprint": []
     },
     {
-      "instanceId": "f4_fungus_decor_02",
-      "objectId": "earth_cave_fungus_cluster",
-      "grid": [13, 14],
-      "offset": [-8, 0],
-      "mirrored": false,
-      "interactionLink": null,
-      "collisionFootprint": []
-    },
-    {
       "instanceId": "f4_crystal_decor_01",
       "objectId": "earth_cave_crystal_cluster",
-      "grid": [18, 10],
-      "offset": [8, 0],
-      "mirrored": false,
-      "interactionLink": null,
-      "collisionFootprint": []
-    },
-    {
-      "instanceId": "f4_cairn_decor_02",
-      "objectId": "earth_cave_cairn",
-      "grid": [23, 8],
-      "offset": [8, 0],
+      "grid": [20, 6],
+      "offset": [-16, -6],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []
@@ -128,8 +122,8 @@
     {
       "instanceId": "f4_crystal_decor_02",
       "objectId": "earth_cave_crystal_cluster",
-      "grid": [28, 14],
-      "offset": [0, 0],
+      "grid": [27, 13],
+      "offset": [22, -4],
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": []

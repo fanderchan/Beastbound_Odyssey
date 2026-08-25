@@ -19,7 +19,7 @@
   ],
   "catalogContractCheck": {
     "path": "evidence/catalog-contract-check.json",
-    "sha256": "cffe0fc435174e95d867061047499d9a2a1c9b36aaaf07f7bbe537dec60788ef"
+    "sha256": "c63e0f1575636dcb2600a0e8c1fd38504899bedca75d91565e257fd28611d04f"
   },
   "source": {
     "origin": "AI-generated original",
@@ -731,28 +731,28 @@
       "mapId": "earth_vein_cave",
       "binding": {
         "path": "bindings/earth_vein_cave.json",
-        "sha256": "9d232379210859586c3475462f09fee0b57c2160796280644ad98bbeffba78a8"
+        "sha256": "a1c8d1ab2b9f7a2c7e59c9771ffa132c925fef11133f58b71d608f19dc681ec6"
       }
     },
     {
       "mapId": "earth_vein_cave_f2",
       "binding": {
         "path": "bindings/earth_vein_cave_f2.json",
-        "sha256": "bb2ea625653a259e94047f556322f6f67c291b8de4eba8ff6c034ee2b29c602c"
+        "sha256": "051272df93ecc7355a7927d64ed3bbf06394479cf150d8622895454b8b3bc62e"
       }
     },
     {
       "mapId": "earth_vein_cave_f3",
       "binding": {
         "path": "bindings/earth_vein_cave_f3.json",
-        "sha256": "f5f8db9cc8cbc53bc4046dcc82aeb6d0fceccfe708baa84843615af9d135d8f7"
+        "sha256": "bbf36bc8dd5386a5863b24b34478f5c6a246798837c07e0a5c52bebd2cd7c68e"
       }
     },
     {
       "mapId": "earth_vein_cave_f4",
       "binding": {
         "path": "bindings/earth_vein_cave_f4.json",
-        "sha256": "57da2ee00fefd7c4ff40d9d7a173082efd2a9fdb96407607ccd4bce4d8f29447"
+        "sha256": "d4e5c531757fa8f8ce46578b4dfe854237fbd48112722acb070c2433cb5886a8"
       }
     }
   ],
@@ -1123,11 +1123,11 @@
     },
     "collisionAudit": {
       "path": "evidence/collision-audit.json",
-      "sha256": "a20b5919ce25ec61a440f9368996e14cfe19fc91c0d3d7a26cbb890dc4daf6f2"
+      "sha256": "5083ae79e2be71e52d3b634c4a862456e6612fd1ec76fe3f0619b51e250e1f0d"
     },
     "performanceReport": {
       "path": "evidence/performance-report.json",
-      "sha256": "48f3919fc0378e5f864b4306911a8e1aa057d80a308fc502093431bf77d641e9"
+      "sha256": "8fb55fa5b094c16f1eaa99f18a64e4f9c68a9b2be58ad082fab5006f05898ee2"
     },
     "ownerAcceptance": null
   }
