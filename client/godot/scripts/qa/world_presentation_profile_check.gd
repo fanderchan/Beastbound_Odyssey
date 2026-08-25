@@ -97,8 +97,8 @@ static func run(host: Node) -> Dictionary:
 	)
 	_expect_vector(
 		WorldPresentationProfile.camera_zoom_for(true, v2),
-		Vector2(1.55, 1.55),
-		"v2 美术预览必须启用 1.55 相机",
+		Vector2(1.82, 1.82),
+		"v2 美术预览必须启用 1.82 相机",
 		errors
 	)
 	_expect_vector(
@@ -146,7 +146,7 @@ static func run(host: Node) -> Dictionary:
 	host.call("_refresh_world_camera_safe_area", host.get_viewport_rect().size)
 	_expect_vector(
 		host.get("game_camera").zoom,
-		Vector2(1.55, 1.55),
+		Vector2(1.82, 1.82),
 		"Main 未应用 v2 canary 相机",
 		errors
 	)
@@ -167,12 +167,12 @@ static func run(host: Node) -> Dictionary:
 	var v2_sample_screen: Vector2 = host.call("_world_to_screen", v2_sample_world)
 	var v2_round_trip_world: Vector2 = host.call("_screen_to_world", v2_sample_screen)
 	if not v2_round_trip_world.is_equal_approx(v2_sample_world):
-		errors.append("v2 1.55 zoom 下 screen/world 坐标不能往返")
+		errors.append("v2 1.82 zoom 下 screen/world 坐标不能往返")
 	var v2_viewport_size: Vector2 = host.get_viewport_rect().size
 	var v2_viewport_world_rect: Rect2 = host.call("_viewport_world_rect")
-	var expected_v2_world_size := v2_viewport_size / Vector2(1.55, 1.55)
+	var expected_v2_world_size := v2_viewport_size / Vector2(1.82, 1.82)
 	if not v2_viewport_world_rect.size.is_equal_approx(expected_v2_world_size):
-		errors.append("v2 viewport world rect 未按 1.55 zoom 缩放")
+		errors.append("v2 viewport world rect 未按 1.82 zoom 缩放")
 	host.set("battle_active", true)
 	host.call("_apply_world_presentation_profile")
 	_expect_vector(
@@ -185,8 +185,8 @@ static func run(host: Node) -> Dictionary:
 	host.call("_apply_world_presentation_profile")
 	_expect_vector(
 		host.get("game_camera").zoom,
-		Vector2(1.55, 1.55),
-		"v2 预览离开战斗后相机未恢复 1.55",
+		Vector2(1.82, 1.82),
+		"v2 预览离开战斗后相机未恢复 1.82",
 		errors
 	)
 	host.set("map_visual_render_state", v1.duplicate(true))

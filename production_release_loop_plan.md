@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W013
+> 当前游标：R1.W014
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -592,8 +592,8 @@
 - [x] **R1.W012 OWNER｜Firebud v2 二次返工后人眼复验**
   依赖：R1.W011。项目所有者明确表示“我不会验证。你自行验证”，把本轮审片与继续返工交给 Codex，但没有亲自接受精确画面或授权伪造签名。受委托美术总监基于 W011 当前 HEAD 的 28.67 秒真实 Main、八帧联系表、十动作、Computer Use、碰撞和性能材料再次退回：全图 14 名 NPC 与关键物件一起参与镜头求解，虽无 HUD 交叠却把村口压成角色展板；训练场仍是十字路加散件，缺少空间围合；角色、地表与物件的密度、清晰度和光照仍不统一。本项不创建 owner acceptance、attestation、promotion 或玩家可达状态，返工拆为 W013–W017。
 
-- [ ] **R1.W013 AUTO｜Firebud v2 局部 HUD 安全构图与首屏密度纠偏**
-  依赖：R1.W012。把镜头避让范围从全图 14 名 NPC／全部关键物件收敛为基础玩家画幅附近、自然可见或即将进入画面的主体；继续对所有当前可见 NPC／关键环境的完整 alpha、固定 HUD 和视口裁边 fail closed。移除 `14/14` 同屏反门禁，冻结合理首屏密度带和邻近 warp 可读性，不隐藏 HUD、不缩小人物、不删除服务、不改 warp/spawn 或玩法地图。
+- [x] **R1.W013 AUTO｜Firebud v2 局部 HUD 安全构图与首屏密度纠偏**
+  依赖：R1.W012。完成纠偏：镜头求解只纳入基础无遮挡世界带内、与其相交或距其一个视觉余量的完整 alpha 主体，全图主体仍进入诊断但不再触发 `14/14` 同屏反门禁。完整进入安全世界带的 NPC 冻结为 `4..7`，其完整 alpha 与固定 HUD 交叠或视口裁边均失败关闭；村口 idle/moving 实测为 `5/7`，邻近训练场 warp 完整可读。精确 v2 review zoom 从 `1.55×` 调为 `1.82×` 恢复角色可读体量，未缩小人物、隐藏 HUD、删除服务或改变 warp/spawn、binding、地图与玩法拓扑。真实 Main 28.67 秒／860 帧、性能 `8/8 @ 60fps`、Godot `11/11`、Python `13/13` 和 bundle auditor `17/17` 通过；W011 六类正式证据已 fail-closed 移入 superseded，候选继续 pending。
 
 - [ ] **R1.W014 AUTO｜Firebud v2 服务簇、训练分区与地标围合重做**
   依赖：R1.W013。保留 14 名 NPC 的身份、服务、对白、appearance、碰撞／approach、主路、遇敌区和双向 warp，使用 Firebud 正式物件建立生活服务簇、训练功能区、入口、路线终点及前后景层级；任何 NPC、物件或 blockedCells 变化必须逐项列出并做权威闭环，不把角色烘焙进地图。
@@ -644,7 +644,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（R1.W012 委托审片退回，当前 R1.W013 AUTO） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.W013 完成，当前 R1.W014 AUTO） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -693,6 +693,7 @@
 - 2026-08-24｜R1.W010｜docs/phase_521_production_release_r1_w010_firebud_hud_glyph_stability.md + `.run/evidence/r1_w010/` + scratch action matrix `r1-w010-action-matrix-20260824-d`｜根因拆为连续预览增量式呈现与旧 Computer Use 村口 warp after 的真实不完整按钮帧；旧视频 `840/840`、runtime PNG `10/10` 证明无字体／Canvas 回归，新模板门禁准确拒绝旧坏帧。Godot 源文字+连续 6 帧、MP4 全帧、runtime/Computer Use 模板相似度与单图审片板全部 fail closed；最终 Main 视频 `860/860`、十动作 `60/60`、性能 `5/5` 通过｜W011 正式证据未启动，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W011
 - 2026-08-25｜R1.W011｜docs/phase_522_production_release_r1_w011_firebud_second_exact_evidence_refreeze.md + Computer Use `6d3134bb5fdb` + collision `0fb6b79e683c` + performance `c2b55eb24b19` + `.run/evidence/r1_w011/`｜同一最终候选明确 supersede W006；两图十动作 Main pair／十唯一正式图、真实 Computer Use `10/10` 与 20 张原始前后 JPEG、任务 HUD `60/60` 连续读回、28.67 秒／860 帧视频及 81 项清单全部重冻；性能 `8/8 @ 60fps`、Godot `10/10`、Node `42/42`、Python `64+17` 与 `189 files / 112 PNG / 17 JSON / errors=[]` 审计全绿｜候选仍 `owner_review_pending / pending / false / false` 且普通玩家不可达；缺口精确只剩 OWNER acceptance、release attestation、released+enabled lifecycle，下一任务 R1.W012 OWNER
 - 2026-08-25｜R1.W012｜受委托美术总监再次退回 + docs/phase_523_production_release_r1_w012_firebud_delegated_third_rejection.md｜项目所有者明确说明“我不会验证。你自行验证”，Codex 审看 W011 当前 28.67 秒真实 Main、八帧联系表、十动作、Computer Use、碰撞和性能后选择退回；工程证据仍绿，但 `14/14` 全图主体镜头求解把村口压成角色展板，训练场缺少围合与地标层级，角色／地表／物件仍未形成统一视觉权重｜不伪造 owner acceptance 或签名，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达；返工拆为 W013–W017，R1.02 改依赖 W017，下一任务 R1.W013
+- 2026-08-26｜R1.W013｜docs/phase_524_production_release_r1_w013_firebud_local_hud_composition_density.md + `.run/evidence/r1_w013/`｜全图主体镜头求解收敛为局部完整 alpha 世界带，移除 `14/14` 同屏反门禁并冻结安全带 NPC `4..7`；精确 v2 review zoom 调为 `1.82×`，村口 idle/moving 实测安全 NPC `5/7` 且邻近 warp 完整。真实 Main `860` 帧／28.67 秒、性能 `8/8 @ 60fps`、Godot `11/11`、Python `13/13`、auditor `17/17` 与 `134 files / errors=[]` 结构审计通过｜W011 六类正式证据已移入 superseded，当前九个发布证据/生命周期门禁按预期缺失；服务分区、训练围合和地标层级仍由 W014 阻塞，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W014
 
 ## 7. 正式上线硬门槛
 

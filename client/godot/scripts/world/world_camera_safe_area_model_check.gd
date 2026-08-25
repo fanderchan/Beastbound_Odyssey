@@ -240,6 +240,29 @@ func _run() -> void:
 		"完整轮廓本来远离固定 HUD 时不得制造镜头漂移",
 		errors
 	)
+	var local_composition_subjects := WorldCameraSafeAreaModel.nearby_composition_subject_rects(
+		[
+			Rect2(420.0, 180.0, 180.0, 140.0),
+			Rect2(1276.0, 280.0, 24.0, 80.0),
+			Rect2(1310.0, 280.0, 24.0, 80.0),
+		],
+		Rect2(Vector2.ZERO, REFERENCE_VIEWPORT)
+	)
+	_expect(
+		local_composition_subjects.size() == 2,
+		"局部构图只应保留自然可见或一档视觉余量内的主体",
+		errors
+	)
+	_expect(
+		local_composition_subjects.has(Rect2(1276.0, 280.0, 24.0, 80.0)),
+		"贴近视口边缘的完整 alpha 主体必须继续参加 HUD／裁边求解",
+		errors
+	)
+	_expect(
+		not local_composition_subjects.has(Rect2(1310.0, 280.0, 24.0, 80.0)),
+		"全图远处主体不得把玩家镜头拉成全员展板",
+		errors
+	)
 
 	var report := {
 		"ok": errors.is_empty(),
@@ -258,6 +281,7 @@ func _run() -> void:
 		"landmarkSafeAnchorX": landmark_safe,
 		"nearbyLandmarkSafeAnchorX": nearby_landmark_safe,
 		"compositionAnchor": composition_anchor,
+		"localCompositionSubjectCount": local_composition_subjects.size(),
 	}
 	print("WORLD_CAMERA_SAFE_AREA_MODEL_CHECK: %s" % JSON.stringify(report))
 	quit(0 if errors.is_empty() else 1)

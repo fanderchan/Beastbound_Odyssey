@@ -47,6 +47,8 @@ const COMPLETE_FRAME_ATTEMPTS := 10
 const HUD_GLYPH_STABILITY_FRAME_COUNT := 6
 const MOVE_FRAME_LIMIT := 240
 const FIREBUD_BUNDLE_ID := "firebud_region_visual_v2"
+const FIREBUD_VILLAGE_SAFE_NPC_MIN := 4
+const FIREBUD_VILLAGE_SAFE_NPC_MAX := 7
 const HUD_GLYPH_REGIONS := {
 	"tabs": {
 		"rect": Rect2i(1020, 136, 166, 24),
@@ -366,40 +368,15 @@ func run(request: Dictionary) -> Dictionary:
 		"hudOverlappingNpcIds",
 		[]
 	) as Array
-	var requires_village_full_alpha_gate := (
+	var requires_village_local_alpha_gate := (
 		str(prepared.get("bundleId", "")) == "firebud_region_visual_v2"
 		and map_id == "firebud_village_gate"
 		and capture_variant in ["default", "pointer"]
 	)
-	if requires_village_full_alpha_gate and not overlapping_npcs.is_empty():
-		errors.append(
-			"固定 HUD 覆盖完整 NPC alpha：%s"
-			% ",".join(_string_array(overlapping_npcs))
-		)
 	var overlapping_key_environment := camera_composition.get(
 		"hudOverlappingKeyEnvironmentIds",
 		[]
 	) as Array
-	if requires_village_full_alpha_gate and not overlapping_key_environment.is_empty():
-		errors.append(
-			"固定 HUD 覆盖关键环境 alpha：%s"
-			% ",".join(_string_array(overlapping_key_environment))
-		)
-	var clipped_npcs := camera_composition.get("viewportClippedNpcIds", []) as Array
-	if requires_village_full_alpha_gate and not clipped_npcs.is_empty():
-		errors.append(
-			"可见 NPC 完整 alpha 被视口边缘裁切：%s"
-			% ",".join(_string_array(clipped_npcs))
-		)
-	var clipped_key_environment := camera_composition.get(
-		"viewportClippedKeyEnvironmentIds",
-		[]
-	) as Array
-	if requires_village_full_alpha_gate and not clipped_key_environment.is_empty():
-		errors.append(
-			"可见关键环境 alpha 被视口边缘裁切：%s"
-			% ",".join(_string_array(clipped_key_environment))
-		)
 	if str(prepared.get("bundleId", "")) == "firebud_region_visual_v2":
 		var configured_anchor := camera_composition.get("configuredAnchor", []) as Array
 		if (
@@ -413,9 +390,64 @@ func run(request: Dictionary) -> Dictionary:
 				errors.append("村口完整 NPC alpha 门禁没有覆盖全部 14 名 NPC")
 			if int(camera_composition.get("keyEnvironmentSubjectCount", 0)) != 7:
 				errors.append("村口关键环境 alpha 门禁没有覆盖冻结的 7 个物件")
-			if requires_village_full_alpha_gate:
-				if int(camera_composition.get("visibleNpcCount", 0)) != 14:
-					errors.append("村口没有在同一安全画幅完整呈现全部 14 名 NPC")
+			if requires_village_local_alpha_gate:
+				var safe_npc_count := int(camera_composition.get("safeNpcCount", 0))
+				if (
+					safe_npc_count < FIREBUD_VILLAGE_SAFE_NPC_MIN
+					or safe_npc_count > FIREBUD_VILLAGE_SAFE_NPC_MAX
+				):
+					errors.append(
+						"村口首屏安全世界带 NPC 密度越界：expected=%d..%d actual=%d"
+						% [
+							FIREBUD_VILLAGE_SAFE_NPC_MIN,
+							FIREBUD_VILLAGE_SAFE_NPC_MAX,
+							safe_npc_count,
+						]
+					)
+				var unsafe_safe_npcs: Array[String] = []
+				for npc_id in _string_array(camera_composition.get("safeNpcIds", [])):
+					if overlapping_npcs.has(npc_id):
+						unsafe_safe_npcs.append(npc_id)
+				if not unsafe_safe_npcs.is_empty():
+					errors.append(
+						"安全世界带 NPC 完整 alpha 被固定 HUD 覆盖：%s"
+						% ",".join(unsafe_safe_npcs)
+					)
+				var unsafe_safe_environment: Array[String] = []
+				for object_id in _string_array(
+					camera_composition.get("safeKeyEnvironmentIds", [])
+				):
+					if overlapping_key_environment.has(object_id):
+						unsafe_safe_environment.append(object_id)
+				if not unsafe_safe_environment.is_empty():
+					errors.append(
+						"安全世界带关键环境完整 alpha 被固定 HUD 覆盖：%s"
+						% ",".join(unsafe_safe_environment)
+					)
+				var clipped_safe_npcs: Array[String] = []
+				for npc_id in _string_array(camera_composition.get("safeNpcIds", [])):
+					if _string_array(
+						camera_composition.get("viewportClippedNpcIds", [])
+					).has(npc_id):
+						clipped_safe_npcs.append(npc_id)
+				if not clipped_safe_npcs.is_empty():
+					errors.append(
+						"安全世界带 NPC 完整 alpha 被视口边缘裁切：%s"
+						% ",".join(clipped_safe_npcs)
+					)
+				var clipped_safe_environment: Array[String] = []
+				for object_id in _string_array(
+					camera_composition.get("safeKeyEnvironmentIds", [])
+				):
+					if _string_array(
+						camera_composition.get("viewportClippedKeyEnvironmentIds", [])
+					).has(object_id):
+						clipped_safe_environment.append(object_id)
+				if not clipped_safe_environment.is_empty():
+					errors.append(
+						"安全世界带关键环境完整 alpha 被视口边缘裁切：%s"
+						% ",".join(clipped_safe_environment)
+					)
 				var nearby_warp := camera_composition.get("nearestWarp", {}) as Dictionary
 				if (
 					str(nearby_warp.get("id", "")) != "warp_to_training_yard"
@@ -650,6 +682,7 @@ func _camera_composition_report() -> Dictionary:
 	var npc_commands: Array[Dictionary] = host._world_depth_npc_commands()
 	var npc_subject_report := _composition_subject_report(
 		npc_commands,
+		safe_rect,
 		fixed_hud_rects,
 		task_hud_rect,
 		task_hud_visible,
@@ -670,6 +703,7 @@ func _camera_composition_report() -> Dictionary:
 			key_environment_commands.append(command)
 	var key_environment_report := _composition_subject_report(
 		key_environment_commands,
+		safe_rect,
 		fixed_hud_rects,
 		task_hud_rect,
 		task_hud_visible,
@@ -727,12 +761,16 @@ func _camera_composition_report() -> Dictionary:
 		"npcAlphaSubjectCount": int(npc_subject_report.get("subjectCount", 0)),
 		"visibleNpcCount": int(npc_subject_report.get("visibleCount", 0)),
 		"visibleNpcIds": npc_subject_report.get("visibleIds", []),
+		"safeNpcCount": int(npc_subject_report.get("safeCount", 0)),
+		"safeNpcIds": npc_subject_report.get("safeIds", []),
 		"npcAlphaScreenRects": npc_subject_report.get("screenRects", {}),
 		"hudOverlappingNpcIds": npc_subject_report.get("hudOverlapIds", []),
 		"viewportClippedNpcIds": npc_subject_report.get("viewportClippedIds", []),
 		"keyEnvironmentSubjectCount": int(key_environment_report.get("subjectCount", 0)),
 		"visibleKeyEnvironmentCount": int(key_environment_report.get("visibleCount", 0)),
 		"visibleKeyEnvironmentIds": key_environment_report.get("visibleIds", []),
+		"safeKeyEnvironmentCount": int(key_environment_report.get("safeCount", 0)),
+		"safeKeyEnvironmentIds": key_environment_report.get("safeIds", []),
 		"keyEnvironmentAlphaScreenRects": key_environment_report.get("screenRects", {}),
 		"hudOverlappingKeyEnvironmentIds": key_environment_report.get("hudOverlapIds", []),
 		"viewportClippedKeyEnvironmentIds": key_environment_report.get("viewportClippedIds", []),
@@ -742,6 +780,7 @@ func _camera_composition_report() -> Dictionary:
 
 func _composition_subject_report(
 	commands: Array[Dictionary],
+	composition_safe_rect: Rect2,
 	fixed_hud_rects: Array[Rect2],
 	task_hud_rect: Rect2,
 	task_hud_visible: bool,
@@ -751,6 +790,7 @@ func _composition_subject_report(
 	var edge_safe_rect := viewport_rect.grow(-WorldCameraSafeAreaModel.DEFAULT_VISUAL_GAP_PX)
 	var subject_count := 0
 	var visible_ids: Array[String] = []
+	var safe_ids: Array[String] = []
 	var hud_overlap_ids: Array[String] = []
 	var task_overlap_ids: Array[String] = []
 	var viewport_clipped_ids: Array[String] = []
@@ -781,6 +821,8 @@ func _composition_subject_report(
 		if not viewport_rect.intersects(screen_rect):
 			continue
 		visible_ids.append(subject_id)
+		if composition_safe_rect.encloses(screen_rect):
+			safe_ids.append(subject_id)
 		if not edge_safe_rect.encloses(screen_rect):
 			viewport_clipped_ids.append(subject_id)
 		if task_hud_visible and task_hud_rect.intersects(screen_rect):
@@ -790,6 +832,7 @@ func _composition_subject_report(
 				hud_overlap_ids.append(subject_id)
 				break
 	visible_ids.sort()
+	safe_ids.sort()
 	hud_overlap_ids.sort()
 	task_overlap_ids.sort()
 	viewport_clipped_ids.sort()
@@ -797,6 +840,8 @@ func _composition_subject_report(
 		"subjectCount": subject_count,
 		"visibleCount": visible_ids.size(),
 		"visibleIds": visible_ids,
+		"safeCount": safe_ids.size(),
+		"safeIds": safe_ids,
 		"hudOverlapIds": hud_overlap_ids,
 		"taskOverlapIds": task_overlap_ids,
 		"viewportClippedIds": viewport_clipped_ids,

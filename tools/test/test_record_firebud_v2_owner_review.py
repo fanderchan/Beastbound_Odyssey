@@ -72,12 +72,30 @@ def _capture_report(*, map_id: str, mode: str) -> dict:
             "taskHudOverlappingBlockingObjectIds": [],
             "npcAlphaSubjectCount": 14,
             "visibleNpcCount": 14,
-            "visibleNpcIds": ["village_guard"],
+            "visibleNpcIds": [
+                "firebud_bank_keeper",
+                "firebud_pet_mm_trial_mentor",
+                "firebud_riding_trainer",
+                "firebud_shopkeeper",
+                "firebud_storyteller",
+                "village_guard",
+            ],
+            "safeNpcCount": 6,
+            "safeNpcIds": [
+                "firebud_bank_keeper",
+                "firebud_pet_mm_trial_mentor",
+                "firebud_riding_trainer",
+                "firebud_shopkeeper",
+                "firebud_storyteller",
+                "village_guard",
+            ],
             "hudOverlappingNpcIds": [],
             "viewportClippedNpcIds": [],
             "keyEnvironmentSubjectCount": 7,
             "visibleKeyEnvironmentCount": 4,
             "visibleKeyEnvironmentIds": ["village_trade_counter_blocked_cluster_01"],
+            "safeKeyEnvironmentCount": 1,
+            "safeKeyEnvironmentIds": ["village_trade_counter_blocked_cluster_01"],
             "hudOverlappingKeyEnvironmentIds": [],
             "viewportClippedKeyEnvironmentIds": [],
             "nearestWarp": {
@@ -324,10 +342,6 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
                 ("playerClearOfFixedHud", False),
                 ("playerAtEffectiveAnchor", False),
                 ("taskHudOverlappingBlockingObjectIds", ["service_pavilion"]),
-                ("hudOverlappingNpcIds", ["firebud_doctor"]),
-                ("hudOverlappingKeyEnvironmentIds", ["service_pavilion"]),
-                ("viewportClippedNpcIds", ["firebud_stable_keeper"]),
-                ("viewportClippedKeyEnvironmentIds", ["ancient_tree"]),
             )
             for key, value in invalid_cases:
                 report = _capture_report(map_id="firebud_village_gate", mode="idle")
@@ -343,13 +357,36 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
 
             for key, value in (
                 ("npcAlphaSubjectCount", 13),
-                ("visibleNpcCount", 13),
+                ("safeNpcCount", 3),
+                ("safeNpcCount", 8),
                 ("keyEnvironmentSubjectCount", 6),
             ):
                 report = _capture_report(map_id="firebud_village_gate", mode="idle")
                 report["cameraComposition"][key] = value
                 path.write_text(json.dumps(report), encoding="utf-8")
                 with self.subTest(key=key):
+                    with self.assertRaises(TOOL.FirebudV2RecordingError):
+                        TOOL._read_capture_report(
+                            path,
+                            map_id="firebud_village_gate",
+                            mode="idle",
+                        )
+
+            for safe_key, conflict_key in (
+                ("safeNpcIds", "hudOverlappingNpcIds"),
+                ("safeNpcIds", "viewportClippedNpcIds"),
+                ("safeKeyEnvironmentIds", "hudOverlappingKeyEnvironmentIds"),
+                (
+                    "safeKeyEnvironmentIds",
+                    "viewportClippedKeyEnvironmentIds",
+                ),
+            ):
+                report = _capture_report(map_id="firebud_village_gate", mode="idle")
+                report["cameraComposition"][conflict_key] = [
+                    report["cameraComposition"][safe_key][0]
+                ]
+                path.write_text(json.dumps(report), encoding="utf-8")
+                with self.subTest(safe_key=safe_key, conflict_key=conflict_key):
                     with self.assertRaises(TOOL.FirebudV2RecordingError):
                         TOOL._read_capture_report(
                             path,

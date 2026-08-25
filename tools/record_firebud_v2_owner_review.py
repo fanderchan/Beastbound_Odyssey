@@ -76,6 +76,8 @@ MAX_DURATION_SECONDS = 90.0
 DEFAULT_SAMPLE_COUNT = 8
 MAX_SAMPLE_COUNT = 16
 HUD_GLYPH_STABILITY_FRAME_COUNT = 6
+FIREBUD_VILLAGE_SAFE_NPC_MIN = 4
+FIREBUD_VILLAGE_SAFE_NPC_MAX = 7
 SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SAFE_MAP_ID = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 REVIEW_MAPS = ("firebud_village_gate", "firebud_training_yard")
@@ -387,28 +389,73 @@ def _read_capture_report(
                         "cameraComposition.keyEnvironmentSubjectCount="
                         f"{camera_composition.get('keyEnvironmentSubjectCount')!r}"
                     )
-                requires_full_village_composition = capture_variant in (
+                requires_local_village_composition = capture_variant in (
                     "",
                     "default",
                     "pointer",
                 )
-                if requires_full_village_composition:
-                    for key in (
-                        "hudOverlappingNpcIds",
-                        "hudOverlappingKeyEnvironmentIds",
-                        "viewportClippedNpcIds",
-                        "viewportClippedKeyEnvironmentIds",
+                if requires_local_village_composition:
+                    safe_npc_count = camera_composition.get("safeNpcCount")
+                    if (
+                        not isinstance(safe_npc_count, int)
+                        or safe_npc_count < FIREBUD_VILLAGE_SAFE_NPC_MIN
+                        or safe_npc_count > FIREBUD_VILLAGE_SAFE_NPC_MAX
                     ):
-                        if camera_composition.get(key) != []:
-                            mismatches.append(
-                                f"cameraComposition.{key}="
-                                f"{camera_composition.get(key)!r}"
-                            )
-                    if camera_composition.get("visibleNpcCount") != 14:
                         mismatches.append(
-                            "cameraComposition.visibleNpcCount="
-                            f"{camera_composition.get('visibleNpcCount')!r}"
+                            "cameraComposition.safeNpcCount="
+                            f"{safe_npc_count!r}"
                         )
+                    safe_npc_ids = camera_composition.get("safeNpcIds")
+                    if (
+                        not isinstance(safe_npc_ids, list)
+                        or len(safe_npc_ids) != safe_npc_count
+                        or not all(isinstance(value, str) and value for value in safe_npc_ids)
+                    ):
+                        mismatches.append(
+                            f"cameraComposition.safeNpcIds={safe_npc_ids!r}"
+                        )
+                    safe_environment_ids = camera_composition.get(
+                        "safeKeyEnvironmentIds"
+                    )
+                    safe_environment_count = camera_composition.get(
+                        "safeKeyEnvironmentCount"
+                    )
+                    if (
+                        not isinstance(safe_environment_ids, list)
+                        or not isinstance(safe_environment_count, int)
+                        or len(safe_environment_ids) != safe_environment_count
+                        or not all(
+                            isinstance(value, str) and value
+                            for value in safe_environment_ids
+                        )
+                    ):
+                        mismatches.append(
+                            "cameraComposition.safeKeyEnvironmentIds="
+                            f"{safe_environment_ids!r}"
+                        )
+                    for safe_key, conflict_key in (
+                        ("safeNpcIds", "hudOverlappingNpcIds"),
+                        ("safeNpcIds", "viewportClippedNpcIds"),
+                        (
+                            "safeKeyEnvironmentIds",
+                            "hudOverlappingKeyEnvironmentIds",
+                        ),
+                        (
+                            "safeKeyEnvironmentIds",
+                            "viewportClippedKeyEnvironmentIds",
+                        ),
+                    ):
+                        safe_ids = camera_composition.get(safe_key, [])
+                        conflict_ids = camera_composition.get(conflict_key, [])
+                        if (
+                            not isinstance(safe_ids, list)
+                            or not isinstance(conflict_ids, list)
+                            or set(safe_ids).intersection(conflict_ids)
+                        ):
+                            mismatches.append(
+                                f"cameraComposition.{safe_key}/{conflict_key}="
+                                f"{safe_ids!r}/{conflict_ids!r}"
+                            )
                     nearest_warp = camera_composition.get("nearestWarp")
                     if (
                         not isinstance(nearest_warp, dict)

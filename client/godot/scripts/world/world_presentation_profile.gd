@@ -8,7 +8,7 @@ const WorldCameraSafeAreaModel := preload(
 const FIREBUD_REVIEW_BUNDLE_ID := "firebud_region_visual_v2"
 const LAYERED_SEMANTIC_OVERLAY := "layered_semantic_overlay"
 const NORMAL_CAMERA_ZOOM := Vector2.ONE
-const FIREBUD_REVIEW_CAMERA_ZOOM := Vector2(1.55, 1.55)
+const FIREBUD_REVIEW_CAMERA_ZOOM := Vector2(1.82, 1.82)
 # Firebud v2 places its landmark spine east of the player. Reserve 60% of the
 # unobstructed world band on that side instead of composing through the fixed
 # right task HUD. The vertical anchor deliberately keeps the Phase400 behavior.

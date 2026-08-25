@@ -9,6 +9,23 @@ const DEFAULT_INTERACTION_CLEARANCE_PX := 112.0
 const DEFAULT_VISUAL_GAP_PX := 12.0
 
 
+static func nearby_composition_subject_rects(
+	subject_rects_at_base: Array[Rect2],
+	viewport_rect: Rect2,
+	lookahead_px: float = DEFAULT_VISUAL_GAP_PX
+) -> Array[Rect2]:
+	var nearby: Array[Rect2] = []
+	if viewport_rect.size.x <= 0.0 or viewport_rect.size.y <= 0.0:
+		return nearby
+	var interest_rect := viewport_rect.grow(maxf(0.0, lookahead_px))
+	for subject in subject_rects_at_base:
+		if subject.size.x <= 0.0 or subject.size.y <= 0.0:
+			continue
+		if interest_rect.intersects(subject):
+			nearby.append(subject)
+	return nearby
+
+
 static func safe_viewport_rect(
 	viewport_size: Vector2,
 	blocker_rects: Array[Rect2],

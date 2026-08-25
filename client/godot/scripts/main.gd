@@ -15910,6 +15910,17 @@ func _world_camera_landmark_safe_anchor(
 				absf(screen_end.y - screen_start.y)
 			)
 		))
+	# HUD avoidance is a local camera-composition contract. Pulling every NPC and
+	# landmark on the entire map into the solver turns a lived-in map into an
+	# inventory board and can move the camera toward subjects the player has not
+	# naturally reached. Keep only subjects that already intersect, or are within
+	# one visual gap of, the unshifted unobstructed world band. Nearby subjects
+	# still use their complete opaque alpha rect below, so HUD and edge safety stay
+	# strict.
+	subject_rects = WorldCameraSafeAreaModel.nearby_composition_subject_rects(
+		subject_rects,
+		world_camera_safe_viewport_rect
+	)
 	var composed_anchor := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects(
 		base_anchor,
 		world_camera_safe_viewport_rect,
