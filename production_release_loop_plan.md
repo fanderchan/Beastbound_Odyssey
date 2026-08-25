@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.02
+> 当前游标：R1.03
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -114,8 +114,8 @@
 - [x] **R1.01 OWNER｜Firebud Village v2 人眼验收**
   依赖：R0.09。展示真实 Main.tscn 中静止、移动、寻路、NPC、战斗切入和性能证据；项目所有者明确批准、退回或首发延期。2026-08-21 项目所有者明确退回：修正碰撞/哈希与录片收口，重做道路过渡、UI 安全区和密度比例后再审；本项只记录退回结论，不批准、不提升、不启用候选，返工拆为 R1.W001–R1.W007。
 
-- [ ] **R1.02 AUTO｜执行 Firebud Village v2 验收结论**
-  依赖：R1.W017（R1.W012 已由受委托审片再次退回）。第三次返工后取得可追溯的明确批准，才使用新冻结的 hash-bound 提升与证明链精确发布；再次退回则继续按一个根因一个 R1.Wxxx 返工；延期则保证玩家不可到达且旧正式版本保持有效。
+- [x] **R1.02 AUTO｜执行 Firebud Village v2 验收结论**
+  依赖：R1.W017（R1.W012 已由受委托审片再次退回）。已执行“首发延期”分支：普通 catalog 继续只引用历史 v1，review catalog 才引用 v2；v2 保持 `owner_review_pending / pending / false / false`，无 owner acceptance、release attestation 或 promotion。只读检查发现历史 v1 binding 已随 W014 当前权威碰撞漂移，严格运行时按设计失败闭合，普通 Main 使用既有程序化地图回退而非偷载 v2；没有改写旧 v1 哈希／证明来制造假绿。正常 Main 的解析、点击移动、寻路和双向切图 `4/4` 通过，显式 preview 才能准备 v2，详见 Phase 529。
 
 - [ ] **R1.03 OWNER｜融合肖像与融合流程人眼验收**
   依赖：R0.09。展示 Phase 479 候选的来源/结果肖像、融合确认、结果页、正常状态、失败状态与当前不含骑乘的边界。
@@ -644,7 +644,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（R1.W017 完成，当前 R1.02 AUTO 延期分支） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.02 延期分支完成，当前 R1.03 OWNER） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -698,6 +698,7 @@
 - 2026-08-26｜R1.W015｜docs/phase_526_production_release_r1_w015_firebud_visual_grade_scale_clarity_lighting.md + `.run/evidence/r1_w015/`｜玩家镜头安全主体从固定脚点探针升级为正式动作完整 alpha union，训练终点危险锚点 y=`207→253`；地表保留 authored low-contrast anchor，player／NPC／mapObject 采用选择性有界视觉分级与 linear filter。真实 Main 四段人物高度 `135.626..140.868px`、NPC 中位 `133.661..135.626px`、比例 `1.000..1.039`，完整 alpha 的 safe rect／任务 HUD／固定 HUD／视口边缘全部通过；28.7 秒／861 帧视频、Godot `13/13`、Python `13+17`、性能 `8/8 @ 60fps`、strict pending preview 和 `134 files / errors=[]` 审计通过｜九个正式证据／OWNER／生命周期门禁按预期仍缺，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W016
 - 2026-08-26｜R1.W016｜docs/phase_527_production_release_r1_w016_firebud_third_exact_evidence_refreeze.md + Computer Use `13188311632e` + collision `d32e84de942d` + performance `251c67e139db` + `.run/evidence/r1_w016/`｜正式取证修复地图端点 camera limits 与理想锚点不一致，人物完整 alpha 改为可达范围内硬优先；同一候选显式 supersede W011，重冻两图十动作／十唯一 Main 图、真实 Computer Use `10/10` 与 20 张原始 JPEG、任务 HUD `60/60`、32.43 秒／973 帧视频、collision/catalog/performance raw runner。Godot `10/10 + 2/2`、Node `42/42`、Python `58+17`、性能 `8/8 @ 60fps` 与 `189 files / 112 PNG / 17 JSON / errors=[]` 全绿｜缺口精确只剩 OWNER acceptance、release attestation、released+enabled lifecycle；候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W017 OWNER
 - 2026-08-26｜R1.W017｜受委托美术总监建议首发延期 + docs/phase_528_production_release_r1_w017_firebud_delegated_release_deferral.md｜项目所有者继续委托 Codex 自行审片但未签署接受；逐格审看 W016 当前视频／联系表／动作帧后确认局部镜头已消除角色展板、村口三簇和训练段落建立空间层级、人物／地表／物件视觉权重收敛，没有新根因支持第四次 Firebud 返工。全游戏正式美术与其他生产门禁仍未完成，且 owner acceptance 缺失，因此建议首发延期、冻结候选、停止无证据返工｜不伪造批准／签名／attestation，不执行 promotion；v2 继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.02 AUTO 延期分支
+- 2026-08-26｜R1.02｜docs/phase_529_production_release_r1_02_firebud_deferred_runtime_enforcement.md + `.run/evidence/r1_02/`｜执行首发延期分支：普通 catalog 仍绑定历史 v1，review catalog 才绑定 v2；v2 精确保持 `owner_review_pending / pending / false / false`，无 acceptance／attestation／promotion。严格普通运行时以 `qaPreviewEnabled=false / normalPendingDisabled=true` 拒绝陈旧 v1 binding，显式 preview 才以 `1224/672` ground draws 准备 v2；正常 Main 的解析、跨帧点击移动、阻挡寻路和双向 warp `4/4` 通过，QA lane 与真实玩家目录收尾｜旧 v1 已发布制品和证明保持不可变，但因当前权威 map data 漂移不冒充仍在运行；玩家使用既有程序化回退，v2 普通玩家不可达，下一任务 R1.03 OWNER
 
 ## 7. 正式上线硬门槛
 
