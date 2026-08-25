@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W020
+> 当前游标：R1.04
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -613,8 +613,8 @@
 - [x] **R1.W019 AUTO｜融合当前 Main 精确证据重冻**
   依赖：R1.W018。已在正式隔离 QA lane 和关闭生产目录上以真实 `Main.tscn`重录 13 章：两路来源／结果正式画像、报价、五次跨帧真实左键、两次 QA-only 本地第二确认、请求中、两路成功、明确失败、重新报价恢复和首尾关闭态；权威变更／网络／profile 写入均为 0。唯一权威片为 1280×720、30 FPS、1444 帧／48.133333 秒有声 H.264/AAC，全片解码、13 张原尺寸关键帧、清单、lane lifecycle 和视觉审看通过；独立性能 `5/5`、录片内 `46+46` 样本通过，详见 Phase 532。
 
-- [ ] **R1.W020 OWNER｜融合返工后委托复验**
-  依赖：R1.W019。只审当前精确证据并给出冻结、退回或延期建议；项目所有者未亲自签署时仍不得生成 owner acceptance、可信画像 digest、release attestation 或执行 promotion。
+- [x] **R1.W020 OWNER｜融合返工后委托复验**
+  依赖：R1.W019。受委托审片逐帧复核唯一权威 48.133333 秒真实 Main、13 张 1280×720 关键帧和现有画像候选，确认 R1.03 的权威成功结果、失败零消耗恢复和重复提交三个根因均已关闭，没有新缺陷支持继续返工；建议“内部冻结当前候选、首发延期”。项目所有者未亲自签署，`semanticIndependenceVerified=false`，因此没有生成 owner acceptance、可信画像 digest、release attestation 或执行 promotion，详见 Phase 533。
 
 ### R2.Dxxx — Boss/PvP 决策缺口
 
@@ -653,7 +653,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（R1.03 委托审查退回流程，R1.W018–W019 已完成，当前 R1.W020 OWNER） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（融合 W018–W020 已关闭返工并建议首发延期，当前 R1.04 AUTO 执行延期分支） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -711,6 +711,7 @@
 - 2026-08-26｜R1.03｜受委托宠物美术总监退回流程 + docs/phase_530_production_release_r1_03_fusion_delegated_flow_rejection.md｜原尺寸审看两张 1024 透明 master、48/64/96/128 小图和 Phase445/479 当前 1280×720 Main 片；曜冠的紫金攻击轮廓与苔垒 V4E 的岩甲防御轮廓可冻结，首批不可骑范围合理。Pet Inspector `0/0`、关闭 verifier `2 forms / 1350 copied / 22 portrait / 2 QA controls`，promoter 继续只被 owner 产物按预期阻断｜权威片只有关闭／报价／第一次确认，当前产品也只有一行成功／失败消息，缺少 R1.03 明列的权威结果页和失败恢复；不生成批准或 promotion，返工拆为 R1.W018–R1.W020，下一任务 R1.W018
 - 2026-08-26｜R1.W018｜docs/phase_531_production_release_r1_w018_fusion_authoritative_outcomes.md｜新增严格融合 outcome model 和 1280×720 overlay；成功只在服务器结果、profile revision 与新宠实例全成立后展示正式画像／实际技能／绑定交易／不可骑终局／三宠消耗，明确拒绝才显示零消耗，未知回执保留同一幂等操作且不猜消耗。模型 `8/8`、面板、客户端域／合同、Node `89/89`、宠物 `36 forms / errors=0 warnings=0`、QA lane `78/78`、性能 `5/5` 全绿｜完整 portrait catalog 仍诚实暴露候选 worktree 缺 Phase371 忽略旧片，不改写历史证明；生产与 owner 门继续全关，下一任务 R1.W019
 - 2026-08-26｜R1.W019｜docs/phase_532_production_release_r1_w019_fusion_main_exact_evidence.md + `.run/evidence/r1_w019_fusion_main_outcome_review/r1-w019-fusion-main-outcomes-20260826-b/`｜真实 Main 13 章完整覆盖两路正式来源／结果画像、报价、双确认、pending、成功、明确失败、requote 恢复、不可骑和首尾关闭；5 次跨帧真实左键，权威变更／网络／profile 写入为 0。唯一权威视频 `66fd49b9…`为 1280×720、30 FPS、1444 帧／48.133333 秒有声 H.264/AAC，13 张原尺寸帧、全片解码、SHA256SUMS、lane lifecycle、录片性能 `46+46` 样本与 60 FPS 独立性能 `5/5` 全绿｜第一轮因 outcome 下层确认指纹残留被后续轮次取代；当前仍无 owner acceptance，四个生产／画像门全关，下一任务 R1.W020 OWNER
+- 2026-08-26｜R1.W020｜docs/phase_533_production_release_r1_w020_fusion_delegated_deferral.md + R1.W019 唯一权威证据 `66fd49b9…`｜受委托逐帧复核两路画像、双确认、请求中、两路成功、明确失败与重新报价恢复，确认最终回执、零消耗恢复和重复提交三个退回根因均已关闭；页面安全区、结果层级、不可骑与高价值消耗说明达到内部冻结线，没有新根因支持继续返工｜建议内部冻结当前候选并首发延期；项目所有者未亲签且 `semanticIndependenceVerified=false`，未生成 acceptance／digest／attestation，生产门继续全关，下一任务 R1.04 AUTO 延期分支
 
 ## 7. 正式上线硬门槛
 
