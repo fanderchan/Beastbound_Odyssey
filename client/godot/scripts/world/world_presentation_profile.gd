@@ -6,9 +6,11 @@ const WorldCameraSafeAreaModel := preload(
 )
 
 const FIREBUD_REVIEW_BUNDLE_ID := "firebud_region_visual_v2"
+const EARTH_VEIN_BUNDLE_ID := "earth_vein_cave_visual_v1"
 const LAYERED_SEMANTIC_OVERLAY := "layered_semantic_overlay"
 const NORMAL_CAMERA_ZOOM := Vector2.ONE
 const FIREBUD_REVIEW_CAMERA_ZOOM := Vector2(1.82, 1.82)
+const EARTH_VEIN_CAMERA_ZOOM := Vector2(1.52, 1.52)
 # Firebud v2 places its landmark spine east of the player. Reserve 60% of the
 # unobstructed world band on that side instead of composing through the fixed
 # right task HUD. The vertical anchor deliberately keeps the Phase400 behavior.
@@ -19,6 +21,8 @@ const MIN_ZOOM_COMPONENT := 0.0001
 static func camera_zoom_for(map_art_review_preview: bool, prepared_visual: Dictionary) -> Vector2:
 	if _is_firebud_review_canary(map_art_review_preview, prepared_visual):
 		return FIREBUD_REVIEW_CAMERA_ZOOM
+	if _earth_vein_camera_profile_enabled(map_art_review_preview, prepared_visual):
+		return EARTH_VEIN_CAMERA_ZOOM
 	return NORMAL_CAMERA_ZOOM
 
 
@@ -55,7 +59,42 @@ static func uses_hud_landmark_composition(
 	map_art_review_preview: bool,
 	prepared_visual: Dictionary
 ) -> bool:
-	return _is_firebud_review_canary(map_art_review_preview, prepared_visual)
+	return (
+		_is_firebud_review_canary(map_art_review_preview, prepared_visual)
+		or _earth_vein_camera_profile_enabled(
+			map_art_review_preview,
+			prepared_visual
+		)
+	)
+
+
+static func uses_endpoint_safe_camera(prepared_visual: Dictionary) -> bool:
+	return (
+		bool(prepared_visual.get("active", false))
+		and str(prepared_visual.get("bundleId", "")).strip_edges()
+			== EARTH_VEIN_BUNDLE_ID
+		and (
+			str(prepared_visual.get("status", "")) == "released"
+			or (
+				bool(prepared_visual.get("qaPreview", false))
+				and bool(prepared_visual.get("reviewCandidate", false))
+				and str(prepared_visual.get("status", ""))
+					== "owner_review_pending"
+			)
+		)
+	)
+
+
+static func _earth_vein_camera_profile_enabled(
+	map_art_review_preview: bool,
+	prepared_visual: Dictionary
+) -> bool:
+	if not uses_endpoint_safe_camera(prepared_visual):
+		return false
+	return (
+		str(prepared_visual.get("status", "")) == "released"
+		or map_art_review_preview
+	)
 
 
 static func uses_authored_ground_details(

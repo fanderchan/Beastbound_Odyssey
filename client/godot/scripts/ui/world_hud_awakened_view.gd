@@ -429,6 +429,39 @@ func apply_layout(viewport_size: Vector2, state: Dictionary) -> void:
 	_apply_visibility_contract()
 
 
+func camera_top_blocker_rect() -> Rect2:
+	if not _mounted or _top_panel == null or not _top_panel.is_visible_in_tree():
+		return Rect2()
+	var occupied_controls: Array[Control] = []
+	var minimap_card := _top_surface.find_child(
+		"WorldHudMinimapCard",
+		false,
+		false
+	) as Control
+	for control in [
+		minimap_card,
+		_map_name_label,
+		_map_cell_label,
+		_top_shortcut_row,
+		_top_secondary_row,
+		_left_shortcut_column,
+		_more_drawer,
+	]:
+		if (
+			control != null
+			and control.is_visible_in_tree()
+			and control.size.x > 0.0
+			and control.size.y > 0.0
+		):
+			occupied_controls.append(control)
+	if occupied_controls.is_empty():
+		return _top_panel.get_global_rect()
+	var blocker := occupied_controls[0].get_global_rect()
+	for index in range(1, occupied_controls.size()):
+		blocker = blocker.merge(occupied_controls[index].get_global_rect())
+	return blocker
+
+
 func apply_view_state(state: Dictionary) -> void:
 	_ensure_built()
 	if not _mounted:

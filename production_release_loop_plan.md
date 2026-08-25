@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W022
+> 当前游标：R1.W023
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -141,8 +141,8 @@
 - [x] **R1.W021 AUTO｜共享地图运行目录与八方向基线收口**
   来源：R1.09。已只退役历史 Firebud v1 的普通 catalog 路由，bundle／manifest／证明／历史 hash 保持不可变；primary 现精确只含仍满足冻结合同的 Mistcap，Firebud v2 与 Earth Vein 六图继续 review-only 且普通生命周期失败关闭。冻结 bundle 仍逐项校验当前成员、精确路径、binding／map data／manifest／attestation，只不再因无关目录成员变化要求历史全目录 hash 等于当前文件；普通与 review 报告生成模式也已隔离。八方向红灯定位为 W014 blocker 令旧出生点 canary 正确拒绝切角，不是算法回归；门禁现从权威 spawn 确定性寻找最近双向平直真实格，当前 `(14,10)` 两路均三点直达且同屏幕 y。Godot 相邻 `7/7`、独立 review catalog、Python `40/40` 与 QA 源合同全绿，真实目录 hash 稳定，详见 Phase 540。
 
-- [ ] **R1.W022 AUTO｜Earth Vein 四层 HUD 安全相机与端点构图**
-  依赖：R1.W021。按真实 1280×720 Main 的任务栏、顶栏、底栏和 camera limits 为四层 spawn、上下楼、出口及 F4 双共鸣台求解可达安全锚点；玩家完整 alpha、关键阻挡和交互地标不得被 HUD 或视口裁边覆盖，不改权威 warp／blockedCells／玩法拓扑。
+- [x] **R1.W022 AUTO｜Earth Vein 四层 HUD 安全相机与端点构图**
+  依赖：R1.W021。已为精确 Earth Vein 候选启用 `1.52×` 相机、可达端点 camera limits、真实顶栏占用并集与 interaction 优先双向构图；四层 spawn／上下楼／出口／F4 双共鸣台真实 Main `10/10`，玩家完整 alpha `121.478..125.856px`，指定地标完整可见且 HUD overlap 为空。去抖点击另修为输入时冻结 world point，避免相机移动后漂到邻格；16 格性能矩阵全绿。未改权威 warp／blockedCells／玩法拓扑，候选生命周期未提升，详见 Phase 541。
 
 - [ ] **R1.W023 AUTO｜Earth Vein 主体比例、密度与逐层层级重做**
   依赖：R1.W022。把真实 Main 玩家主体提升到当前 PC 世界 `120..150px` 目标区间并验证地图物件相对比例；复用已有原创 cave kit 拉开一至三层的路线密度和地标节奏。明确洞穴常驻 NPC 是否 non-applicable；若需要 NPC，只能复用正式 appearance 或走 NPC 生产管线，禁止占位。
@@ -668,7 +668,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（R1.W021 共享地图基线已收口，当前 R1.W022 修复 Earth Vein 四层 HUD 安全相机与端点构图） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.W022 四层 HUD 安全相机与端点构图已收口，当前 R1.W023 重做 Earth Vein 主体比例、密度与逐层层级） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -734,6 +734,7 @@
 - 2026-08-26｜R1.08｜docs/phase_538_production_release_r1_08_bui_vfx_deferred_runtime_enforcement.md + gate `bb6d2fc0…` + isolated Main `3bff1316…`｜发布门逐 hash 绑定 bundle／provenance／八张运行帧；普通事件 `planAttached=true / assetReady=false` 且候选纹理不可读，审片 override 三段 `assetReady=true`，退出后 `override=false / access=false / cache=false`；权威结算与时序 `5/5`、通用性能 `5/5`，隔离战斗原生三段最大 `1.253ms`｜无 owner／digest／attestation／promotion；真实目录始终 `d6b1961e…`、lane absent，下一任务 R1.09 OWNER
 - 2026-08-26｜R1.09｜docs/phase_539_production_release_r1_09_earth_vein_delegated_rejection.md + current Main `7429949e…` + F4 `67db3c43…`｜当前 bundle 仍为 `158 files / 29 JSON / 47 PNG / errors=[]`，Node 路线／遭遇 `21/21`，移动／切图／遭遇／面板 `5/5`；但一层 Main 硬门复现动态锚点未收敛、任务 HUD 覆盖四个 blocking 物件和人物仅 `82.080px`，F4 控制器又因音频未停未能收口。共享门另复现陈旧 Firebud v1 released 目录与当前碰撞/hash 不一致及八方向右路绕行｜受委托退回；无 owner decision／digest／attestation／promotion，Earth Vein 继续 review-only，返工拆为 W021–W025，下一任务 R1.W021
 - 2026-08-26｜R1.W021｜docs/phase_540_production_release_r1_w021_map_catalog_and_eight_direction_baseline.md + Godot 摘要 `284a31fd…`｜只退役 Firebud v1 普通 catalog 路由而不改历史制品／证明；primary 精确只含 Mistcap，Firebud v2 与 Earth Vein 六图继续 review-only，当前成员／路径／binding／map data／manifest／生命周期仍逐项失败关闭。八方向定位为当前 blocker 令旧固定 canary 正确拒绝切角，改为从权威 spawn 确定性选择最近双向直线真实格 `(14,10)`｜Godot parse／运行目录／世界呈现／寻路／八方向／移动／转图 `7/7`、独立 review catalog、Python `40/40` 与 QA 源合同通过；真实目录 `d6b1961e…` 不变，下一任务 R1.W022
+- 2026-08-26｜R1.W022｜docs/phase_541_production_release_r1_w022_earth_vein_hud_safe_camera.md + Main `bab4fb5c…` + perf `dab9362e…`｜精确 Earth Vein 候选采用 `1.52×`、端点可达 limits、真实顶栏占用并集及 interaction 优先双向 solver；四层 10 个 spawn／楼梯／出口／F4 单双柱场景全绿，玩家完整 alpha `121.478..125.856px`、HUD overlap 为空。点击去抖改为冻结 world point，修复相机移动后目标漂邻格；16 格 baseline/candidate idle/moving 全绿，最终四层片 `64.4s / 1932` 帧、8/8 资源收口 PASS｜未改权威地图数据或候选生命周期；F4 专项 `audio_playback_not_disabled` 仍留给 R1.W024，下一任务 R1.W023
 
 ## 7. 正式上线硬门槛
 

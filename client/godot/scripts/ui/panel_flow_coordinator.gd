@@ -5210,6 +5210,12 @@ var pending_click_screen_point:
 	set(value):
 		host.pending_click_screen_point = value
 
+var pending_click_world_point:
+	get:
+		return host.pending_click_world_point
+	set(value):
+		host.pending_click_world_point = value
+
 var has_pending_click_move_target:
 	get:
 		return host.has_pending_click_move_target
@@ -12370,23 +12376,29 @@ func _should_defer_click_screen_point() -> bool:
 
 func _queue_click_screen_point(screen_point: Vector2) -> void:
 	pending_click_screen_point = screen_point
+	# The camera can move while the repath debounce is active. Freeze the world
+	# intent at input time so a deferred click cannot drift into a neighbouring
+	# cell or interaction when the same screen pixel is resolved later.
+	pending_click_world_point = host._screen_to_world(screen_point)
 	has_pending_click_screen_point = true
 
 func _resolve_pending_click_screen_point() -> void:
 	if not has_pending_click_screen_point:
 		return
-	var screen_point = pending_click_screen_point
+	var world_point = pending_click_world_point
 	has_pending_click_screen_point = false
-	_resolve_click_screen_point(screen_point)
+	_resolve_click_world_point(world_point)
 
 func _resolve_click_screen_point(screen_point: Vector2) -> void:
+	_resolve_click_world_point(host._screen_to_world(screen_point))
+
+func _resolve_click_world_point(world_point: Vector2) -> void:
 	click_move_screen_resolve_count += 1
-	var world_point = host._screen_to_world(screen_point)
 	var ground_drop = _find_ground_pet_drop_at_world_point(world_point)
 	if not ground_drop.is_empty():
 		_set_interaction_target(_ground_pet_interaction_for_drop(ground_drop))
 		return
-	var visual_npc_interaction = host._npc_hover_interaction_at_screen_point(screen_point)
+	var visual_npc_interaction = host._npc_hover_interaction_at_world_point(world_point)
 	if not visual_npc_interaction.is_empty():
 		_set_interaction_target(visual_npc_interaction)
 		return
@@ -12457,6 +12469,8 @@ func _click_move_target_matches_current(goal_cell: Vector2i, marker_cell: Vector
 
 func _clear_pending_click_move_target(reset_cooldown: bool = true) -> void:
 	has_pending_click_screen_point = false
+	pending_click_screen_point = Vector2.ZERO
+	pending_click_world_point = Vector2.ZERO
 	has_pending_click_move_target = false
 	if reset_cooldown:
 		click_move_repath_cooldown = 0.0

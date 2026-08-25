@@ -208,7 +208,8 @@ static func composition_anchor_avoiding_rects_in_range(
 	subject_rects_at_base: Array[Rect2],
 	viewport_rect: Rect2,
 	visual_gap_px: float = DEFAULT_VISUAL_GAP_PX,
-	priority_subject_count: int = 0
+	priority_subject_count: int = 0,
+	allow_bidirectional_blocker_escape: bool = false
 ) -> Vector2:
 	if min_anchor.x > max_anchor.x or min_anchor.y > max_anchor.y:
 		return base_anchor
@@ -253,7 +254,8 @@ static func composition_anchor_avoiding_rects_in_range(
 		composition_max_anchor,
 		blocked_rects,
 		subject_rects_at_base,
-		composition_viewport
+		composition_viewport,
+		allow_bidirectional_blocker_escape
 	)
 	var y_candidates := _composition_axis_candidates(
 		1,
@@ -262,7 +264,8 @@ static func composition_anchor_avoiding_rects_in_range(
 		composition_max_anchor,
 		blocked_rects,
 		subject_rects_at_base,
-		composition_viewport
+		composition_viewport,
+		allow_bidirectional_blocker_escape
 	)
 	var best_anchor := clamped_base
 	var best_score := _composition_score(
@@ -339,7 +342,8 @@ static func _composition_axis_candidates(
 	max_anchor: Vector2,
 	blocked_rects: Array[Rect2],
 	subject_rects_at_base: Array[Rect2],
-	viewport_rect: Rect2
+	viewport_rect: Rect2,
+	allow_bidirectional_blocker_escape: bool
 ) -> Array[float]:
 	var min_value := min_anchor.x if axis == 0 else min_anchor.y
 	var max_value := max_anchor.x if axis == 0 else max_anchor.y
@@ -364,24 +368,25 @@ static func _composition_axis_candidates(
 			)
 			if not orthogonal_overlap:
 				continue
-			var candidate := base_value
+			var candidate_offsets: Array[float] = []
 			if axis == 0:
-				candidate += (
-					blocked.position.x - rect.end.x
-					if blocked.get_center().x >= viewport_center.x
-					else blocked.end.x - rect.position.x
-				)
+				candidate_offsets.append(blocked.position.x - rect.end.x)
+				if allow_bidirectional_blocker_escape:
+					candidate_offsets.append(blocked.end.x - rect.position.x)
+				elif blocked.get_center().x < viewport_center.x:
+					candidate_offsets[0] = blocked.end.x - rect.position.x
 			else:
-				candidate += (
-					blocked.position.y - rect.end.y
-					if blocked.get_center().y >= viewport_center.y
-					else blocked.end.y - rect.position.y
+				candidate_offsets.append(blocked.position.y - rect.end.y)
+				if allow_bidirectional_blocker_escape:
+					candidate_offsets.append(blocked.end.y - rect.position.y)
+				elif blocked.get_center().y < viewport_center.y:
+					candidate_offsets[0] = blocked.end.y - rect.position.y
+			for candidate_offset in candidate_offsets:
+				_append_unique_candidate(
+					candidates,
+					candidate_keys,
+					clampf(base_value + candidate_offset, min_value, max_value)
 				)
-			_append_unique_candidate(
-				candidates,
-				candidate_keys,
-				clampf(candidate, min_value, max_value)
-			)
 		if viewport_rect.size.x <= 0.0 or viewport_rect.size.y <= 0.0:
 			continue
 		var visible := rect.intersection(viewport_rect)
@@ -456,6 +461,8 @@ static func _composition_score(
 	var required_count := mini(maxi(0, priority_subject_count), subject_rects_at_base.size())
 	var priority_overlap_count := 0.0
 	var priority_overlap_area := 0.0
+	var priority_hidden_count := 0.0
+	var priority_clipped_count := 0.0
 	var overlap_count := 0.0
 	var overlap_area := 0.0
 	var clipped_count := 0.0
@@ -478,13 +485,19 @@ static func _composition_score(
 			continue
 		var visible := shifted.intersection(viewport_rect)
 		if visible.size.x <= 0.0 or visible.size.y <= 0.0:
+			if subject_index < required_count:
+				priority_hidden_count += 1.0
 			continue
 		visible_count += 1.0
 		if not viewport_rect.encloses(shifted):
 			clipped_count += 1.0
+			if subject_index < required_count:
+				priority_clipped_count += 1.0
 	return [
 		priority_overlap_count,
 		priority_overlap_area,
+		priority_hidden_count,
+		priority_clipped_count,
 		overlap_count,
 		overlap_area,
 		clipped_count,
@@ -547,6 +560,35 @@ static func camera_limit_bounds(
 		world_bounds.position - before,
 		world_bounds.size + before + after
 	)
+
+
+static func camera_limit_bounds_including_focus_points(
+	limit_bounds: Rect2,
+	focus_world_points: Array[Vector2],
+	viewport_size: Vector2,
+	camera_zoom: Vector2,
+	screen_anchor: Vector2
+) -> Rect2:
+	if focus_world_points.is_empty():
+		return limit_bounds
+	var zoom := _safe_zoom(camera_zoom)
+	var half_view := Vector2(
+		maxf(1.0, viewport_size.x) * 0.5 / zoom.x,
+		maxf(1.0, viewport_size.y) * 0.5 / zoom.y
+	)
+	var expanded := limit_bounds
+	for focus_world_point in focus_world_points:
+		if not is_finite(focus_world_point.x) or not is_finite(focus_world_point.y):
+			continue
+		var focus_center := camera_center_for_anchor(
+			focus_world_point,
+			viewport_size,
+			zoom,
+			screen_anchor
+		)
+		expanded = expanded.expand(focus_center - half_view)
+		expanded = expanded.expand(focus_center + half_view)
+	return expanded
 
 
 static func clamp_camera_center(

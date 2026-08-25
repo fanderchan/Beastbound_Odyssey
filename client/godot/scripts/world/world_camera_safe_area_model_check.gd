@@ -130,6 +130,42 @@ func _run() -> void:
 		"地图下缘玩家附近的传送交互必须同时可见可点",
 		errors
 	)
+	var endpoint_focus := Vector2(-80.0, 590.0)
+	var endpoint_anchor := Vector2(640.0, 360.0)
+	var endpoint_limits := WorldCameraSafeAreaModel.camera_limit_bounds_including_focus_points(
+		WorldCameraSafeAreaModel.camera_limit_bounds(
+			Rect2(-480.0, 10.0, 2240.0, 1200.0),
+			REFERENCE_VIEWPORT,
+			zoom,
+			reference_safe
+		),
+		[endpoint_focus],
+		REFERENCE_VIEWPORT,
+		zoom,
+		endpoint_anchor
+	)
+	var endpoint_center := WorldCameraSafeAreaModel.clamp_camera_center(
+		WorldCameraSafeAreaModel.camera_center_for_anchor(
+			endpoint_focus,
+			REFERENCE_VIEWPORT,
+			zoom,
+			endpoint_anchor
+		),
+		endpoint_limits,
+		REFERENCE_VIEWPORT,
+		zoom
+	)
+	var endpoint_focus_screen := WorldCameraSafeAreaModel.world_to_screen(
+		endpoint_focus,
+		endpoint_center,
+		REFERENCE_VIEWPORT,
+		zoom
+	)
+	_expect(
+		endpoint_focus_screen.is_equal_approx(endpoint_anchor),
+		"端点安全相机范围必须让权威出生点真实到达 HUD 安全锚点",
+		errors
+	)
 	var roundtrip_world := WorldCameraSafeAreaModel.screen_to_world(
 		edge_player_screen,
 		edge_camera,
@@ -336,6 +372,7 @@ func _run() -> void:
 		"edgeCamera": edge_camera,
 		"edgePlayerScreen": edge_player_screen,
 		"edgeInteractionScreen": edge_interaction_screen,
+		"endpointFocusScreen": endpoint_focus_screen,
 		"zoomedCamera": zoomed_camera,
 		"zoomedAnchor": zoomed_anchor,
 		"landmarkSafeAnchorX": landmark_safe,

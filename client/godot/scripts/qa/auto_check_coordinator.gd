@@ -1940,8 +1940,38 @@ func _run_auto_camera_click_check() -> void:
 	var matched_world = host.target_marker.distance_to(world_point) <= 0.1
 	var center_matches_camera = center_world.distance_to(displayed_center) <= 0.1
 	var screen_inside = Rect2(Vector2.ZERO, host.get_viewport_rect().size).has_point(screen_point)
-	var status = "ok" if matched_cell and matched_world and center_matches_camera and screen_inside else "failed"
-	print("camera click check ready: status=%s camera_target=%s displayed_center=%s center_world=%s screen=%s expected_cell=%s target_cell=%s matched_world=%s center_matches_camera=%s screen_inside=%s" % [
+
+	# Reproduce the production debounce path: queue a screen click, move the
+	# camera before the cooldown expires, then resolve it. The intended world cell
+	# must remain the cell beneath the pointer at input time, not the cell beneath
+	# the same screen pixel after the camera moved.
+	host.player.clear_move_target()
+	host._clear_navigation_state()
+	host.click_move_repath_cooldown = 0.1
+	host._set_click_move_target(screen_point)
+	var deferred_queued = host.has_pending_click_screen_point
+	var shifted_camera_cell = IsoMapModel.nearest_walkable_cell(
+		host.map_data,
+		camera_anchor_cell + Vector2i(-8, 0)
+	)
+	host.player.global_position = IsoMapModel.grid_to_world(host.map_data, shifted_camera_cell)
+	host._update_camera_position(true)
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	host.click_move_repath_cooldown = 0.0
+	host._resolve_pending_click_screen_point()
+	var deferred_matched_cell = host.has_target_cell and host.target_cell == expected_cell
+	var deferred_matched_world = host.target_marker.distance_to(world_point) <= 0.1
+	var status = "ok" if (
+		matched_cell
+		and matched_world
+		and center_matches_camera
+		and screen_inside
+		and deferred_queued
+		and deferred_matched_cell
+		and deferred_matched_world
+	) else "failed"
+	print("camera click check ready: status=%s camera_target=%s displayed_center=%s center_world=%s screen=%s expected_cell=%s target_cell=%s matched_world=%s center_matches_camera=%s screen_inside=%s deferred_queued=%s deferred_matched_cell=%s deferred_matched_world=%s" % [
 		status,
 		str(host.game_camera.global_position),
 		str(displayed_center),
@@ -1952,6 +1982,9 @@ func _run_auto_camera_click_check() -> void:
 		str(matched_world),
 		str(center_matches_camera),
 		str(screen_inside),
+		str(deferred_queued),
+		str(deferred_matched_cell),
+		str(deferred_matched_world),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
 

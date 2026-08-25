@@ -670,8 +670,17 @@ def parse_perf_run(record: dict[str, Any]) -> dict[str, Any]:
     accepted = int(moving_values["accepted"])
     resolved = int(moving_values["resolved"])
     applied = int(moving_values["applied"])
-    if accepted != clicks or applied != resolved:
-        raise EvidenceError("moving click/apply counts are inconsistent")
+    if accepted != clicks:
+        raise EvidenceError("moving click acceptance counts are inconsistent")
+    # The runtime deliberately coalesces burst targets twice: screen points are
+    # first resolved after debounce, then a resolved target may be superseded or
+    # prove equivalent before a path is applied.  Keep the evidence contract in
+    # lockstep with Main.gd: at least one path must be applied, no path may be
+    # applied without a resolved target, and the burst must collapse before the
+    # accepted-click count.  Requiring applied == resolved rejects healthy
+    # camera-relative bursts whose final target still settles exactly.
+    if not (0 < applied <= resolved < accepted):
+        raise EvidenceError("moving resolve/apply coalescing counts are inconsistent")
     result.update(
         {
             "clicks": clicks,

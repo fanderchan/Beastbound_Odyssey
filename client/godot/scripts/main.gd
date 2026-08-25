@@ -934,6 +934,17 @@ var world_camera_landmark_anchor_player_visual_signature_cache: String = ""
 var world_camera_composition_subject_rects_cache: Array[Rect2] = []
 var world_camera_composition_subject_map_cache: String = ""
 var world_camera_composition_subject_revision_cache: int = -1
+var world_camera_composition_priority_subject_count_cache: int = 0
+var world_camera_endpoint_focus_points_cache: Array[Vector2] = []
+var world_camera_endpoint_focus_map_cache: String = ""
+var world_camera_limit_bounds_cache := Rect2()
+var world_camera_limit_bounds_map_cache: String = ""
+var world_camera_limit_bounds_revision_cache: int = -1
+var world_camera_limit_bounds_viewport_cache := Vector2.ZERO
+var world_camera_limit_bounds_zoom_cache := Vector2.ZERO
+var world_camera_limit_bounds_safe_rect_cache := Rect2()
+var world_camera_limit_bounds_anchor_cache := Vector2.ZERO
+var world_camera_limit_bounds_endpoint_safe_cache: bool = false
 var auto_movement_check: bool = false
 var movement_perf_check: bool = false
 var movement_spam_click_check: bool = false
@@ -1352,6 +1363,7 @@ var movement_spam_input_screen_match_count: int = 0
 var movement_spam_input_screen_mismatch_count: int = 0
 var has_pending_click_screen_point: bool = false
 var pending_click_screen_point := Vector2.ZERO
+var pending_click_world_point := Vector2.ZERO
 var has_pending_click_move_target: bool = false
 var pending_click_move_goal_cell := Vector2i.ZERO
 var pending_click_move_marker_cell := Vector2i.ZERO
@@ -9060,9 +9072,13 @@ func _update_npc_hover_identity_at_screen_point(screen_point: Vector2) -> void:
 
 
 func _npc_hover_interaction_at_screen_point(screen_point: Vector2) -> Dictionary:
+	return _npc_hover_interaction_at_world_point(_screen_to_world(screen_point))
+
+
+func _npc_hover_interaction_at_world_point(world_point: Vector2) -> Dictionary:
 	if npc_hover_identity_presenter == null:
 		return {}
-	return npc_hover_identity_presenter.npc_at_world_point(_screen_to_world(screen_point))
+	return npc_hover_identity_presenter.npc_at_world_point(world_point)
 
 
 func _clear_npc_hover_identity() -> void:
@@ -15817,12 +15833,78 @@ func _camera_center_is_inside_limits(center: Vector2) -> bool:
 func _camera_limit_bounds() -> Rect2:
 	var viewport_size := get_viewport_rect().size
 	var zoom := game_camera.zoom if game_camera != null else Vector2.ONE
-	return WorldCameraSafeAreaModel.camera_limit_bounds(
+	var endpoint_safe_camera := WorldPresentationProfile.uses_endpoint_safe_camera(
+		map_visual_render_state
+	)
+	if (
+		world_camera_limit_bounds_map_cache == current_map_id
+		and world_camera_limit_bounds_revision_cache == map_visual_render_revision
+		and viewport_size.is_equal_approx(world_camera_limit_bounds_viewport_cache)
+		and zoom.is_equal_approx(world_camera_limit_bounds_zoom_cache)
+		and world_camera_safe_viewport_rect == world_camera_limit_bounds_safe_rect_cache
+		and world_camera_safe_anchor_screen.is_equal_approx(
+			world_camera_limit_bounds_anchor_cache
+		)
+		and endpoint_safe_camera == world_camera_limit_bounds_endpoint_safe_cache
+	):
+		return world_camera_limit_bounds_cache
+	var bounds := WorldCameraSafeAreaModel.camera_limit_bounds(
 		_map_world_bounds().grow(80.0),
 		viewport_size,
 		zoom,
 		_world_camera_safe_rect(viewport_size)
 	)
+	if endpoint_safe_camera:
+		bounds = WorldCameraSafeAreaModel.camera_limit_bounds_including_focus_points(
+			bounds,
+			_world_camera_endpoint_focus_world_points(),
+			viewport_size,
+			zoom,
+			world_camera_safe_anchor_screen
+		)
+	world_camera_limit_bounds_cache = bounds
+	world_camera_limit_bounds_map_cache = current_map_id
+	world_camera_limit_bounds_revision_cache = map_visual_render_revision
+	world_camera_limit_bounds_viewport_cache = viewport_size
+	world_camera_limit_bounds_zoom_cache = zoom
+	world_camera_limit_bounds_safe_rect_cache = world_camera_safe_viewport_rect
+	world_camera_limit_bounds_anchor_cache = world_camera_safe_anchor_screen
+	world_camera_limit_bounds_endpoint_safe_cache = endpoint_safe_camera
+	return world_camera_limit_bounds_cache
+
+
+func _world_camera_endpoint_focus_world_points() -> Array[Vector2]:
+	if world_camera_endpoint_focus_map_cache == current_map_id:
+		return world_camera_endpoint_focus_points_cache
+	var points: Array[Vector2] = []
+	var seen_cells: Dictionary = {}
+	var spawn_points := map_data.get("spawnPoints", {}) as Dictionary
+	for spawn_value in spawn_points.values():
+		if not (spawn_value is Array) or (spawn_value as Array).size() != 2:
+			continue
+		var spawn_array := spawn_value as Array
+		var spawn_cell := Vector2i(int(spawn_array[0]), int(spawn_array[1]))
+		var spawn_key := IsoMapModel.cell_key(spawn_cell)
+		if seen_cells.has(spawn_key):
+			continue
+		seen_cells[spawn_key] = true
+		points.append(IsoMapModel.grid_to_world(map_data, spawn_cell))
+	for interaction_value in map_data.get("interactionPoints", []):
+		if not (interaction_value is Dictionary):
+			continue
+		var cell_value: Variant = (interaction_value as Dictionary).get("cell", [])
+		if not (cell_value is Array) or (cell_value as Array).size() != 2:
+			continue
+		var cell_array := cell_value as Array
+		var interaction_cell := Vector2i(int(cell_array[0]), int(cell_array[1]))
+		var interaction_key := IsoMapModel.cell_key(interaction_cell)
+		if seen_cells.has(interaction_key):
+			continue
+		seen_cells[interaction_key] = true
+		points.append(IsoMapModel.grid_to_world(map_data, interaction_cell))
+	world_camera_endpoint_focus_points_cache = points
+	world_camera_endpoint_focus_map_cache = current_map_id
+	return world_camera_endpoint_focus_points_cache
 
 
 func _refresh_world_camera_safe_area(viewport_size: Vector2) -> void:
@@ -15835,7 +15917,20 @@ func _refresh_world_camera_safe_area(viewport_size: Vector2) -> void:
 			or control.mouse_filter == Control.MOUSE_FILTER_IGNORE
 		):
 			continue
-		next_hud_blocker_rects.append(control.get_global_rect())
+		var blocker_rect := control.get_global_rect()
+		if (
+			control == top_panel
+			and world_hud_awakened_view != null
+			and world_hud_awakened_view.has_method("camera_top_blocker_rect")
+		):
+			var occupied_top_value: Variant = world_hud_awakened_view.call(
+				"camera_top_blocker_rect"
+			)
+			if occupied_top_value is Rect2:
+				var occupied_top := occupied_top_value as Rect2
+				if occupied_top.size.x > 0.0 and occupied_top.size.y > 0.0:
+					blocker_rect = occupied_top
+		next_hud_blocker_rects.append(blocker_rect)
 	var next_safe_rect := WorldCameraSafeAreaModel.safe_viewport_rect(
 		viewport_size,
 		next_hud_blocker_rects
@@ -16062,10 +16157,35 @@ func _world_camera_landmark_safe_anchor(
 	# one visual gap of, the unshifted unobstructed world band. Nearby subjects
 	# still use their complete opaque alpha rect below, so HUD and edge safety stay
 	# strict.
-	subject_rects = WorldCameraSafeAreaModel.nearby_composition_subject_rects(
-		subject_rects,
-		world_camera_safe_viewport_rect
+	var composition_interest_rect := world_camera_safe_viewport_rect
+	var endpoint_safe_camera := WorldPresentationProfile.uses_endpoint_safe_camera(
+		map_visual_render_state
 	)
+	if endpoint_safe_camera:
+		# Earth Vein endpoints can place a blocking landmark inside the visible
+		# viewport but entirely behind a fixed HUD panel. Include every subject
+		# that can enter the viewport anywhere inside the achievable anchor range,
+		# so clearing one blocker cannot pull an unscored neighbour under the HUD.
+		var min_anchor_shift := achievable_min_anchor - effective_base_anchor
+		var max_anchor_shift := achievable_max_anchor - effective_base_anchor
+		composition_interest_rect = Rect2(
+			Vector2.ZERO - max_anchor_shift,
+			viewport_size + max_anchor_shift - min_anchor_shift
+		)
+	var priority_source_count := mini(
+		subject_rects.size(),
+		1 + world_camera_composition_priority_subject_count_cache
+	)
+	var priority_subjects := WorldCameraSafeAreaModel.nearby_composition_subject_rects(
+		subject_rects.slice(0, priority_source_count),
+		composition_interest_rect
+	)
+	var ordinary_subjects := WorldCameraSafeAreaModel.nearby_composition_subject_rects(
+		subject_rects.slice(priority_source_count),
+		composition_interest_rect
+	)
+	subject_rects = priority_subjects
+	subject_rects.append_array(ordinary_subjects)
 	var player_subject_rects: Array[Rect2] = [player_screen_rect]
 	var player_safe_anchor := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects_in_range(
 		effective_base_anchor,
@@ -16083,7 +16203,8 @@ func _world_camera_landmark_safe_anchor(
 		subject_rects,
 		Rect2(Vector2.ZERO, viewport_size),
 		WorldCameraSafeAreaModel.DEFAULT_VISUAL_GAP_PX,
-		1
+		priority_subjects.size(),
+		endpoint_safe_camera
 	)
 	var composed_player_rect := Rect2(
 		player_screen_rect.position + composed_anchor - effective_base_anchor,
@@ -16115,6 +16236,25 @@ func _world_camera_composition_subject_world_rects() -> Array[Rect2]:
 		return world_camera_composition_subject_rects_cache
 	var subject_rects: Array[Rect2] = []
 	var opaque_rect_cache: Dictionary = {}
+	world_camera_composition_priority_subject_count_cache = 0
+	var by_layer := map_visual_render_state.get("objectDrawsByLayer", {}) as Dictionary
+	if WorldPresentationProfile.uses_endpoint_safe_camera(map_visual_render_state):
+		for layer_value in by_layer.values():
+			if not (layer_value is Array):
+				continue
+			for command_value in layer_value as Array:
+				if not (command_value is Dictionary):
+					continue
+				var command := command_value as Dictionary
+				if str(command.get("collisionRole", "")) != "interaction":
+					continue
+				var opaque_rect := WorldCameraSafeAreaModel.opaque_world_rect(
+					command,
+					opaque_rect_cache
+				)
+				if opaque_rect.size.x > 0.0 and opaque_rect.size.y > 0.0:
+					subject_rects.append(opaque_rect)
+					world_camera_composition_priority_subject_count_cache += 1
 	for npc_command in _world_depth_npc_commands():
 		var opaque_rect := WorldCameraSafeAreaModel.opaque_world_rect(
 			npc_command,
@@ -16122,7 +16262,6 @@ func _world_camera_composition_subject_world_rects() -> Array[Rect2]:
 		)
 		if opaque_rect.size.x > 0.0 and opaque_rect.size.y > 0.0:
 			subject_rects.append(opaque_rect)
-	var by_layer := map_visual_render_state.get("objectDrawsByLayer", {}) as Dictionary
 	for layer_value in by_layer.values():
 		if not (layer_value is Array):
 			continue
@@ -16132,6 +16271,13 @@ func _world_camera_composition_subject_world_rects() -> Array[Rect2]:
 			var command := command_value as Dictionary
 			var collision_role := str(command.get("collisionRole", ""))
 			if collision_role != "blocking" and collision_role != "interaction":
+				continue
+			if (
+				collision_role == "interaction"
+				and WorldPresentationProfile.uses_endpoint_safe_camera(
+					map_visual_render_state
+				)
+			):
 				continue
 			var opaque_rect := WorldCameraSafeAreaModel.opaque_world_rect(
 				command,

@@ -107,6 +107,18 @@ static func run(host: Node) -> Dictionary:
 		"仅伪造 v2 bundleId 不得启用 canary 相机",
 		errors
 	)
+	_expect_vector(
+		WorldPresentationProfile.camera_zoom_for(true, earth_review),
+		WorldPresentationProfile.EARTH_VEIN_CAMERA_ZOOM,
+		"Earth Vein 候选必须使用端点构图相机比例",
+		errors
+	)
+	_expect_vector(
+		WorldPresentationProfile.camera_zoom_for(false, earth_review),
+		Vector2.ONE,
+		"Earth Vein pending 候选不得在非预览路径启用相机比例",
+		errors
+	)
 	if WorldPresentationProfile.uses_authored_ground_details(false, v2):
 		errors.append("外层未显式进入预览时不得关闭程序化地表反馈")
 	if WorldPresentationProfile.uses_authored_ground_details(true, v1):
@@ -117,6 +129,14 @@ static func run(host: Node) -> Dictionary:
 		errors.append("v2 必须使用 authored encounter/decor 地表细节")
 	if not WorldPresentationProfile.uses_authored_ground_details(true, earth_review):
 		errors.append("分层语义地图候选必须使用 authored encounter/decor 地表细节")
+	if not WorldPresentationProfile.uses_endpoint_safe_camera(earth_review):
+		errors.append("Earth Vein 正式候选必须启用端点 HUD 安全相机范围")
+	if not WorldPresentationProfile.uses_hud_landmark_composition(true, earth_review):
+		errors.append("Earth Vein 正式候选必须启用完整地标 HUD 构图")
+	if WorldPresentationProfile.uses_endpoint_safe_camera({
+		"bundleId": WorldPresentationProfile.EARTH_VEIN_BUNDLE_ID,
+	}):
+		errors.append("仅伪造 Earth Vein bundleId 不得启用端点安全相机")
 	if WorldPresentationProfile.uses_authored_ground_details(false, earth_review):
 		errors.append("pending 分层语义地图不得绕过显式审图入口")
 	if not WorldPresentationProfile.uses_authored_ground_details(false, released_layered):

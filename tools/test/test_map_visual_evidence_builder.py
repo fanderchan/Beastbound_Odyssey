@@ -68,7 +68,26 @@ class PerformanceParserTests(unittest.TestCase):
         self.assertTrue(parsed["moved"])
         self.assertTrue(parsed["coalesced"])
         self.assertEqual(parsed["clicks"], parsed["accepted"])
-        self.assertEqual(parsed["resolved"], parsed["applied"])
+        self.assertLessEqual(parsed["applied"], parsed["resolved"])
+
+    def test_moving_accepts_resolved_target_superseded_before_apply(self) -> None:
+        record = _record("moving")
+        record["stdout"] = record["stdout"].replace(
+            "resolved=3 applied=3",
+            "resolved=3 applied=2",
+        )
+        parsed = builder.parse_perf_run(record)
+        self.assertEqual(parsed["resolved"], 3)
+        self.assertEqual(parsed["applied"], 2)
+
+    def test_moving_rejects_path_apply_without_resolved_target(self) -> None:
+        record = _record("moving")
+        record["stdout"] = record["stdout"].replace(
+            "resolved=3 applied=3",
+            "resolved=3 applied=4",
+        )
+        with self.assertRaises(builder.EvidenceError):
+            builder.parse_perf_run(record)
 
     def test_moving_accepts_two_samples_after_real_target_settle(self) -> None:
         record = _record("moving")

@@ -152,6 +152,7 @@ func _run() -> void:
 	_append_player_gate_errors()
 	_append_message_action_errors()
 	_append_entry_hierarchy_errors()
+	_append_camera_top_blocker_errors(false)
 	await _append_task_entry_bounds_errors()
 
 	var more_button := _named_button("WorldHudMoreButton")
@@ -161,6 +162,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_append_expanded_layout_errors()
+	_append_camera_top_blocker_errors(true)
 	_append_spectator_point_errors()
 
 	_view.call("set_collapsed", true)
@@ -1188,6 +1190,26 @@ func _append_expanded_layout_errors() -> void:
 	_expect(
 		drawer != null and drawer.is_visible_in_tree(),
 		"更多抽屉展开后不可见"
+	)
+
+
+func _append_camera_top_blocker_errors(drawer_open: bool) -> void:
+	var blocker_value: Variant = _view.call("camera_top_blocker_rect")
+	_expect(blocker_value is Rect2, "顶部 HUD 没有返回相机阻挡矩形")
+	if not (blocker_value is Rect2):
+		return
+	var blocker := blocker_value as Rect2
+	_expect(
+		blocker.size.x > 0.0 and blocker.size.y > 0.0,
+		"顶部 HUD 相机阻挡矩形尺寸无效"
+	)
+	_expect(
+		blocker.size.x <= (320.0 if drawer_open else 180.0),
+		"顶部 HUD 相机阻挡区包含不可见的空白容器"
+	)
+	_expect(
+		blocker.size.y <= 145.01,
+		"顶部 HUD 相机阻挡区超过正式顶部内容"
 	)
 
 
