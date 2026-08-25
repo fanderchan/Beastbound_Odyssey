@@ -7,6 +7,10 @@ signal settings_changed(settings: Dictionary)
 
 const DEFAULT_CATALOG_PATH := "res://assets/audio/beastbound_audio_v2/audio-cues.json"
 const DEFAULT_SETTINGS_PATH := "user://beastbound_audio_settings.json"
+const DEFAULT_AMBIENCE_RELEASE_GATE_PATH := (
+	"res://data/audio_ambience_release_gate_v1.json"
+)
+const CANONICAL_AUDIO_BUNDLE_ID := "beastbound_audio_v2"
 const MUSIC_CROSSFADE_SECONDS := 0.75
 const AMBIENCE_CROSSFADE_SECONDS := 0.75
 const AMBIENCE_BATTLE_DUCK_DB := -12.0
@@ -37,6 +41,11 @@ var _ambience_contexts: Dictionary = {}
 var _cues: Dictionary = {}
 var _catalog_loaded := false
 var _catalog_error := ""
+var _ambience_release_gate_valid := false
+var _ambience_release_gate_error := "catalog_not_loaded"
+var _ambience_release_decision := "unresolved"
+var _ambience_runtime_enabled := false
+var _ambience_review_override_enabled := false
 
 var _settings: Dictionary = DEFAULT_SETTINGS.duplicate(true)
 var _stream_cache: Dictionary = {}
@@ -77,6 +86,10 @@ func configure_catalog_path(path: String) -> void:
 	_catalog_path = path.strip_edges() if path.strip_edges() != "" else DEFAULT_CATALOG_PATH
 	_catalog_loaded = false
 	_catalog_error = ""
+	_ambience_release_gate_valid = false
+	_ambience_release_gate_error = "catalog_not_loaded"
+	_ambience_release_decision = "unresolved"
+	_ambience_runtime_enabled = false
 	_catalog.clear()
 	_contexts.clear()
 	_ambience_contexts.clear()
@@ -88,6 +101,22 @@ func configure_catalog_path(path: String) -> void:
 	if is_inside_tree():
 		_load_catalog_once()
 		_sync_effective_audio()
+
+
+func configure_ambience_review_override_enabled(value: bool) -> void:
+	var changed := _ambience_review_override_enabled != value
+	_ambience_review_override_enabled = value
+	if not is_inside_tree() or not _catalog_loaded or not changed:
+		return
+	if not ambience_playback_available():
+		_silence_ambience_players()
+		_set_ambience_ducked(false)
+		_clear_cached_ambience_streams()
+		return
+	_warm_context_ambience_streams()
+	if not _battle_active and _world_context != "":
+		_switch_ambience_context(_world_context)
+	_set_ambience_ducked(_battle_active)
 
 
 func configure_settings_path(path: String) -> void:
@@ -206,7 +235,7 @@ func sync_ambience_context(context: String) -> bool:
 func enter_battle(is_boss: bool = false) -> bool:
 	_battle_active = true
 	_boss_battle_active = is_boss
-	_set_ambience_ducked(true)
+	_set_ambience_ducked(ambience_playback_available())
 	return _switch_music_context(_battle_music_context())
 
 
@@ -242,6 +271,9 @@ func play_cue(cue_id: String, options: Dictionary = {}) -> bool:
 	if role == "music":
 		return _switch_music_cue(cue_id, _context_for_music_cue(cue_id))
 	if role == "ambience":
+		if not ambience_playback_available():
+			_silence_ambience_players()
+			return false
 		return _switch_ambience_cue(
 			cue_id,
 			_context_for_ambience_cue(cue_id)
@@ -401,6 +433,25 @@ func is_ambience_ducked() -> bool:
 	return _ambience_ducked
 
 
+func ambience_release_gate_valid() -> bool:
+	return _ambience_release_gate_valid
+
+
+func ambience_runtime_enabled() -> bool:
+	return _ambience_runtime_enabled
+
+
+func ambience_review_override_enabled() -> bool:
+	return _ambience_review_override_enabled
+
+
+func ambience_playback_available() -> bool:
+	return (
+		_ambience_runtime_enabled
+		or (_ambience_review_override_enabled and _ambience_release_gate_valid)
+	)
+
+
 func world_context() -> String:
 	return _world_context
 
@@ -480,6 +531,12 @@ func debug_snapshot() -> Dictionary:
 		"ambienceTransitionSerial": _ambience_transition_serial,
 		"ambienceDucked": _ambience_ducked,
 		"ambienceBusGainDb": _ambience_bus_gain_db(),
+		"ambienceReleaseGateValid": _ambience_release_gate_valid,
+		"ambienceReleaseGateError": _ambience_release_gate_error,
+		"ambienceReleaseDecision": _ambience_release_decision,
+		"ambienceRuntimeEnabled": _ambience_runtime_enabled,
+		"ambienceReviewOverrideEnabled": _ambience_review_override_enabled,
+		"ambiencePlaybackAvailable": ambience_playback_available(),
 		"playbackEnabled": _playback_enabled,
 		"streamCacheCount": _stream_cache.size(),
 		"warmedMusicStreamCount": _warmed_music_paths.size(),
@@ -534,8 +591,114 @@ func _load_catalog_once() -> void:
 		raw_ambience_contexts as Dictionary
 	).duplicate(true)
 	_cues = (raw_cues as Dictionary).duplicate(true)
+	_load_ambience_release_gate(str(raw.get("bundleId", "")))
 	_catalog_loaded = true
 	_warm_context_streams()
+
+
+func _load_ambience_release_gate(bundle_id: String) -> void:
+	_ambience_release_gate_valid = false
+	_ambience_release_gate_error = "release_gate_unresolved"
+	_ambience_release_decision = "unresolved"
+	_ambience_runtime_enabled = false
+	if bundle_id != CANONICAL_AUDIO_BUNDLE_ID:
+		# Focused test catalogs and legacy bundles do not share the canonical
+		# candidate lifecycle. They preserve their existing routing behavior.
+		_ambience_release_gate_valid = true
+		_ambience_release_gate_error = ""
+		_ambience_release_decision = "not_required"
+		_ambience_runtime_enabled = true
+		return
+	if not FileAccess.file_exists(DEFAULT_AMBIENCE_RELEASE_GATE_PATH):
+		_ambience_release_gate_error = "release_gate_missing"
+		return
+	var file := FileAccess.open(DEFAULT_AMBIENCE_RELEASE_GATE_PATH, FileAccess.READ)
+	if file == null:
+		_ambience_release_gate_error = "release_gate_unreadable"
+		return
+	var parsed = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		_ambience_release_gate_error = "release_gate_invalid_json"
+		return
+	var gate := parsed as Dictionary
+	var errors: Array[String] = []
+	if int(gate.get("schemaVersion", 0)) != 1:
+		errors.append("schema_version")
+	if str(gate.get("gateId", "")) != "beastbound_audio_v2_ambience_release_v1":
+		errors.append("gate_id")
+	if str(gate.get("bundleId", "")) != CANONICAL_AUDIO_BUNDLE_ID:
+		errors.append("bundle_id")
+	if str(gate.get("scope", "")) != "ambience":
+		errors.append("scope")
+	if str(gate.get("decisionSource", "")).strip_edges() == "":
+		errors.append("decision_source")
+	if (
+		str(gate.get("reviewOverride", ""))
+		!= "dedicated_isolated_qa_scene_only"
+	):
+		errors.append("review_override")
+	if typeof(gate.get("releaseApproved", null)) != TYPE_BOOL:
+		errors.append("release_approved_type")
+	if typeof(gate.get("runtimeEnabled", null)) != TYPE_BOOL:
+		errors.append("runtime_enabled_type")
+	var decision := str(gate.get("decision", "")).strip_edges().to_lower()
+	var owner_status := str(
+		gate.get("ownerReviewStatus", "")
+	).strip_edges().to_lower()
+	var runtime_enabled := bool(gate.get("runtimeEnabled", false))
+	var release_approved := bool(gate.get("releaseApproved", false))
+	if runtime_enabled:
+		if (
+			decision != "approved"
+			or owner_status != "owner_listening_accepted"
+			or not release_approved
+			or not gate.get("ownerAcceptance", null) is Dictionary
+			or str(gate.get("ownerDecisionDigest", "")).strip_edges() == ""
+			or not gate.get("releaseAttestation", null) is Dictionary
+		):
+			errors.append("approved_gate_incomplete")
+	else:
+		if decision not in ["deferred", "returned"]:
+			errors.append("closed_gate_decision")
+		if release_approved:
+			errors.append("closed_gate_release_approved")
+		if owner_status not in ["owner_listening_pending", "owner_listening_returned"]:
+			errors.append("closed_gate_owner_status")
+		if (
+			gate.get("ownerAcceptance", null) != null
+			or gate.get("ownerDecisionDigest", null) != null
+			or gate.get("releaseAttestation", null) != null
+		):
+			errors.append("closed_gate_release_artifacts")
+	var cue_hashes = gate.get("cueRuntimeSha256", {})
+	var expected_cues := [
+		"ambience.cave",
+		"ambience.town",
+		"ambience.wilderness",
+	]
+	if not cue_hashes is Dictionary or (cue_hashes as Dictionary).size() != 3:
+		errors.append("cue_hash_shape")
+	else:
+		for cue_id in expected_cues:
+			if not _is_lowercase_sha256(str((cue_hashes as Dictionary).get(cue_id, ""))):
+				errors.append("cue_hash_%s" % cue_id)
+	if not errors.is_empty():
+		_ambience_release_gate_error = ",".join(errors)
+		return
+	_ambience_release_gate_valid = true
+	_ambience_release_gate_error = ""
+	_ambience_release_decision = decision
+	_ambience_runtime_enabled = runtime_enabled
+
+
+static func _is_lowercase_sha256(value: String) -> bool:
+	if value.length() != 64:
+		return false
+	for index in value.length():
+		var code := value.unicode_at(index)
+		if not ((code >= 48 and code <= 57) or (code >= 97 and code <= 102)):
+			return false
+	return true
 
 
 func _load_settings() -> void:
@@ -650,9 +813,11 @@ func _sync_effective_audio() -> bool:
 		_battle_music_context() if _battle_active else _world_context
 	)
 	var ambience_ok := true
-	if not _battle_active:
+	if not ambience_playback_available():
+		_silence_ambience_players()
+	elif not _battle_active:
 		ambience_ok = _switch_ambience_context(_world_context)
-	_set_ambience_ducked(_battle_active)
+	_set_ambience_ducked(_battle_active and ambience_playback_available())
 	return music_ok and ambience_ok
 
 
@@ -746,6 +911,10 @@ func _finish_music_crossfade(previous: AudioStreamPlayer, transition_serial: int
 
 
 func _switch_ambience_context(context: String) -> bool:
+	if not ambience_playback_available():
+		_silence_ambience_players()
+		_set_ambience_ducked(false)
+		return true
 	var cue_id := ambience_context_cue(context)
 	if cue_id == "":
 		return false
@@ -753,6 +922,10 @@ func _switch_ambience_context(context: String) -> bool:
 
 
 func _switch_ambience_cue(cue_id: String, context: String) -> bool:
+	if not ambience_playback_available():
+		_silence_ambience_players()
+		_set_ambience_ducked(false)
+		return false
 	if cue_id == _active_ambience_cue:
 		_active_ambience_context = context
 		if not _playback_enabled or _active_ambience_playback_is_valid():
@@ -1018,7 +1191,11 @@ func _warm_context_music_streams() -> void:
 
 
 func _warm_context_ambience_streams() -> void:
-	if not _catalog_loaded or not _playback_enabled:
+	if (
+		not _catalog_loaded
+		or not _playback_enabled
+		or not ambience_playback_available()
+	):
 		return
 	var context_names: Array[String] = []
 	for context_value in _ambience_contexts.keys():
@@ -1034,6 +1211,18 @@ func _warm_context_ambience_streams() -> void:
 			continue
 		if _stream_for_path(path) != null:
 			_warmed_ambience_paths[path] = true
+
+
+func _clear_cached_ambience_streams() -> void:
+	for context_value in _ambience_contexts.keys():
+		var cue_id := ambience_context_cue(str(context_value))
+		var info := cue_info(cue_id)
+		var path := str(info.get("path", "")).strip_edges()
+		if path == "":
+			continue
+		_stream_cache.erase(path)
+		_missing_stream_paths.erase(path)
+	_warmed_ambience_paths.clear()
 
 
 func _stream_for_path(path: String) -> AudioStream:

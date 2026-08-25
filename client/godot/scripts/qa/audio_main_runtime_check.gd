@@ -117,27 +117,34 @@ static func run(host) -> Dictionary:
 		errors.append("当前地图音乐与语境不一致")
 	if expected_ambience_cue == "":
 		errors.append("当前地图没有稳定环境语境")
-	elif manager.current_ambience_cue() != expected_ambience_cue:
-		errors.append("当前地图环境声与语境不一致")
+	elif manager.current_ambience_cue() != "":
+		errors.append("首发延期后普通 Main 仍激活了地图环境声")
+	if not bool(before.get("ambienceReleaseGateValid", false)):
+		errors.append("普通 Main 的环境声延期发布门无效")
+	if bool(before.get("ambienceRuntimeEnabled", true)):
+		errors.append("普通 Main 错误启用了延期环境声")
+	if bool(before.get("ambiencePlaybackAvailable", true)):
+		errors.append("普通 Main 错误获得环境声播放资格")
+	if int(before.get("warmedAmbienceStreamCount", -1)) != 0:
+		errors.append("普通 Main 仍预热了延期环境声")
+	if manager.play_cue(expected_ambience_cue):
+		errors.append("普通 Main 可以绕过发布门直接播放环境声")
 
 	host._audio_enter_battle({})
 	if manager.current_music_cue() != "music.battle_normal":
 		errors.append("Main 进入战斗后未切换普通战斗音乐")
-	if manager.current_ambience_cue() != expected_ambience_cue:
-		errors.append("Main 进入战斗后错误移除了地图环境声")
-	if not manager.is_ambience_ducked():
-		errors.append("Main 进入战斗后未压低地图环境声")
+	if manager.current_ambience_cue() != "":
+		errors.append("Main 进入战斗后错误恢复了延期环境声")
+	if manager.is_ambience_ducked():
+		errors.append("Main 没有活动环境声却触发了战斗 duck")
 	for cue_id in REQUIRED_ACTION_CUES:
 		if not host._audio_play_cue(cue_id):
 			errors.append("Main 无法分发动作 cue：%s" % cue_id)
 	host._audio_exit_battle()
 	if expected_world_cue != "" and manager.current_music_cue() != expected_world_cue:
 		errors.append("Main 退出战斗后未恢复当前地图音乐")
-	if (
-		expected_ambience_cue != ""
-		and manager.current_ambience_cue() != expected_ambience_cue
-	):
-		errors.append("Main 退出战斗后未恢复当前地图环境声")
+	if manager.current_ambience_cue() != "":
+		errors.append("Main 退出战斗后错误恢复了延期环境声")
 	if manager.is_ambience_ducked():
 		errors.append("Main 退出战斗后未恢复环境声电平")
 
@@ -170,6 +177,21 @@ static func _report(host, errors: Array[String], snapshot: Dictionary) -> Dictio
 		"restoredMusicCue": str(snapshot.get("activeMusicCue", "")),
 		"restoredAmbienceCue": str(snapshot.get("activeAmbienceCue", "")),
 		"ambienceDucked": bool(snapshot.get("ambienceDucked", false)),
+		"ambienceReleaseDecision": str(
+			snapshot.get("ambienceReleaseDecision", "")
+		),
+		"ambienceReleaseGateValid": bool(
+			snapshot.get("ambienceReleaseGateValid", false)
+		),
+		"ambienceRuntimeEnabled": bool(
+			snapshot.get("ambienceRuntimeEnabled", true)
+		),
+		"ambiencePlaybackAvailable": bool(
+			snapshot.get("ambiencePlaybackAvailable", true)
+		),
+		"warmedAmbienceStreamCount": int(
+			snapshot.get("warmedAmbienceStreamCount", -1)
+		),
 		"voicePoolSize": int(snapshot.get("voicePoolSize", 0)),
 		"playbackEnabled": bool(snapshot.get("playbackEnabled", false)),
 		"errors": errors,

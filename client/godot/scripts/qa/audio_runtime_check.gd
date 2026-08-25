@@ -3,7 +3,13 @@ extends SceneTree
 const GameAudioManager := preload("res://scripts/audio/game_audio_manager.gd")
 const WorldAudioContextModel := preload("res://scripts/audio/world_audio_context_model.gd")
 const CATALOG_PATH := "res://assets/audio/beastbound_audio_v2/audio-cues.json"
+const RELEASE_GATE_PATH := "res://data/audio_ambience_release_gate_v1.json"
 const EXPECTED_CUE_COUNT := 34
+const EXPECTED_AMBIENCE_HASHES := {
+	"ambience.cave": "f30c8e32f517d0c2426aea75d569f2e943f213054212e526a31c22702208f283",
+	"ambience.town": "755dc0e18b20d9be0b0bf2ebe6b6de9dad44cf99f1b00bbace6d6fa9de6ec8e3",
+	"ambience.wilderness": "a3388bca77d9b620d48661fd363e72d2850dfc6909ff12f1dd0086bb6bd9f3f2",
+}
 
 
 func _initialize() -> void:
@@ -31,6 +37,8 @@ func _run() -> void:
 	if not manager.catalog_loaded():
 		errors.append("真实音频目录未加载：%s" % manager.catalog_error())
 	var catalog := _load_catalog(errors)
+	var release_gate := _load_release_gate(errors)
+	_validate_release_gate(catalog, release_gate, errors)
 	var loaded_audio_count := _validate_runtime_files(catalog, errors)
 	var contexts = catalog.get("contexts", {}) as Dictionary
 	var ambience_contexts = catalog.get("ambienceContexts", {}) as Dictionary
@@ -47,8 +55,16 @@ func _run() -> void:
 	)
 	if manager.current_music_cue() != "music.town":
 		errors.append("村庄没有切到 music.town")
-	if manager.current_ambience_cue() != "ambience.town":
-		errors.append("村庄没有切到 ambience.town")
+	if manager.current_ambience_cue() != "":
+		errors.append("首发延期后村庄仍激活了 ambience.town")
+	if not manager.ambience_release_gate_valid():
+		errors.append("环境声延期发布门无效")
+	if manager.ambience_runtime_enabled():
+		errors.append("环境声延期发布门错误启用了普通运行时")
+	if manager.ambience_playback_available():
+		errors.append("普通运行检查错误获得环境声播放资格")
+	if manager.play_cue("ambience.town"):
+		errors.append("普通运行检查绕过发布门直接播放环境声")
 	var stable_serial := int(manager.debug_snapshot().get("musicTransitionSerial", -1))
 	var stable_ambience_serial := int(
 		manager.debug_snapshot().get("ambienceTransitionSerial", -1)
@@ -70,20 +86,20 @@ func _run() -> void:
 	)
 	if manager.current_music_cue() != "music.cave":
 		errors.append("洞窟没有切到 music.cave")
-	if manager.current_ambience_cue() != "ambience.cave":
-		errors.append("洞窟没有切到 ambience.cave")
+	if manager.current_ambience_cue() != "":
+		errors.append("首发延期后洞窟仍激活了 ambience.cave")
 	manager.enter_battle(false)
 	if manager.current_music_cue() != "music.battle_normal":
 		errors.append("战斗没有覆盖为 music.battle_normal")
-	if manager.current_ambience_cue() != "ambience.cave":
-		errors.append("战斗错误移除了洞窟环境声")
-	if not manager.is_ambience_ducked():
-		errors.append("战斗没有压低地图环境声")
+	if manager.current_ambience_cue() != "":
+		errors.append("战斗错误恢复了已延期的洞窟环境声")
+	if manager.is_ambience_ducked():
+		errors.append("无活动环境声时仍错误触发了战斗 duck")
 	manager.exit_battle()
 	if manager.current_music_cue() != "music.cave":
 		errors.append("战斗结束没有恢复洞窟音乐")
-	if manager.current_ambience_cue() != "ambience.cave":
-		errors.append("战斗结束没有恢复洞窟环境声")
+	if manager.current_ambience_cue() != "":
+		errors.append("战斗结束错误恢复了已延期的洞窟环境声")
 	if manager.is_ambience_ducked():
 		errors.append("战斗结束没有解除环境声 duck")
 
@@ -123,6 +139,13 @@ func _run() -> void:
 		or not bool(restored_settings.get("muted", false))
 	):
 		errors.append("声音设置没有跨 manager 持久化")
+	var restored_snapshot := restored.debug_snapshot()
+	if (
+		bool(restored_snapshot.get("ambiencePlaybackAvailable", true))
+		or int(restored_snapshot.get("warmedAmbienceStreamCount", -1)) != 0
+		or str(restored_snapshot.get("activeAmbienceCue", "unexpected")) != ""
+	):
+		errors.append("设置恢复后的普通 manager 错误激活了环境声")
 
 	var master_index := AudioServer.get_bus_index("Master")
 	var limiter_count := 0
@@ -141,6 +164,19 @@ func _run() -> void:
 		"reportType": "beastbound.audio_runtime_check",
 		"result": "PASS" if errors.is_empty() else "FAIL",
 		"catalogReviewState": str(catalog.get("reviewState", "")),
+		"ambienceReleaseDecision": str(release_gate.get("decision", "")),
+		"ambienceReleaseGateValid": bool(
+			manager.debug_snapshot().get("ambienceReleaseGateValid", false)
+		),
+		"ambienceRuntimeEnabled": bool(
+			manager.debug_snapshot().get("ambienceRuntimeEnabled", true)
+		),
+		"ambiencePlaybackAvailable": bool(
+			manager.debug_snapshot().get("ambiencePlaybackAvailable", true)
+		),
+		"warmedAmbienceStreamCount": int(
+			manager.debug_snapshot().get("warmedAmbienceStreamCount", -1)
+		),
 		"catalogCueCount": cues.size(),
 		"loadedAudioCount": loaded_audio_count,
 		"ambienceContextCount": ambience_contexts.size(),
@@ -169,6 +205,66 @@ func _load_catalog(errors: Array[String]) -> Dictionary:
 		errors.append("目录 JSON 无法解析")
 		return {}
 	return (parsed as Dictionary).duplicate(true)
+
+
+func _load_release_gate(errors: Array[String]) -> Dictionary:
+	if not FileAccess.file_exists(RELEASE_GATE_PATH):
+		errors.append("环境声发布门文件不存在")
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(RELEASE_GATE_PATH))
+	if not (parsed is Dictionary):
+		errors.append("环境声发布门 JSON 无法解析")
+		return {}
+	return (parsed as Dictionary).duplicate(true)
+
+
+func _validate_release_gate(
+	catalog: Dictionary,
+	gate: Dictionary,
+	errors: Array[String]
+) -> void:
+	if int(gate.get("schemaVersion", 0)) != 1:
+		errors.append("环境声发布门 schemaVersion 必须为 1")
+	if str(gate.get("bundleId", "")) != str(catalog.get("bundleId", "")):
+		errors.append("环境声发布门没有绑定当前音频 bundle")
+	if (
+		str(gate.get("reviewOverride", ""))
+		!= "dedicated_isolated_qa_scene_only"
+	):
+		errors.append("环境声发布门没有限制为隔离 QA 审查")
+	if (
+		str(gate.get("decision", "")) != "deferred"
+		or str(gate.get("ownerReviewStatus", "")) != "owner_listening_pending"
+		or bool(gate.get("releaseApproved", true))
+		or bool(gate.get("runtimeEnabled", true))
+	):
+		errors.append("环境声发布门没有保持延期关闭态")
+	if (
+		gate.get("ownerAcceptance", null) != null
+		or gate.get("ownerDecisionDigest", null) != null
+		or gate.get("releaseAttestation", null) != null
+	):
+		errors.append("环境声延期门错误携带了 owner／发布产物")
+	var cue_hashes = gate.get("cueRuntimeSha256", {})
+	if not cue_hashes is Dictionary:
+		errors.append("环境声发布门缺少 cueRuntimeSha256")
+		return
+	for cue_id_value in EXPECTED_AMBIENCE_HASHES.keys():
+		var cue_id := str(cue_id_value)
+		var cue = (catalog.get("cues", {}) as Dictionary).get(cue_id, {})
+		if not cue is Dictionary:
+			errors.append("环境声发布门引用的 cue 不存在：%s" % cue_id)
+			continue
+		var expected_hash := str(EXPECTED_AMBIENCE_HASHES.get(cue_id, ""))
+		if str((cue_hashes as Dictionary).get(cue_id, "")) != expected_hash:
+			errors.append("环境声发布门 hash 漂移：%s" % cue_id)
+			continue
+		var path := str((cue as Dictionary).get("path", ""))
+		if not FileAccess.file_exists(path):
+			errors.append("环境声发布门运行文件不存在：%s" % cue_id)
+			continue
+		if FileAccess.get_sha256(path) != expected_hash:
+			errors.append("环境声发布门运行文件字节漂移：%s" % cue_id)
 
 
 func _validate_runtime_files(catalog: Dictionary, errors: Array[String]) -> int:

@@ -50,6 +50,7 @@ func _ready() -> void:
 	var review_manager := GameAudioManager.new()
 	review_manager.name = "GameAudioManager"
 	review_manager.configure_settings_path(_review_settings_path)
+	review_manager.configure_ambience_review_override_enabled(true)
 	_host.game_audio_manager = review_manager
 	_host.add_child.call_deferred(review_manager)
 	_perf_mode = perf_mode_override.strip_edges().to_lower()

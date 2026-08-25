@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "gateId": "beastbound_audio_v2_ambience_release_v1",
+  "bundleId": "beastbound_audio_v2",
+  "scope": "ambience",
+  "decision": "deferred",
+  "decisionSource": "docs/phase_535_production_release_r1_05_ambience_delegated_listening_deferral.md",
+  "ownerReviewStatus": "owner_listening_pending",
+  "releaseApproved": false,
+  "runtimeEnabled": false,
+  "ownerAcceptance": null,
+  "ownerDecisionDigest": null,
+  "releaseAttestation": null,
+  "reviewOverride": "dedicated_isolated_qa_scene_only",
+  "cueRuntimeSha256": {
+    "ambience.cave": "f30c8e32f517d0c2426aea75d569f2e943f213054212e526a31c22702208f283",
+    "ambience.town": "755dc0e18b20d9be0b0bf2ebe6b6de9dad44cf99f1b00bbace6d6fa9de6ec8e3",
+    "ambience.wilderness": "a3388bca77d9b620d48661fd363e72d2850dfc6909ff12f1dd0086bb6bd9f3f2"
+  }
+}

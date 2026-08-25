@@ -19,10 +19,17 @@ func _run() -> void:
 		_finish(failures, [])
 		return
 	var catalog_path := "%s/catalog_%s.json" % [temp_root, nonce]
+	var canonical_catalog_path := "%s/canonical_catalog_%s.json" % [temp_root, nonce]
 	var settings_path := "%s/settings_%s.json" % [temp_root, nonce]
-	if not _write_catalog(catalog_path):
+	if (
+		not _write_catalog(catalog_path)
+		or not _write_catalog(
+			canonical_catalog_path,
+			GameAudioManagerScript.CANONICAL_AUDIO_BUNDLE_ID
+		)
+	):
 		failures.append("无法写入临时音频 catalog")
-		_finish(failures, [catalog_path, settings_path])
+		_finish(failures, [catalog_path, canonical_catalog_path, settings_path])
 		return
 
 	var shared_stream := _five_second_silence()
@@ -363,10 +370,129 @@ func _run() -> void:
 	_expect(not silent_manager.play_cue("combat.pool_00"), "缺失 SFX 资源时未安全静音", failures)
 	await _stop_drain_and_free(silent_manager)
 
-	_finish(failures, [catalog_path, settings_path])
+	var release_loader_calls: Dictionary = {}
+	var release_manager := GameAudioManagerScript.new()
+	release_manager.configure_playback_enabled(true)
+	release_manager.configure_catalog_path(canonical_catalog_path)
+	release_manager.configure_settings_path(settings_path)
+	release_manager.configure_stream_loader(func(path: String):
+		release_loader_calls[path] = int(release_loader_calls.get(path, 0)) + 1
+		return shared_stream
+	)
+	get_root().add_child(release_manager)
+	await process_frame
+	var closed_snapshot := release_manager.debug_snapshot()
+	_expect(
+		bool(closed_snapshot.get("ambienceReleaseGateValid", false)),
+		"canonical 环境声延期发布门无效",
+		failures
+	)
+	_expect(
+		str(closed_snapshot.get("ambienceReleaseDecision", "")) == "deferred",
+		"canonical 环境声没有保持 deferred",
+		failures
+	)
+	_expect(
+		not bool(closed_snapshot.get("ambienceRuntimeEnabled", true))
+		and not bool(closed_snapshot.get("ambiencePlaybackAvailable", true)),
+		"canonical 普通运行错误获得环境声播放资格",
+		failures
+	)
+	_expect(
+		int(closed_snapshot.get("warmedMusicStreamCount", 0)) == 4
+		and int(closed_snapshot.get("warmedAmbienceStreamCount", -1)) == 0
+		and int(closed_snapshot.get("streamCacheCount", 0)) == 4,
+		"canonical 普通运行没有只预热四首正式音乐",
+		failures
+	)
+	for ambience_path in _ambience_paths():
+		_expect(
+			int(release_loader_calls.get(ambience_path, 0)) == 0,
+			"延期环境声仍在普通运行预热：%s" % ambience_path,
+			failures
+		)
+	_expect(
+		release_manager.sync_map_context("firebud_village_gate"),
+		"环境声延期时地图音乐同步失败",
+		failures
+	)
+	_expect(
+		release_manager.current_music_cue() == "music.town"
+		and release_manager.current_ambience_cue() == "",
+		"环境声延期时普通地图没有只播放音乐",
+		failures
+	)
+	_expect(
+		not release_manager.play_cue("ambience.town"),
+		"普通运行绕过发布门直接播放环境声",
+		failures
+	)
+	_expect(release_manager.enter_battle(), "环境声延期时战斗音乐未切入", failures)
+	_expect(
+		release_manager.current_ambience_cue() == ""
+		and not release_manager.is_ambience_ducked(),
+		"无活动环境声时战斗仍挂流或 duck",
+		failures
+	)
+	_expect(release_manager.exit_battle(), "环境声延期时战斗音乐未恢复", failures)
+	_expect(
+		_assigned_ambience_stream_count(release_manager) == 0
+		and _playing_ambience_player_count(release_manager) == 0,
+		"环境声延期后普通运行留下了孤儿播放器",
+		failures
+	)
+
+	release_manager.configure_ambience_review_override_enabled(true)
+	await create_timer(GameAudioManagerScript.AMBIENCE_CROSSFADE_SECONDS + 0.10).timeout
+	await process_frame
+	var review_snapshot := release_manager.debug_snapshot()
+	_expect(
+		bool(review_snapshot.get("ambienceReviewOverrideEnabled", false))
+		and bool(review_snapshot.get("ambiencePlaybackAvailable", false)),
+		"显式隔离审查没有获得环境声播放资格",
+		failures
+	)
+	_expect(
+		int(review_snapshot.get("warmedAmbienceStreamCount", 0)) == 3
+		and release_manager.current_ambience_cue() == "ambience.town",
+		"显式隔离审查没有预热并恢复城镇环境声",
+		failures
+	)
+	_expect(release_manager.enter_battle(), "显式隔离审查无法进入战斗音乐", failures)
+	await create_timer(GameAudioManagerScript.MUSIC_CROSSFADE_SECONDS + 0.10).timeout
+	await process_frame
+	_expect(
+		release_manager.current_ambience_cue() == "ambience.town"
+		and release_manager.is_ambience_ducked(),
+		"显式隔离审查没有保留环境声 duck 合同",
+		failures
+	)
+	_expect(release_manager.exit_battle(), "显式隔离审查无法恢复地图音频", failures)
+	await create_timer(GameAudioManagerScript.MUSIC_CROSSFADE_SECONDS + 0.10).timeout
+	await process_frame
+	release_manager.configure_ambience_review_override_enabled(false)
+	var reclosed_snapshot := release_manager.debug_snapshot()
+	_expect(
+		not bool(reclosed_snapshot.get("ambiencePlaybackAvailable", true))
+		and int(reclosed_snapshot.get("warmedAmbienceStreamCount", -1)) == 0
+		and int(reclosed_snapshot.get("streamCacheCount", 0)) == 4
+		and release_manager.current_ambience_cue() == ""
+		and not release_manager.is_ambience_ducked(),
+		"退出显式审查后没有重新收紧环境声发布门",
+		failures
+	)
+	_expect(
+		_assigned_ambience_stream_count(release_manager) == 0
+		and _playing_ambience_player_count(release_manager) == 0,
+		"退出显式审查后仍有孤儿环境声播放器",
+		failures
+	)
+	await _stop_drain_and_free(release_manager)
+
+	_finish(failures, [catalog_path, canonical_catalog_path, settings_path])
 
 
-func _write_catalog(path: String) -> bool:
+func _write_catalog(path: String, bundle_id: String = "audio_manager_check") -> bool:
 	var cues := {
 		"music.town": _cue("res://fake/music_town.wav", "Music", "music", 0, 0),
 		"music.wilderness": _cue("res://fake/music_wilderness.wav", "Music", "music", 0, 0),
@@ -389,7 +515,7 @@ func _write_catalog(path: String) -> bool:
 		)
 	var catalog := {
 		"schemaVersion": 1,
-		"bundleId": "audio_manager_check",
+		"bundleId": bundle_id,
 		"reviewState": "qa_only",
 		"ambienceContexts": {
 			"town": "ambience.town",
