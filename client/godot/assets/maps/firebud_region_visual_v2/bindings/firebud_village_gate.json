@@ -86,40 +86,42 @@
       }
     ],
     "plazaRects": [
-      [2, 12, 5, 3],
-      [8, 11, 4, 3],
-      [8, 17, 3, 3]
+      [2, 12, 5, 5],
+      [3, 17, 3, 3],
+      [6, 18, 8, 4],
+      [9, 9, 10, 5]
     ],
     "plazaCells": [
-      [6, 13],
-      [7, 13],
-      [7, 14],
-      [11, 13],
-      [12, 13],
+      [6, 15],
+      [7, 16],
+      [8, 17],
       [10, 15],
       [10, 16],
-      [9, 16]
+      [10, 17],
+      [11, 14],
+      [12, 14],
+      [13, 14]
     ],
     "overrides": []
   },
   "objectPlacements": [
     {
-      "instanceId": "village_service_pavilion_blocked_cluster_01",
-      "objectId": "firebud_service_pavilion",
-      "grid": [11, 5],
+      "instanceId": "village_growth_rack_blocked_cluster_01",
+      "objectId": "firebud_training_rack",
+      "grid": [11, 7],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[9, 4], [10, 4], [11, 5]]
+      "collisionFootprint": [[10, 6], [11, 7]]
     },
     {
-      "instanceId": "village_ancient_tree_blocked_cluster_01",
-      "objectId": "firebud_ancient_tree",
-      "grid": [16, 8],
+      "instanceId": "village_advanced_planter_blocked_cluster_01",
+      "objectId": "firebud_low_planter",
+      "grid": [11, 8],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[14, 7], [15, 7], [16, 8]]
+      "collisionFootprint": [[10, 8], [11, 8]]
     },
     {
       "instanceId": "village_edge_scenery_tree_west_01",
@@ -169,20 +171,20 @@
     {
       "instanceId": "village_fence_blocked_cluster_01",
       "objectId": "firebud_low_fence",
-      "grid": [22, 12],
+      "grid": [24, 12],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[20, 11], [21, 11], [22, 12]]
+      "collisionFootprint": [[22, 11], [23, 11], [24, 12]]
     },
     {
       "instanceId": "village_planter_blocked_cluster_02",
       "objectId": "firebud_low_planter",
-      "grid": [11, 20],
+      "grid": [13, 21],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[10, 20], [11, 20]]
+      "collisionFootprint": [[12, 21], [13, 21]]
     },
     {
       "instanceId": "village_honey_rocks_blocked_cluster_01",
@@ -196,11 +198,38 @@
     {
       "instanceId": "village_trade_counter_blocked_cluster_01",
       "objectId": "firebud_trade_counter",
-      "grid": [5, 10],
+      "grid": [11, 10],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[4, 10], [5, 10]]
+      "collisionFootprint": [[10, 10], [11, 10]]
+    },
+    {
+      "instanceId": "village_pet_care_supplies_blocked_cluster_01",
+      "objectId": "firebud_supply_pots",
+      "grid": [9, 22],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[8, 21], [9, 21], [9, 22]]
+    },
+    {
+      "instanceId": "village_trial_practice_cluster_blocked_01",
+      "objectId": "firebud_practice_cluster",
+      "grid": [13, 8],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[13, 7], [14, 7], [13, 8]]
+    },
+    {
+      "instanceId": "village_trial_target_blocked_cluster_01",
+      "objectId": "firebud_training_target",
+      "grid": [19, 14],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[18, 14], [19, 13], [19, 14]]
     },
     {
       "instanceId": "village_grass_scatter_01",

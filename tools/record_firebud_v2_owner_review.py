@@ -78,6 +78,7 @@ MAX_SAMPLE_COUNT = 16
 HUD_GLYPH_STABILITY_FRAME_COUNT = 6
 FIREBUD_VILLAGE_SAFE_NPC_MIN = 4
 FIREBUD_VILLAGE_SAFE_NPC_MAX = 7
+FIREBUD_VILLAGE_KEY_ENVIRONMENT_COUNT = 10
 SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SAFE_MAP_ID = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 REVIEW_MAPS = ("firebud_village_gate", "firebud_training_yard")
@@ -384,7 +385,10 @@ def _read_capture_report(
                         "cameraComposition.npcAlphaSubjectCount="
                         f"{camera_composition.get('npcAlphaSubjectCount')!r}"
                     )
-                if camera_composition.get("keyEnvironmentSubjectCount") != 7:
+                if (
+                    camera_composition.get("keyEnvironmentSubjectCount")
+                    != FIREBUD_VILLAGE_KEY_ENVIRONMENT_COUNT
+                ):
                     mismatches.append(
                         "cameraComposition.keyEnvironmentSubjectCount="
                         f"{camera_composition.get('keyEnvironmentSubjectCount')!r}"

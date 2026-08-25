@@ -49,6 +49,7 @@ const MOVE_FRAME_LIMIT := 240
 const FIREBUD_BUNDLE_ID := "firebud_region_visual_v2"
 const FIREBUD_VILLAGE_SAFE_NPC_MIN := 4
 const FIREBUD_VILLAGE_SAFE_NPC_MAX := 7
+const FIREBUD_VILLAGE_KEY_ENVIRONMENT_COUNT := 10
 const HUD_GLYPH_REGIONS := {
 	"tabs": {
 		"rect": Rect2i(1020, 136, 166, 24),
@@ -388,8 +389,14 @@ func run(request: Dictionary) -> Dictionary:
 		if map_id == "firebud_village_gate":
 			if int(camera_composition.get("npcAlphaSubjectCount", 0)) != 14:
 				errors.append("村口完整 NPC alpha 门禁没有覆盖全部 14 名 NPC")
-			if int(camera_composition.get("keyEnvironmentSubjectCount", 0)) != 7:
-				errors.append("村口关键环境 alpha 门禁没有覆盖冻结的 7 个物件")
+			if (
+				int(camera_composition.get("keyEnvironmentSubjectCount", 0))
+				!= FIREBUD_VILLAGE_KEY_ENVIRONMENT_COUNT
+			):
+				errors.append(
+					"村口关键环境 alpha 门禁没有覆盖冻结的 %d 个物件"
+					% FIREBUD_VILLAGE_KEY_ENVIRONMENT_COUNT
+				)
 			if requires_village_local_alpha_gate:
 				var safe_npc_count := int(camera_composition.get("safeNpcCount", 0))
 				if (

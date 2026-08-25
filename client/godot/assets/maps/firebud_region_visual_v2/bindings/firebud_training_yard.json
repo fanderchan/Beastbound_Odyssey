@@ -80,17 +80,18 @@
         "from": [21, 17],
         "to": [30, 28]
       },
-      {
-        "from": [19, 16],
-        "to": [13, 20]
+    {
+      "from": [21, 17],
+      "to": [13, 20]
       }
     ],
     "plazaRects": [
       [4, 8, 5, 3],
       [10, 6, 7, 4],
       [12, 10, 5, 3],
-      [18, 15, 3, 3],
-      [11, 14, 5, 3]
+      [18, 15, 6, 4],
+      [11, 14, 5, 3],
+      [27, 25, 7, 5]
     ],
     "plazaCells": [],
     "overrides": []
@@ -126,11 +127,11 @@
     {
       "instanceId": "training_planter_blocked_cluster_01",
       "objectId": "firebud_low_planter",
-      "grid": [19, 23],
+      "grid": [31, 26],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[17, 22], [18, 22], [19, 23]]
+      "collisionFootprint": [[30, 25], [31, 25], [31, 26]]
     },
     {
       "instanceId": "training_ember_shrub_blocked_cluster_01",
@@ -207,11 +208,11 @@
     {
       "instanceId": "training_ancient_tree_blocked_cluster_01",
       "objectId": "firebud_ancient_tree",
-      "grid": [30, 21],
+      "grid": [7, 20],
       "offset": [0, 0],
       "mirrored": false,
       "interactionLink": null,
-      "collisionFootprint": [[28, 20], [29, 20], [30, 21]]
+      "collisionFootprint": [[5, 19], [6, 19], [7, 20]]
     },
     {
       "instanceId": "training_target_blocked_cluster_02",
@@ -221,6 +222,60 @@
       "mirrored": false,
       "interactionLink": null,
       "collisionFootprint": [[12, 15], [13, 15], [13, 16]]
+    },
+    {
+      "instanceId": "training_fence_blocked_cluster_03",
+      "objectId": "firebud_low_fence",
+      "grid": [10, 13],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[9, 13], [10, 13]]
+    },
+    {
+      "instanceId": "training_fence_blocked_cluster_04",
+      "objectId": "firebud_low_fence",
+      "grid": [19, 13],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[19, 12], [19, 13]]
+    },
+    {
+      "instanceId": "training_target_blocked_cluster_03",
+      "objectId": "firebud_training_target",
+      "grid": [23, 16],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[22, 15], [23, 15], [23, 16]]
+    },
+    {
+      "instanceId": "training_route_rack_blocked_cluster_02",
+      "objectId": "firebud_training_rack",
+      "grid": [26, 18],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[25, 17], [26, 18]]
+    },
+    {
+      "instanceId": "training_village_gate_pavilion_blocked_01",
+      "objectId": "firebud_service_pavilion",
+      "grid": [34, 25],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[32, 24], [33, 24], [34, 25]]
+    },
+    {
+      "instanceId": "training_village_gate_fence_blocked_01",
+      "objectId": "firebud_low_fence",
+      "grid": [34, 29],
+      "offset": [0, 0],
+      "mirrored": false,
+      "interactionLink": null,
+      "collisionFootprint": [[33, 28], [34, 29]]
     },
     {
       "instanceId": "training_flower_accent_01",

@@ -91,7 +91,7 @@ def _capture_report(*, map_id: str, mode: str) -> dict:
             ],
             "hudOverlappingNpcIds": [],
             "viewportClippedNpcIds": [],
-            "keyEnvironmentSubjectCount": 7,
+            "keyEnvironmentSubjectCount": 10,
             "visibleKeyEnvironmentCount": 4,
             "visibleKeyEnvironmentIds": ["village_trade_counter_blocked_cluster_01"],
             "safeKeyEnvironmentCount": 1,
@@ -359,7 +359,7 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
                 ("npcAlphaSubjectCount", 13),
                 ("safeNpcCount", 3),
                 ("safeNpcCount", 8),
-                ("keyEnvironmentSubjectCount", 6),
+                ("keyEnvironmentSubjectCount", 9),
             ):
                 report = _capture_report(map_id="firebud_village_gate", mode="idle")
                 report["cameraComposition"][key] = value

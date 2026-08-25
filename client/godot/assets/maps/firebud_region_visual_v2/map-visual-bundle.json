@@ -17,7 +17,7 @@
   ],
   "catalogContractCheck": {
     "path": "evidence/catalog-contract-check.json",
-    "sha256": "b997d23bca7235d487af8139d0e4593f16902fca34efd55767e439e46375e9f9"
+    "sha256": "ae37c2288765922b99ea94c37775419e1427e576a235c3f63d32b6dbf692b61e"
   },
   "source": {
     "origin": "AI-generated original",
@@ -2152,14 +2152,14 @@
       "mapId": "firebud_training_yard",
       "binding": {
         "path": "bindings/firebud_training_yard.json",
-        "sha256": "2775987fa144e2a7f337a03d871bcd835d176e9af7a5461024997a0e3aaed073"
+        "sha256": "8210409fe8974d7e8c0d56d1b3a550adae26a728251edae930bcca42eb4f7753"
       }
     },
     {
       "mapId": "firebud_village_gate",
       "binding": {
         "path": "bindings/firebud_village_gate.json",
-        "sha256": "571a65eaa75888488883c9a9b00cf2ba40ec17e1aefc408cabd06b7718f27afa"
+        "sha256": "66f9afe1cf13563fa59fe34b63aa4c3374cbdb7adbaf222e34a1ce2bf1816052"
       }
     }
   ],

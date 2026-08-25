@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W014
+> 当前游标：R1.W015
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -595,11 +595,11 @@
 - [x] **R1.W013 AUTO｜Firebud v2 局部 HUD 安全构图与首屏密度纠偏**
   依赖：R1.W012。完成纠偏：镜头求解只纳入基础无遮挡世界带内、与其相交或距其一个视觉余量的完整 alpha 主体，全图主体仍进入诊断但不再触发 `14/14` 同屏反门禁。完整进入安全世界带的 NPC 冻结为 `4..7`，其完整 alpha 与固定 HUD 交叠或视口裁边均失败关闭；村口 idle/moving 实测为 `5/7`，邻近训练场 warp 完整可读。精确 v2 review zoom 从 `1.55×` 调为 `1.82×` 恢复角色可读体量，未缩小人物、隐藏 HUD、删除服务或改变 warp/spawn、binding、地图与玩法拓扑。真实 Main 28.67 秒／860 帧、性能 `8/8 @ 60fps`、Godot `11/11`、Python `13/13` 和 bundle auditor `17/17` 通过；W011 六类正式证据已 fail-closed 移入 superseded，候选继续 pending。
 
-- [ ] **R1.W014 AUTO｜Firebud v2 服务簇、训练分区与地标围合重做**
-  依赖：R1.W013。保留 14 名 NPC 的身份、服务、对白、appearance、碰撞／approach、主路、遇敌区和双向 warp，使用 Firebud 正式物件建立生活服务簇、训练功能区、入口、路线终点及前后景层级；任何 NPC、物件或 blockedCells 变化必须逐项列出并做权威闭环，不把角色烘焙进地图。
+- [x] **R1.W014 AUTO｜Firebud v2 服务簇、训练分区与地标围合重做**
+  依赖：R1.W013。完成重做：14 名 NPC 按入口民生／宠物照料／高阶成长形成 `5/4/5` 三簇，身份、服务、对白、appearance、碰撞／approach、主路、遇敌区和双向 warp 保持；村内巨树／巨亭退出拥挤服务区，正式柜台、训练架、花台、补给和靶位建立生活与成长层级。训练场新增两段围栏、路线靶／架和 `[27,25,7,5]` 终点广场，以亭、花台、围栏围合返回村口的 spawn/warp；所有 placement footprint 与 `22/46` 个权威 blockedCells 闭合。真实 Main 十动作 `10/10`、四段 `861` 帧视频、双向传送、Godot `11/11`、Node `72/72`、性能 `8/8 @ 60fps` 和 `134 files / errors=[]` 审计通过；scratch 终点补图暴露的玩家完整 alpha 靠近小地图已转入 W015，候选继续 pending。
 
 - [ ] **R1.W015 AUTO｜Firebud v2 角色／地表／物件比例、清晰度与光照统一**
-  依赖：R1.W014。以真实 1280×720 Main 画面校正三类素材的视觉权重、边缘锐度、体量和明暗关系；数值一致只能做回归辅助，必须用同机位 idle/moving 证明肉眼统一，禁止用整体模糊、全局压暗或缩小人物掩盖素材不一致。
+  依赖：R1.W014。先修复训练终点真实路线补图中玩家完整 alpha 靠近小地图的问题，再以真实 1280×720 Main 画面校正角色／地表／物件三类素材的视觉权重、边缘锐度、体量和明暗关系；数值一致只能做回归辅助，必须用同机位 idle/moving 证明肉眼统一，禁止用整体模糊、全局压暗、缩小人物或放宽 HUD 门禁掩盖素材不一致。
 
 - [ ] **R1.W016 AUTO｜Firebud v2 第三次返工精确证据重新冻结**
   依赖：R1.W013、R1.W014、R1.W015。显式 supersede W011，基于同一最终候选重建两图十动作、真实 Computer Use、完整 1280×720／30fps／1× 视频、collision/catalog/performance 原始 runner 与 manifest-bound 离线审计；当前可见主体必须 HUD 清楚、无裁边，首屏密度与空间层级必须进入正式证据。
@@ -644,7 +644,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（R1.W013 完成，当前 R1.W014 AUTO） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.W014 完成，当前 R1.W015 AUTO） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -694,6 +694,7 @@
 - 2026-08-25｜R1.W011｜docs/phase_522_production_release_r1_w011_firebud_second_exact_evidence_refreeze.md + Computer Use `6d3134bb5fdb` + collision `0fb6b79e683c` + performance `c2b55eb24b19` + `.run/evidence/r1_w011/`｜同一最终候选明确 supersede W006；两图十动作 Main pair／十唯一正式图、真实 Computer Use `10/10` 与 20 张原始前后 JPEG、任务 HUD `60/60` 连续读回、28.67 秒／860 帧视频及 81 项清单全部重冻；性能 `8/8 @ 60fps`、Godot `10/10`、Node `42/42`、Python `64+17` 与 `189 files / 112 PNG / 17 JSON / errors=[]` 审计全绿｜候选仍 `owner_review_pending / pending / false / false` 且普通玩家不可达；缺口精确只剩 OWNER acceptance、release attestation、released+enabled lifecycle，下一任务 R1.W012 OWNER
 - 2026-08-25｜R1.W012｜受委托美术总监再次退回 + docs/phase_523_production_release_r1_w012_firebud_delegated_third_rejection.md｜项目所有者明确说明“我不会验证。你自行验证”，Codex 审看 W011 当前 28.67 秒真实 Main、八帧联系表、十动作、Computer Use、碰撞和性能后选择退回；工程证据仍绿，但 `14/14` 全图主体镜头求解把村口压成角色展板，训练场缺少围合与地标层级，角色／地表／物件仍未形成统一视觉权重｜不伪造 owner acceptance 或签名，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达；返工拆为 W013–W017，R1.02 改依赖 W017，下一任务 R1.W013
 - 2026-08-26｜R1.W013｜docs/phase_524_production_release_r1_w013_firebud_local_hud_composition_density.md + `.run/evidence/r1_w013/`｜全图主体镜头求解收敛为局部完整 alpha 世界带，移除 `14/14` 同屏反门禁并冻结安全带 NPC `4..7`；精确 v2 review zoom 调为 `1.82×`，村口 idle/moving 实测安全 NPC `5/7` 且邻近 warp 完整。真实 Main `860` 帧／28.67 秒、性能 `8/8 @ 60fps`、Godot `11/11`、Python `13/13`、auditor `17/17` 与 `134 files / errors=[]` 结构审计通过｜W011 六类正式证据已移入 superseded，当前九个发布证据/生命周期门禁按预期缺失；服务分区、训练围合和地标层级仍由 W014 阻塞，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W014
+- 2026-08-26｜R1.W014｜docs/phase_525_production_release_r1_w014_firebud_service_clusters_training_zones_landmark.md + `.run/evidence/r1_w014/` + scratch action matrix `r1-w014-service-zones-landmark-actions-20260826-h`｜14 名 NPC 按 `5/4/5` 分为入口民生、宠物照料和高阶成长三簇，村口／训练场 placement 为 `21/28`、blockedCells 为 `22/46`；训练场四段功能区和亭／花台／围栏路线终点建立，主路、遇敌区、所有 approach、双向 warp 与权威哈希闭合。真实 Main 十动作 `10/10`、28.7 秒／861 帧视频、Godot `11/11`、Node `72/72`、Python `13+17`、性能 `8/8 @ 60fps` 与 `134 files / errors=[]` 审计通过｜九个正式证据／OWNER／生命周期门禁按预期仍缺；终点补图暴露的玩家完整 alpha 靠近小地图转入 W015，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W015
 
 ## 7. 正式上线硬门槛
 
