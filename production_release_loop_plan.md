@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.04
+> 当前游标：R1.05
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -120,8 +120,8 @@
 - [x] **R1.03 OWNER｜融合肖像与融合流程人眼验收**
   依赖：R0.09。项目所有者继续委托 Codex 自行验证但没有亲自签署画像；受委托宠物美术总监按原尺寸审看两张 1024 master、48/64/96/128 contact sheet 和 Phase 445/479 当前 1280×720 Main 片后，接受曜冠／苔垒 V4E 画像作为内部冻结候选，也接受首批不可骑边界。流程候选退回：权威片只有关闭、报价和第一次不可逆确认，没有 R1.03 明列的成功结果页／失败恢复；当前代码成功和失败也只回填一行状态消息，没有持久展示服务器权威成品、实际继承、材料消耗与失败零消耗。没有创建 owner decision／approval／attestation 或执行 promotion；返工拆为 R1.W018–R1.W020，详见 Phase 530。
 
-- [ ] **R1.04 AUTO｜执行融合候选验收结论**
-  依赖：R1.03。批准则提升受绑定的精确资产并验证客户端/服务端融合闭环；退回则返工；不得只改 catalog_enabled 绕过验收。
+- [x] **R1.04 AUTO｜执行融合候选验收结论**
+  依赖：R1.W020。已执行“首发延期”分支：两条正式配方、两张画像和非骑乘包保持关闭态登记，不生成 owner decision／digest／attestation，不执行 promoter 或修改 catalog 开关。关闭 verifier `2 forms / 1350 copied / 22 portrait / 2 QA controls`；promoter `blocked / productionClosed=true`；服务端关闭 HTTP、目录和证明 `53/53`；Godot 面板／客户端域／合同与正常 Main `2/2` 通过，玩家关闭页可返回且网络请求为 0，详见 Phase 534。
 
 - [ ] **R1.05 OWNER｜村庄与洞穴环境音人耳验收**
   依赖：R0.09。试听 Phase 475 的循环衔接、底噪、响度、场景切换和长时间疲劳感，明确批准、退回或延期。
@@ -653,7 +653,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（融合 W018–W020 已关闭返工并建议首发延期，当前 R1.04 AUTO 执行延期分支） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（融合延期分支 R1.04 已完成，当前 R1.05 OWNER 环境音人耳验收） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -712,6 +712,7 @@
 - 2026-08-26｜R1.W018｜docs/phase_531_production_release_r1_w018_fusion_authoritative_outcomes.md｜新增严格融合 outcome model 和 1280×720 overlay；成功只在服务器结果、profile revision 与新宠实例全成立后展示正式画像／实际技能／绑定交易／不可骑终局／三宠消耗，明确拒绝才显示零消耗，未知回执保留同一幂等操作且不猜消耗。模型 `8/8`、面板、客户端域／合同、Node `89/89`、宠物 `36 forms / errors=0 warnings=0`、QA lane `78/78`、性能 `5/5` 全绿｜完整 portrait catalog 仍诚实暴露候选 worktree 缺 Phase371 忽略旧片，不改写历史证明；生产与 owner 门继续全关，下一任务 R1.W019
 - 2026-08-26｜R1.W019｜docs/phase_532_production_release_r1_w019_fusion_main_exact_evidence.md + `.run/evidence/r1_w019_fusion_main_outcome_review/r1-w019-fusion-main-outcomes-20260826-b/`｜真实 Main 13 章完整覆盖两路正式来源／结果画像、报价、双确认、pending、成功、明确失败、requote 恢复、不可骑和首尾关闭；5 次跨帧真实左键，权威变更／网络／profile 写入为 0。唯一权威视频 `66fd49b9…`为 1280×720、30 FPS、1444 帧／48.133333 秒有声 H.264/AAC，13 张原尺寸帧、全片解码、SHA256SUMS、lane lifecycle、录片性能 `46+46` 样本与 60 FPS 独立性能 `5/5` 全绿｜第一轮因 outcome 下层确认指纹残留被后续轮次取代；当前仍无 owner acceptance，四个生产／画像门全关，下一任务 R1.W020 OWNER
 - 2026-08-26｜R1.W020｜docs/phase_533_production_release_r1_w020_fusion_delegated_deferral.md + R1.W019 唯一权威证据 `66fd49b9…`｜受委托逐帧复核两路画像、双确认、请求中、两路成功、明确失败与重新报价恢复，确认最终回执、零消耗恢复和重复提交三个退回根因均已关闭；页面安全区、结果层级、不可骑与高价值消耗说明达到内部冻结线，没有新根因支持继续返工｜建议内部冻结当前候选并首发延期；项目所有者未亲签且 `semanticIndependenceVerified=false`，未生成 acceptance／digest／attestation，生产门继续全关，下一任务 R1.04 AUTO 延期分支
+- 2026-08-26｜R1.04｜docs/phase_534_production_release_r1_04_fusion_deferred_runtime_enforcement.md + `.run/audit/r1_04_fusion_deferred_runtime/closed-verifier.json` + `.run/godot_auto_checks/r1_04_fusion_deferred_runtime/`｜执行首发延期：关闭 verifier `2 forms / 1350 copied / 22 portrait / 2 QA controls`，promoter 按预期 `blocked / productionClosed=true`；服务端两路线真实合格材料报价／执行零副作用关闭，定向 `53/53`；Godot 面板／客户端域／合同与正常 Main `2/2` 通过，关闭说明页可进可返且 `fusion_requests=0`，玩家目录哈希稳定、QA lane absent｜无 owner decision／可信 digest／attestation／promotion，五项生命周期继续 false/pending，下一任务 R1.05 OWNER
 
 ## 7. 正式上线硬门槛
 
