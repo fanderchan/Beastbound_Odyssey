@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W017
+> 当前游标：R1.02
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -604,8 +604,8 @@
 - [x] **R1.W016 AUTO｜Firebud v2 第三次返工精确证据重新冻结**
   依赖：R1.W013、R1.W014、R1.W015。已显式 supersede W011，并在正式取证中修复地图端点相机限制导致理想锚点与实际夹紧镜头不一致的问题；同一最终候选的两图十动作、真实 Computer Use、32.43 秒／973 帧完整视频、collision/catalog/performance 原始 runner 与 manifest-bound 报告已全部重冻。最终审计 `189 files / 112 PNG / 17 JSON / errors=[]`，可见人物完整 alpha、任务 HUD、首屏密度与空间层级均进入正式证据；候选仍 pending，未伪造 OWNER 或发布门禁。
 
-- [ ] **R1.W017 OWNER｜Firebud v2 第三次返工后发布决定**
-  依赖：R1.W016。展示第三次返工的新冻结材料并明确批准、退回或首发延期。项目所有者可亲自接受；若继续委托，Codex 可以基于审片退回或建议延期，但不得把自动检查或独立审美判断伪造成项目所有者接受签名。未取得可追溯的明确批准不得执行 R1.02 promotion。
+- [x] **R1.W017 OWNER｜Firebud v2 第三次返工后发布决定**
+  依赖：R1.W016。项目所有者继续委托 Codex 自行验证，但没有亲自接受精确像素或授权伪造签名。受委托美术总监逐格审看 W016 当前 32.43 秒／973 帧真实 Main、八帧联系表、十动作和 Computer Use 后确认 W012 的角色展板、训练场围合、视觉权重三项根因已实质关闭，没有新缺陷支持继续退回；建议“首发延期并冻结当前候选”，停止无证据 Firebud 返工。该建议不创建 owner acceptance／attestation，不允许 promotion；R1.02 只执行延期分支并证明 v2 继续不可达、旧正式版本有效。
 
 ### R2.Dxxx — Boss/PvP 决策缺口
 
@@ -644,7 +644,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（R1.W016 完成，当前 R1.W017 OWNER） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.W017 完成，当前 R1.02 AUTO 延期分支） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -697,6 +697,7 @@
 - 2026-08-26｜R1.W014｜docs/phase_525_production_release_r1_w014_firebud_service_clusters_training_zones_landmark.md + `.run/evidence/r1_w014/` + scratch action matrix `r1-w014-service-zones-landmark-actions-20260826-h`｜14 名 NPC 按 `5/4/5` 分为入口民生、宠物照料和高阶成长三簇，村口／训练场 placement 为 `21/28`、blockedCells 为 `22/46`；训练场四段功能区和亭／花台／围栏路线终点建立，主路、遇敌区、所有 approach、双向 warp 与权威哈希闭合。真实 Main 十动作 `10/10`、28.7 秒／861 帧视频、Godot `11/11`、Node `72/72`、Python `13+17`、性能 `8/8 @ 60fps` 与 `134 files / errors=[]` 审计通过｜九个正式证据／OWNER／生命周期门禁按预期仍缺；终点补图暴露的玩家完整 alpha 靠近小地图转入 W015，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W015
 - 2026-08-26｜R1.W015｜docs/phase_526_production_release_r1_w015_firebud_visual_grade_scale_clarity_lighting.md + `.run/evidence/r1_w015/`｜玩家镜头安全主体从固定脚点探针升级为正式动作完整 alpha union，训练终点危险锚点 y=`207→253`；地表保留 authored low-contrast anchor，player／NPC／mapObject 采用选择性有界视觉分级与 linear filter。真实 Main 四段人物高度 `135.626..140.868px`、NPC 中位 `133.661..135.626px`、比例 `1.000..1.039`，完整 alpha 的 safe rect／任务 HUD／固定 HUD／视口边缘全部通过；28.7 秒／861 帧视频、Godot `13/13`、Python `13+17`、性能 `8/8 @ 60fps`、strict pending preview 和 `134 files / errors=[]` 审计通过｜九个正式证据／OWNER／生命周期门禁按预期仍缺，候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W016
 - 2026-08-26｜R1.W016｜docs/phase_527_production_release_r1_w016_firebud_third_exact_evidence_refreeze.md + Computer Use `13188311632e` + collision `d32e84de942d` + performance `251c67e139db` + `.run/evidence/r1_w016/`｜正式取证修复地图端点 camera limits 与理想锚点不一致，人物完整 alpha 改为可达范围内硬优先；同一候选显式 supersede W011，重冻两图十动作／十唯一 Main 图、真实 Computer Use `10/10` 与 20 张原始 JPEG、任务 HUD `60/60`、32.43 秒／973 帧视频、collision/catalog/performance raw runner。Godot `10/10 + 2/2`、Node `42/42`、Python `58+17`、性能 `8/8 @ 60fps` 与 `189 files / 112 PNG / 17 JSON / errors=[]` 全绿｜缺口精确只剩 OWNER acceptance、release attestation、released+enabled lifecycle；候选继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.W017 OWNER
+- 2026-08-26｜R1.W017｜受委托美术总监建议首发延期 + docs/phase_528_production_release_r1_w017_firebud_delegated_release_deferral.md｜项目所有者继续委托 Codex 自行审片但未签署接受；逐格审看 W016 当前视频／联系表／动作帧后确认局部镜头已消除角色展板、村口三簇和训练段落建立空间层级、人物／地表／物件视觉权重收敛，没有新根因支持第四次 Firebud 返工。全游戏正式美术与其他生产门禁仍未完成，且 owner acceptance 缺失，因此建议首发延期、冻结候选、停止无证据返工｜不伪造批准／签名／attestation，不执行 promotion；v2 继续 `owner_review_pending / pending / false / false` 且普通玩家不可达，下一任务 R1.02 AUTO 延期分支
 
 ## 7. 正式上线硬门槛
 
