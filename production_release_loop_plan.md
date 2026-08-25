@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.W021
+> 当前游标：R1.W022
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -138,8 +138,8 @@
 - [x] **R1.09 OWNER｜Earth Vein Cave v1 地图人眼验收**
   依赖：R0.09。项目所有者委托 Codex 自行验证但未亲签；当前分支重录在一层第一张真实 Main idle 帧即被新版硬门拒绝：玩家实际点 `(408,360)` 未收敛到 `(640,360)` 动态安全锚点，右侧任务 HUD 覆盖四个 blocking 物件，人物完整动作 alpha 高度仅 `82.080px`，当前帧也没有证明 NPC／主体比例。F4 两座共鸣台可读且真实跨帧移动完成，但专用控制器因 `audio_playback_not_disabled` 未通过资源收口。bundle 结构仍为 `158 files / 29 JSON / 47 PNG / errors=[]`，Node 路线／遭遇 `21/21`，客户端任务／寻路／移动／切图／遭遇等仍绿；共享地图门另暴露陈旧 Firebud v1 released 目录与当前权威碰撞/hash 不一致，八方向 canary 右路也不再平直。结论为受委托退回，不生成 owner decision／digest／attestation，不执行 promotion；返工拆为 R1.W021–R1.W025，详见 Phase 539。
 
-- [ ] **R1.W021 AUTO｜共享地图运行目录与八方向基线收口**
-  来源：R1.09。保持历史 Firebud v1 制品和证明不可变，但普通运行目录不得继续把已与当前权威 map data 不一致的 v1 冒充可用 released 地图；修复或明确退役其 catalog 路由，让 `--auto-map-visual-runtime-check` 在 pending Earth Vein 仍 review-only 时通过。同步定位八方向 canary 是测试坐标漂移还是实际寻路回归，保持真八方向规则并恢复稳定门禁。
+- [x] **R1.W021 AUTO｜共享地图运行目录与八方向基线收口**
+  来源：R1.09。已只退役历史 Firebud v1 的普通 catalog 路由，bundle／manifest／证明／历史 hash 保持不可变；primary 现精确只含仍满足冻结合同的 Mistcap，Firebud v2 与 Earth Vein 六图继续 review-only 且普通生命周期失败关闭。冻结 bundle 仍逐项校验当前成员、精确路径、binding／map data／manifest／attestation，只不再因无关目录成员变化要求历史全目录 hash 等于当前文件；普通与 review 报告生成模式也已隔离。八方向红灯定位为 W014 blocker 令旧出生点 canary 正确拒绝切角，不是算法回归；门禁现从权威 spawn 确定性寻找最近双向平直真实格，当前 `(14,10)` 两路均三点直达且同屏幕 y。Godot 相邻 `7/7`、独立 review catalog、Python `40/40` 与 QA 源合同全绿，真实目录 hash 稳定，详见 Phase 540。
 
 - [ ] **R1.W022 AUTO｜Earth Vein 四层 HUD 安全相机与端点构图**
   依赖：R1.W021。按真实 1280×720 Main 的任务栏、顶栏、底栏和 camera limits 为四层 spawn、上下楼、出口及 F4 双共鸣台求解可达安全锚点；玩家完整 alpha、关键阻挡和交互地标不得被 HUD 或视口裁边覆盖，不改权威 warp／blockedCells／玩法拓扑。
@@ -668,7 +668,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（Earth Vein R1.09 已受委托退回，当前 R1.W021 修复共享地图运行目录与八方向基线） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（R1.W021 共享地图基线已收口，当前 R1.W022 修复 Earth Vein 四层 HUD 安全相机与端点构图） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -733,6 +733,7 @@
 - 2026-08-26｜R1.07｜docs/phase_537_production_release_r1_07_bui_vfx_delegated_visual_review.md + 四背景 Main MP4 `1efbc76e… / 41377a65… / 28b1d28e… / e261bc58…`｜当前 bundle／provenance／八帧逐 hash 复核无漂移；四支 `1280×720 / 30 FPS / 1× / 223 frames` 在 20 actor 下连续覆盖普通、闪避、暴击，人眼确认方向、接触、无伪命中和暴击重量在草甸／砂岩／暗石／赤土均可读，未发现具体素材返工项；分段最坏 `process_total=4.565ms`，月影石坪 54–56.8 FPS 短波动留待 R1.08｜受委托建议内部冻结、首发延期；无 owner acceptance／digest／attestation，真实目录四轮均 `d6b1961e…` 前后不变且 lane absent，下一任务 R1.08 AUTO
 - 2026-08-26｜R1.08｜docs/phase_538_production_release_r1_08_bui_vfx_deferred_runtime_enforcement.md + gate `bb6d2fc0…` + isolated Main `3bff1316…`｜发布门逐 hash 绑定 bundle／provenance／八张运行帧；普通事件 `planAttached=true / assetReady=false` 且候选纹理不可读，审片 override 三段 `assetReady=true`，退出后 `override=false / access=false / cache=false`；权威结算与时序 `5/5`、通用性能 `5/5`，隔离战斗原生三段最大 `1.253ms`｜无 owner／digest／attestation／promotion；真实目录始终 `d6b1961e…`、lane absent，下一任务 R1.09 OWNER
 - 2026-08-26｜R1.09｜docs/phase_539_production_release_r1_09_earth_vein_delegated_rejection.md + current Main `7429949e…` + F4 `67db3c43…`｜当前 bundle 仍为 `158 files / 29 JSON / 47 PNG / errors=[]`，Node 路线／遭遇 `21/21`，移动／切图／遭遇／面板 `5/5`；但一层 Main 硬门复现动态锚点未收敛、任务 HUD 覆盖四个 blocking 物件和人物仅 `82.080px`，F4 控制器又因音频未停未能收口。共享门另复现陈旧 Firebud v1 released 目录与当前碰撞/hash 不一致及八方向右路绕行｜受委托退回；无 owner decision／digest／attestation／promotion，Earth Vein 继续 review-only，返工拆为 W021–W025，下一任务 R1.W021
+- 2026-08-26｜R1.W021｜docs/phase_540_production_release_r1_w021_map_catalog_and_eight_direction_baseline.md + Godot 摘要 `284a31fd…`｜只退役 Firebud v1 普通 catalog 路由而不改历史制品／证明；primary 精确只含 Mistcap，Firebud v2 与 Earth Vein 六图继续 review-only，当前成员／路径／binding／map data／manifest／生命周期仍逐项失败关闭。八方向定位为当前 blocker 令旧固定 canary 正确拒绝切角，改为从权威 spawn 确定性选择最近双向直线真实格 `(14,10)`｜Godot parse／运行目录／世界呈现／寻路／八方向／移动／转图 `7/7`、独立 review catalog、Python `40/40` 与 QA 源合同通过；真实目录 `d6b1961e…` 不变，下一任务 R1.W022
 
 ## 7. 正式上线硬门槛
 

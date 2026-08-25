@@ -321,6 +321,31 @@ static func _validate_runtime_check_mode_contract(errors: Array[String]) -> void
 				]
 			)
 
+	var review_bundle_ids := [
+		"earth_vein_cave_visual_v1",
+		"firebud_region_visual_v2",
+	]
+	var primary_write_ids := MapVisualRuntimeCheck._catalog_contract_bundle_ids_for_write(
+		"catalog_contract_generation",
+		[],
+		review_bundle_ids
+	)
+	if primary_write_ids != ["mistcap_marsh_visual_v1"]:
+		errors.append(
+			"runtime check mode primary generation leaked review bundles: %s"
+			% [str(primary_write_ids)]
+		)
+	var review_write_ids := MapVisualRuntimeCheck._catalog_contract_bundle_ids_for_write(
+		"review_catalog_contract_generation",
+		["firebud_region_visual_v2"],
+		review_bundle_ids
+	)
+	if review_write_ids != ["firebud_region_visual_v2"]:
+		errors.append(
+			"runtime check mode review generation ignored exact override: %s"
+			% [str(review_write_ids)]
+		)
+
 
 static func _validate_edge_scenery_anchor_contract(errors: Array[String]) -> void:
 	var grid_size := Vector2i(10, 8)

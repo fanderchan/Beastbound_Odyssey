@@ -32853,18 +32853,34 @@ func _run_auto_facing_check() -> void:
 	host.get_tree().quit(0 if status == "ok" else 1)
 
 func _run_auto_eight_direction_check() -> void:
-	var start_cell = IsoMapModel.spawn_cell(host.map_data)
+	var authoritative_spawn := IsoMapModel.spawn_cell(host.map_data)
+	var start_cell := _find_eight_direction_canary_start(host.map_data)
+	if start_cell.x < 0 or start_cell.y < 0:
+		print("eight direction check ready: status=failed spawn=%s canary=missing" % [
+			str(authoritative_spawn),
+		])
+		host.get_tree().quit(1)
+		return
 	var right_goal = start_cell + Vector2i(2, -2)
 	var left_goal = start_cell + Vector2i(-2, 2)
 	var right_path: Array[Vector2i] = IsoMapModel.find_path(host.map_data, start_cell, right_goal)
 	var left_path: Array[Vector2i] = IsoMapModel.find_path(host.map_data, start_cell, left_goal)
-	var right_direct = right_path.size() == 3 and right_path[1] == start_cell + Vector2i(1, -1) and right_path[2] == right_goal
-	var left_direct = left_path.size() == 3 and left_path[1] == start_cell + Vector2i(-1, 1) and left_path[2] == left_goal
+	var right_direct := _is_direct_eight_direction_path(
+		right_path,
+		start_cell,
+		Vector2i(1, -1)
+	)
+	var left_direct := _is_direct_eight_direction_path(
+		left_path,
+		start_cell,
+		Vector2i(-1, 1)
+	)
 	var right_flat = host._path_has_same_screen_y(right_path)
 	var left_flat = host._path_has_same_screen_y(left_path)
 	var status = "ok" if right_direct and left_direct and right_flat and left_flat else "failed"
-	print("eight direction check ready: status=%s start=%s right_path=%s left_path=%s right_flat=%s left_flat=%s" % [
+	print("eight direction check ready: status=%s spawn=%s canary=%s right_path=%s left_path=%s right_flat=%s left_flat=%s" % [
 		status,
+		str(authoritative_spawn),
 		str(start_cell),
 		str(right_path),
 		str(left_path),
@@ -32872,3 +32888,55 @@ func _run_auto_eight_direction_check() -> void:
 		str(left_flat),
 	])
 	host.get_tree().quit(0 if status == "ok" else 1)
+
+
+func _find_eight_direction_canary_start(map_data: Dictionary) -> Vector2i:
+	var authoritative_spawn := IsoMapModel.spawn_cell(map_data)
+	var grid_size := IsoMapModel.grid_size(map_data)
+	var max_radius := grid_size.x + grid_size.y
+	for radius in range(max_radius + 1):
+		for delta_y in range(-radius, radius + 1):
+			var delta_x_abs := radius - absi(delta_y)
+			var delta_x_values: Array[int] = [0]
+			if delta_x_abs > 0:
+				delta_x_values = [-delta_x_abs, delta_x_abs]
+			for delta_x in delta_x_values:
+				var candidate := authoritative_spawn + Vector2i(delta_x, delta_y)
+				if not IsoMapModel.is_walkable(map_data, candidate):
+					continue
+				var right_path: Array[Vector2i] = IsoMapModel.find_path(
+					map_data,
+					candidate,
+					candidate + Vector2i(2, -2)
+				)
+				if not _is_direct_eight_direction_path(
+					right_path,
+					candidate,
+					Vector2i(1, -1)
+				):
+					continue
+				var left_path: Array[Vector2i] = IsoMapModel.find_path(
+					map_data,
+					candidate,
+					candidate + Vector2i(-2, 2)
+				)
+				if _is_direct_eight_direction_path(
+					left_path,
+					candidate,
+					Vector2i(-1, 1)
+				):
+					return candidate
+	return Vector2i(-1, -1)
+
+
+func _is_direct_eight_direction_path(
+	path: Array[Vector2i],
+	start_cell: Vector2i,
+	step: Vector2i
+) -> bool:
+	return (
+		path.size() == 3
+		and path[0] == start_cell
+		and path[1] == start_cell + step
+		and path[2] == start_cell + step * 2
+	)

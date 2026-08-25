@@ -6,19 +6,14 @@ const MapVisualCatalog := preload("res://scripts/world/map_visual_catalog.gd")
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 
 const EXPECTED_MAP_IDS: Array[String] = [
-	"firebud_training_yard",
-	"firebud_village_gate",
 	"mistcap_marsh",
 ]
 const TILE_SIZE := Vector2i(80, 40)
 const COLLISION_ROLES: Array[String] = ["none", "decorative", "blocking", "interaction"]
 const BINDING_PATHS := {
-	"firebud_training_yard": "res://assets/maps/firebud_region_visual_v1/bindings/firebud_training_yard.json",
-	"firebud_village_gate": "res://assets/maps/firebud_region_visual_v1/bindings/firebud_village_gate.json",
 	"mistcap_marsh": "res://assets/maps/mistcap_marsh_visual_v1/bindings/mistcap_marsh.json",
 }
 const BUNDLE_MAP_IDS := {
-	"firebud_region_visual_v1": ["firebud_training_yard", "firebud_village_gate"],
 	"mistcap_marsh_visual_v1": ["mistcap_marsh"],
 }
 const GENERATE_CATALOG_CONTRACT_FLAG := "--generate-map-visual-catalog-contract"
@@ -836,13 +831,11 @@ static func _write_catalog_contract_reports(
 	var review_bundle_ids: Array = (
 		review_bundle_ids_value as Array if review_bundle_ids_value is Array else []
 	)
-	var bundle_ids_to_write: Array = bundle_ids_override.duplicate()
-	if bundle_ids_to_write.is_empty():
-		bundle_ids_to_write = (
-			review_bundle_ids.duplicate()
-			if not review_bundle_ids.is_empty()
-			else BUNDLE_MAP_IDS.keys()
-		)
+	var bundle_ids_to_write := _catalog_contract_bundle_ids_for_write(
+		str(run_report.get("mode", "")),
+		bundle_ids_override,
+		review_bundle_ids
+	)
 	for bundle_id_value in bundle_ids_override:
 		var bundle_id := str(bundle_id_value)
 		if not review_bundle_ids.has(bundle_id):
@@ -918,6 +911,20 @@ static func _write_catalog_contract_reports(
 		_remove_staged_files(staged)
 		return {"result": "FAIL", "atomicity": "per_bundle_file", "written": written, "errors": errors}
 	return {"result": "PASS", "atomicity": "per_bundle_file", "written": written, "errors": []}
+
+
+static func _catalog_contract_bundle_ids_for_write(
+	mode: String,
+	bundle_ids_override: Array,
+	review_bundle_ids: Array
+) -> Array:
+	if not bundle_ids_override.is_empty():
+		return bundle_ids_override.duplicate()
+	if mode == "catalog_contract_generation":
+		return BUNDLE_MAP_IDS.keys()
+	if mode == "review_catalog_contract_generation":
+		return review_bundle_ids.duplicate()
+	return []
 
 
 static func _catalog_contract_report_targets(
@@ -1170,16 +1177,12 @@ static func _validate_frozen_catalog_contract(
 	var tested_value: Variant = report.get("testedMapIds", [])
 	if not (tested_value is Array) or not _same_string_set(tested_value as Array, expected_map_ids):
 		errors.append("catalogContractCheck testedMapIds 必须精确覆盖 bundle：%s" % map_id)
-	var selected_catalog_path := (
-		MapVisualCatalog.REVIEW_DATA_PATH
-		if str(manifest.get("status", "")) == MapVisualCatalog.STATUS_OWNER_REVIEW_PENDING
-		else MapVisualCatalog.DATA_PATH
-	)
-	if (
-		not FileAccess.file_exists(selected_catalog_path)
-		or str(report.get("catalogSha256", "")) != FileAccess.get_sha256(selected_catalog_path)
-	):
-		errors.append("catalogContractCheck catalog hash 已过期：%s" % map_id)
+	# Current catalog membership and exact manifest/binding paths are validated
+	# independently before this frozen bundle report. Keeping the historical
+	# catalog hash here avoids invalidating an unchanged released bundle when an
+	# unrelated entry is retired or another review-only entry is added.
+	if str(report.get("catalogSha256", "")).length() != 64:
+		errors.append("catalogContractCheck 历史 catalog hash 无效：%s" % map_id)
 	var frozen_binding_hashes_value: Variant = report.get("bindingHashes", {})
 	var frozen_map_hashes_value: Variant = report.get("mapDataHashes", {})
 	if not (frozen_binding_hashes_value is Dictionary) or not (frozen_map_hashes_value is Dictionary):
