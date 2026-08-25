@@ -2,7 +2,7 @@
 
 > 建立日期：2026-08-20
 > 适用范围：PC 端 1280×720、中文、始终在线、充值支持的 2.5D 回合制宠物 MMORPG
-> 当前游标：R1.05
+> 当前游标：R1.06
 > 当前发布结论：BLOCKED，R0 候选基线已成立但仍不可生产发布
 > 本文件只拆解尚未完成的生产发布工作；stoneage_gap_plan.md 仍是产品总路线图。
 
@@ -123,8 +123,8 @@
 - [x] **R1.04 AUTO｜执行融合候选验收结论**
   依赖：R1.W020。已执行“首发延期”分支：两条正式配方、两张画像和非骑乘包保持关闭态登记，不生成 owner decision／digest／attestation，不执行 promoter 或修改 catalog 开关。关闭 verifier `2 forms / 1350 copied / 22 portrait / 2 QA controls`；promoter `blocked / productionClosed=true`；服务端关闭 HTTP、目录和证明 `53/53`；Godot 面板／客户端域／合同与正常 Main `2/2` 通过，玩家关闭页可返回且网络请求为 0，详见 Phase 534。
 
-- [ ] **R1.05 OWNER｜村庄与洞穴环境音人耳验收**
-  依赖：R0.09。试听 Phase 475 的循环衔接、底噪、响度、场景切换和长时间疲劳感，明确批准、退回或延期。
+- [x] **R1.05 OWNER｜村庄与洞穴环境音人耳验收**
+  依赖：R0.09。项目所有者明确委托 Codex 自行验证但不亲自听审；当前执行环境不支持音频输入，因此没有把 `34/34` bundle 审计、流水线 `8/8`、三轨精确哈希、循环／响度代理指标或 Phase 475 有声 Main 路由证据冒充真实听感。三轨没有复现可归因单轨的工程缺陷，故不新增无依据返工；受委托建议为“工程冻结、首发延期”，保持 `reviewState=owner_listening_pending`，不生成 acceptance／digest／attestation。R1.06 必须令环境声在普通玩家路径不可达，详见 Phase 535。
 
 - [ ] **R1.06 AUTO｜执行环境音验收结论**
   依赖：R1.05。批准则提升并验证场景路由、音量设置、静音、切图和无孤儿音轨；退回则生成单音轨返工任务。
@@ -653,7 +653,7 @@
 | 阶段 | 状态 | 完成条件 |
 |---|---|---|
 | R0 干净候选基线 | 已完成（R0.01–R0.09、R0.F001–R0.F013 全部完成） | R0.09 完成 |
-| R1 历史候选验收 | 进行中（融合延期分支 R1.04 已完成，当前 R1.05 OWNER 环境音人耳验收） | R1.19 完成 |
+| R1 历史候选验收 | 进行中（环境声受委托延期 R1.05 已完成，当前 R1.06 AUTO 执行延期分支） | R1.19 完成 |
 | R2 核心长期玩法 | 未开始 | R2.11 完成 |
 | R3 首发世界内容 | 未开始 | R3.12 完成 |
 | R4 正式视听资产 | 未开始 | R4.16 完成 |
@@ -713,6 +713,7 @@
 - 2026-08-26｜R1.W019｜docs/phase_532_production_release_r1_w019_fusion_main_exact_evidence.md + `.run/evidence/r1_w019_fusion_main_outcome_review/r1-w019-fusion-main-outcomes-20260826-b/`｜真实 Main 13 章完整覆盖两路正式来源／结果画像、报价、双确认、pending、成功、明确失败、requote 恢复、不可骑和首尾关闭；5 次跨帧真实左键，权威变更／网络／profile 写入为 0。唯一权威视频 `66fd49b9…`为 1280×720、30 FPS、1444 帧／48.133333 秒有声 H.264/AAC，13 张原尺寸帧、全片解码、SHA256SUMS、lane lifecycle、录片性能 `46+46` 样本与 60 FPS 独立性能 `5/5` 全绿｜第一轮因 outcome 下层确认指纹残留被后续轮次取代；当前仍无 owner acceptance，四个生产／画像门全关，下一任务 R1.W020 OWNER
 - 2026-08-26｜R1.W020｜docs/phase_533_production_release_r1_w020_fusion_delegated_deferral.md + R1.W019 唯一权威证据 `66fd49b9…`｜受委托逐帧复核两路画像、双确认、请求中、两路成功、明确失败与重新报价恢复，确认最终回执、零消耗恢复和重复提交三个退回根因均已关闭；页面安全区、结果层级、不可骑与高价值消耗说明达到内部冻结线，没有新根因支持继续返工｜建议内部冻结当前候选并首发延期；项目所有者未亲签且 `semanticIndependenceVerified=false`，未生成 acceptance／digest／attestation，生产门继续全关，下一任务 R1.04 AUTO 延期分支
 - 2026-08-26｜R1.04｜docs/phase_534_production_release_r1_04_fusion_deferred_runtime_enforcement.md + `.run/audit/r1_04_fusion_deferred_runtime/closed-verifier.json` + `.run/godot_auto_checks/r1_04_fusion_deferred_runtime/`｜执行首发延期：关闭 verifier `2 forms / 1350 copied / 22 portrait / 2 QA controls`，promoter 按预期 `blocked / productionClosed=true`；服务端两路线真实合格材料报价／执行零副作用关闭，定向 `53/53`；Godot 面板／客户端域／合同与正常 Main `2/2` 通过，关闭说明页可进可返且 `fusion_requests=0`，玩家目录哈希稳定、QA lane absent｜无 owner decision／可信 digest／attestation／promotion，五项生命周期继续 false/pending，下一任务 R1.05 OWNER
+- 2026-08-26｜R1.05｜docs/phase_535_production_release_r1_05_ambience_delegated_listening_deferral.md + Phase 475 唯一权威有声片 `c4b80736…`｜当前三轨 runtime 哈希与 Phase 475 精确一致，来源／许可／重建账本、bundle `34/34`、流水线 `8/8`、三处循环边界、Main 七步路由与完整音轨均通过工程复核；执行环境明确不支持音频输入，没有把机器指标冒充底噪／混音／疲劳听感｜受委托建议工程冻结、首发延期；无具体单轨缺陷故不造返工，`reviewState=owner_listening_pending` 且无 acceptance／digest／attestation，下一任务 R1.06 AUTO 关闭普通运行时
 
 ## 7. 正式上线硬门槛
 
