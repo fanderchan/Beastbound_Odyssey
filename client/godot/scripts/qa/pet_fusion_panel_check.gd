@@ -893,66 +893,71 @@ static func preview_fixture(route_key: String) -> Dictionary:
 	}
 
 
-static func outcome_result_fixture(catalog_document: Dictionary) -> Dictionary:
-	var material_specs := [
-		["core", "outcome_core", "emberhorn_red_fire8_earth2", "赤角兽"],
-		[
-			"resonance_one",
-			"outcome_resonance_one",
-			"emberhorn_gale_fire5_wind5",
-			"岚角兽",
-		],
-		[
-			"resonance_two",
-			"outcome_resonance_two",
-			"emberhorn_ash_fire6_wind4",
-			"灰烬角兽",
-		],
-	]
+static func outcome_result_fixture(
+	catalog_document: Dictionary,
+	route_key: String = ROUTE_SOLAR
+) -> Dictionary:
+	if not [ROUTE_SOLAR, ROUTE_MOSS].has(route_key):
+		return {}
+	var fixture := preview_fixture(route_key)
+	var quote := fixture.get("quote", {}) as Dictionary
+	var quote_result := quote.get("result", {}) as Dictionary
+	var materials = quote.get("materials", [])
+	if not (materials is Array) or (materials as Array).size() != 3:
+		return {}
 	var consumed: Array[Dictionary] = []
 	var inherited_active_ids: Array[String] = []
-	for spec_value in material_specs:
-		var spec := spec_value as Array
-		var form_id := str(spec[2])
+	var passive_source_role_id := "core"
+	var inherited_passive_id := ""
+	for material_value in materials as Array:
+		if not (material_value is Dictionary):
+			return {}
+		var material := material_value as Dictionary
+		var role_id := str(material.get("roleId", ""))
+		var form_id := str(material.get("formId", ""))
 		var gene := PetFusionRecipeCatalogModel.gene_profile_by_form_id(
-			catalog_document,
-			form_id
+			catalog_document, form_id
 		)
+		if gene.is_empty():
+			return {}
 		consumed.append({
-			"roleId": str(spec[0]),
-			"instanceId": str(spec[1]),
+			"roleId": role_id,
+			"instanceId": str(material.get("instanceId", "")),
 			"formId": form_id,
-			"formName": str(spec[3]),
+			"formName": str(material.get("formName", "")),
 		})
-		inherited_active_ids.append(str(gene.get("specialActiveSkillId", "")))
-	var core_gene := PetFusionRecipeCatalogModel.gene_profile_by_form_id(
-		catalog_document,
-		"emberhorn_red_fire8_earth2"
-	)
+		var active_id := str(gene.get("specialActiveSkillId", ""))
+		if active_id != "" and not inherited_active_ids.has(active_id):
+			inherited_active_ids.append(active_id)
+		if role_id == passive_source_role_id:
+			inherited_passive_id = str(gene.get("passiveSkillId", ""))
+	if inherited_passive_id == "":
+		return {}
+	var target_name := str(quote_result.get("targetFormName", ""))
 	return {
 		"schemaVersion": 1,
 		"catalogId": PetFusionRecipeCatalogModel.CATALOG_ID,
-		"recipeId": "emberhorn_solar_crown_fusion_v1",
-		"resultInstanceId": "outcome_result_pet",
-		"targetFormId": "emberhorn_fusion_solar_crown_fire7_wind3",
-		"targetFormName": "曜冠角兽",
+		"recipeId": str(quote.get("recipeId", "")),
+		"resultInstanceId": "outcome_%s_result_pet" % route_key,
+		"targetFormId": str(quote_result.get("targetFormId", "")),
+		"targetFormName": target_name,
 		"level": 1,
 		"rebirthCount": 1,
 		"terminalStage": 2,
 		"consumedMaterials": consumed,
 		"baseActiveSkillIds": ["pet_attack", "pet_defend"],
 		"inheritedActiveSkillIds": inherited_active_ids,
-		"inheritedPassiveSkillId": str(core_gene.get("passiveSkillId", "")),
-		"passiveSourceRoleId": "core",
-		"numericSource": "target_profile_only_v1",
+		"inheritedPassiveSkillId": inherited_passive_id,
+		"passiveSourceRoleId": passive_source_role_id,
+		"numericSource": str(quote_result.get("numericSource", "")),
 		"materialNumericInheritance": false,
 		"rideable": false,
-		"additionalCostPolicy": "materials_only",
-		"resultBinding": PetFusionClientModel.RESULT_BINDING_UNBOUND,
-		"tradeEligibility": (
-			PetFusionRecipeCatalogModel.UNBOUND_RESULT_TRADE_POLICY
+		"additionalCostPolicy": str(
+			quote_result.get("additionalCostPolicy", "")
 		),
-		"message": "曜冠角兽融合完成；三只材料宠已消耗，成品技能与独立成长已生成。",
+		"resultBinding": str(quote_result.get("resultBinding", "")),
+		"tradeEligibility": str(quote_result.get("tradeEligibility", "")),
+		"message": "%s融合完成；三只材料宠已消耗，成品技能与独立成长已生成。" % target_name,
 	}
 
 

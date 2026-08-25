@@ -29,30 +29,122 @@ def _godot_report(*, qa_lane: str = "automation") -> dict:
         end = cursor + frame_count
         target = TOOL.EXPECTED_ROUTE_TARGETS[route]
         target_form = str(target["formId"])
+        source_visible = state in {
+            "preview",
+            "armed",
+            "submitted",
+            "recovered",
+            "pending",
+            "success",
+        }
+        runtime = state in {"pending", "success", "failure"}
+        qa_preview = state in {"preview", "armed", "submitted", "recovered"}
+        controls_locked = state in {
+            "closed",
+            "submitted",
+            "pending",
+            "success",
+            "failure",
+        }
         snapshot = {
             "closed": state == "closed",
+            "runtime": runtime,
+            "qaPreview": qa_preview,
             "messageText": "融合功能尚未开放",
-            "targetName": "" if state == "closed" else target["name"],
+            "targetName": target["name"] if source_visible else "",
             "targetFormId": "" if state == "closed" else target_form,
             "targetPortraitResourcePath": (
-                ""
-                if state == "closed"
+                "" if not source_visible
                 else (
                     "res://assets/pets/"
                     f"{target_form}/portrait/default.png"
                 )
             ),
-            "targetPortraitStatus": "none" if state == "closed" else "formal",
+            "targetPortraitStatus": "formal" if source_visible else "none",
             "candidateCount": 5,
             "candidateFormalPortraitCount": 5,
             "candidatePlaceholderCount": 0,
-            "quoteValid": state != "closed",
+            "materialDisabledCount": 3 if controls_locked else 0,
+            "candidateDisabledCount": 5 if controls_locked else 0,
+            "quoteValid": source_visible,
             "confirmationArmed": state == "armed",
-            "confirmDisabled": state == "closed",
-            "buttonText": "敬请期待" if state == "closed" else "确认融合",
-            "secondConfirmationCount": 0,
+            "confirmDisabled": controls_locked,
+            "buttonText": "确认融合",
+            "secondConfirmationCount": 1 if state == "submitted" else 0,
+            "quoteRequestCount": 0,
+            "fusionRequestCount": 0,
             "networkRequestCount": 0,
+            "outcomeVisible": runtime,
+            "outcomeKind": "",
+            "outcomeAction": "",
+            "outcomeActionText": "",
+            "outcomeActionDisabled": True,
+            "outcomeActionDispatched": False,
+            "outcomePortraitFormId": "",
+            "outcomePortraitStatus": "none",
+            "outcomePortraitResourcePath": "",
+            "outcomeTitleText": "",
+            "outcomeStatusText": "",
+            "outcomeNameText": "",
+            "outcomeLevelText": "",
+            "outcomeActiveText": "",
+            "outcomePassiveText": "",
+            "outcomeBindingText": "",
+            "outcomeTerminalText": "",
+            "outcomeConsumptionText": "",
+            "outcomeDetailText": "",
+            "playerQaTextPresent": False,
+            "playerRawIdentifierPresent": False,
+            "visibleText": "玩家可见融合文案",
         }
+        if state == "pending":
+            snapshot.update(
+                {
+                    "outcomeKind": "pending",
+                    "outcomeActionText": "服务器确认中…",
+                    "outcomePortraitStatus": "symbol",
+                    "outcomeTitleText": "正在确认融合结果",
+                    "outcomeConsumptionText": "结果确认前，不判断材料是否已消耗。",
+                }
+            )
+        elif state == "success":
+            snapshot.update(
+                {
+                    "outcomeKind": "success",
+                    "outcomeAction": "view_pet",
+                    "outcomeActionText": "查看新宠",
+                    "outcomeActionDisabled": False,
+                    "outcomePortraitFormId": target_form,
+                    "outcomePortraitStatus": "formal",
+                    "outcomePortraitResourcePath": (
+                        "res://assets/pets/"
+                        f"{target_form}/portrait/default.png"
+                    ),
+                    "outcomeTitleText": "融合完成",
+                    "outcomeStatusText": "服务器结果已确认，角色档案已同步",
+                    "outcomeNameText": target["name"],
+                    "outcomeLevelText": "一转 Lv1",
+                    "outcomeActiveText": "主动技能：攻击、防御；血脉遗传：烈焰角击",
+                    "outcomePassiveText": "被动技能：赤炎血脉",
+                    "outcomeBindingText": f"绑定与交易：成品{target['bindingNeedle']}",
+                    "outcomeTerminalText": "一转终局融合形态 · 不可骑乘",
+                    "outcomeConsumptionText": "三只材料宠已永久消耗：材料甲 / 材料乙 / 材料丙",
+                }
+            )
+        elif state == "failure":
+            snapshot.update(
+                {
+                    "outcomeKind": "failure",
+                    "outcomeAction": "requote",
+                    "outcomeActionText": "重新获取报价",
+                    "outcomeActionDisabled": False,
+                    "outcomePortraitStatus": "symbol",
+                    "outcomeTitleText": "融合未完成",
+                    "outcomeStatusText": "服务器未执行本次融合",
+                    "outcomeNameText": "三只材料宠仍在",
+                    "outcomeConsumptionText": "本次没有消耗任何宠物。",
+                }
+            )
         chapters.append(
             {
                 "id": chapter_id,
@@ -70,7 +162,7 @@ def _godot_report(*, qa_lane: str = "automation") -> dict:
         )
         cursor = end
     return {
-        "schemaVersion": 1,
+        "schemaVersion": TOOL.REPORT_SCHEMA_VERSION,
         "reportType": TOOL.GODOT_REPORT_TYPE,
         "result": "PASS",
         "scene": TOOL.MAIN_SCENE,
@@ -88,16 +180,24 @@ def _godot_report(*, qa_lane: str = "automation") -> dict:
         },
         "captureFps": 30,
         "playbackSpeed": 1.0,
-        "expectedChapterFrameCount": 900,
-        "renderedChapterFrameCount": 900,
-        "transitionFrameCount": 13,
-        "actualLeftClicks": 2,
-        "pressFrames": 2,
+        "expectedChapterFrameCount": TOOL.EXPECTED_CHAPTER_FRAME_COUNT,
+        "renderedChapterFrameCount": TOOL.EXPECTED_CHAPTER_FRAME_COUNT,
+        "transitionFrameCount": 31,
+        "actualLeftClicks": 5,
+        "pressFrames": 5,
         "productionRuntimeEnabled": False,
         "playerEntryOpened": False,
         "formalPortraitsRequired": True,
-        "secondConfirmationExecuted": False,
+        "qaOnlySecondConfirmationExecuted": True,
+        "qaLocalSecondConfirmationCount": 2,
+        "authoritativeMutationExecuted": False,
+        "authoritativeMutationCount": 0,
+        "profileWriteCount": 0,
+        "outcomeActionCount": 1,
+        "outcomeActions": ["requote"],
         "networkRequestCount": 0,
+        "playerQaTextPresent": False,
+        "playerRawIdentifierPresent": False,
         "profileSaveEnabled": False,
         "accountSessionPresent": False,
         "backendConnected": False,
@@ -113,7 +213,12 @@ def _godot_report(*, qa_lane: str = "automation") -> dict:
     }
 
 
-def _godot_log(*, movie: bool, warning: bool = False) -> str:
+def _godot_log(
+    *,
+    movie: bool,
+    warning: bool = False,
+    process_total_ms: float = 0.4,
+) -> str:
     lines = [
         "Godot Engine v4.7.stable.official.5b4e0cb0f",
         "Metal 4.0 - Forward Mobile - Using Device #0: Apple - Test",
@@ -128,7 +233,9 @@ def _godot_log(*, movie: bool, warning: bool = False) -> str:
         TOOL.START_MARKER
         + " scene=Main.tscn entry=MainSceneFlag viewport=1280x720 "
         + "fps=30 speed=1.00x profile=isolated backend=false "
-        + "profile_save=false production_runtime=false player_entry=false "
+        + "profile_save=false qa_local_outcomes=true "
+        + "authoritative_mutations=false production_runtime=false "
+        + "player_entry=false "
         + "owner_review_status=pending"
     )
     for chapter_id, state, route, frames in TOOL.EXPECTED_CHAPTERS:
@@ -139,13 +246,31 @@ def _godot_log(*, movie: bool, warning: bool = False) -> str:
             + f"state={state} route={route}"
         )
     lines.append(
+        "perf probe: fps=30.0 frames=30 "
+        f"process_total={process_total_ms:.2f}ms draw_world=0.20ms"
+    )
+    lines.append(
+        "perf probe: fps=30.0 frames=30 "
+        f"process_total={process_total_ms + 0.1:.2f}ms draw_world=0.20ms"
+    )
+    lines.append(
+        "perf probe: fps=30.0 frames=30 "
+        f"process_total={process_total_ms + 0.2:.2f}ms draw_world=0.20ms"
+    )
+    lines.append(
+        "perf probe: fps=30.0 frames=30 "
+        f"process_total={process_total_ms + 0.3:.2f}ms draw_world=0.20ms"
+    )
+    lines.append(
         TOOL.STATE_MARKER
         + " main_host=true qa_lane=true profile_isolated=true "
         + "formal_portraits=true placeholders=0 layout_valid=true "
         + "no_player_qa_text=true production_runtime=false "
-        + "player_entry=false network_requests=0 second_confirmations=0 "
-        + "actual_left_clicks=2 press_frames=2 chapter_frames=900 "
-        + "transition_frames=13"
+        + "player_entry=false network_requests=0 profile_writes=0 "
+        + "qa_second_confirmations=2 authoritative_mutations=0 "
+        + "outcome_actions=1 actual_left_clicks=5 press_frames=5 "
+        + f"chapter_frames={TOOL.EXPECTED_CHAPTER_FRAME_COUNT} "
+        + "transition_frames=31"
     )
     lines.append(
         TOOL.END_MARKER
@@ -157,8 +282,8 @@ def _godot_log(*, movie: bool, warning: bool = False) -> str:
 
 def _probe(
     *,
-    duration: str = "30.500000",
-    frame_count: str = "915",
+    duration: str = "48.100000",
+    frame_count: str = "1443",
     with_audio: bool = True,
 ) -> dict:
     streams = [
@@ -223,6 +348,7 @@ class FusionMainOwnerReviewRecorderTest(unittest.TestCase):
         for command in (native, movie):
             self.assertEqual(command.count(TOOL.CAPTURE_FLAG), 1)
             self.assertEqual(command.count(TOOL.MEDIA.QA_LANE_ARGUMENT), 1)
+            self.assertEqual(command.count("--perf-probe"), 1)
             self.assertNotIn("--script", command)
             self.assertNotIn("--user-data-dir", command)
             self.assertIn(TOOL.MAIN_SCENE, command)
@@ -255,8 +381,11 @@ class FusionMainOwnerReviewRecorderTest(unittest.TestCase):
 
     def test_exact_godot_report_passes(self) -> None:
         validated = TOOL._validate_godot_report(_godot_report())
-        self.assertEqual(validated["renderedChapterFrameCount"], 900)
-        self.assertEqual(validated["actualLeftClicks"], 2)
+        self.assertEqual(
+            validated["renderedChapterFrameCount"],
+            TOOL.EXPECTED_CHAPTER_FRAME_COUNT,
+        )
+        self.assertEqual(validated["actualLeftClicks"], 5)
 
     def test_open_runtime_report_is_rejected(self) -> None:
         report = _godot_report()
@@ -267,6 +396,35 @@ class FusionMainOwnerReviewRecorderTest(unittest.TestCase):
     def test_second_confirmation_report_is_rejected(self) -> None:
         report = _godot_report()
         report["chapters"][2]["snapshot"]["secondConfirmationCount"] = 1
+        with self.assertRaises(TOOL.FusionMainRecordingError):
+            TOOL._validate_godot_report(report)
+
+    def test_authoritative_mutation_report_is_rejected(self) -> None:
+        report = _godot_report()
+        report["authoritativeMutationExecuted"] = True
+        report["authoritativeMutationCount"] = 1
+        with self.assertRaises(TOOL.FusionMainRecordingError):
+            TOOL._validate_godot_report(report)
+
+    def test_failure_consumption_guess_is_rejected(self) -> None:
+        report = _godot_report()
+        failure = next(
+            chapter
+            for chapter in report["chapters"]
+            if chapter["state"] == "failure"
+        )
+        failure["snapshot"]["outcomeConsumptionText"] = "材料可能已消耗。"
+        with self.assertRaises(TOOL.FusionMainRecordingError):
+            TOOL._validate_godot_report(report)
+
+    def test_success_outcome_portrait_binding_is_required(self) -> None:
+        report = _godot_report()
+        success = next(
+            chapter
+            for chapter in report["chapters"]
+            if chapter["id"] == "moss_success"
+        )
+        success["snapshot"]["outcomePortraitResourcePath"] = "res://wrong.png"
         with self.assertRaises(TOOL.FusionMainRecordingError):
             TOOL._validate_godot_report(report)
 
@@ -306,6 +464,27 @@ class FusionMainOwnerReviewRecorderTest(unittest.TestCase):
             self.assertFalse(native["movieMode"])
             self.assertTrue(movie["movieMode"])
             self.assertEqual(movie["knownMainWarningCount"], 1)
+            self.assertEqual(movie["performance"]["sampleCount"], 4)
+
+    def test_high_process_total_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            report_path = root / "report.json"
+            report_path.write_text(
+                json.dumps(_godot_report(), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            log_path = root / "native.log"
+            log_path.write_text(
+                _godot_log(movie=False, process_total_ms=20.0),
+                encoding="utf-8",
+            )
+            with self.assertRaises(TOOL.FusionMainRecordingError):
+                TOOL._validate_godot_log(
+                    log_path,
+                    report_path=report_path,
+                    movie_mode=False,
+                )
 
     def test_failure_marker_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -337,7 +516,7 @@ class FusionMainOwnerReviewRecorderTest(unittest.TestCase):
     def test_media_probe_rejects_short_video(self) -> None:
         with self.assertRaises(TOOL.FusionMainRecordingError):
             TOOL._validate_probe(
-                _probe(duration="29.900000", frame_count="897")
+                _probe(duration="46.900000", frame_count="1407")
             )
 
 

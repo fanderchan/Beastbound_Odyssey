@@ -1,9 +1,10 @@
 extends RefCounted
 
-## Formal owner-review capture for the first two fusion routes inside the real
-## Main.tscn host.  This helper is reachable only through a dev-only QA flag,
-## mounts a local presentation overlay, and never performs the second confirm,
-## a network request, a profile save, or a production runtime mutation.
+## Formal outcome-review capture for the first two fusion routes inside the
+## real Main.tscn host. This helper is reachable only through a dev-only QA
+## flag and mounts a local presentation overlay. Its cross-frame second
+## confirmations exercise presentation state only: they never execute an
+## authoritative mutation, network request, profile save, or production gate.
 
 const BalanceCatalogModel := preload(
 	"res://scripts/progression/balance_catalog_model.gd"
@@ -13,6 +14,9 @@ const PetFusionPanel := preload(
 )
 const PetFusionPanelCheck := preload(
 	"res://scripts/qa/pet_fusion_panel_check.gd"
+)
+const PetFusionOutcomeModel := preload(
+	"res://scripts/progression/pet_fusion_outcome_model.gd"
 )
 const PetFusionRecipeCatalogModel := preload(
 	"res://scripts/progression/pet_fusion_recipe_catalog_model.gd"
@@ -29,8 +33,8 @@ const REPORT_ARG_PREFIX := "--pet-fusion-main-owner-review-report="
 const VIEWPORT_SIZE := Vector2i(1280, 720)
 const CAPTURE_FPS := 30
 const PLAYBACK_SPEED := 1.0
-const REPORT_SCHEMA_VERSION := 1
-const REPORT_TYPE := "beastbound.pet_fusion_main_owner_review_capture"
+const REPORT_SCHEMA_VERSION := 2
+const REPORT_TYPE := "beastbound.pet_fusion_main_outcome_review_capture"
 const START_MARKER := "PET_FUSION_MAIN_OWNER_REVIEW_START"
 const CHAPTER_MARKER := "PET_FUSION_MAIN_OWNER_REVIEW_CHAPTER"
 const STATE_MARKER := "PET_FUSION_MAIN_OWNER_REVIEW_STATE"
@@ -66,17 +70,35 @@ const CHAPTER_SPECS: Array[Dictionary] = [
 		"id": "closed_open",
 		"state": "closed",
 		"route": "solar",
-		"frames": 120,
+		"frames": 90,
 	},
 	{
 		"id": "solar_preview",
 		"state": "preview",
 		"route": "solar",
-		"frames": 180,
+		"frames": 120,
 	},
 	{
 		"id": "solar_armed",
 		"state": "armed",
+		"route": "solar",
+		"frames": 90,
+	},
+	{
+		"id": "solar_submitted",
+		"state": "submitted",
+		"route": "solar",
+		"frames": 90,
+	},
+	{
+		"id": "solar_pending",
+		"state": "pending",
+		"route": "solar",
+		"frames": 90,
+	},
+	{
+		"id": "solar_success",
+		"state": "success",
 		"route": "solar",
 		"frames": 150,
 	},
@@ -84,19 +106,43 @@ const CHAPTER_SPECS: Array[Dictionary] = [
 		"id": "moss_preview",
 		"state": "preview",
 		"route": "moss",
-		"frames": 180,
+		"frames": 120,
 	},
 	{
 		"id": "moss_armed",
 		"state": "armed",
 		"route": "moss",
+		"frames": 90,
+	},
+	{
+		"id": "moss_submitted",
+		"state": "submitted",
+		"route": "moss",
+		"frames": 90,
+	},
+	{
+		"id": "moss_success",
+		"state": "success",
+		"route": "moss",
 		"frames": 150,
+	},
+	{
+		"id": "failure_requote",
+		"state": "failure",
+		"route": "moss",
+		"frames": 120,
+	},
+	{
+		"id": "failure_recovered",
+		"state": "recovered",
+		"route": "moss",
+		"frames": 120,
 	},
 	{
 		"id": "closed_final",
 		"state": "closed",
 		"route": "solar",
-		"frames": 120,
+		"frames": 90,
 	},
 ]
 
@@ -113,6 +159,10 @@ var _chapter_frame_count := 0
 var _transition_frame_count := 0
 var _actual_left_clicks := 0
 var _press_frames := 0
+var _qa_second_confirmation_count := 0
+var _authoritative_mutation_count := 0
+var _profile_write_count := 0
+var _outcome_actions: Array[String] = []
 var _failed := false
 
 
@@ -178,7 +228,8 @@ func _run() -> void:
 			START_MARKER
 			+ " scene=Main.tscn entry=MainSceneFlag viewport=1280x720 "
 			+ "fps=30 speed=1.00x profile=isolated backend=false "
-			+ "profile_save=false production_runtime=false "
+			+ "profile_save=false qa_local_outcomes=true "
+			+ "authoritative_mutations=false production_runtime=false "
 			+ "player_entry=false owner_review_status=pending"
 		)
 	)
@@ -243,10 +294,13 @@ func _run() -> void:
 			+ " main_host=true qa_lane=true profile_isolated=true "
 			+ "formal_portraits=true placeholders=0 layout_valid=true "
 			+ "no_player_qa_text=true production_runtime=false "
-			+ "player_entry=false network_requests=0 "
-			+ "second_confirmations=0 actual_left_clicks=%d "
-			+ "press_frames=%d chapter_frames=%d transition_frames=%d"
+			+ "player_entry=false network_requests=0 profile_writes=0 "
+			+ "qa_second_confirmations=%d authoritative_mutations=0 "
+			+ "outcome_actions=%d actual_left_clicks=%d press_frames=%d "
+			+ "chapter_frames=%d transition_frames=%d"
 		) % [
+			_qa_second_confirmation_count,
+			_outcome_actions.size(),
 			_actual_left_clicks,
 			_press_frames,
 			_chapter_frame_count,
@@ -388,7 +442,12 @@ func _mount_overlay() -> void:
 	_host.add_child(_layer)
 	_panel = PetFusionPanel.new()
 	_panel.name = "PetFusionMainOwnerReviewPanel"
+	_panel.outcome_action_requested.connect(_on_outcome_action_requested)
 	_layer.add_child(_panel)
+
+
+func _on_outcome_action_requested(action: String) -> void:
+	_outcome_actions.append(action)
 
 
 func _append_formal_portrait_preflight_errors() -> void:
@@ -455,6 +514,105 @@ func _configure_chapter(chapter_spec: Dictionary) -> Dictionary:
 		await _left_click(confirm_button, "%s 首次确认" % route_key)
 		if _failed:
 			return {}
+	elif state == "submitted":
+		if _active_route != route_key:
+			await _fail("%s 路线没有从相邻确认态提交" % route_key)
+			return {}
+		var submit_button := _panel.get_node_or_null("ConfirmButton") as Button
+		await _left_click(submit_button, "%s QA本地第二次确认" % route_key)
+		if _failed:
+			return {}
+		var submitted_snapshot := _panel.call("snapshot") as Dictionary
+		if (
+			int(submitted_snapshot.get("secondConfirmationCount", -1)) != 1
+			or int(submitted_snapshot.get("networkRequestCount", -1)) != 0
+		):
+			await _fail("%s QA第二次确认没有停在零网络本地态" % route_key)
+			return {}
+		_qa_second_confirmation_count += 1
+	elif state == "pending":
+		var pending_configured := bool(_panel.call(
+			"configure_runtime",
+			fixture.get("catalog", {}),
+			fixture.get("selections", {}),
+			fixture.get("quote", {}),
+			candidates,
+			false,
+			true,
+			"",
+			true,
+			PetFusionOutcomeModel.request_pending_view()
+		))
+		if not pending_configured:
+			await _fail("%s 路线请求中结果态装载失败" % route_key)
+			return {}
+		_active_route = route_key
+	elif state == "success":
+		var catalog := fixture.get("catalog", {}) as Dictionary
+		var result := PetFusionPanelCheck.outcome_result_fixture(catalog, route_key)
+		var success_view := PetFusionOutcomeModel.success_view(result, catalog)
+		var success_configured := bool(_panel.call(
+			"configure_runtime",
+			catalog,
+			fixture.get("selections", {}),
+			fixture.get("quote", {}),
+			candidates,
+			false,
+			false,
+			"",
+			true,
+			success_view
+		))
+		if not success_configured or success_view.is_empty():
+			await _fail("%s 路线权威成功结果态装载失败" % route_key)
+			return {}
+		_active_route = route_key
+	elif state == "failure":
+		var failure_view := PetFusionOutcomeModel.definitive_failure_view(
+			"角色档案已经变化，请刷新三只材料宠和融合条件后重试。",
+			PetFusionOutcomeModel.ACTION_REQUOTE
+		)
+		var failure_configured := bool(_panel.call(
+			"configure_runtime",
+			fixture.get("catalog", {}),
+			fixture.get("selections", {}),
+			{},
+			candidates,
+			false,
+			false,
+			"",
+			true,
+			failure_view
+		))
+		if not failure_configured:
+			await _fail("%s 路线明确失败结果态装载失败" % route_key)
+			return {}
+		_active_route = route_key
+	elif state == "recovered":
+		if _active_route != route_key:
+			await _fail("%s 路线没有从相邻失败态恢复" % route_key)
+			return {}
+		var action_button := _panel.find_child(
+			"OutcomeActionButton", true, false
+		) as Button
+		await _left_click(action_button, "%s 失败后重新获取报价" % route_key)
+		if _failed:
+			return {}
+		if _outcome_actions != [PetFusionOutcomeModel.ACTION_REQUOTE]:
+			await _fail("%s 路线失败恢复动作不精确" % route_key)
+			return {}
+		var recovered := bool(_panel.call(
+			"configure_qa_preview",
+			PetFusionPanel.QA_PREVIEW_TOKEN,
+			fixture.get("catalog", {}),
+			fixture.get("selections", {}),
+			fixture.get("quote", {}),
+			candidates
+		))
+		if not recovered:
+			await _fail("%s 路线失败后未恢复到新报价" % route_key)
+			return {}
+		_active_route = route_key
 	else:
 		await _fail("未知融合验收章节状态：%s" % state)
 		return {}
@@ -472,6 +630,14 @@ func _configure_chapter(chapter_spec: Dictionary) -> Dictionary:
 		var result := quote.get("result", {}) as Dictionary
 		snapshot["targetFormId"] = str(result.get("targetFormId", ""))
 		snapshot["targetPortraitResourcePath"] = _target_portrait_resource_path()
+	snapshot["outcomePortraitResourcePath"] = _outcome_portrait_resource_path()
+	var visible_text := str(snapshot.get("visibleText", ""))
+	snapshot["playerQaTextPresent"] = _contains_player_qa_text(visible_text)
+	snapshot["playerRawIdentifierPresent"] = _visible_raw_identifier_present(
+		visible_text,
+		fixture,
+		route_key
+	)
 	return snapshot
 
 
@@ -488,8 +654,13 @@ func _append_snapshot_errors(
 		errors.append("1280x720布局：%s" % layout_error)
 	if int(snapshot.get("networkRequestCount", -1)) != 0:
 		errors.append("章节发生网络请求")
-	if int(snapshot.get("secondConfirmationCount", -1)) != 0:
-		errors.append("章节越过第二次确认边界")
+	var expected_second_confirmation := 1 if state == "submitted" else 0
+	if int(snapshot.get("secondConfirmationCount", -1)) != expected_second_confirmation:
+		errors.append("章节 QA 本地第二次确认计数不精确")
+	if bool(snapshot.get("playerQaTextPresent", true)):
+		errors.append("玩家画面泄露测试术语")
+	if bool(snapshot.get("playerRawIdentifierPresent", true)):
+		errors.append("玩家画面泄露内部标识")
 	if state == "closed":
 		if not bool(snapshot.get("closed", false)):
 			errors.append("关闭章节没有保持关闭态")
@@ -504,6 +675,8 @@ func _append_snapshot_errors(
 			or not bool(snapshot.get("confirmDisabled", false))
 		):
 			errors.append("关闭章节仍存在可操作控件")
+		if bool(snapshot.get("outcomeVisible", true)):
+			errors.append("关闭章节意外显示结果层")
 		return
 
 	var route_target := ROUTE_TARGETS.get(route_key, {}) as Dictionary
@@ -512,38 +685,112 @@ func _append_snapshot_errors(
 	var expected_portrait_path := (
 		PetPortraitArtCatalog.resource_path_for_form(expected_form_id)
 	)
-	if bool(snapshot.get("closed", true)) or not bool(
-		snapshot.get("quoteValid", false)
-	):
-		errors.append("路线章节没有形成有效本地预览")
-	if str(snapshot.get("targetPortraitStatus", "")) != "formal":
-		errors.append("路线章节没有使用正式目标大头照")
 	if str(snapshot.get("targetFormId", "")) != expected_form_id:
 		errors.append("路线章节目标形态不是冻结目标")
-	if str(snapshot.get("targetNameText", "")) != expected_name:
-		errors.append("路线章节目标名称不是冻结目标")
-	if str(snapshot.get("targetPortraitResourcePath", "")) != expected_portrait_path:
-		errors.append("路线章节正式画像没有绑定冻结目标形态")
-	if int(snapshot.get("candidatePlaceholderCount", -1)) != 0:
-		errors.append("路线章节仍显示候选宠占位图")
-	if int(snapshot.get("candidateFormalPortraitCount", -1)) != candidates.size():
-		errors.append("路线章节候选宠没有全部绑定正式画像")
-	if state == "preview" and bool(snapshot.get("confirmationArmed", true)):
-		errors.append("路线预览章节提前进入二次确认")
-	if state == "armed" and not bool(snapshot.get("confirmationArmed", false)):
-		errors.append("第一次确认后没有停在二次确认前")
-	if bool(snapshot.get("confirmDisabled", true)):
-		errors.append("路线章节确认按钮错误禁用")
-	var visible_text := str(snapshot.get("visibleText", ""))
-	if _contains_player_qa_text(visible_text):
-		errors.append("玩家画面泄露测试术语")
-	var raw_tokens = fixture.get("rawTokens", [])
-	if raw_tokens is Array:
-		for raw_token_value in raw_tokens as Array:
-			var raw_token := str(raw_token_value)
-			if raw_token != "" and visible_text.contains(raw_token):
-				errors.append("玩家画面泄露内部标识")
-				break
+	if ["preview", "armed", "submitted", "recovered", "pending", "success"].has(state):
+		if bool(snapshot.get("closed", true)) or not bool(
+			snapshot.get("quoteValid", false)
+		):
+			errors.append("路线章节没有形成有效本地报价")
+		if str(snapshot.get("targetPortraitStatus", "")) != "formal":
+			errors.append("路线章节没有使用正式来源大头照")
+		if str(snapshot.get("targetNameText", "")) != expected_name:
+			errors.append("路线章节目标名称不是冻结目标")
+		if str(snapshot.get("targetPortraitResourcePath", "")) != expected_portrait_path:
+			errors.append("路线章节正式画像没有绑定冻结目标形态")
+		if int(snapshot.get("candidatePlaceholderCount", -1)) != 0:
+			errors.append("路线章节仍显示候选宠占位图")
+		if int(snapshot.get("candidateFormalPortraitCount", -1)) != candidates.size():
+			errors.append("路线章节候选宠没有全部绑定正式画像")
+
+	if ["preview", "armed", "submitted", "recovered"].has(state):
+		if not bool(snapshot.get("qaPreview", false)):
+			errors.append("本地报价章节不是隔离 QA 预览")
+		if bool(snapshot.get("outcomeVisible", true)):
+			errors.append("报价或确认章节提前显示结果层")
+		var expected_armed := state == "armed"
+		if bool(snapshot.get("confirmationArmed", false)) != expected_armed:
+			errors.append("路线两段确认状态不精确")
+		var expected_disabled := state == "submitted"
+		if bool(snapshot.get("confirmDisabled", true)) != expected_disabled:
+			errors.append("路线确认按钮锁定状态不精确")
+		if state == "submitted" and (
+			int(snapshot.get("materialDisabledCount", -1)) != 3
+			or int(snapshot.get("candidateDisabledCount", -1)) != candidates.size()
+		):
+			errors.append("QA 第二次确认后仍可更换材料")
+		if state == "recovered" and _outcome_actions != [
+			PetFusionOutcomeModel.ACTION_REQUOTE
+		]:
+			errors.append("明确失败没有精确恢复到重新报价")
+		return
+
+	if state == "pending":
+		if (
+			not bool(snapshot.get("runtime", false))
+			or not bool(snapshot.get("outcomeVisible", false))
+			or str(snapshot.get("outcomeKind", ""))
+				!= PetFusionOutcomeModel.KIND_PENDING
+			or str(snapshot.get("outcomeAction", "")) != ""
+			or not bool(snapshot.get("outcomeActionDisabled", false))
+			or bool(snapshot.get("confirmationArmed", true))
+			or not str(snapshot.get("outcomeConsumptionText", "")).contains("不判断")
+			or not bool(snapshot.get("confirmDisabled", false))
+		):
+			errors.append("请求中结果态没有锁定重复提交或错猜消耗")
+		return
+
+	if state == "success":
+		var expected_binding := "未绑定" if route_key == "solar" else "已绑定"
+		if (
+			not bool(snapshot.get("runtime", false))
+			or not bool(snapshot.get("outcomeVisible", false))
+			or str(snapshot.get("outcomeKind", ""))
+				!= PetFusionOutcomeModel.KIND_SUCCESS
+			or str(snapshot.get("outcomePortraitFormId", "")) != expected_form_id
+			or str(snapshot.get("outcomePortraitStatus", "")) != "formal"
+			or str(snapshot.get("outcomePortraitResourcePath", "")) != expected_portrait_path
+			or str(snapshot.get("outcomeNameText", "")) != expected_name
+			or str(snapshot.get("outcomeLevelText", "")) != "一转 Lv1"
+			or not str(snapshot.get("outcomeActiveText", "")).contains("血脉遗传")
+			or not str(snapshot.get("outcomePassiveText", "")).contains("被动技能")
+			or not str(snapshot.get("outcomeBindingText", "")).contains(expected_binding)
+			or not str(snapshot.get("outcomeTerminalText", "")).contains("不可骑乘")
+			or not str(snapshot.get("outcomeConsumptionText", "")).contains("三只材料宠已永久消耗")
+			or str(snapshot.get("outcomeAction", ""))
+				!= PetFusionOutcomeModel.ACTION_VIEW_PET
+			or bool(snapshot.get("outcomeActionDisabled", true))
+			or bool(snapshot.get("confirmationArmed", true))
+			or not bool(snapshot.get("confirmDisabled", false))
+		):
+			errors.append("权威成功结果缺少正式成品、实际继承、绑定、不可骑或三宠消耗")
+		if (
+			int(snapshot.get("materialDisabledCount", -1)) != 3
+			or int(snapshot.get("candidateDisabledCount", -1)) != candidates.size()
+		):
+			errors.append("权威成功结果仍可更换材料")
+		return
+
+	if state == "failure":
+		if (
+			not bool(snapshot.get("runtime", false))
+			or bool(snapshot.get("quoteValid", true))
+			or not bool(snapshot.get("outcomeVisible", false))
+			or str(snapshot.get("outcomeKind", ""))
+				!= PetFusionOutcomeModel.KIND_FAILURE
+			or str(snapshot.get("outcomePortraitStatus", "")) != "symbol"
+			or str(snapshot.get("outcomeAction", ""))
+				!= PetFusionOutcomeModel.ACTION_REQUOTE
+			or bool(snapshot.get("outcomeActionDisabled", true))
+			or str(snapshot.get("outcomeConsumptionText", ""))
+				!= "本次没有消耗任何宠物。"
+			or bool(snapshot.get("confirmationArmed", true))
+			or not bool(snapshot.get("confirmDisabled", false))
+		):
+			errors.append("明确失败结果缺少零消耗结论或重新报价恢复")
+		return
+
+	errors.append("未验证的融合录片章节：%s" % state)
 
 
 func _append_final_state_errors() -> void:
@@ -552,8 +799,17 @@ func _append_final_state_errors() -> void:
 		expected_frames += int(chapter_spec.get("frames", 0))
 	if _chapter_frame_count != expected_frames:
 		_errors.append("章节帧数不完整")
-	if _actual_left_clicks != 2 or _press_frames != _actual_left_clicks:
-		_errors.append("两条路线没有各执行一次跨帧真实左键")
+	if _actual_left_clicks != 5 or _press_frames != _actual_left_clicks:
+		_errors.append("两路双确认和失败恢复没有执行五次跨帧真实左键")
+	if (
+		_qa_second_confirmation_count != 2
+		or _second_confirmation_total() != 2
+	):
+		_errors.append("两条路线没有各完成一次零网络 QA 本地第二确认")
+	if _outcome_actions != [PetFusionOutcomeModel.ACTION_REQUOTE]:
+		_errors.append("失败恢复动作不是唯一的重新报价")
+	if _authoritative_mutation_count != 0 or _profile_write_count != 0:
+		_errors.append("隔离验收意外执行权威变更或档案写入")
 	if not _all_http_requests_disconnected():
 		_errors.append("验收结束时仍有 HTTP 请求处于连接状态")
 	if PetFusionRecipeCatalogModel.runtime_available(_production_catalog):
@@ -676,8 +932,18 @@ func _report(success: bool) -> Dictionary:
 		),
 		"playerEntryOpened": false,
 		"formalPortraitsRequired": true,
-		"secondConfirmationExecuted": _second_confirmation_total() > 0,
+		"qaOnlySecondConfirmationExecuted": (
+			_qa_second_confirmation_count > 0
+		),
+		"qaLocalSecondConfirmationCount": _qa_second_confirmation_count,
+		"authoritativeMutationExecuted": _authoritative_mutation_count > 0,
+		"authoritativeMutationCount": _authoritative_mutation_count,
+		"profileWriteCount": _profile_write_count,
+		"outcomeActionCount": _outcome_actions.size(),
+		"outcomeActions": _outcome_actions.duplicate(),
 		"networkRequestCount": _network_request_total(),
+		"playerQaTextPresent": _reported_player_qa_text_present(),
+		"playerRawIdentifierPresent": _reported_raw_identifier_present(),
 		"profileSaveEnabled": bool(_host.profile_save_enabled) if _host != null else true,
 		"accountSessionPresent": (
 			not (_host.current_account_session as Dictionary).is_empty()
@@ -706,6 +972,8 @@ func _report(success: bool) -> Dictionary:
 func _report_snapshot(snapshot: Dictionary) -> Dictionary:
 	return {
 		"closed": bool(snapshot.get("closed", true)),
+		"runtime": bool(snapshot.get("runtime", false)),
+		"qaPreview": bool(snapshot.get("qaPreview", false)),
 		"messageText": str(snapshot.get("messageText", "")),
 		"targetName": str(snapshot.get("targetNameText", "")),
 		"targetFormId": str(snapshot.get("targetFormId", "")),
@@ -722,6 +990,12 @@ func _report_snapshot(snapshot: Dictionary) -> Dictionary:
 		"candidatePlaceholderCount": int(
 			snapshot.get("candidatePlaceholderCount", 0)
 		),
+		"materialDisabledCount": int(
+			snapshot.get("materialDisabledCount", 0)
+		),
+		"candidateDisabledCount": int(
+			snapshot.get("candidateDisabledCount", 0)
+		),
 		"quoteValid": bool(snapshot.get("quoteValid", false)),
 		"confirmationArmed": bool(
 			snapshot.get("confirmationArmed", false)
@@ -731,9 +1005,49 @@ func _report_snapshot(snapshot: Dictionary) -> Dictionary:
 		"secondConfirmationCount": int(
 			snapshot.get("secondConfirmationCount", -1)
 		),
+		"quoteRequestCount": int(snapshot.get("quoteRequestCount", -1)),
+		"fusionRequestCount": int(snapshot.get("fusionRequestCount", -1)),
 		"networkRequestCount": int(
 			snapshot.get("networkRequestCount", -1)
 		),
+		"outcomeVisible": bool(snapshot.get("outcomeVisible", false)),
+		"outcomeKind": str(snapshot.get("outcomeKind", "")),
+		"outcomeAction": str(snapshot.get("outcomeAction", "")),
+		"outcomeActionText": str(snapshot.get("outcomeActionText", "")),
+		"outcomeActionDisabled": bool(
+			snapshot.get("outcomeActionDisabled", true)
+		),
+		"outcomeActionDispatched": bool(
+			snapshot.get("outcomeActionDispatched", false)
+		),
+		"outcomePortraitFormId": str(
+			snapshot.get("outcomePortraitFormId", "")
+		),
+		"outcomePortraitStatus": str(
+			snapshot.get("outcomePortraitStatus", "")
+		),
+		"outcomePortraitResourcePath": str(
+			snapshot.get("outcomePortraitResourcePath", "")
+		),
+		"outcomeTitleText": str(snapshot.get("outcomeTitleText", "")),
+		"outcomeStatusText": str(snapshot.get("outcomeStatusText", "")),
+		"outcomeNameText": str(snapshot.get("outcomeNameText", "")),
+		"outcomeLevelText": str(snapshot.get("outcomeLevelText", "")),
+		"outcomeActiveText": str(snapshot.get("outcomeActiveText", "")),
+		"outcomePassiveText": str(snapshot.get("outcomePassiveText", "")),
+		"outcomeBindingText": str(snapshot.get("outcomeBindingText", "")),
+		"outcomeTerminalText": str(snapshot.get("outcomeTerminalText", "")),
+		"outcomeConsumptionText": str(
+			snapshot.get("outcomeConsumptionText", "")
+		),
+		"outcomeDetailText": str(snapshot.get("outcomeDetailText", "")),
+		"playerQaTextPresent": bool(
+			snapshot.get("playerQaTextPresent", true)
+		),
+		"playerRawIdentifierPresent": bool(
+			snapshot.get("playerRawIdentifierPresent", true)
+		),
+		"visibleText": str(snapshot.get("visibleText", "")),
 	}
 
 
@@ -748,12 +1062,56 @@ func _target_portrait_resource_path() -> String:
 	return portrait.texture.resource_path
 
 
+func _outcome_portrait_resource_path() -> String:
+	if _panel == null:
+		return ""
+	var portrait := _panel.find_child(
+		"OutcomePortrait", true, false
+	) as TextureRect
+	if portrait == null or portrait.texture == null:
+		return ""
+	return portrait.texture.resource_path
+
+
+static func _visible_raw_identifier_present(
+	visible_text: String,
+	fixture: Dictionary,
+	route_key: String
+) -> bool:
+	var raw_tokens: Array[String] = []
+	var fixture_tokens = fixture.get("rawTokens", [])
+	if fixture_tokens is Array:
+		for raw_value in fixture_tokens as Array:
+			raw_tokens.append(str(raw_value))
+	raw_tokens.append("outcome_%s_result_pet" % route_key)
+	for raw_token in raw_tokens:
+		if raw_token != "" and visible_text.contains(raw_token):
+			return true
+	return false
+
+
 func _network_request_total() -> int:
 	var total := 0
 	for chapter in _chapters:
 		var snapshot := chapter.get("snapshot", {}) as Dictionary
 		total += int(snapshot.get("networkRequestCount", 0))
 	return total
+
+
+func _reported_player_qa_text_present() -> bool:
+	for chapter in _chapters:
+		var snapshot := chapter.get("snapshot", {}) as Dictionary
+		if bool(snapshot.get("playerQaTextPresent", true)):
+			return true
+	return false
+
+
+func _reported_raw_identifier_present() -> bool:
+	for chapter in _chapters:
+		var snapshot := chapter.get("snapshot", {}) as Dictionary
+		if bool(snapshot.get("playerRawIdentifierPresent", true)):
+			return true
+	return false
 
 
 func _second_confirmation_total() -> int:

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Record the closed fusion presentation from the real ``Main.tscn``.
+"""Record the isolated fusion outcome flow from the real ``Main.tscn``.
 
 The recorder uses one owner-attested repository QA user-data lane, runs the
 same Main-hosted flow once natively and once through Godot MovieWriter, and
 publishes only after the closed-release verifier, formal portrait contracts,
 Godot reports, video/audio streams, full decode, screenshots, and lane cleanup
-all pass.  It never opens the normal player entry or executes the second
-fusion confirmation.
+all pass. Its second confirmations and result fixtures are QA-local only: the
+tool never opens the normal player entry or executes an authoritative mutation.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ import math
 import os
 from pathlib import Path
 import re
+import statistics
 import sys
 from typing import Any, Iterator, Mapping, Sequence
 import uuid
@@ -43,12 +44,12 @@ FUSION_CORE_PATH = REPO_ROOT / "tools" / "record_pet_fusion_closed_review.py"
 CAPTURE_FLAG = "--auto-pet-fusion-main-owner-review-capture"
 REPORT_ARG_PREFIX = "--pet-fusion-main-owner-review-report="
 DEFAULT_OUTPUT_ROOT = Path(
-    ".run/evidence/phase407_pet_fusion_main_owner_review"
+    ".run/evidence/r1_w019_fusion_main_outcome_review"
 )
 
-REPORT_SCHEMA_VERSION = 1
-REPORT_TYPE = "beastbound_pet_fusion_main_owner_review_video"
-GODOT_REPORT_TYPE = "beastbound.pet_fusion_main_owner_review_capture"
+REPORT_SCHEMA_VERSION = 2
+REPORT_TYPE = "beastbound_pet_fusion_main_outcome_review_video"
+GODOT_REPORT_TYPE = "beastbound.pet_fusion_main_outcome_review_capture"
 EXPECTED_WIDTH = 1280
 EXPECTED_HEIGHT = 720
 EXPECTED_FPS = 30
@@ -57,33 +58,68 @@ EXPECTED_PIXEL_FORMAT = "yuv420p"
 EXPECTED_AUDIO_CODEC = "aac"
 EXPECTED_AUDIO_SAMPLE_RATE = 48000
 EXPECTED_AUDIO_CHANNELS = 2
-MIN_DURATION_SECONDS = 30.0
-MAX_DURATION_SECONDS = 32.5
+MIN_DURATION_SECONDS = 47.0
+MAX_DURATION_SECONDS = 50.5
+MIN_PERF_PROBE_SAMPLES = 3
+MIN_CAPTURE_FPS = 29.0
+MAX_MEDIAN_PROCESS_TOTAL_MS = 5.0
+MAX_P95_PROCESS_TOTAL_MS = 15.0
 SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 START_MARKER = "PET_FUSION_MAIN_OWNER_REVIEW_START"
 CHAPTER_MARKER = "PET_FUSION_MAIN_OWNER_REVIEW_CHAPTER"
 STATE_MARKER = "PET_FUSION_MAIN_OWNER_REVIEW_STATE"
 END_MARKER = "PET_FUSION_MAIN_OWNER_REVIEW_END"
 FAILURE_MARKER = "PET_FUSION_MAIN_OWNER_REVIEW_FAILED"
+PERF_LINE_RE = re.compile(
+    r"^perf probe: fps=(?P<fps>[0-9.]+) frames=(?P<frames>[0-9]+) "
+    r"(?P<body>.*)$"
+)
+PERF_METRIC_RE = re.compile(r"\b([a-z0-9_]+)=([0-9.]+)ms\b")
 EXPECTED_CHAPTERS = (
-    ("closed_open", "closed", "solar", 120),
-    ("solar_preview", "preview", "solar", 180),
-    ("solar_armed", "armed", "solar", 150),
-    ("moss_preview", "preview", "moss", 180),
-    ("moss_armed", "armed", "moss", 150),
-    ("closed_final", "closed", "solar", 120),
+    ("closed_open", "closed", "solar", 90),
+    ("solar_preview", "preview", "solar", 120),
+    ("solar_armed", "armed", "solar", 90),
+    ("solar_submitted", "submitted", "solar", 90),
+    ("solar_pending", "pending", "solar", 90),
+    ("solar_success", "success", "solar", 150),
+    ("moss_preview", "preview", "moss", 120),
+    ("moss_armed", "armed", "moss", 90),
+    ("moss_submitted", "submitted", "moss", 90),
+    ("moss_success", "success", "moss", 150),
+    ("failure_requote", "failure", "moss", 120),
+    ("failure_recovered", "recovered", "moss", 120),
+    ("closed_final", "closed", "solar", 90),
 )
 EXPECTED_ROUTE_TARGETS = {
     "solar": {
         "formId": "emberhorn_fusion_solar_crown_fire7_wind3",
         "name": "曜冠角兽",
+        "recipeId": "emberhorn_solar_crown_fusion_v1",
+        "bindingNeedle": "未绑定",
     },
     "moss": {
         "formId": "emberhorn_fusion_moss_rampart_fire4_earth6",
         "name": "苔垒角兽",
+        "recipeId": "emberhorn_moss_rampart_fusion_v1",
+        "bindingNeedle": "已绑定",
     },
 }
-SAMPLE_TIMES = (2.0, 7.0, 12.6, 18.5, 24.1, 29.0)
+EXPECTED_CHAPTER_FRAME_COUNT = sum(value[3] for value in EXPECTED_CHAPTERS)
+SAMPLE_TIMES = (
+    1.5,
+    5.0,
+    8.5,
+    11.5,
+    14.5,
+    18.5,
+    23.0,
+    26.5,
+    29.5,
+    33.5,
+    38.0,
+    42.0,
+    45.5,
+)
 KNOWN_MAIN_WARNING = (
     "WARNING: Nodes with non-equal opposite anchors will have their size "
     "overridden after _ready()."
@@ -162,7 +198,7 @@ def _utc_now() -> datetime:
 
 def _new_run_id() -> str:
     stamp = _utc_now().strftime("%Y%m%dT%H%M%S.%fZ")
-    return f"phase407-{stamp}-{uuid.uuid4().hex[:8]}"
+    return f"r1-w019-{stamp}-{uuid.uuid4().hex[:8]}"
 
 
 def _read_text(path: Path, *, label: str) -> str:
@@ -208,6 +244,7 @@ def _require_main_hosted_capture_wiring(
         "runtimeEnabled\"] = true",
         "PetFusionClientModel.pet_fusion_request",
         "const ServerAuthClientModel := preload",
+        "save_profile(",
     ):
         if forbidden in capture_text:
             raise FusionMainRecordingError(
@@ -250,7 +287,9 @@ def _require_main_hosted_capture_wiring(
         '"playerEntryOpened": false',
         '"ownerReviewStatus": "pending"',
         '"portraitOwnerReviewStatus": "owner_review_pending"',
-        "_second_confirmation_total() > 0",
+        '"qaLocalSecondConfirmationCount": _qa_second_confirmation_count',
+        '"authoritativeMutationCount": _authoritative_mutation_count',
+        '"profileWriteCount": _profile_write_count',
         'if main_source.find("pet_fusion_panel.gd") >= 0:',
         '"正常玩家融合入口缺少关闭边界接线：%s" % marker',
     ):
@@ -324,6 +363,7 @@ def _build_godot_command(
             f"--qa-viewport={EXPECTED_WIDTH}x{EXPECTED_HEIGHT}",
             CAPTURE_FLAG,
             f"{REPORT_ARG_PREFIX}{report_path}",
+            "--perf-probe",
             MEDIA.QA_LANE_ARGUMENT,
         ]
     )
@@ -332,6 +372,7 @@ def _build_godot_command(
         command.count(CAPTURE_FLAG) != 1
         or command.count(report_argument) != 1
         or command.count(MEDIA.QA_LANE_ARGUMENT) != 1
+        or command.count("--perf-probe") != 1
         or "--script" in command
         or "--user-data-dir" in command
         or (avi_path is None and "--write-movie" in command)
@@ -344,7 +385,7 @@ def _build_godot_command(
 def _validate_godot_report(value: Mapping[str, Any]) -> dict[str, Any]:
     errors: list[str] = []
     exact_values = {
-        "schemaVersion": 1,
+        "schemaVersion": REPORT_SCHEMA_VERSION,
         "reportType": GODOT_REPORT_TYPE,
         "result": "PASS",
         "scene": MAIN_SCENE,
@@ -353,15 +394,23 @@ def _validate_godot_report(value: Mapping[str, Any]) -> dict[str, Any]:
         "qaOnlyMainOverlay": True,
         "captureFps": EXPECTED_FPS,
         "playbackSpeed": 1.0,
-        "expectedChapterFrameCount": 900,
-        "renderedChapterFrameCount": 900,
-        "actualLeftClicks": 2,
-        "pressFrames": 2,
+        "expectedChapterFrameCount": EXPECTED_CHAPTER_FRAME_COUNT,
+        "renderedChapterFrameCount": EXPECTED_CHAPTER_FRAME_COUNT,
+        "actualLeftClicks": 5,
+        "pressFrames": 5,
         "productionRuntimeEnabled": False,
         "playerEntryOpened": False,
         "formalPortraitsRequired": True,
-        "secondConfirmationExecuted": False,
+        "qaOnlySecondConfirmationExecuted": True,
+        "qaLocalSecondConfirmationCount": 2,
+        "authoritativeMutationExecuted": False,
+        "authoritativeMutationCount": 0,
+        "profileWriteCount": 0,
+        "outcomeActionCount": 1,
+        "outcomeActions": ["requote"],
         "networkRequestCount": 0,
+        "playerQaTextPresent": False,
+        "playerRawIdentifierPresent": False,
         "profileSaveEnabled": False,
         "accountSessionPresent": False,
         "backendConnected": False,
@@ -390,7 +439,7 @@ def _validate_godot_report(value: Mapping[str, Any]) -> dict[str, Any]:
     }:
         errors.append("window")
     transition_frames = value.get("transitionFrameCount")
-    if type(transition_frames) is not int or transition_frames < 7:
+    if type(transition_frames) is not int or transition_frames < 29:
         errors.append("transitionFrameCount")
     actual_root = value.get("actualUserDataRoot")
     expected_root = value.get("expectedUserDataRoot")
@@ -432,17 +481,37 @@ def _validate_godot_report(value: Mapping[str, Any]) -> dict[str, Any]:
             errors.append(f"chapters[{index}].snapshot")
             cursor = end
             continue
-        if snapshot.get("networkRequestCount") != 0:
-            errors.append(f"chapters[{index}].networkRequestCount")
-        if snapshot.get("secondConfirmationCount") != 0:
-            errors.append(f"chapters[{index}].secondConfirmationCount")
+        for key, expected_value in (
+            ("networkRequestCount", 0),
+            ("quoteRequestCount", 0),
+            ("fusionRequestCount", 0),
+            ("playerQaTextPresent", False),
+            ("playerRawIdentifierPresent", False),
+            ("secondConfirmationCount", 1 if state == "submitted" else 0),
+        ):
+            if snapshot.get(key) != expected_value:
+                errors.append(f"chapters[{index}].{key}")
+        expected_times = {
+            "startTimeSeconds": cursor / EXPECTED_FPS,
+            "centerTimeSeconds": (cursor + frame_count // 2) / EXPECTED_FPS,
+            "endTimeSeconds": end / EXPECTED_FPS,
+        }
+        for key, expected_value in expected_times.items():
+            actual_value = snapshot.get(key) if key in snapshot else chapter.get(key)
+            if not isinstance(actual_value, (int, float)) or not math.isclose(
+                float(actual_value), expected_value, abs_tol=0.000001
+            ):
+                errors.append(f"chapters[{index}].{key}")
         if state == "closed":
             for key, expected_value in (
                 ("closed", True),
+                ("runtime", False),
+                ("qaPreview", False),
                 ("confirmDisabled", True),
                 ("targetName", ""),
                 ("targetFormId", ""),
                 ("targetPortraitResourcePath", ""),
+                ("outcomeVisible", False),
             ):
                 if snapshot.get(key) != expected_value:
                     errors.append(f"chapters[{index}].{key}")
@@ -452,23 +521,116 @@ def _validate_godot_report(value: Mapping[str, Any]) -> dict[str, Any]:
             expected_portrait = (
                 f"res://assets/pets/{target_form}/portrait/default.png"
             )
-            expected_armed = state == "armed"
-            for key, expected_value in (
-                ("closed", False),
-                ("quoteValid", True),
-                ("targetName", target["name"]),
-                ("targetFormId", target_form),
-                ("targetPortraitResourcePath", expected_portrait),
-                ("targetPortraitStatus", "formal"),
-                ("candidatePlaceholderCount", 0),
-                ("candidateFormalPortraitCount", 5),
-                ("confirmationArmed", expected_armed),
-                ("confirmDisabled", False),
-            ):
-                if snapshot.get(key) != expected_value:
-                    errors.append(f"chapters[{index}].{key}")
+            if snapshot.get("targetFormId") != target_form:
+                errors.append(f"chapters[{index}].targetFormId")
+            source_states = {
+                "preview",
+                "armed",
+                "submitted",
+                "recovered",
+                "pending",
+                "success",
+            }
+            if state in source_states:
+                for key, expected_value in (
+                    ("closed", False),
+                    ("quoteValid", True),
+                    ("targetName", target["name"]),
+                    ("targetPortraitResourcePath", expected_portrait),
+                    ("targetPortraitStatus", "formal"),
+                    ("candidatePlaceholderCount", 0),
+                    ("candidateFormalPortraitCount", 5),
+                ):
+                    if snapshot.get(key) != expected_value:
+                        errors.append(f"chapters[{index}].{key}")
+            if state in {"preview", "armed", "submitted", "recovered"}:
+                for key, expected_value in (
+                    ("runtime", False),
+                    ("qaPreview", True),
+                    ("outcomeVisible", False),
+                    ("confirmationArmed", state == "armed"),
+                    ("confirmDisabled", state == "submitted"),
+                ):
+                    if snapshot.get(key) != expected_value:
+                        errors.append(f"chapters[{index}].{key}")
+                if state == "submitted":
+                    for key, expected_value in (
+                        ("materialDisabledCount", 3),
+                        ("candidateDisabledCount", 5),
+                    ):
+                        if snapshot.get(key) != expected_value:
+                            errors.append(f"chapters[{index}].{key}")
+            elif state == "pending":
+                for key, expected_value in (
+                    ("runtime", True),
+                    ("qaPreview", False),
+                    ("outcomeVisible", True),
+                    ("outcomeKind", "pending"),
+                    ("outcomeAction", ""),
+                    ("outcomeActionDisabled", True),
+                    ("outcomePortraitStatus", "symbol"),
+                    ("confirmationArmed", False),
+                    ("confirmDisabled", True),
+                ):
+                    if snapshot.get(key) != expected_value:
+                        errors.append(f"chapters[{index}].{key}")
+                if "不判断" not in str(snapshot.get("outcomeConsumptionText", "")):
+                    errors.append(f"chapters[{index}].outcomeConsumptionText")
+            elif state == "success":
+                for key, expected_value in (
+                    ("runtime", True),
+                    ("qaPreview", False),
+                    ("outcomeVisible", True),
+                    ("outcomeKind", "success"),
+                    ("outcomeAction", "view_pet"),
+                    ("outcomeActionDisabled", False),
+                    ("outcomeActionDispatched", False),
+                    ("outcomePortraitFormId", target_form),
+                    ("outcomePortraitStatus", "formal"),
+                    ("outcomePortraitResourcePath", expected_portrait),
+                    ("outcomeNameText", target["name"]),
+                    ("outcomeLevelText", "一转 Lv1"),
+                    ("confirmationArmed", False),
+                    ("confirmDisabled", True),
+                    ("materialDisabledCount", 3),
+                    ("candidateDisabledCount", 5),
+                ):
+                    if snapshot.get(key) != expected_value:
+                        errors.append(f"chapters[{index}].{key}")
+                for key, needle in (
+                    ("outcomeActiveText", "血脉遗传"),
+                    ("outcomePassiveText", "被动技能"),
+                    ("outcomeBindingText", target["bindingNeedle"]),
+                    ("outcomeTerminalText", "不可骑乘"),
+                    ("outcomeConsumptionText", "三只材料宠已永久消耗"),
+                ):
+                    if needle not in str(snapshot.get(key, "")):
+                        errors.append(f"chapters[{index}].{key}")
+            elif state == "failure":
+                for key, expected_value in (
+                    ("runtime", True),
+                    ("qaPreview", False),
+                    ("quoteValid", False),
+                    ("outcomeVisible", True),
+                    ("outcomeKind", "failure"),
+                    ("outcomeAction", "requote"),
+                    ("outcomeActionDisabled", False),
+                    ("outcomeActionDispatched", False),
+                    ("outcomePortraitStatus", "symbol"),
+                    ("outcomeConsumptionText", "本次没有消耗任何宠物。"),
+                    ("confirmationArmed", False),
+                    ("confirmDisabled", True),
+                ):
+                    if snapshot.get(key) != expected_value:
+                        errors.append(f"chapters[{index}].{key}")
+            else:
+                errors.append(f"chapters[{index}].stateUnhandled")
+            visible_text = str(snapshot.get("visibleText", ""))
+            for raw_token in (target_form, str(target["recipeId"])):
+                if raw_token in visible_text:
+                    errors.append(f"chapters[{index}].visibleTextRawIdentifier")
         cursor = end
-    if cursor != 900:
+    if cursor != EXPECTED_CHAPTER_FRAME_COUNT:
         errors.append("chapterFrameSum")
     if errors:
         raise FusionMainRecordingError(
@@ -481,6 +643,94 @@ def _read_godot_report(path: Path) -> dict[str, Any]:
     return _validate_godot_report(
         FUSION._read_json(path, label="Godot 融合 Main 验收报告")
     )
+
+
+def _percentile(values: Sequence[float], fraction: float) -> float:
+    ordered = sorted(float(value) for value in values)
+    if not ordered:
+        raise FusionMainRecordingError("性能百分位缺少样本")
+    rank = (len(ordered) - 1) * fraction
+    lower = math.floor(rank)
+    upper = math.ceil(rank)
+    if lower == upper:
+        return ordered[lower]
+    weight = rank - lower
+    return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
+
+
+def _validate_perf_probe(text: str) -> dict[str, Any]:
+    samples: list[dict[str, float | int]] = []
+    for line in text.splitlines():
+        if not line.startswith("perf probe:"):
+            continue
+        match = PERF_LINE_RE.fullmatch(line)
+        if match is None:
+            raise FusionMainRecordingError("Godot 融合 Main 性能样本格式错误")
+        metrics = {
+            key: float(value)
+            for key, value in PERF_METRIC_RE.findall(match.group("body"))
+        }
+        fps = float(match.group("fps"))
+        process_total = metrics.get("process_total")
+        if (
+            process_total is None
+            or not math.isfinite(fps)
+            or not math.isfinite(process_total)
+            or fps < 0.0
+            or process_total < 0.0
+        ):
+            raise FusionMainRecordingError(
+                "Godot 融合 Main 性能样本缺少有效 fps/process_total"
+            )
+        samples.append(
+            {
+                "fps": fps,
+                "frames": int(match.group("frames")),
+                "processTotalMs": process_total,
+            }
+        )
+    if len(samples) < MIN_PERF_PROBE_SAMPLES:
+        raise FusionMainRecordingError(
+            "Godot 融合 Main 性能样本少于"
+            f" {MIN_PERF_PROBE_SAMPLES} 份"
+        )
+    fps_values = [float(sample["fps"]) for sample in samples]
+    process_values = [float(sample["processTotalMs"]) for sample in samples]
+    median_process = statistics.median(process_values)
+    p95_process = _percentile(process_values, 0.95)
+    if min(fps_values) < MIN_CAPTURE_FPS:
+        raise FusionMainRecordingError(
+            "Godot 融合 Main 录片性能低于"
+            f" {MIN_CAPTURE_FPS:.1f} FPS"
+        )
+    if (
+        median_process > MAX_MEDIAN_PROCESS_TOTAL_MS
+        or p95_process > MAX_P95_PROCESS_TOTAL_MS
+    ):
+        raise FusionMainRecordingError(
+            "Godot 融合 Main process_total 超限："
+            f"median={median_process:.3f}ms p95={p95_process:.3f}ms"
+        )
+    return {
+        "status": "passed",
+        "sampleCount": len(samples),
+        "fpsMinMedianMax": [
+            round(min(fps_values), 3),
+            round(float(statistics.median(fps_values)), 3),
+            round(max(fps_values), 3),
+        ],
+        "processTotalMs": {
+            "minimum": round(min(process_values), 3),
+            "median": round(float(median_process), 3),
+            "p95": round(float(p95_process), 3),
+            "maximum": round(max(process_values), 3),
+        },
+        "limits": {
+            "minimumFps": MIN_CAPTURE_FPS,
+            "medianProcessTotalMs": MAX_MEDIAN_PROCESS_TOTAL_MS,
+            "p95ProcessTotalMs": MAX_P95_PROCESS_TOTAL_MS,
+        },
+    }
 
 
 def _validate_godot_log(
@@ -537,6 +787,7 @@ def _validate_godot_log(
         raise FusionMainRecordingError("native 预检错误启用了 MovieWriter")
 
     lines = text.splitlines()
+    performance = _validate_perf_probe(text)
 
     def unique_marker(marker: str) -> str:
         matches = [line for line in lines if line.startswith(marker)]
@@ -551,7 +802,8 @@ def _validate_godot_log(
         START_MARKER
         + " scene=Main.tscn entry=MainSceneFlag viewport=1280x720 "
         + "fps=30 speed=1.00x profile=isolated backend=false "
-        + "profile_save=false production_runtime=false player_entry=false "
+        + "profile_save=false qa_local_outcomes=true "
+        + "authoritative_mutations=false production_runtime=false player_entry=false "
         + "owner_review_status=pending"
     )
     if start_line != expected_start:
@@ -559,7 +811,7 @@ def _validate_godot_log(
     chapter_pattern = re.compile(
         rf"{re.escape(CHAPTER_MARKER)} chapter=([A-Za-z0-9_.-]+) "
         r"frame=(\d+) seconds=([0-9.]+) speed=1\.00x "
-        r"state=(closed|preview|armed) route=(solar|moss)"
+        r"state=([a-z_]+) route=(solar|moss)"
     )
     chapter_lines = [line for line in lines if line.startswith(CHAPTER_MARKER)]
     matches = [chapter_pattern.fullmatch(line) for line in chapter_lines]
@@ -599,21 +851,31 @@ def _validate_godot_log(
         rf"{re.escape(STATE_MARKER)} main_host=true qa_lane=true "
         r"profile_isolated=true formal_portraits=true placeholders=0 "
         r"layout_valid=true no_player_qa_text=true production_runtime=false "
-        r"player_entry=false network_requests=0 second_confirmations=0 "
-        r"actual_left_clicks=(\d+) press_frames=(\d+) "
+        r"player_entry=false network_requests=0 profile_writes=0 "
+        r"qa_second_confirmations=(\d+) authoritative_mutations=0 "
+        r"outcome_actions=(\d+) actual_left_clicks=(\d+) press_frames=(\d+) "
         r"chapter_frames=(\d+) transition_frames=(\d+)"
     )
     state_match = state_pattern.fullmatch(state_line)
     if state_match is None:
         raise FusionMainRecordingError("Godot 融合 Main STATE 标记不精确")
-    clicks, press_frames, chapter_frames, transition_frames = (
+    (
+        qa_second_confirmations,
+        outcome_actions,
+        clicks,
+        press_frames,
+        chapter_frames,
+        transition_frames,
+    ) = (
         int(value) for value in state_match.groups()
     )
     if (
-        clicks != 2
+        qa_second_confirmations != 2
+        or outcome_actions != 1
+        or clicks != 5
         or press_frames != clicks
-        or chapter_frames != 900
-        or transition_frames < 7
+        or chapter_frames != EXPECTED_CHAPTER_FRAME_COUNT
+        or transition_frames < 29
     ):
         raise FusionMainRecordingError("Godot 融合 Main 交互或帧证据不完整")
     end_line = unique_marker(END_MARKER)
@@ -631,7 +893,10 @@ def _validate_godot_log(
         "renderer": "Metal 4.0 - Forward Mobile",
         "movieWriter": "1280x720@30fps" if movie_mode else None,
         "knownMainWarningCount": warning_lines.count(KNOWN_MAIN_WARNING),
+        "performance": performance,
         "chapters": chapters,
+        "qaLocalSecondConfirmationCount": qa_second_confirmations,
+        "outcomeActionCount": outcome_actions,
         "actualLeftClicks": clicks,
         "pressFrames": press_frames,
         "chapterFrameCount": chapter_frames,
@@ -971,7 +1236,13 @@ def _record_into(
         "movieFlow": movie_result,
         "productionRuntimeEnabled": False,
         "playerEntryOpened": False,
-        "secondConfirmationExecuted": False,
+        "qaOnlySecondConfirmationExecuted": True,
+        "qaLocalSecondConfirmationCount": 2,
+        "authoritativeMutationExecuted": False,
+        "authoritativeMutationCount": 0,
+        "profileWriteCount": 0,
+        "networkRequestCount": 0,
+        "outcomeActions": ["requote"],
         "portraitOwnerReviewStatus": "owner_review_pending",
         "ownerReviewStatus": "pending",
     }
@@ -1007,8 +1278,9 @@ def _record_into(
             ],
             "audioRequired": True,
             "audibleAudioRequired": True,
-            "realLeftClicksRequired": 2,
-            "secondConfirmationAllowed": False,
+            "realLeftClicksRequired": 5,
+            "qaLocalSecondConfirmationsRequired": 2,
+            "authoritativeMutationsAllowed": False,
             "networkRequestsAllowed": False,
             "serverWritesAllowed": False,
             "productionRuntimeAllowed": False,
@@ -1090,12 +1362,18 @@ def _record_into(
         },
         "productionRuntimeEnabled": False,
         "playerEntryOpened": False,
+        "qaOnlySecondConfirmationExecuted": True,
+        "qaLocalSecondConfirmationCount": 2,
+        "authoritativeMutationExecuted": False,
+        "profileWriteCount": 0,
+        "networkRequestCount": 0,
         "portraitOwnerReviewStatus": "owner_review_pending",
         "ownerReviewStatus": "pending",
         "claimLimit": (
-            "real Main-hosted closed-state presentation evidence only; owner "
-            "approval, release attestation, normal player entry, and runtime "
-            "opening remain separate gates"
+            "real Main-hosted isolated outcome-presentation evidence only; "
+            "second confirmations and outcomes are QA-local with zero "
+            "authoritative mutation; owner approval, release attestation, "
+            "normal player entry, and runtime opening remain separate gates"
         ),
     }
     summary_path = run_dir / "summary.json"
@@ -1190,8 +1468,8 @@ def _record(args: argparse.Namespace) -> Path:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "从真实 Main.tscn 与项目正式 QA lane 录制融合关闭态 "
-            "1280x720、30fps、1.00x、有声项目所有者验收片。"
+            "从真实 Main.tscn 与项目正式 QA lane 录制融合两路双确认、"
+            "成功、失败恢复与关闭态 1280x720、30fps、1.00x有声验收片。"
         )
     )
     parser.add_argument("--run-id", help="可选的唯一安全 runId。")

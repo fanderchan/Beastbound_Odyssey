@@ -277,7 +277,7 @@ func configure_runtime(
 		_quote_request_count = 0
 		_fusion_request_count = 0
 		_second_confirmation_count = 0
-	if previous_fingerprint != next_fingerprint:
+	if previous_fingerprint != next_fingerprint or not normalized_outcome.is_empty():
 		_armed_fingerprint = ""
 		_second_confirmation_count = 0
 	if not ROLE_IDS.has(_focused_role_id):
@@ -367,14 +367,62 @@ func snapshot() -> Dictionary:
 		),
 		"outcomeActionDispatched": _outcome_action_dispatched,
 		"outcomePortraitStatus": _outcome_portrait_status,
+		"outcomePortraitFormId": str(
+			_outcome_view.get("portraitFormId", "")
+		),
 		"outcomeTitleText": (
 			_outcome_title_label.text
 			if _outcome_title_label != null
 			else ""
 		),
+		"outcomeStatusText": (
+			_outcome_status_label.text
+			if _outcome_status_label != null
+			else ""
+		),
+		"outcomeNameText": (
+			_outcome_name_label.text
+			if _outcome_name_label != null
+			else ""
+		),
+		"outcomeLevelText": (
+			_outcome_level_label.text
+			if _outcome_level_label != null
+			else ""
+		),
+		"outcomeActiveText": (
+			_outcome_active_label.text
+			if _outcome_active_label != null
+			else ""
+		),
+		"outcomePassiveText": (
+			_outcome_passive_label.text
+			if _outcome_passive_label != null
+			else ""
+		),
+		"outcomeBindingText": (
+			_outcome_binding_label.text
+			if _outcome_binding_label != null
+			else ""
+		),
+		"outcomeTerminalText": (
+			_outcome_terminal_label.text
+			if _outcome_terminal_label != null
+			else ""
+		),
 		"outcomeConsumptionText": (
 			_outcome_consumption_label.text
 			if _outcome_consumption_label != null
+			else ""
+		),
+		"outcomeDetailText": (
+			_outcome_detail_label.text
+			if _outcome_detail_label != null
+			else ""
+		),
+		"outcomeActionText": (
+			_outcome_action_button.text
+			if _outcome_action_button != null
 			else ""
 		),
 		"authorityText": (
@@ -912,6 +960,7 @@ func _build_outcome_layer() -> void:
 	content.add_child(portrait_frame)
 	_place(portrait_frame, Rect2(42.0, 116.0, 238.0, 238.0))
 	_outcome_portrait = TextureRect.new()
+	_outcome_portrait.name = "OutcomePortrait"
 	_outcome_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_outcome_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_outcome_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -923,6 +972,7 @@ func _build_outcome_layer() -> void:
 		PetManagementVisualSkin.GOLD_TEXT,
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
+	_outcome_placeholder.name = "OutcomePortraitPlaceholder"
 	_outcome_placeholder.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_outcome_placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait_frame.add_child(_outcome_placeholder)
