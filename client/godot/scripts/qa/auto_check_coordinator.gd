@@ -28089,7 +28089,11 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		"name": "普通测试号",
 		"amount": 0,
 		"killCount": 0,
-	}, "人物") == "人物 普通测试号 获得 0 点经验（未击倒怪物）。"
+	}, "人物") == "人物 普通测试号 获得 0 点经验（未参与最后一击）。"
+	zero_exp_line_ok = zero_exp_line_ok and host._server_battle_exp_log_line("人物", {
+		"name": "旧战报人物",
+		"amount": 0,
+	}, "人物") == "人物 旧战报人物 获得 0 点经验。"
 	var closed_event_open_room = {
 		"roomId": "closed_event_pve_room",
 		"mode": "party_pve",

@@ -57,6 +57,41 @@ static func project(
 	return server_pve_view(closed_room, account_id, result_key)
 
 
+static func experience_log_line(
+	role_name: String,
+	entry: Dictionary,
+	fallback_name: String,
+	fallback_amount: int = -1
+) -> String:
+	var amount := maxi(0, int(entry.get("amount", fallback_amount)))
+	var display_name := experience_entry_name(entry, fallback_name)
+	if amount <= 0:
+		# Zero EXP alone does not establish a cause. Only an explicit server
+		# kill-credit count proves this actor did not join a finishing blow.
+		var kill_count = entry.get("killCount")
+		if (kill_count is int or kill_count is float) and float(kill_count) == 0.0:
+			return "%s %s 获得 0 点经验（未参与最后一击）。" % [role_name, display_name]
+		return "%s %s 获得 0 点经验。" % [role_name, display_name]
+	var base_amount := amount
+	if entry.has("baseAmount"):
+		base_amount = maxi(0, int(entry.get("baseAmount", amount)))
+	elif entry.has("scaledAmount"):
+		base_amount = maxi(0, int(entry.get("scaledAmount", amount)))
+	if base_amount <= 0:
+		base_amount = amount
+	var bonus_percent := maxi(0, int(entry.get("partyBonusPercent", 0)))
+	if bonus_percent <= 0:
+		bonus_percent = maxi(0, int(round(float(entry.get("partyBonusRate", 0.0)) * 100.0)))
+	if bonus_percent > 0:
+		return "%s %s 获得 %d 点经验（基础%d，组队+%d%%）。" % [role_name, display_name, amount, base_amount, bonus_percent]
+	return "%s %s 获得 %d 点经验。" % [role_name, display_name, amount]
+
+
+static func experience_entry_name(entry: Dictionary, fallback: String) -> String:
+	var display_name := str(entry.get("name", entry.get("displayName", ""))).strip_edges()
+	return display_name if display_name != "" else fallback
+
+
 static func debug_self_check() -> Dictionary:
 	var report := contract_check()
 	return {
@@ -131,6 +166,27 @@ static func contract_check() -> Dictionary:
 		"stone_present": texts.has("获得了1680石币"),
 		"mail_present": _contains_fragment(texts, "已发邮箱"),
 	}
+	checks["zero_exp_known_credit"] = experience_log_line(
+		"人物", {"name": "赤芽", "amount": 0, "killCount": 0}, "人物"
+	) == "人物 赤芽 获得 0 点经验（未参与最后一击）。"
+	checks["zero_exp_unknown_credit"] = experience_log_line(
+		"人物", {"name": "赤芽", "amount": 0}, "人物"
+	) == "人物 赤芽 获得 0 点经验。"
+	var ambiguous_credit_ok := true
+	for credit in [null, false, "0", -1, 1, []]:
+		ambiguous_credit_ok = ambiguous_credit_ok and experience_log_line(
+			"人物", {"name": "赤芽", "amount": 0, "killCount": credit}, "人物"
+		) == "人物 赤芽 获得 0 点经验。"
+	checks["zero_exp_does_not_guess_cause"] = ambiguous_credit_ok
+	checks["json_zero_credit"] = experience_log_line(
+		"宠物", {"displayName": "布伊", "amount": 0, "killCount": 0.0}, "宠物"
+	) == "宠物 布伊 获得 0 点经验（未参与最后一击）。"
+	checks["positive_exp_keeps_party_bonus"] = experience_log_line(
+		"宠物", {"name": "布伊", "amount": 110, "baseAmount": 100, "partyBonusRate": 0.1}, "宠物"
+	) == "宠物 布伊 获得 110 点经验（基础100，组队+10%）。"
+	checks["legacy_amount_and_name_fallback"] = experience_log_line(
+		"骑宠", {}, "乌力", 60
+	) == "骑宠 乌力 获得 60 点经验。"
 	var ok := true
 	for value in checks.values():
 		ok = ok and bool(value)

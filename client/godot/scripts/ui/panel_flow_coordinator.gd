@@ -10220,26 +10220,9 @@ func _server_battle_exp_log_lines_for_current_account(room: Dictionary) -> Array
 	return lines
 
 func _server_battle_exp_log_line(role_name: String, entry: Dictionary, fallback_name: String, fallback_amount: int = -1) -> String:
-	var amount = maxi(0, int(entry.get("amount", fallback_amount)))
-	var display_name = _server_battle_exp_entry_name(entry, fallback_name)
-	if amount <= 0:
-		var kill_count = maxi(0, int(entry.get("killCount", 0)))
-		if kill_count <= 0:
-			return "%s %s 获得 0 点经验（未击倒怪物）。" % [role_name, display_name]
-		return "%s %s 获得 0 点经验。" % [role_name, display_name]
-	var base_amount = amount
-	if entry.has("baseAmount"):
-		base_amount = maxi(0, int(entry.get("baseAmount", amount)))
-	elif entry.has("scaledAmount"):
-		base_amount = maxi(0, int(entry.get("scaledAmount", amount)))
-	if base_amount <= 0:
-		base_amount = amount
-	var bonus_percent = maxi(0, int(entry.get("partyBonusPercent", 0)))
-	if bonus_percent <= 0:
-		bonus_percent = maxi(0, int(round(float(entry.get("partyBonusRate", 0.0)) * 100.0)))
-	if bonus_percent > 0:
-		return "%s %s 获得 %d 点经验（基础%d，组队+%d%%）。" % [role_name, display_name, amount, base_amount, bonus_percent]
-	return "%s %s 获得 %d 点经验。" % [role_name, display_name, amount]
+	return BattleOutcomePresentationModel.experience_log_line(
+		role_name, entry, fallback_name, fallback_amount
+	)
 
 func _server_battle_profile_writeback_for_current_account(room: Dictionary) -> Dictionary:
 	var self_account_id = str(current_account_session.get("accountId", "")).strip_edges()
@@ -10337,10 +10320,7 @@ func _apply_server_battle_hang_writeback(room: Dictionary) -> Dictionary:
 	}
 
 func _server_battle_exp_entry_name(entry: Dictionary, fallback: String) -> String:
-	var display_name = str(entry.get("name", entry.get("displayName", ""))).strip_edges()
-	if display_name != "":
-		return display_name
-	return fallback
+	return BattleOutcomePresentationModel.experience_entry_name(entry, fallback)
 
 func _server_battle_reward_log_lines_for_current_account(room: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
