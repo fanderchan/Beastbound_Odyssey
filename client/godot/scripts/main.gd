@@ -89,6 +89,7 @@ const QuestMarkerVisibilityModel := preload(
 )
 const WorldPresentationProfile := preload("res://scripts/world/world_presentation_profile.gd")
 const WorldDepthLayer := preload("res://scripts/world/world_depth_layer.gd")
+const WorldGroundLayer := preload("res://scripts/world/world_ground_layer.gd")
 const WorldOverlayLayer := preload("res://scripts/world/world_overlay_layer.gd")
 const NpcArtCatalog := preload("res://scripts/world/npc_art_catalog.gd")
 const MailCenterModel := preload("res://scripts/progression/mail_center_model.gd")
@@ -145,6 +146,7 @@ const MapVisualReviewShowcaseProfileCheck := preload(
 	"res://scripts/qa/map_visual_review_showcase_profile_check.gd"
 )
 const WorldDepthLayerCheck := preload("res://scripts/qa/world_depth_layer_check.gd")
+const WorldGroundLayerCheck := preload("res://scripts/qa/world_ground_layer_check.gd")
 const MapVisualReviewCapture := preload("res://scripts/qa/map_visual_review_capture.gd")
 const PerfProbeExitController := preload("res://scripts/qa/perf_probe_exit_controller.gd")
 const PerfProbeRuntimeTiming := preload("res://scripts/qa/perf_probe_runtime_timing.gd")
@@ -1317,6 +1319,7 @@ var npc_main_review_capture_request: Dictionary = {}
 var map_data: Dictionary = {}
 var map_visual_render_state: Dictionary = {}
 var map_visual_render_revision: int = 0
+var world_ground_layer: Node2D
 var world_depth_layer: Node2D
 var world_overlay_layer: Node2D
 var world_depth_map_signature_cache: String = ""
@@ -4348,6 +4351,13 @@ func _run_auto_map_visual_runtime_check() -> void:
 		pet
 	)
 	report["worldDepthIntegration"] = depth_report
+	var ground_report := await WorldGroundLayerCheck.run(self)
+	report["worldGroundIntegration"] = ground_report
+	if str(ground_report.get("result", "FAIL")) != "PASS":
+		report["result"] = "FAIL"
+		var errors := report.get("errors", []) as Array
+		errors.append_array(ground_report.get("errors", []) as Array)
+		report["errors"] = errors
 	if str(depth_report.get("result", "FAIL")) != "PASS":
 		report["result"] = "FAIL"
 		var errors := report.get("errors", []) as Array
@@ -9766,6 +9776,10 @@ func _invalidate_ground_pet_drop_depth_cache() -> void:
 
 func _sync_world_layer_visibility() -> void:
 	var world_visible := not battle_active and not _fullscreen_map_occludes_world()
+	if world_ground_layer != null:
+		var ground_visible: bool = world_visible and world_ground_layer.has_ground()
+		if world_ground_layer.visible != ground_visible:
+			world_ground_layer.visible = ground_visible
 	if world_depth_layer != null and world_depth_layer.visible != world_visible:
 		world_depth_layer.visible = world_visible
 	if world_overlay_layer != null and world_overlay_layer.visible != world_visible:
@@ -9781,6 +9795,9 @@ func _sync_world_visual_layers(
 ) -> void:
 	if world_depth_layer == null or world_overlay_layer == null or map_data.is_empty():
 		return
+	if world_ground_layer != null:
+		world_ground_layer.configure(map_visual_render_state, map_visual_render_revision, _world_background_rect(get_viewport_rect().size))
+		_sync_world_layer_visibility()
 	var npc_visual_grade_signature := WorldVisualGrade.grade_signature(
 		WorldVisualGrade.role_grade(map_visual_render_state, WorldVisualGrade.ROLE_NPC)
 	)
@@ -10368,7 +10385,8 @@ func _draw() -> void:
 	var draw_start := _perf_now()
 	var viewport_size := get_viewport_rect().size
 	var background_rect := _world_background_rect(viewport_size)
-	draw_rect(background_rect, Color(0.085, 0.13, 0.14), true)
+	if battle_active or _fullscreen_map_occludes_world() or world_ground_layer == null or not world_ground_layer.has_ground():
+		draw_rect(background_rect, WorldGroundLayer.BACKGROUND_COLOR, true)
 	if battle_active:
 		_draw_battle_scene()
 		_perf_add("draw_battle", draw_start)
@@ -10381,6 +10399,9 @@ func _draw() -> void:
 
 
 func _build_world_visual_layers() -> void:
+	world_ground_layer = WorldGroundLayer.new()
+	world_ground_layer.name = "WorldGroundLayer"
+	add_child(world_ground_layer)
 	world_depth_layer = WorldDepthLayer.new()
 	world_depth_layer.name = "WorldDepthLayer"
 	add_child(world_depth_layer)
@@ -15657,6 +15678,9 @@ func _world_menu_is_open() -> bool:
 
 
 func _layout_hud() -> void:
+	_sync_world_layer_visibility()
+	if world_ground_layer != null:
+		world_ground_layer.set_background_rect(_world_background_rect(get_viewport_rect().size))
 	if hud_root == null:
 		return
 
@@ -16916,9 +16940,10 @@ func _draw_isometric_map() -> void:
 	if map_data.is_empty():
 		return
 
-	var ground_draw_count := MapVisualRenderer.draw_ground(self, map_visual_render_state)
-	if ground_draw_count <= 0:
-		_draw_legacy_isometric_ground()
+	if world_ground_layer == null or not world_ground_layer.has_ground():
+		var ground_draw_count := MapVisualRenderer.draw_ground(self, map_visual_render_state)
+		if ground_draw_count <= 0:
+			_draw_legacy_isometric_ground()
 	MapVisualRenderer.draw_objects(self, map_visual_render_state, "ground_decal")
 
 	for cell in current_path_cells:

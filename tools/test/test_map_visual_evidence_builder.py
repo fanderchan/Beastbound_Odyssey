@@ -1309,6 +1309,36 @@ class CollisionReceiptTests(unittest.TestCase):
 
 
 class ProjectSettingsIdentityTests(unittest.TestCase):
+    def test_ground_cache_source_and_check_changes_invalidate_identity(self) -> None:
+        ground_inputs = (
+            "scripts/world/world_ground_layer.gd",
+            "scripts/qa/world_ground_layer_check.gd",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "project.godot").write_text(
+                'config_version=5\n[application]\nconfig/name="Ground identity"\n',
+                encoding="utf-8",
+            )
+            for relative in set(builder.RUNTIME_IDENTITY_FILES) | set(ground_inputs):
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"before\n")
+            with (
+                mock.patch.object(builder, "GODOT_ROOT", root),
+                mock.patch.object(builder, "MAP_BUNDLES", {}),
+                mock.patch.object(builder.subprocess, "run", return_value=subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout="fixed-head\n", stderr="",
+                )),
+            ):
+                before = builder.build_identity()
+                for relative in ground_inputs:
+                    with self.subTest(path=relative):
+                        path = root / relative
+                        path.write_bytes(b"after\n")
+                        self.assertNotEqual(before, builder.build_identity())
+                        path.write_bytes(b"before\n")
+
     def test_runtime_identity_covers_map_facing_world_hud_dependencies(self) -> None:
         self.assertTrue(
             {
