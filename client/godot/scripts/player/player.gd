@@ -467,20 +467,9 @@ static func _sprite_source_rect_to_world(
 static func _node_local_rect_to_world(node: Node2D, local_rect: Rect2) -> Rect2:
 	if node == null or local_rect.size.x <= 0.0 or local_rect.size.y <= 0.0:
 		return Rect2()
-	var corners: Array[Vector2] = [
-		node.to_global(local_rect.position),
-		node.to_global(local_rect.position + Vector2(local_rect.size.x, 0.0)),
-		node.to_global(local_rect.end),
-		node.to_global(local_rect.position + Vector2(0.0, local_rect.size.y)),
-	]
-	var min_point := corners[0]
-	var max_point := corners[0]
-	for corner in corners:
-		min_point.x = minf(min_point.x, corner.x)
-		min_point.y = minf(min_point.y, corner.y)
-		max_point.x = maxf(max_point.x, corner.x)
-		max_point.y = maxf(max_point.y, corner.y)
-	return Rect2(min_point, max_point - min_point)
+	# The native affine operation returns the enclosing axis-aligned rectangle,
+	# including parent transforms, rotation, reflection, nonuniform scale/skew.
+	return node.global_transform * local_rect
 
 
 func _facing_index_for_direction(direction: Vector2) -> int:

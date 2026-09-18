@@ -38,6 +38,7 @@ var _group_nodes: Dictionary = {}
 var _registered_actors: Dictionary = {}
 var _order_dirty: bool = true
 var _last_actor_depth_signature: String = ""
+var _actor_depth_values: Dictionary = {}
 var _last_order_signature: String = ""
 var _occlusion_candidates: Array[Dictionary] = []
 var _occlusion_texture_rect_cache: Dictionary = {}
@@ -102,7 +103,9 @@ func clear_group(group_id: String) -> void:
 
 
 func refresh_depth_order(force: bool = false) -> bool:
-	_prune_invalid_actors()
+	var actor_values_changed := _refresh_actor_depth_values()
+	if not force and not _order_dirty and not actor_values_changed:
+		return false
 	var actor_signature := _actor_depth_signature()
 	if not force and not _order_dirty and actor_signature == _last_actor_depth_signature:
 		return false
@@ -163,7 +166,7 @@ func has_depth_member(stable_id: String) -> bool:
 
 func registered_actor_foot_offset(stable_id: String) -> float:
 	var actor_value: Variant = _registered_actors.get(stable_id.strip_edges())
-	if not (actor_value is Node2D) or not is_instance_valid(actor_value):
+	if not is_instance_valid(actor_value) or not (actor_value is Node2D):
 		return NAN
 	return _actor_foot_offset(actor_value as Node2D)
 
@@ -626,16 +629,13 @@ func _add_label(
 
 func _actor_depth_signature() -> String:
 	var parts: Array[String] = []
-	var actor_ids := _registered_actors.keys()
+	var actor_ids := _actor_depth_values.keys()
 	actor_ids.sort()
 	for id_value in actor_ids:
 		var stable_id := str(id_value)
-		var actor_value: Variant = _registered_actors.get(stable_id)
-		if not (actor_value is Node2D) or not is_instance_valid(actor_value):
-			continue
-		var actor := actor_value as Node2D
-		var depth_y := actor.global_position.y + _actor_foot_offset(actor)
-		parts.append("%s:%.3f:%s" % [stable_id, depth_y, str(actor.visible)])
+		var values: Array = _actor_depth_values[stable_id]
+		# Keep the existing three-decimal signature and resulting sort cadence.
+		parts.append("%s:%.3f:%s" % [stable_id, values[0], str(values[1])])
 	return "|".join(parts)
 
 
@@ -645,16 +645,28 @@ static func _actor_foot_offset(actor: Node2D) -> float:
 	return float(actor.get_meta(ACTOR_FOOT_OFFSET_META, 0.0)) if actor != null else 0.0
 
 
-func _prune_invalid_actors() -> void:
+func _refresh_actor_depth_values() -> bool:
+	var changed := false
 	var stale_ids: Array[String] = []
-	for id_value in _registered_actors.keys():
-		var stable_id := str(id_value)
+	# Idle frames only compare raw fields. Do not allocate/sort key arrays or
+	# format/join signatures until a depth/visibility/registration change.
+	for stable_id in _registered_actors:
 		var actor_value: Variant = _registered_actors.get(stable_id)
-		if not (actor_value is Node2D) or not is_instance_valid(actor_value):
+		if not is_instance_valid(actor_value) or not (actor_value is Node2D):
 			stale_ids.append(stable_id)
+			continue
+		var actor := actor_value as Node2D
+		var depth_y := actor.global_position.y + _actor_foot_offset(actor)
+		var previous: Variant = _actor_depth_values.get(stable_id)
+		if previous == null or previous[0] != depth_y or previous[1] != actor.visible:
+			_actor_depth_values[stable_id] = [depth_y, actor.visible]
+			changed = true
 	for stable_id in stale_ids:
 		_registered_actors.erase(stable_id)
+		_actor_depth_values.erase(stable_id)
 		_order_dirty = true
+		changed = true
+	return changed
 
 
 static func _command_less(a: Dictionary, b: Dictionary) -> bool:

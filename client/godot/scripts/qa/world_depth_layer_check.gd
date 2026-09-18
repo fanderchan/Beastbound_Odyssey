@@ -11,6 +11,19 @@ class OcclusionSubject extends Node2D:
 		return Rect2(global_position + Vector2(-10, -60), Vector2(20, 60))
 
 
+class DepthProbe extends WorldDepthLayer:
+	var signature_calls := 0
+	func _actor_depth_signature() -> String:
+		signature_calls += 1
+		return super._actor_depth_signature()
+
+
+class FootProbe extends Node2D:
+	var foot_offset := 0.0
+	func get_world_depth_foot_offset_y() -> float:
+		return foot_offset
+
+
 static func run(
 	depth_layer: Node,
 	overlay_layer: Node,
@@ -128,6 +141,8 @@ static func run(
 	_validate_interaction_occlusion(errors)
 	_validate_map_object_occlusion(depth_layer, errors)
 	_validate_player_occlusion_rect(player, errors)
+	_validate_actor_depth_cache(errors)
+	_validate_affine_world_bounds(player, errors)
 	return _report(
 		errors,
 		snapshot.size(),
@@ -213,6 +228,99 @@ static func _validate_player_occlusion_rect(player: Node2D, errors: Array[String
 		errors.append("人物遮挡范围没有复用已缓存的动作轮廓")
 	if player.get("visual_source_bounds_cache").size() != cache_count:
 		errors.append("人物遮挡查询不应重新扫描纹理")
+
+
+static func _validate_actor_depth_cache(errors: Array[String]) -> void:
+	var layer := DepthProbe.new()
+	var actor := FootProbe.new()
+	var other := Node2D.new()
+	layer.add_child(actor)
+	layer.add_child(other)
+	actor.position.y = 10.0
+	other.position.y = 20.0
+	layer.register_actor("actor:a", actor)
+	layer.register_actor("actor:b", other)
+	layer.refresh_depth_order()
+	var signature_calls := layer.signature_calls
+	for iteration in range(10):
+		actor.position.x += 1.0
+		if layer.refresh_depth_order():
+			errors.append("深度不变时不应重排人物")
+	if layer.signature_calls != signature_calls:
+		errors.append("静止或仅横向移动仍重建深度签名")
+	actor.foot_offset = 30.0
+	layer.refresh_depth_order()
+	if layer.get_child(0) != other:
+		errors.append("动态脚点改变没有更新深度排序")
+	actor.foot_offset = 0.0
+	actor.position.y = 19.9998
+	layer.refresh_depth_order()
+	actor.position.y = 20.0002
+	if layer.refresh_depth_order() or layer.get_child(0) != actor:
+		errors.append("深度缓存改变了既有三位小数签名刷新边界")
+	layer.refresh_depth_order(true)
+	if layer.get_child(0) != other:
+		errors.append("强制刷新没有按完整精度重排人物")
+	signature_calls = layer.signature_calls
+	actor.visible = false
+	layer.refresh_depth_order()
+	if layer.signature_calls != signature_calls + 1:
+		errors.append("人物显隐改变未使深度签名失效")
+	actor.visible = true
+	actor.position.y = 10.0
+	layer.refresh_depth_order()
+	layer.remove_child(actor)
+	actor.free()
+	actor = FootProbe.new()
+	actor.position.y = 10.0
+	layer.add_child(actor)
+	layer.register_actor("actor:a", actor)
+	layer.refresh_depth_order()
+	if layer.get_child(0) != actor:
+		errors.append("相同 stableId 和位置替换人物后未恢复子节点顺序")
+	actor.free()
+	layer.refresh_depth_order()
+	signature_calls = layer.signature_calls
+	for iteration in range(5): layer.refresh_depth_order()
+	if layer.get_child_count() != 1 or layer.signature_calls != signature_calls:
+		errors.append("已释放人物没有从深度缓存清理")
+	layer.free()
+
+
+static func _validate_affine_world_bounds(player: Node2D, errors: Array[String]) -> void:
+	var parent := Node2D.new()
+	var node := Node2D.new()
+	player.add_child(parent)
+	parent.add_child(node)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 559
+	for index in range(128):
+		parent.transform = Transform2D(
+			rng.randf_range(-PI, PI), Vector2(-1.7 if index % 2 else 1.4, 0.65),
+			rng.randf_range(-0.4, 0.4), Vector2(110, -70)
+		)
+		node.transform = Transform2D(
+			rng.randf_range(-PI, PI), Vector2(0.8, -1.6 if index % 3 else 2.1),
+			rng.randf_range(-0.4, 0.4), Vector2(-30, 90)
+		)
+		for rect in [Rect2(-22, -21, 44, 54), Rect2(-128, -224, 256, 256), Rect2(3, 8, 0, 10), Rect2(3, 8, -1, 10)]:
+			var expected := Rect2()
+			if rect.size.x > 0 and rect.size.y > 0:
+				var points := PackedVector2Array([
+					node.to_global(rect.position), node.to_global(rect.position + Vector2(rect.size.x, 0)),
+					node.to_global(rect.end), node.to_global(rect.position + Vector2(0, rect.size.y)),
+				])
+				expected = Rect2(points[0], Vector2.ZERO)
+				for point in points: expected = expected.expand(point)
+			var actual: Rect2 = player.call("_node_local_rect_to_world", node, rect)
+			if (actual.position.distance_to(expected.position) > 0.001
+				or actual.size.distance_to(expected.size) > 0.001):
+				errors.append("人物视觉范围在父变换／旋转／缩放／镜像／倾斜后不一致：%d" % index)
+				parent.free()
+				return
+	parent.free()
+	if player.call("_node_local_rect_to_world", null, Rect2(0, 0, 10, 10)) != Rect2():
+		errors.append("缺失人物节点必须返回空视觉范围")
 
 
 static func _expect_occlusion_alpha(
