@@ -15,6 +15,7 @@ var _sample_done := false
 var _sample_exit_code := 1
 var _active_host: Node = null
 var _errors: Array[String] = []
+var _start_requested := false
 
 
 func _initialize() -> void:
@@ -32,10 +33,22 @@ func _run() -> void:
 	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
 	_window_id = root.get_window_id()
 	root.title = "万兽纪元｜性能测试准备：请点击窗口并保持前台"
+	var start_button := Button.new()
+	start_button.position = Vector2(320, 260)
+	start_button.size = Vector2(640, 180)
+	start_button.text = "开始性能测试\n约 12 分钟，请保持窗口可见\n将依次显示旧网格与当前美术"
+	var font := SystemFont.new()
+	font.font_names = PackedStringArray(["PingFang SC", "Microsoft YaHei", "Arial"])
+	start_button.add_theme_font_override("font", font)
+	start_button.add_theme_font_size_override("font_size", 26)
+	start_button.pressed.connect(func() -> void: _start_requested = true)
+	root.add_child(start_button)
 	if not await _wait_for_foreground():
 		_errors.append("foreground_unavailable")
 		_finish()
 		return
+	start_button.queue_free()
+	await process_frame
 	var packed := load(MAIN_SCENE) as PackedScene
 	if packed == null:
 		_errors.append("main_scene_missing")
@@ -71,11 +84,14 @@ func _run() -> void:
 		var deadline := Time.get_ticks_msec() + SAMPLE_TIMEOUT_MSEC
 		var observed_frames := 0
 		var unfocused_frames := 0
+		var non_drawable_frames := 0
 		while not _sample_done and Time.get_ticks_msec() < deadline:
 			await process_frame
 			observed_frames += 1
 			if not DisplayServer.window_is_focused():
 				unfocused_frames += 1
+			if not root.can_draw() or not RenderingServer.is_render_loop_enabled():
+				non_drawable_frames += 1
 		if not _sample_done:
 			_errors.append("sample_timeout_%d" % index)
 			_finish()
@@ -84,9 +100,17 @@ func _run() -> void:
 		ending["exitCode"] = _sample_exit_code
 		ending["focusObservedFrames"] = observed_frames
 		ending["unfocusedFrames"] = unfocused_frames
+		ending["nonDrawableFrames"] = non_drawable_frames
 		print("map performance sample end: %s" % JSON.stringify(ending))
 		if not start["focused"] or not ending["focused"] or unfocused_frames > 0:
 			_errors.append("foreground_lost_%d" % index)
+		# The initial process_frame signal can precede the first native draw.
+		# All subsequent observed frames must also advance the render loop.
+		if (not start["canDraw"] or not ending["canDraw"]
+			or not start["renderLoopEnabled"] or not ending["renderLoopEnabled"]
+			or non_drawable_frames > 0
+			or ending["drawFrame"] - start["drawFrame"] < observed_frames - 1):
+			_errors.append("native_draw_lost_%d" % index)
 		if _sample_exit_code != 0:
 			_errors.append("sample_failed_%d" % index)
 		# Never free a Main while its finishing coroutine is still executing.
@@ -108,25 +132,34 @@ func _run() -> void:
 
 
 func _wait_for_foreground() -> bool:
-	# macOS can report a focused startup frame before the app is actually
-	# activated. Wait for continuous foreground time before creating Main;
-	# clicking this empty preparation window cannot enter the sampled workload.
+	# Focus and native visibility are independent on macOS. A hidden window
+	# can retain focus while process frames run without rendering. Require a
+	# real start click, stable visibility and actual drawing before Main exists.
 	# Request activation once, never take focus back during measurement.
-	var deadline := Time.get_ticks_msec() + 30000
+	var deadline := Time.get_ticks_msec() + 120000
 	var focused_since := -1
+	var first_draw_frame := 0
 	DisplayServer.window_move_to_foreground()
 	while Time.get_ticks_msec() < deadline:
+		# Fixed-FPS mode can busy-loop while occluded. This delay is confined to
+		# the empty preparation screen and never enters a performance sample.
+		OS.delay_msec(10)
 		await process_frame
 		var now := Time.get_ticks_msec()
-		if not DisplayServer.window_is_focused():
+		if (not _start_requested or not DisplayServer.window_is_focused()
+			or not root.can_draw() or not RenderingServer.is_render_loop_enabled()):
 			focused_since = -1
 			continue
 		if focused_since < 0:
 			focused_since = now
-		if now - focused_since >= 1000:
+			first_draw_frame = Engine.get_frames_drawn()
+		var drawn_frames := Engine.get_frames_drawn() - first_draw_frame
+		if now - focused_since >= 1000 and drawn_frames >= 30:
 			print("map performance foreground ready: %s" % JSON.stringify({
 				"stableMilliseconds": now - focused_since,
 				"mainCount": _main_count(), "frame": Engine.get_process_frames(),
+				"startRequested": _start_requested, "drawnFrames": drawn_frames,
+				"canDraw": root.can_draw(),
 			}))
 			return true
 	return false
@@ -181,6 +214,9 @@ func _boundary(host: Node, index: int) -> Dictionary:
 		"windowMode": DisplayServer.window_get_mode(),
 		"viewport": [viewport_size.x, viewport_size.y],
 		"frame": Engine.get_process_frames(),
+		"drawFrame": Engine.get_frames_drawn(),
+		"canDraw": root.can_draw(),
+		"renderLoopEnabled": RenderingServer.is_render_loop_enabled(),
 		"focused": DisplayServer.window_is_focused(),
 		"title": root.title,
 		"prefetch": host.get("battle_texture_prefetcher").snapshot() if host.get("battle_texture_prefetcher") != null else {},
@@ -211,7 +247,7 @@ func _read_plan() -> Dictionary:
 		return {}
 	var plan: Dictionary = parsed
 	if (plan.get("strategy") != STRATEGY or plan.get("mainScene") != MAIN_SCENE
-		or plan.get("focusPolicy") != "foreground_required_v1"):
+		or plan.get("focusPolicy") != "foreground_drawable_required_v2"):
 		_errors.append("plan_strategy_mismatch")
 	var maps := {
 		"earth_vein_cave_visual_v1": ["earth_vein_cave", "earth_vein_cave_f2", "earth_vein_cave_f3", "earth_vein_cave_f4"],

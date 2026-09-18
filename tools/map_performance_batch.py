@@ -23,7 +23,7 @@ def plan_for(bundle_id: str, repetitions: int, executable: str) -> dict[str, Any
     return {
         "schemaVersion": 1, "strategy": contract.STRATEGY,
         "mainScene": contract.MAIN_SCENE, "bundleId": bundle_id,
-        "focusPolicy": "foreground_required_v1",
+        "focusPolicy": "foreground_drawable_required_v2",
         "repetitions": repetitions, "buildIdentity": builder.build_identity(),
         "sourceIdentity": contract.source_identity(builder.REPO_ROOT),
         "executableSha256": builder._sha256(Path(executable)),

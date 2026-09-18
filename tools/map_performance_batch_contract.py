@@ -68,7 +68,7 @@ def validate_binding(record: dict[str, Any]) -> None:
             or sha256(plan) != batch["planSha256"]
             or plan.get("strategy") != STRATEGY
             or plan.get("mainScene") != MAIN_SCENE
-            or plan.get("focusPolicy") != "foreground_required_v1"
+            or plan.get("focusPolicy") != "foreground_drawable_required_v2"
             or plan.get("buildIdentity") != record.get("buildIdentity")
             or plan.get("bundleId") != record.get("bundleId")
             or batch["processSettled"] is not True
@@ -105,7 +105,11 @@ def validate_binding(record: dict[str, Any]) -> None:
                 or boundary.get("mainScene") != MAIN_SCENE
                 or boundary.get("viewport") != [1280, 720]
                 or boundary.get("windowMode") != 0
-                or boundary.get("focused") is not True):
+                or boundary.get("focused") is not True
+                or boundary.get("canDraw") is not True
+                or boundary.get("renderLoopEnabled") is not True
+                or type(boundary.get("drawFrame")) is not int
+                or boundary["drawFrame"] < 0):
             raise ValueError("performance batch window/Main boundary mismatch")
     if (type(start.get("frame")) is not int or type(end.get("frame")) is not int
             or end["frame"] - start["frame"] < 660
@@ -113,6 +117,9 @@ def validate_binding(record: dict[str, Any]) -> None:
             or end["focusObservedFrames"] < 660
             or type(end.get("unfocusedFrames")) is not int
             or end["unfocusedFrames"] != 0
+            or type(end.get("nonDrawableFrames")) is not int
+            or end["nonDrawableFrames"] != 0
+            or end["drawFrame"] - start["drawFrame"] < end["focusObservedFrames"] - 1
             or end.get("exitCode") != 0):
         raise ValueError("performance batch sample did not complete cleanly")
     if (completion.get("status") != "passed"

@@ -298,7 +298,7 @@
 | [hang_matchmaking_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_owner_review_capture.gd) | 716 |
 | [hang_matchmaking_world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd) | 1622 |
 | [map_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/map_awakened_owner_review_capture.gd) | 2654 |
-| [map_performance_batch.gd](../../client/godot/scripts/qa/map_performance_batch.gd) | 258 |
+| [map_performance_batch.gd](../../client/godot/scripts/qa/map_performance_batch.gd) | 294 |
 | [map_visual_action_capture_batch.gd](../../client/godot/scripts/qa/map_visual_action_capture_batch.gd) | 1079 |
 | [map_visual_release_contract_check.gd](../../client/godot/scripts/qa/map_visual_release_contract_check.gd) | 475 |
 | [map_visual_review_capture.gd](../../client/godot/scripts/qa/map_visual_review_capture.gd) | 1824 |
@@ -976,7 +976,7 @@
 | [lib/macos-host-evidence.mjs](../../tools/lib/macos-host-evidence.mjs) | 1580 |
 | [lib/public-capacity-harness.mjs](../../tools/lib/public-capacity-harness.mjs) | 646 |
 | [map_performance_batch.py](../../tools/map_performance_batch.py) | 204 |
-| [map_performance_batch_contract.py](../../tools/map_performance_batch_contract.py) | 166 |
+| [map_performance_batch_contract.py](../../tools/map_performance_batch_contract.py) | 173 |
 | [map_visual_evidence_builder.py](../../tools/map_visual_evidence_builder.py) | 2057 |
 | [normalize_mounted_sprite_frames.py](../../tools/normalize_mounted_sprite_frames.py) | 198 |
 | [p0_6_equipment_ownership_registry_gate.mjs](../../tools/p0_6_equipment_ownership_registry_gate.mjs) | 316 |
@@ -1081,7 +1081,7 @@
 | [tools/test/test_godot_qa_user_data_lane.py](../../tools/test/test_godot_qa_user_data_lane.py) | 2199 |
 | [tools/test/test_install_firebud_computer_use_evidence.py](../../tools/test/test_install_firebud_computer_use_evidence.py) | 90 |
 | [tools/test/test_install_pet_battle_bundle.py](../../tools/test/test_install_pet_battle_bundle.py) | 1330 |
-| [tools/test/test_map_performance_batch.py](../../tools/test/test_map_performance_batch.py) | 144 |
+| [tools/test/test_map_performance_batch.py](../../tools/test/test_map_performance_batch.py) | 179 |
 | [tools/test/test_map_visual_evidence_builder.py](../../tools/test/test_map_visual_evidence_builder.py) | 1380 |
 | [tools/test/test_map_visual_release_tools.py](../../tools/test/test_map_visual_release_tools.py) | 484 |
 | [tools/test/test_pet_art_batch_audit.py](../../tools/test/test_pet_art_batch_audit.py) | 1793 |

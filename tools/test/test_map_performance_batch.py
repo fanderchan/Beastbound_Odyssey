@@ -19,7 +19,7 @@ def fixture_records() -> list[dict]:
     cases = [dict(zip(("mapId", "variant", "mode", "repetition"), values))
              for values in builder.expected_performance_matrix(["earth_vein_cave"], 3)]
     plan = {"strategy": contract.STRATEGY, "buildIdentity": "test-build",
-            "mainScene": contract.MAIN_SCENE, "focusPolicy": "foreground_required_v1",
+            "mainScene": contract.MAIN_SCENE, "focusPolicy": "foreground_drawable_required_v2",
             "bundleId": "earth_vein_cave_visual_v1", "samples": cases,
             "sourceIdentity": contract.source_identity(TOOLS.parent)}
     plan_sha = contract.sha256(plan)
@@ -35,9 +35,11 @@ def fixture_records() -> list[dict]:
                  "processId": 42, "rootWindowId": 0, "mainInstanceId": 100 + index,
                  "windowCount": 1, "mainCount": 1, "mainScene": contract.MAIN_SCENE,
                  "viewport": [1280, 720], "windowMode": 0, "focused": True,
-                 "frame": index * 1000}
+                 "canDraw": True, "renderLoopEnabled": True,
+                 "drawFrame": index * 1000, "frame": index * 1000}
         end = {**start, "frame": index * 1000 + 800, "exitCode": 0,
-               "focusObservedFrames": 800, "unfocusedFrames": 0}
+               "focusObservedFrames": 800, "unfocusedFrames": 0,
+               "drawFrame": index * 1000 + 800, "nonDrawableFrames": 0}
         del end["sample"]
         record.update(schemaVersion=2, argv=contract.command("godot"), batch={
             "strategy": contract.STRATEGY, "plan": plan, "planSha256": plan_sha,
@@ -118,6 +120,39 @@ class MapPerformanceBatchTest(unittest.TestCase):
                 if line.startswith(contract.END_PREFIX) else line for line in lines)
             with self.assertRaises(ValueError):
                 contract.validate_binding(record)
+
+    def test_focused_but_hidden_or_non_rendering_sample_is_rejected(self):
+        for boundary_name, change in (
+            ("start", {"canDraw": False}),
+            ("end", {"canDraw": False}),
+            ("end", {"renderLoopEnabled": False}),
+            ("end", {"nonDrawableFrames": 1}),
+            ("end", {"nonDrawableFrames": False}),
+            ("end", {"drawFrame": 0}),
+            ("end", {"drawFrame": 798}),
+            ("end", {"drawFrame": True}),
+        ):
+            with self.subTest(boundary=boundary_name, change=change):
+                record = fixture_records()[0]
+                boundary = record["batch"][boundary_name]
+                boundary.update(change)
+                prefix = contract.START_PREFIX if boundary_name == "start" else contract.END_PREFIX
+                record["stdout"] = "".join(
+                    prefix + json.dumps(boundary) + "\n" if line.startswith(prefix) else line
+                    for line in record["stdout"].splitlines(True))
+                self.assertTrue(record["batch"]["start"]["focused"])
+                self.assertTrue(record["batch"]["end"]["focused"])
+                with self.assertRaises(ValueError):
+                    contract.validate_binding(record)
+
+    def test_native_draw_count_allows_only_initial_signal_boundary(self):
+        record = fixture_records()[0]
+        record["batch"]["end"]["drawFrame"] = 799
+        record["stdout"] = "".join(
+            contract.END_PREFIX + json.dumps(record["batch"]["end"]) + "\n"
+            if line.startswith(contract.END_PREFIX) else line
+            for line in record["stdout"].splitlines(True))
+        contract.validate_binding(record)
 
     def test_raw_cleanup_requires_empty_prefetch_and_matching_completion(self):
         for old, new in (('"inFlight": 0', '"inFlight": 1'),

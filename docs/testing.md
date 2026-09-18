@@ -88,7 +88,7 @@ godot --path client/godot --scene res://scenes/Main.tscn
 
 健康目标是启动后低个位数 CPU 和亚毫秒级常态 `process_total`；特定门禁的容忍阈值不是新的正常性能目标。更晚候选的性能矩阵和历史结果见对应 Phase，不能作为本轮重新测量的结果。
 
-地图表现对比使用 `python3 tools/run_map_visual_performance_evidence.py --help` 所列入口：每个 bundle 一个原生窗口，按矩阵重建 Main，窗口标题区分旧网格基线和当前美术候选。首次诊断使用 `--scratch-only` 和新 `--run-id`，避免覆盖正式证据；`--build-identity` 必须等于 `python3 tools/map_visual_evidence_builder.py identity` 输出的当前标识。采样逐帧要求前台，失焦后停止并清理，不继续抢焦点。原始采样完成与性能门槛通过是两件事：CLI 的 `raw_capture_and_cleanup` 结果还必须经过报告生成器和独立 bundle 审计器。固定步长 60 不能作为真实显示 FPS。合同、失败记录和当前待测状态见 [Phase 550](phase_550_single_window_map_performance.md)。
+地图表现对比使用 `python3 tools/run_map_visual_performance_evidence.py --help` 所列入口：每个 bundle 一个原生窗口，按矩阵重建 Main，窗口标题区分旧网格基线和当前美术候选。首次诊断使用 `--scratch-only` 和新 `--run-id`，避免覆盖正式证据；`--build-identity` 必须等于 `python3 tools/map_visual_evidence_builder.py identity` 输出的当前标识。在准备页点击“开始性能测试”后，保持窗口前台可见约 12 分钟。采样同时检查焦点、可绘制状态与实际绘制帧进度；失败后停止并清理，不继续抢焦点或强制绘制。原始采样完成与性能门槛通过是两件事：CLI 的 `raw_capture_and_cleanup` 结果还必须经过报告生成器和独立 bundle 审计器。固定步长 60 不能作为真实显示 FPS。当前可见性合同及真实拒绝记录见 [Phase 558](phase_558_native_performance_visibility.md)，矩阵与资源隔离设计见 [Phase 550](phase_550_single_window_map_performance.md)。
 
 截图审计保留录制时的原始提交号；后续仅提交文档/证据时，只要运行内容指纹相同且原提交是当前 HEAD 的祖先，就不要求无意义地重录。运行内容、工具源码、素材或录制表面真的变化时仍必须重证，不能手改旧回执的提交号。该边界及真实 Git 回归见 [Phase 551](phase_551_map_evidence_commit_provenance.md)。
 
