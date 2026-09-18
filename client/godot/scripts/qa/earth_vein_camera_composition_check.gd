@@ -4,6 +4,7 @@ const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const MapVisualReviewCapture := preload(
 	"res://scripts/qa/map_visual_review_capture.gd"
 )
+const ExitCleanup := preload("res://scripts/qa/runtime_exit_cleanup.gd")
 
 const MAIN_SCENE := "res://scenes/Main.tscn"
 const BUNDLE_ID := "earth_vein_cave_visual_v1"
@@ -69,6 +70,13 @@ const SCENARIOS: Array[Dictionary] = [
 		"nearestWarpId": "",
 	},
 	{
+		"id": "f4_guardian_route_approach",
+		"mapId": "earth_vein_cave_f4",
+		"cell": Vector2i(20, 8),
+		"requiredIds": ["f4_guardian_plinth"],
+		"nearestWarpId": "",
+	},
+	{
 		"id": "f4_lineage",
 		"mapId": "earth_vein_cave_f4",
 		"cell": Vector2i(25, 13),
@@ -90,6 +98,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	root.size = EXPECTED_VIEWPORT
+	root.content_scale_size = EXPECTED_VIEWPORT
+	root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
+	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
 	var errors: Array[String] = []
 	_validate_invocation(errors)
 	if errors.is_empty():
@@ -101,7 +113,7 @@ func _run() -> void:
 	var host = current_scene
 	if host == null:
 		errors.append("真实 Main.tscn 没有成为 current_scene")
-		_finish([], errors)
+		await _finish([], errors)
 		return
 	for _frame_index in range(120):
 		if host.player != null and not host.map_data.is_empty():
@@ -123,7 +135,80 @@ func _run() -> void:
 		scenario_reports.append(scenario_report)
 		for scenario_error in _string_array(scenario_report.get("errors", [])):
 			errors.append("%s：%s" % [str(scenario.get("id", "")), scenario_error])
-	_finish(scenario_reports, errors)
+	var navigation_report := await _run_guardian_navigation(host)
+	scenario_reports.append(navigation_report)
+	for navigation_error in _string_array(navigation_report.get("errors", [])):
+		errors.append("f4_guardian_navigation：%s" % navigation_error)
+	await _finish(scenario_reports, errors)
+
+
+func _run_guardian_navigation(host) -> Dictionary:
+	var errors: Array[String] = []
+	var snapshots: Array[Dictionary] = []
+	host._load_map("earth_vein_cave_f4", "default")
+	host._clear_navigation_state()
+	host.player.global_position = IsoMapModel.grid_to_world(
+		host.map_data, Vector2i(9, 25)
+	)
+	host._update_camera_position(true)
+	var target: Dictionary = host._navigation_target_for_interaction_id(
+		"earth_vein_guardian_npc"
+	)
+	if target.is_empty():
+		errors.append("守护兽的真实导航目标缺失")
+	else:
+		host._route_to_quest_target(target)
+		var deadline := Time.get_ticks_msec() + 30000
+		while Time.get_ticks_msec() < deadline:
+			if not host.player.is_auto_moving() and not host.has_pending_interaction:
+				break
+			await process_frame
+		if host.player.is_auto_moving() or host.has_pending_interaction:
+			errors.append("真实导航没有在 30 秒内到达")
+	if IsoMapModel.world_to_grid(host.map_data, host.player.global_position) != Vector2i(20, 8):
+		errors.append("真实导航没有到达预期的相邻停格 (20,8)")
+	if not host._dialog_is_open():
+		errors.append("导航到达后没有打开守护兽对话")
+	for stage in ["dialog_open", "dialog_closed", "message_expanded", "message_collapsed"]:
+		if stage == "dialog_closed":
+			host._close_dialog()
+		elif stage == "message_expanded" and not host.battle_message_expanded:
+			host._toggle_battle_message_expanded()
+		elif stage == "message_collapsed" and host.battle_message_expanded:
+			host._toggle_battle_message_expanded()
+		# Let the real smoothed camera settle; do not teleport or force its center.
+		await create_timer(1.0).timeout
+		await RenderingServer.frame_post_draw
+		var composition: Dictionary = MapVisualReviewCapture.new(host)._camera_composition_report()
+		snapshots.append({
+			"stage": stage,
+			"messageExpanded": host.battle_message_expanded,
+			"cameraComposition": composition,
+		})
+		if not bool(composition.get("messageHudVisible", false)):
+			errors.append("%s：没有覆盖寻路消息窗显示状态" % stage)
+		for key in ["playerAtEffectiveAnchor", "playerAlphaInsideSafeRect", "playerAlphaClearOfFixedHud", "playerAlphaViewportEdgeClear"]:
+			if not bool(composition.get(key, false)):
+				errors.append("%s：完整人物构图失败：%s" % [stage, key])
+		# This route checks player + interaction priority with the message HUD open.
+		# Keep peripheral overlaps in the report; this is not the all-prop release gate.
+		for object_id in ["f4_guardian_plinth", "f4_lineage_plinth"]:
+			if not _string_array(composition.get("visibleKeyEnvironmentIds", [])).has(object_id):
+				errors.append("%s：交互地标不可见：%s" % [stage, object_id])
+			if _string_array(composition.get("viewportClippedKeyEnvironmentIds", [])).has(object_id):
+				errors.append("%s：交互地标被裁边：%s" % [stage, object_id])
+			if _string_array(composition.get("hudOverlappingKeyEnvironmentIds", [])).has(object_id):
+				errors.append("%s：交互地标被固定 HUD 遮挡：%s" % [stage, object_id])
+	return {
+		"id": "f4_guardian_navigation",
+		"mapId": "earth_vein_cave_f4",
+		"scope": "player_and_interaction_priority_with_message_hud",
+		"routeFrom": [9, 25],
+		"focusCell": [20, 8],
+		"snapshots": snapshots,
+		"errors": errors,
+		"result": "PASS" if errors.is_empty() else "FAIL",
+	}
 
 
 func _run_scenario(host, scenario: Dictionary) -> Dictionary:
@@ -259,13 +344,15 @@ func _finish(scenario_reports: Array[Dictionary], errors: Array[String]) -> void
 		"scene": MAIN_SCENE,
 		"bundleId": BUNDLE_ID,
 		"viewport": [EXPECTED_VIEWPORT.x, EXPECTED_VIEWPORT.y],
-		"scenarioCount": SCENARIOS.size(),
+		"scenarioCount": scenario_reports.size(),
 		"passedScenarioCount": passed_scenarios.size(),
 		"scenarios": scenario_reports,
 		"errors": errors.duplicate(),
 		"result": "PASS" if errors.is_empty() else "FAIL",
 	}
 	print("EARTH_VEIN_CAMERA_COMPOSITION_CHECK: %s" % JSON.stringify(report))
+	if current_scene != null:
+		await ExitCleanup.drain_audio(current_scene)
 	quit(0 if errors.is_empty() else 1)
 
 

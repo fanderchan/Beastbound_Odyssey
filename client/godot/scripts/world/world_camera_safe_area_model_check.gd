@@ -371,6 +371,43 @@ func _run() -> void:
 		errors
 	)
 
+	# Expanded world messages leave a narrow safe band. A landmark can clear the
+	# actual HUD while entering its 12 px visual gap by a few pixels. Cropping its
+	# top must not win merely by reducing that unavoidable gap-overlap area.
+	var expanded_message_blockers: Array[Rect2] = [
+		Rect2(92.0, 0.0, 166.0, 142.0),
+		Rect2(999.0, 13.0, 206.0, 465.0),
+		Rect2(24.0, 350.0, 560.0, 352.0),
+		Rect2(599.0, 530.0, 597.0, 181.0),
+	]
+	var expanded_message_subjects: Array[Rect2] = [
+		Rect2(713.3952, 271.7792, 37.2096, 125.8560),
+		Rect2(716.8000, 210.6566, 273.6000, 167.2373),
+		Rect2(656.0000, 545.0566, 273.6000, 167.2373),
+		Rect2(174.9856, 74.3350, 141.2287, 276.4500),
+		Rect2(287.4000, 713.4257, 159.6000, 127.6287),
+	]
+	var expanded_message_anchor := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects_in_range(
+		Vector2(732.0, 360.0), Vector2(732.0, 120.0), Vector2(851.0, 382.0),
+		expanded_message_blockers, expanded_message_subjects,
+		Rect2(Vector2.ZERO, REFERENCE_VIEWPORT), 12.0, 3, true
+	)
+	for subject in expanded_message_subjects.slice(0, 3):
+		var shifted := Rect2(
+			subject.position + expanded_message_anchor - Vector2(732.0, 360.0),
+			subject.size
+		)
+		_expect(
+			Rect2(Vector2.ZERO, REFERENCE_VIEWPORT).grow(-12.0).encloses(shifted),
+			"消息窗展开后不得靠裁切人物或交互地标减少 HUD 间距重叠面积",
+			errors
+		)
+		_expect(
+			_rects_clear([shifted], expanded_message_blockers),
+			"消息窗展开后人物和交互地标仍须避开实际 HUD",
+			errors
+		)
+
 	var report := {
 		"ok": errors.is_empty(),
 		"errors": errors,
@@ -392,6 +429,7 @@ func _run() -> void:
 		"localCompositionSubjectCount": local_composition_subjects.size(),
 		"endpointPlayerSafeAnchor": endpoint_player_safe_anchor,
 		"clampedEndpointPlayerSafeAnchor": clamped_endpoint_safe_anchor,
+		"expandedMessageAnchor": expanded_message_anchor,
 	}
 	print("WORLD_CAMERA_SAFE_AREA_MODEL_CHECK: %s" % JSON.stringify(report))
 	quit(0 if errors.is_empty() else 1)

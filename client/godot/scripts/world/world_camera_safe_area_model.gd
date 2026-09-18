@@ -506,11 +506,14 @@ static func _composition_score(
 			clipped_count += 1.0
 			if subject_index < required_count:
 				priority_clipped_count += 1.0
+	# At equal priority HUD-overlap count, preserve complete silhouettes before
+	# minimizing overlap area. Otherwise clipping a landmark can "improve" the
+	# score just by removing pixels from an unavoidable HUD visual-gap overlap.
 	return [
 		priority_overlap_count,
-		priority_overlap_area,
 		priority_hidden_count,
 		priority_clipped_count,
+		priority_overlap_area,
 		overlap_count,
 		overlap_area,
 		clipped_count,

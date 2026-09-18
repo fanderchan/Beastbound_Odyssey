@@ -16755,6 +16755,9 @@ func _world_camera_landmark_safe_anchor(
 		subject_rects.slice(priority_source_count),
 		composition_interest_rect
 	)
+	# Arrays share storage on assignment. Freeze the priority prefix before
+	# appending ordinary scenery, or rocks inherit interaction-landmark priority.
+	var priority_subject_count := priority_subjects.size()
 	subject_rects = priority_subjects
 	subject_rects.append_array(ordinary_subjects)
 	var player_subject_rects: Array[Rect2] = [player_screen_rect]
@@ -16774,7 +16777,7 @@ func _world_camera_landmark_safe_anchor(
 		subject_rects,
 		Rect2(Vector2.ZERO, viewport_size),
 		WorldCameraSafeAreaModel.DEFAULT_VISUAL_GAP_PX,
-		priority_subjects.size(),
+		priority_subject_count,
 		endpoint_safe_camera
 	)
 	var composed_player_rect := Rect2(

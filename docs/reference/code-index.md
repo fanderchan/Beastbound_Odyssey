@@ -15,7 +15,7 @@
 | 32998 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
 | 28880 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27363 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
-| 19202 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
+| 19205 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
 | 8834 | [client/godot/scripts/progression/player_progress_model.gd](../../client/godot/scripts/progression/player_progress_model.gd) |
 | 8789 | [tools/build_pet_portrait.py](../../tools/build_pet_portrait.py) |
@@ -34,7 +34,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [main.gd](../../client/godot/scripts/main.gd) | 19202 |
+| [main.gd](../../client/godot/scripts/main.gd) | 19205 |
 
 </details>
 
@@ -285,7 +285,7 @@
 | [character_mount_direction_review.gd](../../client/godot/scripts/qa/character_mount_direction_review.gd) | 928 |
 | [character_runtime_appearance_check.gd](../../client/godot/scripts/qa/character_runtime_appearance_check.gd) | 242 |
 | [commerce_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/commerce_awakened_owner_review_capture.gd) | 492 |
-| [earth_vein_camera_composition_check.gd](../../client/godot/scripts/qa/earth_vein_camera_composition_check.gd) | 277 |
+| [earth_vein_camera_composition_check.gd](../../client/godot/scripts/qa/earth_vein_camera_composition_check.gd) | 364 |
 | [earth_vein_floor_hierarchy_check.gd](../../client/godot/scripts/qa/earth_vein_floor_hierarchy_check.gd) | 481 |
 | [earth_vein_landmark_review_capture.gd](../../client/godot/scripts/qa/earth_vein_landmark_review_capture.gd) | 398 |
 | [earth_vein_review_batch_capture.gd](../../client/godot/scripts/qa/earth_vein_review_batch_capture.gd) | 1462 |
@@ -482,8 +482,8 @@
 | [npc_art_release_evidence.gd](../../client/godot/scripts/world/npc_art_release_evidence.gd) | 1658 |
 | [quest_marker_visibility_model.gd](../../client/godot/scripts/world/quest_marker_visibility_model.gd) | 70 |
 | [server_encounter_permit_model.gd](../../client/godot/scripts/world/server_encounter_permit_model.gd) | 65 |
-| [world_camera_safe_area_model.gd](../../client/godot/scripts/world/world_camera_safe_area_model.gd) | 663 |
-| [world_camera_safe_area_model_check.gd](../../client/godot/scripts/world/world_camera_safe_area_model_check.gd) | 429 |
+| [world_camera_safe_area_model.gd](../../client/godot/scripts/world/world_camera_safe_area_model.gd) | 666 |
+| [world_camera_safe_area_model_check.gd](../../client/godot/scripts/world/world_camera_safe_area_model_check.gd) | 467 |
 | [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 702 |
 | [world_overlay_layer.gd](../../client/godot/scripts/world/world_overlay_layer.gd) | 302 |
 | [world_presentation_profile.gd](../../client/godot/scripts/world/world_presentation_profile.gd) | 138 |
