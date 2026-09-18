@@ -55,6 +55,7 @@ var last_formal_texture: Texture2D
 var last_formal_flip_h: bool = false
 var visual_source_bounds_cache: Dictionary = {}
 var world_visual_grade_signature: String = "disabled"
+var remote_presentation_only := false
 
 
 func _ready() -> void:
@@ -263,6 +264,21 @@ func get_animation_state() -> String:
 
 func get_animation_clip_key() -> String:
 	return "%s_%s" % [animation_state, facing_key]
+
+
+func set_remote_presentation_state(facing: String, moving: bool) -> void:
+	if not remote_presentation_only:
+		remote_presentation_only = true
+		set_controls_enabled(false)
+		set_keyboard_movement_enabled(false)
+		set_physics_process(false)
+		collision_layer = 0
+		collision_mask = 0
+		($CollisionShape2D as CollisionShape2D).disabled = true
+	var normalized_facing := facing if FACING_KEYS.has(facing) else "south"
+	if facing_key != normalized_facing:
+		face_direction(Vector2.from_angle(float(FACING_KEYS.find(normalized_facing)) * PI / 4.0))
+	_set_animation_state("walk" if moving else "idle")
 
 
 func set_appearance_id(value: String) -> bool:

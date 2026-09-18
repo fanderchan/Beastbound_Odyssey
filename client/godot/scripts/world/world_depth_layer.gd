@@ -3,6 +3,7 @@ extends Node2D
 const WorldVisualGrade := preload("res://scripts/world/world_visual_grade.gd")
 const InteractionOcclusionModel := preload("res://scripts/world/interaction_occlusion_model.gd")
 const WorldCameraSafeAreaModel := preload("res://scripts/world/world_camera_safe_area_model.gd")
+const RemotePlayerVisual := preload("res://scripts/world/remote_player_visual.gd")
 
 const GROUP_META := &"world_depth_group"
 const STABLE_ID_META := &"world_depth_stable_id"
@@ -77,6 +78,8 @@ func replace_group(group_id: String, commands: Array[Dictionary]) -> int:
 	var normalized_group := group_id.strip_edges()
 	if normalized_group == "":
 		return 0
+	if normalized_group == "remote_actors":
+		return _sync_remote_actors(commands)
 	_clear_group(normalized_group)
 	var sorted_commands := commands.duplicate(false)
 	sorted_commands.sort_custom(_command_less)
@@ -91,6 +94,42 @@ func replace_group(group_id: String, commands: Array[Dictionary]) -> int:
 	_order_dirty = true
 	refresh_depth_order(true)
 	return nodes.size()
+
+
+func _sync_remote_actors(commands: Array[Dictionary]) -> int:
+	var previous: Dictionary = {}
+	for node in _group_nodes.get("remote_actors", []):
+		previous[str(node.get_meta(STABLE_ID_META))] = node
+	var next: Array[Node2D] = []
+	var seen: Dictionary = {}
+	for command in commands:
+		var stable_id := str(command.get("stableId", "")).strip_edges()
+		if stable_id == "" or seen.has(stable_id) or str(command.get("kind", "")) != KIND_REMOTE_ACTOR or not (command.get("position") is Vector2):
+			continue
+		seen[stable_id] = true
+		var actor: Node2D = previous.get(stable_id)
+		if actor == null:
+			actor = _build_visual(command, "remote_actors")
+			add_child(actor)
+		else:
+			previous.erase(stable_id)
+			(actor as RemotePlayerVisual).apply_command(command)
+			actor.set_meta(DEPTH_Y_META, float(command.get("depthY", actor.position.y)))
+		next.append(actor)
+	for actor in previous.values():
+		remove_child(actor)
+		actor.queue_free()
+	_group_nodes["remote_actors"] = next
+	_order_dirty = true
+	refresh_depth_order()
+	return next.size()
+
+
+func remote_actor_contains_point(stable_id: String, world_point: Vector2) -> bool:
+	for actor in _group_nodes.get("remote_actors", []):
+		if str(actor.get_meta(STABLE_ID_META)) == stable_id:
+			return (actor as RemotePlayerVisual).contains_world_point(world_point)
+	return false
 
 
 func clear_group(group_id: String) -> void:
@@ -249,7 +288,7 @@ func _build_visual(command: Dictionary, group_id: String) -> Node2D:
 	var position_value: Variant = command.get("position")
 	if stable_id == "" or not VALID_KINDS.has(kind) or not (position_value is Vector2):
 		return null
-	var root := Node2D.new()
+	var root: Node2D = RemotePlayerVisual.new() if kind == KIND_REMOTE_ACTOR else Node2D.new()
 	root.name = _safe_node_name(stable_id)
 	root.position = position_value as Vector2
 	root.set_meta(GROUP_META, group_id)
@@ -267,7 +306,7 @@ func _build_visual(command: Dictionary, group_id: String) -> Node2D:
 		KIND_NPC_PLACEHOLDER:
 			_add_npc_placeholder(root, command)
 		KIND_REMOTE_ACTOR:
-			_add_remote_actor(root, command)
+			(root as RemotePlayerVisual).apply_command(command)
 		KIND_GATE:
 			_add_gate(root, command)
 		KIND_RECORD_POINT:
@@ -373,37 +412,6 @@ func _add_npc_placeholder(root: Node2D, command: Dictionary) -> void:
 		local_marker + Vector2(-13, 8),
 		local_marker + Vector2(13, 8),
 	]), trim_color, 3.0)
-
-
-func _add_remote_actor(root: Node2D, command: Dictionary) -> void:
-	var moving := bool(command.get("moving", false))
-	var body_color := Color(0.20, 0.66, 0.72, 0.92) if not moving else Color(0.27, 0.76, 0.82, 0.96)
-	_add_ellipse(root, Vector2(0, 23), Vector2(19, 19), Color(0.02, 0.04, 0.04, 0.32), 28)
-	_add_rect(root, Rect2(Vector2(-15, -22), Vector2(30, 38)), body_color)
-	_add_ellipse(root, Vector2(0, -35), Vector2(9, 9), Color(0.98, 0.75, 0.46, 0.96), 24)
-	var facing_offset: Variant = command.get("facingOffset")
-	if facing_offset is Vector2:
-		_add_ellipse(
-			root,
-			(facing_offset as Vector2) * 18.0 + Vector2(0, -6),
-			Vector2(4, 4),
-			Color(1.0, 0.88, 0.38, 0.96),
-			18
-		)
-	var label := str(command.get("label", "")).strip_edges()
-	if label == "":
-		return
-	var label_width := clampf(float(label.length()) * 16.0 + 22.0, 56.0, 168.0)
-	var label_rect := Rect2(Vector2(-label_width * 0.5, -66.0), Vector2(label_width, 22.0))
-	_add_rect(root, label_rect, Color(0.04, 0.07, 0.06, 0.70))
-	_add_label(
-		root,
-		label,
-		label_rect,
-		14,
-		Color(0.94, 0.98, 0.90, 0.96),
-		command.get("font")
-	)
 
 
 func _add_gate(root: Node2D, command: Dictionary) -> void:

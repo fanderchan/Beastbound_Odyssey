@@ -39,7 +39,7 @@ git log -5 --oneline
 产品范围由 [总路线图](../stoneage_gap_plan.md) 负责，逐步交付由 [生产发布计划](../production_release_loop_plan.md) 负责。两者现在都以主目录为准，旧目录的游标不再驱动开发。
 
 1. **统一基线已恢复**：历史成果和文档导航已核对；完整服务端 1984 项通过、0 失败、1 项因未配置独立 Valkey 环境跳过，客户端定向 8/8 通过。
-2. **一场守护战已形成可试玩、可审看的候选**：正式客户端已接入已有宠物动作和原创洞穴战场背景，修复地标挡人及人物倒下后漏交宠物指令。最新 [Phase 557](phase_557_current_cave_and_guardian_review.md) 已用真实鼠标完成挑战、人物攻击、宠物技能、蓄力防御、胜利返回和背包奖励检查；一个真实 Main 加四个 HTTP 测试队友，五账号均 `revision 102→103`、地之戒 `+1`、石币 `+256`。这不是五真人或平衡验收，远端世界队友仍有简化占位。试玩命令及美术来源见 [Phase 547](phase_547_earth_guardian_battle_presentation.md)。老板美术接受与四层完整性能仍待完成，发布游标保持 `R1.W024`。
+2. **一场守护战已形成可试玩、可审看的候选**：正式客户端已接入已有宠物动作和原创洞穴战场背景，修复地标挡人及人物倒下后漏交宠物指令。最新 [Phase 557](phase_557_current_cave_and_guardian_review.md) 已用真实鼠标完成挑战、人物攻击、宠物技能、蓄力防御、胜利返回和背包奖励检查；一个真实 Main 加四个 HTTP 测试队友，五账号均 `revision 102→103`、地之戒 `+1`、石币 `+256`。这不是五真人或平衡验收。[Phase 563](phase_563_remote_player_appearance.md) 已将远端世界队友接入现有四套人物和骑乘回退；当前联网鼠标复核仍待补齐。试玩命令及美术来源见 [Phase 547](phase_547_earth_guardian_battle_presentation.md)。老板美术接受与四层完整性能仍待完成，发布游标保持 `R1.W024`。
 3. **首次切战卡顿已明显改善，代码已同步 GitHub**：[Phase 548](phase_548_battle_hotpaths_and_authoritative_completion.md) 修复了人物击飞后提前胜利并减少绘制开销；[Phase 549](phase_549_battle_texture_prefetch_and_github_sync.md) 增加有界后台贴图预取，同一五人守护战的新进程首次准备由约 1002 ms 降到两轮约 10 ms。两场权威胜利与五账号奖励到账通过，严格原生前台性能两次通过，最终世界性能探针 `5/5`。此前各阶段已按功能提交推送 GitHub main；107 项待重冻地图证据继续在本地保留。未知形态或立即开战仍可能走同步加载，不能把这个场景的结果推广成全游戏无卡顿。
 4. **依次推进成品门槛**：继续 R1.W024 的当前源码精确地图证据、真实操作、集中式重复移动性能和路线/战斗转换验证，再推进剩余视听验收、首发内容、玩法/经济、运营基础设施、正式构建和封测；每次交付都带具体效果或可复现结果。
 
@@ -49,6 +49,7 @@ git log -5 --oneline
 | --- | --- | --- |
 | 人物比例、遮挡与地标构图 | [Phase 555](phase_555_world_prop_player_visibility.md) 修复前景物件挡人；[Phase 556](phase_556_guardian_navigation_camera.md) 修复四层守护者实际到达格与展开消息窗后的裁切，原生端点／导航 `12/12` | 后续源码已变化，按当前版本重冻画面；外围环境物件不能冒充全部无遮挡 |
 | 四层路线与五人守护战 | [Phase 557](phase_557_current_cave_and_guardian_review.md) 取得 20 对自动截图、四层／地标原速片、碰撞及 20 项真实鼠标证据，并完成五账号权威奖励复核 | 这些属于当时版本；当前 107 项本地候选文件继续保留，尚未成为当前源码的完整精确冻结证据 |
+| 同屏队友外观 | [Phase 563](phase_563_remote_player_appearance.md) 接通服务端外观、八向动画、相同比例、点击范围和提交后骑乘通知；服务端 `91/91`、客户端 `4/4`，原生 Main 展示已录制 | 补做当前联网客户端点击、上下骑和切图；模拟多人和展示片不代表真人联机或 200 人容量 |
 | 原生地图性能 | [Phase 559](phase_559_world_depth_and_bounds_hotpaths.md) 取得完整 48 组可绘制、零失焦样本；四层绝对处理耗时达标 | **总评仍 FAIL**：四层静止增量、二三层移动增量超门槛，不能改写旧回执或只挑合格样本 |
 | 运行优化 | [Phase 559](phase_559_world_depth_and_bounds_hotpaths.md) 减少人物范围／深度排序计算；[Phase 561](phase_561_camera_score_pruning.md) 减少无效镜头候选评分，10000 组结果一致、局部求解约降 20%，定向及通用性能通过 | 静止问题尚未解决，局部及 headless 收益不代替当前原生矩阵 |
 | 取证可靠性与时间口径 | [Phase 551](phase_551_map_evidence_commit_provenance.md) 绑定运行内容和祖先提交；[Phase 558](phase_558_native_performance_visibility.md) 验证前台实际绘制；[Phase 560](phase_560_map_capture_transaction_history.md) 修复历史事务阻断；[Phase 562](phase_562_runtime_probe_wall_clock.md) 区分模拟时间与实际时间，模型、解析及工具 `73/73` 通过 | 固定步长会绕过通常的限帧等待；压力运行的瞬时 CPU 不是正常玩家占用。仍需正常帧预算、VSync、前台状态下的稳态 CPU 与绘制证据 |

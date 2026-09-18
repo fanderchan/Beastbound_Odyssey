@@ -130,6 +130,11 @@ function projectPresenceWirePlayer(value, options = {}) {
     partyRole: normalizePartyRole(source.partyRole),
     position: projectPresenceWirePosition(source.position),
   };
+  // Older event producers may omit these additive fields. Keep the wire
+  // whitelist explicit; source is the server projection, never the move body.
+  for (const key of ["appearanceId", "ridingFormId"]) {
+    if (typeof source[key] === "string") player[key] = source[key];
+  }
   if (options.includeRevision === true) {
     player.presenceRevision = normalizePresenceRevision(source.presenceRevision);
   }

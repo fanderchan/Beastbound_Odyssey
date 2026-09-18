@@ -41,6 +41,7 @@ function createProfileActionsDomain(ctx) {
     publicAccount,
     publicHangSession,
     publicProfileActionResult,
+    publishOnlineAppearanceUpdate,
     recordQuestEventToProfile,
     resolveSession,
     resolveHangOrigin,
@@ -405,6 +406,7 @@ function createProfileActionsDomain(ctx) {
     }
     const persisted = persistProfileForAccount(data, resolved.account, binding, profile, now);
     save(data);
+    publishOnlineAppearanceUpdate(data, resolved.account, profileDoc.profile, profile);
     return ok({
       account: publicAccount(resolved.account),
       profileBinding: persisted.binding,

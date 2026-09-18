@@ -10754,13 +10754,17 @@ func _online_position_draw_signature(players: Array[Dictionary]) -> String:
 	var parts: Array[String] = []
 	for value in players:
 		var position = value.get("position", {}) as Dictionary if value.get("position", {}) is Dictionary else {}
-		parts.append("%s:%s:%d,%d:%s:%s" % [
+		parts.append("%s:%s:%d,%d:%s:%s:%s:%s:%s:%s" % [
 			str(value.get("accountId", value.get("username", ""))),
 			str(position.get("mapId", "")),
 			int(position.get("cellX", 0)),
 			int(position.get("cellY", 0)),
 			str(position.get("facing", "")),
 			str(position.get("moving", false)),
+			str(value.get("appearanceId", "")),
+			str(value.get("ridingFormId", "")),
+			str(value.get("displayName", value.get("username", ""))),
+			str(_online_position_has_cell(position)),
 		])
 	parts.sort()
 	return "|".join(parts)

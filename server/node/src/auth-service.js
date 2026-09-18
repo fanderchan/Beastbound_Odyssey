@@ -214,6 +214,7 @@ const {
   projectOnlinePositionDelta,
   projectOnlinePositionRebase,
 } = require("./auth/online-presence");
+const {publicOnlineAppearance, createOnlineAppearancePublisher} = require("./auth/online-player-appearance");
 const {
   markReusableEventProjection,
 } = require("./event-projection-cache");
@@ -6884,6 +6885,14 @@ function createAuthService(options = {}) {
   }
 
   const domainContext = {
+    publishOnlineAppearanceUpdate: createOnlineAppearancePublisher({
+      normalizeAppearanceId: normalizeCharacterAppearanceId,
+      publish: (data, account, position) => emitOnlinePositionEvent(
+        data, account, position, publicPlayerPosition(position),
+        normalizeOnlineAoiPayload({scope: ONLINE_AOI_SCOPE}, position),
+        {authority: "profile_appearance"},
+      ),
+    }),
     BATTLE_INVITE_ACCEPTED,
     BATTLE_INVITE_CANCELLED,
     BATTLE_INVITE_DECLINED,
@@ -9280,6 +9289,10 @@ function publicOnlinePlayer(account, data) {
     partyId: party ? party.partyId : "",
     partyRole: party && party.leaderAccountId === account.accountId ? "leader" : (party ? "member" : ""),
     position: position ? publicPlayerPosition(position) : null,
+    ...publicOnlineAppearance(
+      summary && data.profiles[summary.playerId] && data.profiles[summary.playerId].profile,
+      normalizeCharacterAppearanceId,
+    ),
   };
 }
 

@@ -9689,7 +9689,7 @@ func _queue_world_redraw_if_needed(delta: float) -> void:
 	world_redraw_signature_elapsed = 0.0
 	var draw_signature := _world_draw_signature()
 	var overlay_signature := _world_overlay_signature()
-	var remote_signature := "%s|%s" % [current_map_id, online_position_draw_signature_cache]
+	var remote_signature := "%s|%s|%d" % [current_map_id, online_position_draw_signature_cache, map_visual_render_revision]
 	var drop_signature := "%s|%s" % [
 		current_map_id,
 		_ground_pet_drop_depth_signature_cached(),
@@ -9814,7 +9814,7 @@ func _sync_world_visual_layers(
 			"interaction_props",
 			_world_depth_interaction_prop_commands(visual_interaction_links)
 		)
-	var remote_signature := "%s|%s" % [current_map_id, online_position_draw_signature_cache]
+	var remote_signature := "%s|%s|%d" % [current_map_id, online_position_draw_signature_cache, map_visual_render_revision]
 	if force or remote_signature != world_depth_remote_signature_cache:
 		world_depth_remote_signature_cache = remote_signature
 		world_depth_layer.replace_group("remote_actors", _world_depth_remote_commands())
@@ -9958,6 +9958,7 @@ func _world_depth_ground_pet_drop_commands(ground_drops: Array) -> Array[Diction
 
 func _world_depth_remote_commands() -> Array[Dictionary]:
 	var commands: Array[Dictionary] = []
+	var visual_grade := WorldVisualGrade.role_grade(map_visual_render_state, WorldVisualGrade.ROLE_PLAYER)
 	var fallback_index := 0
 	var font := _canvas_text_font()
 	for value in online_position_remote_players:
@@ -9977,7 +9978,10 @@ func _world_depth_remote_commands() -> Array[Dictionary]:
 			"depthY": center.y + 24.0,
 			"tiePriority": 10,
 			"moving": bool(position.get("moving", false)),
-			"facingOffset": _online_facing_offset(str(position.get("facing", "south"))),
+			"facing": str(position.get("facing", "south")),
+			"appearanceId": str(value.get("appearanceId", "")),
+			"ridingFormId": str(value.get("ridingFormId", "")),
+			"visualGrade": visual_grade,
 			"label": str(state.get("label", "")),
 			"font": font,
 		})
@@ -16946,39 +16950,6 @@ func _draw_legacy_isometric_ground() -> void:
 			_draw_iso_tile(center, fill, border)
 
 
-func _draw_online_remote_players() -> void:
-	if online_position_remote_players.is_empty() or map_data.is_empty():
-		return
-	var font := _canvas_text_font()
-	for value in online_position_remote_players:
-		var position := value.get("position", {}) as Dictionary if value.get("position", {}) is Dictionary else {}
-		if position.has("hasCell") and not bool(position.get("hasCell", false)):
-			continue
-		if str(position.get("precision", "")).strip_edges().to_lower() == "map":
-			continue
-		if str(position.get("mapId", "")) != current_map_id:
-			continue
-		var cell := Vector2i(int(position.get("cellX", 0)), int(position.get("cellY", 0)))
-		if not IsoMapModel.is_inside(map_data, cell):
-			continue
-		var center := IsoMapModel.grid_to_world(map_data, cell)
-		var moving := bool(position.get("moving", false))
-		var body_color := Color(0.20, 0.66, 0.72, 0.92) if not moving else Color(0.27, 0.76, 0.82, 0.96)
-		draw_circle(center + Vector2(0, 23), 19.0, Color(0.02, 0.04, 0.04, 0.32))
-		draw_rect(Rect2(center + Vector2(-15, -22), Vector2(30, 38)), body_color, true)
-		draw_circle(center + Vector2(0, -35), 9.0, Color(0.98, 0.75, 0.46, 0.96))
-		var facing_offset := _online_facing_offset(str(position.get("facing", "south")))
-		var marker_center := center + facing_offset * 18.0 + Vector2(0, -6)
-		draw_circle(marker_center, 4.0, Color(1.0, 0.88, 0.38, 0.96))
-		var label := _online_player_label(value)
-		if label != "":
-				var font_size := 14
-				var label_width := clampf(float(label.length()) * 16.0 + 22.0, 56.0, 168.0)
-				var rect := Rect2(center + Vector2(-label_width * 0.5, -66.0), Vector2(label_width, 22.0))
-				draw_rect(rect, Color(0.04, 0.07, 0.06, 0.70), true)
-				draw_string(font, rect.position + Vector2(0.0, 16.0), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, font_size, Color(0.94, 0.98, 0.90, 0.96))
-
-
 func _online_remote_player_at_screen_point(screen_point: Vector2, ui_checked: bool = false) -> Dictionary:
 	if not _is_server_account_session() or online_position_remote_players.is_empty() or map_data.is_empty() or (not ui_checked and _is_ui_point(screen_point)):
 		return {}
@@ -17016,6 +16987,10 @@ func _online_remote_player_at_screen_point(screen_point: Vector2, ui_checked: bo
 		if not (state_value is Dictionary):
 			continue
 		var state := state_value as Dictionary
+		if world_depth_layer != null:
+			if world_depth_layer.remote_actor_contains_point(stable_id, world_point):
+				return (state.get("playerInfo", {}) as Dictionary).duplicate(true)
+			continue
 		var center := state.get("center", Vector2.ZERO) as Vector2
 		var label := str(state.get("label", ""))
 		var label_width := clampf(float(label.length()) * 16.0 + 22.0, 56.0, 168.0)

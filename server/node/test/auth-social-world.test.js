@@ -1541,7 +1541,7 @@ test("online position events project one-account AOI deltas without rebuilding r
     "type", "change", "accountId", "presenceRevision", "schemaVersion", "createdAt", "player",
   ]);
   assert.deepEqual(Object.keys(watcherDelta.event.player), [
-    "accountId", "username", "displayName", "partyId", "partyRole", "position",
+    "accountId", "username", "displayName", "partyId", "partyRole", "position", "appearanceId", "ridingFormId",
   ]);
   assert.deepEqual(Object.keys(watcherDelta.event.player.position), [
     "mapId", "cellX", "cellY", "facing", "moving", "hasCell",

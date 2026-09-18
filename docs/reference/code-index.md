@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **941** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **945** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -13,9 +13,9 @@
 | 行数 | 文件 |
 | ---: | --- |
 | 32998 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
-| 28880 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
-| 27363 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
-| 19221 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
+| 28884 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
+| 27376 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
+| 19196 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
 | 8834 | [client/godot/scripts/progression/player_progress_model.gd](../../client/godot/scripts/progression/player_progress_model.gd) |
 | 8789 | [tools/build_pet_portrait.py](../../tools/build_pet_portrait.py) |
@@ -34,7 +34,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [main.gd](../../client/godot/scripts/main.gd) | 19221 |
+| [main.gd](../../client/godot/scripts/main.gd) | 19196 |
 
 </details>
 
@@ -148,7 +148,7 @@
 | [mount_visual_profile_catalog.gd](../../client/godot/scripts/player/mount_visual_profile_catalog.gd) | 253 |
 | [mounted_character_2d.gd](../../client/godot/scripts/player/mounted_character_2d.gd) | 81 |
 | [mounted_character_asset_catalog.gd](../../client/godot/scripts/player/mounted_character_asset_catalog.gd) | 549 |
-| [player.gd](../../client/godot/scripts/player/player.gd) | 569 |
+| [player.gd](../../client/godot/scripts/player/player.gd) | 585 |
 | [player_appearance_catalog.gd](../../client/godot/scripts/player/player_appearance_catalog.gd) | 103 |
 
 </details>
@@ -256,7 +256,7 @@
 
 ## client/godot/scripts/qa
 
-<details><summary>85 个文件</summary>
+<details><summary>86 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -337,11 +337,12 @@
 | [pet_skill_page_review_capture.gd](../../client/godot/scripts/qa/pet_skill_page_review_capture.gd) | 266 |
 | [player_character_main_flow_check.gd](../../client/godot/scripts/qa/player_character_main_flow_check.gd) | 509 |
 | [player_character_owner_review_capture.gd](../../client/godot/scripts/qa/player_character_owner_review_capture.gd) | 498 |
+| [remote_player_visual_check.gd](../../client/godot/scripts/qa/remote_player_visual_check.gd) | 96 |
 | [review_capture_render_pump.gd](../../client/godot/scripts/qa/review_capture_render_pump.gd) | 76 |
 | [runtime_exit_cleanup.gd](../../client/godot/scripts/qa/runtime_exit_cleanup.gd) | 90 |
 | [standalone_pet_art_overlay_check.gd](../../client/godot/scripts/qa/standalone_pet_art_overlay_check.gd) | 520 |
 | [standalone_pet_art_review_gate.gd](../../client/godot/scripts/qa/standalone_pet_art_review_gate.gd) | 139 |
-| [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 549 |
+| [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 551 |
 | [world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/world_hud_owner_review_capture.gd) | 908 |
 | [world_presentation_profile_check.gd](../../client/godot/scripts/qa/world_presentation_profile_check.gd) | 292 |
 | [world_review_frame_parity.gd](../../client/godot/scripts/qa/world_review_frame_parity.gd) | 205 |
@@ -415,7 +416,7 @@
 | [market_awakened_visual_skin.gd](../../client/godot/scripts/ui/market_awakened_visual_skin.gd) | 130 |
 | [npc_dialog_presenter.gd](../../client/godot/scripts/ui/npc_dialog_presenter.gd) | 57 |
 | [npc_hover_identity_presenter.gd](../../client/godot/scripts/ui/npc_hover_identity_presenter.gd) | 189 |
-| [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28880 |
+| [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28884 |
 | [panel_registry.gd](../../client/godot/scripts/ui/panel_registry.gd) | 63 |
 | [password_visibility_button.gd](../../client/godot/scripts/ui/password_visibility_button.gd) | 53 |
 | [pet_codex_acquisition_route_catalog.gd](../../client/godot/scripts/ui/pet_codex_acquisition_route_catalog.gd) | 213 |
@@ -466,7 +467,7 @@
 
 ## client/godot/scripts/world
 
-<details><summary>21 个文件</summary>
+<details><summary>22 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -483,10 +484,11 @@
 | [npc_art_catalog.gd](../../client/godot/scripts/world/npc_art_catalog.gd) | 2267 |
 | [npc_art_release_evidence.gd](../../client/godot/scripts/world/npc_art_release_evidence.gd) | 1658 |
 | [quest_marker_visibility_model.gd](../../client/godot/scripts/world/quest_marker_visibility_model.gd) | 70 |
+| [remote_player_visual.gd](../../client/godot/scripts/world/remote_player_visual.gd) | 97 |
 | [server_encounter_permit_model.gd](../../client/godot/scripts/world/server_encounter_permit_model.gd) | 65 |
 | [world_camera_safe_area_model.gd](../../client/godot/scripts/world/world_camera_safe_area_model.gd) | 676 |
 | [world_camera_safe_area_model_check.gd](../../client/godot/scripts/world/world_camera_safe_area_model_check.gd) | 543 |
-| [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 714 |
+| [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 722 |
 | [world_overlay_layer.gd](../../client/godot/scripts/world/world_overlay_layer.gd) | 302 |
 | [world_presentation_profile.gd](../../client/godot/scripts/world/world_presentation_profile.gd) | 138 |
 | [world_visual_direction_contract.gd](../../client/godot/scripts/world/world_visual_direction_contract.gd) | 52 |
@@ -522,7 +524,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [auth-service.js](../../server/node/src/auth-service.js) | 27363 |
+| [auth-service.js](../../server/node/src/auth-service.js) | 27376 |
 | [cluster-battle-router.js](../../server/node/src/cluster-battle-router.js) | 895 |
 | [cluster-event-runtime-config.js](../../server/node/src/cluster-event-runtime-config.js) | 333 |
 | [event-cluster-relay.js](../../server/node/src/event-cluster-relay.js) | 581 |
@@ -572,7 +574,7 @@
 
 ## server/node/src/auth
 
-<details><summary>124 个文件</summary>
+<details><summary>125 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -639,7 +641,8 @@
 | [market-listing-state.js](../../server/node/src/auth/market-listing-state.js) | 389 |
 | [new-pet-factory.js](../../server/node/src/auth/new-pet-factory.js) | 335 |
 | [offline-hang.js](../../server/node/src/auth/offline-hang.js) | 635 |
-| [online-presence.js](../../server/node/src/auth/online-presence.js) | 261 |
+| [online-player-appearance.js](../../server/node/src/auth/online-player-appearance.js) | 46 |
+| [online-presence.js](../../server/node/src/auth/online-presence.js) | 266 |
 | [party.js](../../server/node/src/auth/party.js) | 390 |
 | [pet-auto-capture-filter.js](../../server/node/src/auth/pet-auto-capture-filter.js) | 497 |
 | [pet-capture-candidate-authority.js](../../server/node/src/auth/pet-capture-candidate-authority.js) | 1273 |
@@ -683,7 +686,7 @@
 | [player-appearance-catalog.js](../../server/node/src/auth/player-appearance-catalog.js) | 68 |
 | [player-level-runtime.js](../../server/node/src/auth/player-level-runtime.js) | 140 |
 | [player-stat-allocation.js](../../server/node/src/auth/player-stat-allocation.js) | 125 |
-| [profile-actions.js](../../server/node/src/auth/profile-actions.js) | 483 |
+| [profile-actions.js](../../server/node/src/auth/profile-actions.js) | 485 |
 | [profile-migration-backup.js](../../server/node/src/auth/profile-migration-backup.js) | 265 |
 | [profile-migration-batch-ops.js](../../server/node/src/auth/profile-migration-batch-ops.js) | 1252 |
 | [profile-migrations.js](../../server/node/src/auth/profile-migrations.js) | 902 |
@@ -705,7 +708,7 @@
 
 ## server/node/test
 
-<details><summary>216 个文件</summary>
+<details><summary>217 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -861,7 +864,8 @@
 | [mysql-transaction-guard.test.js](../../server/node/test/mysql-transaction-guard.test.js) | 323 |
 | [network-admission.test.js](../../server/node/test/network-admission.test.js) | 228 |
 | [new-pet-factory.test.js](../../server/node/test/new-pet-factory.test.js) | 388 |
-| [online-presence.test.js](../../server/node/test/online-presence.test.js) | 209 |
+| [online-player-appearance.test.js](../../server/node/test/online-player-appearance.test.js) | 148 |
+| [online-presence.test.js](../../server/node/test/online-presence.test.js) | 213 |
 | [pet-auto-capture-filter.test.js](../../server/node/test/pet-auto-capture-filter.test.js) | 422 |
 | [pet-capture-candidate-authority.test.js](../../server/node/test/pet-capture-candidate-authority.test.js) | 441 |
 | [pet-capture-shelter.test.js](../../server/node/test/pet-capture-shelter.test.js) | 362 |

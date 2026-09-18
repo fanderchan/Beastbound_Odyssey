@@ -4,6 +4,7 @@ const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const WorldDepthLayer := preload("res://scripts/world/world_depth_layer.gd")
 const PET_SCENE := preload("res://scenes/pet/Pet.tscn")
 const InteractionOcclusionModel := preload("res://scripts/world/interaction_occlusion_model.gd")
+const RemotePlayerVisualCheck := preload("res://scripts/qa/remote_player_visual_check.gd")
 
 
 class OcclusionSubject extends Node2D:
@@ -143,6 +144,7 @@ static func run(
 	_validate_player_occlusion_rect(player, errors)
 	_validate_actor_depth_cache(errors)
 	_validate_affine_world_bounds(player, errors)
+	errors.append_array(RemotePlayerVisualCheck.run(depth_layer.get_parent()))
 	return _report(
 		errors,
 		snapshot.size(),

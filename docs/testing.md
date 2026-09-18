@@ -64,6 +64,8 @@ node tools/run_godot_auto_checks.mjs --only --auto-auth-check --fail-fast --time
 
 不要从历史文章照搬裸 `godot --headless --quit` 到正常玩家资料目录。候选阶段已经证明它也可能轮转玩家日志、写入偏好。隔离车道失败时，先查相关 helper、进程和所有权；不能删掉玩家资料或绕过隔离来换取通过。
 
+同屏角色外观复用现有 `--auto-map-visual-runtime-check`，其中包含四外观、八方向、节点复用、碰撞隔离及点击范围检查；再运行 `--auto-character-runtime-appearance-check` 与 `--auto-camera-click-check`。服务端使用 `online-player-appearance.test.js` 和 `online-presence.test.js` 检查权威投影及提交后广播，完整命令和前后性能见 [Phase 563](phase_563_remote_player_appearance.md)。正式联机验收仍需真实客户端操作。
+
 ## 联机 QA
 
 Live 检查会创建账号或修改状态，只允许连接操作者明确创建的一次性本地 QA 后端。普通玩家的本机 MySQL 服务也不是默认的 QA 写入目标。

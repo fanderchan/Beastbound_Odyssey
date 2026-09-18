@@ -159,6 +159,8 @@ test("protocol v10 snapshot and self rebase rows keep only consumed public field
     username: "remote_user",
     displayName: "远端玩家",
     playerId: "must_not_leak",
+    appearanceId: "obsidian_scout_v1",
+    ridingFormId: "",
     partyId: "party_a",
     partyRole: "member",
     presenceRevision: 12,
@@ -183,6 +185,8 @@ test("protocol v10 snapshot and self rebase rows keep only consumed public field
     partyId: "party_a",
     partyRole: "member",
     position: {mapId: "map_a", cellX: 6, cellY: 7, facing: "north", moving: false, hasCell: true},
+    appearanceId: "obsidian_scout_v1",
+    ridingFormId: "",
     presenceRevision: 12,
   }]);
 
