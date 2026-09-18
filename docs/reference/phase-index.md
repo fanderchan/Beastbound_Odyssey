@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **541** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **542** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 557 | [Phase 557：当前洞穴证据与五人守护战鼠标复验](../phase_557_current_cave_and_guardian_review.md) | 阶段记录 |
 | 556 | [Phase 556：守护兽寻路到达与消息窗构图](../phase_556_guardian_navigation_camera.md) | 阶段记录 |
 | 555 | [Phase 555：前景岩石遮挡与人物可见性](../phase_555_world_prop_player_visibility.md) | 阶段记录 |
 | 554 | [Phase 554：后台审片连续绘制与四层录像重冻](../phase_554_review_render_continuity.md) | 阶段记录 |

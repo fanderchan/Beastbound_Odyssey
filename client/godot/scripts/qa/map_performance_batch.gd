@@ -31,7 +31,7 @@ func _run() -> void:
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
 	_window_id = root.get_window_id()
-	root.title = "万兽纪元｜地图性能对比准备中"
+	root.title = "万兽纪元｜性能测试准备：请点击窗口并保持前台"
 	if not await _wait_for_foreground():
 		_errors.append("foreground_unavailable")
 		_finish()
@@ -108,16 +108,26 @@ func _run() -> void:
 
 
 func _wait_for_foreground() -> bool:
-	# Request activation only during startup. A focus change during sampling
-	# invalidates the batch; never keep taking focus back from the user.
-	var deadline := Time.get_ticks_msec() + 5000
-	var next_request := 0
+	# macOS can report a focused startup frame before the app is actually
+	# activated. Wait for continuous foreground time before creating Main;
+	# clicking this empty preparation window cannot enter the sampled workload.
+	# Request activation once, never take focus back during measurement.
+	var deadline := Time.get_ticks_msec() + 30000
+	var focused_since := -1
+	DisplayServer.window_move_to_foreground()
 	while Time.get_ticks_msec() < deadline:
-		if Time.get_ticks_msec() >= next_request:
-			DisplayServer.window_move_to_foreground()
-			next_request = Time.get_ticks_msec() + 250
 		await process_frame
-		if DisplayServer.window_is_focused():
+		var now := Time.get_ticks_msec()
+		if not DisplayServer.window_is_focused():
+			focused_since = -1
+			continue
+		if focused_since < 0:
+			focused_since = now
+		if now - focused_since >= 1000:
+			print("map performance foreground ready: %s" % JSON.stringify({
+				"stableMilliseconds": now - focused_since,
+				"mainCount": _main_count(), "frame": Engine.get_process_frames(),
+			}))
 			return true
 	return false
 
