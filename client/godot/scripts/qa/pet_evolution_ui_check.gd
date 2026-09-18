@@ -6,10 +6,12 @@ const PetEvolutionVisualCatalog := preload("res://scripts/pet/pet_evolution_visu
 const PetEvolutionPanel := preload("res://scripts/ui/pet_evolution_panel.gd")
 const GmPetEvolutionQaClientModel := preload("res://scripts/progression/gm_pet_evolution_qa_client_model.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
+const EvolutionTrialDialogCheck := preload("res://scripts/qa/evolution_trial_dialog_check.gd")
 
 
 static func run(host) -> void:
 	host.profile_save_enabled = false
+	var trial_dialog_ok := EvolutionTrialDialogCheck.run(host)
 	var contract := PetEvolutionClientModel.contract_check()
 	var presentation_contract := PetEvolutionPresentationModel.contract_check()
 	var gm_contract := GmPetEvolutionQaClientModel.contract_check()
@@ -256,6 +258,7 @@ static func run(host) -> void:
 	)
 	var status := "ok" if (
 		strict_contract_ok
+		and trial_dialog_ok
 		and ui_ok
 		and first_click_did_not_submit
 		and second_click_submitted_once

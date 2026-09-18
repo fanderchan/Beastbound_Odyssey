@@ -2,6 +2,7 @@ extends RefCounted
 
 const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const NpcDialogPresenter := preload("res://scripts/ui/npc_dialog_presenter.gd")
+const EvolutionTrialDialogPresenter := preload("res://scripts/ui/evolution_trial_dialog_presenter.gd")
 const PetSkillTrainingModel := preload("res://scripts/progression/pet_skill_training_model.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const QuestModel := preload("res://scripts/progression/quest_model.gd")
@@ -986,7 +987,7 @@ func _update_dialog_text() -> void:
 	_refresh_dialog_action_buttons(host.active_dialog_interaction)
 
 func _dialog_body_for(item: Dictionary) -> String:
-	var lines: Array = item.get("dialog", [])
+	var lines: Array = EvolutionTrialDialogPresenter.lines_for(item)
 	if lines.is_empty():
 		return "%s：暂时没有更多内容。" % str(item.get("name", "这里"))
 	var text_parts: Array[String] = []
