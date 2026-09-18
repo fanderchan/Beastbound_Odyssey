@@ -1,0 +1,393 @@
+> 历史快照（2026-09-17 整理前）：保留原有说明与测试记录，本页命令、版本和状态不作为当前操作指引。现行入口见 [文档导航](../../README.md)。
+
+---
+
+# Beastbound Odyssey Node.js Backend
+
+Phase158 starts the backend from the smallest useful authority boundary: account login, server-side session shape, GM grant checks, and GM command audit. Phase161 adds a JSON-store profile sync loop for local server testing. Phase163 adds account search plus text mail. Phase164 adds the first server-authoritative party slice: online roster, invites, accept/decline, and leave. Phase165 adds server-backed nearby and party chat transport. Phase166 adds server-backed online position snapshots for same-server player visibility. Phase167 adds a session-authenticated WebSocket event stream for online, chat, and party changes. Phase168 adds the first map/cell area-of-interest filter for online player visibility. Phase169 adds duel battle-room invitations, server room seeds, and room-ready events. Phase170 adds WebSocket event cursors and short disconnect replay for critical chat, party, and battle events. Phase171 adds the first server-authoritative movement step and battle-room entry position gates. Phase172 adds room turn command submission and a server-produced battle event list. Phase189 adds server-authoritative hang/encounter-stone sessions. The Godot player entry now depends on this service for normal play; the default runtime store is MySQL, with the JSON store kept for explicit tests only.
+
+## Run Tests
+
+```sh
+cd server/node
+npm test
+```
+
+## Start Local Server
+
+On macOS, the recommended interactive entry is to double-click `../../start-backend.command`. It opens one owned backend console with a clear running title and live logs. Keep that window open while playing: closing it sends `SIGTERM` only to the exact backend process owned by that console, waits through the server's durable-drain window, and removes its runtime state only after the process exits. Double-clicking again is serialized: the new launcher waits for the previous console and backend to stop before starting one replacement. Closing the old Terminal tab is best-effort because macOS may require Terminal automation permission; failure to close the tab does not weaken process ownership or shutdown safety. If another tool replaces the backend process, the old console detects the identity change and refuses to kill the replacement.
+
+For a non-interactive one-shot restart that leaves the backend running after the command exits:
+
+```sh
+BEASTBOUND_NO_PAUSE=1 ../../start-backend.command
+```
+
+For a foreground development process without the launcher:
+
+```sh
+cd server/node
+npm start
+```
+
+Default URL:
+
+```text
+http://127.0.0.1:8787
+```
+
+Optional environment variables:
+
+- `BEASTBOUND_AUTH_PORT`: local port, default `8787`.
+- `BEASTBOUND_AUTH_HOST`: bind host, default `127.0.0.1`. Use `0.0.0.0` for LAN playtests.
+- `BEASTBOUND_EDGE_MODE`: public-edge contract, default `direct`. Set to `trusted_tls_proxy` only when a reverse proxy terminates TLS and overwrites forwarding headers.
+- `BEASTBOUND_TRUSTED_PROXIES`: comma-separated exact proxy IPs or CIDRs. It is required by `trusted_tls_proxy`; trust-all ranges are rejected.
+- `BEASTBOUND_WS_ALLOWED_ORIGINS`: comma-separated exact browser origins. In `trusted_tls_proxy` mode every configured origin must be canonical HTTPS, for example `https://game.example`. Native clients without an `Origin` header remain supported.
+- `BEASTBOUND_AUTH_STORE` or `BEASTBOUND_STORE`: defaults to `mysql`. Set to `json` only for local tests that intentionally use the JSON store.
+- `BEASTBOUND_AUTH_STORE_PATH`: JSON test store path when `BEASTBOUND_AUTH_STORE=json`, default `.local/auth-store.json`.
+- `BEASTBOUND_MYSQL_HOST`, `BEASTBOUND_MYSQL_PORT`, `BEASTBOUND_MYSQL_USER`, `BEASTBOUND_MYSQL_PASSWORD`, `BEASTBOUND_MYSQL_DATABASE`: MySQL connection settings.
+- `BEASTBOUND_MYSQL_CREATE_DATABASE`: set to `1` only when the configured MySQL user is allowed to create the database. Local live-server setup creates the database once with root, then runs the app account with this set to `0`.
+- `BEASTBOUND_MYSQL_BIN`: optional `mysql` CLI path.
+- `BEASTBOUND_MYSQL_METADATA_LOCK_WAIT_TIMEOUT_SECONDS`: Beastbound-connection/session metadata-lock wait limit, default `5`, maximum `60`; it never changes the shared MySQL global value.
+- `BEASTBOUND_MYSQL_MAIL_INBOX_INDEX_MIGRATION_TIMEOUT_MS`: hard deadline for the one-time online inbox pagination index migration, default `300000`, maximum `900000`. Increase it only when an isolated migration rehearsal proves the table needs longer; metadata-lock waiting remains independently bounded by the session setting above.
+- `BEASTBOUND_STRUCTURED_LOGS`: set to `1` to write JSON lines for HTTP request duration, profile writebacks, and battle settlements.
+- `BEASTBOUND_ALLOW_POSITION_TELEPORT`: set to `1` only on local QA servers to skip server-side position snapshot validation (teleport and cross-map jump checks) and the quest `talk` NPC proximity check. Never enable it for playtest or production servers.
+- `BEASTBOUND_ALLOW_PROFILE_SAVE`: set to `1` only for test/seed/ops tooling that must write whole profile documents through `saveProfile`. Production servers keep it unset so full-profile uploads are rejected (`profile_upload_denied`).
+
+## Trusted TLS Reverse Proxy Mode
+
+The Node process still serves private HTTP; TLS certificates, firewall policy, WAF/CDN behavior, and forwarding-header sanitation belong to the deployment edge. When that edge exists, enable the fail-closed application contract:
+
+```sh
+BEASTBOUND_AUTH_HOST=127.0.0.1
+BEASTBOUND_EDGE_MODE=trusted_tls_proxy
+BEASTBOUND_TRUSTED_PROXIES=127.0.0.1
+BEASTBOUND_WS_ALLOWED_ORIGINS=https://game.example
+```
+
+This mode refuses to start if the backend bind is public, the trusted proxy list is absent/invalid/trust-all, or a configured browser origin is not canonical HTTPS. Every HTTP product request and WebSocket upgrade must then arrive from a trusted immediate peer with a valid `X-Forwarded-For` chain and exactly `X-Forwarded-Proto: https`. Exact `/health`, `/health/live`, and `/health/ready` checks may still reach the private backend directly without forwarding headers.
+
+The proxy must discard client-supplied `Forwarded`, `X-Forwarded-*`, and `X-Real-IP` values before writing its own canonical headers. The application cannot prove that a deployed third-party proxy is configured correctly, so run the deployment's own conformance test before opening public traffic. The repository's isolated transport gate proves the application boundary with a temporary CA, TLS 1.3, two private backend listeners, spoofed-header overwrite, rate limiting, and a real WSS `events.ready`; it does not certify a production proxy vendor, account-sticky load balancer, firewall, or public certificate lifecycle:
+
+```sh
+node tools/run_trusted_tls_edge_gate.mjs
+```
+
+## Optional Multi-Node Event Relay And Account Ownership
+
+The default remains single Node. A deployment may opt into the Valkey Streams event relay and account-owner lease. The current gate proves account conflict rejection, crashed-owner expiry takeover, presence revision continuity, authority reload of account/profile/persistent-party facts from an independently advanced backing-store fixture, and an owner-epoch reset snapshot on the first successful reconnect WebSocket. It does not prove a real shared-MySQL two-process deployment, cross-owner event-by-event replay, battle-runtime recovery, or 200-player horizontal capacity.
+
+Required settings for the Valkey adapter:
+
+- `BEASTBOUND_CLUSTER_MODE=valkey`;
+- `BEASTBOUND_CLUSTER_NODE_ID`: stable, unique ID for this Node process slot;
+- `BEASTBOUND_CLUSTER_ACCOUNT_STICKY=1`: explicit assertion that HTTP and WebSocket ingress keep one account on one Node while the current authority model requires it;
+- `BEASTBOUND_CLUSTER_VALKEY_HOST` and optional `BEASTBOUND_CLUSTER_VALKEY_PORT` (default `6379`);
+- `BEASTBOUND_CLUSTER_VALKEY_TLS=1` for every non-loopback host. Remote plaintext is rejected at startup;
+- optional `BEASTBOUND_CLUSTER_VALKEY_USERNAME`, `BEASTBOUND_CLUSTER_VALKEY_PASSWORD`, and `BEASTBOUND_CLUSTER_VALKEY_DATABASE`. Keep credentials only in the ignored local secret environment or the deployment secret manager, never in tracked files or command examples.
+
+Bounded operational settings:
+
+- `BEASTBOUND_CLUSTER_VALKEY_STREAM_KEY`, default `beastbound:cluster:events:v1`;
+- `BEASTBOUND_CLUSTER_VALKEY_STREAM_MAXLEN`, default `262144`, accepted range `1024..10000000`;
+- `BEASTBOUND_CLUSTER_NODE_LEASE_MS`, default `15000`, accepted range `3000..120000`;
+- `BEASTBOUND_CLUSTER_ACCOUNT_LEASE_MS`, default `15000`, accepted range `3000..120000`;
+- `BEASTBOUND_CLUSTER_ACCOUNT_OWNER_MAX`, default `4096`, accepted range `1..100000`;
+- `BEASTBOUND_CLUSTER_ACCOUNT_ADMISSION_MAX_PENDING`, default `1024`, accepted range `1..10000`;
+- `BEASTBOUND_CLUSTER_ACCOUNT_OWNER_KEY_PREFIX`, optional account-owner key namespace;
+- `BEASTBOUND_CLUSTER_VALKEY_READ_BLOCK_MS`, default `250`;
+- `BEASTBOUND_CLUSTER_VALKEY_REQUEST_TIMEOUT_MS`, default at least `2000` and always greater than the blocking-read window.
+
+Each Node owns a Valkey lease and its own consumer group. Duplicate live node IDs fail startup; events are acknowledged only after the local relay accepts them; pending entries are replayed after a same-node restart. A trimmed pending entry or an `XINFO GROUPS` replay gap is fatal.
+
+Every active account is also guarded by a token-checked Valkey lease. Account IDs are SHA-256 hashed before they enter keys; the value is a process-random token. A persistent per-account generation raises the new owner's presence revision floor by `1,000,000,000`, so a takeover cannot emit a lower revision than an earlier owner. Verified login, bearer HTTP requests, and WebSocket authorization all acquire or confirm ownership before session replacement or gameplay mutation. A conflicting node returns bounded `503`; losing a locally held lease is fatal. Graceful shutdown releases account leases only after HTTP/WS admission, durable mutations, and storage flush have drained.
+
+With cluster admission enabled, login credentials are exact-read by normalized username and a locally missing bearer session is exact-read by token hash before ownership is requested. MySQL validates the indexed SQL mirrors, JSON documents, account/session identity, expiry/revocation facts, and global store revision in one guarded transaction. A newly acquired generation greater than one always reloads the complete persistent authority root before admission returns; generation one reloads when the exact proof shows the local baseline is stale. Reload runs behind the durable mutation coordinator, atomically publishes only after full validation, preserves persistent profiles and parties, and clears only the acquired account's process-local position, invitations, battle rooms/recoveries, trades, sessions, and movement guards. Read or validation failure rejects admission and fails the owner Node closed.
+
+A reconnect that crosses owners deliberately uses state reset rather than pretending the old Node's `eventSeq` is ordered with the new Node's cursor. Owner admission and any required authority reload complete before session authorization, replay-catalog reads, or the online snapshot. The new EventHub epoch then yields `events.ready` with `replayMode=reset`, followed by `events.reset reason=epoch_mismatch` and a snapshot built from the rebased authority. The existing client clears volatile presence and re-requests its profile, party, battle, chat, mail, hang, and online state. This proves current persistent-state convergence; it does not replay every missed remote event or resurrect a process-local battle room.
+
+Node-lease or account-owner loss makes readiness return `503`, rejects unsafe work, drains the server, and closes the process-owned Valkey clients. Health output exposes only sanitized booleans and counters, never node IDs, key hashes, stream keys, credentials, events, accounts, or tokens.
+
+The real local engine gate starts an ephemeral loopback Valkey process, runs the relay and HTTP entrypoint checks, rejects a duplicate node startup, and then removes the temporary state without installing a service:
+
+```sh
+node tools/run_valkey_event_bridge_live_gate.mjs
+```
+
+The independent-process gate starts two game Node processes on different HTTP/WebSocket ports. It proves cross-node presence and world chat, receiver-local event-sequence isolation, wrong-node login rejection before session mutation, same-owner session replacement, forced owner-process death, expiry takeover, presence revision generation advancement, and generation-two authority reload after an isolated backing store advances the account, profile revision, persistent party, durable nearby-chat history, and latest service-event sequence while the takeover Node's service cache remains stale. The reconnect WebSocket is the first successful post-expiry admission and must receive the new account, latest sequence, epoch reset, and persistent party snapshot; the normal authenticated chat-history endpoint must then expose the missing durable message from the rebased root:
+
+```sh
+node tools/run_valkey_two_node_event_gate.mjs
+```
+
+Remote replayable events are intentionally projected as live-only frames on the receiving Node: the relay envelope remains deduplicated, while the source Node's private `eventSeq/eventId` is not reused as the receiving Node's cursor. This prevents silent live loss. Cross-owner reconnect now has a proven epoch-reset, persistent-party snapshot, and durable chat-history refetch, but still no cross-owner event-by-event replay.
+
+This fixture proves the takeover/rebase and persistent reconnect-state mechanism but is not a real shared-MySQL two-process gate. Offline event-by-event hydration, authoritative battle-runtime recovery, network-partition fencing beyond lease expiry, and the 200-connection long soak required by `P0.6d-3b` also remain unproven.
+
+## Local MySQL Live Server
+
+The repeatable local setup flow is:
+
+```sh
+BEASTBOUND_MYSQL_ROOT_PASSWORD='...' node scripts/setup-local-mysql.js
+read -s MIGRATE_PASSWORD
+printf '%s\n' "$MIGRATE_PASSWORD" | node scripts/migrate-local-userdata-to-mysql.js --username auth1373 --password-stdin
+unset MIGRATE_PASSWORD
+BEASTBOUND_SMOKE_PASSWORD='...' node scripts/mysql-live-smoke.js --username auth1373
+```
+
+Then start the server with the ignored local env file:
+
+```sh
+npm run ops -- start
+```
+
+Useful local operations:
+
+```sh
+npm run ops -- status
+npm run ops -- backup
+npm run ops -- restore-drill
+npm run ops -- backup-status --max-backup-age-hours 26 --max-restore-age-hours 168
+npm run ops -- stop
+npm run ops -- restart
+```
+
+`backup` streams a `--single-transaction --quick` logical dump into an owner-only
+file and publishes a create-once SHA-256 manifest beside it. `restore-drill`
+verifies the newest manifested dump, imports it into a random non-3306 isolated
+MySQL instance, performs a strict store load and real HTTP ready smoke, proves
+that startup did not repair the schema or change persistent authority data, and
+then removes the temporary instance. A successful drill publishes an owner-only,
+create-once local restore receipt whose filename binds both the exact backup SHA
+and the receipt content digest. To verify a specific artifact, run
+`npm run ops -- restore-drill /absolute/path/to/backup.sql`. The drill never
+imports into the configured player database.
+
+`backup-status` re-hashes the newest formal dump, validates the newest matching
+restore receipt, checks both ages against the two explicitly supplied hour
+limits, and exits non-zero for missing, corrupt, future-dated, or stale evidence.
+The `26` and `168` values above are command examples, not project RPO/RTO
+defaults; production operators must choose and monitor their own policy. This
+local gate does not prove off-host copies, retention, PITR, or production RPO/RTO.
+
+See `../../docs/phase_182_mysql_live_server.md` for the architecture and LAN playtest boundary.
+
+## Protocol Compatibility
+
+Every non-health HTTP request must include:
+
+- `X-Beastbound-Client-Version`: current Godot client build version, currently `0.1.0`.
+- `X-Beastbound-Protocol-Version`: client protocol version, currently `10`.
+
+Every JSON response includes `protocolVersion`, `serverVersion`, `minClientProtocolVersion`, `maxClientProtocolVersion`, and a reserved `hotUpdate` object. Incompatible or missing client protocol metadata returns HTTP `426` with `protocol_version_mismatch` or `client_version_missing` plus a Chinese upgrade prompt. WebSocket event streams carry the same fields as query parameters: `clientVersion` and `clientProtocolVersion`.
+
+Compatibility window strategy: client build version and protocol version are separate. UI text, art, balance data, or bug-fix builds may change `CLIENT_VERSION` while keeping protocol `10` if HTTP/WS request and response contracts stay compatible. Any breaking request/response, event-stream, or save-interaction change must bump both Godot `CLIENT_PROTOCOL_VERSION` and server `PROTOCOL_VERSION`, then update `MIN_CLIENT_PROTOCOL_VERSION` / `MAX_CLIENT_PROTOCOL_VERSION` to the supported release window. The current release window is `10..10`; clients outside it receive HTTP `426` and the reserved `hotUpdate` payload remains non-required until a real update manifest exists.
+
+## Health And Logs
+
+`GET /health` returns protocol metadata plus `storage` and `eventStream` summaries. When the HTTP server is created with a store, `storage.checked=true` means the endpoint ran one lightweight `store.load()` check; failed storage checks return HTTP `503`.
+
+Structured logs use one JSON object per event with `schemaVersion` and `createdAt`. Current event types:
+
+- `http.request`: method, path, statusCode, ok, durationMs.
+- `profile.writeback`: method, path, profileRevision, storageMode, serverAuthority.
+- `battle.settlement`: roomId, mode, reason, winnerAccountId, battleRecordId, profileWritebackCount, skippedProfileCount, skippedProfiles.
+
+## Current Endpoints
+
+- `GET /health`
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /auth/session`
+- `GET /players/search?username={username}`
+- `GET /players/online`
+- `GET /players/online?scope=aoi&mapId={mapId}&cellX={x}&cellY={y}&radius={cells}`
+- `POST /players/position`
+- `POST /movement/step`
+- `WS /events?clientVersion={clientVersion}&clientProtocolVersion={protocolVersion}` (`Authorization: Bearer` required)
+- `WS /events?clientVersion={clientVersion}&clientProtocolVersion={protocolVersion}&lastEventSeq={eventSeq}` (`Authorization: Bearer` required)
+- `GET /events/latest`
+- `GET /profiles/me`
+- `PUT /profiles/me` (disabled; returns `403 profile_upload_denied`)
+- `POST /profile/action`
+- `POST /hang/session/start`
+- `POST /hang/session/stop`
+- `GET /mail/inbox` (legacy full inbox)
+- `GET /mail/inbox?limit={1..50}&cursor={opaque}` (keyset page; omit `cursor` for the first page)
+- `POST /mail/send`
+- `POST /mail/{mailId}/read`
+- `GET /party/state`
+- `POST /party/invite`
+- `POST /party/invites/{inviteId}/accept`
+- `POST /party/invites/{inviteId}/decline`
+- `POST /party/leave`
+- `GET /chat/messages?channel={channel}&limit={limit}`
+- `POST /chat/send`
+- `GET /battle/state`
+- `POST /battle/interruption/recover` (`Idempotency-Key` required)
+- `POST /battle/invite`
+- `POST /battle/invites/{inviteId}/accept`
+- `POST /battle/invites/{inviteId}/decline`
+- `POST /battle/rooms/{roomId}/commands`
+- `GET /gm/tools`
+- `POST /gm/commands/{commandId}`
+
+## Security Boundary
+
+This prototype keeps the same rule as the Godot contract: the client may hide GM tools, but only the server can authorize GM commands in production. Every GM command authorization writes an audit row.
+
+## Profile Summary Boundary
+
+`/auth/register`, `/auth/login`, `/auth/session`, and `/profiles/me` return `profileSummary`:
+
+```json
+{
+  "playerId": "player_acc_xxx",
+  "profileRevision": 0,
+  "storageMode": "server_document",
+  "serverAuthority": "profile_document",
+  "hasProfile": true
+}
+```
+
+`PUT /profiles/me` is intentionally disabled for player clients:
+
+```json
+{
+  "ok": false,
+  "code": "profile_upload_denied"
+}
+```
+
+Gameplay writes must go through server-authoritative transaction endpoints such as `POST /profile/action`, shops, equipment, quests, rebirth, movement, hang/encounter-stone sessions, and battle settlement. Internal migration and test tooling may still call the service layer directly, but the public HTTP API must not accept full-profile overwrites from a client.
+
+`POST /profile/action` is a whitelisted profile transaction endpoint for ordinary world and pet-management actions that do not need a dedicated route yet. Current action ids cover player stat allocation, backpack slot unlocks, village healing, record-point saving, world item use, pet skill slot updates, pet state/stable/party/lock changes, pet rename/drop/pickup/cleanup, MM guide rewards, and pet cultivation/rebirth. The server reloads the authoritative profile, validates the action, persists the new revision, and returns the updated profile document.
+
+## Mail Boundary
+
+Text mail is the first player-to-player interaction slice:
+
+- `GET /players/search` requires a server session and returns public player identity fields.
+- `POST /mail/send` sends title/body text to another account.
+- `GET /mail/inbox` without query parameters retains the legacy full-inbox response for rolling compatibility.
+- `GET /mail/inbox?limit={1..50}&cursor={opaque}` returns one `(createdAt DESC, mailId DESC)` keyset page plus the full inbox unread count. Clients must treat the cursor as opaque.
+- `POST /mail/{mailId}/read` marks one inbox message as read.
+
+This stage deliberately does not support item attachments for player mail. Existing reward fallback attachments remain in the Godot profile mailbox until economy authority is moved server-side.
+
+## Party Boundary
+
+Parties are server state, not local Godot state:
+
+- `GET /players/online` lists accounts with active, non-revoked sessions and includes each player's party role and latest position when applicable.
+- `POST /party/invite` creates a party for the inviter when needed, then sends a pending invite to another online-capable account.
+- `GET /party/state` returns the current party and pending incoming invites for the session account.
+- `POST /party/invites/{inviteId}/accept` joins the invited account to the party.
+- `POST /party/invites/{inviteId}/decline` declines one pending invite.
+- `POST /party/leave` removes the current account from its party; if the leader leaves, the next member becomes leader, and an empty party dissolves.
+
+This party phase does not yet synchronize following or battle entry as a party.
+
+## Online Position Boundary
+
+Online visibility is now server state, not a local-only player list:
+
+- `POST /players/position` stores the current account's `mapId`, grid cell, facing, moving flag, and update time.
+- The response also returns an AOI-filtered online roster, so a client can upload its own position and refresh visible nearby players with one low-frequency request.
+- `GET /players/online` without query parameters remains the full active roster for party/invite workflows.
+- `GET /players/online?scope=aoi&mapId={mapId}&cellX={x}&cellY={y}&radius={cells}` returns only the current account plus players on the same map within a square cell radius. The default radius for position sync is 18 cells.
+
+`POST /players/position` remains a seed/snapshot sync path. It is not a trusted movement command.
+
+## Movement Boundary
+
+The first server-authoritative movement slice is `POST /movement/step`:
+
+```json
+{
+  "mapId": "firebud_training_yard",
+  "fromCellX": 10,
+  "fromCellY": 10,
+  "toCellX": 11,
+  "toCellY": 10
+}
+```
+
+- The account must already have a server position from `/players/position`.
+- `fromCellX/fromCellY` must match the current server position.
+- The target cell must be on the same map and within one grid cell.
+- The response includes `authority: "server_step"` and a monotonic `movementSeq`.
+- The accepted step publishes `online.position` like other position changes.
+
+This does not yet provide full path authority, collision between players/NPCs, party follow movement, map transfer authority, or anti-cheat timing checks.
+
+## Event Stream Boundary
+
+`WS /events?clientVersion={clientVersion}&clientProtocolVersion={protocolVersion}` upgrades a valid `Authorization: Bearer` server session to a lightweight WebSocket stream. Session tokens are forbidden in the query string:
+
+- On connect, the server sends `events.ready` with the session account and `online.snapshot` with the current AOI-filtered online roster when the account already has a position.
+- `GET /events/latest` returns the latest service cursor for an authenticated session, so local checks can subscribe from the current edge instead of replaying old development events.
+- Clients may reconnect with `lastEventSeq`; the server replays later critical `chat.message`, `party.*`, and `battle.*` events visible to that account.
+- `online.position` is intentionally not replayed because `online.snapshot` is the reconnect state source for visible players.
+- `POST /players/position` publishes `online.position` only to clients whose current AOI includes the actor's current or previous position; each recipient receives its own filtered roster snapshot.
+- `POST /chat/send` publishes `chat.message`; nearby messages are same-server public, while team messages are targeted to party members.
+- Party invite, accept, decline, and leave publish `party.invite`, `party.update`, or `party.invite_declined` to the affected accounts.
+- Battle invite, accept, room command submit, and turn resolve publish `battle.invite`, `battle.room_ready`, `battle.command_submitted`, and `battle.turn_resolved` to the affected accounts.
+
+The stream is an event fanout for already-authorized HTTP actions. Replay history is bounded and meant for short reconnects, not permanent offline mail. It is not yet explicit room subscription, durable offline combat recovery, or anti-cheat timing validation.
+
+## Battle Room Boundary
+
+Duel rooms are the first server-owned battle entry point:
+
+- `POST /battle/invite` sends a pending duel invite to an online account.
+- `GET /battle/state` returns the current ready room, pending incoming/outgoing duel invites, and a neutral interruption notice when a persisted failure ticket exists but its runtime room no longer does.
+- `POST /battle/interruption/recover` idempotently confirms that neutral interruption. It records no winner or loser, clears only the caller's matching ticket, and returns an encounter-stone slot only when the character, activation id, and consumed slot still match exactly.
+- `POST /battle/invites/{inviteId}/accept` marks the invite accepted, creates a `ready` battle room, and generates a server seed.
+- `POST /battle/invites/{inviteId}/decline` declines one pending invite.
+- `POST /battle/rooms/{roomId}/commands` submits the current account's room command for the current round.
+- `battle.room_ready` includes `roomId`, `mode`, `status`, `seed`, participant account ids, entry map/distance, and lightweight participant snapshots.
+- Accepting a duel invite now requires both accounts to have synchronized positions, be on the same map, be within 4 cells, and not be moving.
+- The first room turn model supports `attack` and `defend`. Command submissions publish `battle.command_submitted` without revealing the command details early.
+- When all room participants have submitted the current round, the server creates a `battle_event_list` and publishes `battle.turn_resolved`.
+- The battle room public state includes the round, phase, actors, submitted account ids, and the last resolved event list.
+- Opening a duel, party encounter, or manor-war room persists one lightweight failure ticket per human participant in the same durable start boundary. Normal leave, timeout, victory, defeat, or offline removal clears the matching tickets with settlement. Nonterminal commands still add no persistent write.
+
+Active rooms and the private battle-random secret remain process-local and are deliberately not serialized. The ticket is a fair neutral-termination contract, not a replay snapshot: it cannot resume a half-finished round. Cross-node live battle command routing, seamless battle continuation, and a real two-Node owner-failure gate remain separate work.
+
+## Chat Boundary
+
+Chat is now server state, not a local-only Godot message list:
+
+- `GET /chat/messages?channel=nearby` returns the latest same-server nearby messages for the current account.
+- `POST /chat/send` with `channel=nearby` writes a nearby message for the current account.
+- `GET /chat/messages?channel=team` returns party chat only when the current account is in a server party.
+- `POST /chat/send` with `channel=team` requires current server party membership and stores the party id on the message.
+
+Nearby chat is currently same-server public chat. It is not yet map-coordinate range chat, moderation tooling, or persisted economy/battle authority.
+
+## MySQL Store Boundary
+
+The default store is MySQL. The server uses `server/node/src/mysql-store.js` to create the schema and persist the production server document through an asynchronous write queue. `BEASTBOUND_AUTH_STORE=json` is retained only for tests that intentionally exercise the JSON file store.
+
+Persisted tables include:
+
+- `accounts`
+- `sessions`
+- `profiles`
+- `mail_messages`
+- `parties`
+- `party_invites`
+- `chat_messages`
+- `battle_records`
+- `gm_user_grants`
+- `gm_command_grants`
+- `gm_command_audit`
+- `auth_events`
+- `service_events`
+- `server_state`
+
+Player positions, battle invites, and active battle rooms remain runtime memory state and are cleared from the persisted document before writes. Battle starts now attach a lightweight owner-failure ticket to persisted session documents so a restart can terminate the lost room neutrally; no room actors, commands, HP, or private RNG material are persisted through that ticket.

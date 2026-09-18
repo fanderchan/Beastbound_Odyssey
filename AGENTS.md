@@ -4,6 +4,7 @@ These rules apply to this repository. More specific rules live in `client/godot/
 
 ## Start Every Task From Repository Truth
 
+- The primary development directory is this repository root. Start with [docs/README.md](docs/README.md), [project status](docs/project-status.md), and [architecture](docs/architecture.md). Older linked worktrees are retained as historical snapshots; do not resume their stale plan cursors.
 - Run `git status --short --branch` and inspect recent `git log` before editing. Preserve unrelated user changes and never assume a dirty file belongs to the current task.
 - Read the active plan's `进度追踪` section and the newest relevant `docs/phase_*.md` files before planning work. An explicit user request takes priority over the next unchecked plan item; a generic “继续” means continue from the first unchecked item.
 - `tasks.md` has 32 completed bug items, `release_plan.md` stages A-E are accepted, and `quality_cleanup_plan.md` stages 1-6 are complete. Do not reopen them without a reproduced regression.
@@ -55,6 +56,7 @@ These rules apply to this repository. More specific rules live in `client/godot/
 
 ## Roadmap And Documentation Workflow
 
+- Current how-to documentation belongs in the handbook linked from `docs/README.md`; Phase notes are dated evidence. Keep historical Phase paths stable. After adding/moving source, shared data, or Phase notes, run `node tools/repository_guide.mjs refresh` and `node tools/repository_guide.mjs check`; do not hand-edit generated indexes.
 - Implement in small reviewable slices. A planned gameplay feature normally gets `docs/phase_XXX_<slug>.md` covering reference intent, original Beastbound rule, contracts, non-goals, validation, and performance evidence.
 - After completing a roadmap item, tick it in the active plan and append one concise evidence line. Do not mark it complete before code, targeted tests, and required manual/visual acceptance are actually complete.
 - After a stage, run the stage-appropriate targeted suite and continue automatically unless the next work requires a major product direction, economy rule, destructive migration, external authorization, or an unsafe conflict.

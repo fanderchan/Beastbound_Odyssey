@@ -1,5 +1,7 @@
 # Beastbound Odyssey — 发布前迭代计划（release_plan.md）
 
+> **历史计划：A–E 已验收。** 以下原执行说明仅用于回溯，不再决定新任务顺序。当前入口见 [文档导航](docs/README.md)，产品工作按 [stoneage_gap_plan.md](stoneage_gap_plan.md)；没有复现回归时不重开已完成项。
+
 > 执行者说明：本计划由 Codex 按阶段顺序执行。tasks.md 中 32 条 bug 已全部修复，**不要重复检查它们**。
 > 严格遵守 AGENTS.md（小步迭代、每阶段停下等用户确认、性能基线对比、中文 UI、禁止直接复制 StoneAge 资产）。
 >

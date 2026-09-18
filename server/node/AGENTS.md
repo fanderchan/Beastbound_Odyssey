@@ -4,6 +4,7 @@ These rules apply under `server/node/` together with the repository root `AGENTS
 
 ## Runtime Shape
 
+- `src/http-list-options.js` adapts inbox/archive/reward-vault URL query parameters to domain normalizers. Preserve the legacy inbox optional pagination separately from strict archive/reward-vault routes.
 - Use Node.js 22+ and CommonJS. The service intentionally has no framework dependency; preserve the existing `node:http` and `node:test` style unless the user approves a platform change.
 - `src/http-server.js` owns HTTP/WS transport concerns: URL matching, body reading, auth headers, status mapping, protocol metadata, and structured request logging.
 - `src/auth-service.js` owns service composition, shared normalization/helpers, the in-memory authoritative document, and dependency injection into domains. It is already large; do not add another substantial feature implementation there.

@@ -1,443 +1,99 @@
-# Beastbound Odyssey 测试与性能基线
+# 测试与验证指南
 
-本文档记录当前推荐的自测入口和每阶段性能验证方式。原则是：功能通过不够，还要确认没有把移动、HUD、商店、任务寻路这些热点路径重新拖慢。
+先选最窄的验证，再按风险补充真实客户端、存储或发布门禁。命令默认从日常主目录运行；历史工作区说明见 [项目现状](project-status.md)。
 
-## 基础启动
+## 选择验证范围
 
-正常客户端：
+| 改了什么 | 最少要验证什么 |
+| --- | --- |
+| 文档与导航 | `git diff --check`、`repository_guide.mjs check` |
+| Node 领域规则 | `node --check`、目标 `node --test`；有事务则加对应存储/失败测试 |
+| HTTP 参数或路由 | 领域/参数测试、既有 HTTP 端到端回归和协议边界 |
+| GDScript/资源 | 隔离 QA 解析及相关 `--auto-*-check` |
+| UI、移动、世界、战斗播放、档案同步 | 上述检查 + 真实 Main 1280×720 + 修改前后静止/移动/相应压力证据 |
+| 共享 JSON / 协议 / 持久实体 | 双端消费者、数据合同、迁移/存储、相关 UI 与权威路径 |
+| 宠物/NPC/地图/音频资产 | 领域 Skill 全部要求、资源审计、真实路径、人工验收及生命周期 |
+| 真正发布或阶段总门禁 | 对应工作区的完整 CI、必要外部环境及长期负载；普通迭代不默认跑全量 |
+
+## 文档和工具
 
 ```sh
-godot --path client/godot --scene res://scenes/Main.tscn
+git diff --check
+node --check tools/repository_guide.mjs
+node --test tools/test/repository_guide.test.mjs
+node tools/repository_guide.mjs refresh
+node tools/repository_guide.mjs check
 ```
 
-完整客户端测试入口：
+`check` 只检查生成索引时效和现行指南本地链接目标；不声称历史文章、标题锚点、外部 URL 或代码行为都正确。
+
+## 服务端
+
+以本轮 HTTP 模块整理为例：
 
 ```sh
-godot --path client/godot --scene res://scenes/Main.tscn -- --full-client-preview
+node --check server/node/src/http-server.js
+node --check server/node/src/http-list-options.js
+node --test server/node/test/http-list-options.test.js server/node/test/auth-http-server.test.js
 ```
 
-GM 测试地图：
+完整套件入口为 `npm --prefix server/node test`。具体领域文件从 [代码索引](reference/code-index.md) 或 `rg --files server/node/test` 选择；服务测试优先使用 memory/隔离 store，禁止以测试清理为理由重置玩家数据库。
+
+## Godot 检查与工作区能力
+
+先确认当前运行器支持的参数和已注册检查：
 
 ```sh
-godot --path client/godot --scene res://scenes/Main.tscn -- --full-client-preview --gm-10v10-map
+node tools/run_godot_auto_checks.mjs --help
+node tools/run_godot_auto_checks.mjs --list
 ```
 
-## 基础解析检查
+当前主目录已包含更新的隔离运行器，只做解析时：
 
 ```sh
 node tools/run_godot_auto_checks.mjs --parse-only
 ```
 
-解析检查也必须经过固定 `automation` QA user-data lane；不要直接运行裸
-`godot --headless --path client/godot --quit`，后者会使用正常玩家目录并可能轮转日志或改写偏好。
-
-## 客户端全量自动检查
-
-一键运行当前 `main.gd` 中注册的全部 `--auto-*-check`，并输出 `.run/godot_auto_checks/` 下的 log 与 summary JSON：
+按领域选择检查，例如认证契约：
 
 ```sh
-node tools/run_godot_auto_checks.mjs
+node tools/run_godot_auto_checks.mjs --only --auto-auth-check --fail-fast --timeout-ms 180000
 ```
 
-带 `*-live-check` 的检查需要先启动本地、隔离、可丢弃的 JSON QA 服务端。位置权威校验默认开启（拒绝瞬移/非法跨图，任务 `talk` 事件还会校验玩家与 NPC 的服务端距离），部分 QA 检查会直接向服务器灌任意坐标，所以该 QA 进程需要显式放开位置校验。以下开关只允许用于回环地址的隔离 QA 数据，禁止用于正常玩家、LAN 或生产服务：
+检查默认先执行基础解析；自定义 `--output-dir` 必须位于 `.run/godot_auto_checks/` 下。主目录是当前测试基线，旧工作区只供回溯。
 
-```sh
-mkdir -p .run/godot_auto_checks
-QA_BACKEND_DIR="$(mktemp -d "$PWD/.run/godot_auto_checks/qa_backend.XXXXXX")"
-BEASTBOUND_AUTH_HOST=127.0.0.1 \
-BEASTBOUND_AUTH_PORT=8787 \
-BEASTBOUND_AUTH_STORE=json \
-BEASTBOUND_AUTH_STORE_PATH="$QA_BACKEND_DIR/auth-store.json" \
-BEASTBOUND_ALLOW_POSITION_TELEPORT=1 \
-npm --prefix server/node start
-```
+不要从历史文章照搬裸 `godot --headless --quit` 到正常玩家资料目录。候选阶段已经证明它也可能轮转玩家日志、写入偏好。隔离车道失败时，先查相关 helper、进程和所有权；不能删掉玩家资料或绕过隔离来换取通过。
 
-检查结束后用 `Ctrl-C` 停止这个 QA 服务端，并确认相应端口没有残留监听。
+## 联机 QA
 
-常用缩小范围 / 续跑：
+Live 检查会创建账号或修改状态，只允许连接操作者明确创建的一次性本地 QA 后端。普通玩家的本机 MySQL 服务也不是默认的 QA 写入目标。
 
-```sh
-node tools/run_godot_auto_checks.mjs --list
-node tools/run_godot_auto_checks.mjs --only --auto-auth-check,--auto-server-profile-sync-check
-node tools/run_godot_auto_checks.mjs --from --auto-server-battle-return-check --fail-fast
-```
+若相关检查需要任意坐标，仅在该一次性进程设置 `BEASTBOUND_ALLOW_POSITION_TELEPORT=1`；不用于 LAN、共享或生产。候选完整门禁还要求规范的 `127.0.0.1` origin、Beastbound 健康页与隔离 JSON store，详见 [Phase 510](phase_510_production_release_r0_09_clean_candidate_baseline.md)。
 
-## 本地 CI
+完整门禁和 QA 后端统一使用当前主目录的工具、固定矩阵与 QA lane；历史工作区的记录只用于对照。
 
-默认发布门禁固定为 8 个顶层步骤：diff、两个脚本语法检查、完整服务端、Godot 解析加 34 个发布目标检查、隔离 QA 后端预检、Godot 解析加 7 个联机检查，以及 5 项性能套件。它不会随 `main.gd` 新增的实验或 OWNER 待审检查自动扩张；需要盘点全部发现项时仍可单独运行 `node tools/run_godot_auto_checks.mjs`。
+岩脉守护战有专用的一次性全 HTTP 队伍入口：`python3 tools/play_guardian_review.py --autoplay`，可加 `--record` 留下 30 FPS 原速自动操作片。它运行真实 Main 并核对地之戒和档案版本，报告明确区分自动 viewport 输入、Computer Use 与最终美术接受。使用方式、QA 数值及数据边界见 [工具导航](../tools/README.md#岩脉守护战试玩)；不要改成连接普通玩家后端。
 
-完整门禁必须连接一个健康的、回环地址上的 JSON QA 服务端，并拒绝 MySQL/共享后端。建议用独立端口，避免影响正常本地玩家服务。终端 A：
+## 真实客户端与性能
 
-```sh
-mkdir -p .run/local_ci
-QA_BACKEND_DIR="$(mktemp -d "$PWD/.run/local_ci/qa_backend.XXXXXX")"
-BEASTBOUND_AUTH_HOST=127.0.0.1 \
-BEASTBOUND_AUTH_PORT=18787 \
-BEASTBOUND_AUTH_STORE=json \
-BEASTBOUND_AUTH_STORE_PATH="$QA_BACKEND_DIR/auth-store.json" \
-BEASTBOUND_ALLOW_POSITION_TELEPORT=1 \
-npm --prefix server/node start
-```
-
-终端 B：
-
-```sh
-node tools/run_local_ci.mjs \
-  --auth-server-url http://127.0.0.1:18787
-```
-
-通过标准为顶层 `passed=8 failed=0 total=8`，嵌套目标 `35/35`、联机 `8/8`、性能 `5/5`，并且各 Godot summary 的 `processGroupsClosed=true`、`qaLaneCleanup.laneAbsent=true`、`qaLaneCleanup.realUnchanged=true`。完成后停止终端 A 的 QA 服务端。
-
-开发脚本本身时可用 quick 模式缩短 Godot 自动检查范围：
-
-```sh
-node tools/run_local_ci.mjs --quick
-```
-
-## 发布导出与 PC 发版检查
-
-三平台数据包导出探针：
-
-```sh
-godot --headless --path client/godot --export-pack macOS ../../.run/export_probe/macos/BeastboundOdyssey.pck
-godot --headless --path client/godot --export-pack "Windows Desktop" ../../.run/export_probe/windows/BeastboundOdyssey.pck
-godot --headless --path client/godot --export-pack Android ../../.run/export_probe/android/BeastboundOdyssey.pck
-```
-
-完整 `--export-release` 需要本机安装 Godot 4.7 export templates；Android 还需要 Java SDK、Android SDK platform-tools/build-tools，以及 `adb` / `apksigner`。
-
-当前发布目标是 PC 桌面版。正常 PC 发版体验使用默认窗口：
+正常玩家体验入口：
 
 ```sh
 godot --path client/godot --scene res://scenes/Main.tscn
 ```
 
-移动端命令只保留为未来兼容性烟测，不作为当前 PC 发版阻塞项：
+该命令会打开窗口并使用正常玩家数据。自动审片/录制使用主目录的专用隔离入口，集中执行并保留低打扰窗口安排。工作区整合后如源贴图与导入结果不一致，应先在隔离 QA lane 中运行 Godot editor import，核对真实玩家目录未变并清理 lane，再重跑相应地图检查。
 
-```sh
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-mobile-touch-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --preview-mobile --auto-mobile-touch-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --preview-phone-landscape --auto-mobile-touch-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --preview-mobile-portrait --auto-mobile-touch-check
-```
+涉及热点的变更需记录：工作区与提交、场景、是否真实 Main、稳定段 `process_total`、进程 CPU、静止与移动、相关面板或输入压力、前后差异。鼠标连点/拖动必须跨帧发送真实输入，不能用同一帧调用 helper 代替。`ps` 与游戏探针不一致时应查原因。
 
-`--preview-mobile` 使用 1280x720，`--preview-phone-landscape` 使用 844x390，`--preview-mobile-portrait` 使用 390x844。它们只用于记录未来手机/平板适配风险；需要临时尺寸时可用 `--qa-viewport=宽x高`。
+健康目标是启动后低个位数 CPU 和亚毫秒级常态 `process_total`；特定门禁的容忍阈值不是新的正常性能目标。更晚候选的性能矩阵和历史结果见对应 Phase，不能作为本轮重新测量的结果。
 
-## 后端检查
+20 actor 原生固定场景使用 `python3 tools/capture_battle_layout_perf.py`，包含静止、指令选择和跨帧目标切换。此夹具会显式启用普通 PC 的 VSync；通用 `--perf-probe` 的无 VSync 设置保留给其他探针。窗口失焦应保留失败回执并标明不可作合格前后对比，不要放宽焦点门禁。首次切战的 `battle preparation probe` 只写探针日志，区分人物、宠物和剩余准备时间；近期诊断及联网结算回归见 [Phase 548](phase_548_battle_hotpaths_and_authoritative_completion.md)。
 
-```sh
-cd server/node
-npm test
-```
+## 发布门禁和收尾
 
-## 每阶段推荐回归
+`node tools/run_local_ci.mjs` 只用于真实阶段/发布门禁或明确要求。当前主目录已包含 R0.09 固定矩阵，执行前仍要核对 `--help`、源代码和对应 Phase。Phase 510 的历史全绿证明候选当时通过，不证明当前脏工作区或生产环境通过。
 
-```sh
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --movement-spam-click-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --shop-select-perf-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-player-stat-spam-perf-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-panel-registry-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-auth-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-auth-server-client-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-auth-server-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 6000 -- --auto-server-mail-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-party-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-chat-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-position-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-movement-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-click-move-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-click-move-reject-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-aoi-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-replay-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-battle-room-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-turn-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-reconnect-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 4000 -- --auto-server-battle-return-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-leave-ui-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-qa-panel-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-contract-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-auth-contract-check
-```
+每次验证记录精确命令、结果、skip 原因、没有覆盖的风险。结束后关闭本次创建的服务器、Godot 和子进程，核对 QA lane 和临时端口；不停止原先由用户运行的进程，不改真实玩家档案来清场。
 
-如果改了宠物成长、MM、骑宠或转生，追加：
-
-```sh
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-pet-growth-observation-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-pet-rebirth-mm-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-pet-rebirth-mm-formula-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-riding-system-check
-```
-
-如果改了任务、地图、转生洞穴或寻路，追加：
-
-```sh
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-task-tracker-route-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-map-region-contract-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-rebirth-cave-guardian-check
-```
-
-如果改了战斗公式、战斗播放、自动战斗或数值表，追加：
-
-```sh
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-server-battle-turn-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-server-battle-reconnect-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 4000 -- --auto-server-battle-return-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-leave-ui-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-battle-auto-10v10-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-combat-formula-parity-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-combat-formula-driver-ab-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-numeric-workbench-check
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-numeric-balance-gate-check
-```
-
-## 性能探针
-
-用于观察 `_process`、HUD、draw、移动和任务刷新成本：
-
-```sh
-godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 1600 -- --perf-probe
-```
-
-如果 `--quit-after` 没有及时退出，应手动停止进程并确认没有残留：
-
-```sh
-pgrep -fl godot
-```
-
-记录性能时至少写清楚：
-
-- 当前阶段 / commit。
-- 是否完整客户端。
-- idle `process_total`。
-- 移动或连点测试结果。
-- 商店/状态/任务面板压力结果。
-- 是否有 Godot 残留进程。
-
-## 最近基线
-
-Phase148 开始前的参考结果：
-
-- `--movement-spam-click-check`：`status=ok clicks=360 avg_input_us=15 max_input_us=122 coalesced=true settled=true`
-- `--shop-select-perf-check`：`status=ok item_us=1464911 equipment_us=2252767`
-- `--auto-player-stat-spam-perf-check`：`status=ok elapsed_ms=1.21 refresh_count=2 saves=1`
-- `--auto-qa-panel-check`：`status=ok buttons=true layout1=true layout2=true button_count=18`
-- `--perf-probe`：稳定后 `process_total` 约 1-2ms，首次 HUD 构建存在明显尖峰。
-
-Phase149 重点观察：
-
-- HUD / 任务追踪不应在移动帧持续全量扫描任务、背包或宠物。
-- `--auto-task-tracker-route-check`、`--auto-npc-quest-marker-check` 必须继续通过。
-- `--movement-spam-click-check` 需要保持 `coalesced=true`、`settled=true`。
-- `--perf-probe` 中 `hud_signature`、`redraw_check` 不应出现持续高值。
-
-Phase149 完成后的参考结果：
-
-- `--auto-task-tracker-route-check`：`status=ok route=true disabled_after=true reenabled=true`
-- `--auto-npc-quest-marker-check`：`status=ok available=true in_progress=true ready=true blocked=true rebirth=true`
-- `--movement-spam-click-check`：`status=ok clicks=360 avg_input_us=25 max_input_us=2229 coalesced=true settled=true`
-- `--auto-player-stat-spam-perf-check`：`status=ok elapsed_ms=3.21 refresh_count=2 saves=1`
-- `--shop-select-perf-check`：`status=ok item_us=1513393 equipment_us=2145298`
-- `--perf-probe`：稳定后 `hud_signature` 约 `0.03-0.06ms`，`redraw_check` 约 `0.01-0.04ms`，`process_total` 多数约 `0.19-0.37ms`。
-
-Phase150-C 完成后的参考结果：
-
-- `--auto-pet-rebirth-mm-formula-check`：`status=ok ranges=true interpolation=true preview=true seeded=true full_mid=1.400`
-- `--auto-pet-rebirth-mm-check`：`status=ok catalog=true buy_stone=true feed=true rebirth=true stage2_claim=true`
-- `--shop-select-perf-check`：输出三轮样本的 `item_us/equipment_us` 中位数、`min/max`，以及合并详情刷新的 `item_flush_us/equipment_flush_us`。详情生成与 RichText 排版已按下一帧合并，商品列表与数量上限复用缓存，当前基线约 `item_us≈40ms equipment_us≈50ms flush<1ms`。
-
-Phase150-A 完成后的参考结果：
-
-- `--auto-panel-registry-check`：`status=ok registry=true top_blocks=true synthesis_menu=true synthesis_blocks=true clear=true`
-- `--auto-qa-panel-check`：`status=ok button_count=18`
-- `--auto-equipment-synthesis-check`：`status=ok ui_ready=true ui_result=true output=weapon_hardwood_club`
-- `--movement-spam-click-check`：`status=ok clicks=360 avg_input_us=12 max_input_us=391 coalesced=true settled=true`
-- `--perf-probe`：稳定后 `hud_signature` 约 `0.03-0.08ms`，`redraw_check` 约 `0.01-0.03ms`，`process_total` 多数约 `0.17-0.33ms`。
-
-Phase150-B 重点观察：
-
-- 背包筛选 presenter 拆分后，`全部 / 世界 / 战斗 / 捕捉 / 装备` 五个筛选页签仍应保持原行为。
-- 背包 UI 拆分不应改变道具使用、装备、扩展锁位或背包满兜底。
-- 继续用 `--movement-spam-click-check` 和 `--perf-probe` 确认 UI 拆分没有带回移动卡顿。
-
-Phase150-B 完成后的参考结果：
-
-- `--auto-backpack-filter-check`：`status=ok all=true battle=true world=true capture=true equipment=true`
-- `--auto-backpack-check`：`status=ok slots=true stack=true context=true panel=true unlock=true item_menu=true capture_menu=true meat_consumed=true`
-- `--auto-backpack-world-use-check`：`status=ok context=true detail=true use_button=true targets=true world_use=true full_block=true`
-- `--auto-panel-registry-check`：`status=ok registry=true top_blocks=true synthesis_menu=true synthesis_blocks=true clear=true`
-- `--movement-spam-click-check`：`status=ok clicks=360 avg_input_us=28 max_input_us=150 coalesced=true settled=true`
-- `--perf-probe`：启动期首次 HUD 构建仍有尖峰；稳定后 `hud_signature` 多数约 `0.03-0.06ms`，`process_total` 多数约 `0.17-0.33ms`，偶发约 `0.84ms`。
-
-Phase150-C 重点观察：
-
-- 背包详情和动作按钮状态迁入 presenter 后，世界可用道具、装备、捕捉道具隐藏规则必须保持一致。
-- `--auto-backpack-world-use-check` 要覆盖肉、满血使用、世界使用弹字、捕捉道具不显示使用按钮。
-- 如果本阶段引入 typed array 改动，必须先跑 `godot --headless --path client/godot --quit`，避免 UI 逻辑在运行时才报错。
-
-Phase150-C 完成后的参考结果：
-
-- `--auto-backpack-filter-check`：`status=ok all=true battle=true world=true capture=true equipment=true`
-- `--auto-backpack-check`：`status=ok slots=true stack=true context=true panel=true unlock=true item_menu=true capture_menu=true meat_consumed=true`
-- `--auto-backpack-world-use-check`：`status=ok context=true detail=true use_button=true targets=true world_popup=true full_block=true capture_hidden=true`
-- `--auto-equipment-check`：`status=ok ui_detail=true ui_equip=true compare_gain=true compare_loss=true panel=true`
-- `--auto-equipment-shop-preview-check`：`status=ok detail=true button=true buy_only=true direct_action=true`
-- `--movement-spam-click-check`：`status=ok clicks=360 avg_input_us=27 max_input_us=697 coalesced=true settled=true`
-- `--perf-probe`：启动期首次 HUD 构建约 `58.86ms`；稳定后 `hud_signature` 多数约 `0.02-0.06ms`，`process_total` 多数约 `0.12-0.33ms`。
-
-Phase161 账号/档案同步自测：
-
-- 服务端：`cd server/node && npm test`
-- 客户端：
-  - `godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-auth-server-client-check`
-  - `godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-auth-server-live-check`
-  - `godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 2600 -- --auto-server-profile-sync-check`
-- 性能：继续跑 `--movement-spam-click-check` 和 `--perf-probe`，确认保存同步没有进入移动/HUD热路径。
-
-Phase162 服务器-only / 多开前置自测：
-
-- 先启动服务端：`cd server/node && npm start`
-- 单客户端真实联网登录：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 5000 -- --auto-auth-server-live-check`
-- 双客户端并发时，在两个终端同时运行上一条命令；两个进程应各自输出 `status=ok`，并创建不同服务器账号和档案 revision。
-
-Phase163 玩家文本邮件自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 服务器邮件：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 6000 -- --auto-server-mail-live-check`
-- Godot 系统附件邮箱：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 3200 -- --auto-mailbox-check`
-
-Phase164 在线队伍自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 服务器队伍：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-party-live-check`
-- 性能：继续跑 `--movement-spam-click-check` 和 `--perf-probe`，确认在线队伍请求只发生在打开面板或点击按钮时。
-
-Phase165 服务端聊天自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 聊天面板本地状态：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 4000 -- --auto-chat-panel-check`
-- Godot 真实联网聊天：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-chat-live-check`
-- 回归：继续跑 `--auto-auth-server-client-check`、`--auto-party-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认聊天请求只发生在打开面板、切换频道、刷新或发送消息时。
-
-Phase166 在线位置快照自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 真实联网位置：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-position-live-check`
-- 回归：继续跑 `--auto-auth-server-client-check`、`--auto-party-live-check`、`--auto-chat-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认位置同步走低频 Timer，不进入 HUD/移动每帧重计算。
-
-Phase167 WebSocket 事件通道自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 事件通道契约：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
-- Godot 真实联网事件：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-live-check`
-- 回归：继续跑 `--auto-online-position-live-check`、`--auto-chat-live-check`、`--auto-party-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认 WebSocket 每帧只做轻量 `poll()` 和限量包处理。
-
-Phase168 在线 AOI 自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot AOI 合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
-- Godot 真实联网 AOI：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-online-aoi-live-check`
-- 回归：继续跑 `--auto-online-position-live-check`、`--auto-server-event-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认 AOI 过滤发生在服务端和网络回包处理里，不进入每帧世界/HUD扫描。
-
-Phase169 切磋房间自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 切磋房间合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
-- Godot 真实联网切磋房间：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-battle-room-live-check`
-- 回归：继续跑 `--auto-server-event-live-check`、`--auto-online-aoi-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认房间事件只更新轻量缓存，不启动本地战斗循环或增加 HUD/移动热路径成本。
-
-Phase170 WebSocket 游标和断线补发自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 事件游标合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
-- Godot 真实联网断线补发：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-event-replay-live-check`
-- 回归：继续跑 `--auto-server-event-live-check`、`--auto-battle-room-live-check`、`--auto-online-aoi-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认 replay 只补关键事件，不把 `online.position` 历史插回玩家可见列表。
-
-Phase171 服务器权威移动自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 移动合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
-- Godot 真实联网移动：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-movement-live-check`
-- 回归：继续跑 `--auto-battle-room-live-check`、`--auto-server-event-replay-live-check`、`--auto-server-event-live-check`、`--auto-online-aoi-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认服务器 step 没进入 Godot 每帧热路径，且切磋 ready 前会校验同图、近距离、停稳状态。
-
-Phase172 房间回合命令和服务器战斗事件列表自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 回合合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
-- Godot 真实联网回合：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-turn-live-check`
-- 回归：继续跑 `--auto-battle-room-live-check`、`--auto-server-event-replay-live-check`、`--auto-server-event-live-check`、`--auto-server-movement-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认回合命令通过 HTTP/WebSocket 轻量缓存流转，不启动本地战斗循环，也不进入 Godot 每帧热路径。
-
-Phase177 切磋房间关闭和结果回写自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 关闭合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 7000 -- --auto-auth-server-client-check`
-- Godot 真实联网关闭：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-close-live-check`
-- 回归：继续跑 `--auto-server-battle-turn-live-check`、`--auto-server-battle-reconnect-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认关闭结果只退出服务器权威切磋，不触发本地 PvE 奖励、捕宠、任务或击飞结算。
-
-Phase178 服务器人物与宠物快照自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 真实联网宠物快照：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 9000 -- --auto-server-battle-pet-snapshot-live-check`
-- 回归：继续跑 `--auto-server-battle-turn-live-check`、`--auto-server-battle-reconnect-live-check`、`--auto-server-battle-close-live-check`、`--auto-battle-auto-10v10-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认宠物快照进入服务器 battle actors，但不把 profile 读取或宠物列表扫描放进 Godot 热路径。
-
-Phase179 联网切磋离开按钮自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 真实联网离开：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-leave-ui-live-check`
-- 回归：继续跑 `--auto-server-battle-close-live-check`、`--auto-server-battle-pet-snapshot-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认“离开”走服务端关闭房间，不走本地 PvE 逃跑结算。
-
-Phase180 联网切磋宠物指令自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 真实联网宠物指令：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check`
-- 回归：继续跑 `--auto-server-battle-pet-snapshot-live-check`、`--auto-server-battle-turn-live-check`、`--auto-server-battle-reconnect-live-check`、`--auto-server-battle-close-live-check`、`--auto-server-battle-leave-ui-live-check`、`--auto-battle-auto-10v10-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认人物和宠物 actor 指令不会把 profile 读取、宠物列表扫描或战斗 UI 刷新放进 Godot 热路径。
-
-Phase181 玩家互动入口自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 合同：`godot --headless --path client/godot --scene res://scenes/Main.tscn -- --auto-auth-server-client-check`
-- Godot 真实联网玩家互动：`godot --headless --path client/godot --scene res://scenes/Main.tscn -- --auto-player-interaction-live-check`
-- 回归：继续跑 `--auto-party-live-check`、`--auto-online-position-live-check`、`--auto-battle-room-live-check`、`--movement-spam-click-check` 和 `--perf-probe`，确认点人菜单、入队申请和切磋邀请弹窗不进入移动/HUD热路径。
-
-Phase186 MySQL stdin 保存和宠物指令稳定性自测：
-
-- 服务端：`cd server/node && npm test`
-- MySQL store 语法：`node --check server/node/src/mysql-store.js && node --check server/node/test/auth-service.test.js`
-- Godot 真实联网宠物指令：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-command-live-check`
-- Godot 真实联网宠物快照：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-pet-snapshot-live-check`
-- 回归：确认 MySQL 保存走 stdin 而不是 `mysql -e` 超长参数；宠物 live check 接受切磋后可直接应用 HTTP 返回的房间状态，结束后不残留 open battle room。
-
-Phase187 联网切磋换宠自测：
-
-- 服务端：`cd server/node && npm test`
-- Godot 本地换宠回归：`godot --headless --path client/godot --scene res://scenes/Main.tscn -- --auto-battle-switch-pet-check`
-- Godot 真实联网换宠：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-switch-pet-live-check`
-- 回归：继续跑 `--auto-server-battle-pet-command-live-check`、`--auto-server-battle-target-mapping-check`、`--auto-server-battle-turn-live-check` 和 `--perf-probe`，确认换宠不会提前套用服务器最终 actor 快照，也不会让旧出战宠继续要求下达宠物指令。
-
-Phase188 联网切磋物品自测：
-
-- 服务端：`node --check server/node/src/auth-service.js && cd server/node && npm test`
-- Godot 脚本检查：`godot --headless --path client/godot --check-only --quit`
-- Godot 真实联网物品：`godot --headless --path client/godot --scene res://scenes/Main.tscn --quit-after 12000 -- --auto-server-battle-item-live-check`
-- 回归：继续跑 `--auto-server-battle-switch-pet-live-check` 和 `--perf-probe`，确认联网物品事件按服务器目标 actor 播放，不影响主动换宠规则；宠物倒下仍不自动换宠。
-
-## 验收口径
-
-可以接受：
-
-- 单次打开面板有轻微构建成本。
-- `main.gd` 临时编排新模块，但不继续承载大段静态数据。
-- 兼容层保留，但必须有淘汰说明。
-
-不可接受：
-
-- 移动、HUD、任务寻路每帧全量扫描。
-- 玩家普通 UI 暴露工程命令或 debug 字段。
-- 只跑功能自测，不记录性能变化。
-- 数值表静默改变旧版本语义。
+旧性能数字和历史测试记录保留在 [整理前测试手册](bak/handbooks_20260917/testing.md)。

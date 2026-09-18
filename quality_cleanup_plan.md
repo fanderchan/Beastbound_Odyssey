@@ -1,5 +1,7 @@
 # Beastbound Odyssey — 全面质量整顿计划
 
+> **历史计划：阶段 1–6 已完成。** 以下原执行说明作为当时证据保留，不再决定新任务顺序。现行工程维护见 [维护清单](docs/maintenance.md)，产品方向见 [stoneage_gap_plan.md](stoneage_gap_plan.md)。
+
 > 来源：客户端 `client/godot` 与服务端 `server/node` 两份深度审查。
 >
 > 方针：针对性整顿，不做整体大重构；质量整顿完成后按 `stoneage_gap_plan.md` 继续内容迭代；全程不碰美术资产。

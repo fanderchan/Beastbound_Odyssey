@@ -1,160 +1,45 @@
-# Beastbound Odyssey Godot Client
+# Godot 客户端
 
-Godot 4.7 standard edition client for Beastbound Odyssey.
+Godot 4.7 标准版、GDScript，PC 1280×720 优先。正常入口是 `scenes/Main.tscn`；该场景仅负责 bootstrap，大部分运行时世界、战斗和 UI 由脚本构造。
 
-## Run
+## 开发入口
 
-```sh
-godot --path .
-```
+- [整个项目的现状](../../docs/project-status.md)：当前主目录为唯一日常开发入口。
+- [架构与功能定位](../../docs/architecture.md)：按领域查脚本和服务端消费者。
+- [开发流程](../../docs/development.md)、[测试指南](../../docs/testing.md)。
+- [客户端执行约束](AGENTS.md)、[自动代码索引](../../docs/reference/code-index.md)。
 
-## Check
-
-```sh
-godot --headless --path . --quit
-```
-
-## Full Client Testing
-
-Use this entry for full feature acceptance. It opens the normal client and does not hide previously built systems:
+以下从仓库根目录执行：
 
 ```sh
-godot --path . --scene res://scenes/Main.tscn -- --full-client-preview
+npm --prefix server/node run ops -- start
+godot --path client/godot --scene res://scenes/Main.tscn
 ```
 
-Use this entry when validating 10v10 with the full client:
+正常联机路径由服务器决定账号、档案、物品、货币、移动接受和战斗结果。客户端提交意图、播放事件、缓存权威投影；本地预览模型不是联机结算依据。
+
+## 修改位置
+
+| 目录 | 放什么 |
+| --- | --- |
+| `scripts/world/` | 地图、寻路、交互、世界表现 |
+| `scripts/battle/` | 战斗事实模型、目录、布局、事件回放 |
+| `scripts/progression/` | 档案投影、背包、装备、任务、宠物培养与网络契约 |
+| `scripts/net/` | 同步、选角和重连协调 |
+| `scripts/ui/` | 控件、presenter、面板 controller 和注册 |
+| `scripts/player/`、`scripts/pet/`、`scripts/audio/` | 人物/宠物/声音表现和资源生命周期 |
+| `scripts/qa/` | 自动检查和审查场景 |
+| `data/` | 双端共享的内容与数值 JSON |
+
+新逻辑不继续堆进 `main.gd`、`panel_flow_coordinator.gd`、`auto_check_coordinator.gd`；入口只负责装配和转发。
+
+## 选择检查
 
 ```sh
-godot --path . --scene res://scenes/Main.tscn -- --full-client-preview --gm-10v10-map
+node tools/run_godot_auto_checks.mjs --help
+node tools/run_godot_auto_checks.mjs --list
 ```
 
-This starts on `GM练级测试场`. Its grass encounters are 100% rate and fixed to 10 wild enemies; fill the ally side from the normal `伙伴` panel.
+按修改领域使用 `--only`。该运行器采用隔离 QA lane；只做解析时使用 `--parse-only`，领域回归使用 `--only`。具体命令和本地 QA 后端前置见 [测试指南](../../docs/testing.md)。
 
-No arguments is also a full-client run:
-
-```sh
-godot --path . --scene res://scenes/Main.tscn
-```
-
-The `--xxx-preview` entries below are local previews for one feature area. They are useful for quick checks, but they are not evidence that the full client has lost older feature points.
-
-## Current Slice
-
-Phase 62 contains a minimal isometric exploration, encounter loop, GM 10v10 test map, hang-up walking prototype, encounter stones, hang-up stop settings, 10v10 formation, local battle-command, battle auto-battle settings, training partners, target-selection, speed-order, combo, capture, spirit-targeting, controlled-pet-command, battle action-catalog, battle item-menu, and item-count experiment with:
-
-- Mouse click-to-pathfind on PC.
-- Touch tap-to-pathfind on mobile.
-- A data-driven 45-degree map.
-- Walkable and blocked cells.
-- Camera follow.
-- 8-direction placeholder facing.
-- Player idle/walk placeholder animation.
-- Optional pet follow using `驯宠戒`.
-- A target marker and automatic movement state.
-- Clickable NPC/gate interaction points.
-- Arrival-gated dialog and a simple local task flag.
-- Clickable walk-on transfer points between `火芽训练场` and `火芽村入口`.
-- A visible grass encounter zone on `火芽村入口`.
-- Natural walking in the encounter zone can directly enter battle without a confirmation prompt.
-- A 1-second post-battle encounter grace window after returning to the map.
-- The action-bar `挂机` button makes the player walk back and forth inside the encounter zone, using the same natural encounter checks as manual walking.
-- Low / mid / high encounter stones can be bought in the item shop and trigger stationary encounters every 3 / 2 / 1 seconds while active.
-- The action-bar `挂机` button changes to `停` during hang-up walking or active encounter-stone effects, and stopping clears both auto movement and encounter-stone effects.
-- Battle commands arranged as `攻击` / `精灵` / `捕捉` / `帮助` and `防御` / `物品` / `换宠` / `逃跑`.
-- The battle panel has a short `自动` toggle that auto-submits player and controlled-pet commands from `内挂设置`.
-- The world action bar has a `内挂` settings panel.
-- Player auto actions distinguish `首回合` and `一般回合`.
-- Pet auto actions distinguish `首回合` and `一般回合`, and select `技1` through `技7` instead of hardcoding pet defense as a separate action.
-- Auto healing can watch player/pet HP thresholds and try heal sources in priority order.
-- The `内挂设置` panel has a `挂机` tab whose first version only contains `低血停止`.
-- `低血停止` defaults to `0%`: if the player fell to 0 HP during battle, hang-up stops after returning to the map, while the world profile keeps at least 1 HP.
-- Hang-up low-HP stopping checks only the player, not the pet, and can be set to `不停止`.
-- The world action bar has a `伙伴` panel for adding, removing, filling, or clearing up to four training partners.
-- Training partners clone the current player and active pet when added, then persist and grow independently.
-- Grass encounters with training partners become 10v10 training battles: 5 humans plus 5 pets against 10 wild enemies.
-- Training partner humans and pets use default attack AI against enemy slots from front 1-5, then back 1-5.
-- Victory rewards grant EXP to training partner humans and pets with a simple stat-growth rule.
-- `--full-client-preview --gm-10v10-map` starts the full client on `GM练级测试场`, where grass encounters always contain 10 wild enemies.
-- Upper-right battle command panel with enemy placeholders upper-left and ally placeholders lower-right.
-- 10v10 formation slots with two rows of five on each side; full previews use one mobile-first formation template scaled into the current PC/mobile window.
-- The controlled human placeholder uses a distinct red/gold color in the ally formation.
-- Battle preview uses one continuous ground plane, without a sky/floor split line.
-- `--battle-preview-10v10` fills all 20 slots and shows the inspection grid/anchor dots.
-- `攻击` and `捕捉` enter enemy target-selection mode; PC hover shows the target ring, and click/tap confirms the target.
-- Local `攻击` starts a battle event list ordered by quick/speed, mixing allies and enemies.
-- Enemy attacks choose among living allies instead of always focusing the center/player slot.
-- Adjacent same-target ally attacks can become `合击`.
-- Damage popups, hit reactions, and simple defeated/captured fade states.
-- `捕捉` can catch a weakened wild enemy.
-- In 10v10, only `见习猎人` and `小布伊` are player-controlled; the other allies use simple attack AI.
-- `精灵` opens the player spirit menu: `恩惠精灵5`, `滋润精灵5`, `毒精灵5`, `毒雾精灵5`.
-- After the player command, the same command panel switches to `宠物`.
-- Pet mode exposes `技1 攻击`, `技2 防御`, and `技3 布伊冲撞`; pet enemy skills use the same hover/click or tap target-selection flow.
-- Current player, spirit, pet-skill, and item labels/effects/target rules are declared in `data/battle_actions.json`.
-- The action catalog uses explicit booleans for all-target, ally-target, enemy-target, selection-required, and self-only behavior.
-- `物品` opens a test item menu with `群体草药5`, `回复药5`, `毒粉5`, and `毒雾粉5`.
-- Battle item buttons show local counts and successful item use consumes one count.
-- Item buttons are disabled at `x0`.
-- Enemy defeat, successful capture, and `逃跑` return-to-map behavior.
-- Responsive HUD placement for desktop and mobile screen shapes.
-
-Open the battle preview directly from this directory:
-
-```sh
-godot --path . --scene res://scenes/Main.tscn -- --battle-preview
-```
-
-Open the 10v10 formation preview directly from this directory:
-
-```sh
-godot --path . --scene res://scenes/Main.tscn -- --battle-preview-10v10
-```
-
-Open the 10v10 auto-battle observation preview directly from this directory:
-
-```sh
-godot --path . --scene res://scenes/Main.tscn -- --battle-auto-10v10-preview
-```
-
-This preview starts auto battle immediately and keeps the `停止` button visible while actions play.
-
-Open the auto-battle settings preview directly from this directory:
-
-```sh
-godot --path . --scene res://scenes/Main.tscn -- --auto-battle-settings-preview
-```
-
-Open the hang-up settings preview directly from this directory:
-
-```sh
-godot --path . --scene res://scenes/Main.tscn -- --hang-settings-preview
-```
-
-Manual 10v10 checks:
-
-- Player target choice: press `攻击`, hover an enemy to show the ring, then click/tap that enemy.
-- Pet target choice: after the player target is confirmed, press `技1 攻击` or `技3 布伊冲撞`, hover an enemy to show the ring, then click/tap that enemy.
-- Spirit choices: press `精灵`, choose a spirit, then follow its target rule.
-- `恩惠精灵5` heals all living allies.
-- `滋润精灵5` asks for one ally.
-- `毒精灵5` asks for one enemy.
-- `毒雾精灵5` poisons all living enemies.
-- Item choices: press `物品`, then test `群体草药5`, `回复药5`, `毒粉5`, and `毒雾粉5`.
-
-Check the corrected spirit and pet-command flow:
-
-```sh
-node ../../tools/battle_action_catalog_check.mjs
-node ../../tools/battle_action_catalog_check.mjs --list
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 300 -- --auto-battle-action-catalog-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 3000 -- --auto-battle-item-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-battle-item-count-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1200 -- --auto-battle-spirit-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1200 -- --auto-battle-pet-command-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-pet-target-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 2400 -- --auto-battle-spirit-four-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 3600 -- --auto-battle-settings-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-hang-settings-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-hang-matchmaking-check
-godot --headless --path . --scene res://scenes/Main.tscn --quit-after 1800 -- --auto-gm-10v10-map-check
-```
+旧 Phase 62 功能列表与局部预览记录保留在 [历史手册](../../docs/bak/handbooks_20260917/client-readme.md)，不再当作当前能力清单。
