@@ -17,6 +17,13 @@ test("guardian review uses five HTTP accounts, authoritative encounters and sett
   try {
     // A live Main owns upgraded event sockets. HTTP close alone cannot drain them.
     const fixture = JSON.parse(fs.readFileSync(path.join(directory, "fixture.json")));
+    const initialProfiles = JSON.parse(fs.readFileSync(path.join(directory, "initial-profiles.json")));
+    assert.equal(new Set(initialProfiles.map(row => row.profile.player.appearanceId)).size, 4,
+      "the real client review must distinguish all four existing character appearances");
+    const roster = await review.request(0, "/players/online?mapId=earth_vein_cave_f4&scope=aoi&cellX=21&cellY=8&radius=12");
+    assert.equal(roster.players.length, 5);
+    assert.equal(new Set(roster.players.map(row => `${row.position.cellX},${row.position.cellY}`)).size, 5,
+      "overlapping all teammates cannot prove each world actor is visible");
     eventSocket = await new Promise((resolve, reject) => {
       const request = http.get(review.baseUrl + "/events?clientVersion=guardian-review&clientProtocolVersion=" + protocolMetadata().protocolVersion,
         {headers: {Connection: "Upgrade", Upgrade: "websocket", "Sec-WebSocket-Version": "13",
@@ -60,4 +67,31 @@ test("guardian review uses five HTTP accounts, authoritative encounters and sett
   assert.ok(fs.existsSync(path.join(directory, "stopped.json")));
   assert.equal(fs.statSync(path.join(directory, "fixture.json")).mode & 0o777, 0o600);
   await assert.rejects(fetch(review.baseUrl + "/health"), "the isolated backend must be stopped");
+});
+
+test("guardian transport failure preserves diagnostics without retrying a mutation or logging credentials", async () => {
+  const directory = path.resolve(__dirname, "../../.run", `guardian-review-failure-${crypto.randomUUID()}`);
+  const review = await startGuardianReview(directory);
+  const originalFetch = globalThis.fetch;
+  let attempts = 0;
+  try {
+    globalThis.fetch = async () => {
+      attempts++;
+      throw new TypeError("Bearer secret-value", {cause: Object.assign(new Error("secret-value"), {
+        code: "ECONNRESET", socket: {bytesWritten: 300, bytesRead: 100},
+      })});
+    };
+    await assert.rejects(review.request(0, "/players/position", {privateValue: "secret-value"}), /POST \/players\/position: TypeError ECONNRESET/);
+    assert.equal(attempts, 1);
+    const raw = fs.readFileSync(path.join(directory, "request-failures.ndjson"), "utf8");
+    assert.equal(raw.includes("secret-value"), false);
+    const row = JSON.parse(raw);
+    assert.equal(row.method, "POST");
+    assert.equal(row.route, "/players/position");
+    assert.equal(row.causeCode, "ECONNRESET");
+    assert.equal(row.bytesRead, 100);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await review.close();
+  }
 });

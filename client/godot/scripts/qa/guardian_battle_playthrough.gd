@@ -4,14 +4,39 @@ const Iso := preload("res://scripts/world/isometric_map_model.gd")
 const Interaction := preload("res://scripts/world/interaction_model.gd")
 const Progress := preload("res://scripts/progression/player_progress_model.gd")
 const Battle := preload("res://scripts/battle/battle_model.gd")
+const WorldDepthLayer := preload("res://scripts/world/world_depth_layer.gd")
 
 
-static func run(host, output_dir: String) -> Dictionary:
+static func run(host, output_dir: String, expected_world_players: Array) -> Dictionary:
 	var report := {"kind": "automated_viewport_input_playthrough", "computerUse": false, "status": "running", "inputs": [], "errors": []}
 	var tree: SceneTree = host.get_tree()
 	await tree.create_timer(3.0).timeout
 	var initial_revision: int = host.server_profile_sync_expected_revision
 	var initial_rings := Progress.backpack_item_count(host.player_profile, "ring_earth_trial")
+	if expected_world_players.size() != 4:
+		return _fail(report, "fixture must identify four authoritative teammates")
+	if not await _until(tree, func() -> bool: return _world_snapshot(host, expected_world_players).valid, 20, output_dir):
+		report["initialWorld"] = _world_snapshot(host, expected_world_players)
+		return _fail(report, "four distinct authoritative teammate visuals did not appear")
+	report["initialWorld"] = _world_snapshot(host, expected_world_players)
+	# Observe the real periodic timer and its HTTP completion while standing
+	# still; a forced snapshot would miss the regression in the normal callback.
+	var refresh := {"timer": 0, "responses": 0}
+	var timer_listener := func() -> void: refresh.timer += 1
+	var response_listener := func(result: int, code: int, _headers: PackedStringArray, _body: PackedByteArray) -> void:
+		if result == HTTPRequest.RESULT_SUCCESS and code == 200:
+			refresh.responses += 1
+	host.online_position_timer.timeout.connect(timer_listener)
+	host.online_position_http_request.request_completed.connect(response_listener)
+	var refreshed := await _until(tree, func() -> bool:
+		return refresh.timer > 0 and refresh.responses > 0 and not host.online_position_request_pending,
+		20, output_dir)
+	host.online_position_timer.timeout.disconnect(timer_listener)
+	host.online_position_http_request.request_completed.disconnect(response_listener)
+	report["idleRefresh"] = refresh
+	report["worldAfterIdleRefresh"] = _world_snapshot(host, expected_world_players)
+	if not refreshed or not report.worldAfterIdleRefresh.valid:
+		return _fail(report, "periodic refresh lost teammate visuals")
 	await _capture(host, output_dir, "autoplay-start")
 	var obscured := false
 	for cell in [Vector2i(24, 6), Vector2i(19, 5), Vector2i(21, 8)]:
@@ -57,6 +82,12 @@ static func run(host, output_dir: String) -> Dictionary:
 	report["actorCount"] = (host.battle_state.get("actors", []) as Array).size()
 	if report.participantCount != 5 or report.actorCount != 20 or not host.battle_state.get("serverAuthority", false):
 		return _fail(report, "expected five participants and twenty authoritative actors")
+	report["groundHiddenInBattle"] = not host.world_ground_layer.visible
+	if not report.groundHiddenInBattle:
+		return _fail(report, "world ground remained visible in battle")
+	report["battleAppearancesAtStart"] = _battle_appearance_snapshot(host)
+	if not report.battleAppearancesAtStart.valid:
+		return _fail(report, "battle entry lost authoritative character appearances")
 	await _capture(host, output_dir, "autoplay-battle-start")
 	await tree.create_timer(2.0).timeout
 	var view = host.battle_command_awakened_view
@@ -69,6 +100,9 @@ static func run(host, output_dir: String) -> Dictionary:
 	await _boss_target(host, report)
 	if not await _until(tree, func() -> bool: return host.battle_active and int(host.battle_state.get("round", 0)) == 2 and host.battle_command_owner == "player", 90, output_dir):
 		return _fail(report, "round two did not become available")
+	report["battleAppearancesAfterRound"] = _battle_appearance_snapshot(host)
+	if not report.battleAppearancesAfterRound.valid:
+		return _fail(report, "round playback lost authoritative character appearances")
 	await _capture(host, output_dir, "autoplay-boss-telegraph")
 	await tree.create_timer(3.0).timeout
 	await _button(host, view.visible_button_with_label("防御"), "player defend", report)
@@ -80,6 +114,9 @@ static func run(host, output_dir: String) -> Dictionary:
 	await _button(host, view.auto_button(), "automatic battle", report)
 	if not await _until(tree, func() -> bool: return _battle_completed(host, report), 300, output_dir):
 		return _fail(report, "battle did not finish")
+	report["groundRestoredAfterBattle"] = host.world_ground_layer.visible and host.world_ground_layer.has_ground()
+	if not report.groundRestoredAfterBattle:
+		return _fail(report, "world ground did not return with the settled battle")
 	await _capture(host, output_dir, "autoplay-result")
 	var synchronized := await _until(tree, func() -> bool: return host.server_profile_sync_expected_revision > initial_revision, 20, output_dir)
 	report["profileSynchronized"] = synchronized
@@ -88,6 +125,7 @@ static func run(host, output_dir: String) -> Dictionary:
 	report["endMap"] = host.current_map_id
 	report["earthRingsGranted"] = Progress.backpack_item_count(host.player_profile, "ring_earth_trial") - initial_rings
 	await tree.create_timer(5.0).timeout
+	report["finalWorld"] = _world_snapshot(host, expected_world_players)
 	await _capture(host, output_dir, "autoplay-final")
 	if not synchronized:
 		return _fail(report, "settled server profile did not reach Main")
@@ -95,8 +133,50 @@ static func run(host, output_dir: String) -> Dictionary:
 		return _fail(report, "guardian victory reward or return map missing")
 	if not obscured:
 		return _fail(report, "walk did not exercise interactive-prop occlusion")
+	if not report.finalWorld.valid:
+		return _fail(report, "teammate visuals did not return after battle")
 	report["status"] = "passed" if report.errors.is_empty() else "failed"
 	return report
+
+
+static func _world_snapshot(host, expected_players: Array) -> Dictionary:
+	var rows: Array[Dictionary] = []
+	var valid: bool = host.world_ground_layer.visible and host.world_ground_layer.has_ground()
+	var remotes: Array = host.world_depth_layer._group_nodes.get("remote_actors", [])
+	for expected in expected_players:
+		var row := {"name": str(expected.displayName), "expectedAppearanceId": str(expected.appearanceId), "visible": false}
+		for node in remotes:
+			if str(node.get_meta(WorldDepthLayer.STABLE_ID_META, "")) != "remote:%s" % str(expected.accountId):
+				continue
+			var actor = node.get_node("Presentation")
+			row["appearanceId"] = actor.get_appearance_id()
+			row["visible"] = node.is_visible_in_tree() and actor.is_visible_in_tree()
+			row["formalArt"] = actor.uses_formal_character_art()
+			row["sameScaleAsPlayer"] = actor.scale == host.player.scale
+			break
+		valid = valid and bool(row.visible) and bool(row.get("formalArt", false)) and bool(row.get("sameScaleAsPlayer", false)) and row.get("appearanceId", "") == row.expectedAppearanceId
+		rows.append(row)
+	return {"valid": valid and rows.size() == 4 and remotes.size() == 4, "visiblePlayers": rows,
+		"remoteCount": remotes.size(), "groundVisible": host.world_ground_layer.visible}
+
+
+static func _battle_appearance_snapshot(host) -> Dictionary:
+	var rows: Array[Dictionary] = []
+	var valid := true
+	var room: Dictionary = host.battle_state.get("serverRoom", {})
+	for expected in room.get("battle", {}).get("actors", []):
+		if str(expected.get("kind", "")) != "player":
+			continue
+		var row := {"name": str(expected.get("displayName", "")),
+			"expectedAppearanceId": str(expected.get("appearanceId", "")), "appearanceId": "", "renderedAppearanceId": ""}
+		for actor in host.battle_state.get("actors", []):
+			if str(actor.get("serverActorId", "")) == str(expected.actorId):
+				row["appearanceId"] = str(actor.get("appearanceId", ""))
+				row["renderedAppearanceId"] = host._battle_actor_appearance_id(actor)
+				break
+		valid = valid and row.expectedAppearanceId != "" and row.appearanceId == row.expectedAppearanceId and row.renderedAppearanceId == row.expectedAppearanceId
+		rows.append(row)
+	return {"valid": valid and rows.size() == 5, "players": rows}
 
 
 static func _battle_completed(host, report: Dictionary) -> bool:

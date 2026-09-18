@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **550** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **551** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 566 | [Phase 566：战斗保留队友的权威人物外观](../phase_566_authoritative_battle_appearances.md) | 阶段记录 |
 | 565 | [Phase 565：移动反馈复用静态地面绘制](../phase_565_retained_world_ground.md) | 阶段记录 |
 | 564 | [Phase 564：静止玩家定时刷新后保持同屏可见](../phase_564_idle_online_presence_refresh.md) | 阶段记录 |
 | 563 | [Phase 563：同屏队友使用权威角色外观](../phase_563_remote_player_appearance.md) | 阶段记录 |

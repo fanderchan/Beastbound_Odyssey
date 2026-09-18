@@ -12,6 +12,7 @@ var sequence := 0
 var stop_requested := false
 var started_msec := 0
 var autoplay_running := false
+var expected_world_players: Array = []
 
 func _initialize() -> void:
 	if not OS.has_feature("beastbound_qa_automation") or not OS.get_cmdline_user_args().has("--beastbound-qa-user-data-lane=automation") or OS.get_user_data_dir().get_file() != "BeastboundOdysseyQA_Automation" or out.is_empty():
@@ -59,6 +60,7 @@ func _run() -> void:
 			quit(2)
 			return
 	var online := JSON.parse_string(FileAccess.get_file_as_string(OS.get_environment("BEASTBOUND_GUARDIAN_ONLINE_FIXTURE"))) as Dictionary
+	expected_world_players = online.get("expectedWorldPlayers", [])
 	var profile := online.get("profile", {}) as Dictionary
 	host.current_account_session = online.get("session", {}) as Dictionary
 	host.account_authenticated = true
@@ -128,7 +130,7 @@ func _run() -> void:
 
 
 func _run_autoplay() -> void:
-	var result: Dictionary = await preload("res://scripts/qa/guardian_battle_playthrough.gd").run(host, out)
+	var result: Dictionary = await preload("res://scripts/qa/guardian_battle_playthrough.gd").run(host, out, expected_world_players)
 	_write("autoplay.json", result)
 	print("GUARDIAN_AUTOPLAY " + JSON.stringify(result))
 	autoplay_running = false

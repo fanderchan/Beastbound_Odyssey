@@ -63,3 +63,5 @@ python3 tools/play_guardian_review.py --record --autoplay
 本入口显示指定待审宠物与战场素材，普通玩家开关保持关闭。录像和测试通过只形成待审候选，不代表老板已经接受这些精确美术文件。
 
 `--autoplay` 自动走一次遮挡、挑战、攻击、宠物冲撞、蓄力防御、自动战斗及胜利返回路线，并核对档案版本和地之戒到账。输入通过真实 Main 的 viewport 跨帧发送，报告明确 `computerUse=false`；这是自动操作回放，不代替原生鼠标或所有者验收。提前结束时，在该次输出目录创建 `stop` 文件；协程退出后再清理客户端和后端。实现与验证边界见 [Phase 547](../docs/phase_547_earth_guardian_battle_presentation.md)。
+
+夹具现含四套人物、五个独立站位；自动检查还覆盖静止定时刷新、世界／战斗外观和地面显隐。macOS 录制期间临时防止系统休眠，结束时释放，屏幕保持原状态。测试后端若意外退出，当前客户端会自动结束并保存失败原因；不会自动重发写请求。详见 [Phase 566](../docs/phase_566_authoritative_battle_appearances.md)。

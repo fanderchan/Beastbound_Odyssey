@@ -4,6 +4,7 @@ const CharacterActionAssetCatalog := preload(
 	"res://scripts/player/character_action_asset_catalog.gd"
 )
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
+const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
 const WorldVisualDirectionContract := preload(
 	"res://scripts/world/world_visual_direction_contract.gd"
 )
@@ -57,6 +58,7 @@ static func run(host: Node) -> Dictionary:
 	_append_mount_fallback_errors(errors)
 	_append_live_player_errors(errors, host)
 	_append_battle_host_errors(errors, host)
+	_append_server_battle_appearance_errors(errors, host)
 	return {
 		"ok": errors.is_empty(),
 		"appearanceIds": actual_ids,
@@ -149,6 +151,82 @@ static func _append_battle_host_errors(errors: Array[String], host: Node) -> voi
 	legacy_ride_actor["appearanceId"] = "novice_hunter_v1"
 	if not bool(host.call("_battle_actor_uses_integrated_mount_visual", legacy_ride_actor)):
 		errors.append("战斗中见习猎人已发布骑乘组合不再可用")
+
+
+static func _append_server_battle_appearance_errors(errors: Array[String], host: Node) -> void:
+	var server_actors: Array[Dictionary] = []
+	for index in range(EXPECTED_APPEARANCE_IDS.size()):
+		server_actors.append({
+			"actorId": "appearance_player_%d" % index,
+			"accountId": "appearance_account_%d" % index,
+			"kind": "player",
+			"side": "ally" if index < 3 else "enemy",
+			"appearanceId": EXPECTED_APPEARANCE_IDS[index],
+			"hp": 120, "maxHp": 120,
+		})
+	var room := {"roomId": "appearance_room", "status": "ready", "battle": {
+		"round": 1, "actors": server_actors,
+	}}
+	var original_room := room.duplicate(true)
+	# Reconstruct from either account's perspective, as initial entry and reconnect do.
+	for account_index in [0, 3]:
+		var state := ServerBattleRoomModel.battle_state_from_room(room, {
+			"accountId": "appearance_account_%d" % account_index,
+		})
+		_assert_projected_appearances(errors, host, state, server_actors, "房间重建")
+		var original_state := state.duplicate(true)
+		var changed_actors := server_actors.duplicate(true)
+		for index in range(changed_actors.size()):
+			changed_actors[index]["appearanceId"] = EXPECTED_APPEARANCE_IDS[(index + 1) % 4]
+		var event_list := {"kind": "battle_event_list", "round": 2,
+			"actorsBefore": changed_actors, "actors": changed_actors}
+		var replay_start := ServerBattleRoomModel.state_at_server_event_list_start(state, event_list)
+		_assert_projected_appearances(errors, host, replay_start, changed_actors, "回放开始快照")
+		var replay_end := ServerBattleRoomModel.state_with_server_event_actor_snapshot(state, event_list)
+		_assert_projected_appearances(errors, host, replay_end, changed_actors, "回放结束快照")
+		var partial_actors := changed_actors.duplicate(true)
+		for actor in partial_actors:
+			actor.erase("appearanceId")
+		var partial_state := ServerBattleRoomModel.state_with_server_event_actor_snapshot(replay_end, {
+			"kind": "battle_event_list", "actors": partial_actors,
+		})
+		_assert_projected_appearances(errors, host, partial_state, changed_actors, "缺字段快照保留外观")
+		if state != original_state or room != original_room:
+			errors.append("战斗人物外观投影修改了输入房间或原始状态")
+	# Older rooms have no appearance field. The selected local character remains
+	# the renderer's fallback; unknown remote IDs still use the safe catalog default.
+	var legacy_room := room.duplicate(true)
+	for actor in legacy_room.battle.actors:
+		actor.erase("appearanceId")
+	var legacy_state := ServerBattleRoomModel.battle_state_from_room(legacy_room, {"accountId": "appearance_account_0"})
+	for actor in legacy_state.get("actors", []):
+		var expected := str(host.call("_selected_player_appearance_id")) if actor.id == BattleModel.PLAYER_ACTOR_ID else CharacterActionAssetCatalog.CHARACTER_ID
+		if str(host.call("_battle_actor_appearance_id", actor)) != expected:
+			errors.append("旧战斗房间缺外观时未沿用既有回退")
+	var unknown_actor := server_actors[1].duplicate(true)
+	unknown_actor["appearanceId"] = "unknown_runtime_appearance"
+	var unknown_state := ServerBattleRoomModel.state_with_server_event_actor_snapshot(legacy_state, {
+		"kind": "battle_event_list", "actors": [unknown_actor],
+	})
+	_assert_projected_appearances(errors, host, unknown_state, [unknown_actor], "未知外观安全回退")
+
+
+static func _assert_projected_appearances(
+	errors: Array[String], host: Node, state: Dictionary, expected_actors: Array, context: String
+) -> void:
+	for expected in expected_actors:
+		var found := false
+		for actor in state.get("actors", []):
+			if actor.get("serverActorId", "") != expected.actorId:
+				continue
+			found = true
+			if actor.get("appearanceId", "") != expected.appearanceId:
+				errors.append("%s丢失权威人物外观：%s" % [context, expected.actorId])
+			if str(host.call("_battle_actor_appearance_id", actor)) != CharacterActionAssetCatalog.resolve_appearance_id(expected.appearanceId):
+				errors.append("%s渲染了错误人物：%s" % [context, expected.actorId])
+			break
+		if not found:
+			errors.append("%s缺少人物：%s" % [context, expected.actorId])
 
 
 static func _append_direction_contract_errors(

@@ -375,6 +375,7 @@ static func _battle_actor_from_server(server_actor: Dictionary, is_self_account:
 	var actor := {
 		"id": actor_id,
 		"name": str(server_actor.get("displayName", server_actor.get("username", "猎人"))),
+		"appearanceId": str(server_actor.get("appearanceId", "")).strip_edges(),
 		"side": side,
 		"kind": kind,
 		"slotId": slot_id,
@@ -546,6 +547,7 @@ static func _apply_server_actor_snapshot(state: Dictionary, actor_id: String, se
 			continue
 		var max_hp := maxi(1, int(server_actor.get("maxHp", actor.get("maxHp", 1))))
 		actor["name"] = str(server_actor.get("displayName", actor.get("name", "")))
+		actor["appearanceId"] = str(server_actor.get("appearanceId", actor.get("appearanceId", ""))).strip_edges()
 		actor["hp"] = clampi(int(server_actor.get("hp", actor.get("hp", max_hp))), 0, max_hp)
 		actor["maxHp"] = max_hp
 		actor["quick"] = maxi(1, int(server_actor.get("speed", actor.get("quick", 60))))

@@ -11,8 +11,10 @@ const {protocolMetadata} = require("../server/node/src/protocol");
 
 const MAP_ID = "earth_vein_cave_f4";
 const NAMES = ["洞穴探路者", "岩锋", "岚羽", "赤叶", "青岚"];
+const APPEARANCES = ["novice_hunter_v1", "obsidian_scout_v1", "frost_whisper_v1", "ember_spark_v1", "novice_hunter_v1"];
 const FORMS = ["bui_normal_red_fire10", "wuli_normal_tough_earth10", "wuli_normal_orange_fire10", "bui_normal_red_fire10", "wuli_normal_fast_wind10"];
-const POSITION = {mapId: MAP_ID, cellX: 21, cellY: 8, facing: "south", moving: false};
+const POSITIONS = [[21, 8], [18, 8], [20, 11], [23, 12], [24, 8]].map(([cellX, cellY]) =>
+  ({mapId: MAP_ID, cellX, cellY, facing: "south", moving: false}));
 const ENCOUNTER = {encounterIntent: {zoneId: "earth_vein_guardian_floor", encounterGroupId: "earth_vein_guardian_group", sourceInteractionId: "earth_vein_guardian_npc"}};
 
 function checked(result) {
@@ -32,7 +34,7 @@ function seedParty() {
     // Keep the real client's original low HP to exercise downed-player/pet handoff.
     // Durable QA teammates keep that branch observable before the whole party falls.
     const maxHp = index === 0 ? 520 : 1040;
-    Object.assign(profile.player, {level: 100, exp: 0, nextExp: 656810, statPoints: 0,
+    Object.assign(profile.player, {appearanceId: APPEARANCES[index], level: 100, exp: 0, nextExp: 656810, statPoints: 0,
       hp: maxHp, maxHp, baseStats: {maxHp, attack: 168, defense: 41, quick: 82}});
     profile.petInstances = [];
     profile.activePetInstanceId = "";
@@ -59,7 +61,7 @@ function seedParty() {
   const store = createMemoryAuthStore(snapshot);
   const service = createAuthService({store, allowPositionTeleport: true, allowFullProfileSave: false});
   // Pre-listen fixture setup ends here. Once HTTP starts, even bot presence uses HTTP.
-  for (const member of members) checked(service.updatePlayerPosition(member.session.token, POSITION));
+  for (const [index, member] of members.entries()) checked(service.updatePlayerPosition(member.session.token, POSITIONS[index]));
   for (const member of members.slice(1)) {
     const invite = checked(service.inviteToParty(members[0].session.token, {username: member.account.username}));
     checked(service.acceptPartyInvite(member.session.token, invite.invite.inviteId));
@@ -90,16 +92,34 @@ async function startGuardianReview(outputDir) {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   async function request(index, route, payload) {
     assert.match(route, /^\/(?:battle|players|profiles|party)\//);
-    const response = await fetch(baseUrl + route, {
-      method: payload === undefined ? "GET" : "POST",
-      headers: {Authorization: `Bearer ${members[index].session.token}`,
-        "Content-Type": "application/json", "Idempotency-Key": `guardian_${crypto.randomUUID()}`,
-        "X-Beastbound-Client-Version": "guardian-review",
-        "X-Beastbound-Protocol-Version": String(protocolMetadata().protocolVersion)},
-      body: payload === undefined ? undefined : JSON.stringify(payload),
-      signal: AbortSignal.timeout(10000),
-    });
-    const result = await response.json();
+    const method = payload === undefined ? "GET" : "POST";
+    const started = performance.now();
+    let response;
+    let result;
+    try {
+      response = await fetch(baseUrl + route, {
+        method,
+        headers: {Authorization: `Bearer ${members[index].session.token}`,
+          "Content-Type": "application/json", "Idempotency-Key": `guardian_${crypto.randomUUID()}`,
+          "X-Beastbound-Client-Version": "guardian-review",
+          "X-Beastbound-Protocol-Version": String(protocolMetadata().protocolVersion)},
+        body: payload === undefined ? undefined : JSON.stringify(payload),
+        signal: AbortSignal.timeout(10000),
+      });
+      result = await response.json();
+    } catch (error) {
+      // A failed mutation is outcome-ambiguous: keep the failed run, never
+      // replay it. Record transport facts without tokens, headers or payloads.
+      const failure = {at: new Date().toISOString(), memberIndex: index, method, route,
+        elapsedMs: Math.round(performance.now() - started), responseCode: response?.status ?? null,
+        errorName: String(error.name || "Error"),
+        errorCode: String(error.code || ""), causeName: String(error.cause?.name || ""),
+        causeCode: String(error.cause?.code || ""),
+        bytesWritten: error.cause?.socket?.bytesWritten ?? null,
+        bytesRead: error.cause?.socket?.bytesRead ?? null};
+      append("request-failures.ndjson", failure);
+      throw new Error(`${method} ${route}: ${failure.errorName} ${failure.causeCode || failure.errorCode}; inspect request-failures.ndjson`, {cause: error});
+    }
     if (!result.ok) {
       const error = new Error(`${route}: ${result.code}: ${result.message}`);
       error.code = result.code;
@@ -114,6 +134,9 @@ async function startGuardianReview(outputDir) {
     write("fixture.json", {baseUrl, profile: profiles[0].profile,
       profileRevision: profiles[0].profileSummary.profileRevision,
       partyState: await request(0, "/party/state"),
+      expectedWorldPlayers: members.slice(1).map((member, index) => ({
+        accountId: member.account.accountId, displayName: NAMES[index + 1],
+        appearanceId: APPEARANCES[index + 1], position: POSITIONS[index + 1]})),
       session: {accountId: leader.account.accountId, username: leader.account.username,
         displayName: NAMES[0], role: "player", effectiveRole: "player", authSource: "server",
         serverBaseUrl: baseUrl, serverSessionToken: session.token, serverSessionId: session.sessionId,
@@ -121,7 +144,7 @@ async function startGuardianReview(outputDir) {
         characterSlotIndex: session.slotIndex, selectionEpoch: session.selectionEpoch, selectionRequired: false}});
     write("initial-profiles.json", profiles);
     write("server-info.json", {pid: process.pid, baseUrl, storage: "memory", memberCount: 5,
-      fixtureVersion: 2, characterHp: [520, 1040, 1040, 1040, 1040],
+      fixtureVersion: 3, characterHp: [520, 1040, 1040, 1040, 1040],
       fullProfileSaveEnabled: false, strictEncounterAuthority: true, strictManualAccess: true,
       isolatedPositionTeleport: true, botTransport: "HTTP", scope: "one Main client plus four scripted accounts; not human multiplayer or balance acceptance"});
   } catch (error) {
@@ -138,7 +161,7 @@ async function startGuardianReview(outputDir) {
     if (Date.now() - lastPresence > 3000) {
       lastPresence = Date.now();
       for (let index = first; index < members.length; index++) {
-        await request(index, "/players/position", POSITION);
+        await request(index, "/players/position", POSITIONS[index]);
       }
     }
     for (let index = first; index < members.length; index++) {

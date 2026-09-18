@@ -8,17 +8,51 @@ No external backend, MySQL, real account, or arbitrary Godot flags are accepted.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+import threading
 import time
 from datetime import datetime, timezone
 
 import record_pet_management_owner_review as core
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@contextmanager
+def _keep_review_awake():
+    # A locked Mac may enter deep idle during a recording. Scope the assertion
+    # to this process; never wake the display, unlock it or change power settings.
+    if sys.platform != "darwin":
+        yield
+        return
+    guard = subprocess.Popen(["/usr/bin/caffeinate", "-is", "-w", str(os.getpid())],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        yield
+    finally:
+        if guard.poll() is None:
+            guard.terminate()
+        guard.wait(timeout=5)
+
+
+def _watch_backend(backend, run: Path, finished: threading.Event) -> None:
+    """Stop the owned client promptly if its required backend terminates."""
+    while not finished.wait(0.1):
+        exit_code = backend.poll()
+        if exit_code is None:
+            continue
+        (run / "backend-failure.json").write_text(json.dumps({
+            "status": "failed", "reason": "backend_exited_during_client_review",
+            "pid": backend.pid, "exitCode": exit_code,
+        }, indent=2))
+        (run / "stop").touch()
+        return
 
 
 def main() -> None:
@@ -63,6 +97,8 @@ def main() -> None:
                 "--earth-guardian-review", "--auth-server-url=" + fixture["baseUrl"], core.QA_LANE_ARGUMENT]
 
             def validate(log_path: Path) -> dict:
+                if (run / "backend-failure.json").exists() or backend.poll() is not None:
+                    raise RuntimeError(f"QA teammate backend exited during review; inspect {run / 'backend.log'}")
                 text = log_path.read_text()
                 if "GUARDIAN_REVIEW_COMPLETED" not in text or any(value in text for value in
                         ("SCRIPT ERROR:", "ERROR:", "leaked at exit", "resources still in use at exit")):
@@ -74,9 +110,16 @@ def main() -> None:
                 return {"status": "passed", "scope": "interactive Main review; subjective owner acceptance pending"}
 
             print(f"GUARDIAN_REVIEW_OUTPUT {run}", flush=True)
-            result = core._run_official_lane_godot_sequence(run_dir=run, godot=godot,
-                base_environment=environment, native_command=command, native_log=run / "client.log",
-                timeout_seconds=args.timeout_seconds, native_log_validator=validate)
+            finished = threading.Event()
+            watcher = threading.Thread(target=_watch_backend, args=(backend, run, finished), daemon=True)
+            watcher.start()
+            try:
+                result = core._run_official_lane_godot_sequence(run_dir=run, godot=godot,
+                    base_environment=environment, native_command=command, native_log=run / "client.log",
+                    timeout_seconds=args.timeout_seconds, native_log_validator=validate)
+            finally:
+                finished.set()
+                watcher.join(timeout=2)
             (run / "lifecycle-result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2, default=str))
         finally:
             if backend.poll() is None:
@@ -106,4 +149,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    with _keep_review_awake():
+        main()
