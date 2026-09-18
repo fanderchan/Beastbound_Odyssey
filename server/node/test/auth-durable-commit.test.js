@@ -29,6 +29,13 @@ const {
   mergeRuntimeObjectDelta,
 } = require("../src/auth/durable-mutation-state");
 
+// The village layout now blocks the old row-10 battle setup. Keep these
+// persistence fixtures on the shared walkable approach; production collision
+// validation stays enabled, so a future layout drift fails at setup explicitly.
+function runtimeBattlePosition(cellX) {
+  return {mapId: "firebud_village_gate", cellX, cellY: 17};
+}
+
 function deferred() {
   let resolve;
   let reject;
@@ -552,12 +559,8 @@ test("battle start persists one failure ticket while invitation and nonterminal 
   const seedService = createAuthService({store: base});
   const challenger = seedService.register({username: "runtimeinvitea", password: "test1234", displayName: "邀请A"});
   const opponent = seedService.register({username: "runtimeinviteb", password: "test1234", displayName: "邀请B"});
-  assert.equal(seedService.updatePlayerPosition(challenger.session.token, {
-    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
-  }).ok, true);
-  assert.equal(seedService.updatePlayerPosition(opponent.session.token, {
-    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
-  }).ok, true);
+  assert.equal(seedService.updatePlayerPosition(challenger.session.token, runtimeBattlePosition(10)).ok, true);
+  assert.equal(seedService.updatePlayerPosition(opponent.session.token, runtimeBattlePosition(11)).ok, true);
   const fullReplayWindow = base.load();
   fullReplayWindow.serviceEventSeq = 500;
   fullReplayWindow.serviceEvents = Array.from({length: 500}, (_, index) => ({
@@ -590,12 +593,12 @@ test("battle start persists one failure ticket while invitation and nonterminal 
   const challengerPosition = await fetchJson(`${harness.baseUrl}/players/position`, {
     method: "POST",
     headers: {authorization: `Bearer ${challenger.session.token}`},
-    body: JSON.stringify({mapId: "firebud_village_gate", cellX: 10, cellY: 10}),
+    body: JSON.stringify(runtimeBattlePosition(10)),
   });
   const opponentPosition = await fetchJson(`${harness.baseUrl}/players/position`, {
     method: "POST",
     headers: {authorization: `Bearer ${opponent.session.token}`},
-    body: JSON.stringify({mapId: "firebud_village_gate", cellX: 11, cellY: 10}),
+    body: JSON.stringify(runtimeBattlePosition(11)),
   });
   assert.equal(challengerPosition.ok, true);
   assert.equal(opponentPosition.ok, true);
@@ -692,9 +695,7 @@ test("runtime fast candidate matches the full normalizer for all runtime roots a
       }, {onError: () => {}}),
     });
     for (const [registration, cellX] of [[challenger, 10], [opponent, 11]]) {
-      assert.equal(service.updatePlayerPosition(registration.session.token, {
-        mapId: "firebud_village_gate", cellX, cellY: 10,
-      }).ok, true);
+      assert.equal(service.updatePlayerPosition(registration.session.token, runtimeBattlePosition(cellX)).ok, true);
     }
     return {service, saveCount: () => saveCount};
   };
@@ -779,12 +780,8 @@ test("runtime replay and trace survive uncovered async mutation rollback", async
       },
     }, {onError: () => {}}),
   });
-  assert.equal(service.updatePlayerPosition(challenger.session.token, {
-    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
-  }).ok, true);
-  assert.equal(service.updatePlayerPosition(opponent.session.token, {
-    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(challenger.session.token, runtimeBattlePosition(10)).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, runtimeBattlePosition(11)).ok, true);
   const invited = await service.invokeDurable("inviteToBattle", [
     challenger.session.token, {username: opponent.account.username},
   ], {actionId: "test_rollback_journal_invite"});
@@ -830,12 +827,8 @@ test("failed battle-start COMMIT publishes neither failure tickets nor private r
       },
     }, {onError: () => {}}),
   });
-  assert.equal(service.updatePlayerPosition(challenger.session.token, {
-    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
-  }).ok, true);
-  assert.equal(service.updatePlayerPosition(opponent.session.token, {
-    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(challenger.session.token, runtimeBattlePosition(10)).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, runtimeBattlePosition(11)).ok, true);
   const invited = await service.invokeDurable("inviteToBattle", [
     challenger.session.token, {username: opponent.account.username},
   ], {actionId: "test_start_commit_invite"});
@@ -886,12 +879,8 @@ test("battle random secret closes only after the terminal COMMIT succeeds", asyn
       },
     }, {onError: () => {}}),
   });
-  assert.equal(service.updatePlayerPosition(challenger.session.token, {
-    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
-  }).ok, true);
-  assert.equal(service.updatePlayerPosition(opponent.session.token, {
-    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(challenger.session.token, runtimeBattlePosition(10)).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, runtimeBattlePosition(11)).ok, true);
   const invited = await service.invokeDurable("inviteToBattle", [
     challenger.session.token, {username: opponent.account.username},
   ], {actionId: "test_rng_commit_invite"});
@@ -962,12 +951,8 @@ test("terminal battle command falls back from raw comparison to durable victory 
       },
     }, {onError: () => {}}),
   });
-  assert.equal(service.updatePlayerPosition(challenger.session.token, {
-    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
-  }).ok, true);
-  assert.equal(service.updatePlayerPosition(opponent.session.token, {
-    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(challenger.session.token, runtimeBattlePosition(10)).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, runtimeBattlePosition(11)).ok, true);
   const invited = await service.invokeDurable("inviteToBattle", [
     challenger.session.token,
     {username: opponent.account.username},
@@ -1106,12 +1091,8 @@ test("battle timeout maintenance remains a durable record settlement", async () 
       },
     }, {onError: () => {}}),
   });
-  assert.equal(service.updatePlayerPosition(challenger.session.token, {
-    mapId: "firebud_village_gate", cellX: 10, cellY: 10,
-  }).ok, true);
-  assert.equal(service.updatePlayerPosition(opponent.session.token, {
-    mapId: "firebud_village_gate", cellX: 11, cellY: 10,
-  }).ok, true);
+  assert.equal(service.updatePlayerPosition(challenger.session.token, runtimeBattlePosition(10)).ok, true);
+  assert.equal(service.updatePlayerPosition(opponent.session.token, runtimeBattlePosition(11)).ok, true);
   const invited = await service.invokeDurable("inviteToBattle", [
     challenger.session.token,
     {username: opponent.account.username},
