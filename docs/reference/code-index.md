@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **939** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **941** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -15,7 +15,7 @@
 | 32998 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
 | 28880 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27363 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
-| 19205 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
+| 19221 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
 | 8834 | [client/godot/scripts/progression/player_progress_model.gd](../../client/godot/scripts/progression/player_progress_model.gd) |
 | 8789 | [tools/build_pet_portrait.py](../../tools/build_pet_portrait.py) |
@@ -34,7 +34,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [main.gd](../../client/godot/scripts/main.gd) | 19205 |
+| [main.gd](../../client/godot/scripts/main.gd) | 19221 |
 
 </details>
 
@@ -256,7 +256,7 @@
 
 ## client/godot/scripts/qa
 
-<details><summary>83 个文件</summary>
+<details><summary>85 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -316,6 +316,8 @@
 | [npc_main_review_capture.gd](../../client/godot/scripts/qa/npc_main_review_capture.gd) | 719 |
 | [perf_probe_exit_controller.gd](../../client/godot/scripts/qa/perf_probe_exit_controller.gd) | 51 |
 | [perf_probe_process_scope_boundary.gd](../../client/godot/scripts/qa/perf_probe_process_scope_boundary.gd) | 29 |
+| [perf_probe_runtime_timing.gd](../../client/godot/scripts/qa/perf_probe_runtime_timing.gd) | 46 |
+| [perf_probe_runtime_timing_check.gd](../../client/godot/scripts/qa/perf_probe_runtime_timing_check.gd) | 44 |
 | [pet_action_art_preview.gd](../../client/godot/scripts/qa/pet_action_art_preview.gd) | 126 |
 | [pet_action_asset_check.gd](../../client/godot/scripts/qa/pet_action_asset_check.gd) | 1353 |
 | [pet_battle_review_lab.gd](../../client/godot/scripts/qa/pet_battle_review_lab.gd) | 1176 |
@@ -1082,7 +1084,7 @@
 | [tools/test/test_install_firebud_computer_use_evidence.py](../../tools/test/test_install_firebud_computer_use_evidence.py) | 90 |
 | [tools/test/test_install_pet_battle_bundle.py](../../tools/test/test_install_pet_battle_bundle.py) | 1330 |
 | [tools/test/test_map_performance_batch.py](../../tools/test/test_map_performance_batch.py) | 179 |
-| [tools/test/test_map_visual_evidence_builder.py](../../tools/test/test_map_visual_evidence_builder.py) | 1380 |
+| [tools/test/test_map_visual_evidence_builder.py](../../tools/test/test_map_visual_evidence_builder.py) | 1408 |
 | [tools/test/test_map_visual_release_tools.py](../../tools/test/test_map_visual_release_tools.py) | 484 |
 | [tools/test/test_pet_art_batch_audit.py](../../tools/test/test_pet_art_batch_audit.py) | 1793 |
 | [tools/test/test_pet_battle_export_gate.py](../../tools/test/test_pet_battle_export_gate.py) | 4927 |

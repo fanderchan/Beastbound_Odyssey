@@ -147,6 +147,7 @@ const MapVisualReviewShowcaseProfileCheck := preload(
 const WorldDepthLayerCheck := preload("res://scripts/qa/world_depth_layer_check.gd")
 const MapVisualReviewCapture := preload("res://scripts/qa/map_visual_review_capture.gd")
 const PerfProbeExitController := preload("res://scripts/qa/perf_probe_exit_controller.gd")
+const PerfProbeRuntimeTiming := preload("res://scripts/qa/perf_probe_runtime_timing.gd")
 const PerfProbeProcessScopeBoundary := preload(
 	"res://scripts/qa/perf_probe_process_scope_boundary.gd"
 )
@@ -1534,6 +1535,8 @@ var perf_probe_measurement_error: String = ""
 var perf_probe_process_scope_measurement_frames_total: int = 0
 var perf_probe_process_scope_sample_frames: int = 0
 var perf_probe_process_scope_frame_start_usec: int = 0
+var perf_probe_runtime_start_usec: int = 0
+var perf_probe_runtime_start_max_fps: int = 0
 var perf_probe_process_scope_frame_active: bool = false
 var perf_probe_process_scope_begin_node
 var perf_probe_process_scope_end_node
@@ -9259,6 +9262,9 @@ func _perf_probe_process_scope_begin() -> void:
 	if not perf_probe_pending_report.is_empty():
 		perf_probe_measurement_error = "process_scope_pending_report_crossed_frame"
 	perf_probe_process_scope_frame_start_usec = Time.get_ticks_usec()
+	if perf_probe_process_scope_measurement_frames_total == 0:
+		perf_probe_runtime_start_usec = perf_probe_process_scope_frame_start_usec
+		perf_probe_runtime_start_max_fps = Engine.max_fps
 	perf_probe_process_scope_frame_active = true
 
 
@@ -9266,9 +9272,10 @@ func _perf_probe_process_scope_end() -> void:
 	if not perf_probe_process_scope_frame_active:
 		return
 	perf_probe_process_scope_frame_active = false
+	var completed_at_usec := Time.get_ticks_usec()
 	var duration_usec := maxi(
 		0,
-		Time.get_ticks_usec() - perf_probe_process_scope_frame_start_usec
+		completed_at_usec - perf_probe_process_scope_frame_start_usec
 	)
 	if perf_probe_pending_report.is_empty():
 		perf_probe_totals["process_scope_total"] = int(
@@ -9293,7 +9300,7 @@ func _perf_probe_process_scope_end() -> void:
 		perf_probe_clean_exit_frames > 0
 		and perf_probe_measurement_frames_total >= perf_probe_clean_exit_frames
 	):
-		_print_completed_perf_probe_reports()
+		_print_completed_perf_probe_reports(completed_at_usec)
 		perf_probe_measurement_scope_complete = true
 
 
@@ -9332,13 +9339,20 @@ func _emit_pending_perf_probe_report() -> void:
 	perf_probe_pending_report.clear()
 
 
-func _print_completed_perf_probe_reports() -> void:
+func _print_completed_perf_probe_reports(completed_at_usec: int) -> void:
 	for report in perf_probe_completed_reports:
 		_print_perf_probe_report(
 			int(report.get("frames", 0)),
 			float(report.get("elapsed", 0.0)),
 			report.get("totals", {}) as Dictionary
 		)
+	print("perf probe runtime timing: %s" % JSON.stringify(PerfProbeRuntimeTiming.report(
+		perf_probe_completed_reports,
+		perf_probe_runtime_start_usec,
+		completed_at_usec,
+		perf_probe_runtime_start_max_fps,
+		Engine.max_fps
+	)))
 	perf_probe_completed_reports.clear()
 
 
@@ -9434,6 +9448,8 @@ func _reset_perf_probe_counters() -> void:
 	perf_probe_totals.clear()
 	perf_probe_process_scope_sample_frames = 0
 	perf_probe_process_scope_frame_start_usec = 0
+	perf_probe_runtime_start_usec = 0
+	perf_probe_runtime_start_max_fps = 0
 	perf_probe_process_scope_frame_active = false
 	perf_probe_pending_report.clear()
 	perf_probe_completed_reports.clear()

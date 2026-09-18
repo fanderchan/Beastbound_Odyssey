@@ -365,6 +365,34 @@ class PerformanceParserTests(unittest.TestCase):
         with self.assertRaisesRegex(builder.EvidenceError, "fewer than 8"):
             builder.parse_perf_run(record)
 
+    def test_runtime_timing_diagnostic_does_not_replace_fixed_step_samples(self) -> None:
+        record = _record_at_mean("map", "candidate", "idle", 1, 0.2)
+        expected = builder.parse_perf_run(record)
+        timing = {
+            "schemaVersion": 1,
+            "scope": "sampled_process_frames",
+            "status": "passed",
+            "frames": 480,
+            "wallElapsedSeconds": 0.02,
+            "simulationElapsedSeconds": 8.0,
+            "wallProcessFramesPerSecond": 24000.0,
+            "simulationProcessFramesPerSecond": 60.0,
+            "configuredMaxFpsAtStart": 30,
+            "configuredMaxFpsAtEnd": 30,
+        }
+        record["stdout"] = record["stdout"].replace(
+            "perf probe measurement complete: ",
+            "perf probe runtime timing: " + json.dumps(timing) + "\n"
+            + "perf probe measurement complete: ",
+        )
+        self.assertEqual(builder.parse_perf_run(record), expected)
+        record["stdout"] = "\n".join(
+            line for line in record["stdout"].splitlines()
+            if not line.startswith("perf probe: ")
+        ) + "\n"
+        with self.assertRaisesRegex(builder.EvidenceError, "measurement window"):
+            builder.parse_perf_run(record)
+
     def test_repeated_run_rejects_cleanup_window_sample(self) -> None:
         record = _record_at_mean("map", "candidate", "idle", 1, 0.2)
         leaked_sample = (
