@@ -302,9 +302,10 @@ static func composition_anchor_avoiding_rects_in_range(
 				blocked_rects,
 				subject_rects_at_base,
 				composition_viewport,
-				priority_subject_count
+				priority_subject_count,
+				best_score[0] if priority_subject_count > 0 else best_score[4]
 			)
-			if _composition_score_is_better(score, best_score):
+			if not score.is_empty() and _composition_score_is_better(score, best_score):
 				best_anchor = candidate_anchor
 				best_score = score
 	return best_anchor
@@ -468,8 +469,13 @@ static func _composition_score(
 	blocked_rects: Array[Rect2],
 	subject_rects_at_base: Array[Rect2],
 	viewport_rect: Rect2,
-	priority_subject_count: int = 0
+	priority_subject_count: int = 0,
+	leading_overlap_limit: float = INF
 ) -> Array[float]:
+	# Overlap counts only increase. Once the first varying score component loses
+	# beyond the comparison tolerance, later subjects cannot rescue this anchor.
+	# An empty score means rejected; the unbounded base score is always complete.
+	var overlap_limit := leading_overlap_limit + 0.01
 	var shift := anchor - base_anchor
 	var required_count := mini(maxi(0, priority_subject_count), subject_rects_at_base.size())
 	var priority_overlap_count := 0.0
@@ -493,7 +499,11 @@ static func _composition_score(
 			overlap_area += overlap.size.x * overlap.size.y
 			if subject_index < required_count:
 				priority_overlap_count += 1.0
+				if priority_overlap_count > overlap_limit:
+					return []
 				priority_overlap_area += overlap.size.x * overlap.size.y
+			elif required_count == 0 and overlap_count > overlap_limit:
+				return []
 		if viewport_rect.size.x <= 0.0 or viewport_rect.size.y <= 0.0:
 			continue
 		var visible := shifted.intersection(viewport_rect)

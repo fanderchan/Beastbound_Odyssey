@@ -10,7 +10,7 @@
 | 想知道一个功能该改哪里 | [架构与功能定位](architecture.md) |
 | 启动项目、开始下一轮开发 | [开发流程](development.md) |
 | 判断该跑哪些检查 | [测试指南](testing.md) |
-| 试玩最新守护战、查看效果和成品差距 | [Phase 549 后台加载与 GitHub 同步](phase_549_battle_texture_prefetch_and_github_sync.md)、[Phase 548 战斗优化与结算修复](phase_548_battle_hotpaths_and_authoritative_completion.md)、[Phase 547 守护战表现](phase_547_earth_guardian_battle_presentation.md)、[Phase 546 洞穴往返](phase_546_earth_vein_manual_playthrough.md) |
+| 试玩最新守护战、查看效果和成品差距 | [Phase 557 四层与五人守护战复验](phase_557_current_cave_and_guardian_review.md)、[Phase 547 试玩入口与守护战表现](phase_547_earth_guardian_battle_presentation.md)、[项目现状与剩余门槛](project-status.md) |
 | 继续整理大文件和技术债 | [维护清单](maintenance.md) |
 | 按文件找代码、数据、脚本 | [自动代码索引](reference/code-index.md) |
 | 查某项规则为何这样设计 | [自动阶段索引](reference/phase-index.md) |

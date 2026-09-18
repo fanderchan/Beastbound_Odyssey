@@ -408,6 +408,7 @@ func _run() -> void:
 			errors
 		)
 
+	var bounded_score_cases := _check_bounded_scores(errors)
 	var report := {
 		"ok": errors.is_empty(),
 		"errors": errors,
@@ -430,9 +431,84 @@ func _run() -> void:
 		"endpointPlayerSafeAnchor": endpoint_player_safe_anchor,
 		"clampedEndpointPlayerSafeAnchor": clamped_endpoint_safe_anchor,
 		"expandedMessageAnchor": expanded_message_anchor,
+		"boundedScoreCases": bounded_score_cases,
 	}
 	print("WORLD_CAMERA_SAFE_AREA_MODEL_CHECK: %s" % JSON.stringify(report))
 	quit(0 if errors.is_empty() else 1)
+
+
+func _check_bounded_scores(errors: Array[String]) -> Dictionary:
+	var blockers: Array[Rect2] = [Rect2(100.0, 100.0, 40.0, 40.0)]
+	var subjects: Array[Rect2] = [Rect2(110.0, 110.0, 20.0, 20.0)]
+	var viewport := Rect2(Vector2.ZERO, REFERENCE_VIEWPORT)
+	for priority_count in [0, 1]:
+		var at_tolerance := WorldCameraSafeAreaModel._composition_score(
+			Vector2.ZERO, Vector2.ZERO, blockers, subjects, viewport, priority_count, 0.99
+		)
+		var beyond_tolerance := WorldCameraSafeAreaModel._composition_score(
+			Vector2.ZERO, Vector2.ZERO, blockers, subjects, viewport, priority_count, 0.98
+		)
+		_expect(not at_tolerance.is_empty(), "评分差等于容差时不得提前淘汰镜头", errors)
+		_expect(beyond_tolerance.is_empty(), "评分首项超过容差时应停止无效候选计算", errors)
+	var priority_clear: Array[Rect2] = [Rect2(300.0, 300.0, 20.0, 20.0), subjects[0]]
+	_expect(
+		not WorldCameraSafeAreaModel._composition_score(
+			Vector2.ZERO, Vector2.ZERO, blockers, priority_clear, viewport, 1, 0.0
+		).is_empty(),
+		"普通物件重叠不得冒充优先人物的重叠而淘汰镜头",
+		errors
+	)
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 561
+	var rejected := 0
+	var fully_scored := 0
+	for case_index in range(512):
+		blockers.clear()
+		subjects.clear()
+		for blocker_index in range(rng.randi_range(0, 5)):
+			blockers.append(Rect2(
+				rng.randf_range(-100.0, 1200.0), rng.randf_range(-100.0, 650.0),
+				rng.randf_range(1.0, 300.0), rng.randf_range(1.0, 300.0)
+			))
+		for subject_index in range(rng.randi_range(0, 8)):
+			subjects.append(Rect2(
+				rng.randf_range(-150.0, 1300.0), rng.randf_range(-150.0, 750.0),
+				rng.randf_range(-30.0, 250.0), rng.randf_range(-30.0, 250.0)
+			))
+		var priority_count := rng.randi_range(-2, subjects.size() + 2)
+		var base := Vector2(640.0, 360.0)
+		var candidate := Vector2(rng.randf_range(120.0, 850.0), rng.randf_range(120.0, 570.0))
+		var incumbent := Vector2(rng.randf_range(120.0, 850.0), rng.randf_range(120.0, 570.0))
+		var case_viewport := Rect2() if case_index % 8 == 0 else viewport
+		var incumbent_score := WorldCameraSafeAreaModel._composition_score(
+			incumbent, base, blockers, subjects, case_viewport, priority_count
+		)
+		var complete_score := WorldCameraSafeAreaModel._composition_score(
+			candidate, base, blockers, subjects, case_viewport, priority_count
+		)
+		var bounded_score := WorldCameraSafeAreaModel._composition_score(
+			candidate, base, blockers, subjects, case_viewport, priority_count,
+			incumbent_score[0] if priority_count > 0 else incumbent_score[4]
+		)
+		if bounded_score.is_empty():
+			rejected += 1
+			_expect(
+				not WorldCameraSafeAreaModel._composition_score_is_better(
+					complete_score, incumbent_score
+				),
+				"提前淘汰的候选完整评分不得胜过当前镜头：%d" % case_index,
+				errors
+			)
+		else:
+			fully_scored += 1
+			_expect(
+				bounded_score == complete_score,
+				"保留的候选必须返回完全相同的九维评分：%d" % case_index,
+				errors
+			)
+	_expect(rejected > 0 and fully_scored > 0, "评分对照必须同时覆盖淘汰与保留分支", errors)
+	return {"randomCases": 512, "rejected": rejected, "fullyScored": fully_scored}
 
 
 func _formal_hud_blockers(viewport_size: Vector2) -> Array[Rect2]:

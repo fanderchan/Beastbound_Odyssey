@@ -482,8 +482,8 @@
 | [npc_art_release_evidence.gd](../../client/godot/scripts/world/npc_art_release_evidence.gd) | 1658 |
 | [quest_marker_visibility_model.gd](../../client/godot/scripts/world/quest_marker_visibility_model.gd) | 70 |
 | [server_encounter_permit_model.gd](../../client/godot/scripts/world/server_encounter_permit_model.gd) | 65 |
-| [world_camera_safe_area_model.gd](../../client/godot/scripts/world/world_camera_safe_area_model.gd) | 666 |
-| [world_camera_safe_area_model_check.gd](../../client/godot/scripts/world/world_camera_safe_area_model_check.gd) | 467 |
+| [world_camera_safe_area_model.gd](../../client/godot/scripts/world/world_camera_safe_area_model.gd) | 676 |
+| [world_camera_safe_area_model_check.gd](../../client/godot/scripts/world/world_camera_safe_area_model_check.gd) | 543 |
 | [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 714 |
 | [world_overlay_layer.gd](../../client/godot/scripts/world/world_overlay_layer.gd) | 302 |
 | [world_presentation_profile.gd](../../client/godot/scripts/world/world_presentation_profile.gd) | 138 |
