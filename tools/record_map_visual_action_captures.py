@@ -3288,9 +3288,45 @@ def _recover_incomplete_formal_transactions(
     if not run_base.is_dir():
         return
     for journal_path in sorted(run_base.glob("*/formal-install-transaction.json")):
-        if journal_path.is_symlink():
-            raise MapActionCaptureError("formal transaction journal 不得是符号链接")
+        _guard_repo_path(
+            journal_path,
+            allowed_root=run_base,
+            label="formal transaction journal",
+            expected="file",
+        )
+        if _formal_transaction_is_settled(journal_path):
+            continue
         _recover_formal_transaction(journal_path)
+
+
+def _formal_transaction_is_settled(journal_path: Path) -> bool:
+    """Recognize durable completion without re-auditing mutable destinations.
+
+    Later captures replace the installed set. A completed journal describes
+    history, while an interrupted install still owns its recovery obligations.
+    """
+    journal = _read_json_object(journal_path, label="formal transaction journal")
+    context = _validate_formal_transaction_journal(journal_path, journal)
+    if context["status"] == "rolled_back":
+        return True
+    if context["status"] != "committed":
+        return False
+    binding = journal["summaryBinding"]
+    pending = Path(binding["pendingPath"])
+    final = Path(binding["finalPath"])
+    # Unpublished commits, missing summaries and ambiguous publication still
+    # go through strict recovery, including current installed-byte validation.
+    if _path_exists_or_link(pending) or not _path_exists_or_link(final):
+        return False
+    _guard_repo_path(
+        final,
+        allowed_root=context["runRoot"],
+        label="formal transaction historical summary",
+        expected="file",
+    )
+    if _sha256(final) != binding["sha256"]:
+        raise MapActionCaptureError("formal transaction historical summary SHA 漂移")
+    return True
 
 
 def _next_archive_path(action_root: Path) -> Path:
@@ -4095,10 +4131,11 @@ def _record_under_bundle_lock(
         label="动作取证 bundle 运行根",
         expected="dir_or_missing",
     )
-    _recover_incomplete_formal_transactions(
-        run_base,
-        bundle_lock=bundle_lock,
-    )
+    if not scratch_only:
+        _recover_incomplete_formal_transactions(
+            run_base,
+            bundle_lock=bundle_lock,
+        )
     run_root = _absolute_lexical(run_base / run_id)
     _guard_repo_path(
         run_root,

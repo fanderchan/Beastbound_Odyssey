@@ -83,6 +83,8 @@ class RecordMapVisualActionCapturesTest(unittest.TestCase):
         repository_root: Path,
         *,
         had_old: bool,
+        run_root: Path | None = None,
+        staged_prefix: str = "new",
     ) -> tuple[
         str,
         Path,
@@ -94,7 +96,8 @@ class RecordMapVisualActionCapturesTest(unittest.TestCase):
         dict[Path, bytes],
     ]:
         bundle_id = "earth_vein_cave_visual_v1"
-        run_root = repository_root / ".run/evidence/run"
+        if run_root is None:
+            run_root = repository_root / ".run/evidence/run"
         staging_root = (
             run_root / "single-window-batch" / "staged-actions"
         )
@@ -121,18 +124,21 @@ class RecordMapVisualActionCapturesTest(unittest.TestCase):
                     install_dir / f"{action_kind}-capture.json"
                 )
                 staged_png.write_bytes(
-                    f"new:{map_id}:{action_kind}:png".encode()
+                    f"{staged_prefix}:{map_id}:{action_kind}:png".encode()
                 )
                 staged_report.write_bytes(
-                    f"new:{map_id}:{action_kind}:report".encode()
+                    f"{staged_prefix}:{map_id}:{action_kind}:report".encode()
                 )
                 if had_old:
                     for destination, suffix in (
                         (destination_png, "png"),
                         (destination_report, "report"),
                     ):
-                        payload = f"old:{map_id}:{action_kind}:{suffix}".encode()
-                        destination.write_bytes(payload)
+                        if not destination.exists():
+                            destination.write_bytes(
+                                f"old:{map_id}:{action_kind}:{suffix}".encode()
+                            )
+                        payload = destination.read_bytes()
                         old_bytes[destination] = payload
                 staged_targets.append((
                     map_id,
@@ -704,6 +710,34 @@ class RecordMapVisualActionCapturesTest(unittest.TestCase):
         source = TOOL_PATH.read_text(encoding="utf-8")
         self.assertIn('run_root / "scratch-actions"', source)
         self.assertIn('"scratchOnly": scratch_only', source)
+
+    def test_scratch_preflight_does_not_read_or_recover_formal_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bundle_id = "earth_vein_cave_visual_v1"
+            base = root / TOOL.DEFAULT_RUN_ROOT / bundle_id
+            broken = base / "old" / "formal-install-transaction.json"
+            broken.parent.mkdir(parents=True)
+            broken.write_bytes(b"not a valid journal")
+            # A known later preflight boundary stops before any Godot launch.
+            (base / "existing-run").mkdir()
+            guard = TOOL._guard_repo_path
+            with (
+                mock.patch.object(TOOL, "REPO_ROOT", root),
+                mock.patch.object(TOOL, "_guard_repo_path", side_effect=lambda path, **kw: guard(path, **{**kw, "anchor": root})),
+                mock.patch.object(TOOL.CORE, "_require_executable", return_value="fixture-godot"),
+                mock.patch.object(TOOL, "_process_start_identity", return_value="f" * 64),
+            ):
+                for scratch in (True, False):
+                    args = TOOL._parse_args([
+                        "--bundle-id", bundle_id, "--run-id", "existing-run",
+                        *(["--scratch-only"] if scratch else []),
+                    ])
+                    expected = "runId 根 必须尚不存在" if scratch else "formal transaction journal"
+                    with self.subTest(scratch=scratch), self.assertRaisesRegex(TOOL.MapActionCaptureError, expected):
+                        TOOL._record(args)
+                    self.assertEqual(broken.read_bytes(), b"not a valid journal")
+                    self.assertFalse((base / TOOL.BATCH_BUNDLE_LOCK_NAME).exists())
 
     def test_fresh_run_refuses_any_existing_formal_pair(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -1776,5 +1810,117 @@ class RecordMapVisualActionCapturesTest(unittest.TestCase):
                 first_destination.write_bytes(b"drifted-after-commit")
                 with self.assertRaises(TOOL.MapActionCaptureError):
                     TOOL._recover_formal_transaction(journal_path)
+
+    def _finish_history_fixture(self, root: Path, run_root: Path, outcome: str) -> Path:
+        existing = root / "client/godot/assets/maps/earth_vein_cave_visual_v1/evidence/runtime-actions"
+        bundle, run, staging, install, targets, installs, formal, _old = self._formal_transaction_fixture(
+            root, had_old=existing.exists(), run_root=run_root, staged_prefix=run_root.name,
+        )
+        journal_path, journal, _backups = TOOL._begin_formal_transaction(
+            bundle_id=bundle, run_root=run, staging_root=staging,
+            install_root=install, staged_targets=targets,
+            install_targets=installs, formal_targets=formal,
+        )
+        TOOL._install_formal_transaction(journal_path, journal)
+        if outcome == "rolled_back":
+            TOOL._recover_formal_transaction(journal_path)
+            return journal_path
+        pending = run / "capture-matrix.pending.json"
+        TOOL._write_durable_json(pending, self._valid_formal_summary(journal))
+        TOOL._commit_formal_transaction(journal_path, pending)
+        if outcome == "published":
+            TOOL._publish_committed_summary(journal_path)
+        return journal_path
+
+    def test_recovery_preserves_completed_history_after_a_later_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bundle = "earth_vein_cave_visual_v1"
+            base = root / TOOL.DEFAULT_RUN_ROOT / bundle
+            guard = TOOL._guard_repo_path
+            with (
+                mock.patch.object(TOOL, "REPO_ROOT", root),
+                mock.patch.object(TOOL, "_guard_repo_path", side_effect=lambda path, **kw: guard(path, **{**kw, "anchor": root})),
+                mock.patch.object(TOOL, "_process_start_identity", return_value="f" * 64),
+            ):
+                first = self._finish_history_fixture(root, base / "first", "published")
+                self._finish_history_fixture(root, base / "rollback", "rolled_back")
+                self._finish_history_fixture(root, base / "second", "published")
+                before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                with TOOL._bundle_recorder_lock(base, bundle_id=bundle) as lock:
+                    TOOL._recover_incomplete_formal_transactions(base, bundle_lock=lock)
+                self.assertEqual(before, {p: p.read_bytes() for p in root.rglob("*") if p.is_file()})
+                # Explicit verification of the obsolete installed set remains
+                # strict; the history scan is not evidence of current validity.
+                with self.assertRaises(TOOL.MapActionCaptureError):
+                    TOOL._recover_formal_transaction(first)
+
+    def test_history_scan_rejects_corrupt_or_ambiguous_completion(self) -> None:
+        for mutation in ("summary_bytes", "summary_symlink", "missing_summary", "dual_summary", "rollback_state", "run_symlink"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                bundle = "earth_vein_cave_visual_v1"
+                base = root / TOOL.DEFAULT_RUN_ROOT / bundle
+                guard = TOOL._guard_repo_path
+                with (
+                    mock.patch.object(TOOL, "REPO_ROOT", root),
+                    mock.patch.object(TOOL, "_guard_repo_path", side_effect=lambda path, **kw: guard(path, **{**kw, "anchor": root})),
+                    mock.patch.object(TOOL, "_process_start_identity", return_value="f" * 64),
+                ):
+                    outcome = "rolled_back" if mutation == "rollback_state" else "published"
+                    journal = self._finish_history_fixture(root, base / "capture", outcome)
+                    final = journal.parent / "capture-matrix.json"
+                    if mutation == "summary_bytes":
+                        final.write_bytes(final.read_bytes() + b"\n")
+                    elif mutation == "summary_symlink":
+                        target = final.with_suffix(".saved")
+                        final.rename(target)
+                        final.symlink_to(target)
+                    elif mutation == "missing_summary":
+                        final.unlink()
+                    elif mutation == "dual_summary":
+                        (journal.parent / "capture-matrix.pending.json").write_bytes(final.read_bytes())
+                    elif mutation == "run_symlink":
+                        relocated = root / "relocated-history"
+                        journal.parent.rename(relocated)
+                        journal.parent.symlink_to(relocated, target_is_directory=True)
+                    else:
+                        payload = json.loads(journal.read_text())
+                        payload["entries"][0]["state"] = "installed"
+                        TOOL._write_durable_json(journal, payload)
+                    before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file() and not p.is_symlink()}
+                    with TOOL._bundle_recorder_lock(base, bundle_id=bundle) as lock:
+                        with self.assertRaises(TOOL.MapActionCaptureError):
+                            TOOL._recover_incomplete_formal_transactions(base, bundle_lock=lock)
+                    self.assertEqual(before, {p: p.read_bytes() for p in root.rglob("*") if p.is_file() and not p.is_symlink()})
+
+    def test_history_scan_finishes_an_unpublished_commit_strictly(self) -> None:
+        for drift in (False, True):
+            with self.subTest(drift=drift), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                bundle = "earth_vein_cave_visual_v1"
+                base = root / TOOL.DEFAULT_RUN_ROOT / bundle
+                guard = TOOL._guard_repo_path
+                with (
+                    mock.patch.object(TOOL, "REPO_ROOT", root),
+                    mock.patch.object(TOOL, "_guard_repo_path", side_effect=lambda path, **kw: guard(path, **{**kw, "anchor": root})),
+                    mock.patch.object(TOOL, "_process_start_identity", return_value="f" * 64),
+                ):
+                    journal = self._finish_history_fixture(root, base / "capture", "pending")
+                    pending = journal.parent / "capture-matrix.pending.json"
+                    if drift:
+                        destination = Path(json.loads(journal.read_text())["entries"][0]["destination"])
+                        destination.write_bytes(b"unknown modification")
+                    with TOOL._bundle_recorder_lock(base, bundle_id=bundle) as lock:
+                        if drift:
+                            with self.assertRaises(TOOL.MapActionCaptureError):
+                                TOOL._recover_incomplete_formal_transactions(base, bundle_lock=lock)
+                            self.assertTrue(pending.is_file())
+                            self.assertFalse((journal.parent / "capture-matrix.json").exists())
+                        else:
+                            TOOL._recover_incomplete_formal_transactions(base, bundle_lock=lock)
+                            self.assertFalse(pending.exists())
+                            self.assertTrue((journal.parent / "capture-matrix.json").is_file())
+
 if __name__ == "__main__":
     unittest.main()

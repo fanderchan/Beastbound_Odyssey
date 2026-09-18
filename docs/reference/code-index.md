@@ -26,7 +26,7 @@
 | 5008 | [tools/audit_pet_portrait_catalog.py](../../tools/audit_pet_portrait_catalog.py) |
 | 4927 | [tools/test/test_pet_battle_export_gate.py](../../tools/test/test_pet_battle_export_gate.py) |
 | 4718 | [tools/test/test_build_pet_portrait.py](../../tools/test/test_build_pet_portrait.py) |
-| 4661 | [tools/record_map_visual_action_captures.py](../../tools/record_map_visual_action_captures.py) |
+| 4698 | [tools/record_map_visual_action_captures.py](../../tools/record_map_visual_action_captures.py) |
 
 ## client/godot/scripts
 
@@ -1018,7 +1018,7 @@
 | [record_hang_matchmaking_owner_review.py](../../tools/record_hang_matchmaking_owner_review.py) | 699 |
 | [record_hang_matchmaking_world_hud_owner_review.py](../../tools/record_hang_matchmaking_world_hud_owner_review.py) | 889 |
 | [record_map_awakened_owner_review.py](../../tools/record_map_awakened_owner_review.py) | 995 |
-| [record_map_visual_action_captures.py](../../tools/record_map_visual_action_captures.py) | 4661 |
+| [record_map_visual_action_captures.py](../../tools/record_map_visual_action_captures.py) | 4698 |
 | [record_market_awakened_owner_review.py](../../tools/record_market_awakened_owner_review.py) | 615 |
 | [record_npc_direction_review.py](../../tools/record_npc_direction_review.py) | 993 |
 | [record_pet_codex_awakened_owner_review.py](../../tools/record_pet_codex_awakened_owner_review.py) | 1303 |
@@ -1099,7 +1099,7 @@
 | [tools/test/test_record_hang_matchmaking_owner_review.py](../../tools/test/test_record_hang_matchmaking_owner_review.py) | 234 |
 | [tools/test/test_record_hang_matchmaking_world_hud_owner_review.py](../../tools/test/test_record_hang_matchmaking_world_hud_owner_review.py) | 516 |
 | [tools/test/test_record_map_awakened_owner_review.py](../../tools/test/test_record_map_awakened_owner_review.py) | 340 |
-| [tools/test/test_record_map_visual_action_captures.py](../../tools/test/test_record_map_visual_action_captures.py) | 1780 |
+| [tools/test/test_record_map_visual_action_captures.py](../../tools/test/test_record_map_visual_action_captures.py) | 1926 |
 | [tools/test/test_record_market_awakened_owner_review.py](../../tools/test/test_record_market_awakened_owner_review.py) | 228 |
 | [tools/test/test_record_npc_direction_review.py](../../tools/test/test_record_npc_direction_review.py) | 276 |
 | [tools/test/test_record_pet_codex_awakened_owner_review.py](../../tools/test/test_record_pet_codex_awakened_owner_review.py) | 785 |
