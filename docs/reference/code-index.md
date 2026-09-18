@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **931** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **934** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -12,10 +12,10 @@
 
 | 行数 | 文件 |
 | ---: | --- |
-| 32993 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
+| 32994 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
 | 28900 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27363 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
-| 19183 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
+| 19202 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
 | 8834 | [client/godot/scripts/progression/player_progress_model.gd](../../client/godot/scripts/progression/player_progress_model.gd) |
 | 8789 | [tools/build_pet_portrait.py](../../tools/build_pet_portrait.py) |
@@ -34,7 +34,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [main.gd](../../client/godot/scripts/main.gd) | 19183 |
+| [main.gd](../../client/godot/scripts/main.gd) | 19202 |
 
 </details>
 
@@ -60,7 +60,7 @@
 
 ## client/godot/scripts/battle
 
-<details><summary>34 个文件</summary>
+<details><summary>37 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -85,6 +85,9 @@
 | [battle_skill_feedback_renderer.gd](../../client/godot/scripts/battle/battle_skill_feedback_renderer.gd) | 848 |
 | [battle_spectator_ai_model.gd](../../client/godot/scripts/battle/battle_spectator_ai_model.gd) | 538 |
 | [battle_status_model.gd](../../client/godot/scripts/battle/battle_status_model.gd) | 170 |
+| [battle_texture_prefetch_check.gd](../../client/godot/scripts/battle/battle_texture_prefetch_check.gd) | 113 |
+| [battle_texture_prefetch_plan.gd](../../client/godot/scripts/battle/battle_texture_prefetch_plan.gd) | 49 |
+| [battle_texture_prefetcher.gd](../../client/godot/scripts/battle/battle_texture_prefetcher.gd) | 132 |
 | [battle_visual_presentation_model.gd](../../client/godot/scripts/battle/battle_visual_presentation_model.gd) | 308 |
 | [capture_tool_catalog.gd](../../client/godot/scripts/battle/capture_tool_catalog.gd) | 195 |
 | [mounted_battle_presentation_model.gd](../../client/godot/scripts/battle/mounted_battle_presentation_model.gd) | 118 |
@@ -125,7 +128,7 @@
 | 文件 | 行数 |
 | --- | ---: |
 | [pet.gd](../../client/godot/scripts/pet/pet.gd) | 227 |
-| [pet_action_asset_catalog.gd](../../client/godot/scripts/pet/pet_action_asset_catalog.gd) | 693 |
+| [pet_action_asset_catalog.gd](../../client/godot/scripts/pet/pet_action_asset_catalog.gd) | 707 |
 | [pet_animation_cache_check.gd](../../client/godot/scripts/pet/pet_animation_cache_check.gd) | 75 |
 | [pet_art_catalog.gd](../../client/godot/scripts/pet/pet_art_catalog.gd) | 350 |
 | [pet_battle_release_gate.gd](../../client/godot/scripts/pet/pet_battle_release_gate.gd) | 789 |
@@ -141,7 +144,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [character_action_asset_catalog.gd](../../client/godot/scripts/player/character_action_asset_catalog.gd) | 730 |
+| [character_action_asset_catalog.gd](../../client/godot/scripts/player/character_action_asset_catalog.gd) | 742 |
 | [mount_visual_profile_catalog.gd](../../client/godot/scripts/player/mount_visual_profile_catalog.gd) | 253 |
 | [mounted_character_2d.gd](../../client/godot/scripts/player/mounted_character_2d.gd) | 81 |
 | [mounted_character_asset_catalog.gd](../../client/godot/scripts/player/mounted_character_asset_catalog.gd) | 549 |
@@ -264,7 +267,7 @@
 | [audio_runtime_check.gd](../../client/godot/scripts/qa/audio_runtime_check.gd) | 301 |
 | [audio_settings_panel_check.gd](../../client/godot/scripts/qa/audio_settings_panel_check.gd) | 102 |
 | [audio_world_context_check.gd](../../client/godot/scripts/qa/audio_world_context_check.gd) | 44 |
-| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 32993 |
+| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 32994 |
 | [backpack_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture.gd) | 916 |
 | [backpack_awakened_owner_review_capture_check.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture_check.gd) | 218 |
 | [battle_command_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/battle_command_awakened_owner_review_capture.gd) | 435 |

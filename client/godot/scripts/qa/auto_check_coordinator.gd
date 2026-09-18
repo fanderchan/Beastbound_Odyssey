@@ -5527,6 +5527,7 @@ func _hang_matchmaking_check_real_left_click(control: Control) -> bool:
 
 func _run_auto_battle_formation_check() -> void:
 	var order_errors := preload("res://scripts/battle/battle_draw_order_check.gd").validation_errors()
+	order_errors.append_array(await preload("res://scripts/battle/battle_texture_prefetch_check.gd").run(host))
 	host.profile_save_enabled = false
 	host.player_profile = _qa_battle_profile()
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")

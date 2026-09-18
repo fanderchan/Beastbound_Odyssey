@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **533** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **534** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 549 | [Phase 549：战斗贴图后台预取与主分支同步](../phase_549_battle_texture_prefetch_and_github_sync.md) | 阶段记录 |
 | 548 | [Phase 548：战斗热点优化与联网结算边界](../phase_548_battle_hotpaths_and_authoritative_completion.md) | 阶段记录 |
 | 547 | [Phase 547：岩脉守护战表现、遮挡与倒地宠物指令](../phase_547_earth_guardian_battle_presentation.md) | 阶段记录 |
 | 546 | [Phase 546：洞穴实机往返与进化试炼提示](../phase_546_earth_vein_manual_playthrough.md) | 阶段记录 |

@@ -11,6 +11,7 @@ const WorldCameraSafeAreaModel := preload(
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleLayoutConstants := preload("res://scripts/battle/battle_layout_constants.gd")
 const BattleDrawOrder := preload("res://scripts/battle/battle_draw_order.gd")
+const BattleTexturePrefetcher := preload("res://scripts/battle/battle_texture_prefetcher.gd")
 const BattleLayoutSafeAreaModel := preload(
 	"res://scripts/battle/battle_layout_safe_area_model.gd"
 )
@@ -1521,6 +1522,7 @@ var map_world_bounds_cache_valid: bool = false
 var runtime_target_fps_cache: int = 0
 var canvas_text_font: Font
 var perf_probe_enabled: bool = false
+var battle_texture_prefetcher: Node
 var perf_probe_warmup_frames: int = 0
 var perf_probe_warmup_frames_remaining: int = 0
 var perf_probe_warmup_argument_error: String = ""
@@ -3806,6 +3808,7 @@ func _load_map(map_id: String, spawn_name: String = "default") -> bool:
 		_update_hud_text()
 	_refresh_quick_bar()
 	_sync_world_visual_layers(true)
+	_refresh_battle_texture_prefetch()
 	queue_redraw()
 	return true
 
@@ -9487,6 +9490,21 @@ func _mark_progress_ui_caches_dirty() -> void:
 	quest_marker_signature_cache = ""
 	quest_marker_state_cache.clear()
 	_invalidate_battle_auto_ui_cache()
+	_refresh_battle_texture_prefetch()
+
+
+func _refresh_battle_texture_prefetch() -> void:
+	if not account_authenticated or map_data.is_empty():
+		if battle_texture_prefetcher != null:
+			battle_texture_prefetcher.cancel()
+		return
+	if battle_active:
+		return
+	if battle_texture_prefetcher == null:
+		battle_texture_prefetcher = BattleTexturePrefetcher.new()
+		battle_texture_prefetcher.name = "BattleTexturePrefetcher"
+		add_child(battle_texture_prefetcher)
+	battle_texture_prefetcher.configure(map_data, player_profile)
 
 
 func _flush_profile_save_if_due(delta: float) -> void:
@@ -11131,6 +11149,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 			"remainingMs": (Time.get_ticks_usec() - pets_warmed) / 1000.0,
 			"totalMs": (Time.get_ticks_usec() - preparation_start) / 1000.0,
 			"actors": (next_battle_state.get("actors", []) as Array).size(),
+			"prefetch": battle_texture_prefetcher.snapshot() if battle_texture_prefetcher != null else {},
 		}))
 
 

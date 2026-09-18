@@ -88,7 +88,9 @@ godot --path client/godot --scene res://scenes/Main.tscn
 
 健康目标是启动后低个位数 CPU 和亚毫秒级常态 `process_total`；特定门禁的容忍阈值不是新的正常性能目标。更晚候选的性能矩阵和历史结果见对应 Phase，不能作为本轮重新测量的结果。
 
-20 actor 原生固定场景使用 `python3 tools/capture_battle_layout_perf.py`，包含静止、指令选择和跨帧目标切换。此夹具会显式启用普通 PC 的 VSync；通用 `--perf-probe` 的无 VSync 设置保留给其他探针。窗口失焦应保留失败回执并标明不可作合格前后对比，不要放宽焦点门禁。首次切战的 `battle preparation probe` 只写探针日志，区分人物、宠物和剩余准备时间；近期诊断及联网结算回归见 [Phase 548](phase_548_battle_hotpaths_and_authoritative_completion.md)。
+20 actor 原生固定场景使用 `python3 tools/capture_battle_layout_perf.py`，包含静止、指令选择和跨帧目标切换。此夹具会显式启用普通 PC 的 VSync；通用 `--perf-probe` 的无 VSync 设置保留给其他探针。窗口失焦应保留失败回执并标明不可作合格前后对比，不要放宽焦点门禁。首次切战的 `battle preparation probe` 只写探针日志，区分人物、宠物、剩余准备时间及后台预取队列。最新合格前台证据见 [Phase 549](phase_549_battle_texture_prefetch_and_github_sync.md)，联网结算回归见 [Phase 548](phase_548_battle_hotpaths_and_authoritative_completion.md)。
+
+`--auto-battle-formation-check` 也覆盖贴图预取的并发/总量限制、去重、切图清理、失败和权限边界。无窗口环境明确保留同步加载，避免 Dummy 渲染器线程纹理问题；headless PASS 不能代替后台读取的原生验证。使用 `tools/play_guardian_review.py --autoplay --timeout-seconds 360` 检查真实预取完成数、首次切战时间和完整权威结算，不能给脚本额外插入等待来制造预取已完成的结果。
 
 ## 发布门禁和收尾
 

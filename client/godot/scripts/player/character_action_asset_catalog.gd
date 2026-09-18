@@ -140,6 +140,18 @@ static func warm_battle(appearance_id: String = CHARACTER_ID) -> bool:
 	return warmed
 
 
+static func battle_texture_paths(appearance_id: String) -> PackedStringArray:
+	var resolved := resolve_appearance_id(appearance_id)
+	var paths := PackedStringArray()
+	if not supports_battle_appearance(resolved):
+		return paths
+	for view in VIEWS:
+		for action in battle_actions_for_appearance(resolved):
+			for index in range(1, frame_count_for_action(action, resolved) + 1):
+				paths.append(_frame_path(resolved, view, action, index))
+	return paths
+
+
 static func world_view_for_direction(facing: String) -> String:
 	return WorldVisualDirectionContract.normalize_direction(facing)
 

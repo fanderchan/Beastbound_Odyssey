@@ -228,6 +228,20 @@ static func warm_battle_form(form_id: String) -> bool:
 	return warmed
 
 
+static func battle_texture_paths(form_id: String) -> PackedStringArray:
+	var normalized := form_id.strip_edges()
+	var paths := PackedStringArray()
+	# Prefetch is optional and must never open a pending form or an external
+	# review overlay. The normal access checks still run when textures are used.
+	if not supports_form(normalized) or is_standalone_review_overlay_enabled(normalized):
+		return paths
+	for view in VIEWS:
+		for action in _battle_actions_for_form(normalized):
+			for index in range(1, frame_count_for_action(normalized, action) + 1):
+				paths.append(_frame_path(normalized, view, action, index))
+	return paths
+
+
 static func warm_battle_state(state: Dictionary) -> bool:
 	var found_supported_form := false
 	var all_warmed := true
