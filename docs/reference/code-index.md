@@ -13,7 +13,7 @@
 | 行数 | 文件 |
 | ---: | --- |
 | 33009 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
-| 28886 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
+| 28887 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27376 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
 | 19221 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
@@ -85,8 +85,8 @@
 | [battle_skill_feedback_renderer.gd](../../client/godot/scripts/battle/battle_skill_feedback_renderer.gd) | 848 |
 | [battle_spectator_ai_model.gd](../../client/godot/scripts/battle/battle_spectator_ai_model.gd) | 538 |
 | [battle_status_model.gd](../../client/godot/scripts/battle/battle_status_model.gd) | 170 |
-| [battle_texture_prefetch_check.gd](../../client/godot/scripts/battle/battle_texture_prefetch_check.gd) | 113 |
-| [battle_texture_prefetch_plan.gd](../../client/godot/scripts/battle/battle_texture_prefetch_plan.gd) | 49 |
+| [battle_texture_prefetch_check.gd](../../client/godot/scripts/battle/battle_texture_prefetch_check.gd) | 156 |
+| [battle_texture_prefetch_plan.gd](../../client/godot/scripts/battle/battle_texture_prefetch_plan.gd) | 71 |
 | [battle_texture_prefetcher.gd](../../client/godot/scripts/battle/battle_texture_prefetcher.gd) | 132 |
 | [battle_visual_presentation_model.gd](../../client/godot/scripts/battle/battle_visual_presentation_model.gd) | 308 |
 | [capture_tool_catalog.gd](../../client/godot/scripts/battle/capture_tool_catalog.gd) | 195 |
@@ -418,7 +418,7 @@
 | [market_awakened_visual_skin.gd](../../client/godot/scripts/ui/market_awakened_visual_skin.gd) | 130 |
 | [npc_dialog_presenter.gd](../../client/godot/scripts/ui/npc_dialog_presenter.gd) | 57 |
 | [npc_hover_identity_presenter.gd](../../client/godot/scripts/ui/npc_hover_identity_presenter.gd) | 189 |
-| [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28886 |
+| [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28887 |
 | [panel_registry.gd](../../client/godot/scripts/ui/panel_registry.gd) | 63 |
 | [password_visibility_button.gd](../../client/godot/scripts/ui/password_visibility_button.gd) | 53 |
 | [pet_codex_acquisition_route_catalog.gd](../../client/godot/scripts/ui/pet_codex_acquisition_route_catalog.gd) | 213 |

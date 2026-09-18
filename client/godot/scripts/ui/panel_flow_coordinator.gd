@@ -10747,6 +10747,7 @@ func _apply_online_position_batch(event: Dictionary) -> void:
 func _sync_online_presence_cache_players() -> void:
 	var next_remote_players: Array[Dictionary] = online_presence_cache_model.players()
 	online_position_remote_players = next_remote_players
+	host._refresh_battle_texture_prefetch()
 	var next_signature = _online_position_draw_signature(next_remote_players)
 	if next_signature != online_position_draw_signature_cache:
 		online_position_draw_signature_cache = next_signature

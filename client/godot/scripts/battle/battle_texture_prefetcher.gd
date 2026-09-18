@@ -20,11 +20,11 @@ func _init() -> void:
 	set_process(false)
 
 
-func configure(map_data: Dictionary, profile: Dictionary) -> void:
+func configure(map_data: Dictionary, profile: Dictionary, nearby_players: Array = []) -> void:
 	if not background_loading_supported():
 		cancel()
 		return
-	var subject := Plan.subjects(map_data, profile)
+	var subject := Plan.subjects(map_data, profile, nearby_players)
 	var signature := JSON.stringify(subject)
 	if signature == _signature:
 		return

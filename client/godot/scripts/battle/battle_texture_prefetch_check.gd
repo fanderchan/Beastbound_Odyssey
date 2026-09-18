@@ -32,7 +32,7 @@ static func run(host) -> Array[String]:
 	var errors: Array[String] = []
 	var fake := FakeLoader.new()
 	var paths := PackedStringArray()
-	for index in range(1600):
+	for index in range(Plan.MAX_RESOURCES + 64):
 		paths.append("res://assets/prefetch-check-%d.png" % index)
 	paths.append(paths[0])
 	fake.set_paths(paths)
@@ -79,6 +79,7 @@ static func run(host) -> Array[String]:
 	var all_paths := Plan.paths_for(subject)
 	if all_paths.size() != CharacterArt.battle_texture_paths("").size() + 360:
 		errors.append("prefetch did not enumerate existing authored frames")
+	_append_nearby_character_errors(errors, map_data, profile)
 	Art.disable_qa_preview_form(pending)
 	if Plan.subjects(map_data, profile).forms.has(pending) or not Art.battle_texture_paths(pending).is_empty():
 		errors.append("cached prefetch plan bypassed a closed pet gate")
@@ -111,3 +112,45 @@ static func run(host) -> Array[String]:
 	await host.get_tree().process_frame
 	print("battle texture prefetch check: status=%s engine=%s errors=%s" % ["passed" if errors.is_empty() else "failed", str(report), str(errors)])
 	return errors
+
+
+static func _append_nearby_character_errors(errors: Array[String], source_map: Dictionary, profile: Dictionary) -> void:
+	var map_data := source_map.duplicate(true)
+	map_data["id"] = "prefetch_map"
+	var nearby: Array = []
+	for appearance in CharacterArt.appearance_ids():
+		nearby.append({"appearanceId": appearance, "position": {"mapId": "prefetch_map", "cellX": 5}})
+	nearby.append(nearby[1].duplicate(true))
+	nearby.append({"appearanceId": "invalid", "position": {"mapId": "elsewhere"}})
+	nearby.append({"position": "malformed"})
+	var planned := Plan.subjects(map_data, profile, nearby)
+	var expected_paths := PackedStringArray()
+	for appearance in CharacterArt.appearance_ids():
+		expected_paths.append_array(CharacterArt.battle_texture_paths(appearance))
+	var paths := Plan.paths_for(planned)
+	if planned.appearances.size() != 4 or paths.size() != expected_paths.size() + 360:
+		errors.append("nearby character prefetch lost or duplicated authored frames")
+	for path in expected_paths:
+		if not paths.has(path):
+			errors.append("nearby character frame omitted: " + path)
+			break
+	var fake := FakeLoader.new()
+	fake.configure(map_data, profile, nearby)
+	fake.pump()
+	var loading := fake.snapshot()
+	nearby.reverse()
+	for value in nearby:
+		if value.get("position") is Dictionary:
+			value.position["cellX"] = 9
+	fake.configure(map_data, profile, nearby)
+	if fake.snapshot() != loading:
+		errors.append("nearby movement or roster ordering restarted the prefetch queue")
+	var only_elsewhere := [{"appearanceId": "frost_whisper_v1", "position": {"mapId": "elsewhere"}}]
+	var alone := Plan.subjects(map_data, profile, only_elsewhere)
+	if alone.appearances != [CharacterArt.CHARACTER_ID]:
+		errors.append("prefetch included characters from another map")
+	fake.configure(map_data, profile, only_elsewhere)
+	if fake.snapshot().resources != Plan.paths_for(alone).size():
+		errors.append("departed character textures remained in the prefetch plan")
+	fake.cancel()
+	fake.free()

@@ -9530,7 +9530,7 @@ func _refresh_battle_texture_prefetch() -> void:
 		battle_texture_prefetcher = BattleTexturePrefetcher.new()
 		battle_texture_prefetcher.name = "BattleTexturePrefetcher"
 		add_child(battle_texture_prefetcher)
-	battle_texture_prefetcher.configure(map_data, player_profile)
+	battle_texture_prefetcher.configure(map_data, player_profile, online_position_remote_players)
 
 
 func _flush_profile_save_if_due(delta: float) -> void:
