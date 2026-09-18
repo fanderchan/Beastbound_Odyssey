@@ -1,6 +1,7 @@
 extends Node2D
 
 const WorldVisualGrade := preload("res://scripts/world/world_visual_grade.gd")
+const InteractionOcclusionModel := preload("res://scripts/world/interaction_occlusion_model.gd")
 
 const GROUP_META := &"world_depth_group"
 const STABLE_ID_META := &"world_depth_stable_id"
@@ -37,6 +38,10 @@ var _registered_actors: Dictionary = {}
 var _order_dirty: bool = true
 var _last_actor_depth_signature: String = ""
 var _last_order_signature: String = ""
+var _occlusion_candidates: Array[Dictionary] = []
+var _occlusion_rect := Rect2()
+var _occlusion_depth := INF
+var _occlusion_dirty := true
 
 
 func _ready() -> void:
@@ -46,6 +51,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if visible:
 		refresh_depth_order()
+		refresh_interaction_occlusion()
 
 
 func register_actor(stable_id: String, actor: Node2D, foot_offset_y: float = 0.0) -> bool:
@@ -60,6 +66,7 @@ func register_actor(stable_id: String, actor: Node2D, foot_offset_y: float = 0.0
 	actor.set_meta(TIE_PRIORITY_META, ACTOR_TIE_PRIORITY)
 	_registered_actors[normalized_id] = actor
 	_order_dirty = true
+	_occlusion_dirty = true
 	return true
 
 
@@ -213,6 +220,10 @@ static func debug_sorted_ids(entries: Array[Dictionary]) -> Array[String]:
 
 
 func _clear_group(group_id: String) -> void:
+	_occlusion_candidates = _occlusion_candidates.filter(func(entry: Dictionary) -> bool:
+		return str(entry.get("group", "")) != group_id
+	)
+	_occlusion_dirty = true
 	var values: Variant = _group_nodes.get(group_id, [])
 	if values is Array:
 		for value in values as Array:
@@ -277,6 +288,36 @@ func _add_map_object(root: Node2D, command: Dictionary) -> void:
 		color_modulate as Color if color_modulate is Color else Color.WHITE,
 		command.get("visualGrade", {}) as Dictionary
 	)
+	if str(command.get("collisionRole", "")) == "interaction":
+		_occlusion_candidates.append({
+			"node": root, "rect": draw_rect,
+			"depth": float(command.get("depthY", root.position.y)),
+			"group": str(root.get_meta(GROUP_META, "")),
+		})
+
+
+func refresh_interaction_occlusion() -> void:
+	if _occlusion_candidates.is_empty():
+		return
+	var subject: Node2D = _registered_actors.get("actor:player") as Node2D
+	var rect := Rect2()
+	var depth := INF
+	if is_instance_valid(subject) and subject.visible and subject.has_method("get_occlusion_world_rect"):
+		rect = subject.call("get_occlusion_world_rect") as Rect2
+		depth = subject.global_position.y + _actor_foot_offset(subject)
+	if not _occlusion_dirty and rect == _occlusion_rect and is_equal_approx(depth, _occlusion_depth):
+		return
+	_occlusion_rect = rect
+	_occlusion_depth = depth
+	_occlusion_dirty = false
+	# Only cached interactive props are visited, never the full map/catalog.
+	for candidate in _occlusion_candidates:
+		var object_node: Node2D = candidate.get("node") as Node2D
+		if not is_instance_valid(object_node):
+			continue
+		object_node.modulate.a = InteractionOcclusionModel.alpha_for(
+			rect, depth, candidate.get("rect") as Rect2, float(candidate.get("depth"))
+		)
 
 
 func _add_npc(root: Node2D, command: Dictionary) -> void:

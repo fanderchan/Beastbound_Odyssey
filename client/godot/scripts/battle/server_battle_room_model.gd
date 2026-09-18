@@ -314,6 +314,28 @@ static func current_account_submitted(room: Dictionary, session: Dictionary) -> 
 	return true
 
 
+static func current_account_command_owner(room: Dictionary, session: Dictionary) -> String:
+	var battle := room.get("battle", {}) as Dictionary
+	if str(battle.get("phase", "")) != "command":
+		return ""
+	var account_id := str(session.get("accountId", "")).strip_edges()
+	if account_id == "":
+		return ""
+	var required := _account_required_actor_ids(battle, account_id)
+	var submitted: Array = battle.get("submittedActorIds", [])
+	var pet_pending := false
+	for value in battle.get("actors", []):
+		if not value is Dictionary:
+			continue
+		var actor_id := str(value.get("actorId", ""))
+		if not required.has(actor_id) or submitted.has(actor_id):
+			continue
+		if _server_actor_kind(value) == "player":
+			return "player"
+		pet_pending = pet_pending or _server_actor_kind(value) == "pet"
+	return "pet" if pet_pending else ""
+
+
 static func captured_wild_pet_count_for_account(room: Dictionary, session: Dictionary) -> int:
 	var account_id := str(session.get("accountId", "")).strip_edges()
 	if account_id == "":

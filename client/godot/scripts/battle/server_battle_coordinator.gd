@@ -852,7 +852,7 @@ func sync_room_scene(force_start: bool = false) -> bool:
 		if preserve_local_command_state:
 			_restore_local_command_state(previous_command_state)
 		else:
-			host._set_battle_command_owner("player")
+			host._set_battle_command_owner(_default_command_owner(room))
 			host.battle_target_mode = "enemy"
 			host.battle_pending_player_command.clear()
 			host.battle_pending_pet_command.clear()
@@ -880,7 +880,14 @@ func sync_room_scene(force_start: bool = false) -> bool:
 		host.queue_redraw()
 		return true
 	host._start_battle(next_state)
+	if _default_command_owner(room) == "pet":
+		host._open_server_battle_pet_command()
 	return true
+
+
+func _default_command_owner(room: Dictionary) -> String:
+	var owner := ServerBattleRoomModel.current_account_command_owner(room, host.current_account_session)
+	return "pet" if owner == "pet" else "player"
 
 
 func _local_command_state_snapshot() -> Dictionary:
@@ -1045,7 +1052,8 @@ func sync_command_owner_from_room() -> bool:
 		host._sync_battle_buttons()
 		host._layout_hud()
 		return true
-	if host.battle_command_owner == "player" and self_player_submitted() and needs_self_pet_command():
+	var command_room := host.server_battle_state.get("room", {}) as Dictionary
+	if host.battle_command_owner == "player" and _default_command_owner(command_room) == "pet" and needs_self_pet_command():
 		host._open_server_battle_pet_command()
 		return true
 	return false

@@ -7,6 +7,19 @@ const RED_CLAY_ID := "red_clay"
 const OWNER_REVIEW_ARENA_ID_KEY := "battleArenaOwnerReviewId"
 const OWNER_REVIEW_BUNDLE_ID := "battle_review_arenas_v1"
 const OWNER_REVIEW_STATUS := "pending"
+const EARTH_VEIN_SANCTUM_ID := "earth_vein_sanctum"
+const EARTH_GUARDIAN_REVIEW_FLAG := "--earth-guardian-review"
+
+# The exploration map and the released arena rotation remain unchanged.
+# This exact encounter candidate is available only inside the isolated playtest.
+const ENCOUNTER_REVIEW_ARENAS: Array[Dictionary] = [{
+	"id": EARTH_VEIN_SANCTUM_ID,
+	"name": "岩脉圣所",
+	"path": "res://assets/battle/earth_vein_guardian_v1/runtime/earth_vein_sanctum.png",
+	"sha256": "8f18c237aa6e1ff0edfaa18d5c4ddcbe6a85950e2b6bd497b557f37e470d0f72",
+	"bundleId": "earth_vein_guardian_arena_v1",
+	"readabilityOverlay": Color(0.035, 0.025, 0.018, 0.10),
+}]
 
 const ARENAS: Array[Dictionary] = [
 	{
@@ -40,6 +53,30 @@ const ARENAS: Array[Dictionary] = [
 ]
 
 static var _texture_cache: Dictionary = {}
+static var _earth_guardian_review_enabled := false
+
+
+static func enable_earth_guardian_review_from_cli() -> bool:
+	disable_earth_guardian_review()
+	var args := OS.get_cmdline_user_args()
+	if (
+		not OS.is_debug_build()
+		or not args.has(EARTH_GUARDIAN_REVIEW_FLAG)
+		or not args.has("--beastbound-qa-user-data-lane=automation")
+		or OS.get_user_data_dir().get_file() != "BeastboundOdysseyQA_Automation"
+	):
+		return false
+	var arena := _arena_for_id(EARTH_VEIN_SANCTUM_ID)
+	if FileAccess.get_sha256(str(arena.get("path", ""))) != str(arena.get("sha256", "")):
+		return false
+	var texture := _texture_for_arena(arena, true)
+	_earth_guardian_review_enabled = texture != null and texture.get_size() == Vector2(1280, 720)
+	return _earth_guardian_review_enabled
+
+
+static func disable_earth_guardian_review() -> void:
+	_earth_guardian_review_enabled = false
+	_texture_cache.erase(EARTH_VEIN_SANCTUM_ID)
 
 
 static func arena_ids() -> Array[String]:
@@ -113,7 +150,7 @@ static func evidence_for_state(
 		"name": str(arena.get("name", "")),
 		"path": str(arena.get("path", "")),
 		"sha256": str(arena.get("sha256", "")),
-		"bundleId": OWNER_REVIEW_BUNDLE_ID,
+		"bundleId": str(arena.get("bundleId", OWNER_REVIEW_BUNDLE_ID)),
 		"ownerReviewStatus": OWNER_REVIEW_STATUS,
 		"runtimeEnabled": false,
 		"releaseApproved": false,
@@ -126,7 +163,7 @@ static func validation_errors() -> Array[String]:
 	var seen := {}
 	if ARENAS.size() < 4:
 		errors.append("GM观战战场少于4种")
-	for arena in ARENAS:
+	for arena in ARENAS + ENCOUNTER_REVIEW_ARENAS:
 		var arena_id := str(arena.get("id", "")).strip_edges()
 		if arena_id == "":
 			errors.append("GM观战战场存在空ID")
@@ -170,15 +207,39 @@ static func _arena_id_for_state(
 	state: Dictionary,
 	allow_owner_review_preview: bool
 ) -> String:
+	if (
+		_earth_guardian_review_enabled
+		and _is_earth_guardian_encounter(state)
+	):
+		return EARTH_VEIN_SANCTUM_ID
 	if bool(state.get("reviewLab", false)):
-		return str(state.get("reviewArenaId", ""))
+		var review_id := str(state.get("reviewArenaId", ""))
+		return "" if review_id == EARTH_VEIN_SANCTUM_ID and not _earth_guardian_review_enabled else review_id
 	if allow_owner_review_preview:
-		return str(state.get(OWNER_REVIEW_ARENA_ID_KEY, ""))
+		var review_id := str(state.get(OWNER_REVIEW_ARENA_ID_KEY, ""))
+		return "" if review_id == EARTH_VEIN_SANCTUM_ID and not _earth_guardian_review_enabled else review_id
 	return ""
 
 
+static func _is_earth_guardian_encounter(state: Dictionary) -> bool:
+	if str(state.get("sourceEncounterGroupId", "")) == "earth_vein_guardian_group":
+		return true
+	# Room.entry is the server-authoritative location. No client field or new
+	# protocol payload is needed to choose the cave floor during online replay.
+	var room_value = state.get("serverRoom", {})
+	if not (room_value is Dictionary):
+		return false
+	var room := room_value as Dictionary
+	var entry_value = room.get("entry", {})
+	return (
+		str(room.get("mode", "")) == "party_pve"
+		and entry_value is Dictionary
+		and str((entry_value as Dictionary).get("mapId", "")) == "earth_vein_cave_f4"
+	)
+
+
 static func _arena_for_id(arena_id: String) -> Dictionary:
-	for arena in ARENAS:
+	for arena in ARENAS + ENCOUNTER_REVIEW_ARENAS:
 		if str(arena.get("id", "")) == arena_id:
 			return arena
 	return {}

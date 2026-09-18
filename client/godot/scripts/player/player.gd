@@ -389,6 +389,15 @@ func get_visual_world_rect() -> Rect2:
 	)
 
 
+func get_occlusion_world_rect() -> Rect2:
+	# Geometry only: no image readback or first-frame alpha scan on movement.
+	if riding_form_id != "":
+		return get_visual_world_rect()
+	if formal_asset_enabled and formal_sprite != null and formal_sprite.texture != null:
+		return _node_local_rect_to_world(formal_sprite, formal_sprite.get_rect())
+	return _node_local_rect_to_world(self, Rect2(Vector2(-22.0, -21.0), Vector2(44.0, 54.0)))
+
+
 func _formal_action_source_bounds() -> Rect2i:
 	var cache_key := "%s|%s|%s" % [appearance_id, facing_key, animation_state]
 	if visual_source_bounds_cache.has(cache_key):

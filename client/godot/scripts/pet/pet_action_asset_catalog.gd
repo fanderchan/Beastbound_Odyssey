@@ -56,6 +56,9 @@ const WORLD_ACTION_FPS := {
 
 static var _texture_cache: Dictionary = {}
 static var _metadata_cache: Dictionary = {}
+static var _root_cache: Dictionary = {}
+static var _battle_actions_cache: Dictionary = {}
+static var _animation_specs_cache: Dictionary = {}
 static var _world_warmed: Dictionary = {}
 static var _battle_warmed: Dictionary = {}
 static var _qa_preview_forms: Dictionary = {}
@@ -147,16 +150,14 @@ static func enable_qa_preview_form(form_id: String) -> bool:
 	if PetArtCatalog.form_record(normalized).is_empty() or _bundle_metadata(normalized).is_empty():
 		return false
 	_qa_preview_forms[normalized] = true
-	_world_warmed.erase(normalized)
-	_battle_warmed.erase(normalized)
+	_clear_form_caches(normalized)
 	return true
 
 
 static func disable_qa_preview_form(form_id: String) -> void:
 	var normalized := form_id.strip_edges()
 	_qa_preview_forms.erase(normalized)
-	_world_warmed.erase(normalized)
-	_battle_warmed.erase(normalized)
+	_clear_form_caches(normalized)
 
 
 static func is_qa_preview_enabled(form_id: String) -> bool:
@@ -165,7 +166,7 @@ static func is_qa_preview_enabled(form_id: String) -> bool:
 
 static func supports_form(form_id: String) -> bool:
 	var normalized := form_id.strip_edges()
-	return _battle_access_allowed(normalized) and not battle_actions_for_form(normalized).is_empty()
+	return _battle_access_allowed(normalized) and not _battle_actions_for_form(normalized).is_empty()
 
 
 static func supports_world_form(form_id: String) -> bool:
@@ -174,11 +175,19 @@ static func supports_world_form(form_id: String) -> bool:
 
 
 static func battle_actions_for_form(form_id: String) -> Array[String]:
+	# Callers own the public result; internal readers share the prepared list.
+	return _battle_actions_for_form(form_id).duplicate()
+
+
+static func _battle_actions_for_form(form_id: String) -> Array[String]:
 	var normalized := form_id.strip_edges()
+	if _battle_actions_cache.has(normalized):
+		return _battle_actions_cache[normalized]
 	if normalized == FORM_ID and not is_qa_preview_enabled(normalized):
 		# Keep the currently released seven-action canary stable while its formal
 		# twelve-action repaint is still owner-pending in the same asset directory.
-		return BATTLE_ACTIONS.duplicate()
+		_battle_actions_cache[normalized] = BATTLE_ACTIONS.duplicate()
+		return _battle_actions_cache[normalized]
 	var result: Array[String] = []
 	var specs := _action_specs(normalized)
 	for action in FULL_BATTLE_ACTIONS:
@@ -188,16 +197,13 @@ static func battle_actions_for_form(form_id: String) -> Array[String]:
 	# The canary predates the twelve-action contract and intentionally remains a
 	# seven-action compatibility bundle until its own formal repaint lands.
 	if normalized == FORM_ID and result.is_empty():
-		return BATTLE_ACTIONS.duplicate()
+		result = BATTLE_ACTIONS.duplicate()
+	_battle_actions_cache[normalized] = result
 	return result
 
 
 static func frame_count_for_action(form_id: String, action: String) -> int:
-	var normalized_action := _normalized_action(form_id, action)
-	var spec = _action_specs(form_id).get(normalized_action, {})
-	if spec is Dictionary:
-		return maxi(1, int((spec as Dictionary).get("frameCount", FRAME_COUNTS.get(normalized_action, 1))))
-	return maxi(1, int(FRAME_COUNTS.get(normalized_action, 1)))
+	return int(_animation_spec(form_id, action).count)
 
 
 static func warm_world_form(form_id: String) -> bool:
@@ -225,11 +231,15 @@ static func warm_battle_form(form_id: String) -> bool:
 static func warm_battle_state(state: Dictionary) -> bool:
 	var found_supported_form := false
 	var all_warmed := true
+	var visited := {}
 	for value in state.get("actors", []):
 		if not (value is Dictionary):
 			continue
 		var actor := value as Dictionary
 		var form_id := str(actor.get("formId", actor.get("templateId", ""))).strip_edges()
+		if visited.has(form_id):
+			continue
+		visited[form_id] = true
 		if supports_form(form_id):
 			found_supported_form = true
 			all_warmed = warm_battle_form(form_id) and all_warmed
@@ -280,7 +290,7 @@ static func action_for_battle_state(action_state: String, form_id: String = FORM
 		desired = "dodge"
 	elif ["escape", "switch_pet", "switch_in"].has(normalized):
 		desired = "walk"
-	var available := battle_actions_for_form(form_id)
+	var available := _battle_actions_for_form(form_id)
 	if available.has(desired):
 		return desired
 	if ["skill", "counter"].has(desired) and available.has("attack"):
@@ -293,11 +303,7 @@ static func action_for_battle_state(action_state: String, form_id: String = FORM
 
 
 static func action_fps(action: String, form_id: String = FORM_ID) -> float:
-	var normalized_action := _normalized_action(form_id, action)
-	var spec = _action_specs(form_id).get(normalized_action, {})
-	if spec is Dictionary:
-		return maxf(1.0, float((spec as Dictionary).get("fps", ACTION_FPS.get(normalized_action, 8.0))))
-	return maxf(1.0, float(ACTION_FPS.get(normalized_action, 8.0)))
+	return float(_animation_spec(form_id, action).fps)
 
 
 static func world_action_fps(action: String, form_id: String = FORM_ID) -> float:
@@ -317,23 +323,23 @@ static func world_frame_index_for_elapsed(action: String, elapsed_seconds: float
 static func texture_for_elapsed(form_id: String, view: String, action: String, elapsed_seconds: float) -> Texture2D:
 	if not supports_form(form_id):
 		return null
-	var normalized_action := _normalized_action(form_id, action)
-	var count := frame_count_for_action(form_id, normalized_action)
-	var frame_index := int(floor(maxf(0.0, elapsed_seconds) * action_fps(normalized_action, form_id)))
-	if _action_loops(form_id, normalized_action):
+	var spec := _animation_spec(form_id, action)
+	var count := int(spec.count)
+	var frame_index := int(floor(maxf(0.0, elapsed_seconds) * float(spec.fps)))
+	if bool(spec.loop):
 		frame_index %= count
 	else:
 		frame_index = mini(frame_index, count - 1)
-	return _cached_texture(form_id, view, normalized_action, frame_index + 1)
+	return _cached_texture(form_id, view, str(spec.action), frame_index + 1)
 
 
 static func texture_for_progress(form_id: String, view: String, action: String, progress: float) -> Texture2D:
 	if not supports_form(form_id):
 		return null
-	var normalized_action := _normalized_action(form_id, action)
-	var count := frame_count_for_action(form_id, normalized_action)
+	var spec := _animation_spec(form_id, action)
+	var count := int(spec.count)
 	var frame_index := mini(count - 1, int(floor(clampf(progress, 0.0, 1.0) * float(count))))
-	return _cached_texture(form_id, view, normalized_action, frame_index + 1)
+	return _cached_texture(form_id, view, str(spec.action), frame_index + 1)
 
 
 static func world_texture_for_elapsed(form_id: String, direction: String, action: String, elapsed_seconds: float) -> Texture2D:
@@ -549,21 +555,26 @@ static func _pet_root(form_id: String) -> String:
 	var overlay_root := StandalonePetArtOverlay.root_for_form(form_id)
 	if overlay_root != "":
 		return overlay_root
-	var record := PetArtCatalog.form_record(form_id)
+	var normalized := form_id.strip_edges()
+	if _root_cache.has(normalized):
+		return str(_root_cache[normalized])
+	var record := PetArtCatalog.form_record(normalized)
 	var value = record.get("pet", {})
-	if not (value is Dictionary):
-		return ""
-	return _resource_path(str((value as Dictionary).get("root", "")))
+	var root := _resource_path(str((value as Dictionary).get("root", ""))) if value is Dictionary else ""
+	_root_cache[normalized] = root
+	return root
 
 
 static func _bundle_metadata(form_id: String) -> Dictionary:
 	var normalized := form_id.strip_edges()
-	var overlay_metadata := StandalonePetArtOverlay.metadata_for_form(normalized)
-	if not overlay_metadata.is_empty():
-		return overlay_metadata
 	var cached = _metadata_cache.get(normalized, null)
 	if cached is Dictionary:
 		return cached as Dictionary
+	# Overlay registration/removal invalidates this form before the next read.
+	var overlay_metadata := StandalonePetArtOverlay.metadata_for_form(normalized)
+	if not overlay_metadata.is_empty():
+		_metadata_cache[normalized] = overlay_metadata
+		return overlay_metadata
 	var path := PetArtCatalog.pet_bundle_metadata_path(normalized)
 	var metadata: Dictionary = {}
 	if path != "" and FileAccess.file_exists(path):
@@ -599,6 +610,25 @@ static func _action_loops(form_id: String, action: String) -> bool:
 	return bool((spec as Dictionary).get("loop", ["idle", "walk"].has(action))) if spec is Dictionary else ["idle", "walk"].has(action)
 
 
+static func _animation_spec(form_id: String, action: String) -> Dictionary:
+	var normalized := form_id.strip_edges()
+	var normalized_action := _normalized_action(normalized, action)
+	var by_action: Dictionary = _animation_specs_cache.get(normalized, {})
+	if by_action.has(normalized_action):
+		return by_action[normalized_action]
+	var value = _action_specs(normalized).get(normalized_action, {})
+	var source: Dictionary = value if value is Dictionary else {}
+	var spec := {
+		"action": normalized_action,
+		"count": maxi(1, int(source.get("frameCount", FRAME_COUNTS.get(normalized_action, 1)))),
+		"fps": maxf(1.0, float(source.get("fps", ACTION_FPS.get(normalized_action, 8.0)))),
+		"loop": bool(source.get("loop", normalized_action in ["idle", "walk"])),
+	}
+	by_action[normalized_action] = spec
+	_animation_specs_cache[normalized] = by_action
+	return spec
+
+
 static func _world_frame_count(form_id: String, action: String) -> int:
 	var normalized := _normalized_world_action(action)
 	var spec = _world_specs(form_id).get(normalized, {})
@@ -629,7 +659,7 @@ static func _normalized_view(view: String) -> String:
 
 
 static func _normalized_action(form_id: String, action: String) -> String:
-	var available := battle_actions_for_form(form_id)
+	var available := _battle_actions_for_form(form_id)
 	return action if available.has(action) else ("idle" if available.has("idle") else (available[0] if not available.is_empty() else "idle"))
 
 
@@ -649,6 +679,9 @@ static func _clear_form_caches(form_id: String, root_path: String = "") -> void:
 	var normalized := form_id.strip_edges()
 	if normalized != "":
 		_metadata_cache.erase(normalized)
+		_root_cache.erase(normalized)
+		_battle_actions_cache.erase(normalized)
+		_animation_specs_cache.erase(normalized)
 		_world_warmed.erase(normalized)
 		_battle_warmed.erase(normalized)
 	var normalized_root := root_path.strip_edges().trim_suffix("/")

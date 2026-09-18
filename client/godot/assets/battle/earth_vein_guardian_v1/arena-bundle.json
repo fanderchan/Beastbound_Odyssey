@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "earth_vein_guardian_arena_v1",
+  "arenaId": "earth_vein_sanctum",
+  "visualMode": "baked_battle_floor",
+  "ownerReviewStatus": "pending",
+  "runtimeEnabled": false,
+  "qaPreviewEnabled": true,
+  "releaseApproved": false,
+  "width": 1280,
+  "height": 720,
+  "source": {
+    "tool": "OpenAI built-in image_gen",
+    "generatedAt": "2026-09-18",
+    "originalOutput": "exec-242201d8-21c7-4127-8775-6b6820882d35.png",
+    "promptPath": "source/prompt.txt",
+    "promptSha256": "f0bfc875e1da681526adc418cd278d7703f83a07cfdcf4591b0b9628390c2ef0",
+    "rawPath": "source/raw/earth_vein_sanctum.png",
+    "rawSha256": "ff4f865dc3a98c277ba7ad08bea2ce3c40d753cc70573be0e7712485099b6eeb",
+    "processing": "sips -z 720 1280; dimensions only; no compositing or repainting"
+  },
+  "runtime": {
+    "path": "runtime/earth_vein_sanctum.png",
+    "sha256": "8f18c237aa6e1ff0edfaa18d5c4ddcbe6a85950e2b6bd497b557f37e470d0f72"
+  },
+  "encounterGroupIds": [
+    "earth_vein_guardian_group"
+  ],
+  "replacementPath": "runtime/earth_vein_sanctum.png",
+  "evidence": {
+    "status": "technical_checks_passed_owner_review_pending",
+    "phase": "docs/phase_547_earth_guardian_battle_presentation.md",
+    "mainScene": "res://scenes/Main.tscn",
+    "videoPath": ".run/guardian-review/20260917T203452.269337Z/guardian-1x.mp4",
+    "videoSha256": "3c88ea33d6e2b936099924da83dc31cf857af648579659b7e9b47296badae6e9",
+    "videoFrameCount": 3742,
+    "videoFps": 30,
+    "inputKind": "automated_viewport_input_playthrough",
+    "computerUse": false,
+    "reportPath": ".run/guardian-review/20260917T203452.269337Z/evidence-summary.json",
+    "finalNativeMouseReview": "pending_mac_unlock"
+  }
+}

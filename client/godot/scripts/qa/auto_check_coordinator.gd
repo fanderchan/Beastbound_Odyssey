@@ -5526,6 +5526,7 @@ func _hang_matchmaking_check_real_left_click(control: Control) -> bool:
 
 
 func _run_auto_battle_formation_check() -> void:
+	var order_errors := preload("res://scripts/battle/battle_draw_order_check.gd").validation_errors()
 	host.profile_save_enabled = false
 	host.player_profile = _qa_battle_profile()
 	var loaded: bool = host._load_map("firebud_village_gate", "from_training_yard")
@@ -5538,7 +5539,7 @@ func _run_auto_battle_formation_check() -> void:
 	var slots_unique = BattleModel.occupied_slots_are_unique(host.battle_state)
 	var layout_ok = host._battle_full_formation_screen_layout_ok()
 	var command_top_right = host._battle_command_panel_is_top_right()
-	var status = "ok" if loaded and zone_found and full_formation and slots_unique and layout_ok and command_top_right else "failed"
+	var status = "ok" if order_errors.is_empty() and loaded and zone_found and full_formation and slots_unique and layout_ok and command_top_right else "failed"
 	print("battle formation check ready: status=%s loaded=%s zone_found=%s full_formation=%s slots_unique=%s layout_ok=%s command_top_right=%s actors=%d" % [
 		status,
 		str(loaded),
@@ -9411,7 +9412,8 @@ func _run_auto_battle_knockaway_result_check() -> void:
 		and host.world_log_message.find("回到记录点") >= 0
 	)
 
-	host.player_profile = PlayerProgressModel.default_profile()
+	# New accounts intentionally start without pets; this case needs a battle pet.
+	host.player_profile = _qa_battle_profile()
 	var active_pet_id = str(host.player_profile.get("activePetInstanceId", ""))
 	host._load_map(GM_10V10_MAP_ID)
 	host._start_battle(BattleModel.create_wild_battle({
@@ -14914,6 +14916,7 @@ func _run_auto_rebirth_cave_guardian_check() -> void:
 	host.world_log_message = ""
 
 	var errors = RebirthTrialModel.validation_errors()
+	errors.append_array(preload("res://scripts/qa/guardian_battle_presentation_check.gd").validation_errors())
 	var village_map = host._map_data_for_id("firebud_village_gate")
 	var village_ok = not village_map.is_empty()
 	var entrance_count = 0
@@ -27730,6 +27733,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		host.profile_save_enabled = false
 		host._load_map("firebud_village_gate", "from_training_yard")
 	host._start_battle(state)
+	var command_owner_ok: bool = preload("res://scripts/battle/server_battle_command_owner_check.gd").run(host, room, session)
 	host.battle_target_mode = "player_attack_target"
 	host.battle_hover_target_id = "enemy_pet"
 	host._set_battle_message("请选择攻击目标。")
@@ -28268,7 +28272,7 @@ func _run_auto_server_battle_target_mapping_check() -> void:
 		and str(duel_hang_after.get(HangSettingsModel.SESSION_LAST_STOP_REASON_KEY, "")) == "low_hp"
 		and not host.hang_mode_active
 	)
-	var status = "ok" if element_mapping_ok and element_tactics_ok and switch_tactics_model_ok and element_ui_gate_ok and switch_ui_gate_ok and element_capture_ok and switch_capture_ok and converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and transport_helper_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_singleflight_guard_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_outcome_overlay_ok and pve_outcome_dedupe_ok and teammate_pve_victory_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
+	var status = "ok" if command_owner_ok and element_mapping_ok and element_tactics_ok and switch_tactics_model_ok and element_ui_gate_ok and switch_ui_gate_ok and element_capture_ok and switch_capture_ok and converted_target_ok and converted_attacker_ok and downed_skip_ok and self_spirit_ok and transport_helper_ok and hp_target_ok and message_target_ok and playback_target_ok and combo_mapping_ok and poll_target_ok and restore_singleflight_guard_ok and restore_poll_enabled_ok and explicit_restore_start_ok and active_poll_gate_ok and pve_outcome_overlay_ok and pve_outcome_dedupe_ok and teammate_pve_victory_ok and pve_message_ok and zero_exp_line_ok and closed_event_finished_ok and duel_hang_writeback_ok else "failed"
 	print("server battle target mapping check ready: status=%s elements=%s tactics=%s switch_model=%s ui_gate=%s switch_ui=%s capture=%s switch_capture=%s converted_target=%s attacker=%s downed_skip=%s spirit=%s transport=%s hp=%s message=%s playback=%s combo=%s poll=%s restore_singleflight=%s restore_poll_enabled=%s explicit_restore=%s active_poll=%s pve_overlay=%s pve_dedupe=%s teammate_victory=%s pve_message=%s zero_exp=%s closed_event=%s duel_hang=%s target=%s before_pet=%d after_pet=%d before_player=%d after_player=%d poll_pet=%d poll_player=%d text=%s pve_text=%s pve_outcome=%s duplicate_outcome=%s teammate_outcome=%s closed_text=%s" % [
 		status,
 		str(element_mapping_ok),

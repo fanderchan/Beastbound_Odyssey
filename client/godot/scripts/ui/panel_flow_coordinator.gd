@@ -9929,6 +9929,9 @@ func _finish_server_battle_from_closed_room(room: Dictionary = {}) -> Dictionary
 	var closed_room = room.duplicate(true)
 	if closed_room.is_empty():
 		closed_room = _server_battle_closed_room_from_state()
+	# An empty result must never fall through to the party-PvE victory default.
+	if str(closed_room.get("status", "")) != "closed" or str(closed_room.get("roomId", "")).strip_edges() == "":
+		return {}
 	var is_party_pve = _server_battle_room_is_party_pve(closed_room)
 	var is_manor_war = _server_battle_room_is_manor_war(closed_room)
 	var message = _server_party_pve_result_message(closed_room) if is_party_pve else (_server_manor_war_result_message(closed_room) if is_manor_war else _server_battle_result_message(closed_room))

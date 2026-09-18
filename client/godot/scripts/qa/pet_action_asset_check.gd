@@ -129,6 +129,7 @@ static func run(requested_form_id: String = "") -> Dictionary:
 	errors.append_array(PetBattleReleaseGate.validation_errors())
 	errors.append_array(PetBattleSpriteScaleCatalog.validation_errors())
 	errors.append_array(BattleVisualPresentationModel.validation_errors())
+	errors.append_array(preload("res://scripts/pet/pet_animation_cache_check.gd").validation_errors())
 	if form_id == PetActionAssetCatalog.FORM_ID:
 		_append_contract_errors(errors)
 	var warmed_world := PetActionAssetCatalog.warm_world_form(form_id)

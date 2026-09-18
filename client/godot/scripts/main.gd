@@ -10,6 +10,7 @@ const WorldCameraSafeAreaModel := preload(
 )
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const BattleLayoutConstants := preload("res://scripts/battle/battle_layout_constants.gd")
+const BattleDrawOrder := preload("res://scripts/battle/battle_draw_order.gd")
 const BattleLayoutSafeAreaModel := preload(
 	"res://scripts/battle/battle_layout_safe_area_model.gd"
 )
@@ -11106,10 +11107,13 @@ func _refresh_battle_target_seed() -> void:
 	_panel_flow()._refresh_battle_target_seed()
 
 func _start_battle(next_battle_state: Dictionary) -> void:
+	var preparation_start := Time.get_ticks_usec() if perf_probe_enabled else 0
 	battle_pet_art_elapsed = 0.0
 	_invalidate_battle_auto_ui_cache()
 	_warm_battle_character_appearance_state(next_battle_state)
+	var character_warmed := Time.get_ticks_usec() if perf_probe_enabled else 0
 	PetActionAssetCatalog.warm_battle_state(next_battle_state)
+	var pets_warmed := Time.get_ticks_usec() if perf_probe_enabled else 0
 	PetBattleSpriteScaleCatalog.warm_battle_state(next_battle_state)
 	MountedCharacterAssetCatalog.warm_battle_state(next_battle_state)
 	if bool(next_battle_state.get("reviewLab", false)):
@@ -11120,6 +11124,14 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 		battle_layout_owner_review_capture
 	)
 	_panel_flow()._start_battle(next_battle_state)
+	if perf_probe_enabled:
+		print("battle preparation probe: %s" % JSON.stringify({
+			"characterMs": (character_warmed - preparation_start) / 1000.0,
+			"petMs": (pets_warmed - character_warmed) / 1000.0,
+			"remainingMs": (Time.get_ticks_usec() - pets_warmed) / 1000.0,
+			"totalMs": (Time.get_ticks_usec() - preparation_start) / 1000.0,
+			"actors": (next_battle_state.get("actors", []) as Array).size(),
+		}))
 
 
 func _warm_battle_character_appearance_state(next_battle_state: Dictionary) -> void:
@@ -13526,6 +13538,11 @@ func _play_next_battle_event() -> void:
 
 
 func _battle_state_should_end(state: Dictionary) -> bool:
+	# Server playback can temporarily have no living local actor, or launch our
+	# player while teammates still fight. Finish the full event list; its result
+	# or an authoritative closed room is consumed at the round boundary.
+	if bool(state.get("serverAuthority", false)):
+		return false
 	return (
 		bool(state.get("escaped", false))
 		or
@@ -17046,17 +17063,9 @@ func _draw_battle_scene() -> void:
 
 
 func _battle_actors_sorted_by_depth() -> Array:
-	var actors: Array = battle_state.get("actors", []).duplicate(true)
-	for index in range(actors.size()):
-		for next_index in range(index + 1, actors.size()):
-			var current := actors[index] as Dictionary
-			var next := actors[next_index] as Dictionary
-			var current_y := _battle_slot_world_position(str(current.get("slotId", ""))).y
-			var next_y := _battle_slot_world_position(str(next.get("slotId", ""))).y
-			if next_y < current_y:
-				actors[index] = next
-				actors[next_index] = current
-	return actors
+	return BattleDrawOrder.sorted_actors(
+		battle_state.get("actors", []), _battle_slot_world_position
+	)
 
 
 func _draw_battle_floor_noise(rect: Rect2) -> void:

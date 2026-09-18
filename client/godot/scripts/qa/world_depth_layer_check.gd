@@ -3,6 +3,7 @@ extends RefCounted
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 const WorldDepthLayer := preload("res://scripts/world/world_depth_layer.gd")
 const PET_SCENE := preload("res://scenes/pet/Pet.tscn")
+const InteractionOcclusionModel := preload("res://scripts/world/interaction_occlusion_model.gd")
 
 
 static func run(
@@ -119,6 +120,7 @@ static func run(
 	_validate_pet_visual_offsets(errors)
 	_validate_interaction_prop_visuals(errors)
 	_validate_reference_orders(errors)
+	_validate_interaction_occlusion(errors)
 	return _report(
 		errors,
 		snapshot.size(),
@@ -126,6 +128,21 @@ static func run(
 		actual_npcs,
 		actual_interaction_props
 	)
+
+
+static func _validate_interaction_occlusion(errors: Array[String]) -> void:
+	var subject := Rect2(40, 20, 20, 60)
+	var prop := Rect2(0, 0, 100, 100)
+	for sample in [
+		{"rect": subject, "depth": 80.0, "alpha": InteractionOcclusionModel.OBSCURING_ALPHA},
+		{"rect": subject, "depth": 100.0, "alpha": InteractionOcclusionModel.OBSCURING_ALPHA},
+		{"rect": subject, "depth": 101.0, "alpha": 1.0},
+		{"rect": Rect2(110, 20, 20, 60), "depth": 80.0, "alpha": 1.0},
+		{"rect": Rect2(), "depth": 80.0, "alpha": 1.0},
+	]:
+		var alpha := InteractionOcclusionModel.alpha_for(sample.rect, sample.depth, prop, 100.0)
+		if not is_equal_approx(alpha, float(sample.alpha)):
+			errors.append("交互物遮挡透明度没有遵循主体范围和脚底排序")
 
 
 static func _validate_reference_orders(errors: Array[String]) -> void:

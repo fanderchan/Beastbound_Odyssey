@@ -145,6 +145,7 @@ static func create_wild_battle(encounter_zone: Dictionary) -> Dictionary:
 	var capture_chance_override = wild_pet.get("captureChanceOverride", wild_pet.get("captureRateOverride", null))
 	if capture_chance_override != null:
 		enemy_actor["captureChanceOverride"] = clampf(_rate_value(capture_chance_override, 0.0), 0.0, 1.0)
+	_apply_wild_pet_presentation(enemy_actor, wild_pet)
 	var state := {
 		"id": "local_wild_battle",
 		"round": 1,
@@ -332,6 +333,7 @@ static func _training_partner_enemy_group_actors(encounter_zone: Dictionary, ene
 		for key in ["activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
 			if wild_pet.has(key):
 				actor[key] = _string_array(wild_pet.get(key))
+		_apply_wild_pet_presentation(actor, wild_pet)
 		actors.append(actor)
 	return actors
 
@@ -466,13 +468,29 @@ static func _normalized_wild_pet_entry(value: Dictionary) -> Dictionary:
 	var stats = value.get("battleStats", {})
 	if stats is Dictionary:
 		entry["battleStats"] = (stats as Dictionary).duplicate(true)
-	for key in ["catchable", "captureDifficulty", "captureChanceOverride", "captureRateOverride"]:
+	for key in ["catchable", "captureDifficulty", "captureChanceOverride", "captureRateOverride", "battleAppearanceFormId", "battleDisplayName"]:
 		if value.has(key):
 			entry[key] = value.get(key)
 	for key in ["activeSkillIds", "petSkillSlots", "passiveSkillIds"]:
 		if value.has(key):
 			entry[key] = _string_array(value.get(key))
 	return entry
+
+
+static func _apply_wild_pet_presentation(actor: Dictionary, entry: Dictionary) -> void:
+	# Match the server-room projection only for explicitly non-catchable actors.
+	# Build combat facts from the original species first; appearance never rerolls
+	# stats, elements, skills or capture identity.
+	if typeof(entry.get("catchable")) != TYPE_BOOL or entry.get("catchable") != false:
+		return
+	var appearance_id := str(entry.get("battleAppearanceFormId", "")).strip_edges()
+	if appearance_id == "" or PetTemplateCatalog.runtime_template_for_form(appearance_id).is_empty():
+		return
+	actor["serverFormId"] = str(actor.get("formId", ""))
+	actor["formId"] = appearance_id
+	var display_name := str(entry.get("battleDisplayName", "")).strip_edges()
+	if display_name != "":
+		actor["name"] = display_name
 
 
 static func _wild_pet_name(entry: Dictionary, form_id: String) -> String:
