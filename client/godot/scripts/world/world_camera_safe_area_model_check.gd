@@ -276,6 +276,17 @@ func _run() -> void:
 		"完整轮廓本来远离固定 HUD 时不得制造镜头漂移",
 		errors
 	)
+	var clipped_without_hud_overlap := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects_in_range(
+		Vector2(640.0, 360.0), Vector2(550.0, 250.0), Vector2(700.0, 420.0),
+		[Rect2(0.0, 0.0, 1280.0, 64.0)],
+		[Rect2(-10.0, 220.0, 100.0, 100.0)],
+		Rect2(Vector2.ZERO, REFERENCE_VIEWPORT)
+	)
+	_expect(
+		clipped_without_hud_overlap.is_equal_approx(Vector2(662.0, 360.0)),
+		"无 HUD 遮挡但仍被视口裁切的主体必须继续求解，不能提前返回",
+		errors
+	)
 	var local_composition_subjects := WorldCameraSafeAreaModel.nearby_composition_subject_rects(
 		[
 			Rect2(420.0, 180.0, 180.0, 140.0),

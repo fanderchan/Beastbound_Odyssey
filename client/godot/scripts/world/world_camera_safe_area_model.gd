@@ -231,6 +231,26 @@ static func composition_anchor_avoiding_rects_in_range(
 	var composition_viewport := viewport_rect
 	if composition_viewport.size.x > gap * 2.0 and composition_viewport.size.y > gap * 2.0:
 		composition_viewport = composition_viewport.grow(-gap)
+	var best_anchor := clamped_base
+	var best_score := _composition_score(
+		best_anchor,
+		clamped_base,
+		blocked_rects,
+		subject_rects_at_base,
+		composition_viewport,
+		priority_subject_count
+	)
+	# Zero overlap/clipping, every subject visible and zero displacement is the
+	# global lower bound of the lexicographic score. Do not build or search a
+	# candidate grid when the current composition already attains that bound.
+	if (
+		best_score[0] == 0.0 and best_score[1] == 0.0
+		and best_score[2] == 0.0 and best_score[3] == 0.0
+		and best_score[4] == 0.0 and best_score[5] == 0.0
+		and best_score[6] == 0.0
+		and best_score[7] == -float(subject_rects_at_base.size())
+	):
+		return best_anchor
 	var composition_min_anchor := min_anchor
 	var composition_max_anchor := max_anchor
 	var tall_left_blocker := false
@@ -267,15 +287,6 @@ static func composition_anchor_avoiding_rects_in_range(
 		composition_viewport,
 		allow_bidirectional_blocker_escape
 	)
-	var best_anchor := clamped_base
-	var best_score := _composition_score(
-		best_anchor,
-		clamped_base,
-		blocked_rects,
-		subject_rects_at_base,
-		composition_viewport,
-		priority_subject_count
-	)
 	# Candidate coordinates come only from a visible subject touching the inward
 	# edge of a fixed HUD or viewport boundary. The resulting grid is small for
 	# the formal 14-NPC scene, deterministic, and avoids coordinate-descent traps
@@ -283,6 +294,8 @@ static func composition_anchor_avoiding_rects_in_range(
 	for candidate_x in x_candidates:
 		for candidate_y in y_candidates:
 			var candidate_anchor := Vector2(candidate_x, candidate_y)
+			if candidate_anchor == clamped_base:
+				continue
 			var score := _composition_score(
 				candidate_anchor,
 				clamped_base,
