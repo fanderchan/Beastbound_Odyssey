@@ -62,10 +62,47 @@ MAP_LABELS = {
     "earth_vein_cave_f4": "岩脉洞穴顶层",
 }
 
+OPEN_MAP_SETUP_STEPS = [
+    {
+        "action": "left_click",
+        "windowPoint": [75, 76],
+        "target": "左上角当前地图圆盘",
+    },
+    {"action": "get_app_state", "fresh": True, "afterSettleMs": 1000},
+]
+F1_COLLISION_SETUP_STEPS = [
+    *OPEN_MAP_SETUP_STEPS,
+    {
+        "action": "left_click",
+        "windowPoint": [82, 206],
+        "target": "一层练级区导航目标",
+    },
+    {
+        "action": "get_app_state",
+        "fresh": True,
+        "afterSettleMs": 1000,
+        "repeat": 3,
+    },
+]
+F4_COLLISION_SETUP_STEPS = [
+    {
+        "action": "left_click",
+        "windowPoint": [430, 150],
+        "target": "顶层出生口北侧可行走石地",
+    },
+    {"action": "get_app_state", "fresh": True, "afterSettleMs": 1000},
+    {
+        "action": "left_click",
+        "windowPoint": [480, 250],
+        "target": "顶层岩柱西南侧接近点",
+    },
+    {"action": "get_app_state", "fresh": True, "afterSettleMs": 1000},
+]
+
 ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
     "earth_vein_cave": {
         "pointer": {
-            "point": [58, 104],
+            "point": [75, 76],
             "target": "世界地图按钮",
             "description": "打开一层真实地图面板，核对当前楼层、坐标与全部导航目标。",
             "observations": [
@@ -85,6 +122,7 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "warp": {
+            "setupSteps": OPEN_MAP_SETUP_STEPS,
             "point": [82, 150],
             "target": "地图面板中的岩脉洞穴二层 / 上层",
             "description": "从一层地图面板选择二层，走到楼梯并核对二层落点。",
@@ -95,29 +133,30 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "collision": {
-            "point": [420, 270],
+            "setupSteps": F1_COLLISION_SETUP_STEPS,
+            "point": [320, 235],
             "target": "一层 9,6 岩石阻挡物基座",
             "description": "点击一层显式阻挡岩石，核对角色停在 footprint 外侧。",
             "observations": [
                 "黄色路线终点落在阻挡物位置",
-                "角色最终停在相邻可行走格 10,5",
+                "角色最终停在相邻可行走格 10,6",
                 "角色没有进入或穿过岩石碰撞 footprint",
             ],
         },
         "occlusion": {
-            "point": [222, 270],
+            "point": [290, 293],
             "target": "一层下缘前景岩脊后方",
             "description": "让角色走入一层前景岩脊后方，核对岩脊的前景遮挡层。",
             "observations": [
                 "动作前角色完整显示在岩脊上方的可行走区域",
-                "动作后角色进入岩脊后方并被前景岩脊正确盖住",
+                "动作后角色到达 6,23 并被前景岩脊正确盖住",
                 "遮挡改变绘制层级而没有生成额外碰撞或画面破口",
             ],
         },
     },
     "earth_vein_cave_f2": {
         "pointer": {
-            "point": [58, 104],
+            "point": [75, 76],
             "target": "世界地图按钮",
             "description": "打开二层真实地图面板，核对楼层标题与上下层导航。",
             "observations": [
@@ -127,16 +166,17 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "movement_path": {
-            "point": [264, 187],
-            "target": "二层出生口北侧可行走石地",
-            "description": "在二层点击近场石地，核对真实跨帧短路径移动。",
+            "point": [430, 150],
+            "target": "二层出生口东北侧可行走石地",
+            "description": "在二层点击远场石地，核对真实跨帧长路径移动。",
             "observations": [
-                "角色从 5,20 移动到 5,18",
+                "角色从 5,20 移动到 6,15",
                 "路线没有被 HUD 或楼梯交互误消费",
                 "移动期间保持二层候选美术与正常玩家 HUD",
             ],
         },
         "warp": {
+            "setupSteps": OPEN_MAP_SETUP_STEPS,
             "point": [82, 178],
             "target": "地图面板中的岩脉洞穴三层 / 上层",
             "description": "从二层选择三层并核对三层出生点。",
@@ -147,29 +187,29 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "collision": {
-            "point": [365, 207],
+            "point": [455, 215],
             "target": "二层 8,16 岩石阻挡物基座",
             "description": "点击二层近场阻挡岩石，核对路线止于显式 footprint 外。",
             "observations": [
-                "角色向岩石移动后停在相邻可行走格",
+                "角色向岩石移动后停在相邻可行走格 9,16",
                 "终点菱形与视觉基座位置一致",
                 "角色没有穿入岩石或与贴图底座重叠",
             ],
         },
         "occlusion": {
-            "point": [155, 281],
+            "point": [230, 310],
             "target": "二层下缘前景岩脊后方",
             "description": "让角色穿到二层前景岩脊后，核对大岩脊遮挡。",
             "observations": [
                 "动作前角色在岩石阻挡物旁完整可见",
-                "动作后角色进入下缘岩脊后方并被正确遮挡",
+                "动作后角色到达 8,23 并被下缘岩脊正确遮挡",
                 "大岩脊覆盖角色而没有覆盖 HUD 或产生空白边缘",
             ],
         },
     },
     "earth_vein_cave_f3": {
         "pointer": {
-            "point": [58, 104],
+            "point": [75, 76],
             "target": "世界地图按钮",
             "description": "打开三层地图面板，核对三层标题、上下层出口和练级区。",
             "observations": [
@@ -179,16 +219,17 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "movement_path": {
-            "point": [264, 187],
-            "target": "三层出生口北侧可行走石地",
-            "description": "点击三层近场石地，核对真实路径与稳定镜头。",
+            "point": [430, 150],
+            "target": "三层出生口东北侧可行走石地",
+            "description": "点击三层远场石地，核对真实路径与稳定镜头。",
             "observations": [
-                "角色从 5,20 移动到 5,18",
+                "角色从 5,20 移动到 5,15",
                 "镜头跟随平稳且石地纹理没有网格闪烁",
                 "动作没有触发菜单、对话或楼层切换",
             ],
         },
         "warp": {
+            "setupSteps": OPEN_MAP_SETUP_STEPS,
             "point": [82, 178],
             "target": "地图面板中的岩脉洞穴顶层 / 上层",
             "description": "从三层选择顶层并核对顶层出生点。",
@@ -199,29 +240,29 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "collision": {
-            "point": [346, 226],
+            "point": [455, 215],
             "target": "三层 8,17 岩石阻挡物基座",
             "description": "点击三层显式阻挡岩石，核对人物止步与 footprint。",
             "observations": [
                 "路线菱形落在岩石阻挡位置",
-                "角色停在 9,16 的相邻可行走格",
+                "角色停在 9,17 的相邻可行走格",
                 "人物轮廓与岩石底座没有视觉穿插",
             ],
         },
         "occlusion": {
-            "point": [150, 185],
+            "point": [150, 245],
             "target": "三层左下前景岩脊后方",
             "description": "从岩脊侧面走入其后方，核对三层前后层级切换。",
             "observations": [
                 "动作前角色位于岩脊右侧并完整显示",
-                "动作后角色位于 4,23 并被整段前景岩脊遮住",
-                "遮挡边缘连续，没有角色残片或错误穿帮",
+                "动作后角色位于 4,23，头肩可辨且下半身被岩脊遮住",
+                "遮挡边缘连续，没有角色残片、整人消失或错误穿帮",
             ],
         },
     },
     "earth_vein_cave_f4": {
         "pointer": {
-            "point": [58, 104],
+            "point": [75, 76],
             "target": "世界地图按钮",
             "description": "打开顶层地图面板，核对两座守护台与返回三层导航。",
             "observations": [
@@ -231,17 +272,18 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "movement_path": {
-            "point": [264, 187],
-            "target": "顶层出生口北侧可行走石地",
-            "description": "在顶层点击近场石地，核对真实移动与顶层镜头边界。",
+            "point": [430, 150],
+            "target": "顶层出生口东北侧可行走石地",
+            "description": "在顶层点击远场石地，核对真实移动与顶层镜头边界。",
             "observations": [
-                "角色从 5,22 移动到 5,20",
+                "角色从 5,22 移动到 5,16",
                 "镜头没有暴露地图边缘或越过石地裙边",
                 "正常玩家 HUD 与顶层候选美术保持稳定",
             ],
         },
         "warp": {
-            "point": [82, 205],
+            "setupSteps": OPEN_MAP_SETUP_STEPS,
+            "point": [82, 206],
             "target": "地图面板中的岩脉洞穴三层 / 下层",
             "description": "从顶层选择三层 / 下层并核对返回落点。",
             "observations": [
@@ -251,23 +293,24 @@ ACTION_CONFIG: dict[str, dict[str, dict[str, Any]]] = {
             ],
         },
         "collision": {
-            "point": [400, 165],
+            "setupSteps": F4_COLLISION_SETUP_STEPS,
+            "point": [405, 240],
             "target": "顶层 16,12 岩柱阻挡物基座",
             "description": "点击顶层高岩柱基座，核对三格 footprint 与人物止步。",
             "observations": [
-                "角色从 16,16 接近岩柱并停在 17,11",
+                "角色完成两段可行走接近后点击岩柱，并停在 17,11",
                 "路线菱形冻结在高岩柱基座位置",
                 "角色没有进入三格阻挡 footprint，视觉基座与碰撞一致",
             ],
         },
         "occlusion": {
-            "point": [365, 205],
-            "target": "顶层 18,10 晶簇后侧",
-            "description": "走到顶层晶簇后侧，核对小型前景物件的局部遮挡。",
+            "point": [250, 285],
+            "target": "顶层下缘前景岩脊后方",
+            "description": "走到顶层下缘岩脊后方，核对大型前景物件的局部遮挡。",
             "observations": [
-                "动作前角色与晶簇分离且全身可见",
-                "动作后角色站到晶簇后方，腿部被晶簇前景正确盖住",
-                "上身仍保持清晰，局部遮挡没有变成碰撞或整人消失",
+                "动作前角色位于出生口且全身可见",
+                "动作后角色到达 6,25，头肩可辨且下半身被岩脊盖住",
+                "前景遮挡没有覆盖任务 HUD，也没有造成整人消失",
             ],
         },
     },
@@ -486,6 +529,7 @@ def _build(generated_at_utc: str, replace: bool) -> None:
                 "viewport": [1280, 720],
                 "capturedWindowPoints": [640, 392],
                 "displayServer": "macOS Metal",
+                "setupSteps": config.get("setupSteps", []),
                 "steps": [
                     {
                         "action": "left_click",

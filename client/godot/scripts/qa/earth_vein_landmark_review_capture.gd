@@ -71,6 +71,10 @@ func _run() -> void:
 	host.map_visual_review_capture = true
 
 	var report := _base_report(output_path)
+	report["audioCapturePreparation"] = await _disable_capture_audio_runtime(
+		host,
+		errors
+	)
 	_validate_host(host, report, errors)
 	if errors.is_empty():
 		host.player.clear_move_target()
@@ -155,6 +159,64 @@ func _run() -> void:
 			errors.append("landmark review 运行资源收口失败")
 
 	_finish(report, errors, report_path)
+
+
+func _disable_capture_audio_runtime(host, errors: Array[String]) -> Dictionary:
+	var manager = host.game_audio_manager
+	if manager == null or not is_instance_valid(manager):
+		errors.append("landmark review 缺少有效 AudioManager")
+		return {"status": "failed", "reason": "audio_manager_missing"}
+	for method_name in ["configure_playback_enabled", "stop_all", "debug_snapshot"]:
+		if not manager.has_method(method_name):
+			errors.append("landmark review AudioManager 缺少 %s" % method_name)
+			return {
+				"status": "failed",
+				"reason": "audio_contract_missing",
+				"missingMethod": method_name,
+			}
+	# The standalone controller identifies itself after Main has already built
+	# its normal preview audio runtime. Disable playback before any review input,
+	# then verify every owned player has stopped and released its stream. The
+	# shared exit drainer later severs the battle timeline and frees the manager.
+	manager.call("configure_playback_enabled", false)
+	manager.call("stop_all")
+	for _frame_index in range(4):
+		await process_frame
+	var snapshot_value: Variant = manager.call("debug_snapshot")
+	var snapshot := snapshot_value as Dictionary if snapshot_value is Dictionary else {}
+	var playback_disabled := not bool(snapshot.get("playbackEnabled", true))
+	var audio_players := (manager as Node).find_children(
+		"*",
+		"AudioStreamPlayer",
+		true,
+		false
+	)
+	var playing_count := 0
+	var attached_stream_count := 0
+	for value in audio_players:
+		if not (value is AudioStreamPlayer):
+			continue
+		var player := value as AudioStreamPlayer
+		if player.playing:
+			playing_count += 1
+		if player.stream != null:
+			attached_stream_count += 1
+	var passed := (
+		playback_disabled
+		and playing_count == 0
+		and attached_stream_count == 0
+	)
+	if not passed:
+		errors.append("landmark review 音频未在移动前完成停播与解绑")
+	return {
+		"status": "passed" if passed else "failed",
+		"playbackDisabled": playback_disabled,
+		"audioStopped": playing_count == 0,
+		"audioStreamsDetached": attached_stream_count == 0,
+		"audioPlayerCount": audio_players.size(),
+		"playingAudioPlayerCount": playing_count,
+		"attachedAudioStreamCount": attached_stream_count,
+	}
 
 
 func _validate_invocation(
@@ -306,6 +368,7 @@ func _base_report(output_path: String) -> Dictionary:
 		"playerCellChanged": false,
 		"movementCompleted": false,
 		"input": {},
+		"audioCapturePreparation": {},
 		"requiredLandmarkInstanceIds": [],
 		"preparedObjectInstanceIds": [],
 		"screenshotPath": output_path,

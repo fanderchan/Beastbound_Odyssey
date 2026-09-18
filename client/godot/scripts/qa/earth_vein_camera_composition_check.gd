@@ -156,6 +156,20 @@ func _run_scenario(host, scenario: Dictionary) -> Dictionary:
 	host._clear_navigation_state()
 	host.player.global_position = IsoMapModel.grid_to_world(host.map_data, focus_cell)
 	host._update_camera_position(true)
+	if not bool(host.world_camera_center_cache_valid):
+		errors.append("端点安全相机没有冻结静止中心缓存")
+	if not (host.world_camera_center_target_cache as Vector2).is_equal_approx(
+		host.player.global_position
+	):
+		errors.append("静止中心缓存没有绑定当前玩家世界坐标")
+	if str(host.world_camera_center_map_cache) != map_id:
+		errors.append("静止中心缓存没有绑定当前地图")
+	var frozen_center := host.world_camera_center_value_cache as Vector2
+	host._update_camera_position(false)
+	if not (host.world_camera_center_value_cache as Vector2).is_equal_approx(
+		frozen_center
+	):
+		errors.append("相同输入没有复用冻结相机中心")
 	for _frame_index in range(SETTLE_FRAMES):
 		host.queue_redraw()
 		await process_frame

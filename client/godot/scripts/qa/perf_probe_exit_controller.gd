@@ -9,10 +9,29 @@ func _init(host_ref) -> void:
 	host = host_ref
 
 
-func finish_after_frames(frame_count: int, requested_exit_code: int = 0) -> void:
-	for _frame_index in range(frame_count):
+func finish_after_measurement_frames(
+	frame_count: int,
+	requested_exit_code: int = 0,
+	measurement_mode: String = "fixed_process_frames"
+) -> void:
+	while int(host.get("perf_probe_warmup_frames_remaining")) > 0:
 		await host.get_tree().process_frame
-	await finish(requested_exit_code)
+	while int(host.get("perf_probe_measurement_frames_total")) < frame_count:
+		await host.get_tree().process_frame
+	if int(host.get("perf_probe_sample_frames")) > 0:
+		# The late process-priority boundary closes the exact final frame after
+		# Main has staged it.  Never complete or start audio cleanup until all
+		# process-scope windows have been queued and emitted.
+		while not bool(host.get("perf_probe_measurement_scope_complete")):
+			await host.get_tree().process_frame
+	var measurement_ok := bool(
+		host.call(
+			"_complete_perf_probe_measurement",
+			measurement_mode,
+			frame_count
+		)
+	)
+	await finish(requested_exit_code if measurement_ok else 1)
 
 
 func finish(requested_exit_code: int) -> void:

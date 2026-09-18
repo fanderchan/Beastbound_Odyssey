@@ -199,7 +199,35 @@ def _read_report(path: Path) -> dict[str, Any]:
     ):
         mismatches.append("screenshot")
     cleanup = report.get("runtimeCleanup")
-    if not isinstance(cleanup, dict) or cleanup.get("status") != "passed":
+    preparation = report.get("audioCapturePreparation")
+    preparation_player_count = (
+        preparation.get("audioPlayerCount")
+        if isinstance(preparation, dict)
+        else None
+    )
+    if (
+        not isinstance(preparation, dict)
+        or preparation.get("status") != "passed"
+        or preparation.get("playbackDisabled") is not True
+        or preparation.get("audioStopped") is not True
+        or preparation.get("audioStreamsDetached") is not True
+        or not isinstance(preparation.get("audioPlayerCount"), int)
+        or isinstance(preparation.get("audioPlayerCount"), bool)
+        or preparation.get("audioPlayerCount", 0) <= 0
+        or preparation.get("playingAudioPlayerCount") != 0
+        or preparation.get("attachedAudioStreamCount") != 0
+    ):
+        mismatches.append("audioCapturePreparation")
+    if (
+        not isinstance(cleanup, dict)
+        or cleanup.get("status") != "passed"
+        or cleanup.get("audioPlaybackDisabled") is not True
+        or cleanup.get("audioStopped") is not True
+        or cleanup.get("audioStreamsDetached") is not True
+        or cleanup.get("audioManagerReleased") is not True
+        or cleanup.get("detachedAudioPlayerCount")
+        != preparation_player_count
+    ):
         mismatches.append("runtimeCleanup")
     prepared = report.get("preparedObjectInstanceIds")
     if not isinstance(prepared, list) or any(value not in prepared for value in EXPECTED_LANDMARKS):

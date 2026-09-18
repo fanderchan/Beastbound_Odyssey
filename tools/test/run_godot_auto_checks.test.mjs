@@ -1210,7 +1210,8 @@ test("auth server client success evidence does not reuse a reserved failure fiel
 test("every discovered auto flag has one unique source-backed completion contract", () => {
   const source = scriptSourceTree(path.join(repoRoot, "client/godot/scripts"));
   const flags = discoverAutoCheckFlags();
-  assert.equal(flags.length, 223);
+  assert.equal(flags.length, 225);
+  assert.ok(flags.includes("--auto-earth-vein-review-contract-check"));
   const prefixes = new Set();
   for (const flag of flags) {
     const contract = autoCheckCompletionContract(flag);

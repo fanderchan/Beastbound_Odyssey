@@ -145,6 +145,12 @@ const MapVisualReviewShowcaseProfileCheck := preload(
 const WorldDepthLayerCheck := preload("res://scripts/qa/world_depth_layer_check.gd")
 const MapVisualReviewCapture := preload("res://scripts/qa/map_visual_review_capture.gd")
 const PerfProbeExitController := preload("res://scripts/qa/perf_probe_exit_controller.gd")
+const PerfProbeProcessScopeBoundary := preload(
+	"res://scripts/qa/perf_probe_process_scope_boundary.gd"
+)
+const MovementSpamProbePlan := preload(
+	"res://scripts/qa/movement_spam_probe_plan.gd"
+)
 const NpcMainReviewCapture := preload("res://scripts/qa/npc_main_review_capture.gd")
 const PetPaidResetUiCheck := preload("res://scripts/qa/pet_paid_reset_ui_check.gd")
 const PetEvolutionUiCheck := preload("res://scripts/qa/pet_evolution_ui_check.gd")
@@ -945,11 +951,23 @@ var world_camera_limit_bounds_zoom_cache := Vector2.ZERO
 var world_camera_limit_bounds_safe_rect_cache := Rect2()
 var world_camera_limit_bounds_anchor_cache := Vector2.ZERO
 var world_camera_limit_bounds_endpoint_safe_cache: bool = false
+var world_camera_center_cache_valid: bool = false
+var world_camera_center_target_cache := Vector2.ZERO
+var world_camera_center_map_cache: String = ""
+var world_camera_center_revision_cache: int = -1
+var world_camera_center_viewport_cache := Vector2.ZERO
+var world_camera_center_zoom_cache := Vector2.ZERO
+var world_camera_center_safe_rect_cache := Rect2()
+var world_camera_center_safe_anchor_cache := Vector2.ZERO
+var world_camera_center_hud_signature_cache: String = ""
+var world_camera_center_player_visual_signature_cache: String = ""
+var world_camera_center_value_cache := Vector2.ZERO
 var auto_movement_check: bool = false
 var movement_perf_check: bool = false
 var movement_spam_click_check: bool = false
 var movement_spam_click_limit: int = 0
 var movement_spam_click_limit_argument_error: String = ""
+var movement_spam_shared_target_contract: String = ""
 var shop_select_perf_check: bool = false
 var auto_mouse_click_check: bool = false
 var auto_mobile_touch_check: bool = false
@@ -962,6 +980,7 @@ var auto_camera_check: bool = false
 var auto_camera_click_check: bool = false
 var auto_world_presentation_profile_check: bool = false
 var auto_map_visual_review_showcase_profile_check: bool = false
+var auto_earth_vein_review_contract_check: bool = false
 var auto_animation_state_check: bool = false
 var auto_pet_follow_check: bool = false
 var auto_npc_interaction_check: bool = false
@@ -1501,6 +1520,24 @@ var map_world_bounds_cache_valid: bool = false
 var runtime_target_fps_cache: int = 0
 var canvas_text_font: Font
 var perf_probe_enabled: bool = false
+var perf_probe_warmup_frames: int = 0
+var perf_probe_warmup_frames_remaining: int = 0
+var perf_probe_warmup_argument_error: String = ""
+var perf_probe_measurement_frames_total: int = 0
+var perf_probe_measurement_report_count: int = 0
+var perf_probe_measurement_complete: bool = false
+var perf_probe_measurement_scope_complete: bool = false
+var perf_probe_measurement_error: String = ""
+var perf_probe_process_scope_measurement_frames_total: int = 0
+var perf_probe_process_scope_sample_frames: int = 0
+var perf_probe_process_scope_frame_start_usec: int = 0
+var perf_probe_process_scope_frame_active: bool = false
+var perf_probe_process_scope_begin_node
+var perf_probe_process_scope_end_node
+var perf_probe_pending_report: Dictionary = {}
+var perf_probe_completed_reports: Array[Dictionary] = []
+var perf_probe_sample_frames: int = 0
+var perf_probe_sample_frames_argument_error: String = ""
 var perf_probe_clean_exit_frames: int = 0
 var perf_probe_clean_exit_argument_error: String = ""
 var perf_probe_elapsed: float = 0.0
@@ -1760,12 +1797,44 @@ func _ready() -> void:
 		)
 		get_tree().quit(2)
 		return
-	if perf_probe_clean_exit_argument_error != "":
+	var perf_probe_fixed_frame_contract_error := ""
+	if perf_probe_enabled and perf_probe_sample_frames > 0:
+		if perf_probe_warmup_frames <= 0:
+			perf_probe_fixed_frame_contract_error = (
+				"fixed-frame perf probe requires an explicit warmup"
+			)
+		elif perf_probe_clean_exit_frames <= 0:
+			perf_probe_fixed_frame_contract_error = (
+				"fixed-frame perf probe requires an explicit measurement frame count"
+			)
+		elif perf_probe_clean_exit_frames % perf_probe_sample_frames != 0:
+			perf_probe_fixed_frame_contract_error = (
+				"perf probe measurement frames must be divisible by sample frames"
+			)
+	if (
+		perf_probe_clean_exit_argument_error != ""
+		or perf_probe_warmup_argument_error != ""
+		or perf_probe_sample_frames_argument_error != ""
+		or perf_probe_fixed_frame_contract_error != ""
+	):
+		var perf_probe_argument_error := (
+			perf_probe_clean_exit_argument_error
+			if perf_probe_clean_exit_argument_error != ""
+			else (
+				perf_probe_warmup_argument_error
+				if perf_probe_warmup_argument_error != ""
+				else (
+					perf_probe_sample_frames_argument_error
+					if perf_probe_sample_frames_argument_error != ""
+					else perf_probe_fixed_frame_contract_error
+				)
+			)
+		)
 		print(
 			"perf probe clean exit: %s"
 			% JSON.stringify({
 				"status": "failed",
-				"reason": perf_probe_clean_exit_argument_error,
+				"reason": perf_probe_argument_error,
 			})
 		)
 		get_tree().quit(2)
@@ -1833,7 +1902,9 @@ func _ready() -> void:
 	_refresh_gm_visibility()
 	_layout_hud()
 	_update_hud_text(true)
-	_reset_perf_probe_counters()
+	_build_perf_probe_process_scope_boundaries()
+	_begin_perf_probe_measurement()
+	perf_probe_warmup_frames_remaining = perf_probe_warmup_frames
 	_sync_keyboard_movement_input_gate()
 	set_process(true)
 	if _startup_auth_login_requested() and not account_authenticated and not map_visual_review_capture:
@@ -2410,6 +2481,8 @@ func _ready() -> void:
 		call_deferred("_run_auto_world_presentation_profile_check")
 	elif auto_map_visual_review_showcase_profile_check:
 		call_deferred("_run_auto_map_visual_review_showcase_profile_check")
+	elif auto_earth_vein_review_contract_check:
+		call_deferred("_run_auto_earth_vein_review_contract_check")
 	elif auto_camera_check:
 		call_deferred("_run_auto_camera_check")
 	elif auto_right_click_facing_check:
@@ -2489,7 +2562,34 @@ func _notification(what: int) -> void:
 func _configure_runtime_performance() -> void:
 	_set_runtime_target_fps(ACTIVE_TARGET_FPS)
 	Engine.physics_ticks_per_second = 60
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+	DisplayServer.window_set_vsync_mode(
+		DisplayServer.VSYNC_DISABLED
+		if perf_probe_enabled
+		else DisplayServer.VSYNC_ENABLED
+	)
+
+
+func _build_perf_probe_process_scope_boundaries() -> void:
+	if not perf_probe_enabled:
+		return
+	perf_probe_process_scope_begin_node = PerfProbeProcessScopeBoundary.new()
+	perf_probe_process_scope_end_node = PerfProbeProcessScopeBoundary.new()
+	if (
+		not perf_probe_process_scope_begin_node.configure(
+			self,
+			PerfProbeProcessScopeBoundary.PHASE_BEGIN
+		)
+		or not perf_probe_process_scope_end_node.configure(
+			self,
+			PerfProbeProcessScopeBoundary.PHASE_END
+		)
+	):
+		perf_probe_measurement_error = "process_scope_boundary_configuration_failed"
+		return
+	perf_probe_process_scope_begin_node.name = "PerfProbeProcessScopeBegin"
+	perf_probe_process_scope_end_node.name = "PerfProbeProcessScopeEnd"
+	add_child(perf_probe_process_scope_begin_node)
+	add_child(perf_probe_process_scope_end_node)
 
 
 func _set_runtime_target_fps(target_fps: int) -> void:
@@ -2563,7 +2663,10 @@ func _dev_entrypoint_arg(arg: String) -> bool:
 		or normalized.ends_with("-demo")
 		or normalized.ends_with("-test")
 		or normalized == "--perf-probe"
+		or normalized.begins_with("--perf-probe-warmup-frames=")
+		or normalized.begins_with("--perf-probe-sample-frames=")
 		or normalized.begins_with("--perf-probe-clean-exit-frames=")
+		or normalized.begins_with("--movement-spam-shared-target-contract=")
 		or normalized == "--numeric-experiment-report"
 		or normalized == "--gm-10v10-map"
 		or normalized == "--qa-viewport"
@@ -2704,6 +2807,10 @@ func _apply_preview_window_args() -> void:
 					movement_spam_click_limit_argument_error = "movement spam click limit must be between 1 and 120"
 				else:
 					movement_spam_click_limit = requested_click_limit
+		elif arg.begins_with("--movement-spam-shared-target-contract="):
+			movement_spam_shared_target_contract = arg.substr(
+				"--movement-spam-shared-target-contract=".length()
+			).strip_edges()
 		elif arg == "--shop-select-perf-check":
 			shop_select_perf_check = true
 		elif arg == "--auto-movement-check":
@@ -2730,6 +2837,8 @@ func _apply_preview_window_args() -> void:
 			auto_world_presentation_profile_check = true
 		elif arg == "--auto-map-visual-review-showcase-profile-check":
 			auto_map_visual_review_showcase_profile_check = true
+		elif arg == "--auto-earth-vein-review-contract-check":
+			auto_earth_vein_review_contract_check = true
 		elif arg == "--auto-animation-state-check":
 			auto_animation_state_check = true
 		elif arg == "--auto-pet-follow-check":
@@ -3382,6 +3491,38 @@ func _apply_preview_window_args() -> void:
 			battle_debug_window_enabled = true
 		elif arg == "--perf-probe":
 			perf_probe_enabled = true
+		elif arg.begins_with("--perf-probe-warmup-frames="):
+			var warmup_frame_text := arg.substr(
+				"--perf-probe-warmup-frames=".length()
+			).strip_edges()
+			if not warmup_frame_text.is_valid_int():
+				perf_probe_warmup_argument_error = (
+					"perf probe warmup frames must be an integer"
+				)
+			else:
+				var requested_warmup_frames := int(warmup_frame_text)
+				if requested_warmup_frames < 60 or requested_warmup_frames > 1800:
+					perf_probe_warmup_argument_error = (
+						"perf probe warmup frames must be between 60 and 1800"
+					)
+				else:
+					perf_probe_warmup_frames = requested_warmup_frames
+		elif arg.begins_with("--perf-probe-sample-frames="):
+			var sample_frame_text := arg.substr(
+				"--perf-probe-sample-frames=".length()
+			).strip_edges()
+			if not sample_frame_text.is_valid_int():
+				perf_probe_sample_frames_argument_error = (
+					"perf probe sample frames must be an integer"
+				)
+			else:
+				var requested_sample_frames := int(sample_frame_text)
+				if requested_sample_frames < 30 or requested_sample_frames > 600:
+					perf_probe_sample_frames_argument_error = (
+						"perf probe sample frames must be between 30 and 600"
+					)
+				else:
+					perf_probe_sample_frames = requested_sample_frames
 		elif arg.begins_with("--perf-probe-clean-exit-frames="):
 			var frame_text := arg.substr(
 				"--perf-probe-clean-exit-frames=".length()
@@ -3761,9 +3902,10 @@ func _run_auto_party_member_follow_check() -> void:
 
 
 func _run_perf_probe_clean_exit_after_frames() -> void:
-	await PerfProbeExitController.new(self).finish_after_frames(
+	await PerfProbeExitController.new(self).finish_after_measurement_frames(
 		perf_probe_clean_exit_frames,
-		0
+		0,
+		"post_warmup_fixed_frames"
 	)
 
 
@@ -3772,6 +3914,11 @@ func _run_movement_spam_click_check() -> void:
 		print("movement spam click check ready: status=failed reason=%s" % movement_spam_click_limit_argument_error)
 		get_tree().quit(1)
 		return
+	# Formal map performance evidence discards startup/camera/HUD warmup before
+	# the first real input event. Other callers leave the counter at zero and do
+	# not pay this wait.
+	while perf_probe_warmup_frames_remaining > 0:
+		await get_tree().process_frame
 	# Camera2D only publishes its effective screen center after rendered frames.
 	# The v2 review zoom and HUD-safe anchor can otherwise make every synthetic
 	# target look off-screen when this deferred probe runs before the first draw.
@@ -3797,6 +3944,48 @@ func _run_movement_spam_click_check() -> void:
 	# behavior has its own auto check and must not switch the probe into battle.
 	encounter_grace_remaining = 3600.0
 	var start_cell := IsoMapModel.spawn_cell(map_data)
+	var shared_workload := not movement_spam_shared_target_contract.is_empty()
+	var shared_plan: Dictionary = {}
+	var shared_workload_error := ""
+	var target_candidates: Array[Vector2i] = []
+	var sequence_id := "legacy_dynamic_v1"
+	var sequence_sha256 := "none"
+	var planned_target_count := 0
+	var planned_final_cell_key := IsoMapModel.cell_key(start_cell)
+	if shared_workload:
+		shared_plan = MovementSpamProbePlan.build(
+			map_data,
+			start_cell,
+			movement_spam_click_limit,
+			movement_spam_shared_target_contract
+		)
+		if str(shared_plan.get("status", "")) != "passed":
+			shared_workload_error = str(shared_plan.get("reason", "invalid_plan"))
+		else:
+			for target_value in shared_plan.get("cells", []):
+				if target_value is Vector2i:
+					target_candidates.append(target_value)
+			sequence_id = str(shared_plan.get("contractId", ""))
+			sequence_sha256 = str(shared_plan.get("sequenceSha256", ""))
+			planned_target_count = int(shared_plan.get("cellCount", 0))
+			planned_final_cell_key = str(shared_plan.get("finalCellKey", ""))
+	else:
+		for index in range(120):
+			var offset := Vector2i(4 + (index % 9), -4 - (index % 7))
+			target_candidates.append(
+				IsoMapModel.nearest_walkable_cell(map_data, start_cell + offset)
+			)
+		planned_target_count = target_candidates.size()
+	var actual_start_cell := IsoMapModel.world_to_grid(
+		map_data,
+		player.global_position
+	)
+	if shared_workload and actual_start_cell != start_cell:
+		shared_workload_error = "actual_start_cell_mismatch"
+	if perf_probe_enabled:
+		# The projection-settle frames above are setup, not movement workload.
+		# Start a fresh fixed measurement window immediately before real input.
+		_begin_perf_probe_measurement()
 	var start_position := player.global_position
 	var before_apply_count := click_move_repath_apply_count
 	var before_resolve_count := click_move_screen_resolve_count
@@ -3812,57 +4001,72 @@ func _run_movement_spam_click_check() -> void:
 	var ui_skipped_count := 0
 	var interaction_skipped_count := 0
 	var mouse_event_count := 0
-	for frame_index in range(40):
+	if shared_workload and target_candidates.size() != movement_spam_click_limit:
+		shared_workload_error = "target_count_mismatch"
+	for candidate in target_candidates:
 		if movement_spam_click_limit > 0 and click_count >= movement_spam_click_limit:
 			break
-		for burst_index in range(3):
-			if movement_spam_click_limit > 0 and click_count >= movement_spam_click_limit:
+		if not shared_workload_error.is_empty():
+			break
+		if not IsoMapModel.is_inside(map_data, candidate):
+			if shared_workload:
+				shared_workload_error = "target_outside_map"
 				break
-			var index := frame_index * 3 + burst_index
-			var offset := Vector2i(4 + (index % 9), -4 - (index % 7))
-			var candidate := IsoMapModel.nearest_walkable_cell(map_data, start_cell + offset)
-			if not IsoMapModel.is_inside(map_data, candidate):
-				continue
-			var screen_point := _world_to_screen(IsoMapModel.grid_to_world(map_data, candidate))
-			if not viewport_rect.has_point(screen_point) or _is_ui_point(screen_point):
-				ui_skipped_count += 1
-				continue
-			var world_point := _screen_to_world(screen_point)
-			if (
-				not _find_ground_pet_drop_at_world_point(world_point).is_empty()
-				or not _npc_hover_interaction_at_screen_point(screen_point).is_empty()
-				or not InteractionModel.find_at_world_point(map_data, world_point, 34.0, false).is_empty()
-			):
-				interaction_skipped_count += 1
-				continue
-			# Input.parse_input_event accepts host-window coordinates. Convert the
-			# desired viewport point first so the delivered event remains correct
-			# when headless uses a tiny backing window with a scaled viewport.
-			var input_position := get_viewport().get_screen_transform() * screen_point
-			movement_spam_expected_screen_point = screen_point
-			last_cell = candidate
-			var event := InputEventMouseButton.new()
-			mouse_event_count += 1
-			event.button_index = MOUSE_BUTTON_LEFT
-			event.pressed = true
-			event.position = input_position
-			event.global_position = input_position
-			var started_usec := Time.get_ticks_usec()
-			Input.parse_input_event(event)
-			var elapsed_usec := Time.get_ticks_usec() - started_usec
-			input_elapsed_usec += elapsed_usec
-			max_input_usec = maxi(max_input_usec, elapsed_usec)
-			click_count += 1
-			# A real release on a later process frame prevents same-frame helper
-			# calls from masquerading as movement/input performance coverage.
-			await get_tree().process_frame
-			var release := InputEventMouseButton.new()
-			release.button_index = MOUSE_BUTTON_LEFT
-			release.pressed = false
-			release.position = input_position
-			release.global_position = input_position
-			Input.parse_input_event(release)
-			await get_tree().process_frame
+			continue
+		var screen_point := _world_to_screen(
+			IsoMapModel.grid_to_world(map_data, candidate)
+		)
+		if not viewport_rect.has_point(screen_point) or _is_ui_point(screen_point):
+			ui_skipped_count += 1
+			if shared_workload:
+				shared_workload_error = "target_not_screen_safe"
+				break
+			continue
+		var world_point := _screen_to_world(screen_point)
+		if (
+			not _find_ground_pet_drop_at_world_point(world_point).is_empty()
+			or not _npc_hover_interaction_at_screen_point(screen_point).is_empty()
+			or not InteractionModel.find_at_world_point(
+				map_data,
+				world_point,
+				34.0,
+				false
+			).is_empty()
+		):
+			interaction_skipped_count += 1
+			if shared_workload:
+				shared_workload_error = "target_hits_interaction"
+				break
+			continue
+		# Input.parse_input_event accepts host-window coordinates. Convert the
+		# desired viewport point first so the delivered event remains correct
+		# when the backing window uses a scaled viewport.
+		var input_position := get_viewport().get_screen_transform() * screen_point
+		movement_spam_expected_screen_point = screen_point
+		last_cell = candidate
+		var event := InputEventMouseButton.new()
+		mouse_event_count += 1
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.pressed = true
+		event.position = input_position
+		event.global_position = input_position
+		var started_usec := Time.get_ticks_usec()
+		Input.parse_input_event(event)
+		var elapsed_usec := Time.get_ticks_usec() - started_usec
+		input_elapsed_usec += elapsed_usec
+		max_input_usec = maxi(max_input_usec, elapsed_usec)
+		click_count += 1
+		# A real release on a later process frame prevents same-frame helper
+		# calls from masquerading as movement/input performance coverage.
+		await get_tree().process_frame
+		var release := InputEventMouseButton.new()
+		release.button_index = MOUSE_BUTTON_LEFT
+		release.pressed = false
+		release.position = input_position
+		release.global_position = input_position
+		Input.parse_input_event(release)
+		mouse_event_count += 1
+		await get_tree().process_frame
 	var settle_frame_count := 0
 	while settle_frame_count < 240:
 		await get_tree().physics_frame
@@ -3889,7 +4093,7 @@ func _run_movement_spam_click_check() -> void:
 	# The debounce is time-based, so a fixed resolved-count ceiling is unstable
 	# across headless frame cadences. Require the burst to collapse at least one
 	# accepted click and never apply more paths than it resolves.
-	var coalesced := input_accept_count > 0 and resolved_count < input_accept_count and applied_count <= resolved_count
+	var coalesced := input_accept_count > 0 and resolved_count < input_accept_count and applied_count > 0 and applied_count <= resolved_count
 	var final_player_cell := IsoMapModel.world_to_grid(map_data, player.global_position)
 	var settled: bool = (
 		not has_pending_click_screen_point
@@ -3897,8 +4101,21 @@ func _run_movement_spam_click_check() -> void:
 		and not player.is_auto_moving()
 	)
 	var final_target_matches := final_player_cell == last_cell
-	var status := "ok" if camera_projection_ready and click_count > 0 and moved and coalesced and input_fast and input_screen_roundtrip and settled and final_target_matches else "failed"
-	print("movement spam click check ready: status=%s clicks=%d click_limit=%d ui_skipped=%d interaction_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d screen_matches=%d screen_mismatches=%d screen_roundtrip=%s avg_input_us=%d max_input_us=%d settle_frames=%d moved=%s coalesced=%s settled=%s final_match=%s projection_ready=%s projection_wait_frames=%d auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s final_target=%s expected=%s" % [
+	var exact_shared_workload := (
+		not shared_workload
+		or (
+			shared_workload_error.is_empty()
+			and click_count == movement_spam_click_limit
+			and planned_target_count == movement_spam_click_limit
+			and ui_skipped_count == 0
+			and interaction_skipped_count == 0
+			and mouse_event_count == click_count * 2
+			and input_ui_reject_count == 0
+			and input_remote_hit_count == 0
+		)
+	)
+	var status := "ok" if camera_projection_ready and click_count > 0 and moved and coalesced and input_fast and input_screen_roundtrip and settled and final_target_matches and exact_shared_workload and not battle_active and not encounter_active else "failed"
+	print("movement spam click check ready: status=%s clicks=%d click_limit=%d ui_skipped=%d interaction_skipped=%d mouse_events=%d input_ui=%d remote_hit=%d accepted=%d resolved=%d applied=%d screen_matches=%d screen_mismatches=%d screen_roundtrip=%s avg_input_us=%d max_input_us=%d settle_frames=%d moved=%s coalesced=%s settled=%s final_match=%s projection_ready=%s projection_wait_frames=%d auth=%s bypass=%s battle=%s encounter=%s auth_panel=%s sequence_id=%s sequence_sha256=%s target_count=%d start_cell=%s actual_start_cell=%s final_cell=%s expected_cell=%s shared_error=%s" % [
 		status,
 		click_count,
 		movement_spam_click_limit,
@@ -3927,12 +4144,30 @@ func _run_movement_spam_click_check() -> void:
 		str(battle_active),
 		str(encounter_active),
 		str(auth_panel != null and auth_panel.visible),
-		str(target_cell),
-		str(last_cell),
+		sequence_id,
+		sequence_sha256,
+		planned_target_count,
+		IsoMapModel.cell_key(start_cell),
+		IsoMapModel.cell_key(actual_start_cell),
+		IsoMapModel.cell_key(final_player_cell),
+		planned_final_cell_key,
+		shared_workload_error if not shared_workload_error.is_empty() else "none",
 	])
 	var exit_code := 0 if status == "ok" else 1
 	if perf_probe_clean_exit_frames > 0:
-		await PerfProbeExitController.new(self).finish(exit_code)
+		var exit_controller = PerfProbeExitController.new(self)
+		if shared_workload:
+			await exit_controller.finish_after_measurement_frames(
+				perf_probe_clean_exit_frames,
+				exit_code,
+				"shared_input_then_fixed_frames"
+			)
+		else:
+			var measurement_ok := _complete_perf_probe_measurement(
+				"movement_check_lifecycle",
+				0
+			)
+			await exit_controller.finish(exit_code if measurement_ok else 1)
 		return
 	get_tree().quit(exit_code)
 
@@ -4059,6 +4294,17 @@ func _run_auto_map_visual_review_showcase_profile_check() -> void:
 	var report := MapVisualReviewShowcaseProfileCheck.run()
 	print("map visual review showcase profile check: %s" % JSON.stringify(report))
 	get_tree().quit(0 if str(report.get("result", "FAIL")) == "PASS" else 1)
+
+
+func _run_auto_earth_vein_review_contract_check() -> void:
+	var checker = load("res://scripts/qa/earth_vein_review_contract_check.gd")
+	var report: Dictionary = checker.run()
+	var passed := str(report.get("result", "FAIL")) == "PASS"
+	print("earth vein review contract check ready: status=%s cases=%d errors=%s" % [
+		"ok" if passed else "failed",
+		int(report.get("caseCount", 0)), JSON.stringify(report.get("errors", [])),
+	])
+	get_tree().quit(0 if passed else 1)
 
 
 func _run_auto_animation_state_check() -> void:
@@ -8921,23 +9167,257 @@ func _perf_add(label: String, start_usec: int) -> void:
 func _perf_report(delta: float) -> void:
 	if not perf_probe_enabled:
 		return
+	if perf_probe_warmup_frames_remaining > 0:
+		perf_probe_warmup_frames_remaining -= 1
+		if perf_probe_warmup_frames_remaining == 0:
+			_begin_perf_probe_measurement()
+			print(
+				"perf probe warmup complete: %s"
+				% JSON.stringify({
+					"frames": perf_probe_warmup_frames,
+					"status": "passed",
+				})
+			)
+			var version_info := Engine.get_version_info()
+			var viewport_size := get_viewport().get_visible_rect().size
+			print(
+				"perf probe runtime: %s"
+				% JSON.stringify({
+					"candidateEnabled": map_art_review_preview,
+					"displayServer": DisplayServer.get_name(),
+					"engineVersion": str(version_info.get("string", "")),
+					"engineVersionHash": str(version_info.get("hash", "")).substr(0, 9),
+					"mapId": current_map_id,
+					"mapVisualActive": bool(map_visual_render_state.get("active", false)),
+					"mapVisualBundleId": str(map_visual_render_state.get("bundleId", "")),
+					"mapVisualCatalogSource": str(map_visual_render_state.get("catalogSource", "")),
+					"mapVisualMapId": str(map_visual_render_state.get("mapId", "")),
+					"mapVisualQaPreview": bool(map_visual_render_state.get("qaPreview", false)),
+					"mapVisualReviewCandidate": bool(map_visual_render_state.get("reviewCandidate", false)),
+					"mapVisualStatus": str(map_visual_render_state.get("status", "")),
+					"processScopeMonitor": "process_priority_boundary_v1",
+					"processScopePriorities": [
+						PerfProbeProcessScopeBoundary.BEGIN_PROCESS_PRIORITY,
+						PerfProbeProcessScopeBoundary.END_PROCESS_PRIORITY,
+					],
+					"processScopeReady": (
+						perf_probe_process_scope_begin_node != null
+						and perf_probe_process_scope_end_node != null
+						and perf_probe_process_scope_begin_node.process_priority
+						== PerfProbeProcessScopeBoundary.BEGIN_PROCESS_PRIORITY
+						and perf_probe_process_scope_end_node.process_priority
+						== PerfProbeProcessScopeBoundary.END_PROCESS_PRIORITY
+					),
+					"renderingDriver": RenderingServer.get_current_rendering_driver_name(),
+					"renderingMethod": RenderingServer.get_current_rendering_method(),
+					"sampleFrames": perf_probe_sample_frames,
+					"status": "passed",
+					"videoAdapterName": RenderingServer.get_video_adapter_name(),
+					"viewportSize": [int(viewport_size.x), int(viewport_size.y)],
+					"vsyncMode": int(DisplayServer.window_get_vsync_mode()),
+				})
+			)
+		return
+	perf_probe_measurement_frames_total += 1
 	perf_probe_elapsed += delta
 	perf_probe_frames += 1
-	if perf_probe_elapsed < 1.0:
+	if (
+		perf_probe_sample_frames > 0
+		and perf_probe_frames < perf_probe_sample_frames
+	):
 		return
-	var parts: Array[String] = []
-	var labels := perf_probe_totals.keys()
-	labels.sort()
-	for label in labels:
-		parts.append("%s=%.2fms" % [str(label), float(perf_probe_totals[label]) / 1000.0 / maxf(1.0, float(perf_probe_frames))])
-	print("perf probe: fps=%.1f frames=%d %s" % [
-		float(perf_probe_frames) / maxf(0.001, perf_probe_elapsed),
+	if perf_probe_sample_frames <= 0 and perf_probe_elapsed < 1.0:
+		return
+	if perf_probe_sample_frames > 0:
+		_stage_perf_probe_report()
+		return
+	_print_perf_probe_report(
 		perf_probe_frames,
-		" ".join(parts),
-	])
+		perf_probe_elapsed,
+		perf_probe_totals
+	)
+	perf_probe_measurement_report_count += 1
 	perf_probe_elapsed = 0.0
 	perf_probe_frames = 0
 	perf_probe_totals.clear()
+
+
+func _perf_probe_process_scope_begin() -> void:
+	if (
+		not perf_probe_enabled
+		or perf_probe_sample_frames <= 0
+		or perf_probe_warmup_frames_remaining > 0
+		or perf_probe_measurement_complete
+		or perf_probe_measurement_scope_complete
+	):
+		perf_probe_process_scope_frame_active = false
+		return
+	if not perf_probe_pending_report.is_empty():
+		perf_probe_measurement_error = "process_scope_pending_report_crossed_frame"
+	perf_probe_process_scope_frame_start_usec = Time.get_ticks_usec()
+	perf_probe_process_scope_frame_active = true
+
+
+func _perf_probe_process_scope_end() -> void:
+	if not perf_probe_process_scope_frame_active:
+		return
+	perf_probe_process_scope_frame_active = false
+	var duration_usec := maxi(
+		0,
+		Time.get_ticks_usec() - perf_probe_process_scope_frame_start_usec
+	)
+	if perf_probe_pending_report.is_empty():
+		perf_probe_totals["process_scope_total"] = int(
+			perf_probe_totals.get("process_scope_total", 0)
+		) + duration_usec
+		perf_probe_process_scope_sample_frames += 1
+		perf_probe_process_scope_measurement_frames_total += 1
+		return
+	var pending_totals := (
+		perf_probe_pending_report.get("totals", {}) as Dictionary
+	)
+	pending_totals["process_scope_total"] = int(
+		pending_totals.get("process_scope_total", 0)
+	) + duration_usec
+	perf_probe_pending_report["processScopeFrames"] = int(
+		perf_probe_pending_report.get("processScopeFrames", 0)
+	) + 1
+	perf_probe_process_scope_measurement_frames_total += 1
+	perf_probe_pending_report["totals"] = pending_totals
+	_emit_pending_perf_probe_report()
+	if (
+		perf_probe_clean_exit_frames > 0
+		and perf_probe_measurement_frames_total >= perf_probe_clean_exit_frames
+	):
+		_print_completed_perf_probe_reports()
+		perf_probe_measurement_scope_complete = true
+
+
+func _stage_perf_probe_report() -> void:
+	if not perf_probe_pending_report.is_empty():
+		perf_probe_measurement_error = "previous_sample_not_flushed"
+	perf_probe_pending_report = {
+		"elapsed": perf_probe_elapsed,
+		"frames": perf_probe_frames,
+		"processScopeFrames": perf_probe_process_scope_sample_frames,
+		"totals": perf_probe_totals.duplicate(true),
+	}
+	perf_probe_elapsed = 0.0
+	perf_probe_frames = 0
+	perf_probe_totals.clear()
+	perf_probe_process_scope_sample_frames = 0
+
+
+func _emit_pending_perf_probe_report() -> void:
+	if perf_probe_pending_report.is_empty():
+		return
+	var frames := int(perf_probe_pending_report.get("frames", 0))
+	var process_scope_frames := int(
+		perf_probe_pending_report.get("processScopeFrames", 0)
+	)
+	if process_scope_frames != frames:
+		perf_probe_measurement_error = "process_scope_sample_count_mismatch"
+	perf_probe_completed_reports.append({
+		"elapsed": float(perf_probe_pending_report.get("elapsed", 0.0)),
+		"frames": frames,
+		"totals": (
+			perf_probe_pending_report.get("totals", {}) as Dictionary
+		).duplicate(true),
+	})
+	perf_probe_measurement_report_count += 1
+	perf_probe_pending_report.clear()
+
+
+func _print_completed_perf_probe_reports() -> void:
+	for report in perf_probe_completed_reports:
+		_print_perf_probe_report(
+			int(report.get("frames", 0)),
+			float(report.get("elapsed", 0.0)),
+			report.get("totals", {}) as Dictionary
+		)
+	perf_probe_completed_reports.clear()
+
+
+func _print_perf_probe_report(
+	frames: int,
+	elapsed: float,
+	totals: Dictionary
+) -> void:
+	var parts: Array[String] = []
+	var labels := totals.keys()
+	labels.sort()
+	for label in labels:
+		parts.append(
+			"%s=%.3fms"
+			% [
+				str(label),
+				float(totals[label]) / 1000.0 / maxf(1.0, float(frames)),
+			]
+		)
+	print("perf probe: fps=%.1f frames=%d %s" % [
+		float(frames) / maxf(0.001, elapsed),
+		frames,
+		" ".join(parts),
+	])
+
+
+func _begin_perf_probe_measurement() -> void:
+	if not perf_probe_enabled:
+		return
+	_reset_perf_probe_counters()
+	perf_probe_measurement_frames_total = 0
+	perf_probe_measurement_report_count = 0
+	perf_probe_measurement_complete = false
+	perf_probe_measurement_scope_complete = false
+	perf_probe_measurement_error = ""
+	perf_probe_process_scope_measurement_frames_total = 0
+
+
+func _complete_perf_probe_measurement(
+	measurement_mode: String,
+	expected_frames: int = 0
+) -> bool:
+	if not perf_probe_enabled or perf_probe_measurement_complete:
+		return false
+	var frame_count_matches := (
+		expected_frames <= 0
+		or perf_probe_measurement_frames_total == expected_frames
+	)
+	var expected_sample_count := (
+		int(expected_frames / perf_probe_sample_frames)
+		if expected_frames > 0 and perf_probe_sample_frames > 0
+		else perf_probe_measurement_report_count
+	)
+	var fixed_sample_contract_matches := (
+		perf_probe_sample_frames <= 0
+		or (
+			expected_frames == perf_probe_clean_exit_frames
+			and expected_frames % perf_probe_sample_frames == 0
+			and perf_probe_pending_report.is_empty()
+			and perf_probe_completed_reports.is_empty()
+			and perf_probe_frames == 0
+			and perf_probe_measurement_report_count == expected_sample_count
+			and perf_probe_process_scope_measurement_frames_total == expected_frames
+			and perf_probe_measurement_scope_complete
+			and perf_probe_measurement_error.is_empty()
+		)
+	)
+	var measurement_ok := frame_count_matches and fixed_sample_contract_matches
+	var report := {
+		"completeSamples": perf_probe_measurement_report_count,
+		"discardedPartialFrames": perf_probe_frames,
+		"expectedFrames": expected_frames,
+		"frames": perf_probe_measurement_frames_total,
+		"mode": measurement_mode,
+		"processScope": "process_priority_boundary_v1",
+		"processScopeFrames": perf_probe_process_scope_measurement_frames_total,
+		"status": "passed" if measurement_ok else "failed",
+	}
+	print("perf probe measurement complete: %s" % JSON.stringify(report))
+	perf_probe_measurement_complete = true
+	perf_probe_enabled = false
+	perf_probe_process_active = false
+	return measurement_ok
 
 
 func _reset_perf_probe_counters() -> void:
@@ -8948,6 +9428,11 @@ func _reset_perf_probe_counters() -> void:
 	perf_probe_process_accounting_usec = 0
 	perf_probe_process_active = false
 	perf_probe_totals.clear()
+	perf_probe_process_scope_sample_frames = 0
+	perf_probe_process_scope_frame_start_usec = 0
+	perf_probe_process_scope_frame_active = false
+	perf_probe_pending_report.clear()
+	perf_probe_completed_reports.clear()
 	perf_probe_frame_max_usec.clear()
 	perf_probe_label_samples.clear()
 
@@ -15778,7 +16263,7 @@ func _apply_world_presentation_profile() -> void:
 func _update_camera_position(force: bool) -> void:
 	if game_camera == null or player == null:
 		return
-	var next_position := _clamped_camera_center(player.global_position)
+	var next_position := _cached_clamped_camera_center(player.global_position, force)
 	var target_moved := force or game_camera.global_position.distance_to(next_position) > 0.1
 	if target_moved:
 		game_camera.global_position = next_position
@@ -15797,6 +16282,56 @@ func _update_camera_position(force: bool) -> void:
 		npc_hover_camera_screen_center_valid = true
 	if target_moved or actual_center_moved:
 		_refresh_npc_hover_identity_from_cached_pointer()
+
+
+func _cached_clamped_camera_center(target: Vector2, force: bool = false) -> Vector2:
+	# The endpoint-safe Earth Vein profile solves HUD/landmark composition. Its
+	# inputs are static while the actor is idle, so reuse the fully clamped center
+	# instead of traversing the same safe-area/model call graph every frame.
+	# Moving targets still miss this exact cache and are solved every frame.
+	if not WorldPresentationProfile.uses_hud_landmark_composition(
+		map_art_review_preview and not battle_active,
+		map_visual_render_state
+	):
+		return _clamped_camera_center(target)
+	var viewport_size := get_viewport_rect().size
+	var zoom := game_camera.zoom if game_camera != null else Vector2.ONE
+	var player_visual_signature := (
+		str(player.call("get_visual_bounds_signature"))
+		if player != null and player.has_method("get_visual_bounds_signature")
+		else "fallback"
+	)
+	if (
+		not force
+		and world_camera_center_cache_valid
+		and target.is_equal_approx(world_camera_center_target_cache)
+		and world_camera_center_map_cache == current_map_id
+		and world_camera_center_revision_cache == map_visual_render_revision
+		and viewport_size.is_equal_approx(world_camera_center_viewport_cache)
+		and zoom.is_equal_approx(world_camera_center_zoom_cache)
+		and world_camera_safe_viewport_rect == world_camera_center_safe_rect_cache
+		and world_camera_safe_anchor_screen.is_equal_approx(
+			world_camera_center_safe_anchor_cache
+		)
+		and world_camera_hud_blocker_signature_cache
+			== world_camera_center_hud_signature_cache
+		and player_visual_signature
+			== world_camera_center_player_visual_signature_cache
+	):
+		return world_camera_center_value_cache
+	var center := _clamped_camera_center(target)
+	world_camera_center_cache_valid = true
+	world_camera_center_target_cache = target
+	world_camera_center_map_cache = current_map_id
+	world_camera_center_revision_cache = map_visual_render_revision
+	world_camera_center_viewport_cache = viewport_size
+	world_camera_center_zoom_cache = zoom
+	world_camera_center_safe_rect_cache = world_camera_safe_viewport_rect
+	world_camera_center_safe_anchor_cache = world_camera_safe_anchor_screen
+	world_camera_center_hud_signature_cache = world_camera_hud_blocker_signature_cache
+	world_camera_center_player_visual_signature_cache = player_visual_signature
+	world_camera_center_value_cache = center
+	return center
 
 
 func _clamped_camera_center(target: Vector2) -> Vector2:

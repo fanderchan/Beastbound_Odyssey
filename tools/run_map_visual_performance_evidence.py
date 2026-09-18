@@ -25,6 +25,12 @@ QA_ATTESTATION_PREFIX = "BEASTBOUND_QA_USER_DATA_ATTESTATION: "
 QA_FEATURE = "beastbound_qa_automation"
 QA_CUSTOM_USER_DIR_NAME = "BeastboundOdysseyQA_Automation"
 QA_USER_DATA_ROOT_REDACTION = "<QA_USER_DATA_ROOT>"
+DEFAULT_REPETITIONS = 3
+PERF_WARMUP_FRAMES = builder.PERF_WARMUP_FRAMES
+PERF_MEASUREMENT_FRAMES = builder.PERF_MEASUREMENT_FRAMES
+PERF_SAMPLE_FRAMES = builder.PERF_SAMPLE_FRAMES
+MOVING_WORKLOAD_CONTRACT = builder.MOVING_WORKLOAD_CONTRACT
+RUN_TIMEOUT_SECONDS = 120
 
 
 def _utc_now() -> str:
@@ -33,39 +39,53 @@ def _utc_now() -> str:
     )
 
 
+def _probe_godot_version(
+    executable: str,
+    *,
+    runner: Any = subprocess.run,
+) -> str:
+    completed = runner(
+        [executable, "--version"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=15,
+    )
+    version = completed.stdout.strip()
+    if completed.returncode != 0 or version != builder.RUNNER_VERSION:
+        raise builder.EvidenceError(
+            "Godot runner version does not match the frozen evidence contract"
+        )
+    return version
+
+
 def _command(
     map_id: str,
     variant: str,
     mode: str,
 ) -> list[str]:
-    command = [
-        GODOT,
-        "--path",
-        "client/godot",
-        "--scene",
-        "res://scenes/Main.tscn",
-        "--windowed",
-        "--resolution",
-        "1280x720",
-        "--single-window",
-        "--fixed-fps",
-        "60",
-        "--time-scale",
-        "1.0",
-        "--disable-vsync",
-        "--quit-after",
-        "480" if mode == "idle" else "2600",
-        "--",
-        QA_LANE_ARGUMENT,
-        f"--map-perf-probe-map={map_id}",
-    ]
-    if variant == "candidate":
-        command.append(f"--map-art-review-preview={map_id}")
-    if mode == "moving":
-        command.append("--movement-spam-click-check")
-        command.append("--movement-spam-click-limit=60")
-    command.append("--perf-probe")
-    return command
+    return builder.expected_performance_argv(GODOT, map_id, variant, mode)
+
+
+def _repetition_count(value: str) -> int:
+    try:
+        count = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("repetitions must be an integer") from error
+    if count < 3 or count % 2 == 0:
+        raise argparse.ArgumentTypeError(
+            "repetitions must be an odd integer greater than or equal to 3"
+        )
+    return count
+
+
+def _performance_matrix(
+    map_ids: tuple[str, ...] | list[str],
+    repetitions: int,
+) -> list[tuple[str, str, str, int]]:
+    """Pair baseline/candidate runs closely while keeping runs independent."""
+    return builder.expected_performance_matrix(map_ids, repetitions)
 
 
 def _lane_environment(
@@ -149,6 +169,13 @@ def _public_qa_lane_attestation(
     return public
 
 
+def _diagnostic_tail(value: str, limit: int = 2000) -> str:
+    compact = "\\n".join(line.rstrip() for line in value.splitlines() if line.strip())
+    if len(compact) <= limit:
+        return compact
+    return "<truncated>" + compact[-limit:]
+
+
 def _validate_lane_cleanup(
     prepared: dict[str, Any],
     verified: dict[str, Any] | None,
@@ -189,14 +216,20 @@ def _validate_lane_cleanup(
 
 def _run(
     command: list[str],
+    bundle_id: str,
     map_id: str,
     variant: str,
     mode: str,
     *,
+    repetition: int = 1,
+    build_identity: str,
+    runner_version: str,
     runner: Any = subprocess.run,
     lane_api: Any = lane_helper,
     base_environment: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    if runner_version != builder.RUNNER_VERSION:
+        raise builder.EvidenceError("Godot runner version is invalid")
     base = dict(os.environ if base_environment is None else base_environment)
     owner = uuid.uuid4().hex
     prepared = dict(
@@ -219,6 +252,7 @@ def _run(
             text=True,
             check=False,
             env=environment,
+            timeout=RUN_TIMEOUT_SECONDS,
         )
         ended = _utc_now()
         attestation = _parse_qa_lane_attestation(
@@ -230,10 +264,32 @@ def _run(
         record = {
             "schemaVersion": 1,
             "recordType": "beastbound_map_performance_runner_receipt",
+            "bundleId": bundle_id,
             "mapId": map_id,
             "variant": variant,
             "mode": mode,
+            "repetition": repetition,
+            "buildIdentity": build_identity,
+            **builder.performance_evidence_tool_hashes(),
+            "samplingContract": {
+                "version": 2,
+                "warmupFrames": PERF_WARMUP_FRAMES,
+                "measurementFrames": PERF_MEASUREMENT_FRAMES,
+                "sampleFrames": PERF_SAMPLE_FRAMES,
+                "measurementBoundary": (
+                    "shared_input_then_fixed_frames"
+                    if mode == "moving"
+                    else "post_warmup_fixed_frames"
+                ),
+                "audioPlaybackDisabled": True,
+                "cleanExitRequired": True,
+                "processScopeMonitor": "process_priority_boundary_v1",
+                "movingWorkloadContract": (
+                    MOVING_WORKLOAD_CONTRACT if mode == "moving" else None
+                ),
+            },
             "runner": "godot",
+            "runnerVersion": runner_version,
             "argv": command,
             "startedAtUtc": started,
             "endedAtUtc": ended,
@@ -242,8 +298,16 @@ def _run(
             "stderr": public_stderr,
             "qaLane": {"attestation": _public_qa_lane_attestation(attestation)},
         }
-        # Validate each run before it can enter the frozen receipt.
-        builder.parse_perf_run(record)
+        # Validate each run before it can enter the frozen receipt. Preserve a
+        # bounded, already-redacted diagnostic tail when Godot exits abnormally
+        # so a failed matrix cannot collapse into an unactionable generic error.
+        try:
+            builder.parse_perf_run(record)
+        except builder.EvidenceError as error:
+            raise builder.EvidenceError(
+                f"{error}; stdout_tail={_diagnostic_tail(public_stdout)!r}; "
+                f"stderr_tail={_diagnostic_tail(public_stderr)!r}"
+            ) from error
         verified = dict(
             lane_api.verify_lane(
                 QA_LANE,
@@ -337,12 +401,22 @@ def main(argv: list[str] | None = None) -> int:
         "--bundle-id",
         action="append",
         choices=tuple(builder.MAP_BUNDLES),
-        help="Run only the selected bundle; may be repeated. Defaults to every bundle.",
+        required=True,
+        help="Run the selected bundle; may be repeated.",
     )
     parser.add_argument(
         "--replace-existing",
         action="store_true",
         help="Atomically replace an existing receipt after every new run validates.",
+    )
+    parser.add_argument(
+        "--repetitions",
+        type=_repetition_count,
+        default=DEFAULT_REPETITIONS,
+        help=(
+            "Independent runs per map/variant/mode. Must be odd and at least 3; "
+            f"defaults to {DEFAULT_REPETITIONS}."
+        ),
     )
     args = parser.parse_args(argv)
     try:
@@ -352,23 +426,57 @@ def main(argv: list[str] | None = None) -> int:
             raise builder.EvidenceError(
                 "build identity drifted before performance execution"
             )
-        selected_bundle_ids = args.bundle_id or list(builder.MAP_BUNDLES)
+        selected_bundle_ids = args.bundle_id
+        runner_version = _probe_godot_version(GODOT)
         all_records: dict[str, list[dict[str, Any]]] = {
             bundle_id: [] for bundle_id in selected_bundle_ids
         }
+        matrix_real_inventory_sha256: str | None = None
         for bundle_id in selected_bundle_ids:
             _root, map_ids = builder.MAP_BUNDLES[bundle_id]
-            for map_id in map_ids:
-                for variant in ("baseline", "candidate"):
-                    for mode in ("idle", "moving"):
-                        all_records[bundle_id].append(
-                            _run(
-                                _command(map_id, variant, mode),
-                                map_id,
-                                variant,
-                                mode,
-                            )
-                        )
+            for map_id, variant, mode, repetition in _performance_matrix(
+                map_ids,
+                args.repetitions,
+            ):
+                record = _run(
+                    _command(map_id, variant, mode),
+                    bundle_id,
+                    map_id,
+                    variant,
+                    mode,
+                    repetition=repetition,
+                    build_identity=current_identity,
+                    runner_version=runner_version,
+                )
+                record_real_sha256 = str(
+                    record["qaLane"]["realInventorySha256"]
+                )
+                if matrix_real_inventory_sha256 is None:
+                    matrix_real_inventory_sha256 = record_real_sha256
+                elif record_real_sha256 != matrix_real_inventory_sha256:
+                    raise builder.EvidenceError(
+                        "real user data changed between performance runs"
+                    )
+                all_records[bundle_id].append(record)
+                summary = builder.parse_perf_run(record)
+                print(
+                    json.dumps(
+                        {
+                            "status": "RUN_PASS",
+                            "bundleId": bundle_id,
+                            "mapId": map_id,
+                            "variant": variant,
+                            "mode": mode,
+                            "repetition": repetition,
+                            "processScopeTotalMsMinMeanMax": summary[
+                                "processScopeTotalMsMinMeanMax"
+                            ],
+                        },
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                    flush=True,
+                )
         if builder.build_identity() != current_identity:
             raise builder.EvidenceError(
                 "map runtime identity drifted during performance execution"
@@ -390,6 +498,7 @@ def main(argv: list[str] | None = None) -> int:
                 {
                     "status": "PASS",
                     "buildIdentity": current_identity,
+                    "repetitions": args.repetitions,
                     "runs": sum(len(value) for value in all_records.values()),
                     "receipts": {
                         bundle_id: str(

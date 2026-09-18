@@ -20974,6 +20974,18 @@ func _run_auto_map_panel_check() -> void:
 	host.world_log_history.clear()
 	host.world_log_message = ""
 	host.player_profile = PlayerProgressModel.default_profile()
+	var primary_visual_loaded: bool = host._load_map("mistcap_marsh", "default")
+	host._open_map_panel()
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	var prepared_visual_ok: bool = (
+		primary_visual_loaded
+		and host.map_panel != null
+		and host.map_panel.has_method("uses_prepared_visual")
+		and bool(host.map_panel.call("uses_prepared_visual"))
+	)
+	host._close_map_panel()
+	await host.get_tree().process_frame
 	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
 	host._open_map_panel()
 	await host.get_tree().process_frame
@@ -21004,10 +21016,10 @@ func _run_auto_map_panel_check() -> void:
 		and host.map_panel.size.is_equal_approx(host._layout_size())
 	)
 	var texture_ok = host.map_texture_rect != null and host.map_texture_rect.texture != null
-	var prepared_visual_ok: bool = (
+	var unreleased_fallback_ok: bool = (
 		host.map_panel != null
 		and host.map_panel.has_method("uses_prepared_visual")
-		and bool(host.map_panel.call("uses_prepared_visual"))
+		and not bool(host.map_panel.call("uses_prepared_visual"))
 	)
 	var detail_ok = host.map_detail_label != null and host.map_detail_label.text.find("火芽村入口") >= 0 and host.map_detail_label.text.find("坐标") >= 0
 	var marker_ok = (
@@ -21180,6 +21192,7 @@ func _run_auto_map_panel_check() -> void:
 		and full_screen_ok
 		and texture_ok
 		and prepared_visual_ok
+		and unreleased_fallback_ok
 		and detail_ok
 		and marker_ok
 		and close_restore_ok
@@ -21190,7 +21203,7 @@ func _run_auto_map_panel_check() -> void:
 		and continuation_ok
 		and battle_hidden_ok
 	) else "failed"
-	print("map panel check ready: status=%s loaded=%s awakened=%s local=%s world=%s fullscreen=%s texture=%s prepared_visual=%s detail=%s markers=%s close_restore=%s reopen_local=%s doctor=%s zone=%s route_path=%s continuation=%s battle_hidden=%s marker_count=%d target=%s log=%s" % [
+	print("map panel check ready: status=%s loaded=%s awakened=%s local=%s world=%s fullscreen=%s texture=%s prepared_visual=%s unreleased_fallback=%s detail=%s markers=%s close_restore=%s reopen_local=%s doctor=%s zone=%s route_path=%s continuation=%s battle_hidden=%s marker_count=%d target=%s log=%s" % [
 		status,
 		str(loaded),
 		str(awakened_ok),
@@ -21199,6 +21212,7 @@ func _run_auto_map_panel_check() -> void:
 		str(full_screen_ok),
 		str(texture_ok),
 		str(prepared_visual_ok),
+		str(unreleased_fallback_ok),
 		str(detail_ok),
 		str(marker_ok),
 		str(close_restore_ok),

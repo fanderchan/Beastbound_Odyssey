@@ -309,6 +309,9 @@ func _run_owner_review_capture() -> void:
 
 func _run_perf_capture() -> void:
 	_started_msec = Time.get_ticks_msec()
+	# The general perf probe disables VSync for headless/stress measurements.
+	# This native fixture explicitly measures the normal VSync-on PC path.
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 	if not await _prepare_real_main_battle():
 		return
 	if not bool(_host_property("perf_probe_enabled")):

@@ -12,7 +12,9 @@ from __future__ import annotations
 import argparse
 import binascii
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 import hashlib
+import importlib.util
 import json
 import math
 import re
@@ -21,6 +23,7 @@ import sys
 import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
+from statistics import median
 from typing import Any, Iterable
 
 
@@ -30,6 +33,11 @@ SCHEMA_VERSION = 1
 TILE_SIZE = [80, 40]
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+MAP_RUNTIME_BUILD_IDENTITY_NAMESPACE = "beastbound-map-runtime-surface-v2"
+MAP_RUNTIME_BUILD_IDENTITY_RE = re.compile(
+    rf"^git:[0-9a-f]{{40}}\+"
+    rf"{re.escape(MAP_RUNTIME_BUILD_IDENTITY_NAMESPACE)}:[0-9a-f]{{64}}$"
+)
 VALID_STATUSES = {
     "in_production",
     "owner_review_pending",
@@ -78,18 +86,98 @@ VALID_COLLISION_COMMANDS = {
     COLLISION_COMMAND,
     COLLISION_PREVIEW_COMMAND,
 }
-PERFORMANCE_COMPARISON_MODE = "legacy_fallback_vs_candidate"
+PERFORMANCE_LEGACY_COMPARISON_MODE = "legacy_fallback_vs_candidate"
+# Retain the historical public name for legacy fixtures and callers.
+PERFORMANCE_COMPARISON_MODE = PERFORMANCE_LEGACY_COMPARISON_MODE
+PERFORMANCE_REPEATED_COMPARISON_MODES = {
+    PERFORMANCE_LEGACY_COMPARISON_MODE,
+    "released_primary_vs_same_primary_qa_preview",
+}
 PERFORMANCE_GATE_NAMES = {
     "candidateIdleWithinLimit",
     "candidateMovingWithinLimit",
     "idleRegressionWithinLimit",
     "movingRegressionWithinLimit",
 }
-PERFORMANCE_THRESHOLDS = {
+PERFORMANCE_LEGACY_THRESHOLDS = {
     "candidateIdleProcessMeanMaxMs": 0.5,
     "candidateMovingProcessMeanMaxMs": 0.6,
     "idleRegressionMaxMs": 0.1,
     "movingRegressionMaxMs": 0.35,
+}
+PERFORMANCE_PROCESS_SCOPE_THRESHOLDS = {
+    "candidateIdleProcessScopeMeanMaxMs": 0.5,
+    "candidateMovingProcessScopeMeanMaxMs": 0.6,
+    "idleProcessScopeRegressionMaxMs": 0.1,
+    "movingProcessScopeRegressionMaxMs": 0.35,
+}
+# Retain the historical public name for legacy report fixtures and callers.
+PERFORMANCE_THRESHOLDS = PERFORMANCE_LEGACY_THRESHOLDS
+PERFORMANCE_REPEATED_AGGREGATION_MODE = (
+    "median_of_independent_run_means_with_envelope_extrema"
+)
+PERFORMANCE_REPEATED_EXECUTION_ORDER = (
+    "repetition_then_rotated_map_then_mode_then_alternating_variant_order"
+)
+PERFORMANCE_LEGACY_AGGREGATION_MODE = "legacy_single_run"
+PERFORMANCE_LEGACY_EXECUTION_ORDER = "legacy_single_run"
+PERFORMANCE_FIXED_STEP_FPS = 60
+PERFORMANCE_WARMUP_FRAMES = 180
+PERFORMANCE_MEASUREMENT_FRAMES = 480
+PERFORMANCE_SAMPLE_FRAMES = 60
+PERFORMANCE_SAMPLES_PER_REPETITION = (
+    PERFORMANCE_MEASUREMENT_FRAMES // PERFORMANCE_SAMPLE_FRAMES
+)
+PERFORMANCE_MOVING_WORKLOAD_CONTRACT = "spawn_adjacent_pair_v1"
+PERFORMANCE_RUNNER_RECORD_TYPE = "beastbound_map_performance_runner_receipt"
+PERFORMANCE_RUNNER_VERSION = "4.7.stable.official.5b4e0cb0f"
+PERFORMANCE_AGGREGATED_SAMPLE_METHOD = PERFORMANCE_REPEATED_AGGREGATION_MODE
+PERFORMANCE_METRIC_PROVENANCE = {
+    "processTotalMsMinMeanMax": "Main._process_only",
+    "processScopeTotalMsMinMeanMax": (
+        "QA_process_priority_boundaries_all_intervening_Node_process_callbacks"
+    ),
+    "drawWorldMsMinMeanMax": (
+        "Main._draw_only_missing_windows_recorded_as_zero"
+    ),
+}
+PERFORMANCE_METRIC_SCOPE = {
+    **PERFORMANCE_METRIC_PROVENANCE,
+    "comparisonAndGateMetric": "processScopeTotalMsMinMeanMax",
+}
+PERFORMANCE_LEGACY_METRIC_SCOPE = {
+    **PERFORMANCE_METRIC_PROVENANCE,
+    "comparisonAndGateMetric": "processTotalMsMinMeanMax",
+}
+PERFORMANCE_PAIRED_GATE_NAMES = {
+    "idleRegressionWithinLimit",
+    "movingRegressionWithinLimit",
+}
+PERFORMANCE_PERF_LINE_RE = re.compile(
+    r"^perf probe: fps=(?P<fps>[0-9]+(?:\.[0-9]+)?) "
+    r"frames=(?P<frames>[0-9]+) (?P<body>.*)$"
+)
+PERFORMANCE_METRIC_RE = re.compile(
+    r"\b([a-z0-9_]+)=([0-9]+(?:\.[0-9]+)?)ms\b"
+)
+PERFORMANCE_WARMUP_PREFIX = "perf probe warmup complete: "
+PERFORMANCE_RUNTIME_PREFIX = "perf probe runtime: "
+PERFORMANCE_MEASUREMENT_PREFIX = "perf probe measurement complete: "
+PERFORMANCE_CLEAN_EXIT_PREFIX = "perf probe clean exit: "
+PERFORMANCE_MOVING_PREFIX = "movement spam click check ready: "
+PERFORMANCE_QA_LANE_ATTESTATION = {
+    "customUserDirName": "BeastboundOdysseyQA_Automation",
+    "feature": "beastbound_qa_automation",
+    "lane": "automation",
+    "status": "passed",
+    "userDataRoot": "<QA_USER_DATA_ROOT>",
+}
+PERFORMANCE_DECIMAL_TOLERANCE = 0.00049
+PERFORMANCE_TOOL_PATHS = {
+    "evidenceBuilderSha256": Path(__file__).resolve().parents[4]
+    / "tools/map_visual_evidence_builder.py",
+    "evidenceRunnerSha256": Path(__file__).resolve().parents[4]
+    / "tools/run_map_visual_performance_evidence.py",
 }
 COMPUTER_USE_ACTION_KINDS = {
     "pointer",
@@ -98,6 +186,48 @@ COMPUTER_USE_ACTION_KINDS = {
     "collision",
     "occlusion",
 }
+REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
+MAP_VISUAL_EVIDENCE_BUILDER_PATH = (
+    REPOSITORY_ROOT / "tools/map_visual_evidence_builder.py"
+)
+BATCH_PREVIEW_SOURCE_PATHS = {
+    "orchestrator": "repo://tools/record_map_visual_action_captures.py",
+    "evidenceBuilder": "repo://tools/map_visual_evidence_builder.py",
+    "ownerReviewRecorder": "repo://tools/record_firebud_v2_owner_review.py",
+    "processContainment": "repo://tools/record_pet_management_owner_review.py",
+    "qaUserDataLane": "repo://tools/godot_qa_user_data_lane.py",
+    "hudGlyphAuditor": "repo://tools/audit_firebud_hud_glyph_stability.py",
+    "entrypoint": "res://scripts/qa/map_visual_action_capture_batch.gd",
+    "captureController": "res://scripts/qa/map_visual_review_capture.gd",
+    "interactionModel": "res://scripts/world/interaction_model.gd",
+    "playerProgressModel": "res://scripts/progression/player_progress_model.gd",
+    "showcaseProfile": "res://scripts/qa/map_visual_review_showcase_profile.gd",
+    "mainScene": "res://scenes/Main.tscn",
+    "mainHost": "res://scripts/main.gd",
+}
+BATCH_PREVIEW_FIELDS = {
+    "qaPreviewAuthorization",
+    "batchPlanSha256",
+    "batchSourceIdentity",
+    "batchRuntimeIdentity",
+    "batchBuildIdentity",
+    "batchBundleManifestIdentity",
+    "batchCaptureSurfaceIdentity",
+    "batchCaptureSurfaceIdentitySha256",
+    "batchWindowIdentity",
+    "batchReportSealed",
+}
+BATCH_MANIFEST_RUNTIME_SUBJECT_KEYS = (
+    "schemaVersion",
+    "bundleId",
+    "mapStyleId",
+    "mapIds",
+    "tileSize",
+    "groundAtlas",
+    "tiles",
+    "objects",
+    "mapBindings",
+)
 CATALOG_CONTRACT_REPORT_TYPE = "beastbound.map_visual_catalog_contract"
 RELEASE_ATTESTATION_NAME = "release-attestation.json"
 RELEASE_ATTESTATION_TYPE = "beastbound_map_runtime_release_attestation"
@@ -1871,6 +2001,15 @@ def _is_finite_number(value: Any, *, positive: bool = False) -> bool:
     return value > 0 if positive else value >= 0
 
 
+def _is_canonical_three_decimal_number(value: Any) -> bool:
+    return _is_finite_scalar(value) and math.isclose(
+        float(value),
+        round(float(value), 3),
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    )
+
+
 def _is_non_negative_int_pair(value: Any) -> bool:
     return (
         isinstance(value, list)
@@ -2025,6 +2164,1681 @@ def _validate_performance_sample(
     return process_mean
 
 
+def _performance_repeated_fields_present(
+    report: dict[str, Any],
+    report_maps: dict[str, dict[str, Any]],
+) -> bool:
+    if report.get("aggregationMode") == PERFORMANCE_REPEATED_AGGREGATION_MODE:
+        return True
+    for entry in report_maps.values():
+        for variant in ("baseline", "candidate"):
+            variant_report = entry.get(variant)
+            if not isinstance(variant_report, dict):
+                continue
+            for mode in ("idle", "moving"):
+                sample = variant_report.get(mode)
+                if isinstance(sample, dict) and any(
+                    key in sample
+                    for key in (
+                        "aggregationMethod",
+                        "repetitionCount",
+                        "runMeanValues",
+                        "workloadIdentityByRepetition",
+                        "measurementBoundary",
+                        "runtimeIdentity",
+                        "processScopeTotalMsMinMeanMax",
+                    )
+                ):
+                    return True
+        comparison = entry.get("comparison")
+        if isinstance(comparison, dict) and comparison.get("pairedAggregation") is not None:
+            return True
+    return False
+
+
+def _validate_repeated_workload_identity(
+    audit: Audit,
+    value: Any,
+    field_name: str,
+    *,
+    map_id: str,
+    expected_workload: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    expected_keys = {
+        "sequenceId",
+        "sequenceSha256",
+        "startCell",
+        "actualStartCell",
+        "finalCell",
+        "clicks",
+        "mouseEvents",
+    }
+    if not isinstance(value, dict) or set(value) != expected_keys:
+        audit.error(
+            field_name,
+            f"must contain exactly {sorted(expected_keys)!r}",
+        )
+        return None
+    if value.get("sequenceId") != PERFORMANCE_MOVING_WORKLOAD_CONTRACT:
+        audit.error(
+            f"{field_name}.sequenceId",
+            f"must equal {PERFORMANCE_MOVING_WORKLOAD_CONTRACT!r}",
+        )
+    sequence_sha256 = value.get("sequenceSha256")
+    if not isinstance(sequence_sha256, str) or not SHA256_RE.fullmatch(sequence_sha256):
+        audit.error(
+            f"{field_name}.sequenceSha256",
+            "expected 64 lowercase hex characters",
+        )
+    for cell_key in ("startCell", "actualStartCell", "finalCell"):
+        cell = value.get(cell_key)
+        if not isinstance(cell, str) or re.fullmatch(r"\d+,\d+", cell) is None:
+            audit.error(
+                f"{field_name}.{cell_key}",
+                "expected a non-negative grid cell encoded as x,y",
+            )
+    if value.get("actualStartCell") != value.get("startCell"):
+        audit.error(
+            f"{field_name}.actualStartCell",
+            "must equal the planned startCell",
+        )
+    if value.get("clicks") != 60:
+        audit.error(f"{field_name}.clicks", "must equal 60")
+    if value.get("mouseEvents") != 120:
+        audit.error(f"{field_name}.mouseEvents", "must equal 120")
+    start_cell = value.get("startCell")
+    if isinstance(start_cell, str) and re.fullmatch(r"\d+,\d+", start_cell):
+        start_x, start_y = (int(part) for part in start_cell.split(",", 1))
+        cells = [
+            (
+                start_x + (0 if index % 2 == 0 else 1),
+                start_y + (-1 if index % 2 == 0 else 0),
+            )
+            for index in range(60)
+        ]
+        serialized = (
+            f"{PERFORMANCE_MOVING_WORKLOAD_CONTRACT}|{map_id}|{start_cell}|"
+            + ";".join(f"{x},{y}" for x, y in cells)
+        )
+        expected_sequence_sha256 = hashlib.sha256(
+            serialized.encode("utf-8")
+        ).hexdigest()
+        if value.get("sequenceSha256") != expected_sequence_sha256:
+            audit.error(
+                f"{field_name}.sequenceSha256",
+                "must match the fixed spawn-adjacent sequence",
+            )
+        expected_final_cell = f"{cells[-1][0]},{cells[-1][1]}"
+        if value.get("finalCell") != expected_final_cell:
+            audit.error(
+                f"{field_name}.finalCell",
+                f"must equal the fixed sequence final cell {expected_final_cell!r}",
+            )
+    if expected_workload is not None and value != expected_workload:
+        audit.error(
+            field_name,
+            "must exactly match the workload derived from authoritative map data",
+        )
+    return value
+
+
+def _authoritative_performance_workloads(
+    audit: Audit,
+    map_ids: list[str],
+    field_name: str,
+) -> dict[str, dict[str, Any]]:
+    godot_root = next(
+        (
+            parent
+            for parent in (audit.root, *audit.root.parents)
+            if parent.joinpath("project.godot").is_file()
+        ),
+        None,
+    )
+    # Synthetic report-contract tests may intentionally have no Godot project.
+    # A real bundle audit always reaches this helper from inside the project.
+    if godot_root is None:
+        return {}
+    catalog_path = godot_root / "scripts/world/map_data_catalog.gd"
+    try:
+        catalog_text = catalog_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        audit.error(field_name, f"cannot read authoritative MapDataCatalog ({exc})")
+        return {}
+    registered_paths = {
+        map_id: path
+        for map_id, path in re.findall(
+            r'"([a-z0-9][a-z0-9_-]*)"\s*:\s*"(res://data/[^"\r\n]+\.json)"',
+            catalog_text,
+        )
+    }
+    expected: dict[str, dict[str, Any]] = {}
+    for map_id in map_ids:
+        resource_path = registered_paths.get(map_id)
+        if resource_path is None:
+            audit.error(
+                f"{field_name}.{map_id}",
+                "map is absent from authoritative MapDataCatalog",
+            )
+            continue
+        map_path = godot_root / resource_path[len("res://") :]
+        try:
+            map_data = json.loads(map_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            audit.error(
+                f"{field_name}.{map_id}",
+                f"cannot parse authoritative map data ({exc})",
+            )
+            continue
+        grid_size = map_data.get("gridSize") if isinstance(map_data, dict) else None
+        spawn_points = (
+            map_data.get("spawnPoints") if isinstance(map_data, dict) else None
+        )
+        start_value = (
+            spawn_points.get("default", map_data.get("spawnCell"))
+            if isinstance(spawn_points, dict)
+            else None
+        )
+        if (
+            not isinstance(map_data, dict)
+            or map_data.get("id") != map_id
+            or not isinstance(grid_size, list)
+            or len(grid_size) != 2
+            or not all(
+                isinstance(value, int) and not isinstance(value, bool) and value > 0
+                for value in grid_size
+            )
+            or not isinstance(start_value, list)
+            or len(start_value) != 2
+            or not all(
+                isinstance(value, int) and not isinstance(value, bool)
+                for value in start_value
+            )
+        ):
+            audit.error(
+                f"{field_name}.{map_id}",
+                "authoritative movement geometry is invalid",
+            )
+            continue
+        start = (int(start_value[0]), int(start_value[1]))
+        blocked = {
+            (int(value[0]), int(value[1]))
+            for value in map_data.get("blockedCells", [])
+            if isinstance(value, list) and len(value) >= 2
+        }
+        interaction_cells = {
+            (int(value["cell"][0]), int(value["cell"][1]))
+            for value in map_data.get("interactionPoints", [])
+            if isinstance(value, dict)
+            and isinstance(value.get("cell"), list)
+            and len(value["cell"]) >= 2
+        }
+        cells = [
+            (
+                start[0] + (0 if index % 2 == 0 else 1),
+                start[1] + (-1 if index % 2 == 0 else 0),
+            )
+            for index in range(60)
+        ]
+        if any(
+            x < 0
+            or y < 0
+            or x >= int(grid_size[0])
+            or y >= int(grid_size[1])
+            or (x, y) in blocked
+            or (x, y) in interaction_cells
+            for x, y in cells
+        ):
+            audit.error(
+                f"{field_name}.{map_id}",
+                "authoritative shared movement target is unsafe",
+            )
+            continue
+        start_key = f"{start[0]},{start[1]}"
+        cell_keys = [f"{x},{y}" for x, y in cells]
+        serialized = (
+            f"{PERFORMANCE_MOVING_WORKLOAD_CONTRACT}|{map_id}|{start_key}|"
+            + ";".join(cell_keys)
+        )
+        expected[map_id] = {
+            "sequenceId": PERFORMANCE_MOVING_WORKLOAD_CONTRACT,
+            "sequenceSha256": hashlib.sha256(
+                serialized.encode("utf-8")
+            ).hexdigest(),
+            "startCell": start_key,
+            "actualStartCell": start_key,
+            "finalCell": cell_keys[-1],
+            "clicks": 60,
+            "mouseEvents": 120,
+        }
+    return expected
+
+
+def _expected_repeated_runtime_identity(
+    map_id: str,
+    variant: str,
+    bundle_id: str | None,
+    comparison_mode: Any,
+    runner_version: Any,
+    video_adapter_name: Any,
+) -> dict[str, Any] | None:
+    if (
+        comparison_mode not in PERFORMANCE_REPEATED_COMPARISON_MODES
+        or not isinstance(runner_version, str)
+    ):
+        return None
+    version_match = re.fullmatch(
+        r"(?P<version>\d+\.\d+)\.(?P<status>[^.]+)\."
+        r"(?P<build>[^.]+)\.(?P<hash>[0-9a-f]+)",
+        runner_version,
+    )
+    if version_match is None:
+        return None
+    candidate = variant == "candidate"
+    if comparison_mode == "released_primary_vs_same_primary_qa_preview":
+        visual_state = {
+            "mapVisualActive": True,
+            "mapVisualBundleId": bundle_id,
+            "mapVisualCatalogSource": "normal",
+            "mapVisualMapId": map_id,
+            "mapVisualQaPreview": candidate,
+            "mapVisualReviewCandidate": False,
+            "mapVisualStatus": "released",
+        }
+    else:
+        visual_state = {
+            "mapVisualActive": candidate,
+            "mapVisualBundleId": bundle_id if candidate else "",
+            "mapVisualCatalogSource": "review" if candidate else "",
+            "mapVisualMapId": map_id if candidate else "",
+            "mapVisualQaPreview": candidate,
+            "mapVisualReviewCandidate": candidate,
+            "mapVisualStatus": "owner_review_pending" if candidate else "",
+        }
+    return {
+        "candidateEnabled": candidate,
+        "displayServer": "macOS",
+        "engineVersion": (
+            f"{version_match.group('version')}-{version_match.group('status')} "
+            f"({version_match.group('build')})"
+        ),
+        "engineVersionHash": version_match.group("hash"),
+        "mapId": map_id,
+        **visual_state,
+        "processScopeMonitor": "process_priority_boundary_v1",
+        "processScopePriorities": [-1000000, 1000000],
+        "processScopeReady": True,
+        "renderingDriver": "metal",
+        "renderingMethod": "mobile",
+        "sampleFrames": PERFORMANCE_SAMPLE_FRAMES,
+        "status": "passed",
+        "videoAdapterName": video_adapter_name,
+        "viewportSize": MAIN_VIEWPORT,
+        "vsyncMode": 0,
+    }
+
+
+def _validate_repeated_performance_sample(
+    audit: Audit,
+    sample: Any,
+    field_name: str,
+    *,
+    moving: bool,
+    repetition_count: int,
+    map_id: str,
+    variant: str,
+    bundle_id: str | None,
+    comparison_mode: Any,
+    runner_version: Any,
+    expected_workload: dict[str, Any] | None,
+) -> None:
+    if not isinstance(sample, dict):
+        return
+    expected_samples = repetition_count * PERFORMANCE_SAMPLES_PER_REPETITION
+    expected_measurement_frames = repetition_count * PERFORMANCE_MEASUREMENT_FRAMES
+    if sample.get("samples") != expected_samples:
+        audit.error(
+            f"{field_name}.samples",
+            f"must equal {expected_samples} fixed windows",
+        )
+    if sample.get("measurementFrames") != expected_measurement_frames:
+        audit.error(
+            f"{field_name}.measurementFrames",
+            f"must equal {expected_measurement_frames}",
+        )
+    draw_observed_count = sample.get("drawWorldObservedSampleCount")
+    if (
+        not isinstance(draw_observed_count, int)
+        or isinstance(draw_observed_count, bool)
+        or not 0 <= draw_observed_count <= expected_samples
+    ):
+        audit.error(
+            f"{field_name}.drawWorldObservedSampleCount",
+            f"must be an integer from 0 through {expected_samples}",
+        )
+    if sample.get("repetitionCount") != repetition_count:
+        audit.error(
+            f"{field_name}.repetitionCount",
+            "must match the report repetitionCount",
+        )
+    if sample.get("aggregationMethod") != PERFORMANCE_AGGREGATED_SAMPLE_METHOD:
+        audit.error(
+            f"{field_name}.aggregationMethod",
+            f"must equal {PERFORMANCE_AGGREGATED_SAMPLE_METHOD!r}",
+        )
+    expected_boundary = (
+        "shared_input_then_fixed_frames"
+        if moving
+        else "post_warmup_fixed_frames"
+    )
+    if sample.get("measurementBoundary") != expected_boundary:
+        audit.error(
+            f"{field_name}.measurementBoundary",
+            f"must equal {expected_boundary!r}",
+        )
+    for triplet_key in (
+        "fpsMinMeanMax",
+        "processTotalMsMinMeanMax",
+        "drawWorldMsMinMeanMax",
+        "processScopeTotalMsMinMeanMax",
+    ):
+        triplet = sample.get(triplet_key)
+        if isinstance(triplet, list) and not all(
+            _is_canonical_three_decimal_number(value) for value in triplet
+        ):
+            audit.error(
+                f"{field_name}.{triplet_key}",
+                "repeated aggregate values must be canonical to three decimals",
+            )
+
+    process_scope_triplet = sample.get("processScopeTotalMsMinMeanMax")
+    _validate_metric_triplet(
+        audit,
+        process_scope_triplet,
+        f"{field_name}.processScopeTotalMsMinMeanMax",
+    )
+    run_means = sample.get("runMeanValues")
+    expected_run_mean_keys = {
+        "fps",
+        "processTotalMs",
+        "drawWorldMs",
+        "processScopeTotalMs",
+        "measurementFrames",
+    }
+    if not isinstance(run_means, dict) or set(run_means) != expected_run_mean_keys:
+        audit.error(
+            f"{field_name}.runMeanValues",
+            f"must contain exactly {sorted(expected_run_mean_keys)!r}",
+        )
+        run_means = {}
+    for metric_key in (
+        "fps",
+        "processTotalMs",
+        "drawWorldMs",
+        "processScopeTotalMs",
+    ):
+        values = run_means.get(metric_key)
+        metric_field = f"{field_name}.runMeanValues.{metric_key}"
+        if (
+            not isinstance(values, list)
+            or len(values) != repetition_count
+            or not all(_is_finite_number(value) for value in values)
+        ):
+            audit.error(
+                metric_field,
+                f"must contain {repetition_count} finite non-negative run means",
+            )
+            continue
+        if not all(_is_canonical_three_decimal_number(value) for value in values):
+            audit.error(
+                metric_field,
+                "repeated run means must be canonical to three decimals",
+            )
+        if metric_key == "fps" and any(
+            not math.isclose(
+                float(value),
+                PERFORMANCE_FIXED_STEP_FPS,
+                rel_tol=0.0,
+                abs_tol=PERFORMANCE_DECIMAL_TOLERANCE,
+            )
+            for value in values
+        ):
+            audit.error(metric_field, "every fixed-step run mean must equal 60 FPS")
+        triplet_key = {
+            "fps": "fpsMinMeanMax",
+            "processTotalMs": "processTotalMsMinMeanMax",
+            "drawWorldMs": "drawWorldMsMinMeanMax",
+            "processScopeTotalMs": "processScopeTotalMsMinMeanMax",
+        }[metric_key]
+        triplet = sample.get(triplet_key)
+        if (
+            isinstance(triplet, list)
+            and len(triplet) == 3
+            and all(_is_finite_number(value) for value in triplet)
+        ):
+            expected_median = round(float(median(values)), 3)
+            if not math.isclose(
+                float(triplet[1]),
+                expected_median,
+                rel_tol=0.0,
+                abs_tol=PERFORMANCE_DECIMAL_TOLERANCE,
+            ):
+                audit.error(
+                    f"{field_name}.{triplet_key}",
+                    f"mean must equal the median run mean ({expected_median:.3f})",
+                )
+            if any(value < triplet[0] or value > triplet[2] for value in values):
+                audit.error(
+                    f"{field_name}.{triplet_key}",
+                    "envelope extrema must contain every independent run mean",
+                )
+    measurement_values = run_means.get("measurementFrames")
+    if (
+        not isinstance(measurement_values, list)
+        or len(measurement_values) != repetition_count
+        or any(
+            value != PERFORMANCE_MEASUREMENT_FRAMES
+            for value in measurement_values
+        )
+    ):
+        audit.error(
+            f"{field_name}.runMeanValues.measurementFrames",
+            f"must contain {repetition_count} entries equal to "
+            f"{PERFORMANCE_MEASUREMENT_FRAMES}",
+        )
+
+    runtime_identity = sample.get("runtimeIdentity")
+    if not isinstance(runtime_identity, dict):
+        audit.error(f"{field_name}.runtimeIdentity", "expected an object")
+    else:
+        if not str(runtime_identity.get("videoAdapterName", "")).strip():
+            audit.error(
+                f"{field_name}.runtimeIdentity.videoAdapterName",
+                "must be non-empty",
+            )
+        expected_runtime = _expected_repeated_runtime_identity(
+            map_id,
+            variant,
+            bundle_id,
+            comparison_mode,
+            runner_version,
+            runtime_identity.get("videoAdapterName"),
+        )
+        if expected_runtime is None:
+            audit.error(
+                f"{field_name}.runtimeIdentity.engineVersion",
+                "cannot derive runtime identity from runnerVersion",
+            )
+        elif runtime_identity != expected_runtime:
+            audit.error(
+                f"{field_name}.runtimeIdentity",
+                "must exactly attest the expected Main/Metal/map/process-scope runtime",
+            )
+
+    workloads = sample.get("workloadIdentityByRepetition")
+    if not moving:
+        if workloads is not None:
+            audit.error(
+                f"{field_name}.workloadIdentityByRepetition",
+                "idle samples must not declare a moving workload",
+            )
+        return
+    if not isinstance(workloads, list) or len(workloads) != repetition_count:
+        audit.error(
+            f"{field_name}.workloadIdentityByRepetition",
+            f"must contain {repetition_count} workload identities",
+        )
+        return
+    valid_workloads = [
+        _validate_repeated_workload_identity(
+            audit,
+            workload,
+            f"{field_name}.workloadIdentityByRepetition[{index}]",
+            map_id=map_id,
+            expected_workload=expected_workload,
+        )
+        for index, workload in enumerate(workloads)
+    ]
+    canonical = {
+        json.dumps(value, ensure_ascii=False, sort_keys=True)
+        for value in valid_workloads
+        if value is not None
+    }
+    if len(canonical) > 1:
+        audit.error(
+            f"{field_name}.workloadIdentityByRepetition",
+            "every repetition must use one exact shared workload",
+        )
+    expected_clicks = 60 * repetition_count
+    if sample.get("clicks") != expected_clicks:
+        audit.error(f"{field_name}.clicks", f"must equal {expected_clicks}")
+    if sample.get("accepted") != expected_clicks:
+        audit.error(f"{field_name}.accepted", f"must equal {expected_clicks}")
+
+
+def _performance_expected_argv(
+    executable: str,
+    map_id: str,
+    variant: str,
+    mode: str,
+) -> list[str]:
+    argv = [
+        executable,
+        "--path",
+        "client/godot",
+        "--scene",
+        MAIN_SCENE,
+        "--windowed",
+        "--resolution",
+        "1280x720",
+        "--single-window",
+        "--fixed-fps",
+        str(PERFORMANCE_FIXED_STEP_FPS),
+        "--time-scale",
+        "1.0",
+        "--disable-vsync",
+        "--",
+        "--beastbound-qa-user-data-lane=automation",
+        f"--map-perf-probe-map={map_id}",
+    ]
+    if variant == "candidate":
+        argv.append(f"--map-art-review-preview={map_id}")
+    if mode == "moving":
+        argv.extend(
+            [
+                "--movement-spam-click-check",
+                "--movement-spam-click-limit=60",
+                "--movement-spam-shared-target-contract="
+                f"{PERFORMANCE_MOVING_WORKLOAD_CONTRACT}",
+            ]
+        )
+    argv.extend(
+        [
+            "--perf-probe",
+            f"--perf-probe-warmup-frames={PERFORMANCE_WARMUP_FRAMES}",
+            f"--perf-probe-sample-frames={PERFORMANCE_SAMPLE_FRAMES}",
+            f"--perf-probe-clean-exit-frames={PERFORMANCE_MEASUREMENT_FRAMES}",
+        ]
+    )
+    return argv
+
+
+def _performance_expected_execution_matrix(
+    map_ids: list[str],
+    repetition_count: int,
+) -> list[tuple[str, str, str, int]]:
+    expected: list[tuple[str, str, str, int]] = []
+    for repetition in range(1, repetition_count + 1):
+        rotation = (repetition - 1) % len(map_ids)
+        rotated_map_ids = map_ids[rotation:] + map_ids[:rotation]
+        variants = (
+            ("baseline", "candidate")
+            if repetition % 2 == 1
+            else ("candidate", "baseline")
+        )
+        for map_id in rotated_map_ids:
+            for mode in ("idle", "moving"):
+                for variant in variants:
+                    expected.append((map_id, variant, mode, repetition))
+    return expected
+
+
+def _parse_performance_key_values(
+    audit: Audit,
+    value: str,
+    field_name: str,
+) -> dict[str, str] | None:
+    parsed: dict[str, str] = {}
+    for token in value.split():
+        if "=" not in token:
+            audit.error(field_name, f"malformed token {token!r}")
+            return None
+        key, token_value = token.split("=", 1)
+        if not key or not token_value or key in parsed:
+            audit.error(field_name, f"malformed or duplicate key {key!r}")
+            return None
+        parsed[key] = token_value
+    return parsed
+
+
+def _strict_performance_json_loads(value: str) -> Any:
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in result:
+                raise ValueError(f"duplicate JSON key {key!r}")
+            result[key] = item
+        return result
+
+    return json.loads(
+        value,
+        object_pairs_hook=reject_duplicate_keys,
+        parse_constant=lambda constant: (_ for _ in ()).throw(
+            ValueError(f"non-finite JSON constant {constant}")
+        ),
+    )
+
+
+def _performance_int(
+    audit: Audit,
+    values: dict[str, str],
+    key: str,
+    field_name: str,
+) -> int | None:
+    try:
+        value = int(values[key])
+    except (KeyError, TypeError, ValueError):
+        audit.error(f"{field_name}.{key}", "expected an integer")
+        return None
+    return value
+
+
+def _parse_repeated_performance_record(
+    audit: Audit,
+    record: Any,
+    field_name: str,
+    *,
+    bundle_id: str | None,
+    comparison_mode: Any,
+    runner_identity: dict[str, Any],
+    expected_workload: dict[str, Any] | None,
+) -> tuple[tuple[str, str, str, int] | None, dict[str, Any] | None]:
+    if not isinstance(record, dict):
+        audit.error(field_name, "expected a JSON object")
+        return None, None
+    expected_record_keys = {
+        "schemaVersion",
+        "recordType",
+        "bundleId",
+        "mapId",
+        "variant",
+        "mode",
+        "repetition",
+        "buildIdentity",
+        "evidenceBuilderSha256",
+        "evidenceRunnerSha256",
+        "samplingContract",
+        "runner",
+        "runnerVersion",
+        "argv",
+        "startedAtUtc",
+        "endedAtUtc",
+        "returncode",
+        "stdout",
+        "stderr",
+        "qaLane",
+    }
+    if set(record) != expected_record_keys:
+        audit.error(
+            field_name,
+            f"must contain exactly {sorted(expected_record_keys)!r}",
+        )
+    map_id = record.get("mapId")
+    variant = record.get("variant")
+    mode = record.get("mode")
+    repetition = record.get("repetition")
+    identity = None
+    if (
+        is_id(map_id)
+        and variant in {"baseline", "candidate"}
+        and mode in {"idle", "moving"}
+        and isinstance(repetition, int)
+        and not isinstance(repetition, bool)
+        and repetition > 0
+    ):
+        identity = (map_id, variant, mode, repetition)
+    else:
+        audit.error(
+            field_name,
+            "must identify a valid map, variant, mode and positive repetition",
+        )
+        return None, None
+    if type(record.get("schemaVersion")) is not int or record.get("schemaVersion") != SCHEMA_VERSION:
+        audit.error(f"{field_name}.schemaVersion", f"must equal {SCHEMA_VERSION}")
+    if record.get("recordType") != PERFORMANCE_RUNNER_RECORD_TYPE:
+        audit.error(
+            f"{field_name}.recordType",
+            f"must equal {PERFORMANCE_RUNNER_RECORD_TYPE!r}",
+        )
+    if bundle_id is not None and record.get("bundleId") != bundle_id:
+        audit.error(f"{field_name}.bundleId", "must match the report bundleId")
+    if record.get("runner") != "godot":
+        audit.error(f"{field_name}.runner", "must equal 'godot'")
+    for key in ("runnerVersion", "buildIdentity"):
+        if record.get(key) != runner_identity.get(key):
+            audit.error(
+                f"{field_name}.{key}",
+                "must match the report runnerIdentity",
+            )
+    if type(record.get("returncode")) is not int or record.get("returncode") != 0:
+        audit.error(f"{field_name}.returncode", "must equal 0")
+    started_at = _validate_generated_at_utc(
+        audit,
+        record.get("startedAtUtc"),
+        f"{field_name}.startedAtUtc",
+    )
+    ended_at = _validate_generated_at_utc(
+        audit,
+        record.get("endedAtUtc"),
+        f"{field_name}.endedAtUtc",
+    )
+    if started_at is not None and ended_at is not None and ended_at < started_at:
+        audit.error(
+            f"{field_name}.endedAtUtc",
+            "must not precede startedAtUtc",
+        )
+    for hash_key, tool_path in PERFORMANCE_TOOL_PATHS.items():
+        try:
+            expected_hash = hashlib.sha256(tool_path.read_bytes()).hexdigest()
+        except OSError as exc:
+            audit.error(
+                f"{field_name}.{hash_key}",
+                f"cannot hash the trusted evidence tool ({exc})",
+            )
+            continue
+        if record.get(hash_key) != expected_hash:
+            audit.error(
+                f"{field_name}.{hash_key}",
+                "must match the current trusted evidence tool",
+            )
+
+    sampling_contract = record.get("samplingContract")
+    expected_boundary = (
+        "shared_input_then_fixed_frames"
+        if mode == "moving"
+        else "post_warmup_fixed_frames"
+    )
+    expected_sampling = {
+        "version": 2,
+        "warmupFrames": PERFORMANCE_WARMUP_FRAMES,
+        "measurementFrames": PERFORMANCE_MEASUREMENT_FRAMES,
+        "sampleFrames": PERFORMANCE_SAMPLE_FRAMES,
+        "measurementBoundary": expected_boundary,
+        "audioPlaybackDisabled": True,
+        "cleanExitRequired": True,
+        "processScopeMonitor": "process_priority_boundary_v1",
+        "movingWorkloadContract": (
+            PERFORMANCE_MOVING_WORKLOAD_CONTRACT if mode == "moving" else None
+        ),
+    }
+    if sampling_contract != expected_sampling:
+        audit.error(
+            f"{field_name}.samplingContract",
+            "must equal the fixed 180/480/60 process-scope sampling contract",
+        )
+
+    argv = record.get("argv")
+    if (
+        not isinstance(argv, list)
+        or not argv
+        or not all(isinstance(value, str) for value in argv)
+        or Path(argv[0]).name.lower() != "godot"
+        or argv != _performance_expected_argv(argv[0], map_id, variant, mode)
+    ):
+        audit.error(
+            f"{field_name}.argv",
+            "must equal the canonical non-headless fixed-step Main command",
+        )
+
+    qa_lane = record.get("qaLane")
+    expected_qa_lane_keys = {
+        "attestation",
+        "verified",
+        "realUnchanged",
+        "laneAbsentAfterCleanup",
+        "realInventorySha256",
+        "postCleanupInspectionSha256",
+    }
+    if not isinstance(qa_lane, dict) or set(qa_lane) != expected_qa_lane_keys:
+        audit.error(
+            f"{field_name}.qaLane",
+            f"must contain exactly {sorted(expected_qa_lane_keys)!r}",
+        )
+    else:
+        if qa_lane.get("attestation") != PERFORMANCE_QA_LANE_ATTESTATION:
+            audit.error(
+                f"{field_name}.qaLane.attestation",
+                "must equal the redacted automation-lane runtime attestation",
+            )
+        for key in ("verified", "realUnchanged", "laneAbsentAfterCleanup"):
+            if qa_lane.get(key) is not True:
+                audit.error(f"{field_name}.qaLane.{key}", "must be explicitly true")
+        for key in ("realInventorySha256", "postCleanupInspectionSha256"):
+            digest = qa_lane.get(key)
+            if not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
+                audit.error(
+                    f"{field_name}.qaLane.{key}",
+                    "expected 64 lowercase hex characters",
+                )
+
+    stdout = record.get("stdout")
+    stderr = record.get("stderr")
+    if not isinstance(stdout, str) or not isinstance(stderr, str):
+        audit.error(f"{field_name}.output", "stdout and stderr must be strings")
+        return identity, None
+    lines = (stdout + "\n" + stderr).splitlines()
+
+    def indexes_with_prefix(prefix: str) -> list[int]:
+        return [index for index, line in enumerate(lines) if line.startswith(prefix)]
+
+    warmup_indexes = indexes_with_prefix(PERFORMANCE_WARMUP_PREFIX)
+    runtime_indexes = indexes_with_prefix(PERFORMANCE_RUNTIME_PREFIX)
+    measurement_indexes = indexes_with_prefix(PERFORMANCE_MEASUREMENT_PREFIX)
+    cleanup_indexes = indexes_with_prefix(PERFORMANCE_CLEAN_EXIT_PREFIX)
+    if any(
+        len(indexes) != 1
+        for indexes in (
+            warmup_indexes,
+            runtime_indexes,
+            measurement_indexes,
+            cleanup_indexes,
+        )
+    ):
+        audit.error(
+            f"{field_name}.output",
+            "must emit exactly one warmup, runtime, measurement and clean-exit marker",
+        )
+        return identity, None
+    warmup_index = warmup_indexes[0]
+    runtime_index = runtime_indexes[0]
+    measurement_index = measurement_indexes[0]
+    cleanup_index = cleanup_indexes[0]
+    perf_indexes = [
+        index
+        for index, line in enumerate(lines)
+        if PERFORMANCE_PERF_LINE_RE.match(line) is not None
+    ]
+    if (
+        not perf_indexes
+        or not warmup_index < runtime_index < min(perf_indexes)
+        or max(perf_indexes) >= measurement_index
+        or cleanup_index <= measurement_index
+        or any(index <= warmup_index for index in perf_indexes)
+    ):
+        audit.error(
+            f"{field_name}.output",
+            "performance samples must stay between warmup/runtime and measurement completion",
+        )
+
+    def marker_json(prefix: str, index: int, marker_field: str) -> Any:
+        try:
+            return _strict_performance_json_loads(lines[index][len(prefix) :])
+        except (json.JSONDecodeError, ValueError):
+            audit.error(marker_field, "must contain valid JSON")
+            return None
+
+    warmup = marker_json(
+        PERFORMANCE_WARMUP_PREFIX,
+        warmup_index,
+        f"{field_name}.warmup",
+    )
+    if warmup != {"frames": PERFORMANCE_WARMUP_FRAMES, "status": "passed"}:
+        audit.error(
+            f"{field_name}.warmup",
+            f"must attest exactly {PERFORMANCE_WARMUP_FRAMES} warmup frames",
+        )
+    runtime = marker_json(
+        PERFORMANCE_RUNTIME_PREFIX,
+        runtime_index,
+        f"{field_name}.runtime",
+    )
+    if not isinstance(runtime, dict):
+        audit.error(f"{field_name}.runtime", "expected an object")
+    else:
+        if not str(runtime.get("videoAdapterName", "")).strip():
+            audit.error(
+                f"{field_name}.runtime.videoAdapterName",
+                "must be non-empty",
+            )
+        expected_runtime = _expected_repeated_runtime_identity(
+            map_id,
+            variant,
+            bundle_id,
+            comparison_mode,
+            runner_identity.get("runnerVersion"),
+            runtime.get("videoAdapterName"),
+        )
+        if expected_runtime is None or runtime != expected_runtime:
+            audit.error(
+                f"{field_name}.runtime",
+                "must exactly attest the expected Main/Metal/map/process-scope runtime",
+            )
+
+    measurement = marker_json(
+        PERFORMANCE_MEASUREMENT_PREFIX,
+        measurement_index,
+        f"{field_name}.measurement",
+    )
+    expected_measurement = {
+        "completeSamples": PERFORMANCE_SAMPLES_PER_REPETITION,
+        "discardedPartialFrames": 0,
+        "expectedFrames": PERFORMANCE_MEASUREMENT_FRAMES,
+        "frames": PERFORMANCE_MEASUREMENT_FRAMES,
+        "mode": expected_boundary,
+        "processScope": "process_priority_boundary_v1",
+        "processScopeFrames": PERFORMANCE_MEASUREMENT_FRAMES,
+        "status": "passed",
+    }
+    if measurement != expected_measurement:
+        audit.error(
+            f"{field_name}.measurement",
+            "must attest eight aligned 60-frame process-scope windows",
+        )
+    cleanup = marker_json(
+        PERFORMANCE_CLEAN_EXIT_PREFIX,
+        cleanup_index,
+        f"{field_name}.cleanExit",
+    )
+    if not isinstance(cleanup, dict):
+        audit.error(f"{field_name}.cleanExit", "expected an object")
+    else:
+        expected_cleanup_keys = {
+            "audioManagerReleased",
+            "audioPlaybackDisabled",
+            "audioStopped",
+            "audioStreamsDetached",
+            "detachedAudioPlayerCount",
+            "drainFrames",
+            "drainSeconds",
+            "requestedExitCode",
+            "status",
+        }
+        if set(cleanup) != expected_cleanup_keys:
+            audit.error(
+                f"{field_name}.cleanExit",
+                f"must contain exactly {sorted(expected_cleanup_keys)!r}",
+            )
+        for key in (
+            "audioManagerReleased",
+            "audioPlaybackDisabled",
+            "audioStopped",
+            "audioStreamsDetached",
+        ):
+            if cleanup.get(key) is not True:
+                audit.error(f"{field_name}.cleanExit.{key}", "must be explicitly true")
+        if (
+            cleanup.get("status") != "passed"
+            or type(cleanup.get("requestedExitCode")) is not int
+            or cleanup.get("requestedExitCode") != 0
+        ):
+            audit.error(f"{field_name}.cleanExit", "must report a successful clean exit")
+        detached_count = cleanup.get("detachedAudioPlayerCount")
+        if (
+            not isinstance(detached_count, int)
+            or isinstance(detached_count, bool)
+            or detached_count <= 0
+        ):
+            audit.error(
+                f"{field_name}.cleanExit.detachedAudioPlayerCount",
+                "must be a positive integer",
+            )
+
+    samples: list[dict[str, float]] = []
+    for index in perf_indexes:
+        match = PERFORMANCE_PERF_LINE_RE.match(lines[index])
+        assert match is not None
+        metric_pairs = PERFORMANCE_METRIC_RE.findall(match.group("body"))
+        if len({key for key, _value in metric_pairs}) != len(metric_pairs):
+            audit.error(
+                f"{field_name}.samples[{len(samples)}]",
+                "must not contain duplicate metric keys",
+            )
+            continue
+        metrics = {key: float(value) for key, value in metric_pairs}
+        frames = int(match.group("frames"))
+        fps = float(match.group("fps"))
+        if (
+            frames != PERFORMANCE_SAMPLE_FRAMES
+            or not math.isclose(
+                fps,
+                PERFORMANCE_FIXED_STEP_FPS,
+                rel_tol=0.0,
+                abs_tol=PERFORMANCE_DECIMAL_TOLERANCE,
+            )
+            or "process_total" not in metrics
+            or "process_scope_total" not in metrics
+        ):
+            audit.error(
+                f"{field_name}.samples[{len(samples)}]",
+                "must be one 60-frame/60-FPS window with Main and process-scope metrics",
+            )
+            continue
+        if metrics["process_scope_total"] < metrics["process_total"]:
+            audit.error(
+                f"{field_name}.samples[{len(samples)}].process_scope_total",
+                "must include and therefore be >= the Main._process-only total",
+            )
+            continue
+        samples.append(
+            {
+                "fps": fps,
+                "processTotalMs": metrics["process_total"],
+                "drawWorldMs": metrics.get("draw_world", 0.0),
+                "drawWorldObserved": int("draw_world" in metrics),
+                "processScopeTotalMs": metrics["process_scope_total"],
+            }
+        )
+    if len(perf_indexes) != PERFORMANCE_SAMPLES_PER_REPETITION:
+        audit.error(
+            f"{field_name}.samples",
+            f"must contain exactly {PERFORMANCE_SAMPLES_PER_REPETITION} windows",
+        )
+    if len(samples) != PERFORMANCE_SAMPLES_PER_REPETITION:
+        return identity, None
+
+    moving_indexes = [
+        index
+        for index, line in enumerate(lines)
+        if line.startswith(PERFORMANCE_MOVING_PREFIX)
+    ]
+    moving_lines = [
+        lines[index][len(PERFORMANCE_MOVING_PREFIX) :]
+        for index in moving_indexes
+    ]
+    workload_identity = None
+    moving_values = None
+    if mode == "idle":
+        if moving_lines:
+            audit.error(f"{field_name}.movement", "idle output must not contain movement data")
+    elif (
+        len(moving_lines) != 1
+        or moving_indexes[0] <= runtime_index
+        or moving_indexes[0] >= min(perf_indexes)
+    ):
+        audit.error(
+            f"{field_name}.movement",
+            "must contain exactly one pre-sample movement summary",
+        )
+    else:
+        moving_values = _parse_performance_key_values(
+            audit,
+            moving_lines[0],
+            f"{field_name}.movement",
+        )
+        if moving_values is not None:
+            required_values = {
+                "status": "ok",
+                "moved": "true",
+                "coalesced": "true",
+                "settled": "true",
+                "final_match": "true",
+                "screen_roundtrip": "true",
+                "projection_ready": "true",
+                "battle": "false",
+                "encounter": "false",
+                "shared_error": "none",
+                "sequence_id": PERFORMANCE_MOVING_WORKLOAD_CONTRACT,
+            }
+            for key, expected in required_values.items():
+                if moving_values.get(key) != expected:
+                    audit.error(
+                        f"{field_name}.movement.{key}",
+                        f"must equal {expected!r}",
+                    )
+            integer_values = {
+                key: _performance_int(
+                    audit,
+                    moving_values,
+                    key,
+                    f"{field_name}.movement",
+                )
+                for key in (
+                    "clicks",
+                    "click_limit",
+                    "target_count",
+                    "mouse_events",
+                    "ui_skipped",
+                    "interaction_skipped",
+                    "input_ui",
+                    "remote_hit",
+                    "accepted",
+                    "resolved",
+                    "applied",
+                    "screen_matches",
+                    "screen_mismatches",
+                    "avg_input_us",
+                    "max_input_us",
+                )
+            }
+            exact_integers = {
+                "clicks": 60,
+                "click_limit": 60,
+                "target_count": 60,
+                "mouse_events": 120,
+                "ui_skipped": 0,
+                "interaction_skipped": 0,
+                "input_ui": 0,
+                "remote_hit": 0,
+                "accepted": 60,
+                "screen_matches": 60,
+                "screen_mismatches": 0,
+            }
+            for key, expected in exact_integers.items():
+                if integer_values.get(key) != expected:
+                    audit.error(
+                        f"{field_name}.movement.{key}",
+                        f"must equal {expected}",
+                    )
+            resolved = integer_values.get("resolved")
+            applied = integer_values.get("applied")
+            if (
+                resolved is None
+                or applied is None
+                or not 0 < applied <= resolved < 60
+            ):
+                audit.error(
+                    f"{field_name}.movement",
+                    "must prove 0 < applied <= resolved < accepted",
+                )
+            workload_identity = {
+                "sequenceId": moving_values.get("sequence_id"),
+                "sequenceSha256": moving_values.get("sequence_sha256"),
+                "startCell": moving_values.get("start_cell"),
+                "actualStartCell": moving_values.get("actual_start_cell"),
+                "finalCell": moving_values.get("final_cell"),
+                "clicks": integer_values.get("clicks"),
+                "mouseEvents": integer_values.get("mouse_events"),
+            }
+            _validate_repeated_workload_identity(
+                audit,
+                workload_identity,
+                f"{field_name}.movement.workloadIdentity",
+                map_id=map_id,
+                expected_workload=expected_workload,
+            )
+            if moving_values.get("final_cell") != moving_values.get("expected_cell"):
+                audit.error(
+                    f"{field_name}.movement.final_cell",
+                    "must equal expected_cell",
+                )
+
+    def metric_triplet(key: str) -> list[float]:
+        values = [sample[key] for sample in samples]
+        return [
+            round(min(values), 3),
+            round(sum(values) / len(values), 3),
+            round(max(values), 3),
+        ]
+
+    parsed_record: dict[str, Any] = {
+        "fpsMinMeanMax": metric_triplet("fps"),
+        "processTotalMsMinMeanMax": metric_triplet("processTotalMs"),
+        "drawWorldMsMinMeanMax": metric_triplet("drawWorldMs"),
+        "drawWorldObservedSampleCount": sum(
+            int(sample["drawWorldObserved"]) for sample in samples
+        ),
+        "processScopeTotalMsMinMeanMax": metric_triplet("processScopeTotalMs"),
+        "measurementFrames": PERFORMANCE_MEASUREMENT_FRAMES,
+        "measurementBoundary": expected_boundary,
+        "runtimeIdentity": runtime,
+        "endedAtUtc": record.get("endedAtUtc"),
+    }
+    if moving_values is not None:
+        for source_key, output_key in (
+            ("clicks", "clicks"),
+            ("accepted", "accepted"),
+            ("resolved", "resolved"),
+            ("applied", "applied"),
+            ("avg_input_us", "avgInputUs"),
+            ("max_input_us", "maxInputUs"),
+        ):
+            parsed_record[output_key] = _performance_int(
+                audit,
+                moving_values,
+                source_key,
+                f"{field_name}.movement",
+            )
+        parsed_record["workloadIdentity"] = workload_identity
+    return identity, parsed_record
+
+
+def _read_repeated_performance_receipt(
+    audit: Audit,
+    receipt_path: Path,
+    field_name: str,
+    *,
+    bundle_id: str | None,
+    map_ids: list[str],
+    repetition_count: int,
+    comparison_mode: Any,
+    runner_identity: dict[str, Any],
+    expected_workloads: dict[str, dict[str, Any]],
+) -> dict[tuple[str, str, str, int], dict[str, Any]]:
+    if receipt_path.suffix.lower() != ".jsonl":
+        audit.error(field_name, "repeated performance receipts must use .jsonl")
+        return {}
+    try:
+        lines = receipt_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as exc:
+        audit.error(field_name, f"cannot read repeated receipt ({exc})")
+        return {}
+    if not lines or any(not line.strip() for line in lines):
+        audit.error(field_name, "must contain non-empty JSONL records without blank lines")
+        return {}
+    records: list[Any] = []
+    for index, line in enumerate(lines):
+        try:
+            records.append(_strict_performance_json_loads(line))
+        except (json.JSONDecodeError, ValueError) as exc:
+            audit.error(f"{field_name}[{index}]", f"invalid JSON ({exc})")
+    expected_order = _performance_expected_execution_matrix(map_ids, repetition_count)
+    if len(records) != len(expected_order):
+        audit.error(
+            field_name,
+            f"must contain exactly {len(expected_order)} matrix records",
+        )
+    parsed: dict[tuple[str, str, str, int], dict[str, Any]] = {}
+    actual_order: list[tuple[str, str, str, int]] = []
+    real_inventory_hashes: set[str] = set()
+    for index, record in enumerate(records):
+        identity, sample = _parse_repeated_performance_record(
+            audit,
+            record,
+            f"{field_name}[{index}]",
+            bundle_id=bundle_id,
+            comparison_mode=comparison_mode,
+            runner_identity=runner_identity,
+            expected_workload=expected_workloads.get(str(record.get("mapId", "")))
+            if isinstance(record, dict)
+            else None,
+        )
+        if identity is None:
+            continue
+        actual_order.append(identity)
+        if identity in parsed:
+            audit.error(f"{field_name}[{index}]", "duplicates another matrix record")
+        elif sample is not None:
+            parsed[identity] = sample
+        if isinstance(record, dict) and isinstance(record.get("qaLane"), dict):
+            inventory_hash = record["qaLane"].get("realInventorySha256")
+            if isinstance(inventory_hash, str):
+                real_inventory_hashes.add(inventory_hash)
+    if actual_order != expected_order:
+        audit.error(
+            field_name,
+            "record order must match repetition, rotated map, mode and alternating variant order",
+        )
+    if len(real_inventory_hashes) != 1:
+        audit.error(
+            field_name,
+            "all matrix records must preserve one real-user inventory hash",
+        )
+    return parsed
+
+
+def _performance_receipt_declares_v2_sampling(receipt_path: Path) -> bool:
+    if receipt_path.suffix.lower() != ".jsonl":
+        return False
+    try:
+        lines = receipt_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return False
+    for line in lines:
+        try:
+            record = _strict_performance_json_loads(line)
+        except (json.JSONDecodeError, ValueError):
+            if any(
+                marker in line
+                for marker in (
+                    "samplingContract",
+                    "process_scope_total=",
+                    PERFORMANCE_WARMUP_PREFIX,
+                    PERFORMANCE_RUNTIME_PREFIX,
+                    PERFORMANCE_MEASUREMENT_PREFIX,
+                    PERFORMANCE_CLEAN_EXIT_PREFIX,
+                )
+            ):
+                return True
+            continue
+        if not isinstance(record, dict):
+            continue
+        contract = record.get("samplingContract")
+        stdout = record.get("stdout")
+        argv = record.get("argv")
+        if (
+            contract is not None
+            or any(
+                key in record
+                for key in (
+                    "buildIdentity",
+                    "evidenceBuilderSha256",
+                    "evidenceRunnerSha256",
+                )
+            )
+            or (
+                isinstance(stdout, str)
+                and any(
+                    marker in stdout
+                    for marker in (
+                        "process_scope_total=",
+                        PERFORMANCE_WARMUP_PREFIX,
+                        PERFORMANCE_RUNTIME_PREFIX,
+                        PERFORMANCE_MEASUREMENT_PREFIX,
+                        PERFORMANCE_CLEAN_EXIT_PREFIX,
+                    )
+                )
+            )
+            or (
+                isinstance(argv, list)
+                and any(
+                    isinstance(value, str)
+                    and value.startswith("--perf-probe-warmup-frames=")
+                    for value in argv
+                )
+            )
+        ):
+            return True
+    return False
+
+
+def _triplet_close(left: Any, right: Any) -> bool:
+    return (
+        isinstance(left, list)
+        and isinstance(right, list)
+        and len(left) == len(right) == 3
+        and all(
+            _is_finite_number(left_value)
+            and _is_finite_number(right_value)
+            and math.isclose(
+                float(left_value),
+                float(right_value),
+                rel_tol=0.0,
+                abs_tol=PERFORMANCE_DECIMAL_TOLERANCE,
+            )
+            for left_value, right_value in zip(left, right)
+        )
+    )
+
+
+def _validate_repeated_sample_against_receipt(
+    audit: Audit,
+    sample: Any,
+    field_name: str,
+    *,
+    raw_samples: list[dict[str, Any]],
+    moving: bool,
+) -> None:
+    if not isinstance(sample, dict) or not raw_samples:
+        return
+    runtime_identities = [raw.get("runtimeIdentity") for raw in raw_samples]
+    if (
+        any(not isinstance(value, dict) for value in runtime_identities)
+        or len(
+            {
+                json.dumps(value, ensure_ascii=False, sort_keys=True)
+                for value in runtime_identities
+            }
+        )
+        != 1
+    ):
+        audit.error(
+            f"{field_name}.runtimeIdentity",
+            "raw repetitions must preserve one exact runtime identity",
+        )
+    elif sample.get("runtimeIdentity") != runtime_identities[0]:
+        audit.error(
+            f"{field_name}.runtimeIdentity",
+            "must exactly match the raw receipt runtime identity",
+        )
+    raw_boundaries = [raw.get("measurementBoundary") for raw in raw_samples]
+    if len(set(raw_boundaries)) != 1 or sample.get("measurementBoundary") != raw_boundaries[0]:
+        audit.error(
+            f"{field_name}.measurementBoundary",
+            "must exactly match one stable raw measurement boundary",
+        )
+    raw_triplet_keys = (
+        "fpsMinMeanMax",
+        "processTotalMsMinMeanMax",
+        "drawWorldMsMinMeanMax",
+        "processScopeTotalMsMinMeanMax",
+    )
+    run_mean_key = {
+        "fpsMinMeanMax": "fps",
+        "processTotalMsMinMeanMax": "processTotalMs",
+        "drawWorldMsMinMeanMax": "drawWorldMs",
+        "processScopeTotalMsMinMeanMax": "processScopeTotalMs",
+    }
+    run_means = sample.get("runMeanValues")
+    for triplet_key in raw_triplet_keys:
+        expected_run_means = [raw[triplet_key][1] for raw in raw_samples]
+        declared_run_means = (
+            run_means.get(run_mean_key[triplet_key])
+            if isinstance(run_means, dict)
+            else None
+        )
+        if (
+            not isinstance(declared_run_means, list)
+            or len(declared_run_means) != len(expected_run_means)
+            or any(
+                not _is_finite_number(declared)
+                or not math.isclose(
+                    float(declared),
+                    float(expected),
+                    rel_tol=0.0,
+                    abs_tol=PERFORMANCE_DECIMAL_TOLERANCE,
+                )
+                for declared, expected in zip(declared_run_means, expected_run_means)
+            )
+        ):
+            audit.error(
+                f"{field_name}.runMeanValues.{run_mean_key[triplet_key]}",
+                "must exactly reproduce the ordered raw receipt run means",
+            )
+        expected_aggregate = [
+            round(min(raw[triplet_key][0] for raw in raw_samples), 3),
+            round(float(median(expected_run_means)), 3),
+            round(max(raw[triplet_key][2] for raw in raw_samples), 3),
+        ]
+        if not _triplet_close(sample.get(triplet_key), expected_aggregate):
+            audit.error(
+                f"{field_name}.{triplet_key}",
+                f"must equal the raw receipt aggregation {expected_aggregate!r}",
+            )
+    expected_draw_observed = sum(
+        int(raw.get("drawWorldObservedSampleCount", 0)) for raw in raw_samples
+    )
+    if sample.get("drawWorldObservedSampleCount") != expected_draw_observed:
+        audit.error(
+            f"{field_name}.drawWorldObservedSampleCount",
+            f"must equal raw total {expected_draw_observed}",
+        )
+    if not moving:
+        return
+    workloads = [raw.get("workloadIdentity") for raw in raw_samples]
+    if sample.get("workloadIdentityByRepetition") != workloads:
+        audit.error(
+            f"{field_name}.workloadIdentityByRepetition",
+            "must exactly match the raw receipt workload identity for every repetition",
+        )
+    for key in ("clicks", "accepted", "resolved", "applied"):
+        raw_values = [raw.get(key) for raw in raw_samples]
+        if not all(
+            isinstance(value, int) and not isinstance(value, bool)
+            for value in raw_values
+        ):
+            audit.error(
+                f"{field_name}.{key}",
+                "raw repetitions must contain valid integer values",
+            )
+            continue
+        expected = sum(int(value) for value in raw_values)
+        if sample.get(key) != expected:
+            audit.error(f"{field_name}.{key}", f"must equal raw total {expected}")
+    raw_avg_values = [raw.get("avgInputUs") for raw in raw_samples]
+    if all(
+        isinstance(value, int) and not isinstance(value, bool)
+        for value in raw_avg_values
+    ):
+        expected_avg = int(median(int(value) for value in raw_avg_values))
+        if sample.get("avgInputUs") != expected_avg:
+            audit.error(
+                f"{field_name}.avgInputUs", f"must equal raw median {expected_avg}"
+            )
+    else:
+        audit.error(
+            f"{field_name}.avgInputUs",
+            "raw repetitions must contain valid integer values",
+        )
+    raw_max_values = [raw.get("maxInputUs") for raw in raw_samples]
+    if all(
+        isinstance(value, int) and not isinstance(value, bool)
+        for value in raw_max_values
+    ):
+        expected_max = max(int(value) for value in raw_max_values)
+        if sample.get("maxInputUs") != expected_max:
+            audit.error(
+                f"{field_name}.maxInputUs", f"must equal raw maximum {expected_max}"
+            )
+    else:
+        audit.error(
+            f"{field_name}.maxInputUs",
+            "raw repetitions must contain valid integer values",
+        )
+
+
+def _validate_repeated_paired_aggregation(
+    audit: Audit,
+    comparison: dict[str, Any],
+    field_name: str,
+    *,
+    baseline: dict[str, Any],
+    candidate: dict[str, Any],
+    repetition_count: int,
+) -> None:
+    paired = comparison.get("pairedAggregation")
+    expected_keys = {
+        "repetitions",
+        "processScopeTotalMeanDeltaMsByRepetition",
+        "medianProcessScopeTotalMeanDeltaMs",
+        "gates",
+        "thresholdSource",
+    }
+    if not isinstance(paired, dict) or set(paired) != expected_keys:
+        audit.error(
+            f"{field_name}.pairedAggregation",
+            f"must contain exactly {sorted(expected_keys)!r}",
+        )
+        return
+    repetitions = list(range(1, repetition_count + 1))
+    if paired.get("repetitions") != repetitions:
+        audit.error(
+            f"{field_name}.pairedAggregation.repetitions",
+            f"must equal {repetitions!r}",
+        )
+    if paired.get("thresholdSource") != "comparison.thresholds":
+        audit.error(
+            f"{field_name}.pairedAggregation.thresholdSource",
+            "must equal 'comparison.thresholds'",
+        )
+    deltas = paired.get("processScopeTotalMeanDeltaMsByRepetition")
+    medians = paired.get("medianProcessScopeTotalMeanDeltaMs")
+    if not isinstance(deltas, dict) or set(deltas) != {"idle", "moving"}:
+        audit.error(
+            f"{field_name}.pairedAggregation.processScopeTotalMeanDeltaMsByRepetition",
+            "must contain exactly idle and moving",
+        )
+        deltas = {}
+    if not isinstance(medians, dict) or set(medians) != {"idle", "moving"}:
+        audit.error(
+            f"{field_name}.pairedAggregation.medianProcessScopeTotalMeanDeltaMs",
+            "must contain exactly idle and moving",
+        )
+        medians = {}
+    for mode in ("idle", "moving"):
+        baseline_means = baseline.get(mode, {}).get("runMeanValues", {}).get(
+            "processScopeTotalMs"
+        )
+        candidate_means = candidate.get(mode, {}).get("runMeanValues", {}).get(
+            "processScopeTotalMs"
+        )
+        if (
+            not isinstance(baseline_means, list)
+            or not isinstance(candidate_means, list)
+            or len(baseline_means) != repetition_count
+            or len(candidate_means) != repetition_count
+            or not all(_is_finite_number(value) for value in baseline_means)
+            or not all(_is_finite_number(value) for value in candidate_means)
+        ):
+            continue
+        expected_deltas = [
+            round(float(candidate_value) - float(baseline_value), 3)
+            for baseline_value, candidate_value in zip(
+                baseline_means,
+                candidate_means,
+            )
+        ]
+        declared_deltas = deltas.get(mode)
+        if (
+            not isinstance(declared_deltas, list)
+            or len(declared_deltas) != repetition_count
+            or any(
+                not _is_finite_scalar(declared)
+                or not math.isclose(
+                    float(declared),
+                    expected,
+                    rel_tol=0.0,
+                    abs_tol=PERFORMANCE_DECIMAL_TOLERANCE,
+                )
+                for declared, expected in zip(declared_deltas, expected_deltas)
+            )
+        ):
+            audit.error(
+                f"{field_name}.pairedAggregation.processScopeTotalMeanDeltaMsByRepetition.{mode}",
+                f"must equal paired candidate-minus-baseline deltas {expected_deltas!r}",
+            )
+        elif not all(
+            _is_canonical_three_decimal_number(value) for value in declared_deltas
+        ):
+            audit.error(
+                f"{field_name}.pairedAggregation.processScopeTotalMeanDeltaMsByRepetition.{mode}",
+                "must use canonical three-decimal deltas",
+            )
+        expected_median = round(float(median(expected_deltas)), 3)
+        declared_median = medians.get(mode)
+        if (
+            not _is_finite_scalar(declared_median)
+            or not math.isclose(
+                float(declared_median),
+                expected_median,
+                rel_tol=0.0,
+                abs_tol=PERFORMANCE_DECIMAL_TOLERANCE,
+            )
+        ):
+            audit.error(
+                f"{field_name}.pairedAggregation.medianProcessScopeTotalMeanDeltaMs.{mode}",
+                f"must equal {expected_median:.3f}",
+            )
+        elif not _is_canonical_three_decimal_number(declared_median):
+            audit.error(
+                f"{field_name}.pairedAggregation.medianProcessScopeTotalMeanDeltaMs.{mode}",
+                "must use a canonical three-decimal median",
+            )
+        threshold = PERFORMANCE_PROCESS_SCOPE_THRESHOLDS[
+            "idleProcessScopeRegressionMaxMs"
+            if mode == "idle"
+            else "movingProcessScopeRegressionMaxMs"
+        ]
+        if expected_median > threshold:
+            audit.error(
+                f"{field_name}.pairedAggregation.medianProcessScopeTotalMeanDeltaMs.{mode}",
+                f"paired regression exceeds {threshold}",
+            )
+    paired_gates = paired.get("gates")
+    if (
+        not isinstance(paired_gates, dict)
+        or set(paired_gates) != PERFORMANCE_PAIRED_GATE_NAMES
+    ):
+        audit.error(
+            f"{field_name}.pairedAggregation.gates",
+            f"must contain exactly {sorted(PERFORMANCE_PAIRED_GATE_NAMES)!r}",
+        )
+    elif any(value != "PASS" for value in paired_gates.values()):
+        audit.error(
+            f"{field_name}.pairedAggregation.gates",
+            "all paired regression gates must PASS",
+        )
+
+
 def _validate_report_map_entries(
     audit: Audit,
     value: Any,
@@ -2088,6 +3902,7 @@ def validate_report(
         dict[tuple[tuple[str, str], tuple[str, str]], str],
     ],
     *,
+    map_id_order: list[str] | None = None,
     required: bool,
     release_frozen: bool,
 ) -> set[tuple[str, str]]:
@@ -2104,12 +3919,29 @@ def validate_report(
         return nested_evidence
 
     field_name = f"evidence.{key}"
+    if key == "performanceReport" and isinstance(value, dict):
+        strict_report_path = audit.resolve_file(
+            value.get("path"),
+            f"{field_name}.path",
+        )
+        if strict_report_path is not None:
+            try:
+                strict_report = _strict_performance_json_loads(
+                    strict_report_path.read_text(encoding="utf-8")
+                )
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+                audit.error(field_name, f"must use strict JSON without duplicate keys ({exc})")
+                return nested_evidence
+            if not isinstance(strict_report, dict):
+                audit.error(field_name, "expected a strict JSON object")
+                return nested_evidence
+            report = strict_report
     expected_types = {
         "collisionAudit": COLLISION_REPORT_TYPE,
         "performanceReport": PERFORMANCE_REPORT_TYPE,
         "computerUseReport": COMPUTER_USE_REPORT_TYPE,
     }
-    if report.get("schemaVersion") != SCHEMA_VERSION:
+    if type(report.get("schemaVersion")) is not int or report.get("schemaVersion") != SCHEMA_VERSION:
         audit.error(f"{field_name}.schemaVersion", f"must equal {SCHEMA_VERSION}")
     if report.get("reportType") != expected_types[key]:
         audit.error(f"{field_name}.reportType", f"must equal {expected_types[key]!r}")
@@ -2149,6 +3981,7 @@ def validate_report(
             "must be empty before owner-approved or released evidence is accepted",
         )
 
+    receipt_path: Path | None = None
     if key in {"collisionAudit", "performanceReport"}:
         runner_gate = f"{key}.runner_identity"
         runner_identity = report.get("runnerIdentity")
@@ -2302,13 +4135,194 @@ def validate_report(
                 f"{field_name}.movingInputFrameSeparated",
                 "must be explicitly true",
             )
-        if report.get("comparisonMode") != PERFORMANCE_COMPARISON_MODE:
+        comparison_mode = report.get("comparisonMode")
+        repeated_fields_present = _performance_repeated_fields_present(
+            report,
+            report_maps,
+        )
+        aggregation_mode = report.get("aggregationMode")
+        repetition_count_value = report.get("repetitionCount")
+        execution_order = report.get("executionOrder")
+        repeated_contract = aggregation_mode == PERFORMANCE_REPEATED_AGGREGATION_MODE
+        repetition_count: int | None = None
+        if repeated_fields_present and not repeated_contract:
             audit.error(
-                f"{field_name}.comparisonMode",
-                f"must equal {PERFORMANCE_COMPARISON_MODE!r}",
+                f"{field_name}.aggregationMode",
+                f"repeated fields require {PERFORMANCE_REPEATED_AGGREGATION_MODE!r}",
             )
+        if repeated_contract:
+            if report.get("displayServer") != "macOS Metal":
+                audit.error(
+                    f"{field_name}.displayServer",
+                    "repeated reports must equal 'macOS Metal'",
+                )
+            if comparison_mode not in PERFORMANCE_REPEATED_COMPARISON_MODES:
+                audit.error(
+                    f"{field_name}.comparisonMode",
+                    "must identify a supported repeated runtime comparison",
+                )
+            if (
+                not isinstance(runner_identity, dict)
+                or runner_identity.get("runnerVersion") != PERFORMANCE_RUNNER_VERSION
+            ):
+                audit.error(
+                    f"{field_name}.runnerIdentity.runnerVersion",
+                    f"must equal {PERFORMANCE_RUNNER_VERSION!r}",
+                )
+            if map_id_order is not None and tested != map_id_order:
+                audit.error(
+                    f"{field_name}.testedMapIds",
+                    "repeated reports must preserve the manifest mapIds order",
+                )
+            if (
+                not isinstance(repetition_count_value, int)
+                or isinstance(repetition_count_value, bool)
+                or repetition_count_value < 3
+                or repetition_count_value % 2 == 0
+            ):
+                audit.error(
+                    f"{field_name}.repetitionCount",
+                    "must be an odd integer of at least 3",
+                )
+            else:
+                repetition_count = repetition_count_value
+            if execution_order != PERFORMANCE_REPEATED_EXECUTION_ORDER:
+                audit.error(
+                    f"{field_name}.executionOrder",
+                    f"must equal {PERFORMANCE_REPEATED_EXECUTION_ORDER!r}",
+                )
+            if report.get("controlledFixedStepFps") != PERFORMANCE_FIXED_STEP_FPS:
+                audit.error(
+                    f"{field_name}.controlledFixedStepFps",
+                    f"must equal {PERFORMANCE_FIXED_STEP_FPS}",
+                )
+            if report.get("metricScope") != PERFORMANCE_METRIC_SCOPE:
+                audit.error(
+                    f"{field_name}.metricScope",
+                    f"must equal {PERFORMANCE_METRIC_SCOPE!r}",
+                )
+        elif aggregation_mode is not None:
+            if comparison_mode != PERFORMANCE_LEGACY_COMPARISON_MODE:
+                audit.error(
+                    f"{field_name}.comparisonMode",
+                    f"legacy reports must equal {PERFORMANCE_LEGACY_COMPARISON_MODE!r}",
+                )
+            if aggregation_mode != PERFORMANCE_LEGACY_AGGREGATION_MODE:
+                audit.error(
+                    f"{field_name}.aggregationMode",
+                    f"must equal {PERFORMANCE_LEGACY_AGGREGATION_MODE!r} or the repeated mode",
+                )
+            if repetition_count_value != 1:
+                audit.error(f"{field_name}.repetitionCount", "legacy mode must equal 1")
+            if execution_order != PERFORMANCE_LEGACY_EXECUTION_ORDER:
+                audit.error(
+                    f"{field_name}.executionOrder",
+                    f"legacy mode must equal {PERFORMANCE_LEGACY_EXECUTION_ORDER!r}",
+                )
+            metric_scope = report.get("metricScope")
+            if metric_scope not in (
+                PERFORMANCE_METRIC_PROVENANCE,
+                PERFORMANCE_LEGACY_METRIC_SCOPE,
+            ):
+                audit.error(
+                    f"{field_name}.metricScope",
+                    "legacy reports must identify processTotalMsMinMeanMax as the gate metric",
+                )
+        elif repetition_count_value is not None or execution_order is not None:
+            audit.error(
+                f"{field_name}.aggregationMode",
+                "repetitionCount/executionOrder require an aggregationMode",
+            )
+        else:
+            if comparison_mode != PERFORMANCE_LEGACY_COMPARISON_MODE:
+                audit.error(
+                    f"{field_name}.comparisonMode",
+                    f"historical reports must equal {PERFORMANCE_LEGACY_COMPARISON_MODE!r}",
+                )
+            metric_scope = report.get("metricScope")
+            if metric_scope is not None and metric_scope not in (
+                PERFORMANCE_METRIC_PROVENANCE,
+                PERFORMANCE_LEGACY_METRIC_SCOPE,
+            ):
+                audit.error(
+                    f"{field_name}.metricScope",
+                    "historical reports may only declare legacy metric provenance",
+                )
+        if not repeated_contract and (
+            "controlledFixedStepFps" in report
+            and report.get("controlledFixedStepFps") != PERFORMANCE_FIXED_STEP_FPS
+        ):
+            audit.error(
+                f"{field_name}.controlledFixedStepFps",
+                f"must equal {PERFORMANCE_FIXED_STEP_FPS} when declared",
+            )
+
+        raw_repeated_samples: dict[
+            tuple[str, str, str, int], dict[str, Any]
+        ] = {}
+        ordered_map_ids = (
+            list(map_id_order)
+            if map_id_order is not None
+            else list(tested)
+            if isinstance(tested, list)
+            and len(tested) == len(set(tested))
+            and all(is_id(item) for item in tested)
+            and set(tested) == map_ids
+            else sorted(map_ids)
+        )
+        expected_workloads = (
+            _authoritative_performance_workloads(
+                audit,
+                ordered_map_ids,
+                f"{field_name}.movingWorkloadAuthority",
+            )
+            if repeated_contract and repetition_count is not None
+            else {}
+        )
+        if repeated_contract and repetition_count is not None:
+            if receipt_path is None:
+                audit.error(
+                    f"{field_name}.rawRunnerReceipt",
+                    "is required to validate repeated aggregation",
+                )
+            else:
+                raw_repeated_samples = _read_repeated_performance_receipt(
+                    audit,
+                    receipt_path,
+                    f"{field_name}.rawRunnerReceipt",
+                    bundle_id=bundle_id,
+                    map_ids=ordered_map_ids,
+                    repetition_count=repetition_count,
+                    comparison_mode=comparison_mode,
+                    runner_identity=(
+                        runner_identity if isinstance(runner_identity, dict) else {}
+                    ),
+                    expected_workloads=expected_workloads,
+                )
+                raw_ended_at_values = [
+                    sample.get("endedAtUtc")
+                    for sample in raw_repeated_samples.values()
+                    if isinstance(sample.get("endedAtUtc"), str)
+                ]
+                if raw_ended_at_values and report.get("generatedAtUtc") != max(
+                    raw_ended_at_values
+                ):
+                    audit.error(
+                        f"{field_name}.generatedAtUtc",
+                        "must equal the latest raw receipt completion time",
+                    )
+        elif (
+            receipt_path is not None
+            and _performance_receipt_declares_v2_sampling(receipt_path)
+        ):
+            audit.error(
+                f"{field_name}.aggregationMode",
+                "a v2 repeated receipt cannot be downgraded to a legacy report",
+            )
+        repeated_video_adapters: set[str] = set()
         for map_id, entry in report_maps.items():
             means: dict[str, dict[str, float | None]] = {}
+            variant_reports: dict[str, dict[str, Any]] = {}
             for variant, renderer in (
                 ("baseline", "legacy_fallback"),
                 ("candidate", "map_visual_candidate"),
@@ -2323,6 +4337,7 @@ def validate_report(
                         f"{variant_field}.renderer",
                         f"must equal {renderer!r}",
                     )
+                variant_reports[variant] = variant_report
                 means[variant] = {
                     "idle": _validate_performance_sample(
                         audit,
@@ -2337,28 +4352,157 @@ def validate_report(
                         moving=True,
                     ),
                 }
+                if repeated_contract and repetition_count is not None:
+                    for mode in ("idle", "moving"):
+                        sample = variant_report.get(mode)
+                        sample_field = f"{variant_field}.{mode}"
+                        _validate_repeated_performance_sample(
+                            audit,
+                            sample,
+                            sample_field,
+                            moving=mode == "moving",
+                            repetition_count=repetition_count,
+                            map_id=map_id,
+                            variant=variant,
+                            bundle_id=bundle_id,
+                            comparison_mode=comparison_mode,
+                            runner_version=(
+                                runner_identity.get("runnerVersion")
+                                if isinstance(runner_identity, dict)
+                                else None
+                            ),
+                            expected_workload=expected_workloads.get(map_id),
+                        )
+                        raw_samples = [
+                            raw_repeated_samples.get(
+                                (map_id, variant, mode, repetition)
+                            )
+                            for repetition in range(1, repetition_count + 1)
+                        ]
+                        if all(isinstance(value, dict) for value in raw_samples):
+                            _validate_repeated_sample_against_receipt(
+                                audit,
+                                sample,
+                                sample_field,
+                                raw_samples=[
+                                    value
+                                    for value in raw_samples
+                                    if isinstance(value, dict)
+                                ],
+                                moving=mode == "moving",
+                            )
+                        if isinstance(sample, dict):
+                            runtime_identity = sample.get("runtimeIdentity")
+                            if isinstance(runtime_identity, dict):
+                                adapter_name = runtime_identity.get("videoAdapterName")
+                                if isinstance(adapter_name, str) and adapter_name.strip():
+                                    repeated_video_adapters.add(adapter_name)
+                            process_scope_triplet = sample.get(
+                                "processScopeTotalMsMinMeanMax"
+                            )
+                            means[variant][mode] = (
+                                float(process_scope_triplet[1])
+                                if isinstance(process_scope_triplet, list)
+                                and len(process_scope_triplet) == 3
+                                and all(
+                                    _is_finite_number(value)
+                                    for value in process_scope_triplet
+                                )
+                                else None
+                            )
+
+            if repeated_contract and repetition_count is not None:
+                for variant in ("baseline", "candidate"):
+                    idle_runtime = variant_reports.get(variant, {}).get(
+                        "idle", {}
+                    )
+                    moving_runtime = variant_reports.get(variant, {}).get(
+                        "moving", {}
+                    )
+                    if (
+                        isinstance(idle_runtime, dict)
+                        and isinstance(moving_runtime, dict)
+                        and idle_runtime.get("runtimeIdentity")
+                        != moving_runtime.get("runtimeIdentity")
+                    ):
+                        audit.error(
+                            f"{field_name}.maps.{map_id}.{variant}.runtimeIdentity",
+                            "idle and moving must use one exact runtime identity",
+                        )
+                baseline_moving = variant_reports.get("baseline", {}).get("moving")
+                candidate_moving = variant_reports.get("candidate", {}).get("moving")
+                if (
+                    isinstance(baseline_moving, dict)
+                    and isinstance(candidate_moving, dict)
+                    and baseline_moving.get("workloadIdentityByRepetition")
+                    != candidate_moving.get("workloadIdentityByRepetition")
+                ):
+                    audit.error(
+                        f"{field_name}.maps.{map_id}.movingWorkload",
+                        "baseline and candidate must use the same exact workload per repetition",
+                    )
 
             comparison_field = f"{field_name}.maps.{map_id}.comparison"
             comparison = entry.get("comparison")
             if not isinstance(comparison, dict):
                 audit.error(comparison_field, "expected an object")
                 continue
-            deltas = comparison.get("processTotalMeanDeltaMs")
+            if repeated_contract and repetition_count is not None:
+                _validate_repeated_paired_aggregation(
+                    audit,
+                    comparison,
+                    comparison_field,
+                    baseline=variant_reports.get("baseline", {}),
+                    candidate=variant_reports.get("candidate", {}),
+                    repetition_count=repetition_count,
+                )
+            elif comparison.get("pairedAggregation") is not None:
+                audit.error(
+                    f"{comparison_field}.pairedAggregation",
+                    "is only valid for repeated aggregation",
+                )
+            comparison_delta_key = (
+                "processScopeTotalMeanDeltaMs"
+                if repeated_contract
+                else "processTotalMeanDeltaMs"
+            )
+            expected_thresholds = (
+                PERFORMANCE_PROCESS_SCOPE_THRESHOLDS
+                if repeated_contract
+                else PERFORMANCE_LEGACY_THRESHOLDS
+            )
+            if repeated_contract and set(comparison) != {
+                comparison_delta_key,
+                "pairedAggregation",
+                "thresholds",
+                "gates",
+            }:
+                audit.error(
+                    comparison_field,
+                    "repeated comparison must contain only the process-scope delta, "
+                    "paired aggregation, thresholds and gates",
+                )
+            deltas = comparison.get(comparison_delta_key)
             if not isinstance(deltas, dict):
                 audit.error(
-                    f"{comparison_field}.processTotalMeanDeltaMs",
+                    f"{comparison_field}.{comparison_delta_key}",
                     "expected idle and moving deltas",
                 )
                 deltas = {}
+            elif set(deltas) != {"idle", "moving"}:
+                audit.error(
+                    f"{comparison_field}.{comparison_delta_key}",
+                    "must contain exactly idle and moving",
+                )
             thresholds = comparison.get("thresholds")
             if not isinstance(thresholds, dict):
                 audit.error(f"{comparison_field}.thresholds", "expected an object")
                 thresholds = {}
             else:
-                if thresholds != PERFORMANCE_THRESHOLDS:
+                if thresholds != expected_thresholds:
                     audit.error(
                         f"{comparison_field}.thresholds",
-                        f"must equal the fixed gate {PERFORMANCE_THRESHOLDS!r}",
+                        f"must equal the fixed gate {expected_thresholds!r}",
                     )
                 for threshold_name, threshold in thresholds.items():
                     if not _is_finite_number(threshold, positive=True):
@@ -2381,25 +4525,58 @@ def validate_report(
                 baseline_mean = baseline_means.get(mode)
                 candidate_mean = candidate_means.get(mode)
                 declared_delta = deltas.get(mode)
-                delta_field = f"{comparison_field}.processTotalMeanDeltaMs.{mode}"
+                delta_field = f"{comparison_field}.{comparison_delta_key}.{mode}"
                 if not _is_finite_scalar(declared_delta):
                     audit.error(delta_field, "expected a finite number")
                     continue
+                if repeated_contract and not _is_canonical_three_decimal_number(
+                    declared_delta
+                ):
+                    audit.error(
+                        delta_field,
+                        "must use a canonical three-decimal delta",
+                    )
                 if baseline_mean is None or candidate_mean is None:
                     continue
-                actual_delta = candidate_mean - baseline_mean
-                if not math.isclose(float(declared_delta), actual_delta, abs_tol=0.001):
+                actual_delta = round(candidate_mean - baseline_mean, 3)
+                delta_tolerance = (
+                    PERFORMANCE_DECIMAL_TOLERANCE if repeated_contract else 0.001
+                )
+                if not math.isclose(
+                    float(declared_delta),
+                    actual_delta,
+                    rel_tol=0.0,
+                    abs_tol=delta_tolerance,
+                ):
                     audit.error(
                         delta_field,
                         f"must equal candidate minus baseline ({actual_delta:.3f})",
                     )
                 candidate_limit = thresholds.get(
-                    "candidateIdleProcessMeanMaxMs"
-                    if mode == "idle"
-                    else "candidateMovingProcessMeanMaxMs"
+                    (
+                        "candidateIdleProcessScopeMeanMaxMs"
+                        if mode == "idle"
+                        else "candidateMovingProcessScopeMeanMaxMs"
+                    )
+                    if repeated_contract
+                    else (
+                        "candidateIdleProcessMeanMaxMs"
+                        if mode == "idle"
+                        else "candidateMovingProcessMeanMaxMs"
+                    )
                 )
                 regression_limit = thresholds.get(
-                    "idleRegressionMaxMs" if mode == "idle" else "movingRegressionMaxMs"
+                    (
+                        "idleProcessScopeRegressionMaxMs"
+                        if mode == "idle"
+                        else "movingProcessScopeRegressionMaxMs"
+                    )
+                    if repeated_contract
+                    else (
+                        "idleRegressionMaxMs"
+                        if mode == "idle"
+                        else "movingRegressionMaxMs"
+                    )
                 )
                 if _is_finite_number(candidate_limit, positive=True) and candidate_mean > candidate_limit:
                     audit.error(
@@ -2411,6 +4588,11 @@ def validate_report(
                         f"{comparison_field}.thresholds",
                         f"{mode} regression {actual_delta:.3f} exceeds {regression_limit}",
                     )
+        if repeated_contract and len(repeated_video_adapters) != 1:
+            audit.error(
+                f"{field_name}.runtimeIdentity.videoAdapterName",
+                "all repeated baseline/candidate runs must use one video adapter",
+            )
 
     elif key == "computerUseReport":
         if report.get("method") != "computer_use":
@@ -2967,6 +5149,264 @@ def validate_catalog_contract_check(
     return snapshots
 
 
+def _batch_source_identity() -> dict[str, dict[str, str]]:
+    identity: dict[str, dict[str, str]] = {}
+    for key, portable_path in BATCH_PREVIEW_SOURCE_PATHS.items():
+        if portable_path.startswith("repo://"):
+            path = REPOSITORY_ROOT / portable_path[len("repo://") :]
+        else:
+            path = (
+                REPOSITORY_ROOT
+                / "client/godot"
+                / portable_path[len("res://") :]
+            )
+        identity[key] = {
+            "path": portable_path,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+    return identity
+
+
+def _batch_capture_surface_identity(
+    bundle_id: str,
+    map_ids: Iterable[str],
+) -> dict[str, str]:
+    bundle_root = (
+        REPOSITORY_ROOT / "client/godot/assets/maps" / bundle_id
+    )
+    paths = {
+        REPOSITORY_ROOT / "client/godot/data/map_visual_review_catalog.json",
+        REPOSITORY_ROOT / "client/godot/scripts/world/map_data_catalog.gd",
+        REPOSITORY_ROOT / "client/godot/scripts/world/map_visual_catalog.gd",
+        REPOSITORY_ROOT / "client/godot/scripts/world/map_visual_renderer.gd",
+        bundle_root / MANIFEST_NAME,
+    }
+    map_catalog_source = (
+        REPOSITORY_ROOT / "client/godot/scripts/world/map_data_catalog.gd"
+    ).read_text(encoding="utf-8")
+    map_paths = dict(re.findall(
+        r'"([a-z0-9][a-z0-9_-]*)"\s*:\s*"res://([^"\r\n]+\.json)"',
+        map_catalog_source,
+    ))
+    for map_id in map_ids:
+        relative_path = map_paths.get(map_id)
+        if relative_path is not None:
+            paths.add(REPOSITORY_ROOT / "client/godot" / relative_path)
+    for relative_directory in ("bindings", "runtime"):
+        directory = bundle_root / relative_directory
+        if directory.is_dir():
+            paths.update(path for path in directory.rglob("*") if path.is_file())
+    manifest_path = bundle_root / MANIFEST_NAME
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_subject_sha = _canonical_object_sha256({
+        key: manifest.get(key) for key in BATCH_MANIFEST_RUNTIME_SUBJECT_KEYS
+    })
+    return {
+        path.relative_to(REPOSITORY_ROOT).as_posix(): (
+            manifest_subject_sha
+            if path == manifest_path
+            else hashlib.sha256(path.read_bytes()).hexdigest()
+        )
+        for path in sorted(paths)
+    }
+
+
+def _canonical_object_sha256(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+@lru_cache(maxsize=1)
+def _current_map_runtime_build_identity() -> str:
+    spec = importlib.util.spec_from_file_location(
+        "beastbound_map_visual_evidence_builder_for_audit",
+        MAP_VISUAL_EVIDENCE_BUILDER_PATH,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"cannot load map evidence builder: {MAP_VISUAL_EVIDENCE_BUILDER_PATH}"
+        )
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    identity = builder.build_identity()
+    if (
+        not isinstance(identity, str)
+        or MAP_RUNTIME_BUILD_IDENTITY_RE.fullmatch(identity) is None
+    ):
+        raise RuntimeError("map evidence builder returned an invalid build identity")
+    return identity
+
+
+def _batch_window_checkpoint_valid(value: Any, root_window_id: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and value.get("windowCount") == 1
+        and value.get("windowIds") == [root_window_id]
+        and value.get("rootWindowId") == root_window_id
+        and type(value.get("processFrame")) is int
+        and value.get("processFrame", -1) >= 0
+    )
+
+
+def _validate_capture_preview_authorization(
+    audit: Audit,
+    capture_report: dict[str, Any],
+    field_name: str,
+    *,
+    bundle_id: str,
+    map_id: str,
+    map_ids: Iterable[str],
+) -> None:
+    flag_present = capture_report.get("qaPreviewFlagPresent")
+    if flag_present is True:
+        if capture_report.get("qaPreviewMapId") != map_id:
+            audit.error(
+                f"{field_name}.qaPreviewMapId",
+                "must match screenshot mapId for a legacy per-action preview flag",
+            )
+        unexpected = sorted(BATCH_PREVIEW_FIELDS.intersection(capture_report))
+        if unexpected:
+            audit.error(
+                f"{field_name}.qaPreviewAuthorization",
+                "legacy preview evidence must not carry batch-only fields "
+                f"{unexpected!r}",
+            )
+        return
+    if flag_present is not False:
+        audit.error(
+            f"{field_name}.qaPreviewFlagPresent",
+            "must be a truthful boolean legacy flag or strict batch authorization",
+        )
+        return
+    if capture_report.get("qaPreviewMapId") != "":
+        audit.error(
+            f"{field_name}.qaPreviewMapId",
+            "batch authorization must truthfully record no per-map CLI preview flag",
+        )
+    plan_sha = capture_report.get("batchPlanSha256")
+    build_identity = capture_report.get("batchBuildIdentity")
+    manifest_identity = capture_report.get("batchBundleManifestIdentity")
+    surface_identity = capture_report.get("batchCaptureSurfaceIdentity")
+    surface_sha = capture_report.get("batchCaptureSurfaceIdentitySha256")
+    authorization = capture_report.get("qaPreviewAuthorization")
+    if not isinstance(plan_sha, str) or SHA256_RE.fullmatch(plan_sha) is None:
+        audit.error(f"{field_name}.batchPlanSha256", "expected a SHA-256")
+    if (
+        not isinstance(build_identity, str)
+        or MAP_RUNTIME_BUILD_IDENTITY_RE.fullmatch(build_identity) is None
+    ):
+        audit.error(
+            f"{field_name}.batchBuildIdentity",
+            "expected git:<40hex>+beastbound-map-runtime-surface-v2:<64hex>",
+        )
+    else:
+        try:
+            current_build_identity = _current_map_runtime_build_identity()
+        except Exception as error:
+            audit.error(
+                f"{field_name}.batchBuildIdentity",
+                f"cannot derive the current map runtime build identity: {error}",
+            )
+        else:
+            if build_identity != current_build_identity:
+                audit.error(
+                    f"{field_name}.batchBuildIdentity",
+                    "must equal the current map_visual_evidence_builder build identity",
+                )
+    expected_manifest_path = (
+        f"client/godot/assets/maps/{bundle_id}/{MANIFEST_NAME}"
+    )
+    audited_manifest = json.loads(audit.manifest_path.read_text(encoding="utf-8"))
+    expected_manifest_sha = _canonical_object_sha256({
+        key: audited_manifest.get(key)
+        for key in BATCH_MANIFEST_RUNTIME_SUBJECT_KEYS
+    })
+    if manifest_identity != {
+        "path": expected_manifest_path,
+        "canonicalization": "map_runtime_subject_v1",
+        "sha256": expected_manifest_sha,
+    }:
+        audit.error(
+            f"{field_name}.batchBundleManifestIdentity",
+            "must bind the exact audited pending manifest bytes",
+        )
+    expected_surface = _batch_capture_surface_identity(bundle_id, map_ids)
+    expected_surface_sha = _canonical_object_sha256(expected_surface)
+    if surface_identity != expected_surface:
+        audit.error(
+            f"{field_name}.batchCaptureSurfaceIdentity",
+            "must exactly bind the current candidate catalog, renderer, maps, bindings and runtime assets",
+        )
+    if surface_sha != expected_surface_sha:
+        audit.error(
+            f"{field_name}.batchCaptureSurfaceIdentitySha256",
+            "must match the canonical candidate-source identity",
+        )
+    if capture_report.get("batchSourceIdentity") != _batch_source_identity():
+        audit.error(
+            f"{field_name}.batchSourceIdentity",
+            "must exactly bind the current batch entrypoint/controller/Main sources",
+        )
+    expected_authorization = {
+        "kind": "sha256_bound_batch_plan",
+        "authorized": True,
+        "cliPreviewFlagPresent": False,
+        "controllerActivatedCandidatePreview": True,
+        "planSha256": plan_sha,
+        "bundleId": bundle_id,
+        "mapId": map_id,
+        "actionKind": capture_report.get("captureVariant"),
+        "buildIdentity": build_identity,
+        "bundleManifestSha256": expected_manifest_sha,
+        "captureSurfaceIdentitySha256": expected_surface_sha,
+    }
+    if authorization != expected_authorization:
+        audit.error(
+            f"{field_name}.qaPreviewAuthorization",
+            "must be the exact SHA-bound batch authorization",
+        )
+    if capture_report.get("batchReportSealed") is not True:
+        audit.error(f"{field_name}.batchReportSealed", "must be explicitly true")
+    runtime = capture_report.get("batchRuntimeIdentity")
+    root_window_id = runtime.get("rootWindowId") if isinstance(runtime, dict) else None
+    if (
+        not isinstance(runtime, dict)
+        or runtime.get("displayServerWindowCount") != 1
+        or runtime.get("displayServerWindowIds") != [root_window_id]
+        or type(runtime.get("processId")) is not int
+        or runtime.get("processId", 0) <= 0
+        or runtime.get("audioDriver") != "Dummy"
+        or runtime.get("mainSceneLoadCount") != 1
+        or runtime.get("mainSceneInstanceCount") != 1
+        or runtime.get("viewport") != MAIN_VIEWPORT
+    ):
+        audit.error(
+            f"{field_name}.batchRuntimeIdentity",
+            "must prove one real Main process/root window with Dummy audio",
+        )
+    window_identity = capture_report.get("batchWindowIdentity")
+    if not (
+        isinstance(window_identity, dict)
+        and window_identity.get("rootWindowId") == root_window_id
+        and _batch_window_checkpoint_valid(
+            window_identity.get("before"), root_window_id
+        )
+        and _batch_window_checkpoint_valid(
+            window_identity.get("after"), root_window_id
+        )
+    ):
+        audit.error(
+            f"{field_name}.batchWindowIdentity",
+            "must prove the same sole root window before and after the action",
+        )
+
+
 def validate_evidence(
     audit: Audit,
     evidence: Any,
@@ -2974,6 +5414,7 @@ def validate_evidence(
     map_style_id: str | None,
     manifest_subject_hash: str,
     map_ids: set[str],
+    map_id_order: list[str],
     owner_status: Any,
     frozen_required: bool,
     review_subject_files: set[tuple[str, str]],
@@ -3145,15 +5586,14 @@ def validate_evidence(
                             f"{field_name}.captureReport.displayServer",
                             "must identify a non-headless display server",
                         )
-                    if capture_report.get("qaPreviewFlagPresent") is not True:
-                        audit.error(
-                            f"{field_name}.captureReport.qaPreviewFlagPresent",
-                            "must be explicitly true",
-                        )
-                    if capture_report.get("qaPreviewMapId") != map_id:
-                        audit.error(
-                            f"{field_name}.captureReport.qaPreviewMapId",
-                            "must match screenshot mapId",
+                    if bundle_id is not None and isinstance(map_id, str):
+                        _validate_capture_preview_authorization(
+                            audit,
+                            capture_report,
+                            f"{field_name}.captureReport",
+                            bundle_id=bundle_id,
+                            map_id=map_id,
+                            map_ids=map_ids,
                         )
                     if capture_report.get("mapArtStatus") != "owner_review_pending":
                         audit.error(
@@ -3378,6 +5818,7 @@ def validate_evidence(
             ),
             catalog_contract_hashes,
             runtime_capture_pairs,
+            map_id_order=map_id_order,
             required=frozen_required,
             release_frozen=frozen_required,
         )
@@ -3728,6 +6169,12 @@ def audit_manifest(manifest_path: Path) -> Audit:
         map_style_id,
         manifest_review_subject_sha256(manifest),
         map_ids,
+        (
+            list(manifest.get("mapIds", []))
+            if isinstance(manifest.get("mapIds"), list)
+            and all(is_id(item) for item in manifest.get("mapIds", []))
+            else sorted(map_ids)
+        ),
         owner_status,
         frozen_required,
         review_subject_files,
