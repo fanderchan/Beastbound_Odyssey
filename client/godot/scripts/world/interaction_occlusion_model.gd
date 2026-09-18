@@ -1,6 +1,6 @@
 extends RefCounted
 
-# Keep the controlled character visible behind an interactive prop while retaining
+# Keep the controlled character visible behind a world prop while retaining
 # the existing foot-based depth order. This never changes collision or click targets.
 const OBSCURING_ALPHA := 0.28
 

@@ -148,7 +148,7 @@
 | [mount_visual_profile_catalog.gd](../../client/godot/scripts/player/mount_visual_profile_catalog.gd) | 253 |
 | [mounted_character_2d.gd](../../client/godot/scripts/player/mounted_character_2d.gd) | 81 |
 | [mounted_character_asset_catalog.gd](../../client/godot/scripts/player/mounted_character_asset_catalog.gd) | 549 |
-| [player.gd](../../client/godot/scripts/player/player.gd) | 573 |
+| [player.gd](../../client/godot/scripts/player/player.gd) | 580 |
 | [player_appearance_catalog.gd](../../client/godot/scripts/player/player_appearance_catalog.gd) | 103 |
 
 </details>
@@ -339,7 +339,7 @@
 | [runtime_exit_cleanup.gd](../../client/godot/scripts/qa/runtime_exit_cleanup.gd) | 90 |
 | [standalone_pet_art_overlay_check.gd](../../client/godot/scripts/qa/standalone_pet_art_overlay_check.gd) | 520 |
 | [standalone_pet_art_review_gate.gd](../../client/godot/scripts/qa/standalone_pet_art_review_gate.gd) | 139 |
-| [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 355 |
+| [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 441 |
 | [world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/world_hud_owner_review_capture.gd) | 908 |
 | [world_presentation_profile_check.gd](../../client/godot/scripts/qa/world_presentation_profile_check.gd) | 292 |
 | [world_review_frame_parity.gd](../../client/godot/scripts/qa/world_review_frame_parity.gd) | 205 |
@@ -484,7 +484,7 @@
 | [server_encounter_permit_model.gd](../../client/godot/scripts/world/server_encounter_permit_model.gd) | 65 |
 | [world_camera_safe_area_model.gd](../../client/godot/scripts/world/world_camera_safe_area_model.gd) | 663 |
 | [world_camera_safe_area_model_check.gd](../../client/godot/scripts/world/world_camera_safe_area_model_check.gd) | 429 |
-| [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 694 |
+| [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 702 |
 | [world_overlay_layer.gd](../../client/godot/scripts/world/world_overlay_layer.gd) | 302 |
 | [world_presentation_profile.gd](../../client/godot/scripts/world/world_presentation_profile.gd) | 138 |
 | [world_visual_direction_contract.gd](../../client/godot/scripts/world/world_visual_direction_contract.gd) | 52 |

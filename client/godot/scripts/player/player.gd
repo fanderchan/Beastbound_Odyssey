@@ -394,6 +394,13 @@ func get_occlusion_world_rect() -> Rect2:
 	if riding_form_id != "":
 		return get_visual_world_rect()
 	if formal_asset_enabled and formal_sprite != null and formal_sprite.texture != null:
+		# Camera composition already caches full-action alpha bounds. Reuse them
+		# without scanning textures here; an unprepared action stays conservative.
+		var cache_key := "%s|%s|%s" % [appearance_id, facing_key, animation_state]
+		if visual_source_bounds_cache.has(cache_key):
+			return _sprite_source_rect_to_world(
+				formal_sprite, visual_source_bounds_cache[cache_key] as Rect2i
+			)
 		return _node_local_rect_to_world(formal_sprite, formal_sprite.get_rect())
 	return _node_local_rect_to_world(self, Rect2(Vector2(-22.0, -21.0), Vector2(44.0, 54.0)))
 

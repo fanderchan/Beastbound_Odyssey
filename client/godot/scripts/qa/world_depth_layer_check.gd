@@ -6,6 +6,11 @@ const PET_SCENE := preload("res://scenes/pet/Pet.tscn")
 const InteractionOcclusionModel := preload("res://scripts/world/interaction_occlusion_model.gd")
 
 
+class OcclusionSubject extends Node2D:
+	func get_occlusion_world_rect() -> Rect2:
+		return Rect2(global_position + Vector2(-10, -60), Vector2(20, 60))
+
+
 static func run(
 	depth_layer: Node,
 	overlay_layer: Node,
@@ -121,6 +126,8 @@ static func run(
 	_validate_interaction_prop_visuals(errors)
 	_validate_reference_orders(errors)
 	_validate_interaction_occlusion(errors)
+	_validate_map_object_occlusion(depth_layer, errors)
+	_validate_player_occlusion_rect(player, errors)
 	return _report(
 		errors,
 		snapshot.size(),
@@ -143,6 +150,85 @@ static func _validate_interaction_occlusion(errors: Array[String]) -> void:
 		var alpha := InteractionOcclusionModel.alpha_for(sample.rect, sample.depth, prop, 100.0)
 		if not is_equal_approx(alpha, float(sample.alpha)):
 			errors.append("交互物遮挡透明度没有遵循主体范围和脚底排序")
+
+
+static func _validate_map_object_occlusion(host_layer: Node, errors: Array[String]) -> void:
+	var layer := WorldDepthLayer.new()
+	host_layer.add_child(layer)
+	var subject := OcclusionSubject.new()
+	layer.add_child(subject)
+	layer.register_actor("actor:player", subject)
+	var image := Image.create(100, 100, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	image.fill_rect(Rect2i(30, 30, 40, 70), Color.WHITE)
+	var texture := ImageTexture.create_from_image(image)
+	var commands: Array[Dictionary] = []
+	for role in ["blocking", "decorative", "none", "interaction"]:
+		commands.append({
+			"stableId": "object:occlusion_%s" % role,
+			"kind": "map_object", "collisionRole": role,
+			"position": Vector2(50, 100), "depthY": 100.0,
+			"drawRect": Rect2(0, 0, 100, 100), "texture": texture,
+		})
+	layer.replace_group("map_objects", commands)
+	# The player walks behind, in front of, and away from the same props.
+	# Collision roles govern movement, not whether their art can hide a player.
+	for sample in [
+		{"label": "北侧遮挡", "position": Vector2(50, 80), "visible": true, "alpha": 0.28},
+		{"label": "同脚点遮挡", "position": Vector2(50, 100), "visible": true, "alpha": 0.28},
+		{"label": "走到物件前方", "position": Vector2(50, 101), "visible": true, "alpha": 1.0},
+		{"label": "走出物件范围", "position": Vector2(150, 80), "visible": true, "alpha": 1.0},
+		{"label": "仅与物件侧面透明边距相交", "position": Vector2(15, 80), "visible": true, "alpha": 1.0},
+		{"label": "仅与物件上方透明边距相交", "position": Vector2(50, 25), "visible": true, "alpha": 1.0},
+		{"label": "再次走入遮挡", "position": Vector2(50, 80), "visible": true, "alpha": 0.28},
+		{"label": "隐藏玩家", "position": Vector2(50, 80), "visible": false, "alpha": 1.0},
+		{"label": "恢复玩家", "position": Vector2(50, 80), "visible": true, "alpha": 0.28},
+	]:
+		subject.position = sample.position
+		subject.visible = sample.visible
+		layer.refresh_interaction_occlusion()
+		_expect_occlusion_alpha(layer, float(sample.alpha), str(sample.label), errors)
+	# A map refresh at an unchanged actor position must initialize new props,
+	# and clearing the map must not leave references to freed foreground nodes.
+	layer.replace_group("map_objects", commands)
+	layer.refresh_interaction_occlusion()
+	_expect_occlusion_alpha(layer, 0.28, "原地重建地图", errors)
+	layer.clear_group("map_objects")
+	layer.refresh_interaction_occlusion()
+	if layer.group_count("map_objects") != 0:
+		errors.append("清理地图后仍残留遮挡物件")
+	layer.replace_group("map_objects", commands)
+	layer.refresh_interaction_occlusion()
+	_expect_occlusion_alpha(layer, 0.28, "清理后重建地图", errors)
+	layer.free()
+
+
+static func _validate_player_occlusion_rect(player: Node2D, errors: Array[String]) -> void:
+	# The camera already prepares this action's alpha envelope. Occlusion must
+	# reuse it instead of treating transparent sprite margins as a body part.
+	var visual_rect: Rect2 = player.call("get_visual_world_rect")
+	var cache_count: int = player.get("visual_source_bounds_cache").size()
+	var occlusion_rect: Rect2 = player.call("get_occlusion_world_rect")
+	if not visual_rect.is_equal_approx(occlusion_rect):
+		errors.append("人物遮挡范围没有复用已缓存的动作轮廓")
+	if player.get("visual_source_bounds_cache").size() != cache_count:
+		errors.append("人物遮挡查询不应重新扫描纹理")
+
+
+static func _expect_occlusion_alpha(
+	layer: Node2D, expected: float, label: String, errors: Array[String]
+) -> void:
+	var count := 0
+	for child in layer.get_children():
+		if str(child.get_meta(WorldDepthLayer.GROUP_META, "")) != "map_objects":
+			continue
+		count += 1
+		if not is_equal_approx((child as Node2D).modulate.a, expected):
+			errors.append("%s：%s 没有正确淡化／恢复" % [
+				label, str(child.get_meta(WorldDepthLayer.STABLE_ID_META)),
+			])
+	if count != 4:
+		errors.append("遮挡回归缺少 blocking/decorative/none/interaction 中的物件")
 
 
 static func _validate_reference_orders(errors: Array[String]) -> void:

@@ -2,6 +2,7 @@ extends Node2D
 
 const WorldVisualGrade := preload("res://scripts/world/world_visual_grade.gd")
 const InteractionOcclusionModel := preload("res://scripts/world/interaction_occlusion_model.gd")
+const WorldCameraSafeAreaModel := preload("res://scripts/world/world_camera_safe_area_model.gd")
 
 const GROUP_META := &"world_depth_group"
 const STABLE_ID_META := &"world_depth_stable_id"
@@ -39,6 +40,7 @@ var _order_dirty: bool = true
 var _last_actor_depth_signature: String = ""
 var _last_order_signature: String = ""
 var _occlusion_candidates: Array[Dictionary] = []
+var _occlusion_texture_rect_cache: Dictionary = {}
 var _occlusion_rect := Rect2()
 var _occlusion_depth := INF
 var _occlusion_dirty := true
@@ -223,6 +225,8 @@ func _clear_group(group_id: String) -> void:
 	_occlusion_candidates = _occlusion_candidates.filter(func(entry: Dictionary) -> bool:
 		return str(entry.get("group", "")) != group_id
 	)
+	if _occlusion_candidates.is_empty():
+		_occlusion_texture_rect_cache.clear()
 	_occlusion_dirty = true
 	var values: Variant = _group_nodes.get(group_id, [])
 	if values is Array:
@@ -288,12 +292,15 @@ func _add_map_object(root: Node2D, command: Dictionary) -> void:
 		color_modulate as Color if color_modulate is Color else Color.WHITE,
 		command.get("visualGrade", {}) as Dictionary
 	)
-	if str(command.get("collisionRole", "")) == "interaction":
-		_occlusion_candidates.append({
-			"node": root, "rect": draw_rect,
-			"depth": float(command.get("depthY", root.position.y)),
-			"group": str(root.get_meta(GROUP_META, "")),
-		})
+	# Every depth-sorted map prop can obscure the player, including decorative
+	# boundary rocks. Collision roles only describe movement/interaction rules.
+	# Ground and fixed-overlay art never enter this layer.
+	_occlusion_candidates.append({
+		"node": root,
+		"rect": WorldCameraSafeAreaModel.opaque_world_rect(command, _occlusion_texture_rect_cache),
+		"depth": float(command.get("depthY", root.position.y)),
+		"group": str(root.get_meta(GROUP_META, "")),
+	})
 
 
 func refresh_interaction_occlusion() -> void:
@@ -310,7 +317,8 @@ func refresh_interaction_occlusion() -> void:
 	_occlusion_rect = rect
 	_occlusion_depth = depth
 	_occlusion_dirty = false
-	# Only cached interactive props are visited, never the full map/catalog.
+	# Only cached world props are visited after actor geometry changes; idle
+	# frames return above, without scanning the map/catalog or reading textures.
 	for candidate in _occlusion_candidates:
 		var object_node: Node2D = candidate.get("node") as Node2D
 		if not is_instance_valid(object_node):
