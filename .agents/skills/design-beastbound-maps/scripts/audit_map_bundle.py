@@ -2833,6 +2833,17 @@ def _performance_int(
     return value
 
 
+@lru_cache(maxsize=1)
+def _performance_batch_contract():
+    path = REPOSITORY_ROOT / "tools/map_performance_batch_contract.py"
+    spec = importlib.util.spec_from_file_location("map_performance_batch_for_audit", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load performance batch contract: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _parse_repeated_performance_record(
     audit: Audit,
     record: Any,
@@ -2868,6 +2879,13 @@ def _parse_repeated_performance_record(
         "stderr",
         "qaLane",
     }
+    batched = "batch" in record
+    if batched:
+        expected_record_keys.add("batch")
+        try:
+            _performance_batch_contract().validate_binding(record)
+        except (ValueError, TypeError, KeyError, OSError) as exc:
+            audit.error(f"{field_name}.batch", str(exc))
     if set(record) != expected_record_keys:
         audit.error(
             field_name,
@@ -2893,8 +2911,9 @@ def _parse_repeated_performance_record(
             "must identify a valid map, variant, mode and positive repetition",
         )
         return None, None
-    if type(record.get("schemaVersion")) is not int or record.get("schemaVersion") != SCHEMA_VERSION:
-        audit.error(f"{field_name}.schemaVersion", f"must equal {SCHEMA_VERSION}")
+    record_schema = 2 if batched else SCHEMA_VERSION
+    if type(record.get("schemaVersion")) is not int or record.get("schemaVersion") != record_schema:
+        audit.error(f"{field_name}.schemaVersion", f"must equal {record_schema}")
     if record.get("recordType") != PERFORMANCE_RUNNER_RECORD_TYPE:
         audit.error(
             f"{field_name}.recordType",
@@ -2973,7 +2992,10 @@ def _parse_repeated_performance_record(
         or not argv
         or not all(isinstance(value, str) for value in argv)
         or Path(argv[0]).name.lower() != "godot"
-        or argv != _performance_expected_argv(argv[0], map_id, variant, mode)
+        or argv != (
+            _performance_batch_contract().command(argv[0]) if batched
+            else _performance_expected_argv(argv[0], map_id, variant, mode)
+        )
     ):
         audit.error(
             f"{field_name}.argv",
@@ -3422,6 +3444,11 @@ def _read_repeated_performance_receipt(
         except (json.JSONDecodeError, ValueError) as exc:
             audit.error(f"{field_name}[{index}]", f"invalid JSON ({exc})")
     expected_order = _performance_expected_execution_matrix(map_ids, repetition_count)
+    if all(isinstance(record, dict) for record in records):
+        try:
+            _performance_batch_contract().validate_matrix(records)
+        except (ValueError, TypeError, KeyError, OSError) as exc:
+            audit.error(f"{field_name}.batch", str(exc))
     if len(records) != len(expected_order):
         audit.error(
             field_name,

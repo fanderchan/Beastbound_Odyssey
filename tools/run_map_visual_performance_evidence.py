@@ -7,6 +7,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -414,10 +415,14 @@ def main(argv: list[str] | None = None) -> int:
         type=_repetition_count,
         default=DEFAULT_REPETITIONS,
         help=(
-            "Independent runs per map/variant/mode. Must be odd and at least 3; "
+            "Fresh Main samples per map/variant/mode in one window. Odd, 3 to 9; "
             f"defaults to {DEFAULT_REPETITIONS}."
         ),
     )
+    parser.add_argument("--godot", default=GODOT)
+    parser.add_argument("--run-id", default=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
+    parser.add_argument("--scratch-only", action="store_true",
+                        help="Keep validated receipts under .run without replacing formal evidence.")
     args = parser.parse_args(argv)
     try:
         lane_helper.validate_repository_contract(REPO_ROOT)
@@ -427,84 +432,65 @@ def main(argv: list[str] | None = None) -> int:
                 "build identity drifted before performance execution"
             )
         selected_bundle_ids = args.bundle_id
-        runner_version = _probe_godot_version(GODOT)
-        all_records: dict[str, list[dict[str, Any]]] = {
-            bundle_id: [] for bundle_id in selected_bundle_ids
-        }
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", args.run_id):
+            raise builder.EvidenceError("invalid run-id")
+        if len(set(selected_bundle_ids)) != len(selected_bundle_ids):
+            raise builder.EvidenceError("duplicate bundle-id")
+        if args.repetitions > 9:
+            raise builder.EvidenceError("batch repetitions must not exceed 9")
+        from map_performance_batch import run_batch
+        all_records: dict[str, list[dict[str, Any]]] = {}
         matrix_real_inventory_sha256: str | None = None
+        scratch_root = REPO_ROOT / ".run/map-performance" / args.run_id
+        if scratch_root.exists():
+            raise builder.EvidenceError(f"run-id already exists: {args.run_id}")
         for bundle_id in selected_bundle_ids:
-            _root, map_ids = builder.MAP_BUNDLES[bundle_id]
-            for map_id, variant, mode, repetition in _performance_matrix(
-                map_ids,
-                args.repetitions,
-            ):
-                record = _run(
-                    _command(map_id, variant, mode),
-                    bundle_id,
-                    map_id,
-                    variant,
-                    mode,
-                    repetition=repetition,
-                    build_identity=current_identity,
-                    runner_version=runner_version,
-                )
-                record_real_sha256 = str(
-                    record["qaLane"]["realInventorySha256"]
-                )
+            if not args.scratch_only and not args.replace_existing:
+                target = builder.GODOT_ROOT / builder.MAP_BUNDLES[bundle_id][0] / "evidence/performance-runner-receipt.jsonl"
+                if target.exists():
+                    raise builder.EvidenceError(f"refusing to overwrite receipt: {target}")
+        for bundle_id in selected_bundle_ids:
+            records = run_batch(
+                bundle_id=bundle_id, repetitions=args.repetitions,
+                executable=args.godot, run_dir=scratch_root / bundle_id,
+                build_identity=current_identity,
+            )
+            for record in records:
+                real_sha = record["qaLane"]["realInventorySha256"]
                 if matrix_real_inventory_sha256 is None:
-                    matrix_real_inventory_sha256 = record_real_sha256
-                elif record_real_sha256 != matrix_real_inventory_sha256:
-                    raise builder.EvidenceError(
-                        "real user data changed between performance runs"
-                    )
-                all_records[bundle_id].append(record)
+                    matrix_real_inventory_sha256 = real_sha
+                elif real_sha != matrix_real_inventory_sha256:
+                    raise builder.EvidenceError("real user data changed between performance runs")
                 summary = builder.parse_perf_run(record)
-                print(
-                    json.dumps(
-                        {
-                            "status": "RUN_PASS",
-                            "bundleId": bundle_id,
-                            "mapId": map_id,
-                            "variant": variant,
-                            "mode": mode,
-                            "repetition": repetition,
-                            "processScopeTotalMsMinMeanMax": summary[
-                                "processScopeTotalMsMinMeanMax"
-                            ],
-                        },
-                        ensure_ascii=False,
-                        separators=(",", ":"),
-                    ),
-                    flush=True,
-                )
+                print(json.dumps({"status": "RUN_PASS", "bundleId": bundle_id,
+                                  **{key: record[key] for key in ("mapId", "variant", "mode", "repetition")},
+                                  "processScopeTotalMsMinMeanMax": summary["processScopeTotalMsMinMeanMax"]},
+                                 ensure_ascii=False, separators=(",", ":")), flush=True)
+            all_records[bundle_id] = records
+            _write_receipt(scratch_root / bundle_id / "performance-runner-receipt.jsonl",
+                           records, replace_existing=False)
         if builder.build_identity() != current_identity:
             raise builder.EvidenceError(
                 "map runtime identity drifted during performance execution"
             )
-        for bundle_id, records in all_records.items():
-            relative_root, _map_ids = builder.MAP_BUNDLES[bundle_id]
-            receipt = (
-                builder.GODOT_ROOT
-                / relative_root
-                / "evidence/performance-runner-receipt.jsonl"
-            )
-            _write_receipt(
-                receipt,
-                records,
-                replace_existing=args.replace_existing,
-            )
+        if not args.scratch_only:
+            for bundle_id, records in all_records.items():
+                receipt = builder.GODOT_ROOT / builder.MAP_BUNDLES[bundle_id][0] / "evidence/performance-runner-receipt.jsonl"
+                _write_receipt(receipt, records, replace_existing=args.replace_existing)
         print(
             json.dumps(
                 {
                     "status": "PASS",
+                    "scope": "raw_capture_and_cleanup",
+                    "performanceGatesEvaluated": False,
                     "buildIdentity": current_identity,
                     "repetitions": args.repetitions,
+                    "visibleWindowLifecycles": len(all_records),
+                    "scratchOnly": args.scratch_only,
                     "runs": sum(len(value) for value in all_records.values()),
                     "receipts": {
                         bundle_id: str(
-                            builder.GODOT_ROOT
-                            / builder.MAP_BUNDLES[bundle_id][0]
-                            / "evidence/performance-runner-receipt.jsonl"
+                            scratch_root / bundle_id / "performance-runner-receipt.jsonl"
                         )
                         for bundle_id in all_records
                     },
@@ -518,6 +504,8 @@ def main(argv: list[str] | None = None) -> int:
         builder.EvidenceError,
         OSError,
         subprocess.SubprocessError,
+        RuntimeError,
+        ValueError,
     ) as error:
         print(
             json.dumps(

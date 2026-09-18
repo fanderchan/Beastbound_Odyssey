@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -20,6 +21,13 @@ from statistics import median
 import subprocess
 import sys
 from typing import Any, Iterable
+
+_batch_spec = importlib.util.spec_from_file_location(
+    "_map_performance_batch_contract", Path(__file__).with_name("map_performance_batch_contract.py")
+)
+assert _batch_spec is not None and _batch_spec.loader is not None
+batch_contract = importlib.util.module_from_spec(_batch_spec)
+_batch_spec.loader.exec_module(batch_contract)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -935,7 +943,7 @@ def parse_perf_run(record: dict[str, Any]) -> dict[str, Any]:
         ):
             raise EvidenceError("performance sampling contract values are invalid")
         if (
-            record.get("schemaVersion") != 1
+            record.get("schemaVersion") != (2 if "batch" in record else 1)
             or record.get("recordType")
             != "beastbound_map_performance_runner_receipt"
             or record.get("runner") != "godot"
@@ -957,18 +965,25 @@ def parse_perf_run(record: dict[str, Any]) -> dict[str, Any]:
             raise EvidenceError("performance sampling argv must be a string array")
         if any(value.startswith("--quit-after") for value in argv):
             raise EvidenceError("performance sampling must use runtime clean exit")
+        expected_argv = (
+            batch_contract.command(argv[0])
+            if "batch" in record and argv
+            else expected_performance_argv(
+                argv[0] if argv else "", str(record.get("mapId", "")),
+                str(record.get("variant", "")), str(mode),
+            )
+        )
+        if "batch" in record:
+            try:
+                batch_contract.validate_binding(record)
+            except ValueError as error:
+                raise EvidenceError(str(error)) from error
         if (
             mode not in ("idle", "moving")
             or record.get("variant") not in ("baseline", "candidate")
             or not argv
             or Path(argv[0]).name.lower() != "godot"
-            or argv
-            != expected_performance_argv(
-                argv[0],
-                str(record.get("mapId", "")),
-                str(record.get("variant", "")),
-                str(mode),
-            )
+            or argv != expected_argv
         ):
             raise EvidenceError("performance argv is not the canonical command")
         combined_output = stdout + "\n" + stderr
@@ -1509,6 +1524,10 @@ def build_performance_report(
     if not receipt.is_file() or receipt.stat().st_size <= 0:
         raise EvidenceError(f"missing non-empty performance receipt: {receipt}")
     records = _read_receipt_records(receipt)
+    try:
+        batch_contract.validate_matrix(records)
+    except ValueError as error:
+        raise EvidenceError(str(error)) from error
     grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
     explicit_repetitions = ["repetition" in record for record in records]
     if any(explicit_repetitions) and not all(explicit_repetitions):
@@ -1877,7 +1896,7 @@ def build_performance_report(
         "notes": [
             f"All {len(records)} variants ran through the real Main.tscn non-headless Metal path.",
             (
-                f"Each matrix cell used {len(repetitions)} independent runs; the reported mean is the median of run means, while min/max preserve the full run envelope."
+                f"Each matrix cell used {len(repetitions)} fresh-Main samples; the reported mean is the median of sample means, while min/max preserve the full envelope."
                 if repeated
                 else "This historical receipt predates repeated-run aggregation and uses one validated run per matrix cell."
             ),
@@ -1892,6 +1911,11 @@ def build_performance_report(
                 else "Legacy sampling predates the warmup and runtime clean-exit contract."
             ),
             "Moving variants used cross-frame Input.parse_input_event mouse press/release delivery.",
+            (
+                "One process/window; Main state resets between samples, while process resource caches remain shared. This is fixed-step steady-state CPU evidence, not cold-start or observed display FPS."
+                if "batch" in records[0]
+                else "Each historical sample used a separate process/window."
+            ),
             "All values were parsed from the verbatim Godot stdout/stderr frozen in the raw JSONL receipt.",
         ],
     }

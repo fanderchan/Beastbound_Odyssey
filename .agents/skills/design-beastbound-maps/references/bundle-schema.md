@@ -858,6 +858,21 @@ be read-only, remain byte-for-byte equal to that candidate's frozen catalog
 snapshot, and never substitutes for the strict runtime/pre-export gate after
 catalog promotion.
 
+Repeated performance receipts may use schema 2 with the repository-owned
+`single_window_fresh_main_v1` contract. A bundle's full matrix shares one native
+process/root window but instantiates and releases a fresh `Main.tscn` per sample.
+The 180/480/60 warmup/measurement/report interval, shared moving workload,
+process-scope metric, paired aggregation and thresholds remain unchanged.
+Each record binds the hashed plan and tool sources, executable identity, raw
+sample boundaries, foreground coverage on every observed frame, raw prefetch
+drain and final cleanup. Partial batches, mixed standalone/batch records,
+cross-process splicing and stale sources are invalid. The builder and independent
+auditor both enforce this contract. Shared engine resource caches make these
+steady-state samples, not independent cold launches; fixed-step 60 is not a
+measurement of actual display FPS. The runner's raw-capture PASS does not imply
+that the report's performance gates pass. Schema 1 standalone historical
+receipts retain their original validation.
+
 ### Computer Use report and per-map action matrix
 
 The Computer Use report is separate from Main-scene capture reports and from

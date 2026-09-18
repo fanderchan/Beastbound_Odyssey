@@ -624,7 +624,46 @@ def _repeated_performance_record(
 
 
 class RepeatedPerformanceReportContractTests(unittest.TestCase):
-    def _build_fixture(self, root: Path) -> tuple[Path, dict]:
+    @staticmethod
+    def _batch_records(records: list[dict]) -> None:
+        contract = AUDITOR._performance_batch_contract()
+        plan = {
+            "strategy": contract.STRATEGY, "mainScene": contract.MAIN_SCENE,
+            "focusPolicy": "foreground_required_v1", "buildIdentity": "test-build",
+            "bundleId": TEST_PERFORMANCE_BUNDLE_ID,
+            "sourceIdentity": contract.source_identity(AUDITOR.REPOSITORY_ROOT),
+            "samples": [{key: r[key] for key in ("mapId", "variant", "mode", "repetition")}
+                        for r in records],
+        }
+        digest = contract.sha256(plan)
+        completion = {
+            "status": "passed", "planSha256": digest, "processId": 42,
+            "rootWindowId": 0, "windowCount": 1, "completedSamples": len(records),
+            "releasedMainCount": len(records), "remainingMainCount": 0, "errors": [],
+        }
+        for index, record in enumerate(records):
+            start = {
+                "planSha256": digest, "sampleIndex": index, "sample": plan["samples"][index],
+                "processId": 42, "rootWindowId": 0, "mainInstanceId": 100 + index,
+                "windowCount": 1, "mainCount": 1, "mainScene": contract.MAIN_SCENE,
+                "viewport": [1280, 720], "windowMode": 0, "focused": True,
+                "frame": index * 1000,
+            }
+            end = {**start, "frame": index * 1000 + 800, "exitCode": 0,
+                   "focusObservedFrames": 800, "unfocusedFrames": 0}
+            del end["sample"]
+            record.update(schemaVersion=2, argv=contract.command("godot"), batch={
+                "strategy": contract.STRATEGY, "plan": plan, "planSha256": digest,
+                "start": start, "end": end, "completion": completion,
+                "processSettled": True, "windowClosedAfterCleanup": True,
+                "cleanupStdout": contract.DRAIN_PREFIX + json.dumps({
+                    "sampleIndex": index, "snapshot": {"inFlight": 0, "retained": 0}
+                }) + "\n" + contract.FINISH_PREFIX + json.dumps(completion) + "\n",
+            })
+            record["stdout"] = (contract.START_PREFIX + json.dumps(start) + "\n"
+                                + record["stdout"] + contract.END_PREFIX + json.dumps(end) + "\n")
+
+    def _build_fixture(self, root: Path, *, batched: bool = False) -> tuple[Path, dict]:
         godot_root = root / "client/godot"
         godot_root.mkdir(parents=True)
         (godot_root / "project.godot").write_text(
@@ -684,6 +723,8 @@ class RepeatedPerformanceReportContractTests(unittest.TestCase):
                 3,
             )
         ]
+        if batched:
+            self._batch_records(records)
         receipt = evidence_root / "performance-runner-receipt.jsonl"
         receipt.write_text(
             "".join(json.dumps(record) + "\n" for record in records),
@@ -755,6 +796,60 @@ class RepeatedPerformanceReportContractTests(unittest.TestCase):
             bundle_root, report = self._build_fixture(Path(temporary))
             audit = self._audit(bundle_root, report)
         self.assertEqual([], audit.errors)
+
+    def test_single_window_report_passes_independent_strict_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle_root, report = self._build_fixture(Path(temporary), batched=True)
+            audit = self._audit(bundle_root, report)
+        self.assertEqual([], audit.errors)
+
+    def test_single_window_evidence_cannot_bypass_independent_checks(self) -> None:
+        mutations = {
+            "unreleased Main": lambda r: r["batch"]["completion"].update(releasedMainCount=0),
+            "second window": lambda r: r["batch"]["end"].update(windowCount=2),
+            "lost focus": lambda r: r["batch"]["end"].update(unfocusedFrames=1),
+            "old source": lambda r: r["batch"]["plan"].update(sourceIdentity={}),
+            "raw cleanup missing": lambda r: r["batch"].update(cleanupStdout=""),
+            "short sample": lambda r: r.update(stdout=r["stdout"].replace("frames=60", "frames=59")),
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle_root, report = self._build_fixture(Path(temporary), batched=True)
+            receipt = bundle_root / "evidence/performance-runner-receipt.jsonl"
+            original = [json.loads(line) for line in receipt.read_text().splitlines()]
+            for name, mutate in mutations.items():
+                with self.subTest(name=name):
+                    records = copy.deepcopy(original)
+                    mutate(records[0])
+                    # Keep raw boundaries in agreement to test the contract,
+                    # not merely a mismatch between raw and copied metadata.
+                    record = records[0]
+                    contract = AUDITOR._performance_batch_contract()
+                    for prefix, key in ((contract.START_PREFIX, "start"),
+                                        (contract.END_PREFIX, "end")):
+                        record["stdout"] = "".join(
+                            prefix + json.dumps(record["batch"][key]) + "\n"
+                            if line.startswith(prefix) else line
+                            for line in record["stdout"].splitlines(True))
+                    self._rewrite_receipt(bundle_root, report, records)
+                    self.assertTrue(self._audit(bundle_root, report).errors)
+
+    def test_single_window_matrix_rejects_cross_batch_splicing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle_root, report = self._build_fixture(Path(temporary), batched=True)
+            receipt = bundle_root / "evidence/performance-runner-receipt.jsonl"
+            records = [json.loads(line) for line in receipt.read_text().splitlines()]
+            # Individually consistent record from a different native process.
+            record = records[1]
+            contract = AUDITOR._performance_batch_contract()
+            for key in ("start", "end", "completion"):
+                record["batch"][key]["processId"] = 99
+            record["stdout"] = record["stdout"].replace('"processId": 42', '"processId": 99')
+            record["batch"]["cleanupStdout"] = record["batch"]["cleanupStdout"].replace(
+                '"processId": 42', '"processId": 99')
+            contract.validate_binding(record)
+            self._rewrite_receipt(bundle_root, report, records)
+            audit = self._audit(bundle_root, report)
+            self.assertTrue(any("fresh Main isolation" in error for error in audit.errors))
 
     def test_repeated_metadata_sampling_and_scope_tampering_fail_closed(self) -> None:
         mutations = {

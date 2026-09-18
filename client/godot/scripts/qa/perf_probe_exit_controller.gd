@@ -41,4 +41,11 @@ func finish(requested_exit_code: int) -> void:
 	var final_exit_code := requested_exit_code
 	if str(cleanup.get("status", "")) != "passed":
 		final_exit_code = 1
-	host.get_tree().quit(final_exit_code)
+	var tree := host.get_tree() as SceneTree
+	var tree_script := tree.get_script() as Script
+	if tree_script != null and tree_script.resource_path == "res://scripts/qa/map_performance_batch.gd":
+		# The isolated batch owns the native window; each real Main still drains
+		# its audio and returns its actual exit status before being released.
+		tree.call("complete_map_performance_sample", host, final_exit_code)
+		return
+	tree.quit(final_exit_code)

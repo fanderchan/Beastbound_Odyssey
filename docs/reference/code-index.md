@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **934** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **938** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -256,7 +256,7 @@
 
 ## client/godot/scripts/qa
 
-<details><summary>81 个文件</summary>
+<details><summary>82 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -298,6 +298,7 @@
 | [hang_matchmaking_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_owner_review_capture.gd) | 716 |
 | [hang_matchmaking_world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd) | 1622 |
 | [map_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/map_awakened_owner_review_capture.gd) | 2654 |
+| [map_performance_batch.gd](../../client/godot/scripts/qa/map_performance_batch.gd) | 248 |
 | [map_visual_action_capture_batch.gd](../../client/godot/scripts/qa/map_visual_action_capture_batch.gd) | 1079 |
 | [map_visual_release_contract_check.gd](../../client/godot/scripts/qa/map_visual_release_contract_check.gd) | 475 |
 | [map_visual_review_capture.gd](../../client/godot/scripts/qa/map_visual_review_capture.gd) | 1824 |
@@ -313,7 +314,7 @@
 | [npc_direction_review.gd](../../client/godot/scripts/qa/npc_direction_review.gd) | 554 |
 | [npc_hover_identity_check.gd](../../client/godot/scripts/qa/npc_hover_identity_check.gd) | 117 |
 | [npc_main_review_capture.gd](../../client/godot/scripts/qa/npc_main_review_capture.gd) | 719 |
-| [perf_probe_exit_controller.gd](../../client/godot/scripts/qa/perf_probe_exit_controller.gd) | 44 |
+| [perf_probe_exit_controller.gd](../../client/godot/scripts/qa/perf_probe_exit_controller.gd) | 51 |
 | [perf_probe_process_scope_boundary.gd](../../client/godot/scripts/qa/perf_probe_process_scope_boundary.gd) | 29 |
 | [pet_action_art_preview.gd](../../client/godot/scripts/qa/pet_action_art_preview.gd) | 126 |
 | [pet_action_asset_check.gd](../../client/godot/scripts/qa/pet_action_asset_check.gd) | 1353 |
@@ -943,7 +944,7 @@
 
 ## tools
 
-<details><summary>96 个文件</summary>
+<details><summary>98 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -973,7 +974,9 @@
 | [lib/isolated-mysql-runtime.mjs](../../tools/lib/isolated-mysql-runtime.mjs) | 296 |
 | [lib/macos-host-evidence.mjs](../../tools/lib/macos-host-evidence.mjs) | 1580 |
 | [lib/public-capacity-harness.mjs](../../tools/lib/public-capacity-harness.mjs) | 646 |
-| [map_visual_evidence_builder.py](../../tools/map_visual_evidence_builder.py) | 2033 |
+| [map_performance_batch.py](../../tools/map_performance_batch.py) | 204 |
+| [map_performance_batch_contract.py](../../tools/map_performance_batch_contract.py) | 166 |
+| [map_visual_evidence_builder.py](../../tools/map_visual_evidence_builder.py) | 2057 |
 | [normalize_mounted_sprite_frames.py](../../tools/normalize_mounted_sprite_frames.py) | 198 |
 | [p0_6_equipment_ownership_registry_gate.mjs](../../tools/p0_6_equipment_ownership_registry_gate.mjs) | 316 |
 | [p0_6_large_collection_journal_gate.mjs](../../tools/p0_6_large_collection_journal_gate.mjs) | 778 |
@@ -1031,7 +1034,7 @@
 | [run_firebud_v2_performance_evidence.py](../../tools/run_firebud_v2_performance_evidence.py) | 537 |
 | [run_godot_auto_checks.mjs](../../tools/run_godot_auto_checks.mjs) | 3280 |
 | [run_local_ci.mjs](../../tools/run_local_ci.mjs) | 448 |
-| [run_map_visual_performance_evidence.py](../../tools/run_map_visual_performance_evidence.py) | 534 |
+| [run_map_visual_performance_evidence.py](../../tools/run_map_visual_performance_evidence.py) | 522 |
 | [run_map_visual_preexport_gate.py](../../tools/run_map_visual_preexport_gate.py) | 146 |
 | [run_mysql_backup_restore_drill.mjs](../../tools/run_mysql_backup_restore_drill.mjs) | 689 |
 | [run_pet_battle_export_gate.py](../../tools/run_pet_battle_export_gate.py) | 5412 |
@@ -1048,7 +1051,7 @@
 
 ## tools/tests
 
-<details><summary>60 个文件</summary>
+<details><summary>61 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -1077,6 +1080,7 @@
 | [tools/test/test_godot_qa_user_data_lane.py](../../tools/test/test_godot_qa_user_data_lane.py) | 2199 |
 | [tools/test/test_install_firebud_computer_use_evidence.py](../../tools/test/test_install_firebud_computer_use_evidence.py) | 90 |
 | [tools/test/test_install_pet_battle_bundle.py](../../tools/test/test_install_pet_battle_bundle.py) | 1330 |
+| [tools/test/test_map_performance_batch.py](../../tools/test/test_map_performance_batch.py) | 144 |
 | [tools/test/test_map_visual_evidence_builder.py](../../tools/test/test_map_visual_evidence_builder.py) | 1380 |
 | [tools/test/test_map_visual_release_tools.py](../../tools/test/test_map_visual_release_tools.py) | 484 |
 | [tools/test/test_pet_art_batch_audit.py](../../tools/test/test_pet_art_batch_audit.py) | 1793 |
