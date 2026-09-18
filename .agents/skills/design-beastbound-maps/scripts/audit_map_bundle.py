@@ -19,6 +19,7 @@ import json
 import math
 import re
 import struct
+import subprocess
 import sys
 import zlib
 from dataclasses import dataclass, field
@@ -5270,6 +5271,29 @@ def _current_map_runtime_build_identity() -> str:
     return identity
 
 
+@lru_cache(maxsize=128)
+def _map_runtime_identity_matches_current(captured: str, current: str) -> bool:
+    if not all(MAP_RUNTIME_BUILD_IDENTITY_RE.fullmatch(value) for value in (captured, current)):
+        return False
+    captured_git, captured_surface = captured.split("+", 1)
+    current_git, current_surface = current.split("+", 1)
+    if captured_surface != current_surface:
+        return False
+    if captured_git == current_git:
+        return True
+    # Evidence/docs commits necessarily change HEAD. Preserve the capture's
+    # actual provenance, while accepting identical runtime bytes only from an
+    # existing ancestor in this repository; unknown/unrelated revisions fail.
+    try:
+        result = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", captured_git[4:], current_git[4:]],
+            cwd=REPOSITORY_ROOT, capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
+
+
 def _batch_window_checkpoint_valid(value: Any, root_window_id: Any) -> bool:
     return (
         isinstance(value, dict)
@@ -5341,10 +5365,10 @@ def _validate_capture_preview_authorization(
                 f"cannot derive the current map runtime build identity: {error}",
             )
         else:
-            if build_identity != current_build_identity:
+            if not _map_runtime_identity_matches_current(build_identity, current_build_identity):
                 audit.error(
                     f"{field_name}.batchBuildIdentity",
-                    "must equal the current map_visual_evidence_builder build identity",
+                    "must match the current runtime surface and an existing ancestor commit",
                 )
     expected_manifest_path = (
         f"client/godot/assets/maps/{bundle_id}/{MANIFEST_NAME}"

@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -338,10 +339,57 @@ class CapturePreviewAuthorizationTests(unittest.TestCase):
             map_ids=self.MAP_IDS,
         )
         self.assertTrue(any(
-            "must equal the current map_visual_evidence_builder build identity"
+            "must match the current runtime surface and an existing ancestor commit"
             in error
             for error in drift_audit.errors
         ))
+
+    def test_unchanged_capture_survives_a_later_metadata_commit(self) -> None:
+        audit = self._audit()
+        capture = self._batch_capture(audit)
+        parent = subprocess.run(
+            ["git", "rev-parse", "HEAD~1"], cwd=AUDITOR.REPOSITORY_ROOT,
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+        captured_identity = "git:" + parent + "+" + self.BUILD_IDENTITY.split("+", 1)[1]
+        capture["batchBuildIdentity"] = captured_identity
+        capture["qaPreviewAuthorization"]["buildIdentity"] = captured_identity
+        AUDITOR._validate_capture_preview_authorization(
+            audit, capture, "capture", bundle_id=self.BUNDLE_ID,
+            map_id="earth_vein_cave", map_ids=self.MAP_IDS,
+        )
+        self.assertEqual([], audit.errors)
+
+    def test_runtime_identity_checks_real_git_ancestry_and_content(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+
+            def git(*args: str) -> str:
+                return subprocess.run(
+                    ["git", "-c", "user.name=QA", "-c", "user.email=qa@example.invalid", *args],
+                    cwd=root, check=True, capture_output=True, text=True,
+                ).stdout.strip()
+
+            git("init", "--quiet")
+            git("commit", "--quiet", "--allow-empty", "-m", "capture baseline")
+            original = git("rev-parse", "HEAD")
+            (root / "README.md").write_text("Document the captured build.\n")
+            git("add", "README.md")
+            git("commit", "--quiet", "-m", "metadata only")
+            current = git("rev-parse", "HEAD")
+            git("checkout", "--quiet", "--orphan", "unrelated")
+            git("commit", "--quiet", "--allow-empty", "-m", "unrelated history")
+            unrelated = git("rev-parse", "HEAD")
+            suffix = "+beastbound-map-runtime-surface-v2:" + "a" * 64
+            compare = AUDITOR._map_runtime_identity_matches_current
+            compare.cache_clear()
+            with mock.patch.object(AUDITOR, "REPOSITORY_ROOT", root):
+                self.assertTrue(compare("git:" + original + suffix, "git:" + current + suffix))
+                self.assertFalse(compare("git:" + unrelated + suffix, "git:" + current + suffix))
+                self.assertFalse(compare("git:" + "0" * 40 + suffix, "git:" + current + suffix))
+                self.assertFalse(compare("git:" + original + suffix, "git:" + current + suffix[:-1] + "b"))
+                self.assertFalse(compare("malformed", "git:" + current + suffix))
+            compare.cache_clear()
 
     def test_batch_source_identity_rejects_missing_extra_and_byte_drift(
         self,

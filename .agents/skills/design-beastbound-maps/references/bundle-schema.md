@@ -875,6 +875,14 @@ receipts retain their original validation.
 
 ### Computer Use report and per-map action matrix
 
+Batch screenshot `batchBuildIdentity` keeps the exact capture-time Git revision.
+The runtime-surface fingerprint must match the current checkout. A later
+evidence/documentation commit is allowed only when the captured revision is an
+existing ancestor of current HEAD in this repository; unrelated or unknown
+revisions and failed ancestry queries are rejected. All independent source,
+manifest, capture-surface and file hashes remain mandatory. Never rewrite a
+receipt's recorded revision to make it appear current.
+
 The Computer Use report is separate from Main-scene capture reports and from
 Godot's own `Input.parse_input_event` evidence. Its `method` must be
 `"computer_use"`, `scene` must be `res://scenes/Main.tscn`, `viewport` must be
