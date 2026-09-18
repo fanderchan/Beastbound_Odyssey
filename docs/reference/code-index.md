@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **938** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **939** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -256,7 +256,7 @@
 
 ## client/godot/scripts/qa
 
-<details><summary>82 个文件</summary>
+<details><summary>83 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -288,7 +288,7 @@
 | [earth_vein_camera_composition_check.gd](../../client/godot/scripts/qa/earth_vein_camera_composition_check.gd) | 277 |
 | [earth_vein_floor_hierarchy_check.gd](../../client/godot/scripts/qa/earth_vein_floor_hierarchy_check.gd) | 481 |
 | [earth_vein_landmark_review_capture.gd](../../client/godot/scripts/qa/earth_vein_landmark_review_capture.gd) | 398 |
-| [earth_vein_review_batch_capture.gd](../../client/godot/scripts/qa/earth_vein_review_batch_capture.gd) | 1450 |
+| [earth_vein_review_batch_capture.gd](../../client/godot/scripts/qa/earth_vein_review_batch_capture.gd) | 1462 |
 | [earth_vein_review_contract_check.gd](../../client/godot/scripts/qa/earth_vein_review_contract_check.gd) | 113 |
 | [evolution_trial_dialog_check.gd](../../client/godot/scripts/qa/evolution_trial_dialog_check.gd) | 47 |
 | [firebud_village_service_layout_check.gd](../../client/godot/scripts/qa/firebud_village_service_layout_check.gd) | 544 |
@@ -335,6 +335,7 @@
 | [pet_skill_page_review_capture.gd](../../client/godot/scripts/qa/pet_skill_page_review_capture.gd) | 266 |
 | [player_character_main_flow_check.gd](../../client/godot/scripts/qa/player_character_main_flow_check.gd) | 509 |
 | [player_character_owner_review_capture.gd](../../client/godot/scripts/qa/player_character_owner_review_capture.gd) | 498 |
+| [review_capture_render_pump.gd](../../client/godot/scripts/qa/review_capture_render_pump.gd) | 76 |
 | [runtime_exit_cleanup.gd](../../client/godot/scripts/qa/runtime_exit_cleanup.gd) | 90 |
 | [standalone_pet_art_overlay_check.gd](../../client/godot/scripts/qa/standalone_pet_art_overlay_check.gd) | 520 |
 | [standalone_pet_art_review_gate.gd](../../client/godot/scripts/qa/standalone_pet_art_review_gate.gd) | 139 |
@@ -1012,7 +1013,7 @@
 | [record_character_entry_owner_review.py](../../tools/record_character_entry_owner_review.py) | 724 |
 | [record_commerce_awakened_owner_review.py](../../tools/record_commerce_awakened_owner_review.py) | 769 |
 | [record_earth_vein_landmark_review.py](../../tools/record_earth_vein_landmark_review.py) | 399 |
-| [record_earth_vein_review_batch.py](../../tools/record_earth_vein_review_batch.py) | 2684 |
+| [record_earth_vein_review_batch.py](../../tools/record_earth_vein_review_batch.py) | 2721 |
 | [record_firebud_v2_owner_review.py](../../tools/record_firebud_v2_owner_review.py) | 1365 |
 | [record_hang_matchmaking_owner_review.py](../../tools/record_hang_matchmaking_owner_review.py) | 699 |
 | [record_hang_matchmaking_world_hud_owner_review.py](../../tools/record_hang_matchmaking_world_hud_owner_review.py) | 889 |
@@ -1093,7 +1094,7 @@
 | [tools/test/test_record_character_entry_owner_review.py](../../tools/test/test_record_character_entry_owner_review.py) | 250 |
 | [tools/test/test_record_commerce_awakened_owner_review.py](../../tools/test/test_record_commerce_awakened_owner_review.py) | 284 |
 | [tools/test/test_record_earth_vein_landmark_review.py](../../tools/test/test_record_earth_vein_landmark_review.py) | 124 |
-| [tools/test/test_record_earth_vein_review_batch.py](../../tools/test/test_record_earth_vein_review_batch.py) | 956 |
+| [tools/test/test_record_earth_vein_review_batch.py](../../tools/test/test_record_earth_vein_review_batch.py) | 1000 |
 | [tools/test/test_record_firebud_v2_owner_review.py](../../tools/test/test_record_firebud_v2_owner_review.py) | 632 |
 | [tools/test/test_record_hang_matchmaking_owner_review.py](../../tools/test/test_record_hang_matchmaking_owner_review.py) | 234 |
 | [tools/test/test_record_hang_matchmaking_world_hud_owner_review.py](../../tools/test/test_record_hang_matchmaking_world_hud_owner_review.py) | 516 |

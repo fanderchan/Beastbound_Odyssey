@@ -103,6 +103,17 @@ def _final_payload(capture_pass: str) -> dict:
         },
         "movieWriterTerminalFrameCount": 1,
         "movieWriterExpectedFrameCount": 500,
+        "renderContinuity": {
+            "policy": "occluded_viewport_without_present_v1",
+            "result": "PASS",
+            "performanceEvidence": False,
+            "startProcessFrame": 50,
+            "endProcessFrameExclusive": 499,
+            "completedProcessFrameCount": 449,
+            "fallbackDrawCount": 250,
+            "missingDrawFrameCount": 0,
+            "firstMissingDrawFrames": [],
+        },
         "startupIsolation": {
             "status": "passed",
             "accountSessionCleared": True,
@@ -169,6 +180,39 @@ def _capture_payload(*, end_cell: list[int] | None = None) -> dict:
 
 
 class EarthVeinLowDisturbanceRecorderTests(unittest.TestCase):
+    def test_render_continuity_rejects_stale_or_partial_frame_evidence(self) -> None:
+        payload = _final_payload("movie")
+        self.assertEqual(TOOL._validate_render_continuity(payload)["result"], "PASS")
+        for field, invalid_values in {
+            "policy": (None, "foreground_native"),
+            "result": (None, "FAIL"),
+            "performanceEvidence": (None, True, 0),
+            "startProcessFrame": (None, True, 51),
+            "endProcessFrameExclusive": (None, True, 498),
+            "completedProcessFrameCount": (None, True, 448),
+            "fallbackDrawCount": (None, True, -1, 451),
+            "missingDrawFrameCount": (None, False, 1),
+            "firstMissingDrawFrames": (None, [100]),
+        }.items():
+            for value in invalid_values:
+                with self.subTest(field=field, value=value):
+                    bad = json.loads(json.dumps(payload))
+                    bad["renderContinuity"][field] = value
+                    with self.assertRaises(TOOL.EarthVeinBatchRecordingError):
+                        TOOL._validate_render_continuity(bad)
+        del payload["renderContinuity"]
+        with self.assertRaises(TOOL.EarthVeinBatchRecordingError):
+            TOOL._validate_render_continuity(payload)
+
+    def test_render_continuity_accepts_visible_and_occluded_capture_without_fps_claim(self) -> None:
+        for capture_pass in ("native", "movie"):
+            for fallback_count in (0, 449, 450):
+                with self.subTest(capture_pass=capture_pass, fallback_count=fallback_count):
+                    payload = _final_payload(capture_pass)
+                    payload["renderContinuity"]["fallbackDrawCount"] = fallback_count
+                    receipt = TOOL._validate_render_continuity(payload)
+                    self.assertFalse(receipt["performanceEvidence"])
+
     def test_launch_contract_has_only_one_native_and_one_movie_window(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             contract = TOOL.launch_contract(

@@ -18,6 +18,7 @@ const MapVisualReviewCapture := preload(
 	"res://scripts/qa/map_visual_review_capture.gd"
 )
 const RuntimeExitCleanup := preload("res://scripts/qa/runtime_exit_cleanup.gd")
+const ReviewCaptureRenderPump := preload("res://scripts/qa/review_capture_render_pump.gd")
 
 const MAIN_SCENE := "res://scenes/Main.tscn"
 const BUNDLE_ID := "earth_vein_cave_visual_v1"
@@ -55,6 +56,7 @@ const HARNESS_PATHS: Array[String] = [
 	"res://scripts/qa/earth_vein_review_batch_capture.gd",
 	"res://scripts/qa/map_visual_review_capture.gd",
 	"res://scripts/qa/runtime_exit_cleanup.gd",
+	"res://scripts/qa/review_capture_render_pump.gd",
 	"res://scripts/audio/game_audio_manager.gd",
 	"res://scripts/audio/battle_audio_timeline_controller.gd",
 	"res://scripts/audio/battle_audio_cue_model.gd",
@@ -192,6 +194,10 @@ func _run() -> void:
 			errors.append("批量 Main 窗口未在 8 秒内恢复到 windowed")
 		capture_frame_start = Engine.get_process_frames() - _process_frame_origin
 	var initial_runtime_identity := _runtime_identity_checkpoint("initial", errors)
+	var render_pump = null
+	if host != null and errors.is_empty():
+		render_pump = ReviewCaptureRenderPump.new()
+		render_pump.start(root)
 	if host != null and errors.is_empty():
 		for map_id in MAP_IDS:
 			for mode in MODES:
@@ -256,6 +262,11 @@ func _run() -> void:
 	# Landmark already owns the final awaited cleanup.  No process frame may be
 	# advanced after its endExclusive; MovieWriter adds only its documented
 	# terminal frame when quit() closes the persistent root window.
+	var render_continuity := {}
+	if render_pump != null:
+		render_continuity = render_pump.stop()
+		if str(render_continuity.get("result", "FAIL")) != "PASS":
+			errors.append("审片期间存在未绘制的逻辑帧，不能接受重复画面录像")
 	var final_cleanup := {
 		"status": "not_required",
 		"reason": "last_stage_already_drained",
@@ -318,6 +329,7 @@ func _run() -> void:
 			process_frame_end_exclusive + 1
 		),
 		"startupIsolation": startup_isolation,
+		"renderContinuity": render_continuity,
 		"fourFloorSegmentCount": _floor_stage_count(stages),
 		"landmarkSegmentCount": _landmark_stage_count(stages),
 		"captureSequence": _capture_sequence(stages),

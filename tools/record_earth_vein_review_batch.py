@@ -114,6 +114,10 @@ HARNESS_PATHS: dict[str, Path] = {
     / "scripts"
     / "qa"
     / "runtime_exit_cleanup.gd",
+    "reviewCaptureRenderPump": GODOT_PROJECT
+    / "scripts"
+    / "qa"
+    / "review_capture_render_pump.gd",
     "gameAudioManager": GODOT_PROJECT
     / "scripts"
     / "audio"
@@ -188,6 +192,9 @@ GODOT_REVIEW_AUTH_RESOURCES: dict[str, Path] = {
     ],
     "res://scripts/qa/runtime_exit_cleanup.gd": HARNESS_PATHS[
         "runtimeExitCleanup"
+    ],
+    "res://scripts/qa/review_capture_render_pump.gd": HARNESS_PATHS[
+        "reviewCaptureRenderPump"
     ],
     "res://scripts/audio/game_audio_manager.gd": HARNESS_PATHS[
         "gameAudioManager"
@@ -1119,7 +1126,36 @@ def _payload_from_log(path: Path, *, movie_mode: bool) -> dict[str, Any]:
         process_frame_end_exclusive=payload["processFrameEndExclusive"],
     )
     _validate_runtime_identity_contract(payload, stages)
+    _validate_render_continuity(payload)
     return payload
+
+
+def _validate_render_continuity(payload: Mapping[str, Any]) -> dict[str, Any]:
+    continuity = payload.get("renderContinuity")
+    start = payload.get("captureFrameStartInclusive")
+    end = payload.get("processFrameEndExclusive")
+    if (
+        not isinstance(continuity, dict)
+        or type(start) is not int
+        or type(end) is not int
+        or end <= start
+        or continuity.get("policy") != "occluded_viewport_without_present_v1"
+        or continuity.get("result") != "PASS"
+        or continuity.get("performanceEvidence") is not False
+        or type(continuity.get("startProcessFrame")) is not int
+        or continuity.get("startProcessFrame") != start
+        or type(continuity.get("endProcessFrameExclusive")) is not int
+        or continuity.get("endProcessFrameExclusive") != end
+        or type(continuity.get("completedProcessFrameCount")) is not int
+        or continuity.get("completedProcessFrameCount") != end - start
+        or type(continuity.get("missingDrawFrameCount")) is not int
+        or continuity.get("missingDrawFrameCount") != 0
+        or continuity.get("firstMissingDrawFrames") != []
+        or type(continuity.get("fallbackDrawCount")) is not int
+        or not 0 <= continuity.get("fallbackDrawCount", -1) <= end - start + 1
+    ):
+        raise EarthVeinBatchRecordingError("batch render continuity 存在缺帧或无效绘制证据")
+    return dict(continuity)
 
 
 def _read_json(path: Path, *, label: str) -> dict[str, Any]:
@@ -1646,6 +1682,7 @@ def _read_batch_report(
     ):
         raise EarthVeinBatchRecordingError("batch pre-Main authorization 合同失败")
     _validate_harness_hashes(report.get("harnessHashes"))
+    _validate_render_continuity(report)
     stages = report.get("stages")
     if not isinstance(stages, list) or len(stages) != 9:
         raise EarthVeinBatchRecordingError("batch stages 必须精确覆盖 8+1")
