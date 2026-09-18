@@ -2,6 +2,7 @@ extends RefCounted
 
 const PLAYER_SCENE := preload("res://scenes/player/Player.tscn")
 const PET_SCENE := preload("res://scenes/pet/Pet.tscn")
+const OnlinePresenceRefreshCheck := preload("res://scripts/qa/online_presence_refresh_check.gd")
 const IsoMapModel := preload("res://scripts/world/isometric_map_model.gd")
 const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const EncounterModel := preload("res://scripts/world/encounter_model.gd")
@@ -2753,7 +2754,7 @@ func _run_auto_map_transfer_check() -> void:
 		var village_payload_cell := Vector2i(int(village_map_payload.get("cellX", -999)), int(village_map_payload.get("cellY", -999)))
 		village_map_payload_ok = (
 			str(village_map_payload.get("mapId", "")) == "firebud_village_gate"
-			and str(village_map_payload.get("scope", "")) == "map"
+			and str(village_map_payload.get("scope", "")) == "aoi"
 			and village_payload_cell == village_spawn_cell
 		)
 
@@ -2778,7 +2779,7 @@ func _run_auto_map_transfer_check() -> void:
 		var return_payload_cell := Vector2i(int(return_map_payload.get("cellX", -999)), int(return_map_payload.get("cellY", -999)))
 		return_map_payload_ok = (
 			str(return_map_payload.get("mapId", "")) == "firebud_training_yard"
-			and str(return_map_payload.get("scope", "")) == "map"
+			and str(return_map_payload.get("scope", "")) == "aoi"
 			and return_payload_cell == return_spawn_cell
 		)
 	host._set_gm_speed_multiplier(previous_multiplier)
@@ -25227,9 +25228,11 @@ func _run_auto_online_position_live_check() -> void:
 	))
 	var leader_parsed = ServerAuthClientModel.parse_auth_response(int(leader_register.get("responseCode", 0)), leader_register.get("body", PackedByteArray()) as PackedByteArray)
 	var member_parsed = ServerAuthClientModel.parse_auth_response(int(member_register.get("responseCode", 0)), member_register.get("body", PackedByteArray()) as PackedByteArray)
-	var leader_session = leader_parsed.get("session", {}) as Dictionary if leader_parsed.get("session", {}) is Dictionary else {}
-	var member_session = member_parsed.get("session", {}) as Dictionary if member_parsed.get("session", {}) is Dictionary else {}
-	var register_ok = bool(leader_parsed.get("ok", false)) and bool(member_parsed.get("ok", false))
+	var leader_character := await _prepare_registered_live_character_session(leader_parsed, "同步甲" + leader_username.right(6), base_url)
+	var member_character := await _prepare_registered_live_character_session(member_parsed, "同步乙" + member_username.right(6), base_url)
+	var leader_session: Dictionary = leader_character.get("session", {})
+	var member_session: Dictionary = member_character.get("session", {})
+	var register_ok = bool(leader_character.get("ok", false)) and bool(member_character.get("ok", false))
 	var member_position_response = await host._auto_http_request_spec(ServerAuthClientModel.player_position_update_request(
 		base_url,
 		str(member_session.get("serverSessionToken", "")),
@@ -25280,13 +25283,21 @@ func _run_auto_online_position_live_check() -> void:
 		frames += 1
 		await host.get_tree().process_frame
 	var snapshot_ok = host._server_event_type_seen("online.snapshot")
+	# The stream may open while the initial HTTP position is in flight. Its
+	# snapshot can be empty; wait for the authoritative rebase/delta as well.
+	frames = 0
+	while frames < 720 and not host._online_remote_player_at(member_username, host.current_map_id, member_cell):
+		frames += 1
+		await host.get_tree().process_frame
 	var remote_ok = host._online_remote_player_at(member_username, host.current_map_id, member_cell)
 	var self_hidden_ok = not host._online_remote_player_at(leader_username, host.current_map_id, leader_cell)
 	var member_account_id = str(member_session.get("accountId", ""))
 	var draw_signature_ok = host.online_position_draw_signature_cache.find(member_username) >= 0 or (member_account_id != "" and host.online_position_draw_signature_cache.find(member_account_id) >= 0)
 	var revision_ok = member_account_id != "" and host._panel_flow().online_presence_cache_model.revision_for(member_account_id) > 0
 	var cache_bound_ok = host.online_position_remote_players.size() <= 24
-	var status = "ok" if live_map_loaded and register_ok and member_position_ok and http_roster_absent and ready_ok and snapshot_ok and remote_ok and self_hidden_ok and draw_signature_ok and revision_ok and cache_bound_ok else "failed"
+	var refresh_report := await OnlinePresenceRefreshCheck.run(host, base_url, member_session)
+	print("online presence refresh check: %s" % JSON.stringify(refresh_report))
+	var status = "ok" if bool(refresh_report.get("ok", false)) and live_map_loaded and register_ok and member_position_ok and http_roster_absent and ready_ok and snapshot_ok and remote_ok and self_hidden_ok and draw_signature_ok and revision_ok and cache_bound_ok else "failed"
 	print("online position live check ready: status=%s map_loaded=%s register=%s member_position=%s http_roster_absent=%s ready=%s snapshot=%s remote=%s self_hidden=%s revision=%s cache_bound=%s draw_signature=%s leader=%s member=%s cell=%s" % [
 		status,
 		str(live_map_loaded),

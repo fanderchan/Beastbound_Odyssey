@@ -10670,7 +10670,9 @@ func _current_online_position_payload() -> Dictionary:
 
 func _current_online_map_payload() -> Dictionary:
 	var payload := _current_online_position_payload()
-	payload["scope"] = "map"
+	# Normal world refreshes must keep the validated cell visible to nearby
+	# players. Explicit map-only queries retain their separate privacy contract.
+	payload["scope"] = "aoi"
 	return payload
 
 func _on_online_position_http_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:

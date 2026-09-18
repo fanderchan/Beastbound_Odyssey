@@ -49,7 +49,7 @@ git log -5 --oneline
 | --- | --- | --- |
 | 人物比例、遮挡与地标构图 | [Phase 555](phase_555_world_prop_player_visibility.md) 修复前景物件挡人；[Phase 556](phase_556_guardian_navigation_camera.md) 修复四层守护者实际到达格与展开消息窗后的裁切，原生端点／导航 `12/12` | 后续源码已变化，按当前版本重冻画面；外围环境物件不能冒充全部无遮挡 |
 | 四层路线与五人守护战 | [Phase 557](phase_557_current_cave_and_guardian_review.md) 取得 20 对自动截图、四层／地标原速片、碰撞及 20 项真实鼠标证据，并完成五账号权威奖励复核 | 这些属于当时版本；当前 107 项本地候选文件继续保留，尚未成为当前源码的完整精确冻结证据 |
-| 同屏队友外观 | [Phase 563](phase_563_remote_player_appearance.md) 接通服务端外观、八向动画、相同比例、点击范围和提交后骑乘通知；服务端 `91/91`、客户端 `4/4`，原生 Main 展示已录制 | 补做当前联网客户端点击、上下骑和切图；模拟多人和展示片不代表真人联机或 200 人容量 |
+| 同屏队友外观与持续可见性 | [Phase 563](phase_563_remote_player_appearance.md) 接通权威外观、八向动画、相同比例、点击范围和提交后骑乘通知；[Phase 564](phase_564_idle_online_presence_refresh.md) 修复静止定时刷新误隐藏人物，真实 HTTP/WS 旁观回归通过，服务端 `48/48`、客户端 `5/5` | 补做当前联网客户端点击、上下骑和切图的人工视觉复核；自动回归及展示片不代表五真人联机或 200 人容量 |
 | 原生地图性能 | [Phase 559](phase_559_world_depth_and_bounds_hotpaths.md) 取得完整 48 组可绘制、零失焦样本；四层绝对处理耗时达标 | **总评仍 FAIL**：四层静止增量、二三层移动增量超门槛，不能改写旧回执或只挑合格样本 |
 | 运行优化 | [Phase 559](phase_559_world_depth_and_bounds_hotpaths.md) 减少人物范围／深度排序计算；[Phase 561](phase_561_camera_score_pruning.md) 减少无效镜头候选评分，10000 组结果一致、局部求解约降 20%，定向及通用性能通过 | 静止问题尚未解决，局部及 headless 收益不代替当前原生矩阵 |
 | 取证可靠性与时间口径 | [Phase 551](phase_551_map_evidence_commit_provenance.md) 绑定运行内容和祖先提交；[Phase 558](phase_558_native_performance_visibility.md) 验证前台实际绘制；[Phase 560](phase_560_map_capture_transaction_history.md) 修复历史事务阻断；[Phase 562](phase_562_runtime_probe_wall_clock.md) 区分模拟时间与实际时间，模型、解析及工具 `73/73` 通过 | 固定步长会绕过通常的限帧等待；压力运行的瞬时 CPU 不是正常玩家占用。仍需正常帧预算、VSync、前台状态下的稳态 CPU 与绘制证据 |
