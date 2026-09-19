@@ -44,6 +44,8 @@ flowchart TD
 
 Player 的边界校正仅在校正坐标与当前位置精确不同时赋值，避免每个物理帧触发重复变换通知。边界、速度与目标规则保持一致，见 [Phase 574](phase_574_player_position_updates.md)。
 
+人物轮廓查询键随形象／朝向／动作改变，相机签名另外包含骑乘形态。遮挡只缓存源图到局部范围的换算，并比较实际范围、贴图尺寸、绘制矩形与翻转；每次仍应用当前全局变换，不缓存世界坐标。未准备的动作保持保守范围，遮挡查询不扫描图片。验证见 [Phase 575](phase_575_player_visual_bounds_reuse.md)。
+
 [PanelRegistry](../client/godot/scripts/ui/panel_registry.gd) 根据面板显隐及进出场景的信号使菜单状态缓存失效，未变化时查询不再遍历全部控件。注册必须经过 `set_world_menu_panels()` / `add_world_menu_panel()`，已有面板数组用于枚举读取。点击命中仍使用原递归检查，验证见 [Phase 573](phase_573_panel_visibility_hotpath.md)。
 
 ## 服务端的职责边界

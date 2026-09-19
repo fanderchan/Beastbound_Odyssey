@@ -62,6 +62,19 @@ var _formal_clip_action := ""
 var _formal_clip_fps := 1.0
 var _formal_clip_frames: Array[Texture2D] = []
 var _formal_clip_cache: Dictionary = {}
+var _bounds_appearance := ""
+var _bounds_facing := ""
+var _bounds_action := ""
+var _bounds_source_key := ""
+var _bounds_mount := ""
+var _bounds_visual_signature := ""
+var _occlusion_source_rect := Rect2i()
+var _occlusion_draw_rect := Rect2()
+var _occlusion_texture_size := Vector2.ZERO
+var _occlusion_flip_h := false
+var _occlusion_flip_v := false
+var _occlusion_local_rect := Rect2()
+var _occlusion_local_valid := false
 
 
 func _ready() -> void:
@@ -371,12 +384,27 @@ func set_world_visual_grade(grade: Dictionary) -> void:
 
 
 func get_visual_bounds_signature() -> String:
-	return "%s|%s|%s|%s" % [
-		appearance_id,
-		riding_form_id,
-		facing_key,
-		animation_state,
-	]
+	_formal_action_bounds_key()
+	if _bounds_visual_signature == "" or _bounds_mount != riding_form_id:
+		_bounds_mount = riding_form_id
+		_bounds_visual_signature = "%s|%s|%s|%s" % [
+			appearance_id, riding_form_id, facing_key, animation_state,
+		]
+	return _bounds_visual_signature
+
+
+func _formal_action_bounds_key() -> String:
+	if (
+		appearance_id != _bounds_appearance
+		or facing_key != _bounds_facing
+		or animation_state != _bounds_action
+	):
+		_bounds_appearance = appearance_id
+		_bounds_facing = facing_key
+		_bounds_action = animation_state
+		_bounds_source_key = "%s|%s|%s" % [appearance_id, facing_key, animation_state]
+		_bounds_visual_signature = ""
+	return _bounds_source_key
 
 
 func get_visual_bounds_source() -> String:
@@ -423,17 +451,42 @@ func get_occlusion_world_rect() -> Rect2:
 	if formal_asset_enabled and formal_sprite != null and formal_sprite.texture != null:
 		# Camera composition already caches full-action alpha bounds. Reuse them
 		# without scanning textures here; an unprepared action stays conservative.
-		var cache_key := "%s|%s|%s" % [appearance_id, facing_key, animation_state]
+		var cache_key := _formal_action_bounds_key()
 		if visual_source_bounds_cache.has(cache_key):
-			return _sprite_source_rect_to_world(
-				formal_sprite, visual_source_bounds_cache[cache_key] as Rect2i
-			)
+			return _cached_formal_occlusion_rect(visual_source_bounds_cache[cache_key] as Rect2i)
 		return _node_local_rect_to_world(formal_sprite, formal_sprite.get_rect())
 	return _node_local_rect_to_world(self, Rect2(Vector2(-22.0, -21.0), Vector2(44.0, 54.0)))
 
 
+func _cached_formal_occlusion_rect(source_rect: Rect2i) -> Rect2:
+	var draw_rect := formal_sprite.get_rect()
+	var texture_size := Vector2(formal_sprite.texture.get_size())
+	var flip_h := formal_sprite.flip_h
+	var flip_v := formal_sprite.flip_v
+	if (
+		not _occlusion_local_valid
+		or source_rect != _occlusion_source_rect
+		or draw_rect != _occlusion_draw_rect
+		or texture_size != _occlusion_texture_size
+		or flip_h != _occlusion_flip_h
+		or flip_v != _occlusion_flip_v
+	):
+		_occlusion_source_rect = source_rect
+		_occlusion_draw_rect = draw_rect
+		_occlusion_texture_size = texture_size
+		_occlusion_flip_h = flip_h
+		_occlusion_flip_v = flip_v
+		_occlusion_local_rect = _sprite_source_local_rect(
+			source_rect, texture_size, draw_rect, flip_h, flip_v
+		)
+		_occlusion_local_valid = true
+	# Only source-to-local geometry is retained. Always apply the live global
+	# transform so movement, parent transforms and reparenting stay immediate.
+	return _node_local_rect_to_world(formal_sprite, _occlusion_local_rect)
+
+
 func _formal_action_source_bounds() -> Rect2i:
-	var cache_key := "%s|%s|%s" % [appearance_id, facing_key, animation_state]
+	var cache_key := _formal_action_bounds_key()
 	if visual_source_bounds_cache.has(cache_key):
 		return visual_source_bounds_cache.get(cache_key, Rect2i()) as Rect2i
 	var combined := Rect2i()
@@ -471,24 +524,29 @@ static func _sprite_source_rect_to_world(
 ) -> Rect2:
 	if sprite == null or sprite.texture == null:
 		return Rect2()
-	var texture_size := Vector2(sprite.texture.get_size())
+	return _node_local_rect_to_world(sprite, _sprite_source_local_rect(
+		source_rect, Vector2(sprite.texture.get_size()), sprite.get_rect(), sprite.flip_h, sprite.flip_v
+	))
+
+
+static func _sprite_source_local_rect(
+	source_rect: Rect2i, texture_size: Vector2, draw_rect: Rect2, flip_h: bool, flip_v: bool
+) -> Rect2:
 	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
 		return Rect2()
-	var draw_rect := sprite.get_rect()
 	var normalized_source_position := Vector2(source_rect.position) / texture_size
-	if sprite.flip_h:
+	if flip_h:
 		normalized_source_position.x = (
 			texture_size.x - float(source_rect.end.x)
 		) / texture_size.x
-	if sprite.flip_v:
+	if flip_v:
 		normalized_source_position.y = (
 			texture_size.y - float(source_rect.end.y)
 		) / texture_size.y
-	var local_rect := Rect2(
+	return Rect2(
 		draw_rect.position + normalized_source_position * draw_rect.size,
 		Vector2(source_rect.size) / texture_size * draw_rect.size
 	)
-	return _node_local_rect_to_world(sprite, local_rect)
 
 
 static func _node_local_rect_to_world(node: Node2D, local_rect: Rect2) -> Rect2:
