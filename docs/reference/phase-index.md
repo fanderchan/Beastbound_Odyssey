@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **553** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **554** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 569 | [Phase 569：刷新当前四层洞穴与地标审片](../phase_569_current_four_floor_review.md) | 阶段记录 |
 | 568 | [Phase 568：保留有序地面几何，减少渲染命令开销](../phase_568_cached_ground_geometry.md) | 阶段记录 |
 | 567 | [Phase 567：提前加载同图队友的战斗动作](../phase_567_nearby_character_battle_prefetch.md) | 阶段记录 |
 | 566 | [Phase 566：战斗保留队友的权威人物外观](../phase_566_authoritative_battle_appearances.md) | 阶段记录 |

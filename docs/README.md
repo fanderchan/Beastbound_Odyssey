@@ -10,7 +10,7 @@
 | 想知道一个功能该改哪里 | [架构与功能定位](architecture.md) |
 | 启动项目、开始下一轮开发 | [开发流程](development.md) |
 | 判断该跑哪些检查 | [测试指南](testing.md) |
-| 试玩最新守护战、查看效果和成品差距 | [Phase 557 四层与五人守护战复验](phase_557_current_cave_and_guardian_review.md)、[Phase 547 试玩入口与守护战表现](phase_547_earth_guardian_battle_presentation.md)、[项目现状与剩余门槛](project-status.md) |
+| 试玩最新守护战、查看效果和成品差距 | [当前四层／地标／五人战斗预览与试玩入口](phase_569_current_four_floor_review.md)、[项目现状与剩余门槛](project-status.md)；历史鼠标复验见 [Phase 557](phase_557_current_cave_and_guardian_review.md) |
 | 继续整理大文件和技术债 | [维护清单](maintenance.md) |
 | 按文件找代码、数据、脚本 | [自动代码索引](reference/code-index.md) |
 | 查某项规则为何这样设计 | [自动阶段索引](reference/phase-index.md) |

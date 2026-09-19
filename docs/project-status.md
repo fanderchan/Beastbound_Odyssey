@@ -39,7 +39,7 @@ git log -5 --oneline
 产品范围由 [总路线图](../stoneage_gap_plan.md) 负责，逐步交付由 [生产发布计划](../production_release_loop_plan.md) 负责。两者现在都以主目录为准，旧目录的游标不再驱动开发。
 
 1. **统一基线已恢复**：历史成果和文档导航已核对；完整服务端 1984 项通过、0 失败、1 项因未配置独立 Valkey 环境跳过，客户端定向 8/8 通过。
-2. **一场守护战已形成可试玩、可审看的候选**：正式客户端已接入已有宠物动作和原创洞穴战场背景，修复地标挡人及人物倒下后漏交宠物指令。最新 [Phase 557](phase_557_current_cave_and_guardian_review.md) 已用真实鼠标完成挑战、人物攻击、宠物技能、蓄力防御、胜利返回和背包奖励检查；一个真实 Main 加四个 HTTP 测试队友，五账号均 `revision 102→103`、地之戒 `+1`、石币 `+256`。这不是五真人或平衡验收。[Phase 566](phase_566_authoritative_battle_appearances.md) 已修复战斗投影漏掉人物外观，当前四套人物的完整五账号自动实机试玩、倒地宠物操作和奖励再次通过；当前联网鼠标复核仍待补齐。试玩命令及美术来源见 [Phase 547](phase_547_earth_guardian_battle_presentation.md)。老板美术接受与四层完整性能仍待完成，发布游标保持 `R1.W024`。
+2. **一场守护战已形成可试玩、可审看的候选**：正式客户端已接入已有宠物动作和原创洞穴战场背景，修复地标挡人及人物倒下后漏交宠物指令。[Phase 557](phase_557_current_cave_and_guardian_review.md) 曾用真实鼠标完成挑战、人物攻击、宠物技能、蓄力防御、胜利返回和背包奖励检查；一个真实 Main 加四个 HTTP 测试队友，五账号均 `revision 102→103`、地之戒 `+1`、石币 `+256`。这不是五真人或平衡验收。[Phase 566](phase_566_authoritative_battle_appearances.md) 已修复战斗投影漏掉人物外观，当前四套人物的完整五账号自动实机试玩、倒地宠物操作和奖励再次通过；当前联网鼠标复核仍待补齐。最新四层／地标／战斗预览和试玩命令集中在 [Phase 569](phase_569_current_four_floor_review.md)，美术来源见 [Phase 547](phase_547_earth_guardian_battle_presentation.md)。老板美术接受与四层完整性能仍待完成，发布游标保持 `R1.W024`。
 3. **首次切战卡顿已明显改善，代码已同步 GitHub**：[Phase 548](phase_548_battle_hotpaths_and_authoritative_completion.md) 修复了人物击飞后提前胜利并减少绘制开销；[Phase 549](phase_549_battle_texture_prefetch_and_github_sync.md) 增加有界后台贴图预取，同一五人守护战的新进程首次准备由约 1002 ms 降到两轮约 10 ms。两场权威胜利与五账号奖励到账通过，严格原生前台性能两次通过，最终世界性能探针 `5/5`。此前各阶段已按功能提交推送 GitHub main；107 项待重冻地图证据继续在本地保留。未知形态或立即开战仍可能走同步加载，不能把这个场景的结果推广成全游戏无卡顿。
 4. **依次推进成品门槛**：继续 R1.W024 的当前源码精确地图证据、真实操作、集中式重复移动性能和路线/战斗转换验证，再推进剩余视听验收、首发内容、玩法/经济、运营基础设施、正式构建和封测；每次交付都带具体效果或可复现结果。
 
@@ -48,7 +48,7 @@ git log -5 --oneline
 | 当前事项 | 已有证据 | 仍需完成 |
 | --- | --- | --- |
 | 人物比例、遮挡与地标构图 | [Phase 555](phase_555_world_prop_player_visibility.md) 修复前景物件挡人；[Phase 556](phase_556_guardian_navigation_camera.md) 修复四层守护者实际到达格与展开消息窗后的裁切，原生端点／导航 `12/12` | 后续源码已变化，按当前版本重冻画面；外围环境物件不能冒充全部无遮挡 |
-| 四层路线与五人守护战 | [Phase 557](phase_557_current_cave_and_guardian_review.md) 取得 20 对自动截图、四层／地标原速片、碰撞及 20 项真实鼠标证据，并完成五账号权威奖励复核 | 这些属于当时版本；当前 107 项本地候选文件继续保留，尚未成为当前源码的完整精确冻结证据 |
+| 四层路线与五人守护战 | [Phase 557](phase_557_current_cave_and_guardian_review.md) 保留当时 20 项真实鼠标及五账号奖励观察；[Phase 569](phase_569_current_four_floor_review.md) 已在地面优化后的当前源码重录四层／地标，原生与录像各 `9/9`、104 项哈希复核通过，关联当前源码一致的五账号战斗片 | 当前 20 项动作／鼠标配对及前台性能仍待完成；107 项本地候选文件继续保留，尚未成为当前源码的完整精确冻结证据 |
 | 同屏队友外观与持续可见性 | [Phase 563](phase_563_remote_player_appearance.md) 接通权威外观、八向动画、相同比例、点击范围和提交后骑乘通知；[Phase 564](phase_564_idle_online_presence_refresh.md) 修复静止定时刷新误隐藏人物，真实 HTTP/WS 旁观回归通过，服务端 `48/48`、客户端 `5/5` | 补做当前联网客户端点击、上下骑和切图的人工视觉复核；自动回归及展示片不代表五真人联机或 200 人容量 |
 | 四套战斗人物与首场加载 | [Phase 566](phase_566_authoritative_battle_appearances.md) 修复权威外观丢失；[Phase 567](phase_567_nearby_character_battle_prefetch.md) 补齐同图人物预取，首次准备 `430.989→9.700ms`，客户端 `4/4`，完整原生五账号奖励再次通过；录制休眠中断已处理 | 立刻开战或尚未进入预取的人物仍可能同步加载；原生鼠标、正常前台性能和所有者接受继续待完成 |
 | 原生地图性能 | [Phase 559](phase_559_world_depth_and_bounds_hotpaths.md) 取得完整 48 组可绘制、零失焦样本；四层绝对处理耗时达标 | **总评仍 FAIL**：四层静止增量、二三层移动增量超门槛，不能改写旧回执或只挑合格样本 |
