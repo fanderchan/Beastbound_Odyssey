@@ -38,6 +38,8 @@ flowchart TD
 
 启用美术的地图由 [WorldGroundLayer](../client/godot/scripts/world/world_ground_layer.gd) 保留背景和地面绘制。[MapGroundMesh](../client/godot/scripts/world/map_ground_mesh.gd) 按原图集与叠放顺序合并地面几何，只在地图修订变化时重建；背景范围变化只刷新绘制，特殊裁切／翻转和子图集继续走原区域绘制器。路径等动态反馈仍由 Main 绘制，人物与物件由 WorldDepthLayer 排序。未启用美术继续走原网格回退。变更地面数据时必须沿用地图修订失效链路，避免只重绘 Main 而留下旧缓存。
 
+[BattleTexturePrefetcher](../client/godot/scripts/battle/battle_texture_prefetcher.gd) 预取当前地图、宠物和同屏人物的战斗贴图。每个成功提交的线程请求必须领取一次结果，包括加载失败的请求；切图取消保持异步，节点退出才等待并回收剩余最多四个请求，见 [Phase 570](phase_570_prefetch_request_cleanup.md)。
+
 ## 服务端的职责边界
 
 | 位置 | 职责 |

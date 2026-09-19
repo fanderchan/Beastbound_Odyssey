@@ -10,6 +10,7 @@ class FakeLoader:
 	var states: Dictionary = {}
 	var gets: Array[String] = []
 	var bad_get := false
+	var allow_blocking_get := false
 	var texture := ImageTexture.new()
 	func background_loading_supported() -> bool:
 		return true
@@ -21,10 +22,19 @@ class FakeLoader:
 	func _load_status(path: String) -> int:
 		return int(states.get(path, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE))
 	func _loaded_texture(path: String) -> Texture2D:
-		bad_get = bad_get or _load_status(path) != ResourceLoader.THREAD_LOAD_LOADED
+		var status := _load_status(path)
+		bad_get = bad_get or (status == ResourceLoader.THREAD_LOAD_IN_PROGRESS and not allow_blocking_get)
 		gets.append(path)
-		return texture
+		states.erase(path)
+		return null if status == ResourceLoader.THREAD_LOAD_FAILED else texture
 	func _cached_texture(_path: String) -> Texture2D:
+		return null
+
+
+class NativeRequestLoader:
+	extends "res://scripts/battle/battle_texture_prefetcher.gd"
+	func _cached_texture(_path: String) -> Texture2D:
+		# Request even cached assets so teardown must claim real engine tokens.
 		return null
 
 
@@ -52,14 +62,15 @@ static func run(host) -> Array[String]:
 		errors.append("map change retained obsolete textures or duplicate paths")
 	fake.states["res://assets/new-map.png"] = ResourceLoader.THREAD_LOAD_FAILED
 	fake.pump()
-	if int(fake.snapshot().failed) != 1 or fake.bad_get:
-		errors.append("failed threaded load was fetched or silently accepted")
+	if int(fake.snapshot().failed) != 1 or fake.bad_get or fake.states.has("res://assets/new-map.png"):
+		errors.append("failed threaded load was not released or was silently accepted")
 	fake.set_paths(PackedStringArray(["res://assets/reject.png"]))
 	fake.pump()
 	if int(fake.snapshot().failed) != 1 or fake.is_processing():
 		errors.append("rejected request left the queue running")
 	fake.cancel()
 	fake.free()
+	_append_teardown_errors(errors, host)
 
 	var pending := "bui_normal_red_fire10"
 	var was_preview := Art.is_qa_preview_enabled(pending)
@@ -110,8 +121,45 @@ static func run(host) -> Array[String]:
 	real.cancel()
 	real.queue_free()
 	await host.get_tree().process_frame
+	var exiting := NativeRequestLoader.new()
+	host.add_child(exiting)
+	exiting.set_paths(real_paths.slice(0, Prefetch.MAX_IN_FLIGHT))
+	exiting.pump()
+	if int(exiting.snapshot().inFlight) != Prefetch.MAX_IN_FLIGHT:
+		errors.append("native exit check did not start four owned loads")
+	exiting.free()
+	for path in real_paths.slice(0, Prefetch.MAX_IN_FLIGHT):
+		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			errors.append("native exit left an unclaimed engine load token: " + path)
 	print("battle texture prefetch check: status=%s engine=%s errors=%s" % ["passed" if errors.is_empty() else "failed", str(report), str(errors)])
 	return errors
+
+
+static func _append_teardown_errors(errors: Array[String], host) -> void:
+	var exiting := FakeLoader.new()
+	host.add_child(exiting)
+	var paths := PackedStringArray()
+	for index in range(Prefetch.MAX_IN_FLIGHT + 2):
+		paths.append("res://assets/exit-check-%d.png" % index)
+	exiting.set_paths(paths)
+	exiting.pump()
+	var started := exiting.states.keys()
+	if started.size() != Prefetch.MAX_IN_FLIGHT:
+		errors.append("exit check did not fill the bounded request window")
+	exiting.cancel()
+	if not exiting.gets.is_empty() or not exiting.is_processing():
+		errors.append("normal cancellation blocked or abandoned unfinished loads")
+	exiting.allow_blocking_get = true
+	host.remove_child(exiting)
+	if exiting.gets.size() != started.size() or not exiting.states.is_empty():
+		errors.append("tree exit did not claim every owned load exactly once")
+	if exiting.snapshot().inFlight != 0 or exiting.snapshot().queued != 0 or exiting.is_processing():
+		errors.append("tree exit left prefetch work active")
+	host.add_child(exiting)
+	host.remove_child(exiting)
+	if exiting.gets.size() != started.size():
+		errors.append("repeated tree exit reclaimed an already released load")
+	exiting.free()
 
 
 static func _append_nearby_character_errors(errors: Array[String], source_map: Dictionary, profile: Dictionary) -> void:

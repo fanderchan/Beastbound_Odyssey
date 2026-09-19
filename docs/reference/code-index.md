@@ -85,9 +85,9 @@
 | [battle_skill_feedback_renderer.gd](../../client/godot/scripts/battle/battle_skill_feedback_renderer.gd) | 848 |
 | [battle_spectator_ai_model.gd](../../client/godot/scripts/battle/battle_spectator_ai_model.gd) | 538 |
 | [battle_status_model.gd](../../client/godot/scripts/battle/battle_status_model.gd) | 170 |
-| [battle_texture_prefetch_check.gd](../../client/godot/scripts/battle/battle_texture_prefetch_check.gd) | 156 |
+| [battle_texture_prefetch_check.gd](../../client/godot/scripts/battle/battle_texture_prefetch_check.gd) | 204 |
 | [battle_texture_prefetch_plan.gd](../../client/godot/scripts/battle/battle_texture_prefetch_plan.gd) | 71 |
-| [battle_texture_prefetcher.gd](../../client/godot/scripts/battle/battle_texture_prefetcher.gd) | 132 |
+| [battle_texture_prefetcher.gd](../../client/godot/scripts/battle/battle_texture_prefetcher.gd) | 147 |
 | [battle_visual_presentation_model.gd](../../client/godot/scripts/battle/battle_visual_presentation_model.gd) | 308 |
 | [capture_tool_catalog.gd](../../client/godot/scripts/battle/capture_tool_catalog.gd) | 195 |
 | [mounted_battle_presentation_model.gd](../../client/godot/scripts/battle/mounted_battle_presentation_model.gd) | 118 |

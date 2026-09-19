@@ -20,6 +20,19 @@ func _init() -> void:
 	set_process(false)
 
 
+func _exit_tree() -> void:
+	cancel()
+	var pending := _in_flight.keys()
+	_in_flight.clear()
+	set_process(false)
+	# Each accepted request owns a loader token until get() claims it, even
+	# after failure. Only teardown may wait for these at most four local loads;
+	# normal map changes keep draining asynchronously through pump().
+	for path in pending:
+		if _load_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			_loaded_texture(path)
+
+
 func configure(map_data: Dictionary, profile: Dictionary, nearby_players: Array = []) -> void:
 	if not background_loading_supported():
 		cancel()
@@ -79,6 +92,8 @@ func pump() -> void:
 			if _wanted.has(path) and texture != null:
 				_resident[path] = texture
 		else:
+			if status == ResourceLoader.THREAD_LOAD_FAILED:
+				_loaded_texture(path)
 			_failed += 1
 		operations += 1
 		if Time.get_ticks_usec() - started >= STEP_BUDGET_USEC:
