@@ -14,6 +14,24 @@ static func validation_errors() -> Array[String]:
 	var guardian_state := {"sourceEncounterGroupId": "earth_vein_guardian_group"}
 	if BattleArenaVisualCatalog.enable_earth_guardian_review_from_cli():
 		errors.append("ordinary auto-check must not enable the interactive arena preview")
+	if BattleArenaVisualCatalog.enable_earth_cave_review_from_cli():
+		errors.append("ordinary auto-check must not enable cave journey review")
+	for map_id in BattleArenaVisualCatalog.EARTH_CAVE_REVIEW_MAPS:
+		var cave_state := {"serverRoom": {"mode": "party_pve", "entry": {"mapId": map_id}}}
+		if not BattleArenaVisualCatalog._is_earth_cave_encounter(cave_state):
+			errors.append("cave journey omitted authoritative floor: %s" % map_id)
+		if not BattleArenaVisualCatalog.evidence_for_state(cave_state).is_empty():
+			errors.append("cave journey art escaped its explicit preview flag")
+	for invalid in [
+		{}, {"serverRoom": null}, {"serverRoom": []},
+		{"sourceMapId": "earth_vein_cave_f3"},
+		{"serverRoom": {"mode": "party_pve", "entry": null}},
+		{"serverRoom": {"mode": "duel", "entry": {"mapId": "earth_vein_cave_f3"}}},
+		{"serverRoom": {"mode": "party_pve", "entry": {"mapId": "tide_echo_cave_f3"}}},
+		{"serverRoom": {"mode": "party_pve", "entry": {"mapId": "earth_vein_cave_f5"}}},
+	]:
+		if BattleArenaVisualCatalog._is_earth_cave_encounter(invalid):
+			errors.append("cave journey accepted an unrelated or malformed location")
 	for state in [guardian_state, {"reviewLab": true, "reviewArenaId": "earth_vein_sanctum"}, {"battleArenaOwnerReviewId": "earth_vein_sanctum"}]:
 		if BattleArenaVisualCatalog.texture_for_state(state, true) != null:
 			errors.append("guardian arena escaped its dedicated isolated preview")

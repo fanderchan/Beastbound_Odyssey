@@ -60,10 +60,13 @@ def main() -> None:
     parser.add_argument("--godot", default="godot")
     parser.add_argument("--record", action="store_true")
     parser.add_argument("--autoplay", action="store_true", help="run disclosed in-engine input checks; not Computer Use acceptance")
+    parser.add_argument("--cave-journey", action="store_true", help="also preview existing candidate art in ordinary cave encounters; continue playing after the guardian")
     parser.add_argument("--timeout-seconds", type=int, default=900)
     args = parser.parse_args()
     if not 30 <= args.timeout_seconds <= 3600:
         parser.error("timeout must be between 30 and 3600 seconds")
+    if args.cave_journey and args.autoplay:
+        parser.error("--cave-journey is interactive; --autoplay stops after the guardian")
     godot = shutil.which(args.godot)
     if not godot:
         parser.error("Godot executable not found")
@@ -95,6 +98,8 @@ def main() -> None:
                 command += ["--write-movie", str(run / "guardian.avi"), "--fixed-fps", "30", "--max-fps", "30", "--disable-vsync"]
             command += ["--", "--qa-viewport=1280x720", "--map-art-review-preview",
                 "--earth-guardian-review", "--auth-server-url=" + fixture["baseUrl"], core.QA_LANE_ARGUMENT]
+            if args.cave_journey:
+                command.append("--earth-cave-review")
 
             def validate(log_path: Path) -> dict:
                 if (run / "backend-failure.json").exists() or backend.poll() is not None:

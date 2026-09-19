@@ -13,6 +13,10 @@ var stop_requested := false
 var started_msec := 0
 var autoplay_running := false
 var expected_world_players: Array = []
+var preview_forms: Array[String] = [
+	"bui_normal_red_fire10", "wuli_normal_tough_earth10",
+	"wuli_normal_orange_fire10", "wuli_normal_fast_wind10",
+]
 
 func _initialize() -> void:
 	if not OS.has_feature("beastbound_qa_automation") or not OS.get_cmdline_user_args().has("--beastbound-qa-user-data-lane=automation") or OS.get_user_data_dir().get_file() != "BeastboundOdysseyQA_Automation" or out.is_empty():
@@ -54,7 +58,14 @@ func _run() -> void:
 		push_error("Guardian arena preview gate refused isolated entry")
 		quit(2)
 		return
-	for form_id in ["bui_normal_red_fire10", "wuli_normal_tough_earth10", "wuli_normal_orange_fire10", "wuli_normal_fast_wind10"]:
+	var cave_journey := OS.get_cmdline_user_args().has(Arena.EARTH_CAVE_REVIEW_FLAG)
+	if cave_journey:
+		if not Arena.enable_earth_cave_review_from_cli():
+			push_error("Cave journey preview gate refused isolated entry")
+			quit(2)
+			return
+		preview_forms.append("mossback_sunbaked_earth6_fire4")
+	for form_id in preview_forms:
 		if not Art.enable_qa_preview_form(form_id):
 			push_error("Guardian exact-form preview refused: " + form_id)
 			quit(2)
@@ -79,20 +90,15 @@ func _run() -> void:
 	host._begin_perf_probe_measurement()
 	host._start_server_event_stream_if_needed()
 	host._start_online_position_sync_if_needed()
-	_write("fixture.json", {"scope": "isolated memory backend; one real Main client and four headless QA account drivers; authentic server encounter, rules and settlement; not human multiplayer or balance acceptance", "level": profile["player"]["level"], "profile": profile, "pid": OS.get_process_id(), "viewport": [1280, 720], "userData": OS.get_user_data_dir()})
+	_write("fixture.json", {"scope": "isolated memory backend; one real Main client and four headless QA account drivers; authentic server encounter, rules and settlement; not human multiplayer or balance acceptance", "caveJourneyReview": cave_journey, "previewForms": preview_forms, "level": profile["player"]["level"], "profile": profile, "pid": OS.get_process_id(), "viewport": [1280, 720], "userData": OS.get_user_data_dir()})
 	print("GUARDIAN_REVIEW_READY")
 	if OS.get_environment("BEASTBOUND_GUARDIAN_AUTOPLAY") == "1":
 		autoplay_running = true
 		call_deferred("_run_autoplay")
+	# Online movement already consumes authoritative encounter permits while
+	# candidate art is previewed. Never toggle the visual flag to enable battles:
+	# doing so reloads later floors as the fallback grid and changes camera scale.
 	while not stop_requested and not FileAccess.file_exists(out.path_join("stop")) and Time.get_ticks_msec() - started_msec < int(OS.get_environment("BEASTBOUND_GUARDIAN_REVIEW_SECONDS")) * 1000:
-		if FileAccess.file_exists(out.path_join("encounters-on")):
-			host.map_art_review_preview = false
-			DirAccess.remove_absolute(out.path_join("encounters-on"))
-			print("GUARDIAN_REVIEW natural encounters enabled; existing visual cache preserved")
-		if FileAccess.file_exists(out.path_join("encounters-off")):
-			host.map_art_review_preview = true
-			DirAccess.remove_absolute(out.path_join("encounters-off"))
-			print("GUARDIAN_REVIEW art preview resumed")
 		var state := _state()
 		var stream := FileAccess.open(out.path_join("states.ndjson"), FileAccess.READ_WRITE if FileAccess.file_exists(out.path_join("states.ndjson")) else FileAccess.WRITE)
 		stream.seek_end()
@@ -121,7 +127,8 @@ func _run() -> void:
 	host._stop_server_event_stream()
 	host._stop_online_position_sync()
 	Arena.disable_earth_guardian_review()
-	for form_id in ["bui_normal_red_fire10", "wuli_normal_tough_earth10", "wuli_normal_orange_fire10", "wuli_normal_fast_wind10"]:
+	Arena.disable_earth_cave_review()
+	for form_id in preview_forms:
 		Art.disable_qa_preview_form(form_id)
 	var cleanup: Dictionary = await ExitCleanup.drain_audio(host)
 	_write("audio-cleanup.json", cleanup)
@@ -140,7 +147,8 @@ func _state() -> Dictionary:
 	var cell: Vector2i = Iso.world_to_grid(host.map_data, host.player.global_position)
 	var battle: Dictionary = host.battle_state
 	var room: Dictionary = battle.get("serverRoom", {})
-	return {"unixTime": Time.get_unix_time_from_system(), "frame": Engine.get_process_frames(), "map": host.current_map_id, "cell": [cell.x, cell.y], "battle": host.battle_active, "dialog": host._dialog_is_open(), "artPreview": host.map_art_review_preview, "serverSession": host._is_server_account_session(), "saving": host.profile_save_enabled, "round": battle.get("round", 0), "phase": battle.get("phase", ""), "actorCount": (battle.get("actors", []) as Array).size(), "participantCount": (room.get("participants", []) as Array).size(), "serverAuthority": battle.get("serverAuthority", false), "arenaEvidence": Arena.evidence_for_state(battle), "scene": host.scene_file_path, "worldLog": host.world_log_message, "playerHp": (host.player_profile.get("player", {}) as Dictionary).get("hp"), "profileRevision": host.server_profile_sync_expected_revision, "perf": host._perf_probe_frame_snapshot_for_qa()}
+	var zoom: Vector2 = host.game_camera.zoom
+	return {"unixTime": Time.get_unix_time_from_system(), "frame": Engine.get_process_frames(), "map": host.current_map_id, "cell": [cell.x, cell.y], "battle": host.battle_active, "dialog": host._dialog_is_open(), "resultPanel": host.battle_result_panel.visible, "artPreview": host.map_art_review_preview, "mapVisualBundleId": host.map_visual_render_state.get("bundleId", ""), "mapVisualActive": host.map_visual_render_state.get("active", false), "cameraZoom": [zoom.x, zoom.y], "serverSession": host._is_server_account_session(), "saving": host.profile_save_enabled, "round": battle.get("round", 0), "phase": battle.get("phase", ""), "actorCount": (battle.get("actors", []) as Array).size(), "participantCount": (room.get("participants", []) as Array).size(), "serverAuthority": battle.get("serverAuthority", false), "arenaEvidence": Arena.evidence_for_state(battle), "scene": host.scene_file_path, "worldLog": host.world_log_message, "playerHp": (host.player_profile.get("player", {}) as Dictionary).get("hp"), "profileRevision": host.server_profile_sync_expected_revision, "perf": host._perf_probe_frame_snapshot_for_qa()}
 
 func _write(name: String, value: Dictionary) -> void:
 	var file := FileAccess.open(out.path_join(name), FileAccess.WRITE)

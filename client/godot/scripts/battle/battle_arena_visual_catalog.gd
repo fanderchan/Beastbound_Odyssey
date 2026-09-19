@@ -9,6 +9,10 @@ const OWNER_REVIEW_BUNDLE_ID := "battle_review_arenas_v1"
 const OWNER_REVIEW_STATUS := "pending"
 const EARTH_VEIN_SANCTUM_ID := "earth_vein_sanctum"
 const EARTH_GUARDIAN_REVIEW_FLAG := "--earth-guardian-review"
+const EARTH_CAVE_REVIEW_FLAG := "--earth-cave-review"
+const EARTH_CAVE_REVIEW_MAPS: Array[String] = [
+	"earth_vein_cave", "earth_vein_cave_f2", "earth_vein_cave_f3", "earth_vein_cave_f4",
+]
 
 # The exploration map and the released arena rotation remain unchanged.
 # This exact encounter candidate is available only inside the isolated playtest.
@@ -54,14 +58,27 @@ const ARENAS: Array[Dictionary] = [
 
 static var _texture_cache: Dictionary = {}
 static var _earth_guardian_review_enabled := false
+static var _earth_cave_review_enabled := false
 
 
 static func enable_earth_guardian_review_from_cli() -> bool:
 	disable_earth_guardian_review()
+	_earth_guardian_review_enabled = _enable_isolated_cave_arena(EARTH_GUARDIAN_REVIEW_FLAG)
+	return _earth_guardian_review_enabled
+
+
+static func enable_earth_cave_review_from_cli() -> bool:
+	disable_earth_cave_review()
+	_earth_cave_review_enabled = _enable_isolated_cave_arena(EARTH_CAVE_REVIEW_FLAG)
+	return _earth_cave_review_enabled
+
+
+static func _enable_isolated_cave_arena(flag: String) -> bool:
 	var args := OS.get_cmdline_user_args()
 	if (
 		not OS.is_debug_build()
-		or not args.has(EARTH_GUARDIAN_REVIEW_FLAG)
+		or not OS.has_feature("beastbound_qa_automation")
+		or not args.has(flag)
 		or not args.has("--beastbound-qa-user-data-lane=automation")
 		or OS.get_user_data_dir().get_file() != "BeastboundOdysseyQA_Automation"
 	):
@@ -70,12 +87,16 @@ static func enable_earth_guardian_review_from_cli() -> bool:
 	if FileAccess.get_sha256(str(arena.get("path", ""))) != str(arena.get("sha256", "")):
 		return false
 	var texture := _texture_for_arena(arena, true)
-	_earth_guardian_review_enabled = texture != null and texture.get_size() == Vector2(1280, 720)
-	return _earth_guardian_review_enabled
+	return texture != null and texture.get_size() == Vector2(1280, 720)
 
 
 static func disable_earth_guardian_review() -> void:
 	_earth_guardian_review_enabled = false
+	_texture_cache.erase(EARTH_VEIN_SANCTUM_ID)
+
+
+static func disable_earth_cave_review() -> void:
+	_earth_cave_review_enabled = false
 	_texture_cache.erase(EARTH_VEIN_SANCTUM_ID)
 
 
@@ -207,6 +228,8 @@ static func _arena_id_for_state(
 	state: Dictionary,
 	allow_owner_review_preview: bool
 ) -> String:
+	if _earth_cave_review_enabled and _is_earth_cave_encounter(state):
+		return EARTH_VEIN_SANCTUM_ID
 	if (
 		_earth_guardian_review_enabled
 		and _is_earth_guardian_encounter(state)
@@ -219,6 +242,16 @@ static func _arena_id_for_state(
 		var review_id := str(state.get(OWNER_REVIEW_ARENA_ID_KEY, ""))
 		return "" if review_id == EARTH_VEIN_SANCTUM_ID and not _earth_guardian_review_enabled else review_id
 	return ""
+
+
+static func _is_earth_cave_encounter(state: Dictionary) -> bool:
+	# Only authoritative online PvE locations choose this optional review art.
+	# No form substitution, map mutation or published-asset decision is involved.
+	var room = state.get("serverRoom", {})
+	if not (room is Dictionary) or str(room.get("mode", "")) != "party_pve":
+		return false
+	var entry = room.get("entry", {})
+	return entry is Dictionary and EARTH_CAVE_REVIEW_MAPS.has(str(entry.get("mapId", "")))
 
 
 static func _is_earth_guardian_encounter(state: Dictionary) -> bool:

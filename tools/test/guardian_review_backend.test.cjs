@@ -9,6 +9,8 @@ const http = require("node:http");
 const {once} = require("node:events");
 const {protocolMetadata} = require("../../server/node/src/protocol");
 const {startGuardianReview, ENCOUNTER} = require("../guardian_review_backend.cjs");
+const {createPetEncounterAuthority} = require("../../server/node/src/auth/pet-encounter-authority");
+const {createPetEncounterPermitAuthority} = require("../../server/node/src/auth/pet-encounter-permit-authority");
 
 test("guardian review uses five HTTP accounts, authoritative encounters and settled profiles", {timeout: 60000}, async () => {
   const directory = path.resolve(__dirname, "../../.run", `guardian-review-test-${crypto.randomUUID()}`);
@@ -92,6 +94,57 @@ test("guardian transport failure preserves diagnostics without retrying a mutati
     assert.equal(row.bytesRead, 100);
   } finally {
     globalThis.fetch = originalFetch;
+    await review.close();
+  }
+});
+
+test("review teammates continue in a second room and preserve both closures", {timeout: 60000}, async () => {
+  const directory = path.resolve(__dirname, "../../.run", `guardian-review-continuation-${crypto.randomUUID()}`);
+  const review = await startGuardianReview(directory, {encounterPermitAuthority: createPetEncounterPermitAuthority({
+    catalog: createPetEncounterAuthority().catalog, randomFloat: () => 0, eligibleStepIntervalMs: 0,
+  })});
+  try {
+    const first = await review.request(0, "/battle/party-encounter", ENCOUNTER);
+    for (let tick = 0; tick < 80 && review.closedRoom()?.roomId !== first.room.roomId; tick++) {
+      await review.tick({includeLeader: true});
+    }
+    assert.equal(review.closedRoom()?.roomId, first.room.roomId);
+    // Use real accepted movement and a server-issued permit, not a second ring
+    // challenge (which correctly rejects a repeat claim in this rebirth cycle).
+    for (let index = 0; index < 5; index++) {
+      await review.request(index, "/players/position", {
+        mapId: "earth_vein_cave_f3", cellX: 13, cellY: 13, facing: "south", moving: false,
+      });
+    }
+    let permit;
+    for (const [fromCellX, fromCellY, toCellX, toCellY] of [
+      [13, 13, 14, 13], [14, 13, 14, 14], [14, 14, 13, 14],
+    ]) {
+      const moved = await review.request(0, "/movement/step", {
+        mapId: "earth_vein_cave_f3", fromCellX, fromCellY, toCellX, toCellY, facing: "south", moving: true,
+      });
+      permit = moved.encounterPermit || permit;
+    }
+    assert.equal(typeof permit?.token, "string");
+    const second = await review.request(0, "/battle/party-encounter", {
+      encounterIntent: {zoneId: permit.zoneId, encounterGroupId: permit.encounterGroupId},
+      encounterPermitToken: permit.token,
+    });
+    assert.notEqual(second.room.roomId, first.room.roomId);
+    await review.tick();
+    const current = (await review.request(0, "/battle/state")).room;
+    assert.ok(current.battle.submittedActorIds.length > 0,
+      "a previous closed room must not silence the teammates in the next encounter");
+    for (let tick = 0; tick < 80 && review.closedRoom()?.roomId !== second.room.roomId; tick++) {
+      await review.tick({includeLeader: true});
+    }
+    assert.equal(review.closedRoom()?.roomId, second.room.roomId,
+      "ordinary HTTP commands must finish the second battle without stale submissions");
+    const closures = fs.readFileSync(path.join(directory, "closed-rooms.ndjson"), "utf8")
+      .trim().split("\n").map(line => JSON.parse(line).room);
+    assert.deepEqual(closures.map(room => room.roomId), [first.room.roomId, second.room.roomId]);
+    assert.ok(closures.every(room => room.status === "closed"));
+  } finally {
     await review.close();
   }
 });

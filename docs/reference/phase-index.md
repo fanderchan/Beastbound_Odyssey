@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **565** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **566** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 581 | [Phase 581：连续洞穴试玩与战斗结算点击修复](../phase_581_cave_journey_visuals_and_result_input.md) | 阶段记录 |
 | 580 | [Phase 580：当前五人守护战鼠标通关与静止耗时诊断](../phase_580_current_guardian_mouse_review.md) | 阶段记录 |
 | 579 | [Phase 579：当前洞穴完整性能与动作截图复核](../phase_579_current_cave_evidence.md) | 阶段记录 |
 | 578 | [Phase 578：合并地图相机策略判断](../phase_578_camera_policy_dispatch.md) | 阶段记录 |

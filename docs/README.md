@@ -10,7 +10,7 @@
 | 想知道一个功能该改哪里 | [架构与功能定位](architecture.md) |
 | 启动项目、开始下一轮开发 | [开发流程](development.md) |
 | 判断该跑哪些检查 | [测试指南](testing.md) |
-| 试玩最新守护战、查看效果和成品差距 | [四层／地标／五人战斗预览与试玩入口](phase_569_current_four_floor_review.md)、[当前守护战鼠标通关与剩余缺口](phase_580_current_guardian_mouse_review.md)、[当前四层截图与完整性能](phase_579_current_cave_evidence.md)、[四层鼠标操作记录](phase_571_current_cave_input_and_performance.md)、[正常时钟 CPU 对照](phase_576_cave_native_cpu_and_full_matrix.md)、[项目现状与剩余门槛](project-status.md) |
+| 试玩最新洞穴和守护战、查看效果和成品差距 | [连续洞穴试玩、结算点击修复与剩余同步问题](phase_581_cave_journey_visuals_and_result_input.md)、[四层／地标／五人战斗预览与试玩入口](phase_569_current_four_floor_review.md)、[当前守护战鼠标通关](phase_580_current_guardian_mouse_review.md)、[当前四层截图与完整性能](phase_579_current_cave_evidence.md)、[项目现状与剩余门槛](project-status.md) |
 | 继续整理大文件和技术债 | [维护清单](maintenance.md) |
 | 按文件找代码、数据、脚本 | [自动代码索引](reference/code-index.md) |
 | 查某项规则为何这样设计 | [自动阶段索引](reference/phase-index.md) |

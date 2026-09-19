@@ -22,7 +22,7 @@ function checked(result) {
   return result;
 }
 
-function seedParty() {
+function seedParty({encounterPermitAuthority} = {}) {
   const seed = createAuthService({store: createMemoryAuthStore(), allowFullProfileSave: true,
     autoCreateInitialCharacterForTests: true,
     initialCharacterElementsForTests: {earth: 10, water: 0, fire: 0, wind: 0}});
@@ -59,7 +59,8 @@ function seedParty() {
   snapshot.gmUserGrants = {};
   snapshot.gmCommandGrants = {};
   const store = createMemoryAuthStore(snapshot);
-  const service = createAuthService({store, allowPositionTeleport: true, allowFullProfileSave: false});
+  const service = createAuthService({store, allowPositionTeleport: true, allowFullProfileSave: false,
+    petEncounterPermitAuthority: encounterPermitAuthority});
   // Pre-listen fixture setup ends here. Once HTTP starts, even bot presence uses HTTP.
   for (const [index, member] of members.entries()) checked(service.updatePlayerPosition(member.session.token, POSITIONS[index]));
   for (const member of members.slice(1)) {
@@ -69,19 +70,22 @@ function seedParty() {
   return {service, store, members};
 }
 
-async function startGuardianReview(outputDir) {
+async function startGuardianReview(outputDir, {encounterPermitAuthority} = {}) {
   fs.mkdirSync(outputDir, {mode: 0o700});
   const write = (name, data) => fs.writeFileSync(path.join(outputDir, name), JSON.stringify(data, null, 2), {mode: 0o600});
   const append = (name, data) => fs.appendFileSync(path.join(outputDir, name), JSON.stringify(data) + "\n", {mode: 0o600});
-  const {service, store, members} = seedParty();
+  const {service, store, members} = seedParty({encounterPermitAuthority});
   const server = createHttpServer({service, store});
   let closedRoom = null;
+  const closedRoomIds = new Set();
   const unsubscribe = service.onEvent((event) => {
     if (event.type === "battle.turn_resolved" || event.type === "battle.room_closed") {
       append("battle-events.ndjson", {at: Date.now(), event});
     }
     if (event.type === "battle.room_closed") {
       closedRoom = structuredClone(event.room);
+      closedRoomIds.add(closedRoom.roomId);
+      append("closed-rooms.ndjson", {at: Date.now(), room: closedRoom});
       write("closed-room.json", closedRoom);
     }
   });
@@ -91,7 +95,7 @@ async function startGuardianReview(outputDir) {
   });
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   async function request(index, route, payload) {
-    assert.match(route, /^\/(?:battle|players|profiles|party)\//);
+    assert.match(route, /^\/(?:battle|players|profiles|party|movement)\//);
     const method = payload === undefined ? "GET" : "POST";
     const started = performance.now();
     let response;
@@ -146,6 +150,7 @@ async function startGuardianReview(outputDir) {
     write("server-info.json", {pid: process.pid, baseUrl, storage: "memory", memberCount: 5,
       fixtureVersion: 3, characterHp: [520, 1040, 1040, 1040, 1040],
       fullProfileSaveEnabled: false, strictEncounterAuthority: true, strictManualAccess: true,
+      encounterPermitSource: encounterPermitAuthority ? "injected_test_authority" : "runtime_default",
       isolatedPositionTeleport: true, botTransport: "HTTP", scope: "one Main client plus four scripted accounts; not human multiplayer or balance acceptance"});
   } catch (error) {
     unsubscribe();
@@ -179,7 +184,9 @@ async function startGuardianReview(outputDir) {
       const target = targets.find(actor => actor.battleAppearanceFormId !== "wuli_evolved_crystal_earth8_water2") || targets[0];
       if (!target) continue;
       for (const actor of battle.actors.filter(entry => entry.accountId === members[index].account.accountId && required.has(entry.actorId) && !submitted.has(entry.actorId))) {
-        if (closedRoom) return;
+        // A final command may close this room before the remaining cached
+        // actors are visited. Skip that room, not every later encounter.
+        if (closedRoomIds.has(room.roomId)) break;
         // Respect the visible boss telegraph. No damage, rewards or outcome injection.
         const defend = battle.bossIntent && battle.bossIntent.targetActorId === actor.actorId;
         await request(index, `/battle/rooms/${room.roomId}/commands`, {

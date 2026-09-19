@@ -21604,6 +21604,11 @@ func _run_auto_panel_registry_check() -> void:
 	await host.get_tree().process_frame
 	var no_menu_after_ok = not host._world_menu_is_open()
 	var synthesis_clear_ok = not host._is_ui_point(synthesis_point)
+	var result_input_check: Dictionary = await preload("res://scripts/qa/battle_result_input_check.gd").run(host)
+	print("battle result input check: " + JSON.stringify(result_input_check))
+	if result_input_check.get("status") != "passed":
+		host.get_tree().quit(1)
+		return
 	var status = "ok" if loaded and registry_ok and top_blocks_ok and no_menu_before_ok and action_bar_blocks_ok and action_bar_click_blocked_ok and market_button_opens_ok and synthesis_visible_ok and synthesis_menu_ok and synthesis_blocks_ok and synthesis_ground_click_closes_ok and no_menu_after_ok and synthesis_clear_ok else "failed"
 	print("panel registry check ready: status=%s loaded=%s registry=%s top_blocks=%s before=%s action_blocks=%s action_click_blocked=%s market_button_opens=%s synthesis_visible=%s synthesis_menu=%s synthesis_blocks=%s ground_click_closes=%s after=%s clear=%s" % [
 		status,

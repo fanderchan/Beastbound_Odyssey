@@ -11351,6 +11351,7 @@ func _register_hud_panels() -> void:
 		family_panel,
 		player_action_panel,
 		battle_invite_panel,
+		battle_result_panel,
 		mailbox_panel,
 		market_panel,
 		bank_panel,
