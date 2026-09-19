@@ -1330,6 +1330,8 @@ var world_depth_drop_signature_dirty: bool = true
 var world_overlay_signature_cache: String = ""
 var player_profile: Dictionary = {}
 var player_appearance_visual_id_cache: String = "__uninitialized__"
+var player_appearance_raw_cache: String = ""
+var player_appearance_resolved_cache: String = ""
 var player_mount_visual_ride_id_cache: String = "__uninitialized__"
 var account_authenticated: bool = false
 var auth_auto_bypass: bool = false
@@ -10458,8 +10460,15 @@ func _selected_player_appearance_id() -> String:
 	var player_value = player_profile.get("player", {})
 	var appearance_id := ""
 	if player_value is Dictionary:
-		appearance_id = str((player_value as Dictionary).get("appearanceId", "")).strip_edges()
-	return CharacterActionAssetCatalog.resolve_appearance_id(appearance_id)
+		appearance_id = str((player_value as Dictionary).get("appearanceId", ""))
+	# The appearance catalog is immutable during a client session. Compare the
+	# raw profile value so in-place edits and profile replacement both invalidate
+	# the result, without normalizing the same selection every frame.
+	if player_appearance_resolved_cache != "" and appearance_id == player_appearance_raw_cache:
+		return player_appearance_resolved_cache
+	player_appearance_raw_cache = appearance_id
+	player_appearance_resolved_cache = CharacterActionAssetCatalog.resolve_appearance_id(appearance_id)
+	return player_appearance_resolved_cache
 
 
 func _spawn_pet() -> void:

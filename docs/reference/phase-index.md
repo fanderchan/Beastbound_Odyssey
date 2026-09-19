@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **561** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **562** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 577 | [Phase 577：人物外观选择缓存](../phase_577_player_appearance_selection_cache.md) | 阶段记录 |
 | 576 | [Phase 576：洞穴正常时钟 CPU 对照与完整前台矩阵](../phase_576_cave_native_cpu_and_full_matrix.md) | 阶段记录 |
 | 575 | [Phase 575：复用人物轮廓键与局部遮挡范围](../phase_575_player_visual_bounds_reuse.md) | 阶段记录 |
 | 574 | [Phase 574：减少人物位置的无效更新](../phase_574_player_position_updates.md) | 阶段记录 |

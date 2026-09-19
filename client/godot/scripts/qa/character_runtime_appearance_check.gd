@@ -56,6 +56,7 @@ static func run(host: Node) -> Dictionary:
 				errors.append("两套人物形象错误复用了同一世界本体：%s" % appearance_id)
 			appearance_idle_signatures[signature] = appearance_id
 	_append_mount_fallback_errors(errors)
+	_append_profile_selection_errors(errors, host)
 	_append_live_player_errors(errors, host)
 	_append_world_animation_errors(errors, host)
 	_append_battle_host_errors(errors, host)
@@ -89,6 +90,48 @@ static func _append_mount_fallback_errors(errors: Array[String]) -> void:
 			"novice_hunter_v1"
 		):
 			errors.append("新人物错误复用了见习猎人骑乘整图：%s" % appearance_id)
+
+
+static func _append_profile_selection_errors(errors: Array[String], host: Node) -> void:
+	var original_profile: Dictionary = host.get("player_profile")
+	var fallback := CharacterActionAssetCatalog.CHARACTER_ID
+	var cases: Array[Dictionary] = [
+		{"profile": {}, "expected": fallback},
+		{"profile": {"player": null}, "expected": fallback},
+		{"profile": {"player": 7}, "expected": fallback},
+		{"profile": {"player": {}}, "expected": fallback},
+		{"profile": {"player": {"appearanceId": ""}}, "expected": fallback},
+		{"profile": {"player": {"appearanceId": "unknown_appearance"}}, "expected": fallback},
+		{"profile": {"player": {"appearanceId": 7}}, "expected": fallback},
+		{"profile": {"player": {"appearanceId": "  obsidian_scout_v1\t"}}, "expected": "obsidian_scout_v1"},
+	]
+	for appearance_id in EXPECTED_APPEARANCE_IDS:
+		cases.append({"profile": {"player": {"appearanceId": appearance_id}}, "expected": appearance_id})
+	for sample in cases:
+		var profile: Dictionary = sample["profile"]
+		var original := profile.duplicate(true)
+		host.set("player_profile", profile)
+		_expect_profile_selection(host, str(sample["expected"]), errors)
+		if profile != original:
+			errors.append("人物外观查询修改了档案原始字段")
+	# Mutating the same nested Dictionary must not retain an old selection.
+	var mutable_profile := {"player": {"appearanceId": fallback}}
+	host.set("player_profile", mutable_profile)
+	for appearance_id in EXPECTED_APPEARANCE_IDS:
+		mutable_profile.player.appearanceId = appearance_id
+		_expect_profile_selection(host, appearance_id, errors)
+	mutable_profile.player = {"appearanceId": "unknown_appearance"}
+	_expect_profile_selection(host, fallback, errors)
+	mutable_profile.erase("player")
+	_expect_profile_selection(host, fallback, errors)
+	host.set("player_profile", original_profile)
+	host.call("_selected_player_appearance_id")
+
+
+static func _expect_profile_selection(host: Node, expected: String, errors: Array[String]) -> void:
+	for repeat in range(2):
+		if str(host.call("_selected_player_appearance_id")) != expected:
+			errors.append("人物档案外观切换或旧档案回退错误：%s" % expected)
 
 
 static func _append_live_player_errors(errors: Array[String], host: Node) -> void:

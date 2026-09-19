@@ -42,6 +42,8 @@ flowchart TD
 
 人物世界动画由 [Player](../client/godot/scripts/player/player.gd) 缓存当前形象的朝向／动作片段。帧率和纹理引用在片段首次使用时从 CharacterActionAssetCatalog 解析，逐帧只按原有时间选帧；切换形象会清空旧片段。目录在单次运行中保持不变，如后续增加运行时素材热更新，必须同步增加动画缓存失效入口。验证见 [Phase 572](phase_572_world_animation_hotpath.md)。
 
+Main 的人物外观选择按档案中原始 `appearanceId` 缓存解析结果。每次仍读取字段，以兼容整体换档与嵌套字典原地修改；空白和未知 ID 继续由目录统一处理。若增加目录热更新，需同时失效这份缓存。验证见 [Phase 577](phase_577_player_appearance_selection_cache.md)。
+
 Player 的边界校正仅在校正坐标与当前位置精确不同时赋值，避免每个物理帧触发重复变换通知。边界、速度与目标规则保持一致，见 [Phase 574](phase_574_player_position_updates.md)。
 
 人物轮廓查询键随形象／朝向／动作改变，相机签名另外包含骑乘形态。遮挡只缓存源图到局部范围的换算，并比较实际范围、贴图尺寸、绘制矩形与翻转；每次仍应用当前全局变换，不缓存世界坐标。未准备的动作保持保守范围，遮挡查询不扫描图片。验证见 [Phase 575](phase_575_player_visual_bounds_reuse.md)。
