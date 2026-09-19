@@ -1,6 +1,6 @@
 # 项目现状与下一步
 
-核对日期：2026-09-19。日常开发统一使用 **`/Users/fander/projects/Beastbound_Odyssey`**。老板只需要从这个目录打开项目和本文；版本整理、实现、测试和文档同步由开发者负责。
+核对日期：2026-09-20。日常开发统一使用 **`/Users/fander/projects/Beastbound_Odyssey`**。老板只需要从这个目录打开项目和本文；版本整理、实现、测试和文档同步由开发者负责。
 
 ## 游戏已经有什么
 
@@ -52,11 +52,11 @@ git log -5 --oneline
 | 同屏队友外观与持续可见性 | [Phase 563](phase_563_remote_player_appearance.md) 接通权威外观、八向动画、相同比例、点击范围和提交后骑乘通知；[Phase 564](phase_564_idle_online_presence_refresh.md) 修复静止定时刷新误隐藏人物，真实 HTTP/WS 旁观回归通过，服务端 `48/48`、客户端 `5/5` | 补做当前联网客户端点击、上下骑和切图的人工视觉复核；自动回归及展示片不代表五真人联机或 200 人容量 |
 | 四套战斗人物与首场加载 | [Phase 566](phase_566_authoritative_battle_appearances.md) 修复权威外观丢失；[Phase 567](phase_567_nearby_character_battle_prefetch.md) 补齐同图人物预取，首次准备 `430.989→9.700ms`，客户端 `4/4`，完整原生五账号奖励再次通过；录制休眠中断已处理 | 立刻开战或尚未进入预取的人物仍可能同步加载；原生鼠标、正常前台性能和所有者接受继续待完成 |
 | 关闭客户端的资源回收 | [Phase 570](phase_570_prefetch_request_cleanup.md) 修复退出及加载失败时未回收后台贴图请求，提前退出由四个泄漏变为零；定向 `4/4`、原生请求回收和完整五账号胜利通过，五人各获地之戒、人物倒下后的宠物指令再次验证 | 当前自动试玩不替代真实鼠标、前台性能或所有者接受 |
-| 原生地图性能 | [Phase 571](phase_571_current_cave_input_and_performance.md) 最近可作正式判断的完整矩阵为 **FAIL**；Phase 572–574 已减少动画、镜头、菜单与位置的重复计算；[Phase 575](phase_575_player_visual_bounds_reuse.md) 复用人物轮廓键和局部遮挡范围，962 次状态对照一致、定向 `5/5`，headless 静止完整脚本耗时约减少 7.4%，移动基本持平 | 当前原生矩阵第 33 组失焦，完整回执未形成；随后四段正常时钟原生脚本对照均保持前台，已定位新增调用及共用函数耗时差异。关闭分析器的 CPU 对照及两次直接启动诊断均受前台绘制／窗口操作阻塞，尚无有效普通运行 CPU 结果或完整达标结论 |
+| 原生地图性能 | Phase 572–575 已优化动画、镜头、菜单、位置和人物轮廓；[Phase 576](phase_576_cave_native_cpu_and_full_matrix.md) 当前完整 48 组零失焦／零不可绘制，四层绝对静止 `0.316–0.333ms`、移动 `0.408–0.473ms` 及移动增量全部达标 | 静止增量 `0.150–0.169ms` 仍超过 `0.100ms`，完整总评继续 **FAIL**；失败数据只保留在 scratch，尚未安装正式性能证据 |
 | 运行优化 | [Phase 559](phase_559_world_depth_and_bounds_hotpaths.md) 精简范围／排序；[Phase 561](phase_561_camera_score_pruning.md) 剪去无效镜头评分；[Phase 565](phase_565_retained_world_ground.md) 缓存静态地面；[Phase 568](phase_568_cached_ground_geometry.md) 合并保留地面几何，十对画面逐像素一致，原生录片渲染器 CPU 均值 `0.08→0.04–0.05ms`，当前五账号奖励和地图恢复再次通过 | 正式静止增量问题尚未解决；脚本处理基本不变，局部收益不是 FPS 提升，也不代替当前前台矩阵 |
-| 取证可靠性与时间口径 | [Phase 551](phase_551_map_evidence_commit_provenance.md) 绑定运行内容和祖先提交；[Phase 558](phase_558_native_performance_visibility.md) 验证前台绘制；[Phase 560](phase_560_map_capture_transaction_history.md) 修复事务阻断；[Phase 562](phase_562_runtime_probe_wall_clock.md) 区分模拟／实际时间；Phase 571 正常时钟静止 56 秒约 `8.68% CPU`、30 FPS、零失焦 | 进程占用仍需降低，并补正常联网静止／移动对照；固定步长压力值和启用诊断的离线夹具不能当作普通玩家性能 |
+| 取证可靠性与时间口径 | [Phase 551](phase_551_map_evidence_commit_provenance.md) 绑定运行内容和祖先提交；[Phase 558](phase_558_native_performance_visibility.md) 验证前台绘制；[Phase 560](phase_560_map_capture_transaction_history.md) 修复事务阻断；[Phase 562](phase_562_runtime_probe_wall_clock.md) 区分模拟／实际时间；Phase 576 关闭分析器后的二层静止对照，30 FPS 下当前美术约 `7.784% CPU`、旧网格约 `22.366%`，四段均持续前台绘制 | 这是同版两种渲染路径的离线对照，不是修改前后收益；仍需降低进程占用并补正常联网静止／移动证据，脚本区段增量不能直接等同于整进程 CPU 增量 |
 
-**接下来的顺序**：Phase 572–575 的运行优化已验证并同步 GitHub；四层 headless 调用对照和四段有效原生脚本分析均已完成。先恢复可持续前台绘制的实机环境，再补关闭分析器的正常时钟网格／美术 CPU 对照，依据结果处理剩余开销和完整前台矩阵；随后补自动动作／真实鼠标配对及联网战斗操作，完成 R1.W024 后进入 R1.W025 受委托复审。最新两次诊断均未取得有效 CPU 结果，窗口控制工具亦出现应用列表读取超时；全部测试进程与隔离环境已清理，失败现场保留，未拼接批次或更新正式候选。
+**接下来的顺序**：Phase 576 已完成正常时钟 CPU 对照及当前完整前台矩阵，矩阵的未通过项收敛到静止增量。下一步结合脚本分析定位剩余静止处理，验证实际修改的前后收益；随后补自动动作／真实鼠标配对及联网战斗操作，完成 R1.W024 后进入 R1.W025 受委托复审。窗口工具仍可能在操作已生效后报错，必须先读日志和窗口状态再决定是否重试；本次有效批次未追加干预，全部测试进程与隔离环境已清理。
 
 其他地图如潮回洞穴仍有网格占位，不在岩脉四层完成范围内。Firebud v2、融合、环境声和 Bui VFX 已有返工或延期决定，不从旧主目录的 `R1.01` 重做。Earth Vein 仍为待验收候选；测试和内部审查不等于老板亲自批准精确美术资产。
 
