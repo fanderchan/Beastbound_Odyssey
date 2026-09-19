@@ -52,11 +52,11 @@ git log -5 --oneline
 | 同屏队友外观与持续可见性 | [Phase 563](phase_563_remote_player_appearance.md) 接通权威外观、八向动画、相同比例、点击范围和提交后骑乘通知；[Phase 564](phase_564_idle_online_presence_refresh.md) 修复静止定时刷新误隐藏人物，真实 HTTP/WS 旁观回归通过，服务端 `48/48`、客户端 `5/5` | 补做当前联网客户端点击、上下骑和切图的人工视觉复核；自动回归及展示片不代表五真人联机或 200 人容量 |
 | 四套战斗人物与首场加载 | [Phase 566](phase_566_authoritative_battle_appearances.md) 修复权威外观丢失；[Phase 567](phase_567_nearby_character_battle_prefetch.md) 补齐同图人物预取，首次准备 `430.989→9.700ms`，客户端 `4/4`，完整原生五账号奖励再次通过；录制休眠中断已处理 | 立刻开战或尚未进入预取的人物仍可能同步加载；原生鼠标、正常前台性能和所有者接受继续待完成 |
 | 关闭客户端的资源回收 | [Phase 570](phase_570_prefetch_request_cleanup.md) 修复退出及加载失败时未回收后台贴图请求，提前退出由四个泄漏变为零；定向 `4/4`、原生请求回收和完整五账号胜利通过，五人各获地之戒、人物倒下后的宠物指令再次验证 | 当前自动试玩不替代真实鼠标、前台性能或所有者接受 |
-| 原生地图性能 | [Phase 571](phase_571_current_cave_input_and_performance.md) 当前完整 48 组均可绘制、零失焦；已按未修改的官方 builder 和阈值评估 | **总评 FAIL**：四层绝对静止／移动和增量全部超门槛。先定位并证明优化收益，再重跑矩阵；不能改写旧回执或只挑合格样本 |
+| 原生地图性能 | [Phase 571](phase_571_current_cave_input_and_performance.md) 最近完整 48 组均可绘制、零失焦，正式门槛 **FAIL**；[Phase 572](phase_572_world_animation_hotpath.md) 已减少动画与备用镜头求解，12 组 headless 前后对照完整脚本耗时约降低静止 9.1%／移动 10.1% | 新版本原生对照受窗口不可操作阻断，尚无原生达标结论；继续定位剩余开销并补前台验证，不能用 headless 替换正式矩阵 |
 | 运行优化 | [Phase 559](phase_559_world_depth_and_bounds_hotpaths.md) 精简范围／排序；[Phase 561](phase_561_camera_score_pruning.md) 剪去无效镜头评分；[Phase 565](phase_565_retained_world_ground.md) 缓存静态地面；[Phase 568](phase_568_cached_ground_geometry.md) 合并保留地面几何，十对画面逐像素一致，原生录片渲染器 CPU 均值 `0.08→0.04–0.05ms`，当前五账号奖励和地图恢复再次通过 | 正式静止增量问题尚未解决；脚本处理基本不变，局部收益不是 FPS 提升，也不代替当前前台矩阵 |
 | 取证可靠性与时间口径 | [Phase 551](phase_551_map_evidence_commit_provenance.md) 绑定运行内容和祖先提交；[Phase 558](phase_558_native_performance_visibility.md) 验证前台绘制；[Phase 560](phase_560_map_capture_transaction_history.md) 修复事务阻断；[Phase 562](phase_562_runtime_probe_wall_clock.md) 区分模拟／实际时间；Phase 571 正常时钟静止 56 秒约 `8.68% CPU`、30 FPS、零失焦 | 进程占用仍需降低，并补正常联网静止／移动对照；固定步长压力值和启用诊断的离线夹具不能当作普通玩家性能 |
 
-**接下来的顺序**：先依据 Phase 571 完整矩阵定位相机、遮挡及帧循环开销，用较小前后对照证明收益后再重跑正式矩阵；随后完成自动动作／真实鼠标配对与联网战斗操作，完成 R1.W024 后进入 R1.W025 受委托复审。20 项当前地图鼠标观察已补齐；窗口中断和性能失败均保留，正式候选尚未更新。自动实机胜利与退出回收已在 Phase 570 复验，可独立验证的工作继续按授权推进。
+**接下来的顺序**：Phase 572 已确认动画和镜头重复计算的局部收益；继续定位剩余静止开销，在窗口可操作时补原生前后对照及正常时钟 CPU，再重跑正式矩阵；随后完成自动动作／真实鼠标配对与联网战斗操作，完成 R1.W024 后进入 R1.W025 受委托复审。20 项当前地图鼠标观察已补齐；窗口中断和性能失败均保留，正式候选尚未更新。自动实机胜利与退出回收已在 Phase 570 复验，可独立验证的工作继续按授权推进。
 
 其他地图如潮回洞穴仍有网格占位，不在岩脉四层完成范围内。Firebud v2、融合、环境声和 Bui VFX 已有返工或延期决定，不从旧主目录的 `R1.01` 重做。Earth Vein 仍为待验收候选；测试和内部审查不等于老板亲自批准精确美术资产。
 

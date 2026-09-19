@@ -16804,15 +16804,6 @@ func _world_camera_landmark_safe_anchor(
 	var priority_subject_count := priority_subjects.size()
 	subject_rects = priority_subjects
 	subject_rects.append_array(ordinary_subjects)
-	var player_subject_rects: Array[Rect2] = [player_screen_rect]
-	var player_safe_anchor := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects_in_range(
-		effective_base_anchor,
-		achievable_min_anchor,
-		achievable_max_anchor,
-		world_camera_hud_blocker_rects,
-		player_subject_rects,
-		Rect2(Vector2.ZERO, viewport_size)
-	)
 	var composed_anchor := WorldCameraSafeAreaModel.composition_anchor_avoiding_rects_in_range(
 		effective_base_anchor,
 		achievable_min_anchor,
@@ -16832,7 +16823,17 @@ func _world_camera_landmark_safe_anchor(
 		if blocker.grow(
 			WorldCameraSafeAreaModel.DEFAULT_VISUAL_GAP_PX
 		).intersects(composed_player_rect):
-			composed_anchor = player_safe_anchor
+			# The player-only result is used solely by this fallback. Avoid a
+			# second solve when the full composition already keeps the player clear.
+			var player_subject_rects: Array[Rect2] = [player_screen_rect]
+			composed_anchor = WorldCameraSafeAreaModel.composition_anchor_avoiding_rects_in_range(
+				effective_base_anchor,
+				achievable_min_anchor,
+				achievable_max_anchor,
+				world_camera_hud_blocker_rects,
+				player_subject_rects,
+				Rect2(Vector2.ZERO, viewport_size)
+			)
 			break
 	world_camera_landmark_anchor_screen_cache = composed_anchor
 	world_camera_landmark_anchor_cell_cache = player_cell

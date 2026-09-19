@@ -57,6 +57,7 @@ static func run(host: Node) -> Dictionary:
 			appearance_idle_signatures[signature] = appearance_id
 	_append_mount_fallback_errors(errors)
 	_append_live_player_errors(errors, host)
+	_append_world_animation_errors(errors, host)
 	_append_battle_host_errors(errors, host)
 	_append_server_battle_appearance_errors(errors, host)
 	return {
@@ -66,6 +67,7 @@ static func run(host: Node) -> Dictionary:
 		"worldFramesPerAppearance": 40,
 		"battleFramesPerAppearance": 180,
 		"worldRuntimeMirroring": false,
+		"worldAnimationClipsChecked": EXPECTED_APPEARANCE_IDS.size() * 8 * 2,
 		"battlePresentationFlip": {"ally": true, "enemy": false},
 		"legacyFallbackAppearanceId": CharacterActionAssetCatalog.resolve_appearance_id(""),
 		"newAppearanceMountedFallback": "on_foot",
@@ -123,6 +125,62 @@ static func _append_live_player_errors(errors: Array[String], host: Node) -> voi
 		errors.append("见习猎人已发布骑乘组合不再可用")
 	player_node.call("set_appearance_id", previous_appearance)
 	player_node.call("set_riding_form", previous_ride_form)
+
+
+static func _append_world_animation_errors(errors: Array[String], host: Node) -> void:
+	# Use a separate actor so boundary/time probes cannot change the live player.
+	var actor = load("res://scenes/player/Player.tscn").instantiate()
+	host.add_child(actor)
+	actor.set_process(false)
+	actor.set_physics_process(false)
+	var sprite := actor.get_node("FormalSprite") as Sprite2D
+	for appearance_id in EXPECTED_APPEARANCE_IDS:
+		actor.set_appearance_id(appearance_id)
+		for direction_index in range(actor.FACING_KEYS.size()):
+			var direction: String = actor.FACING_KEYS[direction_index]
+			var facing := Vector2.from_angle(float(direction_index) * PI / 4.0)
+			for action in ["walk", "idle"]:
+				actor._set_animation_state(action)
+				var fps := CharacterActionAssetCatalog.world_action_fps(action, appearance_id)
+				var count := CharacterActionAssetCatalog.world_frame_count_for_action(action, appearance_id)
+				var times: Array[float] = [-1.0, 0.0, 1000.25]
+				for frame in range(1, count * 2 + 1):
+					for offset in [-0.0000001, 0.0, 0.0000001]:
+						times.append(float(frame) / fps + offset)
+				for elapsed in times:
+					actor.animation_time = elapsed
+					# Repeated facing calls are part of actual physics movement.
+					actor.face_direction(facing)
+					var expected := CharacterActionAssetCatalog.world_texture_for_elapsed(
+						direction, action, elapsed, appearance_id
+					)
+					if sprite.texture != expected:
+						errors.append("人物动画边界帧不一致：%s/%s/%s@%.9f" % [
+							appearance_id, direction, action, elapsed
+						])
+				actor.animation_time = 0.0
+				actor.animation_visual_elapsed = 0.0
+				actor.set_speed_multiplier(2.5)
+				actor.face_direction(facing)
+				var elapsed := 0.0
+				var visual_elapsed := 0.0
+				var expected_texture := sprite.texture
+				for delta in [0.016, 0.033, 0.005, 0.2, 0.016, 0.45]:
+					var step: float = delta * 2.5 if action == "walk" else delta
+					elapsed += step
+					visual_elapsed += step
+					if visual_elapsed >= 1.0 / fps:
+						visual_elapsed = fmod(visual_elapsed, 1.0 / fps)
+						expected_texture = CharacterActionAssetCatalog.world_texture_for_elapsed(
+							direction, action, elapsed, appearance_id
+						)
+					actor._process(delta)
+					if sprite.texture != expected_texture:
+						errors.append("人物动画节拍或移动加速改变：%s/%s/%s" % [
+							appearance_id, direction, action
+						])
+	host.remove_child(actor)
+	actor.free()
 
 
 static func _append_battle_host_errors(errors: Array[String], host: Node) -> void:

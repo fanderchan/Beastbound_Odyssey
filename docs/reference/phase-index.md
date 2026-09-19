@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **556** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **557** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 572 | [Phase 572：缓存人物动画片段并延后镜头备用求解](../phase_572_world_animation_hotpath.md) | 阶段记录 |
 | 571 | [Phase 571：当前洞穴鼠标操作与前台性能复核](../phase_571_current_cave_input_and_performance.md) | 阶段记录 |
 | 570 | [Phase 570：战斗贴图请求的退出回收](../phase_570_prefetch_request_cleanup.md) | 阶段记录 |
 | 569 | [Phase 569：刷新当前四层洞穴与地标审片](../phase_569_current_four_floor_review.md) | 阶段记录 |

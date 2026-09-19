@@ -56,6 +56,12 @@ var last_formal_flip_h: bool = false
 var visual_source_bounds_cache: Dictionary = {}
 var world_visual_grade_signature: String = "disabled"
 var remote_presentation_only := false
+var _formal_clip_appearance := ""
+var _formal_clip_facing := ""
+var _formal_clip_action := ""
+var _formal_clip_fps := 1.0
+var _formal_clip_frames: Array[Texture2D] = []
+var _formal_clip_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -73,10 +79,12 @@ func _process(delta: float) -> void:
 	animation_time += animation_delta
 	animation_visual_elapsed += animation_delta
 	if formal_asset_enabled:
+		if riding_form_id == "":
+			_prepare_formal_clip()
 		var animation_fps := (
 			MountedCharacterAssetCatalog.world_action_fps(animation_state)
 			if riding_form_id != ""
-			else CharacterActionAssetCatalog.world_action_fps(animation_state, appearance_id)
+			else _formal_clip_fps
 		)
 		var frame_step := 1.0 / maxf(1.0, animation_fps)
 		if animation_visual_elapsed < frame_step:
@@ -515,18 +523,48 @@ func _update_formal_animation() -> void:
 		return
 	if formal_sprite == null:
 		return
-	var texture := CharacterActionAssetCatalog.world_texture_for_elapsed(
-		facing_key,
-		animation_state,
-		animation_time,
-		appearance_id
-	)
+	_prepare_formal_clip()
+	var frame_index := int(floor(maxf(0.0, animation_time) * _formal_clip_fps)) % _formal_clip_frames.size()
+	var texture := _formal_clip_frames[frame_index]
 	if texture != null and texture != last_formal_texture:
 		formal_sprite.texture = texture
 		last_formal_texture = texture
 	if last_formal_flip_h:
 		formal_sprite.flip_h = false
 		last_formal_flip_h = false
+
+
+func _prepare_formal_clip() -> void:
+	if (
+		appearance_id == _formal_clip_appearance
+		and facing_key == _formal_clip_facing
+		and animation_state == _formal_clip_action
+	):
+		return
+	# The catalog is immutable for this runtime. Resolve its paths and metadata
+	# only when the clip changes; physics and visual ticks still select the same
+	# frame at their original times, including repeated same-direction movement.
+	if appearance_id != _formal_clip_appearance:
+		_formal_clip_cache.clear()
+	_formal_clip_appearance = appearance_id
+	_formal_clip_facing = facing_key
+	_formal_clip_action = animation_state
+	var clip_key := "%s|%s" % [facing_key, animation_state]
+	if _formal_clip_cache.has(clip_key):
+		var clip: Dictionary = _formal_clip_cache[clip_key]
+		_formal_clip_fps = clip["fps"]
+		_formal_clip_frames = clip["frames"]
+		return
+	_formal_clip_fps = CharacterActionAssetCatalog.world_action_fps(animation_state, appearance_id)
+	var count := CharacterActionAssetCatalog.world_frame_count_for_action(animation_state, appearance_id)
+	# Keep the current appearance's small set of clips, so zigzag movement does
+	# not resolve all four walking frames again on every direction change.
+	_formal_clip_frames = []
+	for frame_index in range(1, count + 1):
+		_formal_clip_frames.append(CharacterActionAssetCatalog.world_texture_for_frame(
+			facing_key, animation_state, frame_index, appearance_id
+		))
+	_formal_clip_cache[clip_key] = {"fps": _formal_clip_fps, "frames": _formal_clip_frames}
 
 
 func _set_placeholder_visible(value: bool) -> void:

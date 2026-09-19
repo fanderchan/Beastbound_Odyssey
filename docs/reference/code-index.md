@@ -15,7 +15,7 @@
 | 33009 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
 | 28887 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27376 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
-| 19221 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
+| 19222 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
 | 8834 | [client/godot/scripts/progression/player_progress_model.gd](../../client/godot/scripts/progression/player_progress_model.gd) |
 | 8789 | [tools/build_pet_portrait.py](../../tools/build_pet_portrait.py) |
@@ -34,7 +34,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [main.gd](../../client/godot/scripts/main.gd) | 19221 |
+| [main.gd](../../client/godot/scripts/main.gd) | 19222 |
 
 </details>
 
@@ -148,7 +148,7 @@
 | [mount_visual_profile_catalog.gd](../../client/godot/scripts/player/mount_visual_profile_catalog.gd) | 253 |
 | [mounted_character_2d.gd](../../client/godot/scripts/player/mounted_character_2d.gd) | 81 |
 | [mounted_character_asset_catalog.gd](../../client/godot/scripts/player/mounted_character_asset_catalog.gd) | 549 |
-| [player.gd](../../client/godot/scripts/player/player.gd) | 585 |
+| [player.gd](../../client/godot/scripts/player/player.gd) | 623 |
 | [player_appearance_catalog.gd](../../client/godot/scripts/player/player_appearance_catalog.gd) | 103 |
 
 </details>
@@ -283,7 +283,7 @@
 | [character_mount_art_check.gd](../../client/godot/scripts/qa/character_mount_art_check.gd) | 419 |
 | [character_mount_art_preview.gd](../../client/godot/scripts/qa/character_mount_art_preview.gd) | 134 |
 | [character_mount_direction_review.gd](../../client/godot/scripts/qa/character_mount_direction_review.gd) | 928 |
-| [character_runtime_appearance_check.gd](../../client/godot/scripts/qa/character_runtime_appearance_check.gd) | 320 |
+| [character_runtime_appearance_check.gd](../../client/godot/scripts/qa/character_runtime_appearance_check.gd) | 378 |
 | [commerce_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/commerce_awakened_owner_review_capture.gd) | 492 |
 | [earth_vein_camera_composition_check.gd](../../client/godot/scripts/qa/earth_vein_camera_composition_check.gd) | 364 |
 | [earth_vein_floor_hierarchy_check.gd](../../client/godot/scripts/qa/earth_vein_floor_hierarchy_check.gd) | 481 |
