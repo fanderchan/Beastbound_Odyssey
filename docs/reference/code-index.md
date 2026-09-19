@@ -148,7 +148,7 @@
 | [mount_visual_profile_catalog.gd](../../client/godot/scripts/player/mount_visual_profile_catalog.gd) | 253 |
 | [mounted_character_2d.gd](../../client/godot/scripts/player/mounted_character_2d.gd) | 81 |
 | [mounted_character_asset_catalog.gd](../../client/godot/scripts/player/mounted_character_asset_catalog.gd) | 549 |
-| [player.gd](../../client/godot/scripts/player/player.gd) | 623 |
+| [player.gd](../../client/godot/scripts/player/player.gd) | 626 |
 | [player_appearance_catalog.gd](../../client/godot/scripts/player/player_appearance_catalog.gd) | 103 |
 
 </details>

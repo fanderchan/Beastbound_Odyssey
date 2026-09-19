@@ -235,7 +235,10 @@ func _effective_speed_multiplier() -> float:
 
 
 func _clamp_to_bounds() -> void:
-	global_position = _clamp_point_to_bounds(global_position)
+	var current_position := global_position
+	var bounded_position := _clamp_point_to_bounds(current_position)
+	if bounded_position != current_position:
+		global_position = bounded_position
 
 
 func _clamp_point_to_bounds(point: Vector2) -> Vector2:

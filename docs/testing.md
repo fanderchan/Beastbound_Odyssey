@@ -92,6 +92,8 @@ godot --path client/godot --scene res://scenes/Main.tscn
 
 地图表现对比使用 `python3 tools/run_map_visual_performance_evidence.py --help` 所列入口：每个 bundle 一个原生窗口，按矩阵重建 Main，窗口标题区分旧网格基线和当前美术候选。首次诊断使用 `--scratch-only` 和新 `--run-id`，避免覆盖正式证据；`--build-identity` 必须等于 `python3 tools/map_visual_evidence_builder.py identity` 输出的当前标识。在准备页点击“开始性能测试”后，保持窗口前台可见约 12 分钟。采样同时检查焦点、可绘制状态与实际绘制帧进度；失败后停止并清理，不继续抢焦点或强制绘制。原始采样完成与性能门槛通过是两件事：CLI 的 `raw_capture_and_cleanup` 结果还必须经过报告生成器和独立 bundle 审计器。固定步长 60 不能作为真实显示 FPS。当前可见性合同及真实拒绝记录见 [Phase 558](phase_558_native_performance_visibility.md)，矩阵与资源隔离设计见 [Phase 550](phase_550_single_window_map_performance.md)。
 
+Computer Use 点击报错后，先分别读取最新 UI 状态和当前进程日志，确认动作是否已生效，再决定恢复操作；不要把 `noWindowsAvailable` 当作“点击没有发送”。一旦样本开始，停止追加 Raise、按键或点击。若已在测量期间加入额外操作，该批只作诊断，另开新批次取正式证据。明确检测到锁屏时等待用户手动解锁，不反复激活窗口。实际案例见 [Phase 574](phase_574_player_position_updates.md)。
+
 固定帧窗口结束后的 `perf probe runtime timing:` 将模拟 delta 与单调时钟实际间隔分开，详见 [Phase 562](phase_562_runtime_probe_wall_clock.md)。`wallProcessFramesPerSecond` 是处理帧率，不是显示 FPS 或 CPU 百分比；配置 `Engine.max_fps=30` 也不证明限帧有效，`--fixed-fps` 会跳过通常的等待。外部 runner 的 argv 才是引擎启动选项的依据。正常运行的 CPU/FPS 检查必须保留正常帧预算、VSync 和前台绘制条件，单独记录稳态进程占用；不能用固定步长压力运行的瞬时 CPU 替代。新增 timing 不改变既有性能门槛。
 
 截图审计保留录制时的原始提交号；后续仅提交文档/证据时，只要运行内容指纹相同且原提交是当前 HEAD 的祖先，就不要求无意义地重录。运行内容、工具源码、素材或录制表面真的变化时仍必须重证，不能手改旧回执的提交号。该边界及真实 Git 回归见 [Phase 551](phase_551_map_evidence_commit_provenance.md)。
