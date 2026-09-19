@@ -21545,6 +21545,11 @@ func _run_auto_npc_quest_marker_check() -> void:
 
 func _run_auto_panel_registry_check() -> void:
 	host.profile_save_enabled = false
+	var visibility_check: Dictionary = await preload("res://scripts/qa/panel_registry_visibility_check.gd").run(host)
+	print("panel registry visibility check: " + JSON.stringify(visibility_check))
+	if visibility_check.get("status") != "passed":
+		host.get_tree().quit(1)
+		return
 	var loaded = host._load_map("firebud_village_gate", "from_training_yard")
 	await host.get_tree().process_frame
 	var registry_ok = host.panel_registry != null

@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **950** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **951** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -12,7 +12,7 @@
 
 | 行数 | 文件 |
 | ---: | --- |
-| 33009 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
+| 33014 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
 | 28887 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27376 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
 | 19222 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
@@ -256,7 +256,7 @@
 
 ## client/godot/scripts/qa
 
-<details><summary>88 个文件</summary>
+<details><summary>89 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -267,7 +267,7 @@
 | [audio_runtime_check.gd](../../client/godot/scripts/qa/audio_runtime_check.gd) | 301 |
 | [audio_settings_panel_check.gd](../../client/godot/scripts/qa/audio_settings_panel_check.gd) | 102 |
 | [audio_world_context_check.gd](../../client/godot/scripts/qa/audio_world_context_check.gd) | 44 |
-| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33009 |
+| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33014 |
 | [backpack_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture.gd) | 916 |
 | [backpack_awakened_owner_review_capture_check.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture_check.gd) | 218 |
 | [battle_command_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/battle_command_awakened_owner_review_capture.gd) | 435 |
@@ -315,6 +315,7 @@
 | [npc_hover_identity_check.gd](../../client/godot/scripts/qa/npc_hover_identity_check.gd) | 117 |
 | [npc_main_review_capture.gd](../../client/godot/scripts/qa/npc_main_review_capture.gd) | 719 |
 | [online_presence_refresh_check.gd](../../client/godot/scripts/qa/online_presence_refresh_check.gd) | 94 |
+| [panel_registry_visibility_check.gd](../../client/godot/scripts/qa/panel_registry_visibility_check.gd) | 97 |
 | [perf_probe_exit_controller.gd](../../client/godot/scripts/qa/perf_probe_exit_controller.gd) | 51 |
 | [perf_probe_process_scope_boundary.gd](../../client/godot/scripts/qa/perf_probe_process_scope_boundary.gd) | 29 |
 | [perf_probe_runtime_timing.gd](../../client/godot/scripts/qa/perf_probe_runtime_timing.gd) | 46 |
@@ -419,7 +420,7 @@
 | [npc_dialog_presenter.gd](../../client/godot/scripts/ui/npc_dialog_presenter.gd) | 57 |
 | [npc_hover_identity_presenter.gd](../../client/godot/scripts/ui/npc_hover_identity_presenter.gd) | 189 |
 | [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28887 |
-| [panel_registry.gd](../../client/godot/scripts/ui/panel_registry.gd) | 63 |
+| [panel_registry.gd](../../client/godot/scripts/ui/panel_registry.gd) | 91 |
 | [password_visibility_button.gd](../../client/godot/scripts/ui/password_visibility_button.gd) | 53 |
 | [pet_codex_acquisition_route_catalog.gd](../../client/godot/scripts/ui/pet_codex_acquisition_route_catalog.gd) | 213 |
 | [pet_codex_awakened_panel.gd](../../client/godot/scripts/ui/pet_codex_awakened_panel.gd) | 1467 |

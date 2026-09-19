@@ -42,6 +42,8 @@ flowchart TD
 
 人物世界动画由 [Player](../client/godot/scripts/player/player.gd) 缓存当前形象的朝向／动作片段。帧率和纹理引用在片段首次使用时从 CharacterActionAssetCatalog 解析，逐帧只按原有时间选帧；切换形象会清空旧片段。目录在单次运行中保持不变，如后续增加运行时素材热更新，必须同步增加动画缓存失效入口。验证见 [Phase 572](phase_572_world_animation_hotpath.md)。
 
+[PanelRegistry](../client/godot/scripts/ui/panel_registry.gd) 根据面板显隐及进出场景的信号使菜单状态缓存失效，未变化时查询不再遍历全部控件。注册必须经过 `set_world_menu_panels()` / `add_world_menu_panel()`，已有面板数组用于枚举读取。点击命中仍使用原递归检查，验证见 [Phase 573](phase_573_panel_visibility_hotpath.md)。
+
 ## 服务端的职责边界
 
 | 位置 | 职责 |
