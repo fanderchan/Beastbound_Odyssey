@@ -36,7 +36,7 @@ flowchart TD
 
 `main.gd`、`panel_flow_coordinator.gd`、`auto_check_coordinator.gd` 都是现存宿主耦合大文件。新逻辑应进入责任明确的领域模块，再由宿主转发；不能只把逻辑从一个大协调器挪进另一个。
 
-启用美术的地图由 [WorldGroundLayer](../client/godot/scripts/world/world_ground_layer.gd) 保留背景和地面绘制，地图修订或背景范围变化才刷新；路径等动态反馈仍由 Main 绘制，人物与物件由 WorldDepthLayer 排序。未启用美术继续走原网格回退。变更地面数据时必须沿用地图修订失效链路，避免只重绘 Main 而留下旧缓存。
+启用美术的地图由 [WorldGroundLayer](../client/godot/scripts/world/world_ground_layer.gd) 保留背景和地面绘制。[MapGroundMesh](../client/godot/scripts/world/map_ground_mesh.gd) 按原图集与叠放顺序合并地面几何，只在地图修订变化时重建；背景范围变化只刷新绘制，特殊裁切／翻转和子图集继续走原区域绘制器。路径等动态反馈仍由 Main 绘制，人物与物件由 WorldDepthLayer 排序。未启用美术继续走原网格回退。变更地面数据时必须沿用地图修订失效链路，避免只重绘 Main 而留下旧缓存。
 
 ## 服务端的职责边界
 

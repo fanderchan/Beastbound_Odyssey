@@ -136,6 +136,7 @@ RUNTIME_IDENTITY_FILES = (
     "scripts/world/world_presentation_profile.gd",
     "scripts/world/world_depth_layer.gd",
     "scripts/world/world_ground_layer.gd",
+    "scripts/world/map_ground_mesh.gd",
     "scripts/world/world_overlay_layer.gd",
     "scripts/qa/map_visual_runtime_check.gd",
     "scripts/qa/movement_spam_probe_plan.gd",

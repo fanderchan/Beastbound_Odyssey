@@ -1312,6 +1312,7 @@ class ProjectSettingsIdentityTests(unittest.TestCase):
     def test_ground_cache_source_and_check_changes_invalidate_identity(self) -> None:
         ground_inputs = (
             "scripts/world/world_ground_layer.gd",
+            "scripts/world/map_ground_mesh.gd",
             "scripts/qa/world_ground_layer_check.gd",
         )
         with tempfile.TemporaryDirectory() as directory:

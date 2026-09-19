@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **949** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **950** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -344,7 +344,7 @@
 | [standalone_pet_art_overlay_check.gd](../../client/godot/scripts/qa/standalone_pet_art_overlay_check.gd) | 520 |
 | [standalone_pet_art_review_gate.gd](../../client/godot/scripts/qa/standalone_pet_art_review_gate.gd) | 139 |
 | [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 551 |
-| [world_ground_layer_check.gd](../../client/godot/scripts/qa/world_ground_layer_check.gd) | 90 |
+| [world_ground_layer_check.gd](../../client/godot/scripts/qa/world_ground_layer_check.gd) | 157 |
 | [world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/world_hud_owner_review_capture.gd) | 908 |
 | [world_presentation_profile_check.gd](../../client/godot/scripts/qa/world_presentation_profile_check.gd) | 292 |
 | [world_review_frame_parity.gd](../../client/godot/scripts/qa/world_review_frame_parity.gd) | 205 |
@@ -469,7 +469,7 @@
 
 ## client/godot/scripts/world
 
-<details><summary>23 个文件</summary>
+<details><summary>24 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -478,6 +478,7 @@
 | [interaction_occlusion_model.gd](../../client/godot/scripts/world/interaction_occlusion_model.gd) | 13 |
 | [isometric_map_model.gd](../../client/godot/scripts/world/isometric_map_model.gd) | 521 |
 | [map_data_catalog.gd](../../client/godot/scripts/world/map_data_catalog.gd) | 49 |
+| [map_ground_mesh.gd](../../client/godot/scripts/world/map_ground_mesh.gd) | 61 |
 | [map_region_catalog.gd](../../client/godot/scripts/world/map_region_catalog.gd) | 235 |
 | [map_route_planner.gd](../../client/godot/scripts/world/map_route_planner.gd) | 234 |
 | [map_route_planner_check.gd](../../client/godot/scripts/world/map_route_planner_check.gd) | 234 |
@@ -491,7 +492,7 @@
 | [world_camera_safe_area_model.gd](../../client/godot/scripts/world/world_camera_safe_area_model.gd) | 676 |
 | [world_camera_safe_area_model_check.gd](../../client/godot/scripts/world/world_camera_safe_area_model_check.gd) | 543 |
 | [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 722 |
-| [world_ground_layer.gd](../../client/godot/scripts/world/world_ground_layer.gd) | 45 |
+| [world_ground_layer.gd](../../client/godot/scripts/world/world_ground_layer.gd) | 51 |
 | [world_overlay_layer.gd](../../client/godot/scripts/world/world_overlay_layer.gd) | 302 |
 | [world_presentation_profile.gd](../../client/godot/scripts/world/world_presentation_profile.gd) | 138 |
 | [world_visual_direction_contract.gd](../../client/godot/scripts/world/world_visual_direction_contract.gd) | 52 |
@@ -986,7 +987,7 @@
 | [lib/public-capacity-harness.mjs](../../tools/lib/public-capacity-harness.mjs) | 646 |
 | [map_performance_batch.py](../../tools/map_performance_batch.py) | 204 |
 | [map_performance_batch_contract.py](../../tools/map_performance_batch_contract.py) | 173 |
-| [map_visual_evidence_builder.py](../../tools/map_visual_evidence_builder.py) | 2059 |
+| [map_visual_evidence_builder.py](../../tools/map_visual_evidence_builder.py) | 2060 |
 | [normalize_mounted_sprite_frames.py](../../tools/normalize_mounted_sprite_frames.py) | 198 |
 | [p0_6_equipment_ownership_registry_gate.mjs](../../tools/p0_6_equipment_ownership_registry_gate.mjs) | 316 |
 | [p0_6_large_collection_journal_gate.mjs](../../tools/p0_6_large_collection_journal_gate.mjs) | 778 |
@@ -1091,7 +1092,7 @@
 | [tools/test/test_install_firebud_computer_use_evidence.py](../../tools/test/test_install_firebud_computer_use_evidence.py) | 90 |
 | [tools/test/test_install_pet_battle_bundle.py](../../tools/test/test_install_pet_battle_bundle.py) | 1330 |
 | [tools/test/test_map_performance_batch.py](../../tools/test/test_map_performance_batch.py) | 179 |
-| [tools/test/test_map_visual_evidence_builder.py](../../tools/test/test_map_visual_evidence_builder.py) | 1438 |
+| [tools/test/test_map_visual_evidence_builder.py](../../tools/test/test_map_visual_evidence_builder.py) | 1439 |
 | [tools/test/test_map_visual_release_tools.py](../../tools/test/test_map_visual_release_tools.py) | 484 |
 | [tools/test/test_pet_art_batch_audit.py](../../tools/test/test_pet_art_batch_audit.py) | 1793 |
 | [tools/test/test_pet_battle_export_gate.py](../../tools/test/test_pet_battle_export_gate.py) | 4927 |

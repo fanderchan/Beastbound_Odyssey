@@ -1,12 +1,14 @@
 extends Node2D
 
 const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
+const MapGroundMesh := preload("res://scripts/world/map_ground_mesh.gd")
 const BACKGROUND_COLOR := Color(0.085, 0.13, 0.14)
 
 var _prepared: Dictionary = {}
 var _revision := -1
 var _background_rect := Rect2()
 var _has_ground := false
+var _ground_mesh: ArrayMesh
 
 
 func _init() -> void:
@@ -21,6 +23,7 @@ func configure(prepared: Dictionary, revision: int, background_rect: Rect2) -> v
 		_revision = revision
 		_has_ground = MapVisualRenderer.has_prepared_visual(prepared) and MapVisualRenderer.ground_draw_count(prepared) > 0
 		_prepared = prepared if _has_ground else {}
+		_ground_mesh = MapGroundMesh.build(_prepared) if _has_ground else null
 		visible = _has_ground
 		queue_redraw()
 	set_background_rect(background_rect)
@@ -42,4 +45,7 @@ func _draw() -> void:
 	if not _has_ground:
 		return
 	draw_rect(_background_rect, BACKGROUND_COLOR, true)
-	MapVisualRenderer.draw_ground(self, _prepared)
+	if _ground_mesh != null:
+		draw_mesh(_ground_mesh, _prepared.get("atlasTexture") as Texture2D)
+	else:
+		MapVisualRenderer.draw_ground(self, _prepared)
