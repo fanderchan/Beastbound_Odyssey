@@ -19,10 +19,11 @@ const MIN_ZOOM_COMPONENT := 0.0001
 
 
 static func camera_zoom_for(map_art_review_preview: bool, prepared_visual: Dictionary) -> Vector2:
-	if _is_firebud_review_canary(map_art_review_preview, prepared_visual):
-		return FIREBUD_REVIEW_CAMERA_ZOOM
-	if _earth_vein_camera_profile_enabled(map_art_review_preview, prepared_visual):
-		return EARTH_VEIN_CAMERA_ZOOM
+	match _camera_profile_bundle_id(map_art_review_preview, prepared_visual):
+		FIREBUD_REVIEW_BUNDLE_ID:
+			return FIREBUD_REVIEW_CAMERA_ZOOM
+		EARTH_VEIN_BUNDLE_ID:
+			return EARTH_VEIN_CAMERA_ZOOM
 	return NORMAL_CAMERA_ZOOM
 
 
@@ -34,7 +35,8 @@ static func camera_anchor_for(
 ) -> Vector2:
 	var anchor := WorldCameraSafeAreaModel.player_anchor(viewport_size, safe_rect)
 	if (
-		not _is_firebud_review_canary(map_art_review_preview, prepared_visual)
+		_camera_profile_bundle_id(map_art_review_preview, prepared_visual)
+			!= FIREBUD_REVIEW_BUNDLE_ID
 		or safe_rect.size.x <= 0.0
 		or safe_rect.size.y <= 0.0
 	):
@@ -59,42 +61,37 @@ static func uses_hud_landmark_composition(
 	map_art_review_preview: bool,
 	prepared_visual: Dictionary
 ) -> bool:
-	return (
-		_is_firebud_review_canary(map_art_review_preview, prepared_visual)
-		or _earth_vein_camera_profile_enabled(
-			map_art_review_preview,
-			prepared_visual
-		)
-	)
+	return _camera_profile_bundle_id(map_art_review_preview, prepared_visual) != ""
 
 
 static func uses_endpoint_safe_camera(prepared_visual: Dictionary) -> bool:
-	return (
-		bool(prepared_visual.get("active", false))
-		and str(prepared_visual.get("bundleId", "")).strip_edges()
-			== EARTH_VEIN_BUNDLE_ID
-		and (
-			str(prepared_visual.get("status", "")) == "released"
-			or (
-				bool(prepared_visual.get("qaPreview", false))
-				and bool(prepared_visual.get("reviewCandidate", false))
-				and str(prepared_visual.get("status", ""))
-					== "owner_review_pending"
-			)
-		)
-	)
+	return _camera_profile_bundle_id(true, prepared_visual) == EARTH_VEIN_BUNDLE_ID
 
 
-static func _earth_vein_camera_profile_enabled(
+static func _camera_profile_bundle_id(
 	map_art_review_preview: bool,
 	prepared_visual: Dictionary
-) -> bool:
-	if not uses_endpoint_safe_camera(prepared_visual):
-		return false
-	return (
-		str(prepared_visual.get("status", "")) == "released"
-		or map_art_review_preview
-	)
+) -> String:
+	# Select the bundle once instead of checking both map policies every frame.
+	# Read the live fields: candidate/released transitions need no cache reset.
+	if not bool(prepared_visual.get("active", false)):
+		return ""
+	var bundle_id := str(prepared_visual.get("bundleId", "")).strip_edges()
+	if bundle_id == EARTH_VEIN_BUNDLE_ID:
+		var status := str(prepared_visual.get("status", ""))
+		if status == "released":
+			return bundle_id
+		if status != "owner_review_pending":
+			return ""
+	elif bundle_id != FIREBUD_REVIEW_BUNDLE_ID:
+		return ""
+	if (
+		map_art_review_preview
+		and bool(prepared_visual.get("qaPreview", false))
+		and bool(prepared_visual.get("reviewCandidate", false))
+	):
+		return bundle_id
+	return ""
 
 
 static func uses_authored_ground_details(
@@ -122,17 +119,3 @@ static func safe_zoom(value: Vector2) -> Vector2:
 
 static func _safe_zoom_component(value: float) -> float:
 	return value if absf(value) >= MIN_ZOOM_COMPONENT else 1.0
-
-
-static func _is_firebud_review_canary(
-	map_art_review_preview: bool,
-	prepared_visual: Dictionary
-) -> bool:
-	return (
-		map_art_review_preview
-		and bool(prepared_visual.get("active", false))
-		and bool(prepared_visual.get("qaPreview", false))
-		and bool(prepared_visual.get("reviewCandidate", false))
-		and str(prepared_visual.get("bundleId", "")).strip_edges()
-			== FIREBUD_REVIEW_BUNDLE_ID
-	)

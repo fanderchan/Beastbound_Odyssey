@@ -7,6 +7,7 @@ const WorldPresentationProfile := preload(
 
 static func run(host: Node) -> Dictionary:
 	var errors: Array[String] = []
+	var policy_state_count := _validate_camera_policy_states(errors)
 	var v1 := {
 		"active": true,
 		"bundleId": "firebud_region_visual_v1",
@@ -262,6 +263,7 @@ static func run(host: Node) -> Dictionary:
 	return {
 		"schemaVersion": 1,
 		"reportType": "beastbound.world_presentation_profile_check",
+		"cameraPolicyStates": policy_state_count,
 		"result": "PASS" if errors.is_empty() else "FAIL",
 		"currentBundleId": str(original_prepared.get("bundleId", "")),
 		"currentReviewPreview": original_preview,
@@ -280,6 +282,53 @@ static func run(host: Node) -> Dictionary:
 		"roundTripError": round_trip_world.distance_to(sample_world),
 		"errors": errors,
 	}
+
+
+static func _validate_camera_policy_states(errors: Array[String]) -> int:
+	var count := 0
+	var viewport := Vector2(1280, 720)
+	var safe_rect := Rect2(8, 206, 955, 288)
+	var prepared := {}
+	for bundle_id in ["earth_vein_cave_visual_v1", "firebud_region_visual_v2", "unknown_bundle"]:
+		for status in ["owner_review_pending", "released", "retired", ""]:
+			# Bits: active=8, explicit preview=4, qaPreview=2, reviewCandidate=1.
+			# These allowed-state tables preserve each bundle's lifecycle contract.
+			var composition_masks: Array = []
+			var endpoint_masks: Array = []
+			var enabled_zoom := Vector2.ONE
+			if bundle_id == "earth_vein_cave_visual_v1":
+				enabled_zoom = Vector2(1.52, 1.52)
+				if status == "released":
+					composition_masks = range(8, 16)
+					endpoint_masks = range(8, 16)
+				elif status == "owner_review_pending":
+					composition_masks = [15]
+					endpoint_masks = [11, 15]
+			elif bundle_id == "firebud_region_visual_v2":
+				# Firebud remains preview-only even if its status says released.
+				composition_masks = [15]
+				enabled_zoom = Vector2(1.82, 1.82)
+			for wrapped in [false, true]:
+				for mask in range(16):
+					prepared["bundleId"] = "  %s\t" % bundle_id if wrapped else bundle_id
+					prepared["status"] = status
+					prepared["active"] = bool(mask & 8)
+					prepared["qaPreview"] = bool(mask & 2)
+					prepared["reviewCandidate"] = bool(mask & 1)
+					var preview := bool(mask & 4)
+					var composition := composition_masks.has(mask)
+					var original := prepared.duplicate(true)
+					var expected_anchor := Vector2(390, 360) if composition and bundle_id == "firebud_region_visual_v2" else viewport * 0.5
+					if (
+						WorldPresentationProfile.uses_hud_landmark_composition(preview, prepared) != composition
+						or WorldPresentationProfile.uses_endpoint_safe_camera(prepared) != endpoint_masks.has(mask)
+						or WorldPresentationProfile.camera_zoom_for(preview, prepared) != (enabled_zoom if composition else Vector2.ONE)
+						or WorldPresentationProfile.camera_anchor_for(viewport, safe_rect, preview, prepared) != expected_anchor
+						or prepared != original
+					):
+						errors.append("地图相机生命周期边界或原地状态更新错误：%s/%s/%d/%s" % [bundle_id, status, mask, wrapped])
+					count += 1
+	return count
 
 
 static func _expect_vector(

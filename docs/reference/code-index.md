@@ -348,7 +348,7 @@
 | [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 553 |
 | [world_ground_layer_check.gd](../../client/godot/scripts/qa/world_ground_layer_check.gd) | 157 |
 | [world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/world_hud_owner_review_capture.gd) | 908 |
-| [world_presentation_profile_check.gd](../../client/godot/scripts/qa/world_presentation_profile_check.gd) | 292 |
+| [world_presentation_profile_check.gd](../../client/godot/scripts/qa/world_presentation_profile_check.gd) | 341 |
 | [world_review_frame_parity.gd](../../client/godot/scripts/qa/world_review_frame_parity.gd) | 205 |
 
 </details>
@@ -496,7 +496,7 @@
 | [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 722 |
 | [world_ground_layer.gd](../../client/godot/scripts/world/world_ground_layer.gd) | 51 |
 | [world_overlay_layer.gd](../../client/godot/scripts/world/world_overlay_layer.gd) | 302 |
-| [world_presentation_profile.gd](../../client/godot/scripts/world/world_presentation_profile.gd) | 138 |
+| [world_presentation_profile.gd](../../client/godot/scripts/world/world_presentation_profile.gd) | 121 |
 | [world_visual_direction_contract.gd](../../client/godot/scripts/world/world_visual_direction_contract.gd) | 52 |
 | [world_visual_grade.gd](../../client/godot/scripts/world/world_visual_grade.gd) | 153 |
 
