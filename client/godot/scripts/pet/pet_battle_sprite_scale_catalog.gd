@@ -15,6 +15,7 @@ const SOURCE_FRAME_SIZE := 256.0
 static var _loaded := false
 static var _catalog: Dictionary = {}
 static var _profiles_by_form: Dictionary = {}
+static var _preview_profiles_by_form: Dictionary = {}
 static var _load_error := ""
 
 
@@ -34,7 +35,7 @@ static func warm_battle_state(state: Dictionary) -> bool:
 		).strip_edges()
 		if not PetActionAssetCatalog.supports_form(form_id):
 			continue
-		all_ready = _profiles_by_form.has(form_id) and all_ready
+		all_ready = not _selected_profile(form_id).is_empty() and all_ready
 	return all_ready
 
 
@@ -52,7 +53,7 @@ static func sprite_scale_for_form(form_id: String) -> float:
 	# or invalid catalog fails visually safe at 1.0 without file I/O in _draw().
 	if not _loaded or _load_error != "":
 		return DEFAULT_SPRITE_SCALE
-	var profile = _profiles_by_form.get(form_id.strip_edges(), {})
+	var profile := _selected_profile(form_id.strip_edges())
 	if not (profile is Dictionary):
 		return DEFAULT_SPRITE_SCALE
 	return float((profile as Dictionary).get("spriteScale", DEFAULT_SPRITE_SCALE))
@@ -60,8 +61,18 @@ static func sprite_scale_for_form(form_id: String) -> float:
 
 static func profile_for_form(form_id: String) -> Dictionary:
 	_ensure_loaded()
-	var value = _profiles_by_form.get(form_id.strip_edges(), {})
+	var value = _selected_profile(form_id.strip_edges())
 	return (value as Dictionary).duplicate(true) if value is Dictionary else {}
+
+
+static func _selected_profile(form_id: String) -> Dictionary:
+	if _profiles_by_form.has(form_id):
+		return _profiles_by_form[form_id]
+	# Candidate measurements must never enable art or affect a normal player.
+	# This only checks prepared in-memory flags, including during drawing.
+	if PetActionAssetCatalog.is_qa_preview_enabled(form_id):
+		return _preview_profiles_by_form.get(form_id, {})
+	return {}
 
 
 static func validation_errors() -> Array[String]:
@@ -78,6 +89,10 @@ static func validation_errors() -> Array[String]:
 	if scale_range.size() != 2 or scale_range[0] <= 0.0 or scale_range[1] < scale_range[0]:
 		errors.append("普通宠物战斗身体比例范围无效")
 		return errors
+	var preview_range := _number_range(_catalog.get("previewScaleRange", []))
+	if not _preview_profiles_by_form.is_empty() and (preview_range.size() != 2 or preview_range[0] <= 0.0 or preview_range[1] < preview_range[0]):
+		errors.append("候选宠物战斗身体比例范围无效")
+		return errors
 	var runtime_forms: Dictionary = {}
 	for record in PetArtCatalog.runtime_form_records():
 		var form_id := str(record.get("formId", "")).strip_edges()
@@ -85,15 +100,23 @@ static func validation_errors() -> Array[String]:
 			runtime_forms[form_id] = true
 			if not _profiles_by_form.has(form_id):
 				errors.append("当前运行宠物缺少显式战斗身体比例：%s" % form_id)
-	for form_id_value in _profiles_by_form.keys():
+	for form_id_value in _profiles_by_form.keys() + _preview_profiles_by_form.keys():
 		var form_id := str(form_id_value)
-		var profile := _profiles_by_form[form_id] as Dictionary
-		if not runtime_forms.has(form_id):
-			errors.append("战斗身体比例登记了非运行宠物：%s" % form_id)
-		if not PetActionAssetCatalog.supports_form(form_id):
-			errors.append("战斗身体比例登记的宠物没有正式动作包：%s" % form_id)
+		var preview_only := _preview_profiles_by_form.has(form_id)
+		var profile: Dictionary = _preview_profiles_by_form[form_id] if preview_only else _profiles_by_form[form_id]
+		var allowed_range := preview_range if preview_only else scale_range
+		if preview_only:
+			if runtime_forms.has(form_id) or PetArtCatalog.form_record(form_id).is_empty():
+				errors.append("候选身体比例只允许尚未发布的已登记宠物：%s" % form_id)
+			if not FileAccess.file_exists(PetArtCatalog.pet_bundle_metadata_path(form_id)):
+				errors.append("候选身体比例缺少素材包：%s" % form_id)
+		else:
+			if not runtime_forms.has(form_id):
+				errors.append("战斗身体比例登记了非运行宠物：%s" % form_id)
+			if not PetActionAssetCatalog.supports_form(form_id):
+				errors.append("战斗身体比例登记的宠物没有正式动作包：%s" % form_id)
 		var sprite_scale := float(profile.get("spriteScale", 0.0))
-		if sprite_scale < scale_range[0] or sprite_scale > scale_range[1]:
+		if not is_finite(sprite_scale) or sprite_scale < allowed_range[0] or sprite_scale > allowed_range[1]:
 			errors.append("战斗身体比例越界：%s=%.3f" % [form_id, sprite_scale])
 		if str(profile.get("artRole", "")).strip_edges() == "":
 			errors.append("战斗身体比例缺少美术层级角色：%s" % form_id)
@@ -220,7 +243,12 @@ static func _ensure_loaded() -> void:
 		_load_error = "普通宠物战斗身体比例目录不是有效 JSON 对象"
 		return
 	_catalog = parsed as Dictionary
-	var profiles = _catalog.get("profiles", [])
+	_load_profiles(_catalog.get("profiles", []), _profiles_by_form)
+	if _load_error == "":
+		_load_profiles(_catalog.get("previewProfiles", []), _preview_profiles_by_form)
+
+
+static func _load_profiles(profiles, target: Dictionary) -> void:
 	if not (profiles is Array):
 		_load_error = "普通宠物战斗身体比例 profiles 必须为数组"
 		return
@@ -233,10 +261,10 @@ static func _ensure_loaded() -> void:
 		if form_id == "":
 			_load_error = "普通宠物战斗身体比例存在空 formId"
 			return
-		if _profiles_by_form.has(form_id):
+		if _profiles_by_form.has(form_id) or _preview_profiles_by_form.has(form_id):
 			_load_error = "普通宠物战斗身体比例重复 formId：%s" % form_id
 			return
-		_profiles_by_form[form_id] = profile
+		target[form_id] = profile
 
 
 static func _number_range(value) -> Array[float]:

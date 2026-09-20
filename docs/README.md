@@ -10,7 +10,7 @@
 | 想知道一个功能该改哪里 | [架构与功能定位](architecture.md) |
 | 启动项目、开始下一轮开发 | [开发流程](development.md) |
 | 判断该跑哪些检查 | [测试指南](testing.md) |
-| 试玩最新洞穴和守护战、查看效果和成品差距 | [当前可玩内容与剩余门槛](project-status.md)、[四层／地标／五人战斗试玩入口](phase_569_current_four_floor_review.md)、[完整回合播放与最新鼠标复验](phase_589_ordered_server_battle_playback.md)、[联网超时修复与返程现状](phase_590_authoritative_battle_timeout.md) |
+| 试玩最新洞穴和守护战、查看效果和成品差距 | [当前可玩内容与剩余门槛](project-status.md)、[四层／地标／五人战斗试玩入口](phase_569_current_four_floor_review.md)、[完整回合播放与最新鼠标复验](phase_589_ordered_server_battle_playback.md)、[联网超时修复与返程现状](phase_590_authoritative_battle_timeout.md)、[普通遭遇候选宠物比例](phase_591_sunbaked_candidate_battle_scale.md) |
 | 继续整理大文件和技术债 | [维护清单](maintenance.md) |
 | 按文件找代码、数据、脚本 | [自动代码索引](reference/code-index.md) |
 | 查某项规则为何这样设计 | [自动阶段索引](reference/phase-index.md) |

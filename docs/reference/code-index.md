@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **962** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **963** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -128,7 +128,7 @@
 
 ## client/godot/scripts/pet
 
-<details><summary>8 个文件</summary>
+<details><summary>9 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -137,7 +137,8 @@
 | [pet_animation_cache_check.gd](../../client/godot/scripts/pet/pet_animation_cache_check.gd) | 75 |
 | [pet_art_catalog.gd](../../client/godot/scripts/pet/pet_art_catalog.gd) | 350 |
 | [pet_battle_release_gate.gd](../../client/godot/scripts/pet/pet_battle_release_gate.gd) | 789 |
-| [pet_battle_sprite_scale_catalog.gd](../../client/godot/scripts/pet/pet_battle_sprite_scale_catalog.gd) | 305 |
+| [pet_battle_sprite_scale_catalog.gd](../../client/godot/scripts/pet/pet_battle_sprite_scale_catalog.gd) | 333 |
+| [pet_candidate_sprite_scale_check.gd](../../client/godot/scripts/pet/pet_candidate_sprite_scale_check.gd) | 49 |
 | [pet_evolution_visual_catalog.gd](../../client/godot/scripts/pet/pet_evolution_visual_catalog.gd) | 294 |
 | [standalone_pet_art_overlay.gd](../../client/godot/scripts/pet/standalone_pet_art_overlay.gd) | 701 |
 
@@ -299,7 +300,7 @@
 | [evolution_trial_dialog_check.gd](../../client/godot/scripts/qa/evolution_trial_dialog_check.gd) | 47 |
 | [firebud_village_service_layout_check.gd](../../client/godot/scripts/qa/firebud_village_service_layout_check.gd) | 544 |
 | [guardian_battle_playthrough.gd](../../client/godot/scripts/qa/guardian_battle_playthrough.gd) | 254 |
-| [guardian_battle_presentation_check.gd](../../client/godot/scripts/qa/guardian_battle_presentation_check.gd) | 106 |
+| [guardian_battle_presentation_check.gd](../../client/godot/scripts/qa/guardian_battle_presentation_check.gd) | 107 |
 | [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 187 |
 | [hang_matchmaking_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_owner_review_capture.gd) | 716 |
 | [hang_matchmaking_world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd) | 1622 |

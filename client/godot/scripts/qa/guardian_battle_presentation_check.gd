@@ -10,6 +10,7 @@ const ReviewEntry := preload("res://scripts/qa/guardian_battle_review.gd")
 
 static func validation_errors() -> Array[String]:
 	var errors: Array[String] = []
+	errors.append_array(preload("res://scripts/pet/pet_candidate_sprite_scale_check.gd").validation_errors())
 	errors.append_array(BattleArenaVisualCatalog.validation_errors())
 	var guardian_state := {"sourceEncounterGroupId": "earth_vein_guardian_group"}
 	if BattleArenaVisualCatalog.enable_earth_guardian_review_from_cli():
