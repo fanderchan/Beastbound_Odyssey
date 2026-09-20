@@ -53,6 +53,7 @@ python3 tools/play_guardian_review.py
 python3 tools/play_guardian_review.py --record
 python3 tools/play_guardian_review.py --record --autoplay
 python3 tools/play_guardian_review.py --cave-journey --timeout-seconds 1200
+python3 tools/play_guardian_review.py --downed-owner-check --record
 ```
 
 需要本机 Godot 4.7；可用 `--godot /absolute/path/to/godot` 指定已有程序，录像额外需要 `ffmpeg` 和 `ffprobe`。入口固定使用官方隔离 QA lane、真实 `Main.tscn`、1280×720，以及仅监听随机回环端口的一次性内存后端，不连接正常 MySQL 或真实账号。四名测试队友通过正式 HTTP 接口保持在线并提交攻击／应对蓄力；这不等于五名真人联机或难度验收。
@@ -68,6 +69,8 @@ python3 tools/play_guardian_review.py --cave-journey --timeout-seconds 1200
 联网移动本身会领取服务器遇敌票据，无需切换美术模式。试玩入口在换层时持续保留候选地图与相机比例；旧的 `encounters-on/off` 文件控制已移除，避免下层退回网格与默认缩放。
 
 测试队友在每场结束后继续参与后续房间。`backend/closed-rooms.ndjson` 保留每场原始结算，`backend/closed-room.json` 保留最后一场；验证特定守护奖励时应按房间与遭遇来源选择记录，不能把最后一场普通遭遇当作守护战。测试角色的生命会按真实战斗消耗，连续试玩不自动补满或伪造胜利。
+
+`--downed-owner-check` 是单独的人工回归夹具：在后端开始监听前，将主控人物设为当前生命 1／最大生命 10400，主控战宠当前生命设为 1，四名队友及其战宠保持满血。较高的人物生命上限用于避免低生命测试号因过量伤害被击飞、提前离场；遭遇种子固定为 32 字节的 `0x58`，使遭遇与敌人目标顺序可复现。令牌和战斗反应随机源保持原样，伤害、指令、结算仍走正式实现，不注入胜负。它不能与 `--cave-journey` 或 `--autoplay` 混用。须实际观察主控人物和战宠都倒下、其他队友继续推进回合，最终客户端收到结算；初始配置或战斗结束本身不代表覆盖该分支，也不构成正常角色成长／平衡验收。相关修复与证据见 [Phase 582](../docs/phase_582_battle_response_ownership.md)。
 
 `--autoplay` 自动走一次遮挡、挑战、攻击、宠物冲撞、蓄力防御、自动战斗及胜利返回路线，并核对档案版本和地之戒到账。输入通过真实 Main 的 viewport 跨帧发送，报告明确 `computerUse=false`；这是自动操作回放，不代替原生鼠标或所有者验收。提前结束时，在该次输出目录创建 `stop` 文件；协程退出后再清理客户端和后端。实现与验证边界见 [Phase 547](../docs/phase_547_earth_guardian_battle_presentation.md)。
 

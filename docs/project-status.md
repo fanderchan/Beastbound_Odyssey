@@ -39,7 +39,7 @@ git log -5 --oneline
 产品范围由 [总路线图](../stoneage_gap_plan.md) 负责，逐步交付由 [生产发布计划](../production_release_loop_plan.md) 负责。两者现在都以主目录为准，旧目录的游标不再驱动开发。
 
 1. **统一基线已恢复**：历史成果和文档导航已核对；完整服务端 1984 项通过、0 失败、1 项因未配置独立 Valkey 环境跳过，客户端定向 8/8 通过。
-2. **一场守护战已形成可试玩、可审看的候选**：正式客户端已接入已有宠物动作和原创洞穴战场背景，修复地标挡人及人物倒下后漏交宠物指令。[Phase 580](phase_580_current_guardian_mouse_review.md) 已用当前源码和真实鼠标完成挑战、两轮角色／战宠防御、游戏内自动战斗、胜利返回及背包奖励检查；一个真实 Main 加四个 HTTP 测试队友，五账号均 `revision 102→103`、地之戒 `+1`、石币 `+218`。这不是五真人或平衡验收。[Phase 566](phase_566_authoritative_battle_appearances.md) 的四套人物战斗外观修复仍在当前版本中。最新四层／地标／战斗预览和试玩命令集中在 [Phase 569](phase_569_current_four_floor_review.md)，美术来源见 [Phase 547](phase_547_earth_guardian_battle_presentation.md)。[Phase 581](phase_581_cave_journey_visuals_and_result_input.md) 又接入普通遭遇现有候选素材，修复换层网格／比例和结算点击穿透；连续返回在二层暴露长战斗结算不同步，下一步优先修复。老板美术接受与四层完整性能仍待完成，发布游标保持 `R1.W024`。
+2. **一场守护战已形成可试玩、可审看的候选**：正式客户端已接入已有宠物动作和原创洞穴战场背景，修复地标挡人及人物倒下后漏交宠物指令。[Phase 580](phase_580_current_guardian_mouse_review.md) 已用当前源码和真实鼠标完成挑战、两轮角色／战宠防御、游戏内自动战斗、胜利返回及背包奖励检查；一个真实 Main 加四个 HTTP 测试队友，五账号均 `revision 102→103`、地之戒 `+1`、石币 `+218`。这不是五真人或平衡验收。[Phase 566](phase_566_authoritative_battle_appearances.md) 的四套人物战斗外观修复仍在当前版本中。最新四层／地标／战斗预览和试玩命令集中在 [Phase 569](phase_569_current_four_floor_review.md)，美术来源见 [Phase 547](phase_547_earth_guardian_battle_presentation.md)。[Phase 581](phase_581_cave_journey_visuals_and_result_input.md) 又接入普通遭遇现有候选素材，修复换层网格／比例和结算点击穿透；连续返回在二层暴露长战斗结算不同步。[Phase 582](phase_582_battle_response_ownership.md) 已修复共享请求字典清空导致有效状态被丢弃，故障回放与实机双倒地结算通过；整场录制仍因 WebSocket 429 失败，需继续处理。老板美术接受与四层完整性能仍待完成，发布游标保持 `R1.W024`。
 3. **首次切战卡顿已明显改善，代码已同步 GitHub**：[Phase 548](phase_548_battle_hotpaths_and_authoritative_completion.md) 修复了人物击飞后提前胜利并减少绘制开销；[Phase 549](phase_549_battle_texture_prefetch_and_github_sync.md) 增加有界后台贴图预取，同一五人守护战的新进程首次准备由约 1002 ms 降到两轮约 10 ms。两场权威胜利与五账号奖励到账通过，严格原生前台性能两次通过，最终世界性能探针 `5/5`。此前各阶段已按功能提交推送 GitHub main；107 项待重冻地图证据继续在本地保留。未知形态或立即开战仍可能走同步加载，不能把这个场景的结果推广成全游戏无卡顿。
 4. **依次推进成品门槛**：继续 R1.W024 的当前源码精确地图证据、真实操作、集中式重复移动性能和路线/战斗转换验证，再推进剩余视听验收、首发内容、玩法/经济、运营基础设施、正式构建和封测；每次交付都带具体效果或可复现结果。
 
@@ -48,7 +48,7 @@ git log -5 --oneline
 | 当前事项 | 已有证据 | 仍需完成 |
 | --- | --- | --- |
 | 人物比例、遮挡与地标构图 | [Phase 555](phase_555_world_prop_player_visibility.md) 修复前景物件挡人；[Phase 556](phase_556_guardian_navigation_camera.md) 修复守护者到达格和消息窗裁切；[Phase 571](phase_571_current_cave_input_and_performance.md) 已用当前源码实测四层岩墙前后遮挡、守护导航与消息面板，人物完整 alpha 高度 `121.478–125.856px` | 正式证据配对及所有者接受仍待完成；外围环境物件不能冒充全部无遮挡 |
-| 四层路线与五人守护战 | [Phase 580](phase_580_current_guardian_mouse_review.md) 完成联网鼠标守护战闭环和五账号奖励；[Phase 581](phase_581_cave_journey_visuals_and_result_input.md) 修复连续试玩的普通遭遇显示、换层美术／比例、结算点击及测试队友续战，真实 F4→F3→F2 与两次普通遭遇逃离通过 | 第三场服务器第 13 回合战败，客户端停在第 8 回合等待；优先修复结算同步，再完成一层／出洞。正式截图配对和性能仍待完成，107 项本地候选文件保留 |
+| 四层路线与五人守护战 | [Phase 580](phase_580_current_guardian_mouse_review.md) 完成联网鼠标守护战闭环和五账号奖励；[Phase 581](phase_581_cave_journey_visuals_and_result_input.md) 修复连续试玩的普通遭遇显示、换层美术／比例、结算点击及测试队友续战，真实 F4→F3→F2 与两次普通遭遇逃离通过 | [Phase 582](phase_582_battle_response_ownership.md) 已修复结算同步；原故障回放返回村口，实机主控双倒地后队友第 13 回合胜利、五账号奖励到账。整场日志仍有 WebSocket 429；优先查清限流，再完成一层／出洞、正式截图配对和性能。107 项本地候选文件保留 |
 | 同屏队友外观与持续可见性 | [Phase 563](phase_563_remote_player_appearance.md) 接通权威外观、八向动画、相同比例、点击范围和提交后骑乘通知；[Phase 564](phase_564_idle_online_presence_refresh.md) 修复静止定时刷新误隐藏人物，真实 HTTP/WS 旁观回归通过，服务端 `48/48`、客户端 `5/5` | 补做当前联网客户端点击、上下骑和切图的人工视觉复核；自动回归及展示片不代表五真人联机或 200 人容量 |
 | 四套战斗人物与首场加载 | [Phase 566](phase_566_authoritative_battle_appearances.md) 修复权威外观丢失；[Phase 567](phase_567_nearby_character_battle_prefetch.md) 补齐同图人物预取，首次准备 `430.989→9.700ms`，客户端 `4/4`，完整原生五账号奖励再次通过；录制休眠中断已处理 | 立刻开战或尚未进入预取的人物仍可能同步加载；原生鼠标、正常前台性能和所有者接受继续待完成 |
 | 关闭客户端的资源回收 | [Phase 570](phase_570_prefetch_request_cleanup.md) 修复退出及加载失败时未回收后台贴图请求，提前退出由四个泄漏变为零；定向 `4/4`、原生请求回收和完整五账号胜利通过，五人各获地之戒、人物倒下后的宠物指令再次验证 | 当前自动试玩不替代真实鼠标、前台性能或所有者接受 |
@@ -57,7 +57,7 @@ git log -5 --oneline
 | 相机与外观的重复计算 | [Phase 577](phase_577_player_appearance_selection_cache.md) 复用未变化的外观选择；[Phase 578](phase_578_camera_policy_dispatch.md) 合并相机资格判断，384 种状态、定向 `4/4` 及跨帧移动通过。该源码单次原生静止 600/600 帧有效，约 `7.816% CPU`；Phase 579 已补完整地图矩阵 | 局部及单次数据不能证明整体性能改善；修改前后正常时钟 CPU 对照仍未完成 |
 | 取证可靠性与时间口径 | [Phase 551](phase_551_map_evidence_commit_provenance.md) 绑定运行内容和祖先提交；[Phase 558](phase_558_native_performance_visibility.md) 验证前台绘制；[Phase 562](phase_562_runtime_probe_wall_clock.md) 区分模拟／实际时间；Phase 576 正常 30 FPS 下美术约 `7.784% CPU`、网格约 `22.366%`；[Phase 580](phase_580_current_guardian_mouse_review.md) 关闭详细计时并明确运行时 VSync 后仍测得约 `0.150ms` 静止增量，未采用无收益的调用方式微调 | 同版渲染路径对照不是修改前后收益；脚本区段增量不等于整进程 CPU 增量。普通启动会覆盖命令行 VSync 设置，不能混用不同条件的数据或据此放宽性能门 |
 
-**接下来的顺序**：先复现并修复 Phase 581 的服务器已结算、客户端仍等待的问题，再完成连续返回路线。当前普通遭遇已能在隔离试玩中展示现有候选素材，换层美术／人物比例和结算点击已复验；这不代表素材正式发布或四层完整验收。随后继续静止性能增量和当前精确证据配对，完整通过 R1.W024 后进入 R1.W025 受委托复审。原有 107 项候选文件保留。
+**接下来的顺序**：Phase 582 已修复 Phase 581 的结算等待问题；先定位实机新增证据中的 WebSocket 429，再完成无错误的连续返回路线。当前普通遭遇已能在隔离试玩中展示现有候选素材，换层美术／人物比例和结算点击已复验；这不代表素材正式发布或四层完整验收。随后继续静止性能增量和当前精确证据配对，完整通过 R1.W024 后进入 R1.W025 受委托复审。原有 107 项候选文件保留。
 
 其他地图如潮回洞穴仍有网格占位，不在岩脉四层完成范围内。Firebud v2、融合、环境声和 Bui VFX 已有返工或延期决定，不从旧主目录的 `R1.01` 重做。Earth Vein 仍为待验收候选；测试和内部审查不等于老板亲自批准精确美术资产。
 

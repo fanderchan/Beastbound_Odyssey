@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **953** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **954** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -12,7 +12,7 @@
 
 | 行数 | 文件 |
 | ---: | --- |
-| 33019 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
+| 33021 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
 | 28888 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27376 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
 | 19231 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
@@ -60,7 +60,7 @@
 
 ## client/godot/scripts/battle
 
-<details><summary>37 个文件</summary>
+<details><summary>38 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -95,9 +95,10 @@
 | [pet_template_catalog.gd](../../client/godot/scripts/battle/pet_template_catalog.gd) | 518 |
 | [server_battle_boss_replay_check.gd](../../client/godot/scripts/battle/server_battle_boss_replay_check.gd) | 491 |
 | [server_battle_command_owner_check.gd](../../client/godot/scripts/battle/server_battle_command_owner_check.gd) | 96 |
-| [server_battle_coordinator.gd](../../client/godot/scripts/battle/server_battle_coordinator.gd) | 1455 |
+| [server_battle_coordinator.gd](../../client/godot/scripts/battle/server_battle_coordinator.gd) | 1448 |
 | [server_battle_interruption_model.gd](../../client/godot/scripts/battle/server_battle_interruption_model.gd) | 129 |
 | [server_battle_reaction_replay_check.gd](../../client/godot/scripts/battle/server_battle_reaction_replay_check.gd) | 679 |
+| [server_battle_request_owner_check.gd](../../client/godot/scripts/battle/server_battle_request_owner_check.gd) | 94 |
 | [server_battle_ride_replay_check.gd](../../client/godot/scripts/battle/server_battle_ride_replay_check.gd) | 774 |
 | [server_battle_room_model.gd](../../client/godot/scripts/battle/server_battle_room_model.gd) | 1611 |
 | [server_battle_status_replay_check.gd](../../client/godot/scripts/battle/server_battle_status_replay_check.gd) | 655 |
@@ -267,7 +268,7 @@
 | [audio_runtime_check.gd](../../client/godot/scripts/qa/audio_runtime_check.gd) | 301 |
 | [audio_settings_panel_check.gd](../../client/godot/scripts/qa/audio_settings_panel_check.gd) | 102 |
 | [audio_world_context_check.gd](../../client/godot/scripts/qa/audio_world_context_check.gd) | 44 |
-| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33019 |
+| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33021 |
 | [backpack_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture.gd) | 916 |
 | [backpack_awakened_owner_review_capture_check.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture_check.gd) | 218 |
 | [battle_command_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/battle_command_awakened_owner_review_capture.gd) | 435 |
@@ -295,7 +296,7 @@
 | [firebud_village_service_layout_check.gd](../../client/godot/scripts/qa/firebud_village_service_layout_check.gd) | 544 |
 | [guardian_battle_playthrough.gd](../../client/godot/scripts/qa/guardian_battle_playthrough.gd) | 254 |
 | [guardian_battle_presentation_check.gd](../../client/godot/scripts/qa/guardian_battle_presentation_check.gd) | 106 |
-| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 155 |
+| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 159 |
 | [hang_matchmaking_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_owner_review_capture.gd) | 716 |
 | [hang_matchmaking_world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd) | 1622 |
 | [map_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/map_awakened_owner_review_capture.gd) | 2654 |
@@ -1012,7 +1013,7 @@
 | [pet_rebirth_balance_audit.mjs](../../tools/pet_rebirth_balance_audit.mjs) | 260 |
 | [pet_rebirth_evaluation_audit.mjs](../../tools/pet_rebirth_evaluation_audit.mjs) | 338 |
 | [pet_wild_capture_growth_audit.mjs](../../tools/pet_wild_capture_growth_audit.mjs) | 330 |
-| [play_guardian_review.py](../../tools/play_guardian_review.py) | 158 |
+| [play_guardian_review.py](../../tools/play_guardian_review.py) | 163 |
 | [prepare_npc_blind_review_packet.py](../../tools/prepare_npc_blind_review_packet.py) | 648 |
 | [progression_leveling_soak.mjs](../../tools/progression_leveling_soak.mjs) | 45 |
 | [progression_route_audit.mjs](../../tools/progression_route_audit.mjs) | 46 |

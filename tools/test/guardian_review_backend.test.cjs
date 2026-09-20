@@ -98,6 +98,49 @@ test("guardian transport failure preserves diagnostics without retrying a mutati
   }
 });
 
+test("downed-owner regression discloses its HP fixture and keeps the real battle progressing", {timeout: 60000}, async () => {
+  const directory = path.resolve(__dirname, "../../.run", `guardian-review-downed-${crypto.randomUUID()}`);
+  const review = await startGuardianReview(directory, {downedOwnerCheck: true});
+  try {
+    const profiles = JSON.parse(fs.readFileSync(path.join(directory, "initial-profiles.json")));
+    assert.equal(profiles[0].profile.player.hp, 1);
+    assert.equal(profiles[0].profile.player.maxHp, 10400);
+    assert.equal(profiles[0].profile.petInstances[0].hp, 1);
+    assert.ok(profiles[0].profile.petInstances[0].maxHp > 1);
+    assert.ok(profiles.slice(1).every(row => row.profile.player.hp === 1040 && row.profile.player.maxHp === 1040
+      && row.profile.petInstances[0].hp === row.profile.petInstances[0].maxHp));
+    const info = JSON.parse(fs.readFileSync(path.join(directory, "server-info.json")));
+    assert.equal(info.downedOwnerCheck, true);
+    assert.deepEqual(info.characterMaxHp, [10400, 1040, 1040, 1040, 1040]);
+    assert.equal(info.encounterSeedSource, "qa_fixed_58x32");
+    assert.equal(info.fullProfileSaveEnabled, false);
+    const start = await review.request(0, "/battle/party-encounter", ENCOUNTER);
+    const leaderId = start.room.participants[0].accountId;
+    const owned = start.room.battle.actors.filter(actor => actor.accountId === leaderId);
+    assert.equal(owned.length, 2);
+    assert.equal(owned.find(actor => actor.kind === "player").hp, 1);
+    assert.equal(owned.find(actor => actor.kind === "pet").hp, 1);
+    for (let tick = 0; tick < 80 && !review.closedRoom(); tick++) {
+      await review.tick({includeLeader: true});
+    }
+    assert.equal(review.closedRoom()?.status, "closed");
+    assert.ok(review.closedRoom().battle.round > 1);
+    const rounds = fs.readFileSync(path.join(directory, "rooms.ndjson"), "utf8")
+      .trim().split("\n").map(line => JSON.parse(line).room);
+    const downed = rounds.find(room => {
+      const actors = room.battle.actors.filter(actor => actor.accountId === leaderId);
+      return actors.length === 2 && actors.every(actor => actor.hp === 0)
+        && room.battle.actors.some(actor => actor.kind === "player" && actor.hp > 0);
+    });
+    assert.ok(downed, "the fixture must actually leave the owner without either actor while teammates live");
+    assert.ok(rounds.some(room => room.battle.round > downed.battle.round),
+      "a later ready round must still advance without another owner command");
+    // Native evidence separately verifies that Main receives those later states.
+  } finally {
+    await review.close();
+  }
+});
+
 test("review teammates continue in a second room and preserve both closures", {timeout: 60000}, async () => {
   const directory = path.resolve(__dirname, "../../.run", `guardian-review-continuation-${crypto.randomUUID()}`);
   const review = await startGuardianReview(directory, {encounterPermitAuthority: createPetEncounterPermitAuthority({

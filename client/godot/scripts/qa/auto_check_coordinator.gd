@@ -23200,7 +23200,9 @@ func _run_auto_auth_server_client_check() -> void:
 		and is_equal_approx(float(reconnect_check.get("readyDeadlineSeconds", 0.0)), 5.0)
 	)
 	var session_guard_ok := bool(host._panel_flow()._server_session_request_guard_self_check().get("ok", false))
-	var battle_owner_ok := bool(host._server_battle().request_owner_self_check().get("ok", false))
+	var battle_owner_check: Dictionary = await preload("res://scripts/battle/server_battle_request_owner_check.gd").run(host)
+	print("battle request ownership check: " + JSON.stringify(battle_owner_check))
+	var battle_owner_ok := bool(battle_owner_check.get("ok", false))
 	var stale_poll_guard_ok := ServerBattleRoomModel.polled_room_is_older(
 		{"roomId": "room_race", "battle": {"round": 8}},
 		{"roomId": "room_race", "battle": {"round": 7}},

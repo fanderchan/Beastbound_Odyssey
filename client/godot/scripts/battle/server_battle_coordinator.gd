@@ -65,7 +65,8 @@ func _begin_state_request(token: String) -> Dictionary:
 func _finish_state_request(owner: Dictionary) -> bool:
 	if int(state_request_owner.get("id", -1)) != int(owner.get("id", -2)):
 		return false
-	state_request_owner.clear()
+	# The callback shares this Dictionary; detach before validating its snapshot.
+	state_request_owner = {}
 	host.server_battle_state_poll_request_active = false
 	var current: bool = (
 		int(owner.get("generation", -1)) == state_request_generation
@@ -76,15 +77,6 @@ func _finish_state_request(owner: Dictionary) -> bool:
 		state_request_rerun_queued = false
 		host.call_deferred("_request_server_battle_state_restore")
 	return current
-
-
-func request_owner_self_check() -> Dictionary:
-	var first := {"id": 1, "generation": 4, "token": "a"}
-	var second := {"id": 2, "generation": 5, "token": "b"}
-	return {
-		"ok": int(first.get("id")) != int(second.get("id")) and int(first.get("generation")) < int(second.get("generation")),
-		"olderOwnerCannotClear": int(first.get("id")) != int(second.get("id")),
-	}
 
 
 func _begin_interruption_recovery(token: String, ticket_id: String) -> Dictionary:
@@ -103,7 +95,8 @@ func _begin_interruption_recovery(token: String, ticket_id: String) -> Dictionar
 func _finish_interruption_recovery(owner: Dictionary) -> bool:
 	if int(interruption_recovery_owner.get("id", -1)) != int(owner.get("id", -2)):
 		return false
-	interruption_recovery_owner.clear()
+	# Keep the callback's token, generation and ticket available for validation.
+	interruption_recovery_owner = {}
 	interruption_recovery_request_active = false
 	return (
 		int(owner.get("generation", -1)) == interruption_recovery_generation

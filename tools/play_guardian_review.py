@@ -61,12 +61,15 @@ def main() -> None:
     parser.add_argument("--record", action="store_true")
     parser.add_argument("--autoplay", action="store_true", help="run disclosed in-engine input checks; not Computer Use acceptance")
     parser.add_argument("--cave-journey", action="store_true", help="also preview existing candidate art in ordinary cave encounters; continue playing after the guardian")
+    parser.add_argument("--downed-owner-check", action="store_true", help="use a fixed encounter seed, leader at 1/10400 HP and leader pet at 1 HP; healthy teammates keep fighting")
     parser.add_argument("--timeout-seconds", type=int, default=900)
     args = parser.parse_args()
     if not 30 <= args.timeout_seconds <= 3600:
         parser.error("timeout must be between 30 and 3600 seconds")
     if args.cave_journey and args.autoplay:
         parser.error("--cave-journey is interactive; --autoplay stops after the guardian")
+    if args.downed_owner_check and (args.cave_journey or args.autoplay):
+        parser.error("--downed-owner-check is a separate interactive regression fixture")
     godot = shutil.which(args.godot)
     if not godot:
         parser.error("Godot executable not found")
@@ -80,8 +83,10 @@ def main() -> None:
         BEASTBOUND_GUARDIAN_AUTOPLAY="1" if args.autoplay else "0",
         BEASTBOUND_GUARDIAN_REVIEW_SECONDS=str(args.timeout_seconds - 15))
     with (run / "backend.log").open("w") as log:
-        backend = subprocess.Popen(["node", str(ROOT / "tools/guardian_review_backend.cjs"),
-            str(run / "backend")], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
+        backend_command = ["node", str(ROOT / "tools/guardian_review_backend.cjs"), str(run / "backend")]
+        if args.downed_owner_check:
+            backend_command.append("--downed-owner-check")
+        backend = subprocess.Popen(backend_command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL, start_new_session=True)
         try:
             deadline = time.monotonic() + 30

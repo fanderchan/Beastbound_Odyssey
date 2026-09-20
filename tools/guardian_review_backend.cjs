@@ -8,6 +8,8 @@ const assert = require("node:assert/strict");
 const {createAuthService, createMemoryAuthStore} = require("../server/node/src/auth-service");
 const {createHttpServer, drainServerForShutdown} = require("../server/node/src/http-server");
 const {protocolMetadata} = require("../server/node/src/protocol");
+const {createPetEncounterAuthority} = require("../server/node/src/auth/pet-encounter-authority");
+const {createPetEncounterPermitAuthority} = require("../server/node/src/auth/pet-encounter-permit-authority");
 
 const MAP_ID = "earth_vein_cave_f4";
 const NAMES = ["洞穴探路者", "岩锋", "岚羽", "赤叶", "青岚"];
@@ -22,7 +24,7 @@ function checked(result) {
   return result;
 }
 
-function seedParty({encounterPermitAuthority} = {}) {
+function seedParty({encounterPermitAuthority, downedOwnerCheck = false} = {}) {
   const seed = createAuthService({store: createMemoryAuthStore(), allowFullProfileSave: true,
     autoCreateInitialCharacterForTests: true,
     initialCharacterElementsForTests: {earth: 10, water: 0, fire: 0, wind: 0}});
@@ -33,7 +35,9 @@ function seedParty({encounterPermitAuthority} = {}) {
     const profile = structuredClone(original.profile);
     // Keep the real client's original low HP to exercise downed-player/pet handoff.
     // Durable QA teammates keep that branch observable before the whole party falls.
-    const maxHp = index === 0 ? 520 : 1040;
+    // The downed-owner fixture uses a high cap with 1 current HP so overkill
+    // does not immediately eject its low-HP leader via the normal launch rule.
+    const maxHp = index === 0 ? (downedOwnerCheck ? 10400 : 520) : 1040;
     Object.assign(profile.player, {appearanceId: APPEARANCES[index], level: 100, exp: 0, nextExp: 656810, statPoints: 0,
       hp: maxHp, maxHp, baseStats: {maxHp, attack: 168, defense: 41, quick: 82}});
     profile.petInstances = [];
@@ -52,6 +56,16 @@ function seedParty({encounterPermitAuthority} = {}) {
       current = checked(seed.getProfile(member.session.token));
     }
     assert.equal(current.profile.petInstances[0].state, "battle");
+    if (downedOwnerCheck && index === 0) {
+      // Pre-listen regression setup only: healthy teammates keep fighting
+      // after both low-HP actors owned by the real client fall.
+      // No damage, targeting, commands or settlement are injected at runtime.
+      current.profile.player.hp = 1;
+      current.profile.petInstances[0].hp = 1;
+      checked(seed.saveProfile(member.session.token, {
+        expectedRevision: current.profileSummary.profileRevision, profile: current.profile,
+      }));
+    }
     return member;
   });
   const snapshot = seed.snapshot();
@@ -70,11 +84,18 @@ function seedParty({encounterPermitAuthority} = {}) {
   return {service, store, members};
 }
 
-async function startGuardianReview(outputDir, {encounterPermitAuthority} = {}) {
+async function startGuardianReview(outputDir, {encounterPermitAuthority, downedOwnerCheck = false} = {}) {
   fs.mkdirSync(outputDir, {mode: 0o700});
   const write = (name, data) => fs.writeFileSync(path.join(outputDir, name), JSON.stringify(data, null, 2), {mode: 0o600});
   const append = (name, data) => fs.appendFileSync(path.join(outputDir, name), JSON.stringify(data) + "\n", {mode: 0o600});
-  const {service, store, members} = seedParty({encounterPermitAuthority});
+  const fixedEncounterSeed = downedOwnerCheck && !encounterPermitAuthority;
+  const permitAuthority = encounterPermitAuthority || (fixedEncounterSeed ? createPetEncounterPermitAuthority({
+    catalog: createPetEncounterAuthority().catalog,
+    // Reproducible encounter/AI target order only. Tokens, reaction rolls and
+    // all runtime commands/settlement retain their normal implementations.
+    randomBytes: size => size === 32 ? Buffer.alloc(size, 0x58) : crypto.randomBytes(size),
+  }) : undefined);
+  const {service, store, members} = seedParty({encounterPermitAuthority: permitAuthority, downedOwnerCheck});
   const server = createHttpServer({service, store});
   let closedRoom = null;
   const closedRoomIds = new Set();
@@ -148,9 +169,12 @@ async function startGuardianReview(outputDir, {encounterPermitAuthority} = {}) {
         characterSlotIndex: session.slotIndex, selectionEpoch: session.selectionEpoch, selectionRequired: false}});
     write("initial-profiles.json", profiles);
     write("server-info.json", {pid: process.pid, baseUrl, storage: "memory", memberCount: 5,
-      fixtureVersion: 3, characterHp: [520, 1040, 1040, 1040, 1040],
+      fixtureVersion: 4, downedOwnerCheck, characterHp: profiles.map(row => row.profile.player.hp),
+      characterMaxHp: profiles.map(row => row.profile.player.maxHp),
+      activePetHp: profiles.map(row => row.profile.petInstances.find(pet => pet.state === "battle")?.hp),
       fullProfileSaveEnabled: false, strictEncounterAuthority: true, strictManualAccess: true,
-      encounterPermitSource: encounterPermitAuthority ? "injected_test_authority" : "runtime_default",
+      encounterPermitSource: fixedEncounterSeed ? "qa_fixed_seed_authority" : (encounterPermitAuthority ? "injected_test_authority" : "runtime_default"),
+      encounterSeedSource: fixedEncounterSeed ? "qa_fixed_58x32" : "authority_default",
       isolatedPositionTeleport: true, botTransport: "HTTP", scope: "one Main client plus four scripted accounts; not human multiplayer or balance acceptance"});
   } catch (error) {
     unsubscribe();
@@ -215,7 +239,7 @@ async function main() {
   const outputDir = path.resolve(process.argv[2] || "");
   const runRoot = path.resolve(__dirname, "../.run") + path.sep;
   assert.ok(outputDir.startsWith(runRoot) && !fs.existsSync(outputDir), "choose a fresh directory under .run");
-  const review = await startGuardianReview(outputDir);
+  const review = await startGuardianReview(outputDir, {downedOwnerCheck: process.argv.includes("--downed-owner-check")});
   let stopping = false;
   process.on("SIGINT", () => {stopping = true;});
   process.on("SIGTERM", () => {stopping = true;});
