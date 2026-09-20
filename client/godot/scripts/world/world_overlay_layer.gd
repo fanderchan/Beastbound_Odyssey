@@ -7,6 +7,7 @@ const KIND_SELECTION := "selection"
 const KIND_NPC_QUEST := "npc_quest"
 const KIND_FACILITY := "facility"
 const KIND_TEXTURE := "texture"
+const FACILITY_PLAYER_CLEARANCE := 6.0
 const VALID_KINDS: Array[String] = [
 	KIND_TARGET,
 	KIND_SELECTION,
@@ -19,6 +20,65 @@ var _last_signature: String = ""
 var _command_kinds: Dictionary = {}
 var _target_node: Node2D
 var _replace_count: int = 0
+var _occlusion_subject: Node2D
+var _facility_entries: Array[Dictionary] = []
+var _facility_subject_rect := Rect2()
+var _facility_placement_dirty := true
+
+
+func _ready() -> void:
+	# Read geometry after actor animation and the depth layer have settled.
+	process_priority = 110
+	set_process(not _facility_entries.is_empty())
+
+
+func _process(_delta: float) -> void:
+	if visible:
+		refresh_facility_placement()
+
+
+func set_occlusion_subject(subject: Node2D) -> void:
+	_occlusion_subject = subject if is_instance_valid(subject) and subject.has_method("get_occlusion_world_rect") else null
+	_facility_placement_dirty = true
+	refresh_facility_placement()
+
+
+func refresh_facility_placement() -> void:
+	if _facility_entries.is_empty():
+		return
+	var subject_rect := Rect2()
+	if is_instance_valid(_occlusion_subject) and _occlusion_subject.is_visible_in_tree():
+		var world_rect: Rect2 = _occlusion_subject.call("get_occlusion_world_rect")
+		subject_rect = global_transform.affine_inverse() * world_rect
+	if not _facility_placement_dirty and subject_rect == _facility_subject_rect:
+		return
+	_facility_subject_rect = subject_rect
+	_facility_placement_dirty = false
+	_update_facility_positions(subject_rect)
+
+
+func _update_facility_positions(subject_rect: Rect2) -> void:
+	# Only visit retained labels when actor geometry or commands change. Neither
+	# this path nor the subject query reads textures, catalogs or profile data.
+	var protected_rect := subject_rect.grow(FACILITY_PLAYER_CLEARANCE)
+	var has_subject := subject_rect.has_area()
+	for entry in _facility_entries:
+		var node := entry.node as Node2D
+		var target_position: Vector2 = entry.anchor
+		var label := entry.label as Label
+		# A fallback font can make the Control taller than the requested 22 px.
+		# Protect the actual label as well as its retained background geometry.
+		var original_rect: Rect2 = (entry.rect as Rect2).merge(
+			Rect2(target_position + label.position, label.size)
+		)
+		if has_subject and original_rect.intersects(protected_rect):
+			target_position.y += minf(0.0, protected_rect.position.y - original_rect.end.y)
+		if node.position != target_position:
+			node.position = target_position
+
+
+func _on_facility_label_resized() -> void:
+	_facility_placement_dirty = true
 
 
 func replace_commands(commands: Array[Dictionary], signature: String, force: bool = false) -> int:
@@ -29,6 +89,7 @@ func replace_commands(commands: Array[Dictionary], signature: String, force: boo
 		remove_child(child)
 		child.queue_free()
 	_command_kinds.clear()
+	_facility_entries.clear()
 	var sorted_commands := commands.duplicate(false)
 	sorted_commands.sort_custom(_command_less)
 	for command in sorted_commands:
@@ -42,6 +103,9 @@ func replace_commands(commands: Array[Dictionary], signature: String, force: boo
 			_target_node = node
 	_last_signature = signature
 	_replace_count += 1
+	_facility_placement_dirty = true
+	set_process(not _facility_entries.is_empty())
+	refresh_facility_placement()
 	return get_child_count()
 
 
@@ -200,6 +264,13 @@ func _add_facility_label(root: Node2D, command: Dictionary) -> void:
 	if font_value is Font:
 		label.add_theme_font_override("font", font_value as Font)
 	root.add_child(label)
+	_facility_entries.append({
+		"node": root,
+		"label": label,
+		"anchor": root.position,
+		"rect": Rect2(root.position + rect.position, rect.size),
+	})
+	label.resized.connect(_on_facility_label_resized)
 
 
 func _add_texture(root: Node2D, command: Dictionary) -> void:

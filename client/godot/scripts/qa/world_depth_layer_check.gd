@@ -147,6 +147,7 @@ static func run(
 	_validate_affine_world_bounds(player, errors)
 	errors.append_array(PlayerVisualBoundsCheck.run(depth_layer.get_parent()))
 	errors.append_array(RemotePlayerVisualCheck.run(depth_layer.get_parent()))
+	errors.append_array(preload("res://scripts/qa/world_overlay_visibility_check.gd").run(depth_layer.get_parent()))
 	return _report(
 		errors,
 		snapshot.size(),

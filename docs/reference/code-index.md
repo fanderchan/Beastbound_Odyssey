@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **972** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **973** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -15,7 +15,7 @@
 | 33029 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
 | 28889 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27380 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
-| 19261 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
+| 19263 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
 | 8834 | [client/godot/scripts/progression/player_progress_model.gd](../../client/godot/scripts/progression/player_progress_model.gd) |
 | 8789 | [tools/build_pet_portrait.py](../../tools/build_pet_portrait.py) |
@@ -34,7 +34,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [main.gd](../../client/godot/scripts/main.gd) | 19261 |
+| [main.gd](../../client/godot/scripts/main.gd) | 19263 |
 
 </details>
 
@@ -262,7 +262,7 @@
 
 ## client/godot/scripts/qa
 
-<details><summary>96 个文件</summary>
+<details><summary>97 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -356,10 +356,11 @@
 | [runtime_exit_cleanup.gd](../../client/godot/scripts/qa/runtime_exit_cleanup.gd) | 90 |
 | [standalone_pet_art_overlay_check.gd](../../client/godot/scripts/qa/standalone_pet_art_overlay_check.gd) | 520 |
 | [standalone_pet_art_review_gate.gd](../../client/godot/scripts/qa/standalone_pet_art_review_gate.gd) | 139 |
-| [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 570 |
+| [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 571 |
 | [world_ground_layer_check.gd](../../client/godot/scripts/qa/world_ground_layer_check.gd) | 157 |
 | [world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/world_hud_owner_review_capture.gd) | 908 |
 | [world_idle_render_check.gd](../../client/godot/scripts/qa/world_idle_render_check.gd) | 320 |
+| [world_overlay_visibility_check.gd](../../client/godot/scripts/qa/world_overlay_visibility_check.gd) | 124 |
 | [world_presentation_profile_check.gd](../../client/godot/scripts/qa/world_presentation_profile_check.gd) | 341 |
 | [world_review_frame_parity.gd](../../client/godot/scripts/qa/world_review_frame_parity.gd) | 205 |
 
@@ -509,7 +510,7 @@
 | [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 741 |
 | [world_ground_layer.gd](../../client/godot/scripts/world/world_ground_layer.gd) | 51 |
 | [world_idle_render_controller.gd](../../client/godot/scripts/world/world_idle_render_controller.gd) | 126 |
-| [world_overlay_layer.gd](../../client/godot/scripts/world/world_overlay_layer.gd) | 302 |
+| [world_overlay_layer.gd](../../client/godot/scripts/world/world_overlay_layer.gd) | 373 |
 | [world_presentation_profile.gd](../../client/godot/scripts/world/world_presentation_profile.gd) | 121 |
 | [world_visual_direction_contract.gd](../../client/godot/scripts/world/world_visual_direction_contract.gd) | 52 |
 | [world_visual_grade.gd](../../client/godot/scripts/world/world_visual_grade.gd) | 153 |

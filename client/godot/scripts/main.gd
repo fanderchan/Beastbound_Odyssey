@@ -10443,6 +10443,8 @@ func _spawn_player() -> void:
 		world_depth_layer.register_actor("actor:player", player, 24.0)
 	else:
 		add_child(player)
+	if world_overlay_layer != null:
+		world_overlay_layer.set_occlusion_subject(player)
 	if map_data.is_empty():
 		player.global_position = _layout_size() * 0.5
 	else:
