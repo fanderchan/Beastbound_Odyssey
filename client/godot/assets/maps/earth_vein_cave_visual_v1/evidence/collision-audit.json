@@ -3,7 +3,7 @@
   "reportType": "beastbound_map_collision_audit",
   "bundleId": "earth_vein_cave_visual_v1",
   "result": "PASS",
-  "generatedAtUtc": "2026-09-20T21:09:27Z",
+  "generatedAtUtc": "2026-09-20T22:27:33Z",
   "scene": "res://scenes/Main.tscn",
   "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd -- --preview-map-visual-catalog-contract",
   "testedMapIds": [
@@ -49,7 +49,7 @@
     }
   ],
   "authoritySnapshot": {
-    "catalogContractSha256": "37b47be70d6a5431a25eeff7fbdf23f726401f789ee37c14b240f840fa7dc424",
+    "catalogContractSha256": "c51db4c3c6b8ed2e9d78df10279e1b5fe9a75d10e29e3ea126e414eab402002b",
     "bindingHashes": {
       "earth_vein_cave": "a1c8d1ab2b9f7a2c7e59c9771ffa132c925fef11133f58b71d608f19dc681ec6",
       "earth_vein_cave_f2": "051272df93ecc7355a7927d64ed3bbf06394479cf150d8622895454b8b3bc62e",
@@ -60,7 +60,7 @@
       "earth_vein_cave": "a3bff8c95e4315c409ac818656ee57a4d4ad1e26112bada4b3ab9ed6ce36c8cf",
       "earth_vein_cave_f2": "9d59b59500b61efe65c17fe40b07729abf113222e1ceb32ab8b8c1d8ed74c314",
       "earth_vein_cave_f3": "305a787cd8101ec22dc46e50c2ae776a049450c99da62a5731213e62a565a15a",
-      "earth_vein_cave_f4": "c6de465f36cf3c684b632d46d9236be47572421a8e7b79ecfe4c12155900c453"
+      "earth_vein_cave_f4": "b72a39c662ce7e499b880e54a000a46a0eb7543877a502674e04f95e6364e028"
     }
   },
   "excludedReleaseGate": null,
@@ -68,26 +68,26 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:614ff4a4f048b0608dea7cd9b8d85287c778e4de+beastbound-map-runtime-surface-v2:cbef22faa06579f683a8a9778395442b61057f0f0744584f86da44a55cf5cf09"
+    "buildIdentity": "git:e8e9aaea9e64c6dae47283fb27cda1bbb9e21f3e+beastbound-map-runtime-surface-v2:d4493cf00321ccbb60c9f261c051963b068ef34ac4883df42a21cbefd30adb3a"
   },
   "rawRunnerReceipt": {
     "path": "evidence/collision-runner-receipt.log",
-    "sha256": "6df3f109000210f762b17174a01db12492a6b6d34b239c8d4279dfd3f89c9205"
+    "sha256": "0b371d8d3949df1541376210b60ad82c930e10db862c41a5c4acff40a7807d53"
   },
   "notes": [
     "This report covers authoritative map, collision, protected-cell and exact-path contracts.",
     "Tall-object front/behind presentation is independently gated by the formal Computer Use occlusion action.",
-    "The command identifies the delegated production checker. The raw receipt preserves the actual owned-QA wrapper argv; the wrapper validates Main lane attestation, consumes only its lane flag, then uses the unchanged collision CLI gate and run() implementation."
+    "The raw receipt is the completed owned-QA wrapper output; Main attests the isolated lane before the unchanged runtime checker executes. Historical performance and action captures retain their original identities until the review batch is re-frozen."
   ],
   "qaExecution": {
-    "buildIdentity": "git:614ff4a4f048b0608dea7cd9b8d85287c778e4de+beastbound-map-runtime-surface-v2:cbef22faa06579f683a8a9778395442b61057f0f0744584f86da44a55cf5cf09",
+    "buildIdentity": "git:e8e9aaea9e64c6dae47283fb27cda1bbb9e21f3e+beastbound-map-runtime-surface-v2:d4493cf00321ccbb60c9f261c051963b068ef34ac4883df42a21cbefd30adb3a",
     "argv": [
       "/Users/fander/projects/Beastbound_Odyssey/.run/phase584-native-review/Beastbound QA.app/Contents/MacOS/Godot",
       "--headless",
       "--path",
       "/Users/fander/projects/Beastbound_Odyssey/client/godot",
       "--script",
-      "/Users/fander/projects/Beastbound_Odyssey/.run/phase602-collision-owned/collision_owned.gd",
+      "/Users/fander/projects/Beastbound_Odyssey/.run/phase605-collision/collision_owned.gd",
       "--audio-driver",
       "Dummy",
       "--",
@@ -98,6 +98,6 @@
     "delegatedScript": "res://scripts/qa/map_visual_runtime_check.gd",
     "realUnchanged": true,
     "laneAbsentAfterCleanup": true,
-    "nativeLogSha256": "6df3f109000210f762b17174a01db12492a6b6d34b239c8d4279dfd3f89c9205"
+    "nativeLogSha256": "0b371d8d3949df1541376210b60ad82c930e10db862c41a5c4acff40a7807d53"
   }
 }

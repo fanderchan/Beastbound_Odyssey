@@ -3,6 +3,7 @@ extends RefCounted
 const BattleModel := preload("res://scripts/battle/battle_model.gd")
 const EncounterModel := preload("res://scripts/world/encounter_model.gd")
 const MapDataCatalog := preload("res://scripts/world/map_data_catalog.gd")
+const InteractionModel := preload("res://scripts/world/interaction_model.gd")
 const BattleArenaVisualCatalog := preload("res://scripts/battle/battle_arena_visual_catalog.gd")
 # Compile the standalone entrypoint in the normal isolated targeted check too.
 const ReviewEntry := preload("res://scripts/qa/guardian_battle_review.gd")
@@ -50,6 +51,8 @@ static func validation_errors() -> Array[String]:
 	var checked := 0
 	for map_id in ["earth_vein_cave_f4", "tide_echo_cave_f4"]:
 		var map_data := JSON.parse_string(FileAccess.get_file_as_string(MapDataCatalog.path_for(map_id))) as Dictionary
+		if map_id == "earth_vein_cave_f4":
+			_check_earth_landmark_identity(map_data, errors)
 		for zone_value in map_data.get("encounterZones", []):
 			var zone := zone_value as Dictionary
 			var fixed: Array = zone.get("fixedWildPets", [])
@@ -89,6 +92,16 @@ static func validation_errors() -> Array[String]:
 		"status": "passed" if errors.is_empty() else "failed", "guardians": checked, "errors": errors,
 	}))
 	return errors
+
+
+static func _check_earth_landmark_identity(map_data: Dictionary, errors: Array[String]) -> void:
+	var labels: Array[String] = []
+	for interaction_id in ["earth_vein_guardian_npc", "earth_vein_evolution_lineage_npc"]:
+		var item := InteractionModel.find_by_id(map_data, interaction_id)
+		var label := InteractionModel.world_marker_label_for(item)
+		if label.is_empty() or label != str(item.get("name", "")) or labels.has(label):
+			errors.append("Earth Vein landmark must show its distinct dialog identity: %s" % interaction_id)
+		labels.append(label)
 
 
 static func _check_single_and_invalid_entries(entry: Dictionary, errors: Array[String]) -> void:

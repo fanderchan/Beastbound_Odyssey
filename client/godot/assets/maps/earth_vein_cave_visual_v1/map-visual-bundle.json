@@ -19,7 +19,7 @@
   ],
   "catalogContractCheck": {
     "path": "evidence/catalog-contract-check.json",
-    "sha256": "37b47be70d6a5431a25eeff7fbdf23f726401f789ee37c14b240f840fa7dc424"
+    "sha256": "c51db4c3c6b8ed2e9d78df10279e1b5fe9a75d10e29e3ea126e414eab402002b"
   },
   "source": {
     "origin": "AI-generated original",
@@ -1123,7 +1123,7 @@
     },
     "collisionAudit": {
       "path": "evidence/collision-audit.json",
-      "sha256": "4c93bf620fbfc2dc484198352b905db24ef7b1a0e9520b7bd3fd7ca0096e4af4"
+      "sha256": "431686263819516f55f3214a6c1bf53b860466cd5f05ac94e3c32dfd3ee2c6de"
     },
     "performanceReport": {
       "path": "evidence/performance-report.json",

@@ -20,12 +20,12 @@
 		"unknownMapFailedClosed": true
 	},
 	"errors": [],
-	"generatedAtUtc": "2026-08-26T06:55:20Z",
+	"generatedAtUtc": "2026-09-20T22:27:10Z",
 	"mapDataHashes": {
 		"earth_vein_cave": "a3bff8c95e4315c409ac818656ee57a4d4ad1e26112bada4b3ab9ed6ce36c8cf",
 		"earth_vein_cave_f2": "9d59b59500b61efe65c17fe40b07729abf113222e1ceb32ab8b8c1d8ed74c314",
 		"earth_vein_cave_f3": "305a787cd8101ec22dc46e50c2ae776a049450c99da62a5731213e62a565a15a",
-		"earth_vein_cave_f4": "c6de465f36cf3c684b632d46d9236be47572421a8e7b79ecfe4c12155900c453"
+		"earth_vein_cave_f4": "b72a39c662ce7e499b880e54a000a46a0eb7543877a502674e04f95e6364e028"
 	},
 	"maps": [
 		{
