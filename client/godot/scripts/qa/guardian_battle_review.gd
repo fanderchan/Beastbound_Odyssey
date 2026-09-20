@@ -100,6 +100,8 @@ func _run() -> void:
 	# doing so reloads later floors as the fallback grid and changes camera scale.
 	while not stop_requested and not FileAccess.file_exists(out.path_join("stop")) and Time.get_ticks_msec() - started_msec < int(OS.get_environment("BEASTBOUND_GUARDIAN_REVIEW_SECONDS")) * 1000:
 		var state := _state()
+		var reconnect = host._panel_flow().server_event_reconnect_model
+		state["eventStream"] = {"state": host.server_event_state, "phase": reconnect.phase(), "attempt": reconnect.attempt(), "retrySeconds": host.server_event_reconnect_remaining, "stableSeconds": reconnect.stable_open_seconds(), "waitingReadySeconds": reconnect.waiting_ready_seconds(), "cursor": host.server_event_last_seq}
 		var stream := FileAccess.open(out.path_join("states.ndjson"), FileAccess.READ_WRITE if FileAccess.file_exists(out.path_join("states.ndjson")) else FileAccess.WRITE)
 		stream.seek_end()
 		stream.store_line(JSON.stringify(state))
@@ -124,6 +126,8 @@ func _run() -> void:
 		if autoplay_running:
 			push_error("Guardian autoplay failed to drain")
 	_write("completed.json", _state())
+	# Cleanup yields frames; keep Main from reconnecting after its stream is stopped.
+	host.set_process(false)
 	host._stop_server_event_stream()
 	host._stop_online_position_sync()
 	Arena.disable_earth_guardian_review()

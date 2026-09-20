@@ -16,9 +16,28 @@ var _stable_open_seconds: float = 0.0
 var _connecting_seconds: float = 0.0
 var _waiting_ready_seconds: float = 0.0
 var _phase: String = PHASE_IDLE
+var _clock: Callable
+var _last_poll_usec: int = -1
+
+
+func _init(monotonic_clock: Callable = Callable()) -> void:
+	_clock = monotonic_clock
+
+
+func _now_usec() -> int:
+	return int(_clock.call()) if _clock.is_valid() else Time.get_ticks_usec()
+
+
+func poll_elapsed_seconds() -> float:
+	# Network peers use real time, even when recordings or simulation time run faster.
+	var now := _now_usec()
+	var elapsed := maxf(0.0, float(now - _last_poll_usec) / 1000000.0) if _last_poll_usec >= 0 else 0.0
+	_last_poll_usec = maxi(now, _last_poll_usec)
+	return elapsed
 
 
 func reset() -> void:
+	_last_poll_usec = -1
 	_attempt = 0
 	_stable_open_seconds = 0.0
 	_connecting_seconds = 0.0
@@ -27,6 +46,7 @@ func reset() -> void:
 
 
 func note_connecting() -> void:
+	_last_poll_usec = _now_usec()
 	_stable_open_seconds = 0.0
 	_connecting_seconds = 0.0
 	_waiting_ready_seconds = 0.0
@@ -72,6 +92,7 @@ func ready_timed_out() -> bool:
 
 
 func next_delay(random_unit: float = -1.0, retry_after_seconds: float = 0.0) -> float:
+	_last_poll_usec = _now_usec()
 	var window := minf(MAX_DELAY_SECONDS, BASE_DELAY_SECONDS * pow(2.0, float(mini(_attempt, 20))))
 	_attempt = mini(MAX_ATTEMPT, _attempt + 1)
 	_stable_open_seconds = 0.0

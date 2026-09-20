@@ -9411,7 +9411,7 @@ func _stop_server_event_stream() -> void:
 	server_event_seen.clear()
 	server_event_pending_events.clear()
 
-func _poll_server_event_stream(delta: float) -> void:
+func _poll_server_event_stream(_simulation_delta: float) -> void:
 	if not _is_server_account_session():
 		if server_event_state != "off":
 			_stop_server_event_stream()
@@ -9425,6 +9425,7 @@ func _poll_server_event_stream(delta: float) -> void:
 		server_event_pending_events.pop_front()
 		_handle_server_event(pending_event)
 		remaining_position_delta_budget -= pending_cost
+	var delta := server_event_reconnect_model.poll_elapsed_seconds()
 	if server_event_socket == null:
 		server_event_reconnect_remaining = maxf(0.0, server_event_reconnect_remaining - maxf(0.0, delta))
 		if server_event_reconnect_remaining <= 0.0:

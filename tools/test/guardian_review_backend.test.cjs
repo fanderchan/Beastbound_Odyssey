@@ -67,6 +67,13 @@ test("guardian review uses five HTTP accounts, authoritative encounters and sett
   }
   assert.ok(fs.existsSync(path.join(directory, "closed-room.json")));
   assert.ok(fs.existsSync(path.join(directory, "stopped.json")));
+  const streamLog = fs.readFileSync(path.join(directory, "event-stream.ndjson"), "utf8");
+  const stream = streamLog.trim().split("\n").map(line => JSON.parse(line));
+  assert.ok(stream.some(row => row.connections === 1 && row.acceptedUpgrades === 1));
+  assert.equal(stream.at(-1).connections, 0, "stream observations must include completed shutdown");
+  assert.equal(stream.at(-1).rejectedUpgrades, 0);
+  const privateFixture = JSON.parse(fs.readFileSync(path.join(directory, "fixture.json")));
+  assert.equal(streamLog.includes(privateFixture.session.serverSessionToken), false);
   assert.equal(fs.statSync(path.join(directory, "fixture.json")).mode & 0o777, 0o600);
   await assert.rejects(fetch(review.baseUrl + "/health"), "the isolated backend must be stopped");
 });

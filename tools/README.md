@@ -72,6 +72,8 @@ python3 tools/play_guardian_review.py --downed-owner-check --record
 
 `--downed-owner-check` 是单独的人工回归夹具：在后端开始监听前，将主控人物设为当前生命 1／最大生命 10400，主控战宠当前生命设为 1，四名队友及其战宠保持满血。较高的人物生命上限用于避免低生命测试号因过量伤害被击飞、提前离场；遭遇种子固定为 32 字节的 `0x58`，使遭遇与敌人目标顺序可复现。令牌和战斗反应随机源保持原样，伤害、指令、结算仍走正式实现，不注入胜负。它不能与 `--cave-journey` 或 `--autoplay` 混用。须实际观察主控人物和战宠都倒下、其他队友继续推进回合，最终客户端收到结算；初始配置或战斗结束本身不代表覆盖该分支，也不构成正常角色成长／平衡验收。相关修复与证据见 [Phase 582](../docs/phase_582_battle_response_ownership.md)。
 
+试玩的 `states.ndjson` 保存事件流状态及重连计时，`backend/event-stream.ndjson` 按计数变化记录连接、拒绝原因和心跳失败，关闭后记录连接归零；均不包含会话 token。这些是本机诊断记录，不能单独替代整场客户端检查。计时修复见 [Phase 583](../docs/phase_583_event_stream_monotonic_clock.md)。
+
 `--autoplay` 自动走一次遮挡、挑战、攻击、宠物冲撞、蓄力防御、自动战斗及胜利返回路线，并核对档案版本和地之戒到账。输入通过真实 Main 的 viewport 跨帧发送，报告明确 `computerUse=false`；这是自动操作回放，不代替原生鼠标或所有者验收。提前结束时，在该次输出目录创建 `stop` 文件；协程退出后再清理客户端和后端。实现与验证边界见 [Phase 547](../docs/phase_547_earth_guardian_battle_presentation.md)。
 
 夹具现含四套人物、五个独立站位；自动检查还覆盖静止定时刷新、世界／战斗外观和地面显隐。macOS 录制期间临时防止系统休眠，结束时释放，屏幕保持原状态。测试后端若意外退出，当前客户端会自动结束并保存失败原因；不会自动重发写请求。详见 [Phase 566](../docs/phase_566_authoritative_battle_appearances.md)。

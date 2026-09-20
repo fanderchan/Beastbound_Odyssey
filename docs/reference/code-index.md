@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **954** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **955** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -12,8 +12,8 @@
 
 | 行数 | 文件 |
 | ---: | --- |
-| 33021 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
-| 28888 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
+| 33024 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
+| 28889 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27376 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
 | 19231 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
@@ -107,7 +107,7 @@
 
 ## client/godot/scripts/net
 
-<details><summary>8 个文件</summary>
+<details><summary>9 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -117,7 +117,8 @@
 | [hang_matchmaking_controller.gd](../../client/godot/scripts/net/hang_matchmaking_controller.gd) | 168 |
 | [idempotent_http_retry_state.gd](../../client/godot/scripts/net/idempotent_http_retry_state.gd) | 104 |
 | [online_presence_cache_model.gd](../../client/godot/scripts/net/online_presence_cache_model.gd) | 665 |
-| [server_event_reconnect_model.gd](../../client/godot/scripts/net/server_event_reconnect_model.gd) | 165 |
+| [server_event_clock_check.gd](../../client/godot/scripts/net/server_event_clock_check.gd) | 79 |
+| [server_event_reconnect_model.gd](../../client/godot/scripts/net/server_event_reconnect_model.gd) | 186 |
 | [server_sync_coordinator.gd](../../client/godot/scripts/net/server_sync_coordinator.gd) | 796 |
 
 </details>
@@ -268,7 +269,7 @@
 | [audio_runtime_check.gd](../../client/godot/scripts/qa/audio_runtime_check.gd) | 301 |
 | [audio_settings_panel_check.gd](../../client/godot/scripts/qa/audio_settings_panel_check.gd) | 102 |
 | [audio_world_context_check.gd](../../client/godot/scripts/qa/audio_world_context_check.gd) | 44 |
-| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33021 |
+| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33024 |
 | [backpack_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture.gd) | 916 |
 | [backpack_awakened_owner_review_capture_check.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture_check.gd) | 218 |
 | [battle_command_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/battle_command_awakened_owner_review_capture.gd) | 435 |
@@ -296,7 +297,7 @@
 | [firebud_village_service_layout_check.gd](../../client/godot/scripts/qa/firebud_village_service_layout_check.gd) | 544 |
 | [guardian_battle_playthrough.gd](../../client/godot/scripts/qa/guardian_battle_playthrough.gd) | 254 |
 | [guardian_battle_presentation_check.gd](../../client/godot/scripts/qa/guardian_battle_presentation_check.gd) | 106 |
-| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 159 |
+| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 163 |
 | [hang_matchmaking_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_owner_review_capture.gd) | 716 |
 | [hang_matchmaking_world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd) | 1622 |
 | [map_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/map_awakened_owner_review_capture.gd) | 2654 |
@@ -422,7 +423,7 @@
 | [market_awakened_visual_skin.gd](../../client/godot/scripts/ui/market_awakened_visual_skin.gd) | 130 |
 | [npc_dialog_presenter.gd](../../client/godot/scripts/ui/npc_dialog_presenter.gd) | 57 |
 | [npc_hover_identity_presenter.gd](../../client/godot/scripts/ui/npc_hover_identity_presenter.gd) | 189 |
-| [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28888 |
+| [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28889 |
 | [panel_registry.gd](../../client/godot/scripts/ui/panel_registry.gd) | 91 |
 | [password_visibility_button.gd](../../client/godot/scripts/ui/password_visibility_button.gd) | 53 |
 | [pet_codex_acquisition_route_catalog.gd](../../client/godot/scripts/ui/pet_codex_acquisition_route_catalog.gd) | 213 |

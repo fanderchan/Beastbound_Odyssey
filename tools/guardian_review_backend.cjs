@@ -185,7 +185,24 @@ async function startGuardianReview(outputDir, {encounterPermitAuthority, downedO
   }
   let lastPresence = 0;
   let lastRoomSignature = "";
+  let lastStreamSignature = "";
+  function recordEventStream() {
+    const metrics = server.eventHub.metrics();
+    const state = {
+      connections: metrics.connections, acceptedUpgrades: metrics.acceptedUpgrades,
+      rejectedUpgrades: metrics.rejectedUpgrades, upgradeRejectReasons: metrics.upgradeRejectReasons,
+      heartbeatTimeouts: metrics.heartbeatTimeouts,
+      protocolViolations: metrics.protocolViolations, inboundRateLimited: metrics.inboundRateLimited,
+      slowConsumerDisconnects: metrics.slowConsumerDisconnects,
+    };
+    const signature = JSON.stringify(state);
+    if (signature !== lastStreamSignature) {
+      lastStreamSignature = signature;
+      append("event-stream.ndjson", {at: Date.now(), ...state});
+    }
+  }
   async function tick({includeLeader = false} = {}) {
+    recordEventStream();
     const first = includeLeader ? 0 : 1;
     if (Date.now() - lastPresence > 3000) {
       lastPresence = Date.now();
@@ -229,6 +246,7 @@ async function startGuardianReview(outputDir, {encounterPermitAuthority, downedO
       const drained = drainServerForShutdown(server, store);
       server.closeAllConnections();
       await drained;
+      recordEventStream();
       write("stopped.json", {pid: process.pid, stoppedAt: new Date().toISOString()});
     }
   }
