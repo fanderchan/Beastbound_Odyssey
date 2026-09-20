@@ -40,6 +40,8 @@ flowchart TD
 
 启用美术的地图由 [WorldGroundLayer](../client/godot/scripts/world/world_ground_layer.gd) 保留背景和地面绘制。[MapGroundMesh](../client/godot/scripts/world/map_ground_mesh.gd) 按原图集与叠放顺序合并地面几何，只在地图修订变化时重建；背景范围变化只刷新绘制，特殊裁切／翻转和子图集继续走原区域绘制器。路径等动态反馈仍由 Main 绘制，人物与物件由 WorldDepthLayer 排序。未启用美术继续走原网格回退。变更地面数据时必须沿用地图修订失效链路，避免只重绘 Main 而留下旧缓存。
 
+WorldDepthLayer 为注册人物保留带类型的脚点深度与可见性记录，成员仅在注册时按 stableId 排序；晚序回调仍读取实时脚点方法／元数据，移动或显隐变化后生成原有三位小数签名。替换同名人物强制刷新，同帧释放多个节点也完整清理。不要把元数据或动态脚点当成永久常量；回归与前后证据见 [Phase 600](phase_600_retained_actor_depth_state.md)。
+
 [WorldPresentationProfile](../client/godot/scripts/world/world_presentation_profile.gd) 集中解析地图相机策略，缩放、锚点、地标构图和端点资格共用同一入口。按当前地图字段即时判断，保留各地图的正式／预览边界；增加地图策略时同步扩展生命周期状态检查，见 [Phase 578](phase_578_camera_policy_dispatch.md)。
 
 [WorldIdleRenderController](../client/godot/scripts/world/world_idle_render_controller.gd) 在世界镜头完全停稳后暂停 Camera2D 的重复内部更新，普通空闲运行再启用按需绘制。目标、缩放、视口或外部变换改变时恢复相机；未支持的相机模式继续走引擎更新。Main 保持原有 30/60 FPS 处理预算，有效移动点击立即恢复活动预算，退出时还原全局渲染设置。性能探针和审查捕获支持运行中启用，并要求连续绘制；定长探针结束统计后，音频清理到 Main 退出之间仍须绘制。`--write-movie` 在启动时固定连续绘制。正常运行的节能收益另用正常时钟测量。回归扩展在 `--auto-camera-check`，不新增玩家设置或测试入口参数。

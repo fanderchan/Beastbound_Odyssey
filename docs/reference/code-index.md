@@ -354,7 +354,7 @@
 | [runtime_exit_cleanup.gd](../../client/godot/scripts/qa/runtime_exit_cleanup.gd) | 90 |
 | [standalone_pet_art_overlay_check.gd](../../client/godot/scripts/qa/standalone_pet_art_overlay_check.gd) | 520 |
 | [standalone_pet_art_review_gate.gd](../../client/godot/scripts/qa/standalone_pet_art_review_gate.gd) | 139 |
-| [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 553 |
+| [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 570 |
 | [world_ground_layer_check.gd](../../client/godot/scripts/qa/world_ground_layer_check.gd) | 157 |
 | [world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/world_hud_owner_review_capture.gd) | 908 |
 | [world_idle_render_check.gd](../../client/godot/scripts/qa/world_idle_render_check.gd) | 320 |
@@ -503,7 +503,7 @@
 | [server_encounter_permit_model.gd](../../client/godot/scripts/world/server_encounter_permit_model.gd) | 65 |
 | [world_camera_safe_area_model.gd](../../client/godot/scripts/world/world_camera_safe_area_model.gd) | 676 |
 | [world_camera_safe_area_model_check.gd](../../client/godot/scripts/world/world_camera_safe_area_model_check.gd) | 543 |
-| [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 722 |
+| [world_depth_layer.gd](../../client/godot/scripts/world/world_depth_layer.gd) | 741 |
 | [world_ground_layer.gd](../../client/godot/scripts/world/world_ground_layer.gd) | 51 |
 | [world_idle_render_controller.gd](../../client/godot/scripts/world/world_idle_render_controller.gd) | 126 |
 | [world_overlay_layer.gd](../../client/godot/scripts/world/world_overlay_layer.gd) | 302 |

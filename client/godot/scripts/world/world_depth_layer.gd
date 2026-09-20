@@ -35,11 +35,19 @@ const ACTOR_TIE_PRIORITY := 10
 const OBJECT_TIE_PRIORITY := 20
 const LATE_DEPTH_PROCESS_PRIORITY := 100
 
+class ActorDepthState:
+	extends RefCounted
+	var actor: Node2D
+	var stable_id: String
+	var depth_y := INF
+	var visible := false
+	var initialized := false
+
 var _group_nodes: Dictionary = {}
 var _registered_actors: Dictionary = {}
 var _order_dirty: bool = true
 var _last_actor_depth_signature: String = ""
-var _actor_depth_values: Dictionary = {}
+var _actor_depth_states: Array[ActorDepthState] = []
 var _last_order_signature: String = ""
 var _occlusion_candidates: Array[Dictionary] = []
 var _occlusion_texture_rect_cache: Dictionary = {}
@@ -69,6 +77,20 @@ func register_actor(stable_id: String, actor: Node2D, foot_offset_y: float = 0.0
 	actor.set_meta(ACTOR_FOOT_OFFSET_META, foot_offset_y)
 	actor.set_meta(TIE_PRIORITY_META, ACTOR_TIE_PRIORITY)
 	_registered_actors[normalized_id] = actor
+	var state: ActorDepthState
+	for existing in _actor_depth_states:
+		if existing.stable_id == normalized_id:
+			state = existing
+			break
+	if state == null:
+		state = ActorDepthState.new()
+		state.stable_id = normalized_id
+		_actor_depth_states.append(state)
+		_actor_depth_states.sort_custom(func(a: ActorDepthState, b: ActorDepthState) -> bool:
+			return a.stable_id < b.stable_id
+		)
+	state.actor = actor
+	state.initialized = false
 	_order_dirty = true
 	_occlusion_dirty = true
 	return true
@@ -637,13 +659,10 @@ func _add_label(
 
 func _actor_depth_signature() -> String:
 	var parts: Array[String] = []
-	var actor_ids := _actor_depth_values.keys()
-	actor_ids.sort()
-	for id_value in actor_ids:
-		var stable_id := str(id_value)
-		var values: Array = _actor_depth_values[stable_id]
+	# Membership order changes only at registration, not when actors move.
+	for state in _actor_depth_states:
 		# Keep the existing three-decimal signature and resulting sort cadence.
-		parts.append("%s:%.3f:%s" % [stable_id, values[0], str(values[1])])
+		parts.append("%s:%.3f:%s" % [state.stable_id, state.depth_y, str(state.visible)])
 	return "|".join(parts)
 
 
@@ -655,25 +674,25 @@ static func _actor_foot_offset(actor: Node2D) -> float:
 
 func _refresh_actor_depth_values() -> bool:
 	var changed := false
-	var stale_ids: Array[String] = []
-	# Idle frames only compare raw fields. Do not allocate/sort key arrays or
-	# format/join signatures until a depth/visibility/registration change.
-	for stable_id in _registered_actors:
-		var actor_value: Variant = _registered_actors.get(stable_id)
-		if not is_instance_valid(actor_value) or not (actor_value is Node2D):
-			stale_ids.append(stable_id)
-			continue
-		var actor := actor_value as Node2D
-		var depth_y := actor.global_position.y + _actor_foot_offset(actor)
-		var previous: Variant = _actor_depth_values.get(stable_id)
-		if previous == null or previous[0] != depth_y or previous[1] != actor.visible:
-			_actor_depth_values[stable_id] = [depth_y, actor.visible]
+	# Retain typed records instead of looking up and unpacking two dictionaries
+	# on every frame. Reverse iteration also removes dead actors without a
+	# temporary array, including several actors released in the same frame.
+	for index in range(_actor_depth_states.size() - 1, -1, -1):
+		var state := _actor_depth_states[index]
+		if not is_instance_valid(state.actor):
+			_registered_actors.erase(state.stable_id)
+			_actor_depth_states.remove_at(index)
+			_order_dirty = true
 			changed = true
-	for stable_id in stale_ids:
-		_registered_actors.erase(stable_id)
-		_actor_depth_values.erase(stable_id)
-		_order_dirty = true
-		changed = true
+			continue
+		var actor := state.actor
+		var depth_y := actor.global_position.y + _actor_foot_offset(actor)
+		var actor_visible := actor.visible
+		if not state.initialized or state.depth_y != depth_y or state.visible != actor_visible:
+			state.depth_y = depth_y
+			state.visible = actor_visible
+			state.initialized = true
+			changed = true
 	return changed
 
 

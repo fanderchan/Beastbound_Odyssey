@@ -282,12 +282,29 @@ static func _validate_actor_depth_cache(errors: Array[String]) -> void:
 	layer.refresh_depth_order()
 	if layer.get_child(0) != actor:
 		errors.append("相同 stableId 和位置替换人物后未恢复子节点顺序")
+	other.set_meta(WorldDepthLayer.ACTOR_FOOT_OFFSET_META, -30.0)
+	layer.refresh_depth_order()
+	if layer.get_child(0) != other:
+		errors.append("人物静止时修改脚点元数据未更新排序")
+	other.set_meta(WorldDepthLayer.ACTOR_FOOT_OFFSET_META, 0.0)
+	layer.refresh_depth_order()
 	actor.free()
 	layer.refresh_depth_order()
 	signature_calls = layer.signature_calls
 	for iteration in range(5): layer.refresh_depth_order()
 	if layer.get_child_count() != 1 or layer.signature_calls != signature_calls:
 		errors.append("已释放人物没有从深度缓存清理")
+	var last_actor := Node2D.new()
+	layer.add_child(last_actor)
+	layer.register_actor("actor:last", last_actor)
+	layer.refresh_depth_order()
+	other.free()
+	last_actor.free()
+	layer.refresh_depth_order()
+	signature_calls = layer.signature_calls
+	for iteration in range(5): layer.refresh_depth_order()
+	if layer.get_child_count() != 0 or layer.signature_calls != signature_calls:
+		errors.append("同帧释放多个人物后深度缓存未清空")
 	layer.free()
 
 
