@@ -37,6 +37,11 @@ class GuardianBackendWatchTests(unittest.TestCase):
                         review.validate_turn_playback(run)
             (run / "backend/battle-events.ndjson").write_text("")
             self.assertEqual(review.validate_turn_playback(run)["status"], "not_observed")
+            (run / "backend/battle-events.ndjson").write_text(json.dumps(events[-1]))
+            path.write_text("")
+            empty_close = review.validate_turn_playback(run)
+            self.assertEqual(empty_close["status"], "passed")
+            self.assertEqual(empty_close["turns"], 0)
 
     def test_arena_sampling_rejects_lost_final_round_context_and_unloaded_texture(self):
         battle = {"battle": True, "frame": 13153, "serverRoomStatus": "closed",

@@ -102,8 +102,8 @@ def main() -> None:
     parser.add_argument("--godot", default="godot")
     parser.add_argument("--record", action="store_true")
     parser.add_argument("--autoplay", action="store_true", help="run disclosed in-engine input checks; not Computer Use acceptance")
-    parser.add_argument("--cave-journey", action="store_true", help="also preview existing candidate art in ordinary cave encounters; continue playing after the guardian")
-    parser.add_argument("--downed-owner-check", action="store_true", help="use a fixed encounter seed, leader at 1/10400 HP and leader pet at 1 HP; healthy teammates keep fighting")
+    parser.add_argument("--cave-journey", action="store_true", help="use a disclosed 10400-HP route party and preview existing candidate art across cave encounters; not balance acceptance")
+    parser.add_argument("--downed-owner-check", action="store_true", help="use fixed actor identities and battle seeds, leader at 1/10400 HP and leader pet at 1 HP; healthy teammates keep fighting")
     parser.add_argument("--timeout-seconds", type=int, default=900)
     args = parser.parse_args()
     if not 30 <= args.timeout_seconds <= 3600:
@@ -128,6 +128,8 @@ def main() -> None:
         backend_command = ["node", str(ROOT / "tools/guardian_review_backend.cjs"), str(run / "backend")]
         if args.downed_owner_check:
             backend_command.append("--downed-owner-check")
+        if args.cave_journey:
+            backend_command.append("--cave-journey")
         backend = subprocess.Popen(backend_command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL, start_new_session=True)
         try:

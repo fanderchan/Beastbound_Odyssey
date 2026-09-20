@@ -13464,7 +13464,7 @@ func _refresh_battle_target_seed() -> void:
 	]
 
 func _start_battle(next_battle_state: Dictionary) -> void:
-	host._server_battle().playback_queue.reset(str(next_battle_state.get("serverRoomId", "")))
+	host._server_battle().reset_playback(str(next_battle_state.get("serverRoomId", "")))
 	host.pending_server_encounter_permit.clear()
 	host._clear_navigation_state()
 	host._close_dialog()
@@ -13561,7 +13561,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	host.queue_redraw()
 
 func _end_battle(_restore_world: bool = true) -> void:
-	host._server_battle().playback_queue.reset()
+	host._server_battle().reset_playback()
 	host.pending_server_encounter_permit.clear()
 	var was_battle_active = battle_active
 	if was_battle_active:

@@ -128,10 +128,12 @@ test("downed-owner regression discloses its HP fixture and keeps the real battle
       && row.profile.petInstances[0].hp === row.profile.petInstances[0].maxHp));
     const info = JSON.parse(fs.readFileSync(path.join(directory, "server-info.json")));
     assert.equal(info.downedOwnerCheck, true);
+    assert.equal(info.profileIdentitySource, "qa_sequential_uuid_v1");
     assert.deepEqual(info.characterMaxHp, [10400, 1040, 1040, 1040, 1040]);
     assert.equal(info.encounterSeedSource, "qa_fixed_58x32");
     assert.equal(info.fullProfileSaveEnabled, false);
     const start = await review.request(0, "/battle/party-encounter", ENCOUNTER);
+    assert.equal(start.room.seed, info.directBattleSeed, "the direct NPC challenge must use the disclosed battle seed");
     const leaderId = start.room.participants[0].accountId;
     const owned = start.room.battle.actors.filter(actor => actor.accountId === leaderId);
     assert.equal(owned.length, 2);
@@ -158,12 +160,18 @@ test("downed-owner regression discloses its HP fixture and keeps the real battle
   }
 });
 
-test("review teammates continue in a second room and preserve both closures", {timeout: 60000}, async () => {
+test("continuous-route fixture survives consecutive HTTP battles without changing the downed-owner fixture", {timeout: 120000}, async () => {
   const directory = path.resolve(__dirname, "../../.run", `guardian-review-continuation-${crypto.randomUUID()}`);
-  const review = await startGuardianReview(directory, {encounterPermitAuthority: createPetEncounterPermitAuthority({
+  const review = await startGuardianReview(directory, {caveJourney: true, encounterPermitAuthority: createPetEncounterPermitAuthority({
     catalog: createPetEncounterAuthority().catalog, randomFloat: () => 0, eligibleStepIntervalMs: 0,
   })});
   try {
+    const info = JSON.parse(fs.readFileSync(path.join(directory, "server-info.json")));
+    assert.equal(info.caveJourney, true);
+    assert.equal(info.downedOwnerCheck, false);
+    assert.deepEqual(info.characterHp, [10400, 10400, 10400, 10400, 10400]);
+    assert.deepEqual(info.characterMaxHp, info.characterHp);
+    assert.equal(info.fullProfileSaveEnabled, false);
     const first = await review.request(0, "/battle/party-encounter", ENCOUNTER);
     for (let tick = 0; tick < 80 && review.closedRoom()?.roomId !== first.room.roomId; tick++) {
       await review.tick({includeLeader: true});
@@ -204,6 +212,9 @@ test("review teammates continue in a second room and preserve both closures", {t
       .trim().split("\n").map(line => JSON.parse(line).room);
     assert.deepEqual(closures.map(room => room.roomId), [first.room.roomId, second.room.roomId]);
     assert.ok(closures.every(room => room.status === "closed"));
+    assert.ok(closures.every(room => room.battle.result.winnerAccountId), "route party must survive both battles using normal commands");
+    const leader = await review.request(0, "/profiles/me");
+    assert.ok(leader.profile.player.hp > 1, "route review must remain playable after the guardian and ordinary encounter");
   } finally {
     await review.close();
   }

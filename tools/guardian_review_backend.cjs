@@ -18,14 +18,24 @@ const FORMS = ["bui_normal_red_fire10", "wuli_normal_tough_earth10", "wuli_norma
 const POSITIONS = [[21, 8], [18, 8], [20, 11], [23, 12], [24, 8]].map(([cellX, cellY]) =>
   ({mapId: MAP_ID, cellX, cellY, facing: "south", moving: false}));
 const ENCOUNTER = {encounterIntent: {zoneId: "earth_vein_guardian_floor", encounterGroupId: "earth_vein_guardian_group", sourceInteractionId: "earth_vein_guardian_npc"}};
+// Retained from a real downed-owner run. Direct NPC challenges use the
+// battle-room seed rather than the walking-encounter permit's 32-byte seed.
+const DOWNED_BATTLE_SEED = "0494e6b2c3959de9";
 
 function checked(result) {
   assert.equal(result.ok, true, `${result.code || "unknown"}: ${result.message || ""}`);
   return result;
 }
 
-function seedParty({encounterPermitAuthority, downedOwnerCheck = false} = {}) {
+function seedParty({encounterPermitAuthority, downedOwnerCheck = false, caveJourney = false} = {}) {
+  // Actor identities participate in targeting rolls. Pet private growth and
+  // credentials retain their normal cryptographic randomness.
+  let fixtureSerial = 0;
+  const fixtureRandomId = downedOwnerCheck
+    ? () => `${String(++fixtureSerial).padStart(8, "0")}-0000-4000-8000-000000000000`
+    : undefined;
   const seed = createAuthService({store: createMemoryAuthStore(), allowFullProfileSave: true,
+    randomId: fixtureRandomId,
     autoCreateInitialCharacterForTests: true,
     initialCharacterElementsForTests: {earth: 10, water: 0, fire: 0, wind: 0}});
   const members = NAMES.map((displayName, index) => {
@@ -37,7 +47,9 @@ function seedParty({encounterPermitAuthority, downedOwnerCheck = false} = {}) {
     // Durable QA teammates keep that branch observable before the whole party falls.
     // The downed-owner fixture uses a high cap with 1 current HP so overkill
     // does not immediately eject its low-HP leader via the normal launch rule.
-    const maxHp = index === 0 ? (downedOwnerCheck ? 10400 : 520) : 1040;
+    // Route review needs a durable party across encounters. This is disclosed
+    // pre-listen QA data, not a balance profile or runtime healing shortcut.
+    const maxHp = caveJourney ? 10400 : (index === 0 ? (downedOwnerCheck ? 10400 : 520) : 1040);
     Object.assign(profile.player, {appearanceId: APPEARANCES[index], level: 100, exp: 0, nextExp: 656810, statPoints: 0,
       hp: maxHp, maxHp, baseStats: {maxHp, attack: 168, defense: 41, quick: 82}});
     profile.petInstances = [];
@@ -74,6 +86,9 @@ function seedParty({encounterPermitAuthority, downedOwnerCheck = false} = {}) {
   snapshot.gmCommandGrants = {};
   const store = createMemoryAuthStore(snapshot);
   const service = createAuthService({store, allowPositionTeleport: true, allowFullProfileSave: false,
+    randomBytes: downedOwnerCheck
+      ? size => size === 8 ? Buffer.from(DOWNED_BATTLE_SEED, "hex") : crypto.randomBytes(size)
+      : undefined,
     petEncounterPermitAuthority: encounterPermitAuthority});
   // Pre-listen fixture setup ends here. Once HTTP starts, even bot presence uses HTTP.
   for (const [index, member] of members.entries()) checked(service.updatePlayerPosition(member.session.token, POSITIONS[index]));
@@ -84,7 +99,8 @@ function seedParty({encounterPermitAuthority, downedOwnerCheck = false} = {}) {
   return {service, store, members};
 }
 
-async function startGuardianReview(outputDir, {encounterPermitAuthority, downedOwnerCheck = false} = {}) {
+async function startGuardianReview(outputDir, {encounterPermitAuthority, downedOwnerCheck = false, caveJourney = false} = {}) {
+  assert.ok(!(downedOwnerCheck && caveJourney), "choose either downed-owner or continuous-route fixture");
   fs.mkdirSync(outputDir, {mode: 0o700});
   const write = (name, data) => fs.writeFileSync(path.join(outputDir, name), JSON.stringify(data, null, 2), {mode: 0o600});
   const append = (name, data) => fs.appendFileSync(path.join(outputDir, name), JSON.stringify(data) + "\n", {mode: 0o600});
@@ -95,7 +111,7 @@ async function startGuardianReview(outputDir, {encounterPermitAuthority, downedO
     // all runtime commands/settlement retain their normal implementations.
     randomBytes: size => size === 32 ? Buffer.alloc(size, 0x58) : crypto.randomBytes(size),
   }) : undefined);
-  const {service, store, members} = seedParty({encounterPermitAuthority: permitAuthority, downedOwnerCheck});
+  const {service, store, members} = seedParty({encounterPermitAuthority: permitAuthority, downedOwnerCheck, caveJourney});
   const server = createHttpServer({service, store});
   let closedRoom = null;
   const closedRoomIds = new Set();
@@ -169,12 +185,15 @@ async function startGuardianReview(outputDir, {encounterPermitAuthority, downedO
         characterSlotIndex: session.slotIndex, selectionEpoch: session.selectionEpoch, selectionRequired: false}});
     write("initial-profiles.json", profiles);
     write("server-info.json", {pid: process.pid, baseUrl, storage: "memory", memberCount: 5,
-      fixtureVersion: 4, downedOwnerCheck, characterHp: profiles.map(row => row.profile.player.hp),
+      fixtureVersion: 5, downedOwnerCheck, caveJourney,
+      profileIdentitySource: downedOwnerCheck ? "qa_sequential_uuid_v1" : "runtime_random",
+      characterHp: profiles.map(row => row.profile.player.hp),
       characterMaxHp: profiles.map(row => row.profile.player.maxHp),
       activePetHp: profiles.map(row => row.profile.petInstances.find(pet => pet.state === "battle")?.hp),
       fullProfileSaveEnabled: false, strictEncounterAuthority: true, strictManualAccess: true,
       encounterPermitSource: fixedEncounterSeed ? "qa_fixed_seed_authority" : (encounterPermitAuthority ? "injected_test_authority" : "runtime_default"),
       encounterSeedSource: fixedEncounterSeed ? "qa_fixed_58x32" : "authority_default",
+      directBattleSeed: downedOwnerCheck ? DOWNED_BATTLE_SEED : null,
       isolatedPositionTeleport: true, botTransport: "HTTP", scope: "one Main client plus four scripted accounts; not human multiplayer or balance acceptance"});
   } catch (error) {
     unsubscribe();
@@ -257,7 +276,9 @@ async function main() {
   const outputDir = path.resolve(process.argv[2] || "");
   const runRoot = path.resolve(__dirname, "../.run") + path.sep;
   assert.ok(outputDir.startsWith(runRoot) && !fs.existsSync(outputDir), "choose a fresh directory under .run");
-  const review = await startGuardianReview(outputDir, {downedOwnerCheck: process.argv.includes("--downed-owner-check")});
+  const review = await startGuardianReview(outputDir, {
+    downedOwnerCheck: process.argv.includes("--downed-owner-check"), caveJourney: process.argv.includes("--cave-journey"),
+  });
   let stopping = false;
   process.on("SIGINT", () => {stopping = true;});
   process.on("SIGTERM", () => {stopping = true;});

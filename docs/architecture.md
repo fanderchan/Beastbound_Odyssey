@@ -42,7 +42,7 @@ flowchart TD
 
 [BattleTexturePrefetcher](../client/godot/scripts/battle/battle_texture_prefetcher.gd) 预取当前地图、宠物和同屏人物的战斗贴图。每个成功提交的线程请求必须领取一次结果，包括加载失败的请求；切图取消保持异步，节点退出才等待并回收剩余最多四个请求，见 [Phase 570](phase_570_prefetch_request_cleanup.md)。
 
-[ServerBattlePlaybackQueue](../client/godot/scripts/battle/server_battle_playback_queue.gd) 保存动画期间收到的后续权威回合。ServerBattleCoordinator 在当前回合完成后逐个接续，队列排空再结算；最新房间快照与当前播放回合分开保存，进出战斗清空队列。128 回合恢复窗口及逐回合实机核对见 [Phase 589](phase_589_ordered_server_battle_playback.md)。
+[ServerBattlePlaybackQueue](../client/godot/scripts/battle/server_battle_playback_queue.gd) 保存动画期间收到的后续权威回合。ServerBattleCoordinator 在当前回合完成后逐个接续，队列排空再结算；最新房间快照与当前播放回合分开保存，进出战斗清空队列。128 回合恢复窗口及逐回合实机核对见 [Phase 589](phase_589_ordered_server_battle_playback.md)。联网倒计时按服务器截止时间显示，到时等待权威结果；当前回合只允许完成一次，空边界不重复应用快照，见 [Phase 590](phase_590_authoritative_battle_timeout.md)。
 
 人物世界动画由 [Player](../client/godot/scripts/player/player.gd) 缓存当前形象的朝向／动作片段。帧率和纹理引用在片段首次使用时从 CharacterActionAssetCatalog 解析，逐帧只按原有时间选帧；切换形象会清空旧片段。目录在单次运行中保持不变，如后续增加运行时素材热更新，必须同步增加动画缓存失效入口。验证见 [Phase 572](phase_572_world_animation_hotpath.md)。
 

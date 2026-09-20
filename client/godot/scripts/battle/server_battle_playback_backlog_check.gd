@@ -62,7 +62,27 @@ static func run(host, fixture: Dictionary, session: Dictionary, event_fixture: D
 	host._start_battle(RoomModel.battle_state_from_room(next_room, session))
 	var next_turn := turns[0].duplicate(true)
 	next_turn["roomId"] = next_room.roomId
+	var completions: Array = []
+	var observe_completion := func(turn: Dictionary) -> void: completions.append(turn.get("round", 0))
+	host._server_battle().turn_playback_finished.connect(observe_completion)
 	checks["next_battle_restarts_at_turn_one"] = host._play_server_battle_event_list(next_turn)
+	for _frame in range(240):
+		if not host._server_battle_event_playback_active():
+			break
+		await host.get_tree().process_frame
+	host.battle_state = BattleModel.set_actor_hp(host.battle_state, "enemy_pet", 65)
+	host._server_battle().finish_event_list()
+	checks["empty_round_boundary_does_not_repeat_completion"] = completions == [1]
+	checks["empty_round_boundary_does_not_reapply_previous_hp"] = int(BattleModel.actor_by_id(host.battle_state, "enemy_pet").get("hp", -1)) == 65
+	var actors_before_timeout: Array = host.battle_state.actors.duplicate(true)
+	host.battle_state.serverRoom.battle["commandDeadlineAt"] = Time.get_datetime_string_from_unix_time(Time.get_unix_time_from_system() + 30.0, true) + "Z"
+	host.battle_command_countdown_remaining = 1.0
+	host._update_battle_command_countdown(250.0)
+	checks["server_command_timer_uses_authoritative_deadline"] = str(host.battle_state.phase) == "command" and host.battle_command_countdown_remaining > 25.0
+	host.battle_state.serverRoom.battle["commandDeadlineAt"] = "2000-01-01T00:00:00Z"
+	host._update_battle_command_countdown(0.0)
+	checks["server_timeout_waits_without_local_round"] = str(host.battle_state.phase) == "server_waiting" and host.battle_event_queue.is_empty() and host.battle_current_event.is_empty() and host.battle_state.actors == actors_before_timeout
+	host._server_battle().turn_playback_finished.disconnect(observe_completion)
 	host._end_battle(true)
 	checks["queue_cleared_on_interruption"] = host._server_battle().playback_queue.room_id == ""
 	print("server battle playback backlog check: " + JSON.stringify({"checks": checks, "played": played}))

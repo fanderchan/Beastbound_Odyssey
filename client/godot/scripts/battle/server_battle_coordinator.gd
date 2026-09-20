@@ -18,6 +18,7 @@ var host
 signal turn_playback_started(turn: Dictionary)
 signal turn_playback_finished(turn: Dictionary)
 var playback_queue := ServerBattlePlaybackQueue.new()
+var active_playback_turn: Dictionary = {}
 var state_request_generation: int = 0
 var state_request_serial: int = 0
 var state_request_owner: Dictionary = {}
@@ -978,9 +979,28 @@ func play_next_queued_turn() -> bool:
 	return false
 
 
+func reset_playback(room_id: String = "") -> void:
+	playback_queue.reset(room_id)
+	active_playback_turn = {}
+
+
+func wait_for_command_timeout() -> void:
+	if not host._battle_is_server_authority() or host._server_battle_event_playback_active():
+		return
+	# The existing server contract closes expired rooms. Never synthesize a
+	# local defense round or advance authoritative actors on a client timer.
+	host.battle_state["phase"] = "server_waiting"
+	host.server_battle_waiting_poll_elapsed = SERVER_BATTLE_WAITING_POLL_SECONDS
+	host._sync_battle_buttons()
+	host.queue_redraw()
+
+
 func finish_event_list() -> bool:
-	var turn: Dictionary = host.battle_state.get("lastServerEventList", {})
-	if str(turn.get("kind", "")) == "battle_event_list":
+	# Empty/local round boundaries may run while waiting for another command.
+	# Consume only a turn that this coordinator actually started, exactly once.
+	var turn := active_playback_turn
+	active_playback_turn = {}
+	if not turn.is_empty():
 		host.battle_state = ServerBattleRoomModel.state_with_server_event_actor_snapshot(host.battle_state, turn)
 		turn_playback_finished.emit(turn)
 	if not playback_queue.pending.is_empty():
@@ -995,6 +1015,7 @@ func _start_event_list(event_list: Dictionary) -> bool:
 	var local_events := ServerBattleRoomModel.battle_events_from_server_event_list(playback_start_state, event_list)
 	if local_events.is_empty():
 		return false
+	active_playback_turn = event_list.duplicate(true)
 	if turn_key != "":
 		host.server_battle_last_playback_turn_key = turn_key
 	host.battle_state = playback_start_state

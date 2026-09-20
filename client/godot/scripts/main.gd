@@ -13438,6 +13438,8 @@ func _open_pet_command_or_start_round() -> void:
 
 
 func _battle_start_pending_round() -> void:
+	if _battle_is_server_authority():
+		return
 	battle_target_mode = "enemy"
 	if battle_pending_player_command.is_empty():
 		_set_battle_message("请先选择人物指令。")
@@ -14760,7 +14762,8 @@ func _update_battle_command_countdown(delta: float) -> void:
 	if phase != "command" or _battle_commands_locked():
 		_sync_battle_round_timer_labels(false)
 		return
-	battle_command_countdown_remaining = maxf(0.0, battle_command_countdown_remaining - delta)
+	var server_remaining := _server_battle_command_deadline_remaining() if _battle_is_server_authority() else -1.0
+	battle_command_countdown_remaining = maxf(0.0, server_remaining if server_remaining >= 0.0 else battle_command_countdown_remaining - delta)
 	_sync_battle_round_timer_labels(false)
 	if battle_command_countdown_remaining <= 0.001:
 		_submit_battle_timeout_default_commands()
@@ -14792,6 +14795,9 @@ func _sync_battle_round_timer_labels(force: bool = false) -> void:
 
 func _submit_battle_timeout_default_commands() -> void:
 	if not battle_active or _battle_commands_locked():
+		return
+	if _battle_is_server_authority():
+		_server_battle().wait_for_command_timeout()
 		return
 	var added_default := false
 	if battle_pending_player_command.is_empty():
