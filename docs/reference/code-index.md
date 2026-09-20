@@ -986,7 +986,7 @@
 | [combine_npc_staged_review.py](../../tools/combine_npc_staged_review.py) | 602 |
 | [finalize_pet_identity_gate.py](../../tools/finalize_pet_identity_gate.py) | 1897 |
 | [godot_qa_user_data_lane.py](../../tools/godot_qa_user_data_lane.py) | 3729 |
-| [guardian_review_media.py](../../tools/guardian_review_media.py) | 102 |
+| [guardian_review_media.py](../../tools/guardian_review_media.py) | 106 |
 | [install_firebud_computer_use_evidence.py](../../tools/install_firebud_computer_use_evidence.py) | 510 |
 | [install_pet_battle_bundle.py](../../tools/install_pet_battle_bundle.py) | 1489 |
 | [lib/isolated-mysql-runtime.mjs](../../tools/lib/isolated-mysql-runtime.mjs) | 296 |

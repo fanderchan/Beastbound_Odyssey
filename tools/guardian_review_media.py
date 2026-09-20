@@ -29,7 +29,11 @@ def encode_review_movie(raw_movie: Path, run: Path, *, timeout_seconds: float) -
             # Empty Theora packets mean repeat the previous image. FFmpeg's
             # decoder omits them, including trailing holds: expand only these
             # verified packet timestamps, never an inferred missing capture.
-            filters += f",fps=30,tpad=stop_mode=clone:stop={timeline['trailingDuplicateFrames']}"
+            # FFmpeg can infer a full keyframe interval at EOF when the last
+            # coded image is a keyframe. Bound expansion by the verified packet
+            # count, so that inferred duration cannot extend the recording.
+            filters += (f",fps=30,tpad=stop_mode=clone:stop={timeline['trailingDuplicateFrames']}"
+                f",trim=end_frame={timeline['frameCount']}")
         receipt["stage"] = "transcode"
         _strict_ffmpeg(["-i", str(raw_movie), "-map", "0:v:0", "-map", "0:a:0",
             "-vf", filters, "-color_range", "tv",

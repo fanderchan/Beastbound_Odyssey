@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **571** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **572** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 587 | [Phase 587：双倒地鼠标复验与长片结束边界](../phase_587_downed_owner_mouse_regression.md) | 阶段记录 |
 | 586 | [Phase 586：拒绝损坏录片并支持较长守护战试玩](../phase_586_guardian_recording_integrity.md) | 阶段记录 |
 | 585 | [Phase 585：修复五人战斗事件流接收过小](../phase_585_battle_event_receive_capacity.md) | 阶段记录 |
 | 584 | [Phase 584：守护战后台录制连续绘制](../phase_584_guardian_review_render_continuity.md) | 阶段记录 |
