@@ -302,7 +302,7 @@
 | [firebud_village_service_layout_check.gd](../../client/godot/scripts/qa/firebud_village_service_layout_check.gd) | 544 |
 | [guardian_battle_playthrough.gd](../../client/godot/scripts/qa/guardian_battle_playthrough.gd) | 254 |
 | [guardian_battle_presentation_check.gd](../../client/godot/scripts/qa/guardian_battle_presentation_check.gd) | 107 |
-| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 191 |
+| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 204 |
 | [hang_matchmaking_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_owner_review_capture.gd) | 716 |
 | [hang_matchmaking_world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd) | 1622 |
 | [map_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/map_awakened_owner_review_capture.gd) | 2654 |

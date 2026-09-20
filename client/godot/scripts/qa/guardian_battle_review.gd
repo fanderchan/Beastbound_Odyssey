@@ -99,6 +99,10 @@ func _run() -> void:
 	host._start_server_event_stream_if_needed()
 	host._start_online_position_sync_if_needed()
 	_write("fixture.json", {"scope": "isolated memory backend; one real Main client and four headless QA account drivers; authentic server encounter, rules and settlement; not human multiplayer or balance acceptance", "caveJourneyReview": cave_journey, "previewForms": preview_forms, "level": profile["player"]["level"], "profile": profile, "pid": OS.get_process_id(), "viewport": [1280, 720], "userData": OS.get_user_data_dir()})
+	# Match native performance preparation: request activation once for the
+	# explicitly launched interactive review, never during play or autoplay.
+	if OS.get_environment("BEASTBOUND_GUARDIAN_AUTOPLAY") != "1" and DisplayServer.get_name() != "headless":
+		DisplayServer.window_move_to_foreground()
 	print("GUARDIAN_REVIEW_READY")
 	if OS.get_environment("BEASTBOUND_GUARDIAN_AUTOPLAY") == "1":
 		autoplay_running = true
@@ -170,11 +174,20 @@ func _state() -> Dictionary:
 	var room: Dictionary = battle.get("serverRoom", {})
 	var arena_texture_ready := Arena.texture_for_state(battle) != null
 	var zoom: Vector2 = host.game_camera.zoom
+	# Sampled by the review loop, outside the player's runtime hot paths.
+	# Drawn frames include offline fallback draws, so they do not prove that
+	# the OS is presenting the window or Computer Use is receiving fresh images.
+	var native_window := {
+		"focused": DisplayServer.window_is_focused(),
+		"canDraw": root.can_draw(),
+		"renderLoopEnabled": RenderingServer.is_render_loop_enabled(),
+		"drawnFrames": Engine.get_frames_drawn(),
+	}
 	var owned_actors: Array = []
 	for actor in battle.get("actors", []):
 		if actor is Dictionary and str(actor.get("serverAccountId", "")) == str(host.current_account_session.get("accountId", "")):
 			owned_actors.append({"id": actor.get("id", ""), "hp": actor.get("hp", 0), "maxHp": actor.get("maxHp", 0), "launched": actor.get("launched", false)})
-	return {"unixTime": Time.get_unix_time_from_system(), "frame": Engine.get_process_frames(), "map": host.current_map_id, "cell": [cell.x, cell.y], "battle": host.battle_active, "dialog": host._dialog_is_open(), "resultPanel": host.battle_result_panel.visible, "artPreview": host.map_art_review_preview, "mapVisualBundleId": host.map_visual_render_state.get("bundleId", ""), "mapVisualActive": host.map_visual_render_state.get("active", false), "cameraZoom": [zoom.x, zoom.y], "serverSession": host._is_server_account_session(), "saving": host.profile_save_enabled, "round": battle.get("round", 0), "phase": battle.get("phase", ""), "ownedActors": owned_actors, "actorCount": (battle.get("actors", []) as Array).size(), "participantCount": (room.get("participants", []) as Array).size(), "serverAuthority": battle.get("serverAuthority", false), "arenaEvidence": Arena.evidence_for_state(battle), "arenaTextureReady": arena_texture_ready, "serverRoomStatus": room.get("status", ""), "serverRoomEntry": room.get("entry", null), "scene": host.scene_file_path, "worldLog": host.world_log_message, "playerHp": (host.player_profile.get("player", {}) as Dictionary).get("hp"), "profileRevision": host.server_profile_sync_expected_revision, "perf": host._perf_probe_frame_snapshot_for_qa()}
+	return {"unixTime": Time.get_unix_time_from_system(), "frame": Engine.get_process_frames(), "nativeWindow": native_window, "map": host.current_map_id, "cell": [cell.x, cell.y], "battle": host.battle_active, "dialog": host._dialog_is_open(), "resultPanel": host.battle_result_panel.visible, "artPreview": host.map_art_review_preview, "mapVisualBundleId": host.map_visual_render_state.get("bundleId", ""), "mapVisualActive": host.map_visual_render_state.get("active", false), "cameraZoom": [zoom.x, zoom.y], "serverSession": host._is_server_account_session(), "saving": host.profile_save_enabled, "round": battle.get("round", 0), "phase": battle.get("phase", ""), "ownedActors": owned_actors, "actorCount": (battle.get("actors", []) as Array).size(), "participantCount": (room.get("participants", []) as Array).size(), "serverAuthority": battle.get("serverAuthority", false), "arenaEvidence": Arena.evidence_for_state(battle), "arenaTextureReady": arena_texture_ready, "serverRoomStatus": room.get("status", ""), "serverRoomEntry": room.get("entry", null), "scene": host.scene_file_path, "worldLog": host.world_log_message, "playerHp": (host.player_profile.get("player", {}) as Dictionary).get("hp"), "profileRevision": host.server_profile_sync_expected_revision, "perf": host._perf_probe_frame_snapshot_for_qa()}
 
 func _write(name: String, value: Dictionary) -> void:
 	var file := FileAccess.open(out.path_join(name), FileAccess.WRITE)
