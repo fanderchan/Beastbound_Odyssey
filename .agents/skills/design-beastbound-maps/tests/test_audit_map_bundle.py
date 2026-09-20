@@ -510,8 +510,8 @@ def _repeated_runtime_identity(map_id: str, variant: str) -> dict:
         "processScopeMonitor": "process_priority_boundary_v1",
         "processScopePriorities": [-1000000, 1000000],
         "processScopeReady": True,
-        "renderingDriver": "metal",
-        "renderingMethod": "mobile",
+        "renderingDriver": "opengl3",
+        "renderingMethod": "gl_compatibility",
         "sampleFrames": BUILDER.PERF_SAMPLE_FRAMES,
         "status": "passed",
         "videoAdapterName": "Unit Test GPU",
@@ -677,7 +677,7 @@ class RepeatedPerformanceReportContractTests(unittest.TestCase):
         contract = AUDITOR._performance_batch_contract()
         plan = {
             "strategy": contract.STRATEGY, "mainScene": contract.MAIN_SCENE,
-            "focusPolicy": "foreground_required_v1", "buildIdentity": "test-build",
+            "focusPolicy": "foreground_drawable_required_v2", "buildIdentity": "test-build",
             "bundleId": TEST_PERFORMANCE_BUNDLE_ID,
             "sourceIdentity": contract.source_identity(AUDITOR.REPOSITORY_ROOT),
             "samples": [{key: r[key] for key in ("mapId", "variant", "mode", "repetition")}
@@ -695,10 +695,12 @@ class RepeatedPerformanceReportContractTests(unittest.TestCase):
                 "processId": 42, "rootWindowId": 0, "mainInstanceId": 100 + index,
                 "windowCount": 1, "mainCount": 1, "mainScene": contract.MAIN_SCENE,
                 "viewport": [1280, 720], "windowMode": 0, "focused": True,
-                "frame": index * 1000,
+                "canDraw": True, "renderLoopEnabled": True,
+                "drawFrame": index * 1000, "frame": index * 1000,
             }
             end = {**start, "frame": index * 1000 + 800, "exitCode": 0,
-                   "focusObservedFrames": 800, "unfocusedFrames": 0}
+                   "focusObservedFrames": 800, "unfocusedFrames": 0,
+                   "drawFrame": index * 1000 + 800, "nonDrawableFrames": 0}
             del end["sample"]
             record.update(schemaVersion=2, argv=contract.command("godot"), batch={
                 "strategy": contract.STRATEGY, "plan": plan, "planSha256": digest,
@@ -851,11 +853,60 @@ class RepeatedPerformanceReportContractTests(unittest.TestCase):
             audit = self._audit(bundle_root, report)
         self.assertEqual([], audit.errors)
 
+    def test_old_renderer_cannot_be_accepted_as_current_performance(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle_root, report = self._build_fixture(Path(temporary))
+            receipt = bundle_root / "evidence/performance-runner-receipt.jsonl"
+            records = [json.loads(line) for line in receipt.read_text().splitlines()]
+            for record in records:
+                rewritten = []
+                for line in record["stdout"].splitlines():
+                    if line.startswith(BUILDER.PERF_RUNTIME_PREFIX):
+                        runtime = json.loads(line[len(BUILDER.PERF_RUNTIME_PREFIX):])
+                        runtime.update(renderingMethod="mobile", renderingDriver="metal")
+                        line = BUILDER.PERF_RUNTIME_PREFIX + json.dumps(runtime)
+                    rewritten.append(line)
+                record["stdout"] = "\n".join(rewritten) + "\n"
+            for entry in report["maps"]:
+                for variant in ("baseline", "candidate"):
+                    for mode in ("idle", "moving"):
+                        entry[variant][mode]["runtimeIdentity"].update(
+                            renderingMethod="mobile", renderingDriver="metal"
+                        )
+            # Even internally consistent old Metal data must not satisfy the
+            # current Compatibility gate or be legitimized by recomputed hashes.
+            report["displayServer"] = "macOS Metal"
+            self._rewrite_receipt(bundle_root, report, records)
+            audit = self._audit(bundle_root, report)
+            self.assertTrue(any("displayServer" in error for error in audit.errors))
+            self.assertTrue(any("runtime" in error for error in audit.errors))
+
+    def test_compatibility_summary_does_not_hide_wrong_raw_driver(self) -> None:
+        for method, driver in (("gl_compatibility", "metal"), ("mobile", "opengl3")):
+            with self.subTest(method=method, driver=driver), tempfile.TemporaryDirectory() as temporary:
+                bundle_root, report = self._build_fixture(Path(temporary))
+                receipt = bundle_root / "evidence/performance-runner-receipt.jsonl"
+                records = [json.loads(line) for line in receipt.read_text().splitlines()]
+                rewritten = []
+                for line in records[0]["stdout"].splitlines():
+                    if line.startswith(BUILDER.PERF_RUNTIME_PREFIX):
+                        runtime = json.loads(line[len(BUILDER.PERF_RUNTIME_PREFIX):])
+                        runtime.update(renderingMethod=method, renderingDriver=driver)
+                        line = BUILDER.PERF_RUNTIME_PREFIX + json.dumps(runtime)
+                    rewritten.append(line)
+                records[0]["stdout"] = "\n".join(rewritten) + "\n"
+                self._rewrite_receipt(bundle_root, report, records)
+                audit = self._audit(bundle_root, report)
+                self.assertTrue(any("rawRunnerReceipt[0].runtime" in error for error in audit.errors))
+
     def test_single_window_evidence_cannot_bypass_independent_checks(self) -> None:
         mutations = {
             "unreleased Main": lambda r: r["batch"]["completion"].update(releasedMainCount=0),
             "second window": lambda r: r["batch"]["end"].update(windowCount=2),
             "lost focus": lambda r: r["batch"]["end"].update(unfocusedFrames=1),
+            "not drawable": lambda r: r["batch"]["end"].update(canDraw=False),
+            "render loop disabled": lambda r: r["batch"]["end"].update(renderLoopEnabled=False),
+            "missing draw": lambda r: r["batch"]["end"].update(drawFrame=0),
             "old source": lambda r: r["batch"]["plan"].update(sourceIdentity={}),
             "raw cleanup missing": lambda r: r["batch"].update(cleanupStdout=""),
             "short sample": lambda r: r.update(stdout=r["stdout"].replace("frames=60", "frames=59")),

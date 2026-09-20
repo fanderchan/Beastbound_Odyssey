@@ -2469,8 +2469,8 @@ def _expected_repeated_runtime_identity(
         "processScopeMonitor": "process_priority_boundary_v1",
         "processScopePriorities": [-1000000, 1000000],
         "processScopeReady": True,
-        "renderingDriver": "metal",
-        "renderingMethod": "mobile",
+        "renderingDriver": "opengl3",
+        "renderingMethod": "gl_compatibility",
         "sampleFrames": PERFORMANCE_SAMPLE_FRAMES,
         "status": "passed",
         "videoAdapterName": video_adapter_name,
@@ -2673,7 +2673,7 @@ def _validate_repeated_performance_sample(
         elif runtime_identity != expected_runtime:
             audit.error(
                 f"{field_name}.runtimeIdentity",
-                "must exactly attest the expected Main/Metal/map/process-scope runtime",
+                "must exactly attest the expected Main/Compatibility/OpenGL/map/process-scope runtime",
             )
 
     workloads = sample.get("workloadIdentityByRepetition")
@@ -3124,7 +3124,7 @@ def _parse_repeated_performance_record(
         if expected_runtime is None or runtime != expected_runtime:
             audit.error(
                 f"{field_name}.runtime",
-                "must exactly attest the expected Main/Metal/map/process-scope runtime",
+                "must exactly attest the expected Main/Compatibility/OpenGL/map/process-scope runtime",
             )
 
     measurement = marker_json(
@@ -4179,10 +4179,10 @@ def validate_report(
                 f"repeated fields require {PERFORMANCE_REPEATED_AGGREGATION_MODE!r}",
             )
         if repeated_contract:
-            if report.get("displayServer") != "macOS Metal":
+            if report.get("displayServer") != "macOS OpenGL Compatibility":
                 audit.error(
                     f"{field_name}.displayServer",
-                    "repeated reports must equal 'macOS Metal'",
+                    "repeated reports must equal 'macOS OpenGL Compatibility'",
                 )
             if comparison_mode not in PERFORMANCE_REPEATED_COMPARISON_MODES:
                 audit.error(

@@ -4,15 +4,25 @@
   "bundleId": "earth_vein_cave_visual_v1",
   "result": "PASS",
   "comparisonMode": "legacy_fallback_vs_candidate",
-  "generatedAtUtc": "2026-08-25T23:11:58.995Z",
+  "aggregationMode": "median_of_independent_run_means_with_envelope_extrema",
+  "repetitionCount": 3,
+  "executionOrder": "repetition_then_rotated_map_then_mode_then_alternating_variant_order",
+  "generatedAtUtc": "2026-09-20T20:41:29.103Z",
   "scene": "res://scenes/Main.tscn",
   "viewport": [
     1280,
     720
   ],
-  "displayServer": "macOS Metal",
+  "displayServer": "macOS OpenGL Compatibility",
   "movingInputDelivery": "Input.parse_input_event",
   "movingInputFrameSeparated": true,
+  "controlledFixedStepFps": 60,
+  "metricScope": {
+    "comparisonAndGateMetric": "processScopeTotalMsMinMeanMax",
+    "processTotalMsMinMeanMax": "Main._process_only",
+    "processScopeTotalMsMinMeanMax": "QA_process_priority_boundaries_all_intervening_Node_process_callbacks",
+    "drawWorldMsMinMeanMax": "Main._draw_only_missing_windows_recorded_as_zero"
+  },
   "testedMapIds": [
     "earth_vein_cave",
     "earth_vein_cave_f2",
@@ -25,115 +35,469 @@
       "baseline": {
         "renderer": "legacy_fallback",
         "idle": {
-          "samples": 8,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.18,
-            0.2,
-            0.22
+            0.129,
+            0.231,
+            0.243
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.095,
-            0.76
+            0.0,
+            0.0
+          ],
+          "drawWorldObservedSampleCount": 0,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.145,
+              0.231,
+              0.234
+            ],
+            "drawWorldMs": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.169,
+              0.273,
+              0.277
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": false,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave",
+            "mapVisualActive": false,
+            "mapVisualBundleId": "",
+            "mapVisualCatalogSource": "",
+            "mapVisualMapId": "",
+            "mapVisualQaPreview": false,
+            "mapVisualReviewCandidate": false,
+            "mapVisualStatus": "",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "post_warmup_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.151,
+            0.273,
+            0.287
           ]
         },
         "moving": {
-          "samples": 2,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.12,
-            0.175,
-            0.23
+            0.121,
+            0.222,
+            0.259
           ],
           "drawWorldMsMinMeanMax": [
-            2.58,
-            3.085,
-            3.59
+            0.0,
+            0.513,
+            2.063
           ],
-          "clicks": 60,
-          "accepted": 60,
-          "resolved": 18,
-          "applied": 18,
+          "drawWorldObservedSampleCount": 9,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.142,
+              0.222,
+              0.234
+            ],
+            "drawWorldMs": [
+              0.3,
+              0.513,
+              0.591
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.174,
+              0.276,
+              0.293
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": false,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave",
+            "mapVisualActive": false,
+            "mapVisualBundleId": "",
+            "mapVisualCatalogSource": "",
+            "mapVisualMapId": "",
+            "mapVisualQaPreview": false,
+            "mapVisualReviewCandidate": false,
+            "mapVisualStatus": "",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "shared_input_then_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.154,
+            0.276,
+            0.323
+          ],
+          "clicks": 180,
+          "accepted": 180,
+          "resolved": 69,
+          "applied": 54,
           "avgInputUs": 1,
-          "maxInputUs": 4,
+          "maxInputUs": 9,
           "moved": true,
           "coalesced": true,
           "settled": true,
           "finalTargetMatched": true,
           "battle": false,
-          "encounter": false
+          "encounter": false,
+          "workloadIdentityByRepetition": [
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "a2bfef4d8c014e07bb45218365215ca48bce1c5b9627df0cf658765be4cbf7fd",
+              "startCell": "4,20",
+              "actualStartCell": "4,20",
+              "finalCell": "5,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "a2bfef4d8c014e07bb45218365215ca48bce1c5b9627df0cf658765be4cbf7fd",
+              "startCell": "4,20",
+              "actualStartCell": "4,20",
+              "finalCell": "5,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "a2bfef4d8c014e07bb45218365215ca48bce1c5b9627df0cf658765be4cbf7fd",
+              "startCell": "4,20",
+              "actualStartCell": "4,20",
+              "finalCell": "5,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            }
+          ]
         }
       },
       "candidate": {
         "renderer": "map_visual_candidate",
         "idle": {
-          "samples": 8,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.23,
-            0.279,
-            0.35
+            0.057,
+            0.153,
+            0.215
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.01,
-            0.08
+            0.0,
+            0.0
+          ],
+          "drawWorldObservedSampleCount": 0,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.068,
+              0.153,
+              0.171
+            ],
+            "drawWorldMs": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.088,
+              0.194,
+              0.218
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": true,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave",
+            "mapVisualActive": true,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1",
+            "mapVisualCatalogSource": "review",
+            "mapVisualMapId": "earth_vein_cave",
+            "mapVisualQaPreview": true,
+            "mapVisualReviewCandidate": true,
+            "mapVisualStatus": "owner_review_pending",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "post_warmup_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.075,
+            0.194,
+            0.269
           ]
         },
         "moving": {
-          "samples": 2,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.29,
-            0.3,
-            0.31
+            0.054,
+            0.155,
+            0.349
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.085,
-            0.17
+            0.004,
+            0.022
           ],
-          "clicks": 6,
-          "accepted": 6,
-          "resolved": 4,
-          "applied": 3,
-          "avgInputUs": 2,
-          "maxInputUs": 2,
+          "drawWorldObservedSampleCount": 9,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.081,
+              0.172,
+              0.155
+            ],
+            "drawWorldMs": [
+              0.003,
+              0.004,
+              0.006
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.113,
+              0.233,
+              0.22
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": true,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave",
+            "mapVisualActive": true,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1",
+            "mapVisualCatalogSource": "review",
+            "mapVisualMapId": "earth_vein_cave",
+            "mapVisualQaPreview": true,
+            "mapVisualReviewCandidate": true,
+            "mapVisualStatus": "owner_review_pending",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "shared_input_then_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.071,
+            0.22,
+            0.496
+          ],
+          "clicks": 180,
+          "accepted": 180,
+          "resolved": 69,
+          "applied": 54,
+          "avgInputUs": 1,
+          "maxInputUs": 8,
           "moved": true,
           "coalesced": true,
           "settled": true,
           "finalTargetMatched": true,
           "battle": false,
-          "encounter": false
+          "encounter": false,
+          "workloadIdentityByRepetition": [
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "a2bfef4d8c014e07bb45218365215ca48bce1c5b9627df0cf658765be4cbf7fd",
+              "startCell": "4,20",
+              "actualStartCell": "4,20",
+              "finalCell": "5,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "a2bfef4d8c014e07bb45218365215ca48bce1c5b9627df0cf658765be4cbf7fd",
+              "startCell": "4,20",
+              "actualStartCell": "4,20",
+              "finalCell": "5,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "a2bfef4d8c014e07bb45218365215ca48bce1c5b9627df0cf658765be4cbf7fd",
+              "startCell": "4,20",
+              "actualStartCell": "4,20",
+              "finalCell": "5,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            }
+          ]
         }
       },
       "comparison": {
-        "processTotalMeanDeltaMs": {
-          "idle": 0.079,
-          "moving": 0.125
+        "processScopeTotalMeanDeltaMs": {
+          "idle": -0.079,
+          "moving": -0.056
+        },
+        "pairedAggregation": {
+          "repetitions": [
+            1,
+            2,
+            3
+          ],
+          "processScopeTotalMeanDeltaMsByRepetition": {
+            "idle": [
+              -0.081,
+              -0.079,
+              -0.059
+            ],
+            "moving": [
+              -0.061,
+              -0.043,
+              -0.073
+            ]
+          },
+          "medianProcessScopeTotalMeanDeltaMs": {
+            "idle": -0.079,
+            "moving": -0.061
+          },
+          "gates": {
+            "idleRegressionWithinLimit": "PASS",
+            "movingRegressionWithinLimit": "PASS"
+          },
+          "thresholdSource": "comparison.thresholds"
         },
         "thresholds": {
-          "candidateIdleProcessMeanMaxMs": 0.5,
-          "candidateMovingProcessMeanMaxMs": 0.6,
-          "idleRegressionMaxMs": 0.1,
-          "movingRegressionMaxMs": 0.35
+          "candidateIdleProcessScopeMeanMaxMs": 0.5,
+          "candidateMovingProcessScopeMeanMaxMs": 0.6,
+          "idleProcessScopeRegressionMaxMs": 0.1,
+          "movingProcessScopeRegressionMaxMs": 0.35
         },
         "gates": {
           "candidateIdleWithinLimit": "PASS",
@@ -148,115 +512,469 @@
       "baseline": {
         "renderer": "legacy_fallback",
         "idle": {
-          "samples": 8,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.2,
-            0.223,
-            0.24
+            0.129,
+            0.236,
+            0.268
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.099,
-            0.79
+            0.0,
+            0.0
+          ],
+          "drawWorldObservedSampleCount": 0,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.134,
+              0.253,
+              0.236
+            ],
+            "drawWorldMs": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.158,
+              0.298,
+              0.279
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": false,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f2",
+            "mapVisualActive": false,
+            "mapVisualBundleId": "",
+            "mapVisualCatalogSource": "",
+            "mapVisualMapId": "",
+            "mapVisualQaPreview": false,
+            "mapVisualReviewCandidate": false,
+            "mapVisualStatus": "",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "post_warmup_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.152,
+            0.279,
+            0.319
           ]
         },
         "moving": {
-          "samples": 2,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.15,
-            0.155,
-            0.16
+            0.13,
+            0.227,
+            0.291
           ],
           "drawWorldMsMinMeanMax": [
-            2.68,
-            2.88,
-            3.08
+            0.0,
+            0.592,
+            2.411
           ],
-          "clicks": 60,
-          "accepted": 60,
-          "resolved": 18,
-          "applied": 18,
-          "avgInputUs": 1,
-          "maxInputUs": 2,
+          "drawWorldObservedSampleCount": 9,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.171,
+              0.254,
+              0.227
+            ],
+            "drawWorldMs": [
+              0.396,
+              0.66,
+              0.592
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.212,
+              0.319,
+              0.283
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": false,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f2",
+            "mapVisualActive": false,
+            "mapVisualBundleId": "",
+            "mapVisualCatalogSource": "",
+            "mapVisualMapId": "",
+            "mapVisualQaPreview": false,
+            "mapVisualReviewCandidate": false,
+            "mapVisualStatus": "",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "shared_input_then_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.155,
+            0.283,
+            0.349
+          ],
+          "clicks": 180,
+          "accepted": 180,
+          "resolved": 69,
+          "applied": 54,
+          "avgInputUs": 2,
+          "maxInputUs": 9,
           "moved": true,
           "coalesced": true,
           "settled": true,
           "finalTargetMatched": true,
           "battle": false,
-          "encounter": false
+          "encounter": false,
+          "workloadIdentityByRepetition": [
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "f15c799f2d4d21ebdf13248487b5afe0ab48e9a0937c54727366293bfa6c0fbd",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "f15c799f2d4d21ebdf13248487b5afe0ab48e9a0937c54727366293bfa6c0fbd",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "f15c799f2d4d21ebdf13248487b5afe0ab48e9a0937c54727366293bfa6c0fbd",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            }
+          ]
         }
       },
       "candidate": {
         "renderer": "map_visual_candidate",
         "idle": {
-          "samples": 8,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.26,
-            0.315,
-            0.35
+            0.065,
+            0.162,
+            0.327
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "drawWorldObservedSampleCount": 0,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.088,
+              0.202,
+              0.162
+            ],
+            "drawWorldMs": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.112,
+              0.263,
+              0.205
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": true,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f2",
+            "mapVisualActive": true,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1",
+            "mapVisualCatalogSource": "review",
+            "mapVisualMapId": "earth_vein_cave_f2",
+            "mapVisualQaPreview": true,
+            "mapVisualReviewCandidate": true,
+            "mapVisualStatus": "owner_review_pending",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "post_warmup_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.083,
+            0.205,
+            0.427
+          ]
+        },
+        "moving": {
+          "samples": 24,
+          "measurementFrames": 1440,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.055,
+            0.139,
+            0.361
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
             0.005,
-            0.04
-          ]
-        },
-        "moving": {
-          "samples": 2,
-          "fpsMinMeanMax": [
-            60.0,
-            60.0,
-            60.0
+            0.019
           ],
-          "processTotalMsMinMeanMax": [
-            0.42,
-            0.43,
-            0.44
+          "drawWorldObservedSampleCount": 9,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.085,
+              0.143,
+              0.139
+            ],
+            "drawWorldMs": [
+              0.003,
+              0.005,
+              0.005
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.122,
+              0.207,
+              0.2
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": true,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f2",
+            "mapVisualActive": true,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1",
+            "mapVisualCatalogSource": "review",
+            "mapVisualMapId": "earth_vein_cave_f2",
+            "mapVisualQaPreview": true,
+            "mapVisualReviewCandidate": true,
+            "mapVisualStatus": "owner_review_pending",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "shared_input_then_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.073,
+            0.2,
+            0.538
           ],
-          "drawWorldMsMinMeanMax": [
-            0.21,
-            0.285,
-            0.36
-          ],
-          "clicks": 39,
-          "accepted": 39,
-          "resolved": 12,
-          "applied": 12,
+          "clicks": 180,
+          "accepted": 180,
+          "resolved": 69,
+          "applied": 54,
           "avgInputUs": 1,
-          "maxInputUs": 4,
+          "maxInputUs": 5,
           "moved": true,
           "coalesced": true,
           "settled": true,
           "finalTargetMatched": true,
           "battle": false,
-          "encounter": false
+          "encounter": false,
+          "workloadIdentityByRepetition": [
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "f15c799f2d4d21ebdf13248487b5afe0ab48e9a0937c54727366293bfa6c0fbd",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "f15c799f2d4d21ebdf13248487b5afe0ab48e9a0937c54727366293bfa6c0fbd",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "f15c799f2d4d21ebdf13248487b5afe0ab48e9a0937c54727366293bfa6c0fbd",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            }
+          ]
         }
       },
       "comparison": {
-        "processTotalMeanDeltaMs": {
-          "idle": 0.092,
-          "moving": 0.275
+        "processScopeTotalMeanDeltaMs": {
+          "idle": -0.074,
+          "moving": -0.083
+        },
+        "pairedAggregation": {
+          "repetitions": [
+            1,
+            2,
+            3
+          ],
+          "processScopeTotalMeanDeltaMsByRepetition": {
+            "idle": [
+              -0.046,
+              -0.035,
+              -0.074
+            ],
+            "moving": [
+              -0.09,
+              -0.112,
+              -0.083
+            ]
+          },
+          "medianProcessScopeTotalMeanDeltaMs": {
+            "idle": -0.046,
+            "moving": -0.09
+          },
+          "gates": {
+            "idleRegressionWithinLimit": "PASS",
+            "movingRegressionWithinLimit": "PASS"
+          },
+          "thresholdSource": "comparison.thresholds"
         },
         "thresholds": {
-          "candidateIdleProcessMeanMaxMs": 0.5,
-          "candidateMovingProcessMeanMaxMs": 0.6,
-          "idleRegressionMaxMs": 0.1,
-          "movingRegressionMaxMs": 0.35
+          "candidateIdleProcessScopeMeanMaxMs": 0.5,
+          "candidateMovingProcessScopeMeanMaxMs": 0.6,
+          "idleProcessScopeRegressionMaxMs": 0.1,
+          "movingProcessScopeRegressionMaxMs": 0.35
         },
         "gates": {
           "candidateIdleWithinLimit": "PASS",
@@ -271,115 +989,469 @@
       "baseline": {
         "renderer": "legacy_fallback",
         "idle": {
-          "samples": 8,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.18,
-            0.246,
-            0.27
+            0.167,
+            0.243,
+            0.264
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.09,
-            0.72
+            0.0,
+            0.0
+          ],
+          "drawWorldObservedSampleCount": 0,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.207,
+              0.243,
+              0.244
+            ],
+            "drawWorldMs": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.244,
+              0.286,
+              0.287
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": false,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f3",
+            "mapVisualActive": false,
+            "mapVisualBundleId": "",
+            "mapVisualCatalogSource": "",
+            "mapVisualMapId": "",
+            "mapVisualQaPreview": false,
+            "mapVisualReviewCandidate": false,
+            "mapVisualStatus": "",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "post_warmup_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.197,
+            0.286,
+            0.314
           ]
         },
         "moving": {
-          "samples": 2,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.14,
-            0.18,
-            0.22
+            0.19,
+            0.231,
+            0.278
           ],
           "drawWorldMsMinMeanMax": [
-            2.71,
-            2.945,
-            3.18
+            0.0,
+            0.539,
+            2.003
           ],
-          "clicks": 51,
-          "accepted": 51,
-          "resolved": 16,
-          "applied": 16,
-          "avgInputUs": 1,
-          "maxInputUs": 2,
+          "drawWorldObservedSampleCount": 9,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.233,
+              0.218,
+              0.231
+            ],
+            "drawWorldMs": [
+              0.557,
+              0.531,
+              0.539
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.289,
+              0.273,
+              0.288
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": false,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f3",
+            "mapVisualActive": false,
+            "mapVisualBundleId": "",
+            "mapVisualCatalogSource": "",
+            "mapVisualMapId": "",
+            "mapVisualQaPreview": false,
+            "mapVisualReviewCandidate": false,
+            "mapVisualStatus": "",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "shared_input_then_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.252,
+            0.288,
+            0.347
+          ],
+          "clicks": 180,
+          "accepted": 180,
+          "resolved": 69,
+          "applied": 54,
+          "avgInputUs": 2,
+          "maxInputUs": 12,
           "moved": true,
           "coalesced": true,
           "settled": true,
           "finalTargetMatched": true,
           "battle": false,
-          "encounter": false
+          "encounter": false,
+          "workloadIdentityByRepetition": [
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            }
+          ]
         }
       },
       "candidate": {
         "renderer": "map_visual_candidate",
         "idle": {
-          "samples": 8,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.28,
-            0.304,
-            0.34
+            0.079,
+            0.114,
+            0.211
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.013,
-            0.1
+            0.0,
+            0.0
+          ],
+          "drawWorldObservedSampleCount": 0,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.114,
+              0.163,
+              0.112
+            ],
+            "drawWorldMs": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.146,
+              0.209,
+              0.143
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": true,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f3",
+            "mapVisualActive": true,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1",
+            "mapVisualCatalogSource": "review",
+            "mapVisualMapId": "earth_vein_cave_f3",
+            "mapVisualQaPreview": true,
+            "mapVisualReviewCandidate": true,
+            "mapVisualStatus": "owner_review_pending",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "post_warmup_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.103,
+            0.146,
+            0.267
           ]
         },
         "moving": {
-          "samples": 2,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.35,
-            0.37,
-            0.39
+            0.076,
+            0.189,
+            0.551
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.06,
-            0.12
+            0.005,
+            0.046
           ],
-          "clicks": 10,
-          "accepted": 10,
-          "resolved": 4,
-          "applied": 4,
-          "avgInputUs": 1,
-          "maxInputUs": 2,
+          "drawWorldObservedSampleCount": 9,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.218,
+              0.189,
+              0.136
+            ],
+            "drawWorldMs": [
+              0.012,
+              0.005,
+              0.005
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.329,
+              0.266,
+              0.197
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": true,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f3",
+            "mapVisualActive": true,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1",
+            "mapVisualCatalogSource": "review",
+            "mapVisualMapId": "earth_vein_cave_f3",
+            "mapVisualQaPreview": true,
+            "mapVisualReviewCandidate": true,
+            "mapVisualStatus": "owner_review_pending",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "shared_input_then_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.1,
+            0.266,
+            0.846
+          ],
+          "clicks": 180,
+          "accepted": 180,
+          "resolved": 69,
+          "applied": 54,
+          "avgInputUs": 2,
+          "maxInputUs": 131,
           "moved": true,
           "coalesced": true,
           "settled": true,
           "finalTargetMatched": true,
           "battle": false,
-          "encounter": false
+          "encounter": false,
+          "workloadIdentityByRepetition": [
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            }
+          ]
         }
       },
       "comparison": {
-        "processTotalMeanDeltaMs": {
-          "idle": 0.058,
-          "moving": 0.19
+        "processScopeTotalMeanDeltaMs": {
+          "idle": -0.14,
+          "moving": -0.022
+        },
+        "pairedAggregation": {
+          "repetitions": [
+            1,
+            2,
+            3
+          ],
+          "processScopeTotalMeanDeltaMsByRepetition": {
+            "idle": [
+              -0.098,
+              -0.077,
+              -0.144
+            ],
+            "moving": [
+              0.04,
+              -0.007,
+              -0.091
+            ]
+          },
+          "medianProcessScopeTotalMeanDeltaMs": {
+            "idle": -0.098,
+            "moving": -0.007
+          },
+          "gates": {
+            "idleRegressionWithinLimit": "PASS",
+            "movingRegressionWithinLimit": "PASS"
+          },
+          "thresholdSource": "comparison.thresholds"
         },
         "thresholds": {
-          "candidateIdleProcessMeanMaxMs": 0.5,
-          "candidateMovingProcessMeanMaxMs": 0.6,
-          "idleRegressionMaxMs": 0.1,
-          "movingRegressionMaxMs": 0.35
+          "candidateIdleProcessScopeMeanMaxMs": 0.5,
+          "candidateMovingProcessScopeMeanMaxMs": 0.6,
+          "idleProcessScopeRegressionMaxMs": 0.1,
+          "movingProcessScopeRegressionMaxMs": 0.35
         },
         "gates": {
           "candidateIdleWithinLimit": "PASS",
@@ -394,115 +1466,469 @@
       "baseline": {
         "renderer": "legacy_fallback",
         "idle": {
-          "samples": 8,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.2,
-            0.237,
-            0.27
+            0.221,
+            0.248,
+            0.283
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.071,
-            0.57
+            0.0,
+            0.0
+          ],
+          "drawWorldObservedSampleCount": 0,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.27,
+              0.234,
+              0.248
+            ],
+            "drawWorldMs": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.318,
+              0.275,
+              0.292
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": false,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f4",
+            "mapVisualActive": false,
+            "mapVisualBundleId": "",
+            "mapVisualCatalogSource": "",
+            "mapVisualMapId": "",
+            "mapVisualQaPreview": false,
+            "mapVisualReviewCandidate": false,
+            "mapVisualStatus": "",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "post_warmup_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.26,
+            0.292,
+            0.333
           ]
         },
         "moving": {
-          "samples": 2,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.14,
-            0.145,
-            0.15
+            0.209,
+            0.238,
+            0.352
           ],
           "drawWorldMsMinMeanMax": [
-            2.57,
-            2.795,
-            3.02
+            0.0,
+            0.539,
+            2.483
           ],
-          "clicks": 54,
-          "accepted": 54,
-          "resolved": 17,
-          "applied": 17,
-          "avgInputUs": 1,
-          "maxInputUs": 1,
+          "drawWorldObservedSampleCount": 9,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.264,
+              0.238,
+              0.235
+            ],
+            "drawWorldMs": [
+              0.668,
+              0.53,
+              0.539
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.334,
+              0.297,
+              0.296
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": false,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f4",
+            "mapVisualActive": false,
+            "mapVisualBundleId": "",
+            "mapVisualCatalogSource": "",
+            "mapVisualMapId": "",
+            "mapVisualQaPreview": false,
+            "mapVisualReviewCandidate": false,
+            "mapVisualStatus": "",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "shared_input_then_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.25,
+            0.297,
+            0.461
+          ],
+          "clicks": 180,
+          "accepted": 180,
+          "resolved": 69,
+          "applied": 54,
+          "avgInputUs": 2,
+          "maxInputUs": 8,
           "moved": true,
           "coalesced": true,
           "settled": true,
           "finalTargetMatched": true,
           "battle": false,
-          "encounter": false
+          "encounter": false,
+          "workloadIdentityByRepetition": [
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "86b56eb2fba289d4523e7931f39abf5b082bbc6eebe21f023acc8e2528d49d13",
+              "startCell": "5,22",
+              "actualStartCell": "5,22",
+              "finalCell": "6,22",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "86b56eb2fba289d4523e7931f39abf5b082bbc6eebe21f023acc8e2528d49d13",
+              "startCell": "5,22",
+              "actualStartCell": "5,22",
+              "finalCell": "6,22",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "86b56eb2fba289d4523e7931f39abf5b082bbc6eebe21f023acc8e2528d49d13",
+              "startCell": "5,22",
+              "actualStartCell": "5,22",
+              "finalCell": "6,22",
+              "clicks": 60,
+              "mouseEvents": 120
+            }
+          ]
         }
       },
       "candidate": {
         "renderer": "map_visual_candidate",
         "idle": {
-          "samples": 8,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.26,
-            0.304,
-            0.33
+            0.082,
+            0.158,
+            0.247
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.005,
-            0.04
+            0.0,
+            0.0
+          ],
+          "drawWorldObservedSampleCount": 0,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.174,
+              0.158,
+              0.151
+            ],
+            "drawWorldMs": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.222,
+              0.202,
+              0.192
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": true,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f4",
+            "mapVisualActive": true,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1",
+            "mapVisualCatalogSource": "review",
+            "mapVisualMapId": "earth_vein_cave_f4",
+            "mapVisualQaPreview": true,
+            "mapVisualReviewCandidate": true,
+            "mapVisualStatus": "owner_review_pending",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "post_warmup_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.107,
+            0.202,
+            0.314
           ]
         },
         "moving": {
-          "samples": 2,
+          "samples": 24,
+          "measurementFrames": 1440,
           "fpsMinMeanMax": [
             60.0,
             60.0,
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.33,
-            0.365,
-            0.4
+            0.077,
+            0.189,
+            0.466
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.05,
-            0.1
+            0.004,
+            0.021
           ],
-          "clicks": 6,
-          "accepted": 6,
-          "resolved": 4,
-          "applied": 3,
+          "drawWorldObservedSampleCount": 9,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.218,
+              0.137,
+              0.189
+            ],
+            "drawWorldMs": [
+              0.006,
+              0.003,
+              0.004
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.3,
+              0.187,
+              0.256
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": true,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f4",
+            "mapVisualActive": true,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1",
+            "mapVisualCatalogSource": "review",
+            "mapVisualMapId": "earth_vein_cave_f4",
+            "mapVisualQaPreview": true,
+            "mapVisualReviewCandidate": true,
+            "mapVisualStatus": "owner_review_pending",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "shared_input_then_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.1,
+            0.256,
+            0.628
+          ],
+          "clicks": 180,
+          "accepted": 180,
+          "resolved": 69,
+          "applied": 54,
           "avgInputUs": 1,
-          "maxInputUs": 1,
+          "maxInputUs": 6,
           "moved": true,
           "coalesced": true,
           "settled": true,
           "finalTargetMatched": true,
           "battle": false,
-          "encounter": false
+          "encounter": false,
+          "workloadIdentityByRepetition": [
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "86b56eb2fba289d4523e7931f39abf5b082bbc6eebe21f023acc8e2528d49d13",
+              "startCell": "5,22",
+              "actualStartCell": "5,22",
+              "finalCell": "6,22",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "86b56eb2fba289d4523e7931f39abf5b082bbc6eebe21f023acc8e2528d49d13",
+              "startCell": "5,22",
+              "actualStartCell": "5,22",
+              "finalCell": "6,22",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "86b56eb2fba289d4523e7931f39abf5b082bbc6eebe21f023acc8e2528d49d13",
+              "startCell": "5,22",
+              "actualStartCell": "5,22",
+              "finalCell": "6,22",
+              "clicks": 60,
+              "mouseEvents": 120
+            }
+          ]
         }
       },
       "comparison": {
-        "processTotalMeanDeltaMs": {
-          "idle": 0.067,
-          "moving": 0.22
+        "processScopeTotalMeanDeltaMs": {
+          "idle": -0.09,
+          "moving": -0.041
+        },
+        "pairedAggregation": {
+          "repetitions": [
+            1,
+            2,
+            3
+          ],
+          "processScopeTotalMeanDeltaMsByRepetition": {
+            "idle": [
+              -0.096,
+              -0.073,
+              -0.1
+            ],
+            "moving": [
+              -0.034,
+              -0.11,
+              -0.04
+            ]
+          },
+          "medianProcessScopeTotalMeanDeltaMs": {
+            "idle": -0.096,
+            "moving": -0.04
+          },
+          "gates": {
+            "idleRegressionWithinLimit": "PASS",
+            "movingRegressionWithinLimit": "PASS"
+          },
+          "thresholdSource": "comparison.thresholds"
         },
         "thresholds": {
-          "candidateIdleProcessMeanMaxMs": 0.5,
-          "candidateMovingProcessMeanMaxMs": 0.6,
-          "idleRegressionMaxMs": 0.1,
-          "movingRegressionMaxMs": 0.35
+          "candidateIdleProcessScopeMeanMaxMs": 0.5,
+          "candidateMovingProcessScopeMeanMaxMs": 0.6,
+          "idleProcessScopeRegressionMaxMs": 0.1,
+          "movingProcessScopeRegressionMaxMs": 0.35
         },
         "gates": {
           "candidateIdleWithinLimit": "PASS",
@@ -518,15 +1944,19 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:f49d7d4ce73c8bc371e5295f6bacc249e7a386f2+beastbound-map-runtime-surface-v2:12c225a12550d7d6accb1a3d684357bbfce6ca9fc1c2568709885c1c3e0631a4"
+    "buildIdentity": "git:18ffa702cb35e6399fe899abd33e1cbf9e8628d8+beastbound-map-runtime-surface-v2:cbef22faa06579f683a8a9778395442b61057f0f0744584f86da44a55cf5cf09"
   },
   "rawRunnerReceipt": {
     "path": "evidence/performance-runner-receipt.jsonl",
-    "sha256": "c232d86ef31fdf37315e1436f57de9f8c2c4ecdd3508e1825a3cf1ec89b256c3"
+    "sha256": "0ed4050972c3391329c1a83757270bc49915d043aab3ada12f0b02204e606990"
   },
   "notes": [
-    "All 16 variants ran through the real Main.tscn non-headless Metal path.",
+    "All 48 variants ran through the real Main.tscn non-headless Compatibility path.",
+    "Each matrix cell used 3 fresh-Main samples; the reported mean is the median of sample means, while min/max preserve the full envelope.",
+    "Odd repetitions ran baseline then candidate; even repetitions reversed the order to limit systematic cache/order bias.",
+    "Repeated runs rotated map order, discarded 180 warmup frames, disabled audio playback, and required shared runtime clean-exit cleanup.",
     "Moving variants used cross-frame Input.parse_input_event mouse press/release delivery.",
+    "One process/window; Main state resets between samples, while process resource caches remain shared. This is fixed-step steady-state CPU evidence, not cold-start or observed display FPS.",
     "All values were parsed from the verbatim Godot stdout/stderr frozen in the raw JSONL receipt."
   ]
 }
