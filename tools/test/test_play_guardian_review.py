@@ -12,6 +12,28 @@ import play_guardian_review as review
 
 
 class GuardianBackendWatchTests(unittest.TestCase):
+    def test_autoplay_rejects_silent_reconnects_despite_successful_battle(self):
+        ready = {"state": "open", "phase": "ready", "attempt": 0}
+        metric = {"acceptedUpgrades": 1, "rejectedUpgrades": 0, "heartbeatTimeouts": 0,
+            "protocolViolations": 0, "inboundRateLimited": 0, "slowConsumerDisconnects": 0}
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory)
+            (run / "backend").mkdir()
+            def write(states, metrics):
+                (run / "states.ndjson").write_text("\n".join(json.dumps({"eventStream": s}) for s in states))
+                (run / "backend/event-stream.ndjson").write_text("\n".join(json.dumps(m) for m in metrics))
+            write([{"state": "connecting", "phase": "connecting", "attempt": 0}, ready, ready], [metric])
+            self.assertEqual(review._validate_event_stream(run)["readySamples"], 2)
+            for states, metrics in [([], [metric]), ([ready], []),
+                    ([ready, {"state": "closed", "phase": "idle", "attempt": 1}, ready], [metric]),
+                    ([ready], [{**metric, "acceptedUpgrades": 2}]),
+                    ([ready], [{**metric, "rejectedUpgrades": 1}]),
+                    ([ready], [{**metric, "heartbeatTimeouts": 1}])]:
+                with self.subTest(states=states, metrics=metrics):
+                    write(states, metrics)
+                    with self.assertRaises(RuntimeError):
+                        review._validate_event_stream(run)
+
     def test_capture_requires_complete_draw_receipt_and_never_claims_performance(self):
         receipt = {"captureFrameStartInclusive": 12, "processFrameEndExclusive": 112,
             "renderContinuity": {"policy": "occluded_viewport_without_present_v1", "result": "PASS",

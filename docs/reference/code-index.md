@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **956** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **957** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -12,8 +12,8 @@
 
 | 行数 | 文件 |
 | ---: | --- |
-| 33024 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
-| 28889 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
+| 33027 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
+| 28888 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27376 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
 | 19231 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
@@ -107,7 +107,7 @@
 
 ## client/godot/scripts/net
 
-<details><summary>9 个文件</summary>
+<details><summary>10 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -119,6 +119,7 @@
 | [online_presence_cache_model.gd](../../client/godot/scripts/net/online_presence_cache_model.gd) | 665 |
 | [server_event_clock_check.gd](../../client/godot/scripts/net/server_event_clock_check.gd) | 79 |
 | [server_event_reconnect_model.gd](../../client/godot/scripts/net/server_event_reconnect_model.gd) | 186 |
+| [server_event_transport_check.gd](../../client/godot/scripts/net/server_event_transport_check.gd) | 90 |
 | [server_sync_coordinator.gd](../../client/godot/scripts/net/server_sync_coordinator.gd) | 796 |
 
 </details>
@@ -244,7 +245,7 @@
 | [quest_model.gd](../../client/godot/scripts/progression/quest_model.gd) | 988 |
 | [rebirth_model.gd](../../client/godot/scripts/progression/rebirth_model.gd) | 303 |
 | [rebirth_trial_model.gd](../../client/godot/scripts/progression/rebirth_trial_model.gd) | 346 |
-| [server_auth_client_model.gd](../../client/godot/scripts/progression/server_auth_client_model.gd) | 2677 |
+| [server_auth_client_model.gd](../../client/godot/scripts/progression/server_auth_client_model.gd) | 2687 |
 | [server_auth_contract_model.gd](../../client/godot/scripts/progression/server_auth_contract_model.gd) | 236 |
 | [server_capture_feedback_model.gd](../../client/godot/scripts/progression/server_capture_feedback_model.gd) | 292 |
 | [server_pet_profile_projection_model.gd](../../client/godot/scripts/progression/server_pet_profile_projection_model.gd) | 465 |
@@ -269,7 +270,7 @@
 | [audio_runtime_check.gd](../../client/godot/scripts/qa/audio_runtime_check.gd) | 301 |
 | [audio_settings_panel_check.gd](../../client/godot/scripts/qa/audio_settings_panel_check.gd) | 102 |
 | [audio_world_context_check.gd](../../client/godot/scripts/qa/audio_world_context_check.gd) | 44 |
-| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33024 |
+| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33027 |
 | [backpack_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture.gd) | 916 |
 | [backpack_awakened_owner_review_capture_check.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture_check.gd) | 218 |
 | [battle_command_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/battle_command_awakened_owner_review_capture.gd) | 435 |
@@ -423,7 +424,7 @@
 | [market_awakened_visual_skin.gd](../../client/godot/scripts/ui/market_awakened_visual_skin.gd) | 130 |
 | [npc_dialog_presenter.gd](../../client/godot/scripts/ui/npc_dialog_presenter.gd) | 57 |
 | [npc_hover_identity_presenter.gd](../../client/godot/scripts/ui/npc_hover_identity_presenter.gd) | 189 |
-| [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28889 |
+| [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28888 |
 | [panel_registry.gd](../../client/godot/scripts/ui/panel_registry.gd) | 91 |
 | [password_visibility_button.gd](../../client/godot/scripts/ui/password_visibility_button.gd) | 53 |
 | [pet_codex_acquisition_route_catalog.gd](../../client/godot/scripts/ui/pet_codex_acquisition_route_catalog.gd) | 213 |
@@ -1014,7 +1015,7 @@
 | [pet_rebirth_balance_audit.mjs](../../tools/pet_rebirth_balance_audit.mjs) | 260 |
 | [pet_rebirth_evaluation_audit.mjs](../../tools/pet_rebirth_evaluation_audit.mjs) | 338 |
 | [pet_wild_capture_growth_audit.mjs](../../tools/pet_wild_capture_growth_audit.mjs) | 330 |
-| [play_guardian_review.py](../../tools/play_guardian_review.py) | 173 |
+| [play_guardian_review.py](../../tools/play_guardian_review.py) | 190 |
 | [prepare_npc_blind_review_packet.py](../../tools/prepare_npc_blind_review_packet.py) | 648 |
 | [progression_leveling_soak.mjs](../../tools/progression_leveling_soak.mjs) | 45 |
 | [progression_route_audit.mjs](../../tools/progression_route_audit.mjs) | 46 |
@@ -1102,7 +1103,7 @@
 | [tools/test/test_map_visual_release_tools.py](../../tools/test/test_map_visual_release_tools.py) | 484 |
 | [tools/test/test_pet_art_batch_audit.py](../../tools/test/test_pet_art_batch_audit.py) | 1793 |
 | [tools/test/test_pet_battle_export_gate.py](../../tools/test/test_pet_battle_export_gate.py) | 4927 |
-| [tools/test/test_play_guardian_review.py](../../tools/test/test_play_guardian_review.py) | 83 |
+| [tools/test/test_play_guardian_review.py](../../tools/test/test_play_guardian_review.py) | 105 |
 | [tools/test/test_prepare_npc_blind_review_packet.py](../../tools/test/test_prepare_npc_blind_review_packet.py) | 470 |
 | [tools/test/test_promote_pet_fusion_runtime_release.py](../../tools/test/test_promote_pet_fusion_runtime_release.py) | 274 |
 | [tools/test/test_record_backpack_awakened_owner_review.py](../../tools/test/test_record_backpack_awakened_owner_review.py) | 195 |

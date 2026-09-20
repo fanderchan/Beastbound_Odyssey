@@ -23192,9 +23192,12 @@ func _run_auto_auth_server_client_check() -> void:
 	var reconnect_check: Dictionary = ServerEventReconnectModel.new().self_check()
 	var event_clock_check: Dictionary = preload("res://scripts/net/server_event_clock_check.gd").run(host)
 	print("event stream clock check: " + JSON.stringify(event_clock_check))
+	var event_transport_check: Dictionary = await preload("res://scripts/net/server_event_transport_check.gd").run(host)
+	print("event stream transport check: " + JSON.stringify(event_transport_check))
 	var reconnect_model_ok = (
 		bool(reconnect_check.get("ok", false))
 		and bool(event_clock_check.get("ok", false))
+		and bool(event_transport_check.get("ok", false))
 		and int(reconnect_check.get("delayCount", 0)) == 7
 		and int(reconnect_check.get("cursorCaseCount", 0)) == 4
 		and is_equal_approx(float(reconnect_check.get("maxDelaySeconds", 0.0)), 30.0)

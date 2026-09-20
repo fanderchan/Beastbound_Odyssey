@@ -32,6 +32,22 @@ def _validate_capture(run: Path) -> dict:
     return validate_render_continuity(report)
 
 
+def _validate_event_stream(run: Path) -> dict:
+    states = [json.loads(line)["eventStream"] for line in (run / "states.ndjson").read_text().splitlines()]
+    metrics = [json.loads(line) for line in (run / "backend/event-stream.ndjson").read_text().splitlines()]
+    ready_index = next((index for index, state in enumerate(states) if state.get("phase") == "ready"), None)
+    if (ready_index is None or not metrics
+            or any(state.get("attempt") != 0 for state in states)
+            or any(state.get("state") != "open" or state.get("phase") != "ready" for state in states[ready_index:])
+            or max(row.get("acceptedUpgrades", 0) for row in metrics) != 1
+            or any(row.get("rejectedUpgrades") != 0 or row.get("heartbeatTimeouts") != 0
+                or row.get("protocolViolations") != 0 or row.get("inboundRateLimited") != 0
+                or row.get("slowConsumerDisconnects") != 0 for row in metrics)):
+        raise RuntimeError("Guardian event stream did not remain ready on one healthy connection")
+    return {"status": "passed", "readySamples": len(states) - ready_index, "acceptedUpgrades": 1,
+        "scope": "isolated autoplay without deliberate network interruption"}
+
+
 @contextmanager
 def _keep_review_awake():
     # A locked Mac may enter deep idle during a recording. Scope the assertion
@@ -126,6 +142,7 @@ def main() -> None:
                     report = json.loads((run / "autoplay.json").read_text())
                     if report.get("status") != "passed":
                         raise RuntimeError(f"Automated playthrough failed: {report.get('errors')}")
+                    _validate_event_stream(run)
                 return {"status": "passed", "scope": "Main review capture; subjective owner acceptance pending",
                     "performanceEvidence": False, "renderContinuity": continuity}
 

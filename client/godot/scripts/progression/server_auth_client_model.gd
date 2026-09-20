@@ -21,6 +21,9 @@ const DEFAULT_RETRY_ATTEMPTS := 3
 const DEFAULT_RETRY_BASE_DELAY_MS := 250
 const DEFAULT_RETRY_MAX_DELAY_MS := 1000
 const MAIL_INBOX_PAGE_LIMIT := 30
+# EventHub limits queued frames to 256 KiB including framing. Five-player
+# battle events exceed WebSocketPeer's default 65535-byte message limit.
+const EVENT_STREAM_INBOUND_BUFFER_BYTES := 256 * 1024
 const NETWORK_FAILED_CODE := "network_failed"
 const NETWORK_RETRY_FAILED_CODE := "network_retry_failed"
 const SESSION_INVALID_CODES := [
@@ -977,6 +980,13 @@ static func event_stream_url(base_url: String, last_event_seq: int = 0, event_st
 
 static func event_stream_headers(session_token: String) -> PackedStringArray:
 	return PackedStringArray(_auth_headers(session_token))
+
+
+static func event_stream_peer(session_token: String) -> WebSocketPeer:
+	var peer := WebSocketPeer.new()
+	peer.inbound_buffer_size = EVENT_STREAM_INBOUND_BUFFER_BYTES
+	peer.handshake_headers = event_stream_headers(session_token)
+	return peer
 
 
 static func event_latest_request(base_url: String, session_token: String) -> Dictionary:

@@ -9384,8 +9384,7 @@ func _start_server_event_stream_if_needed() -> void:
 			return
 	if server_event_reconnect_remaining > 0.0 and (server_event_state == "closed" or server_event_state == "error"):
 		return
-	server_event_socket = WebSocketPeer.new()
-	server_event_socket.handshake_headers = ServerAuthClientModel.event_stream_headers(_server_profile_token())
+	server_event_socket = ServerAuthClientModel.event_stream_peer(_server_profile_token())
 	server_event_reconnect_model.note_connecting()
 	var err = server_event_socket.connect_to_url(ServerAuthClientModel.event_stream_url(
 		_server_profile_base_url(),
