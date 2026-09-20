@@ -53,6 +53,7 @@ python3 tools/play_guardian_review.py
 python3 tools/play_guardian_review.py --record
 python3 tools/play_guardian_review.py --record --autoplay
 python3 tools/play_guardian_review.py --cave-journey --timeout-seconds 1200
+python3 tools/play_guardian_review.py --cave-journey --autoplay --record --timeout-seconds 1800
 python3 tools/play_guardian_review.py --downed-owner-check --record
 ```
 
@@ -64,13 +65,15 @@ python3 tools/play_guardian_review.py --downed-owner-check --record
 
 本入口显示指定待审宠物与战场素材，普通玩家开关保持关闭。录像和测试通过只形成待审候选，不代表老板已经接受这些精确美术文件。
 
-`--cave-journey` 供连续人工试玩：在原有守护战预览之外，为岩脉四层的服务器权威 PvE 战斗启用现有洞穴背景，并为一至三层普通遭遇启用晒甲苔背兽的现有候选战斗动作。它仍从四层开始，可先挑战或直接选择楼梯下楼；不改变野怪种类、等级、遇敌率、奖励或素材发布状态，也不声明宠物世界／骑乘素材已经完成。此模式不能和会在守护战后退出的 `--autoplay` 同用。
+`--cave-journey` 供连续试玩：在原有守护战预览之外，为岩脉四层的服务器权威 PvE 战斗启用现有洞穴背景，并为一至三层普通遭遇启用晒甲苔背兽的现有候选战斗动作。它仍从四层开始，可先挑战或直接选择楼梯下楼；不改变野怪种类、等级、遇敌率、奖励或素材发布状态，也不声明宠物世界／骑乘素材已经完成。为覆盖整段返程，启动后端监听前将五个人物当前／最大生命设为 10400，途中不补血；这是路线测试数值，不是正常难度。
+
+与 `--autoplay` 合用时，守护战成功后通过正常按钮逐层回到火芽村，并自动处理途中遭遇。`autoplay.json` 保存输入和楼层快照；`journey-validation.json` 交叉核对实际采样、镜头、贴图和权威胜利，超时、逃跑或跳层均失败。它仍明确 `computerUse=false / performanceEvidence=false`。当前完整自动返程证据见 [Phase 592](../docs/phase_592_cave_return_playthrough.md)。
 
 联网移动本身会领取服务器遇敌票据，无需切换美术模式。试玩入口在换层时持续保留候选地图与相机比例；旧的 `encounters-on/off` 文件控制已移除，避免下层退回网格与默认缩放。
 
 测试队友在每场结束后继续参与后续房间。`backend/closed-rooms.ndjson` 保留每场原始结算，`backend/closed-room.json` 保留最后一场；验证特定守护奖励时应按房间与遭遇来源选择记录，不能把最后一场普通遭遇当作守护战。测试角色的生命会按真实战斗消耗，连续试玩不自动补满或伪造胜利。
 
-`--downed-owner-check` 是单独的人工回归夹具：在后端开始监听前，将主控人物设为当前生命 1／最大生命 10400，主控战宠当前生命设为 1，四名队友及其战宠保持满血。较高的人物生命上限用于避免低生命测试号因过量伤害被击飞、提前离场；遭遇种子固定为 32 字节的 `0x58`，使遭遇与敌人目标顺序可复现。令牌和战斗反应随机源保持原样，伤害、指令、结算仍走正式实现，不注入胜负。它不能与 `--cave-journey` 或 `--autoplay` 混用。须实际观察主控人物和战宠都倒下、其他队友继续推进回合，最终客户端收到结算；初始配置或战斗结束本身不代表覆盖该分支，也不构成正常角色成长／平衡验收。相关修复与证据见 [Phase 582](../docs/phase_582_battle_response_ownership.md)。
+`--downed-owner-check` 是单独的人工回归夹具：在后端开始监听前，将主控人物设为当前生命 1／最大生命 10400，主控战宠当前生命设为 1，四名队友及其战宠保持满血。较高的人物生命上限用于避免低生命测试号因过量伤害被击飞、提前离场；行走遇敌票据使用固定种子；直接 NPC 挑战另固定 8 字节房间种子和 QA 角色实例 ID，以覆盖参与目标随机过程的两个来源。令牌与宠物隐藏成长仍使用正常随机源，伤害、指令、结算走正式实现，不注入胜负；当前确定性配置见 [Phase 590](../docs/phase_590_authoritative_battle_timeout.md)。它不能与 `--cave-journey` 或 `--autoplay` 混用。须实际观察主控人物和战宠都倒下、其他队友继续推进回合，最终客户端收到结算；初始配置或战斗结束本身不代表覆盖该分支，也不构成正常角色成长／平衡验收。相关修复与证据见 [Phase 582](../docs/phase_582_battle_response_ownership.md)。
 
 试玩的 `states.ndjson` 保存事件流状态及重连计时，`backend/event-stream.ndjson` 按计数变化记录连接、拒绝原因和心跳失败，关闭后记录连接归零；均不包含会话 token。这些是本机诊断记录，不能单独替代整场客户端检查。计时修复见 [Phase 583](../docs/phase_583_event_stream_monotonic_clock.md)。
 

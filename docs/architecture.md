@@ -34,6 +34,8 @@ flowchart TD
 | [audio/](../client/godot/scripts/audio/) | 音频目录、总线、运行时管理与生命周期 |
 | [qa/](../client/godot/scripts/qa/) | 自动检查和专用审查入口；不进入普通玩家 UI |
 
+隔离联机审查由 `guardian_battle_review.gd` 启动真实 Main 和权威本地队伍。守护战自动输入与跨层返程分别由 `guardian_battle_playthrough.gd`、`cave_journey_playthrough.gd` 承担；Python 验证器将 Main 快照与服务端回合／胜负记录交叉核对。这些脚本不进入普通玩家路径，也不提供性能或所有者美术批准，见 [Phase 592](phase_592_cave_return_playthrough.md)。
+
 `main.gd`、`panel_flow_coordinator.gd`、`auto_check_coordinator.gd` 都是现存宿主耦合大文件。新逻辑应进入责任明确的领域模块，再由宿主转发；不能只把逻辑从一个大协调器挪进另一个。
 
 启用美术的地图由 [WorldGroundLayer](../client/godot/scripts/world/world_ground_layer.gd) 保留背景和地面绘制。[MapGroundMesh](../client/godot/scripts/world/map_ground_mesh.gd) 按原图集与叠放顺序合并地面几何，只在地图修订变化时重建；背景范围变化只刷新绘制，特殊裁切／翻转和子图集继续走原区域绘制器。路径等动态反馈仍由 Main 绘制，人物与物件由 WorldDepthLayer 排序。未启用美术继续走原网格回退。变更地面数据时必须沿用地图修订失效链路，避免只重绘 Main 而留下旧缓存。

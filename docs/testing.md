@@ -76,6 +76,8 @@ Live 检查会创建账号或修改状态，只允许连接操作者明确创建
 
 岩脉守护战有专用的一次性全 HTTP 队伍入口：`python3 tools/play_guardian_review.py --autoplay`，可加 `--record` 留下 30 FPS 原速自动操作片。它运行真实 Main 并核对地之戒和档案版本，报告明确区分自动 viewport 输入、Computer Use 与最终美术接受。使用方式、QA 数值及数据边界见 [工具导航](../tools/README.md#岩脉守护战试玩)；不要改成连接普通玩家后端。
 
+加 `--cave-journey --timeout-seconds 1800` 可继续自动走完三层、二层、一层和村口，处理途中普通遭遇；核对每层贴图／镜头、实际输入、权威胜利及逐回合完整播放。该模式使用明确的高生命路线队伍，不是难度或原生鼠标验收，见 [Phase 592](phase_592_cave_return_playthrough.md)。
+
 ## 真实客户端与性能
 
 正常玩家体验入口：

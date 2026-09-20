@@ -154,7 +154,11 @@ func _run() -> void:
 
 
 func _run_autoplay() -> void:
-	var result: Dictionary = await preload("res://scripts/qa/guardian_battle_playthrough.gd").run(host, out, expected_world_players)
+	var result: Dictionary
+	if OS.get_cmdline_user_args().has(Arena.EARTH_CAVE_REVIEW_FLAG):
+		result = await preload("res://scripts/qa/cave_journey_playthrough.gd").run(host, out, expected_world_players)
+	else:
+		result = await preload("res://scripts/qa/guardian_battle_playthrough.gd").run(host, out, expected_world_players)
 	_write("autoplay.json", result)
 	print("GUARDIAN_AUTOPLAY " + JSON.stringify(result))
 	autoplay_running = false

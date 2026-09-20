@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 import record_pet_management_owner_review as core
 from guardian_review_media import encode_review_movie
 from guardian_review_playback import validate_turn_playback
+from guardian_review_journey import validate_cave_journey
 from review_capture_render_continuity import validate_render_continuity
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -101,15 +102,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default="godot")
     parser.add_argument("--record", action="store_true")
-    parser.add_argument("--autoplay", action="store_true", help="run disclosed in-engine input checks; not Computer Use acceptance")
+    parser.add_argument("--autoplay", action="store_true", help="run disclosed in-engine input checks; with --cave-journey also return through all floors; not Computer Use acceptance")
     parser.add_argument("--cave-journey", action="store_true", help="use a disclosed 10400-HP route party and preview existing candidate art across cave encounters; not balance acceptance")
     parser.add_argument("--downed-owner-check", action="store_true", help="use fixed actor identities and battle seeds, leader at 1/10400 HP and leader pet at 1 HP; healthy teammates keep fighting")
     parser.add_argument("--timeout-seconds", type=int, default=900)
     args = parser.parse_args()
     if not 30 <= args.timeout_seconds <= 3600:
         parser.error("timeout must be between 30 and 3600 seconds")
-    if args.cave_journey and args.autoplay:
-        parser.error("--cave-journey is interactive; --autoplay stops after the guardian")
     if args.downed_owner_check and (args.cave_journey or args.autoplay):
         parser.error("--downed-owner-check is a separate interactive regression fixture")
     godot = shutil.which(args.godot)
@@ -166,6 +165,9 @@ def main() -> None:
                     if report.get("status") != "passed":
                         raise RuntimeError(f"Automated playthrough failed: {report.get('errors')}")
                     _validate_event_stream(run)
+                    if args.cave_journey:
+                        journey = validate_cave_journey(run)
+                        (run / "journey-validation.json").write_text(json.dumps(journey, indent=2))
                 return {"status": "passed", "scope": "Main review capture; subjective owner acceptance pending",
                     "performanceEvidence": False, "renderContinuity": continuity, "arenaSamples": arenas,
                     "turnPlayback": playback}
