@@ -52,6 +52,8 @@ WorldDepthLayer 为注册人物保留带类型的脚点深度与可见性记录�
 
 [ServerBattlePlaybackQueue](../client/godot/scripts/battle/server_battle_playback_queue.gd) 保存动画期间收到的后续权威回合。ServerBattleCoordinator 在当前回合完成后逐个接续，队列排空再结算；最新房间快照与当前播放回合分开保存，进出战斗清空队列。128 回合恢复窗口及逐回合实机核对见 [Phase 589](phase_589_ordered_server_battle_playback.md)。联网倒计时按服务器截止时间显示，到时等待权威结果；当前回合只允许完成一次，空边界不重复应用快照，见 [Phase 590](phase_590_authoritative_battle_timeout.md)。
 
+[BattleOutcomeFloatOverlay](../client/godot/scripts/ui/battle_outcome_float_overlay.gd) 只播放世界中的只读结算视图。PFC 进入新战斗时取消展示与待播队列但保留奖励 ID 去重；组件按播放代次隔离旧异步回调，并持有淡出中的行直到释放。五行队列、标题和退出行的布局在正常 1280×720 下逐帧检查，见 [Phase 604](phase_604_battle_outcome_lifecycle.md)。不要让显示取消变成奖励回滚或重新结算。
+
 宠物身体倍率由 PetBattleSpriteScaleCatalog 在战斗准备时加载；正式 profiles 与显式 QA previewProfiles 分开，绘制只读取已准备的内存数据。候选倍率不能启用素材或改变权威战斗几何，见 [Phase 591](phase_591_sunbaked_candidate_battle_scale.md)。
 
 人物世界动画由 [Player](../client/godot/scripts/player/player.gd) 缓存当前形象的朝向／动作片段。帧率和纹理引用在片段首次使用时从 CharacterActionAssetCatalog 解析，逐帧只按原有时间选帧；切换形象会清空旧片段。目录在单次运行中保持不变，如后续增加运行时素材热更新，必须同步增加动画缓存失效入口。验证见 [Phase 572](phase_572_world_animation_hotpath.md)。

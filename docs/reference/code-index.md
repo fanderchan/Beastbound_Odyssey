@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **971** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **972** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -12,8 +12,8 @@
 
 | 行数 | 文件 |
 | ---: | --- |
-| 33028 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
-| 28888 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
+| 33029 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
+| 28889 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27380 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
 | 19261 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
@@ -273,7 +273,7 @@
 | [audio_runtime_check.gd](../../client/godot/scripts/qa/audio_runtime_check.gd) | 301 |
 | [audio_settings_panel_check.gd](../../client/godot/scripts/qa/audio_settings_panel_check.gd) | 102 |
 | [audio_world_context_check.gd](../../client/godot/scripts/qa/audio_world_context_check.gd) | 44 |
-| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33028 |
+| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33029 |
 | [backpack_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture.gd) | 916 |
 | [backpack_awakened_owner_review_capture_check.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture_check.gd) | 218 |
 | [battle_command_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/battle_command_awakened_owner_review_capture.gd) | 435 |
@@ -367,7 +367,7 @@
 
 ## client/godot/scripts/ui
 
-<details><summary>107 个文件</summary>
+<details><summary>108 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -392,8 +392,9 @@
 | [battle_command_awakened_view.gd](../../client/godot/scripts/ui/battle_command_awakened_view.gd) | 881 |
 | [battle_command_awakened_visual_skin.gd](../../client/godot/scripts/ui/battle_command_awakened_visual_skin.gd) | 125 |
 | [battle_function_drawer.gd](../../client/godot/scripts/ui/battle_function_drawer.gd) | 339 |
-| [battle_outcome_float_overlay.gd](../../client/godot/scripts/ui/battle_outcome_float_overlay.gd) | 331 |
+| [battle_outcome_float_overlay.gd](../../client/godot/scripts/ui/battle_outcome_float_overlay.gd) | 352 |
 | [battle_outcome_float_overlay_check.gd](../../client/godot/scripts/ui/battle_outcome_float_overlay_check.gd) | 74 |
+| [battle_outcome_lifecycle_check.gd](../../client/godot/scripts/ui/battle_outcome_lifecycle_check.gd) | 160 |
 | [battle_outcome_presentation_model.gd](../../client/godot/scripts/ui/battle_outcome_presentation_model.gd) | 457 |
 | [character_creation_panel.gd](../../client/godot/scripts/ui/character_creation_panel.gd) | 794 |
 | [character_entry_flow_controller.gd](../../client/godot/scripts/ui/character_entry_flow_controller.gd) | 888 |
@@ -432,7 +433,7 @@
 | [market_awakened_visual_skin.gd](../../client/godot/scripts/ui/market_awakened_visual_skin.gd) | 130 |
 | [npc_dialog_presenter.gd](../../client/godot/scripts/ui/npc_dialog_presenter.gd) | 57 |
 | [npc_hover_identity_presenter.gd](../../client/godot/scripts/ui/npc_hover_identity_presenter.gd) | 189 |
-| [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28888 |
+| [panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) | 28889 |
 | [panel_registry.gd](../../client/godot/scripts/ui/panel_registry.gd) | 91 |
 | [password_visibility_button.gd](../../client/godot/scripts/ui/password_visibility_button.gd) | 53 |
 | [pet_codex_acquisition_route_catalog.gd](../../client/godot/scripts/ui/pet_codex_acquisition_route_catalog.gd) | 213 |

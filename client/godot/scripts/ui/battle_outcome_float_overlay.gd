@@ -7,6 +7,8 @@ const BASE_ROW_WIDTH := 470.0
 const BASE_ROW_HEIGHT := 40.0
 const ROW_STEP := 43.0
 const MAX_VISIBLE_ROWS := 5
+const TITLE_HEIGHT := 56.0
+const TITLE_ROW_GAP := 12.0
 
 const TITLE_COLOR := Color("#ffd66b")
 const TEXT_COLOR := Color("#f6e8c9")
@@ -20,6 +22,7 @@ var _title_label: Label
 var _queue: Array[Dictionary] = []
 var _seen_outcome_ids: Dictionary = {}
 var _active_rows: Array[Dictionary] = []
+var _retiring_rows: Array[Control] = []
 var _running := false
 var _generation := 0
 var _last_outcome_id := ""
@@ -104,8 +107,8 @@ func _play_queue(generation: int) -> void:
 	while generation == _generation and not _queue.is_empty():
 		var view: Dictionary = _queue.pop_front() as Dictionary
 		await _play_view(view, generation)
-	_running = false
 	if generation == _generation:
+		_running = false
 		visible = false
 
 
@@ -116,10 +119,11 @@ func _play_view(view: Dictionary, generation: int) -> void:
 	_last_outcome_id = str(view.get("outcomeId", ""))
 	_clear_rows()
 	_title_label.text = "✦  %s  ✦" % str(view.get("title", "战斗胜利"))
+	_title_label.position.y = _title_base_y()
 	_title_label.visible = true
 	_title_label.modulate = Color(1, 1, 1, 0)
 	_title_label.scale = Vector2(0.9, 0.9)
-	_title_label.pivot_offset = Vector2(260, 28)
+	_title_label.pivot_offset = Vector2(260, TITLE_HEIGHT * 0.5)
 	sequence_started.emit(_last_outcome_id)
 	var title_tween := create_tween()
 	_track_tween(title_tween)
@@ -185,7 +189,7 @@ func _add_row(row: Dictionary) -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.custom_minimum_size = Vector2(BASE_ROW_WIDTH, BASE_ROW_HEIGHT)
 	panel.size = Vector2(BASE_ROW_WIDTH, BASE_ROW_HEIGHT)
-	panel.position = Vector2(_center_x() - BASE_ROW_WIDTH * 0.5, _row_base_y())
+	panel.position = Vector2(_center_x() - BASE_ROW_WIDTH * 0.5, _row_base_y() + ROW_STEP)
 	panel.pivot_offset = Vector2(BASE_ROW_WIDTH * 0.5, BASE_ROW_HEIGHT * 0.5)
 	panel.scale = Vector2(0.90, 0.90)
 	panel.modulate = Color(1, 1, 1, 0)
@@ -212,6 +216,7 @@ func _add_row(row: Dictionary) -> void:
 	var tween := create_tween()
 	_track_tween(tween)
 	tween.set_parallel(true)
+	tween.tween_property(panel, "position:y", _row_base_y(), _seconds(0.20)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(panel, "modulate:a", 1.0, _seconds(0.16)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(panel, "scale", Vector2(1.05, 1.05), _seconds(0.12)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.chain().tween_property(panel, "scale", Vector2.ONE, _seconds(0.09)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -219,12 +224,15 @@ func _add_row(row: Dictionary) -> void:
 		var oldest: Dictionary = _active_rows.pop_front() as Dictionary
 		var oldest_panel := oldest.get("panel") as Control
 		if oldest_panel != null and is_instance_valid(oldest_panel):
+			_retiring_rows.append(oldest_panel)
 			var remove_tween := create_tween()
 			_track_tween(remove_tween)
 			remove_tween.set_parallel(true)
-			remove_tween.tween_property(oldest_panel, "position:y", oldest_panel.position.y - 28.0, _seconds(0.18))
+			# The shared shift already moves this row; a second position tween
+			# would break its spacing with the following row during retirement.
+			remove_tween.tween_interval(_seconds(0.18))
 			remove_tween.tween_property(oldest_panel, "modulate:a", 0.0, _seconds(0.16))
-			remove_tween.chain().tween_callback(oldest_panel.queue_free)
+			remove_tween.chain().tween_callback(_finish_retiring_row.bind(oldest_panel))
 
 
 func _shift_existing_rows() -> void:
@@ -244,7 +252,7 @@ func _build_title() -> void:
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_title_label.position = Vector2(_center_x() - 260.0, _title_base_y())
-	_title_label.size = Vector2(520, 56)
+	_title_label.size = Vector2(520, TITLE_HEIGHT)
 	_title_label.add_theme_font_size_override("font_size", 34)
 	_title_label.add_theme_color_override("font_color", TITLE_COLOR)
 	_title_label.add_theme_color_override("font_shadow_color", Color("#3c180caa"))
@@ -279,6 +287,17 @@ func _clear_rows() -> void:
 		if panel != null and is_instance_valid(panel):
 			panel.queue_free()
 	_active_rows.clear()
+	# Cancelling a fade also cancels its queued free callback.
+	for panel in _retiring_rows:
+		if is_instance_valid(panel):
+			panel.queue_free()
+	_retiring_rows.clear()
+
+
+func _finish_retiring_row(panel: Control) -> void:
+	_retiring_rows.erase(panel)
+	if is_instance_valid(panel):
+		panel.queue_free()
 
 
 func _row_style(kind: String) -> StyleBoxFlat:
@@ -320,7 +339,9 @@ func _center_x() -> float:
 
 
 func _title_base_y() -> float:
-	return maxf(198.0, size.y * 0.31) if size.y > 0 else 224.0
+	var preferred := maxf(198.0, size.y * 0.31) if size.y > 0 else 224.0
+	# Reserve room for the five settled rows and the outgoing fading row.
+	return minf(preferred, _row_base_y() - MAX_VISIBLE_ROWS * ROW_STEP - TITLE_HEIGHT - TITLE_ROW_GAP)
 
 
 func _row_base_y() -> float:

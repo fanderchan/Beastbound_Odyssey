@@ -13464,6 +13464,7 @@ func _refresh_battle_target_seed() -> void:
 	]
 
 func _start_battle(next_battle_state: Dictionary) -> void:
+	_dismiss_battle_outcome_float()
 	host._server_battle().reset_playback(str(next_battle_state.get("serverRoomId", "")))
 	host.pending_server_encounter_permit.clear()
 	host._clear_navigation_state()
