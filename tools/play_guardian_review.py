@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 
 import record_pet_management_owner_review as core
 from guardian_review_media import encode_review_movie
+from guardian_review_playback import validate_turn_playback
 from review_capture_render_continuity import validate_render_continuity
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -157,13 +158,15 @@ def main() -> None:
                     raise RuntimeError(f"Main review or cleanup failed; inspect {log_path}")
                 continuity = _validate_capture(run)
                 arenas = _validate_arena_samples(run)
+                playback = validate_turn_playback(run)
                 if args.autoplay:
                     report = json.loads((run / "autoplay.json").read_text())
                     if report.get("status") != "passed":
                         raise RuntimeError(f"Automated playthrough failed: {report.get('errors')}")
                     _validate_event_stream(run)
                 return {"status": "passed", "scope": "Main review capture; subjective owner acceptance pending",
-                    "performanceEvidence": False, "renderContinuity": continuity, "arenaSamples": arenas}
+                    "performanceEvidence": False, "renderContinuity": continuity, "arenaSamples": arenas,
+                    "turnPlayback": playback}
 
             print(f"GUARDIAN_REVIEW_OUTPUT {run}", flush=True)
             finished = threading.Event()

@@ -37,7 +37,11 @@ static func polled_room_is_older(current_room: Dictionary, polled_room: Dictiona
 		return false
 	var current_battle := current_room.get("battle", {}) as Dictionary if current_room.get("battle", {}) is Dictionary else {}
 	var polled_battle := polled_room.get("battle", {}) as Dictionary if polled_room.get("battle", {}) is Dictionary else {}
-	return int(current_battle.get("round", 0)) > int(polled_battle.get("round", 0))
+	if str(current_room.get("status", "")) == "closed" and str(polled_room.get("status", "")) != "closed":
+		return true
+	var current_round := int(current_battle.get("round", 0))
+	var polled_round := int(polled_battle.get("round", 0))
+	return current_round > polled_round or (current_round == polled_round and int(current_battle.get("turnSeq", 0)) > int(polled_battle.get("turnSeq", 0)))
 
 
 static func battle_state_from_room(room: Dictionary, session: Dictionary) -> Dictionary:

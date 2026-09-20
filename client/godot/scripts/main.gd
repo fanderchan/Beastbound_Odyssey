@@ -13623,9 +13623,8 @@ func _battle_state_should_end(state: Dictionary) -> bool:
 
 func _finish_battle_round_and_open_commands() -> void:
 	if bool(battle_state.get("serverAuthority", false)):
-		var last_server_event_list := battle_state.get("lastServerEventList", {}) as Dictionary if battle_state.get("lastServerEventList", {}) is Dictionary else {}
-		if str(last_server_event_list.get("kind", "")) == "battle_event_list":
-			battle_state = ServerBattleRoomModel.state_with_server_event_actor_snapshot(battle_state, last_server_event_list)
+		if _server_battle().finish_event_list():
+			return
 		var closed_room := _server_battle_closed_room_from_state()
 		if not closed_room.is_empty():
 			_finish_server_battle_from_closed_room(closed_room)

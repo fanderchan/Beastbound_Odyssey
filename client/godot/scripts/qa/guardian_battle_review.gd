@@ -42,6 +42,8 @@ func _run() -> void:
 		push_error("Manual journey Main scene failed to initialize")
 		quit(2)
 		return
+	host._server_battle().turn_playback_started.connect(func(turn: Dictionary) -> void: _record_turn_playback("started", turn))
+	host._server_battle().turn_playback_finished.connect(func(turn: Dictionary) -> void: _record_turn_playback("finished", turn))
 	host.game_audio_manager.configure_playback_enabled(false)
 	host.game_audio_manager.stop_all()
 	host.profile_save_enabled = false
@@ -173,3 +175,13 @@ func _state() -> Dictionary:
 func _write(name: String, value: Dictionary) -> void:
 	var file := FileAccess.open(out.path_join(name), FileAccess.WRITE)
 	file.store_string(JSON.stringify(value, "\t"))
+
+
+func _record_turn_playback(stage: String, turn: Dictionary) -> void:
+	var path := out.path_join("turn-playback.ndjson")
+	var file := FileAccess.open(path, FileAccess.READ_WRITE if FileAccess.file_exists(path) else FileAccess.WRITE)
+	file.seek_end()
+	file.store_line(JSON.stringify({"stage": stage, "roomId": turn.get("roomId", ""),
+		"round": turn.get("round", 0), "turnSeq": turn.get("turnSeq", 0),
+		"frame": Engine.get_process_frames(), "unixTime": Time.get_unix_time_from_system(),
+		"skippedTurns": host._server_battle().playback_queue.skipped_turns}))

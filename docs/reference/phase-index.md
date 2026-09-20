@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **573** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **574** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 589 | [Phase 589：服务器回合连续播放](../phase_589_ordered_server_battle_playback.md) | 阶段记录 |
 | 588 | [Phase 588：结算快照保留战场位置](../phase_588_closed_battle_arena_context.md) | 阶段记录 |
 | 587 | [Phase 587：双倒地鼠标复验与长片结束边界](../phase_587_downed_owner_mouse_regression.md) | 阶段记录 |
 | 586 | [Phase 586：拒绝损坏录片并支持较长守护战试玩](../phase_586_guardian_recording_integrity.md) | 阶段记录 |

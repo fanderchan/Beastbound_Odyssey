@@ -10587,9 +10587,7 @@ func _sync_server_battle_snapshot_fields_during_playback(room: Dictionary) -> vo
 	var battle = room.get("battle", {}) as Dictionary if room.get("battle", {}) is Dictionary else {}
 	if not battle.is_empty():
 		battle_state["serverBattle"] = battle.duplicate(true)
-		var last_event_list = battle.get("lastEventList", null)
-		if last_event_list is Dictionary:
-			battle_state["lastServerEventList"] = (last_event_list as Dictionary).duplicate(true)
+		# lastServerEventList belongs to the currently playing turn, not a future snapshot.
 
 func _play_server_battle_event_list(event_list: Dictionary) -> bool:
 	return host._server_battle().play_event_list(event_list)
@@ -13466,6 +13464,7 @@ func _refresh_battle_target_seed() -> void:
 	]
 
 func _start_battle(next_battle_state: Dictionary) -> void:
+	host._server_battle().playback_queue.reset(str(next_battle_state.get("serverRoomId", "")))
 	host.pending_server_encounter_permit.clear()
 	host._clear_navigation_state()
 	host._close_dialog()
@@ -13562,6 +13561,7 @@ func _start_battle(next_battle_state: Dictionary) -> void:
 	host.queue_redraw()
 
 func _end_battle(_restore_world: bool = true) -> void:
+	host._server_battle().playback_queue.reset()
 	host.pending_server_encounter_permit.clear()
 	var was_battle_active = battle_active
 	if was_battle_active:

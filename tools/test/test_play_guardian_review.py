@@ -12,6 +12,32 @@ import play_guardian_review as review
 
 
 class GuardianBackendWatchTests(unittest.TestCase):
+    def test_completed_battle_requires_every_turn_to_finish_once_in_order(self):
+        turns = [{"roomId": "room", "round": number, "turnSeq": number} for number in range(1, 5)]
+        events = [{"event": {"type": "battle.turn_resolved", "turn": turn}} for turn in turns]
+        events.append({"event": {"type": "battle.room_closed", "room": {"roomId": "room"}}})
+        records = [{**turn, "stage": stage, "frame": index, "skippedTurns": 0}
+            for index, (turn, stage) in enumerate((turn, stage) for turn in turns for stage in ("started", "finished"))]
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory)
+            (run / "backend").mkdir()
+            (run / "backend/battle-events.ndjson").write_text("\n".join(map(json.dumps, events)))
+            path = run / "turn-playback.ndjson"
+            with self.assertRaises(RuntimeError):
+                review.validate_turn_playback(run)
+            path.write_text("\n".join(map(json.dumps, records)))
+            self.assertEqual(review.validate_turn_playback(run)["turns"], 4)
+            for invalid in [records[:2], records[:-1], records + records[-2:],
+                    records[:2] + records[4:6] + records[2:4] + records[6:],
+                    [{**row, "skippedTurns": 1} for row in records],
+                    records[:-1] + [{**records[-1], "frame": 0}]]:
+                with self.subTest(invalid=invalid):
+                    path.write_text("\n".join(map(json.dumps, invalid)))
+                    with self.assertRaises(RuntimeError):
+                        review.validate_turn_playback(run)
+            (run / "backend/battle-events.ndjson").write_text("")
+            self.assertEqual(review.validate_turn_playback(run)["status"], "not_observed")
+
     def test_arena_sampling_rejects_lost_final_round_context_and_unloaded_texture(self):
         battle = {"battle": True, "frame": 13153, "serverRoomStatus": "closed",
             "arenaEvidence": {"id": "earth_vein_sanctum"}, "arenaTextureReady": True}

@@ -5,6 +5,7 @@ const BattleActionCatalog := preload("res://scripts/battle/battle_action_catalog
 const CaptureToolCatalog := preload("res://scripts/battle/capture_tool_catalog.gd")
 const ServerBattleInterruptionModel := preload("res://scripts/battle/server_battle_interruption_model.gd")
 const ServerBattleRoomModel := preload("res://scripts/battle/server_battle_room_model.gd")
+const ServerBattlePlaybackQueue := preload("res://scripts/battle/server_battle_playback_queue.gd")
 const HangSettingsModel := preload("res://scripts/progression/hang_settings_model.gd")
 const PlayerProgressModel := preload("res://scripts/progression/player_progress_model.gd")
 const ServerAuthClientModel := preload("res://scripts/progression/server_auth_client_model.gd")
@@ -14,6 +15,9 @@ const SERVER_BATTLE_ROOM_RESTORE_POLL_SECONDS := 1.0
 const SERVER_BATTLE_ESCAPE_PREVIEW_SECONDS := 0.62
 
 var host
+signal turn_playback_started(turn: Dictionary)
+signal turn_playback_finished(turn: Dictionary)
+var playback_queue := ServerBattlePlaybackQueue.new()
 var state_request_generation: int = 0
 var state_request_serial: int = 0
 var state_request_owner: Dictionary = {}
@@ -462,6 +466,9 @@ func apply_battle_event(event: Dictionary) -> void:
 		_apply_compact_command_progress(event)
 		return
 	var turn := event.get("turn", {}) as Dictionary if event.get("turn", {}) is Dictionary else {}
+	if event_type == "battle.turn_resolved" and not (event.get("room", null) is Dictionary):
+		play_event_list(turn)
+		return
 	var room_updated := false
 	if event.get("room", null) is Dictionary:
 		var updated_room := (event.get("room", {}) as Dictionary).duplicate(true)
@@ -469,7 +476,9 @@ func apply_battle_event(event: Dictionary) -> void:
 			var room_with_turn := ServerBattleRoomModel.room_with_turn_event_list(updated_room, turn)
 			if not room_with_turn.is_empty():
 				updated_room = room_with_turn
-		host.server_battle_state["room"] = updated_room
+		if not _store_room_snapshot(updated_room):
+			play_event_list(turn)
+			return
 		room_updated = true
 	if event.has("invite"):
 		_apply_battle_invite_event(event, event_type)
@@ -797,11 +806,10 @@ func apply_room_state(room: Dictionary, force_start: bool = false) -> bool:
 
 
 func apply_room_closed(room: Dictionary) -> void:
-	if room.is_empty():
+	if room.is_empty() or not _store_room_snapshot(room):
 		return
-	host.server_battle_state["room"] = room.duplicate(true)
 	var room_id := str(room.get("roomId", "")).strip_edges()
-	if host._server_battle_event_playback_active() and room_id != "" and room_id == str(host.battle_state.get("serverRoomId", "")):
+	if (host._server_battle_event_playback_active() or not playback_queue.pending.is_empty()) and room_id != "" and room_id == str(host.battle_state.get("serverRoomId", "")):
 		host.server_battle_pending_closed_room = room.duplicate(true)
 		host._sync_server_battle_snapshot_fields_during_playback(room)
 		return
@@ -946,11 +954,43 @@ func play_event_list(event_list: Dictionary) -> bool:
 		return false
 	if str(event_list.get("kind", "")) != "battle_event_list":
 		return false
-	if host._server_battle_event_playback_active():
+	var room_id := str(host.battle_state.get("serverRoomId", "")).strip_edges()
+	if str(event_list.get("roomId", room_id)).strip_edges() != room_id:
 		return false
 	var turn_key: String = host._server_battle_turn_key(event_list)
 	if turn_key != "" and turn_key == host.server_battle_last_playback_turn_key:
 		return false
+	if playback_queue.room_id != room_id:
+		playback_queue.reset(room_id)
+	if not playback_queue.enqueue(event_list):
+		return false
+	if host._server_battle_event_playback_active():
+		return true
+	return play_next_queued_turn()
+
+
+func play_next_queued_turn() -> bool:
+	if not host._battle_is_server_authority() or host._server_battle_event_playback_active():
+		return false
+	while not playback_queue.pending.is_empty():
+		if _start_event_list(playback_queue.take_next()):
+			return true
+	return false
+
+
+func finish_event_list() -> bool:
+	var turn: Dictionary = host.battle_state.get("lastServerEventList", {})
+	if str(turn.get("kind", "")) == "battle_event_list":
+		host.battle_state = ServerBattleRoomModel.state_with_server_event_actor_snapshot(host.battle_state, turn)
+		turn_playback_finished.emit(turn)
+	if not playback_queue.pending.is_empty():
+		host.battle_state = BattleModel.decrement_field_effects(host.battle_state)
+		host.battle_state["guardingActorIds"] = []
+	return play_next_queued_turn()
+
+
+func _start_event_list(event_list: Dictionary) -> bool:
+	var turn_key: String = host._server_battle_turn_key(event_list)
 	var playback_start_state := ServerBattleRoomModel.state_at_server_event_list_start(host.battle_state, event_list)
 	var local_events := ServerBattleRoomModel.battle_events_from_server_event_list(playback_start_state, event_list)
 	if local_events.is_empty():
@@ -986,7 +1026,19 @@ func play_event_list(event_list: Dictionary) -> bool:
 	host._set_battle_command_owner("player")
 	host._sync_battle_buttons()
 	host._layout_hud()
+	turn_playback_started.emit(event_list)
 	host._play_next_battle_event()
+	return true
+
+
+func _store_room_snapshot(room: Dictionary) -> bool:
+	var room_id := str(room.get("roomId", "")).strip_edges()
+	if host._battle_is_server_authority() and room_id != str(host.battle_state.get("serverRoomId", "")).strip_edges():
+		return false
+	var current_room: Dictionary = host.server_battle_state.get("room", {}) if host.server_battle_state.get("room", {}) is Dictionary else {}
+	if ServerBattleRoomModel.polled_room_is_older(current_room, room):
+		return false
+	host.server_battle_state["room"] = room.duplicate(true)
 	return true
 
 
@@ -1376,10 +1428,12 @@ func _apply_command_success(parsed: Dictionary, command_id: String, can_open_pet
 	var turn := parsed.get("turn", {}) as Dictionary if parsed.get("turn", {}) is Dictionary else {}
 	if room is Dictionary:
 		var room_dict := room as Dictionary
+		if not _store_room_snapshot(room_dict):
+			play_event_list(turn)
+			return
 		var turn_key: String = host._server_battle_turn_key(turn)
 		var same_turn_playing: bool = turn_key != "" and turn_key == host.server_battle_last_playback_turn_key and host._server_battle_event_playback_active()
 		var room_closed := str(room_dict.get("status", "")).strip_edges() == "closed"
-		host.server_battle_state["room"] = room_dict.duplicate(true)
 		if same_turn_playing:
 			host._sync_server_battle_snapshot_fields_during_playback(room_dict)
 		else:
