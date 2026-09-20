@@ -147,6 +147,8 @@ const MapVisualReviewShowcaseProfileCheck := preload(
 )
 const WorldDepthLayerCheck := preload("res://scripts/qa/world_depth_layer_check.gd")
 const WorldGroundLayerCheck := preload("res://scripts/qa/world_ground_layer_check.gd")
+const WorldIdleRenderController := preload("res://scripts/world/world_idle_render_controller.gd")
+const WorldIdleRenderCheck := preload("res://scripts/qa/world_idle_render_check.gd")
 const MapVisualReviewCapture := preload("res://scripts/qa/map_visual_review_capture.gd")
 const PerfProbeExitController := preload("res://scripts/qa/perf_probe_exit_controller.gd")
 const PerfProbeRuntimeTiming := preload("res://scripts/qa/perf_probe_runtime_timing.gd")
@@ -929,6 +931,7 @@ var numeric_workbench_result_label: RichTextLabel
 var numeric_workbench_profile_id: String = ""
 var numeric_workbench_stone_plan_id: String = ""
 var game_camera: Camera2D
+var world_idle_renderer := WorldIdleRenderController.new()
 var world_camera_safe_viewport_rect: Rect2
 var world_camera_safe_anchor_screen: Vector2
 var world_camera_hud_blocker_rects: Array[Rect2] = []
@@ -2568,9 +2571,13 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		_flush_profile_save_now()
+	elif what == NOTIFICATION_EXIT_TREE:
+		world_idle_renderer.release()
 
 
 func _configure_runtime_performance() -> void:
+	# MovieWriter requires every frame, including ordinary static world views.
+	world_idle_renderer.configure_runtime(OS.get_cmdline_args().has("--write-movie"))
 	_set_runtime_target_fps(ACTIVE_TARGET_FPS)
 	Engine.physics_ticks_per_second = 60
 	DisplayServer.window_set_vsync_mode(
@@ -2611,7 +2618,11 @@ func _set_runtime_target_fps(target_fps: int) -> void:
 
 
 func _update_runtime_frame_budget() -> void:
-	_set_runtime_target_fps(ACTIVE_TARGET_FPS if _world_needs_active_fps() else IDLE_TARGET_FPS)
+	var active := _world_needs_active_fps()
+	_set_runtime_target_fps(ACTIVE_TARGET_FPS if active else IDLE_TARGET_FPS)
+	# Review tools may enable capture or profiling after Main has started.
+	# Keep their continuous-draw contract without changing their VSync policy.
+	world_idle_renderer.apply_runtime_budget(active, perf_probe_enabled or map_visual_review_capture)
 
 
 func _world_needs_active_fps() -> bool:
@@ -2624,6 +2635,8 @@ func _world_needs_active_fps() -> bool:
 	if _world_menu_is_open():
 		return true
 	if hang_mode_active or _encounter_stone_active():
+		return true
+	if has_pending_click_screen_point or has_pending_click_move_target:
 		return true
 	if has_target_marker or has_pending_interaction or not current_path_cells.is_empty():
 		return true
@@ -4289,6 +4302,11 @@ func _run_auto_pathfinding_check() -> void:
 
 
 func _run_auto_camera_check() -> void:
+	var idle_report := await WorldIdleRenderCheck.run(self)
+	print("world idle render regression: %s" % JSON.stringify(idle_report))
+	if idle_report.status != "ok":
+		get_tree().quit(1)
+		return
 	await _auto_checks()._run_auto_camera_check()
 
 
@@ -9665,6 +9683,9 @@ func _handle_world_pointer_pressed(screen_point: Vector2, context_only: bool = f
 		return
 	click_move_input_accept_count += 1
 	_set_click_move_target(screen_point, true)
+	# Input may start movement before the next Main process tick. Restore the
+	# active budget now, including clicks still waiting for the repath debounce.
+	_update_runtime_frame_budget()
 
 
 func _face_player_toward_screen_point(screen_point: Vector2) -> bool:
@@ -16361,6 +16382,7 @@ func _update_camera_position(force: bool) -> void:
 	var target_moved := force or game_camera.global_position.distance_to(next_position) > 0.1
 	if target_moved:
 		game_camera.global_position = next_position
+	world_idle_renderer.observe(game_camera, force)
 	if force:
 		game_camera.reset_smoothing()
 		npc_hover_last_camera_screen_center = game_camera.get_screen_center_position()

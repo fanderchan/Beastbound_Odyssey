@@ -11,7 +11,7 @@
 | 启动项目、开始下一轮开发 | [开发流程](development.md) |
 | 判断该跑哪些检查 | [测试指南](testing.md) |
 | 试玩最新洞穴和守护战、查看效果和成品差距 | [当前可玩内容与剩余门槛](project-status.md)、[四层／地标／五人战斗试玩入口](phase_569_current_four_floor_review.md)、[完整自动返村](phase_592_cave_return_playthrough.md)、[完整鼠标返村](phase_596_manual_cave_return_completed.md)、[人工录制时钟与恢复检查](phase_595_manual_recording_clock.md) |
-| 排查当前静止性能问题 | [静止相机重复重绘与唤醒原型](phase_597_idle_camera_render_diagnosis.md) |
+| 排查当前静止性能问题 | [静止相机休眠与按需绘制](phase_598_world_idle_rendering.md)、[诊断依据](phase_597_idle_camera_render_diagnosis.md) |
 | 继续整理大文件和技术债 | [维护清单](maintenance.md) |
 | 按文件找代码、数据、脚本 | [自动代码索引](reference/code-index.md) |
 | 查某项规则为何这样设计 | [自动阶段索引](reference/phase-index.md) |

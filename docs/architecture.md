@@ -42,6 +42,8 @@ flowchart TD
 
 [WorldPresentationProfile](../client/godot/scripts/world/world_presentation_profile.gd) 集中解析地图相机策略，缩放、锚点、地标构图和端点资格共用同一入口。按当前地图字段即时判断，保留各地图的正式／预览边界；增加地图策略时同步扩展生命周期状态检查，见 [Phase 578](phase_578_camera_policy_dispatch.md)。
 
+[WorldIdleRenderController](../client/godot/scripts/world/world_idle_render_controller.gd) 在世界镜头完全停稳后暂停 Camera2D 的重复内部更新，普通空闲运行再启用按需绘制。目标、缩放、视口或外部变换改变时恢复相机；未支持的相机模式继续走引擎更新。Main 保持原有 30/60 FPS 处理预算，有效移动点击立即恢复活动预算，退出时还原全局渲染设置。性能探针和审查捕获支持运行中启用，并要求连续绘制；`--write-movie` 则在启动时固定连续绘制。正常运行的节能收益另用正常时钟测量。回归扩展在 `--auto-camera-check`，不新增玩家设置或测试入口参数。
+
 [BattleTexturePrefetcher](../client/godot/scripts/battle/battle_texture_prefetcher.gd) 预取当前地图、宠物和同屏人物的战斗贴图。每个成功提交的线程请求必须领取一次结果，包括加载失败的请求；切图取消保持异步，节点退出才等待并回收剩余最多四个请求，见 [Phase 570](phase_570_prefetch_request_cleanup.md)。
 
 [ServerBattlePlaybackQueue](../client/godot/scripts/battle/server_battle_playback_queue.gd) 保存动画期间收到的后续权威回合。ServerBattleCoordinator 在当前回合完成后逐个接续，队列排空再结算；最新房间快照与当前播放回合分开保存，进出战斗清空队列。128 回合恢复窗口及逐回合实机核对见 [Phase 589](phase_589_ordered_server_battle_playback.md)。联网倒计时按服务器截止时间显示，到时等待权威结果；当前回合只允许完成一次，空边界不重复应用快照，见 [Phase 590](phase_590_authoritative_battle_timeout.md)。
