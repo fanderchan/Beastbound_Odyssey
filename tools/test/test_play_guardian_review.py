@@ -12,6 +12,33 @@ import play_guardian_review as review
 
 
 class GuardianBackendWatchTests(unittest.TestCase):
+    def test_manual_recording_requires_real_time_spacing_without_retiming_slow_frames(self):
+        receipt = {"policy": "manual_recording_no_catch_up_v1", "performanceEvidence": False,
+            "captureFps": 30, "intervalUsec": 33334, "pacedFrames": 300,
+            "wallUsec": 12000000, "minimumFrameIntervalUsec": 33334,
+            "maximumFrameIntervalUsec": 300000, "sleepUsec": 5000000}
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory)
+            self.assertFalse(review._validate_frame_pacing(run, expected=False)["enabled"])
+            with self.assertRaises(FileNotFoundError):
+                review._validate_frame_pacing(run, expected=True)
+            path = run / "frame-pacing.json"
+            path.write_text(json.dumps(receipt))
+            self.assertTrue(review._validate_frame_pacing(run, expected=True)["enabled"])
+            with self.assertRaisesRegex(RuntimeError, "outside a manual recording"):
+                review._validate_frame_pacing(run, expected=False)
+            for change in [{"minimumFrameIntervalUsec": 16000}, {"pacedFrames": 0},
+                    {"wallUsec": 9999999}, {"sleepUsec": 12000001},
+                    {"maximumFrameIntervalUsec": 1}, {"pacedFrames": True},
+                    {"captureFps": 60}, {"intervalUsec": 16667}, {"performanceEvidence": True}]:
+                with self.subTest(change=change):
+                    path.write_text(json.dumps({**receipt, **change}))
+                    with self.assertRaises(RuntimeError):
+                        review._validate_frame_pacing(run, expected=True)
+            path.write_text("[]")
+            with self.assertRaises(RuntimeError):
+                review._validate_frame_pacing(run, expected=True)
+
     def test_completed_battle_requires_every_turn_to_finish_once_in_order(self):
         turns = [{"roomId": "room", "round": number, "turnSeq": number} for number in range(1, 5)]
         events = [{"event": {"type": "battle.turn_resolved", "turn": turn}} for turn in turns]

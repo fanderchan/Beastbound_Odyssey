@@ -57,7 +57,9 @@ git log -5 --oneline
 | 相机与外观的重复计算 | [Phase 577](phase_577_player_appearance_selection_cache.md) 复用未变化的外观选择；[Phase 578](phase_578_camera_policy_dispatch.md) 合并相机资格判断，384 种状态、定向 `4/4` 及跨帧移动通过。该源码单次原生静止 600/600 帧有效，约 `7.816% CPU`；Phase 579 已补完整地图矩阵 | 局部及单次数据不能证明整体性能改善；修改前后正常时钟 CPU 对照仍未完成 |
 | 取证可靠性与时间口径 | [Phase 551](phase_551_map_evidence_commit_provenance.md) 绑定运行内容和祖先提交；[Phase 558](phase_558_native_performance_visibility.md) 验证前台绘制；[Phase 562](phase_562_runtime_probe_wall_clock.md) 区分模拟／实际时间；Phase 576 正常 30 FPS 下美术约 `7.784% CPU`、网格约 `22.366%`；[Phase 580](phase_580_current_guardian_mouse_review.md) 关闭详细计时并明确运行时 VSync 后仍测得约 `0.150ms` 静止增量，未采用无收益的调用方式微调 | 同版渲染路径对照不是修改前后收益；脚本区段增量不等于整进程 CPU 增量。普通启动会覆盖命令行 VSync 设置，不能混用不同条件的数据或据此放宽性能门 |
 
-**接下来的顺序**：连续战斗、换层比例和完整自动出洞已在 [Phase 592](phase_592_cave_return_playthrough.md) 复验；[Phase 594](phase_594_manual_cave_return_review.md) 新增部分鼠标返程与窗口可绘制诊断，没有修改游戏运行逻辑。继续定位正式静止性能增量和原生停画，再补 Computer Use 完整返程和当前精确证据配对，再进入 R1.W025 受委托复审。仅靠贴图范围通知的遮挡缓存方案已因遗漏翻转／裁剪／原纹理尺寸变化而放弃，不从该方案重新开始。候选显示不代表素材正式发布，原有 107 项候选文件保留。
+[Phase 595](phase_595_manual_recording_clock.md) 修复了人工录制的时钟加速：活动状态原先约 60、不可绘制区间中位数约 167 帧／秒，现两种状态均限制在约 29 帧／秒；真实最小化／恢复／关闭地图操作通过。该限速仅用于人工录制，未改变游戏性能或阈值，也尚未重新完成整段返村。
+
+**接下来的顺序**：连续战斗、换层比例和完整自动出洞已在 [Phase 592](phase_592_cave_return_playthrough.md) 复验；[Phase 594](phase_594_manual_cave_return_review.md) 新增部分鼠标返程与窗口可绘制诊断，没有修改游戏运行逻辑。在修正录制时钟后继续 Computer Use 完整返程，同时定位正式静止性能增量与长流程原生停画，补当前精确证据配对，再进入 R1.W025 受委托复审。仅靠贴图范围通知的遮挡缓存方案已因遗漏翻转／裁剪／原纹理尺寸变化而放弃，不从该方案重新开始。候选显示不代表素材正式发布，原有 107 项候选文件保留。
 
 其他地图如潮回洞穴仍有网格占位，不在岩脉四层完成范围内。Firebud v2、融合、环境声和 Bui VFX 已有返工或延期决定，不从旧主目录的 `R1.01` 重做。Earth Vein 仍为待验收候选；测试和内部审查不等于老板亲自批准精确美术资产。
 

@@ -3,6 +3,7 @@
 
 Close the game window, or create <output>/stop, to finish. --record captures the
 same interactive run at 30 FPS and converts it without changing playback speed.
+Manual recordings are capped in real time; autoplay keeps its offline clock.
 No external backend, MySQL, real account, or arbitrary Godot flags are accepted.
 """
 from __future__ import annotations
@@ -67,6 +68,30 @@ def _validate_event_stream(run: Path) -> dict:
         "scope": "isolated autoplay without deliberate network interruption"}
 
 
+def _validate_frame_pacing(run: Path, *, expected: bool) -> dict:
+    path = run / "frame-pacing.json"
+    if not expected:
+        if path.exists():
+            raise RuntimeError("Unexpected pacing outside a manual recording")
+        return {"enabled": False, "performanceEvidence": False}
+    report = json.loads(path.read_text())
+    numeric = ("pacedFrames", "wallUsec", "minimumFrameIntervalUsec",
+        "maximumFrameIntervalUsec", "sleepUsec")
+    if (not isinstance(report, dict)
+            or report.get("policy") != "manual_recording_no_catch_up_v1"
+            or report.get("performanceEvidence") is not False
+            or report.get("captureFps") != 30 or report.get("intervalUsec") != 33334
+            or any(type(report.get(key)) is not int or report[key] < 0 for key in numeric)
+            or report["pacedFrames"] == 0
+            or report["minimumFrameIntervalUsec"] < 33334
+            or report["maximumFrameIntervalUsec"] < report["minimumFrameIntervalUsec"]
+            or report["wallUsec"] < report["pacedFrames"] * 33334
+            or report["sleepUsec"] > report["wallUsec"]):
+        raise RuntimeError("Manual recording advanced faster than its real-time frame budget")
+    return {**report, "enabled": True,
+        "scope": "manual recording speed cap; slow frames may still extend wall time; not performance evidence"}
+
+
 @contextmanager
 def _keep_review_awake():
     # A locked Mac may enter deep idle during a recording. Scope the assertion
@@ -101,7 +126,7 @@ def _watch_backend(backend, run: Path, finished: threading.Event) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default="godot")
-    parser.add_argument("--record", action="store_true")
+    parser.add_argument("--record", action="store_true", help="record a 30 FPS engine timeline; manual runs are capped in real time, autoplay keeps its offline clock")
     parser.add_argument("--autoplay", action="store_true", help="run disclosed in-engine input checks; with --cave-journey also return through all floors; not Computer Use acceptance")
     parser.add_argument("--cave-journey", action="store_true", help="use a disclosed 10400-HP route party and preview existing candidate art across cave encounters; not balance acceptance")
     parser.add_argument("--downed-owner-check", action="store_true", help="use fixed actor identities and battle seeds, leader at 1/10400 HP and leader pet at 1 HP; healthy teammates keep fighting")
@@ -122,6 +147,7 @@ def main() -> None:
     environment = dict(os.environ, BEASTBOUND_GUARDIAN_REVIEW_DIR=str(run),
         BEASTBOUND_GUARDIAN_ONLINE_FIXTURE=str(run / "backend/fixture.json"),
         BEASTBOUND_GUARDIAN_AUTOPLAY="1" if args.autoplay else "0",
+        BEASTBOUND_GUARDIAN_REALTIME_RECORDING="1" if args.record and not args.autoplay else "0",
         BEASTBOUND_GUARDIAN_REVIEW_SECONDS=str(args.timeout_seconds - 15))
     with (run / "backend.log").open("w") as log:
         backend_command = ["node", str(ROOT / "tools/guardian_review_backend.cjs"), str(run / "backend")]
@@ -160,6 +186,7 @@ def main() -> None:
                 continuity = _validate_capture(run)
                 arenas = _validate_arena_samples(run)
                 playback = validate_turn_playback(run)
+                pacing = _validate_frame_pacing(run, expected=args.record and not args.autoplay)
                 if args.autoplay:
                     report = json.loads((run / "autoplay.json").read_text())
                     if report.get("status") != "passed":
@@ -170,7 +197,7 @@ def main() -> None:
                         (run / "journey-validation.json").write_text(json.dumps(journey, indent=2))
                 return {"status": "passed", "scope": "Main review capture; subjective owner acceptance pending",
                     "performanceEvidence": False, "renderContinuity": continuity, "arenaSamples": arenas,
-                    "turnPlayback": playback}
+                    "turnPlayback": playback, "framePacing": pacing}
 
             print(f"GUARDIAN_REVIEW_OUTPUT {run}", flush=True)
             finished = threading.Event()

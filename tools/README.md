@@ -63,6 +63,8 @@ python3 tools/play_guardian_review.py --downed-owner-check --record
 
 关闭窗口会排空客户端资源并停止该后端；默认最长 15 分钟。启动时打印的 `.run/guardian-review/<timestamp>/` 保存生命周期、真实回合事件、结算前后档案和截图；`--record` 使用 `guardian.ogv` 录制，再导出原速 `guardian-1x.mp4`，避免长片超过 Godot AVI 的 4 GiB 上限。转码错误、全片解码和完整 30 FPS 时间线均须通过，详见 `media-validation.json`；失败保留日志和 `.partial.mp4`，不会输出有效成片名称或 `GUARDIAN_REVIEW_CLEAN`。实现见 [Phase 586](../docs/phase_586_guardian_recording_integrity.md)。`backend/fixture.json` 含临时会话，权限为 `600`，输出目录为 `700`；不提交或对外分享原始 fixture。
 
+人工 `--record` 现在按单调墙钟将推进速度限制在每秒最多约 30 帧，长帧后不突发追帧；`frame-pacing.json` 记录实际间隔并由启动器校验。未录制试玩与 `--autoplay` 不启用这层等待。文件中的“原速”指原始引擎帧时间线；加载、系统调度和慢帧仍可能使实际操作时间更长，不能将成片时长直接当作墙钟或性能数据，见 [Phase 595](../docs/phase_595_manual_recording_clock.md)。
+
 本入口显示指定待审宠物与战场素材，普通玩家开关保持关闭。录像和测试通过只形成待审候选，不代表老板已经接受这些精确美术文件。
 
 `--cave-journey` 供连续试玩：在原有守护战预览之外，为岩脉四层的服务器权威 PvE 战斗启用现有洞穴背景，并为一至三层普通遭遇启用晒甲苔背兽的现有候选战斗动作。它仍从四层开始，可先挑战或直接选择楼梯下楼；不改变野怪种类、等级、遇敌率、奖励或素材发布状态，也不声明宠物世界／骑乘素材已经完成。为覆盖整段返程，启动后端监听前将五个人物当前／最大生命设为 10400，途中不补血；这是路线测试数值，不是正常难度。

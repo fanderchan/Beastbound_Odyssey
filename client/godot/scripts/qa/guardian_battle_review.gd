@@ -4,6 +4,7 @@ const Art := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const Arena := preload("res://scripts/battle/battle_arena_visual_catalog.gd")
 const ExitCleanup := preload("res://scripts/qa/runtime_exit_cleanup.gd")
 const ReviewCaptureRenderPump := preload("res://scripts/qa/review_capture_render_pump.gd")
+const ReviewRealtimeFramePacer := preload("res://scripts/qa/review_realtime_frame_pacer.gd")
 const Progress := preload("res://scripts/progression/player_progress_model.gd")
 const Iso := preload("res://scripts/world/isometric_map_model.gd")
 var host
@@ -13,6 +14,7 @@ var sequence := 0
 var stop_requested := false
 var started_msec := 0
 var autoplay_running := false
+var frame_pacer: ReviewRealtimeFramePacer
 var expected_world_players: Array = []
 var preview_forms: Array[String] = [
 	"bui_normal_red_fire10", "wuli_normal_tough_earth10",
@@ -24,6 +26,9 @@ func _initialize() -> void:
 		push_error("Guardian review requires the official isolated QA launcher")
 		quit(2)
 		return
+	if OS.get_environment("BEASTBOUND_GUARDIAN_REALTIME_RECORDING") == "1":
+		frame_pacer = ReviewRealtimeFramePacer.new()
+		frame_pacer.start(self)
 	call_deferred("_run")
 
 func _run() -> void:
@@ -153,6 +158,9 @@ func _run() -> void:
 		Art.disable_qa_preview_form(form_id)
 	var cleanup: Dictionary = await ExitCleanup.drain_audio(host)
 	_write("audio-cleanup.json", cleanup)
+	if frame_pacer != null:
+		_write("frame-pacing.json", frame_pacer.stop())
+		frame_pacer = null
 	print("GUARDIAN_REVIEW_COMPLETED")
 	quit(0)
 
