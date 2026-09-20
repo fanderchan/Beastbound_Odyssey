@@ -3,6 +3,7 @@ extends SceneTree
 const Art := preload("res://scripts/pet/pet_action_asset_catalog.gd")
 const Arena := preload("res://scripts/battle/battle_arena_visual_catalog.gd")
 const ExitCleanup := preload("res://scripts/qa/runtime_exit_cleanup.gd")
+const ReviewCaptureRenderPump := preload("res://scripts/qa/review_capture_render_pump.gd")
 const Progress := preload("res://scripts/progression/player_progress_model.gd")
 const Iso := preload("res://scripts/world/isometric_map_model.gd")
 var host
@@ -88,6 +89,11 @@ func _run() -> void:
 	host._layout_hud()
 	host.perf_probe_enabled = true
 	host._begin_perf_probe_measurement()
+	# Offline review captures must keep drawing when the OS occludes the window.
+	# This helper does not focus it and its receipts cannot prove performance.
+	var capture_frame_start := Engine.get_process_frames()
+	var render_pump := ReviewCaptureRenderPump.new()
+	render_pump.start(root)
 	host._start_server_event_stream_if_needed()
 	host._start_online_position_sync_if_needed()
 	_write("fixture.json", {"scope": "isolated memory backend; one real Main client and four headless QA account drivers; authentic server encounter, rules and settlement; not human multiplayer or balance acceptance", "caveJourneyReview": cave_journey, "previewForms": preview_forms, "level": profile["player"]["level"], "profile": profile, "pid": OS.get_process_id(), "viewport": [1280, 720], "userData": OS.get_user_data_dir()})
@@ -126,6 +132,11 @@ func _run() -> void:
 		if autoplay_running:
 			push_error("Guardian autoplay failed to drain")
 	_write("completed.json", _state())
+	var continuity := render_pump.stop()
+	_write("render-continuity.json", {"captureFrameStartInclusive": capture_frame_start,
+		"processFrameEndExclusive": Engine.get_process_frames(), "renderContinuity": continuity})
+	if continuity.get("result") != "PASS":
+		push_error("Guardian review had missing drawn frames")
 	# Cleanup yields frames; keep Main from reconnecting after its stream is stopped.
 	host.set_process(false)
 	host._stop_server_event_stream()

@@ -20,8 +20,16 @@ import time
 from datetime import datetime, timezone
 
 import record_pet_management_owner_review as core
+from review_capture_render_continuity import validate_render_continuity
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _validate_capture(run: Path) -> dict:
+    report = json.loads((run / "render-continuity.json").read_text())
+    if not isinstance(report, dict):
+        raise ValueError("Guardian render continuity must be an object")
+    return validate_render_continuity(report)
 
 
 @contextmanager
@@ -113,11 +121,13 @@ def main() -> None:
                 if "GUARDIAN_REVIEW_COMPLETED" not in text or any(value in text for value in
                         ("SCRIPT ERROR:", "ERROR:", "leaked at exit", "resources still in use at exit")):
                     raise RuntimeError(f"Main review or cleanup failed; inspect {log_path}")
+                continuity = _validate_capture(run)
                 if args.autoplay:
                     report = json.loads((run / "autoplay.json").read_text())
                     if report.get("status") != "passed":
                         raise RuntimeError(f"Automated playthrough failed: {report.get('errors')}")
-                return {"status": "passed", "scope": "interactive Main review; subjective owner acceptance pending"}
+                return {"status": "passed", "scope": "Main review capture; subjective owner acceptance pending",
+                    "performanceEvidence": False, "renderContinuity": continuity}
 
             print(f"GUARDIAN_REVIEW_OUTPUT {run}", flush=True)
             finished = threading.Event()

@@ -12,6 +12,29 @@ import play_guardian_review as review
 
 
 class GuardianBackendWatchTests(unittest.TestCase):
+    def test_capture_requires_complete_draw_receipt_and_never_claims_performance(self):
+        receipt = {"captureFrameStartInclusive": 12, "processFrameEndExclusive": 112,
+            "renderContinuity": {"policy": "occluded_viewport_without_present_v1", "result": "PASS",
+                "performanceEvidence": False, "startProcessFrame": 12, "endProcessFrameExclusive": 112,
+                "completedProcessFrameCount": 100, "fallbackDrawCount": 99,
+                "missingDrawFrameCount": 0, "firstMissingDrawFrames": []}}
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory)
+            with self.assertRaises(FileNotFoundError):
+                review._validate_capture(run)
+            path = run / "render-continuity.json"
+            path.write_text(json.dumps(receipt))
+            self.assertFalse(review._validate_capture(run)["performanceEvidence"])
+            invalid = [None, [], {}, {**receipt, "processFrameEndExclusive": 111}]
+            for fields in [{"missingDrawFrameCount": 1, "firstMissingDrawFrames": [54]},
+                           {"result": "FAIL"}, {"performanceEvidence": True}]:
+                invalid.append({**receipt, "renderContinuity": {**receipt["renderContinuity"], **fields}})
+            for value in invalid:
+                with self.subTest(value=value):
+                    path.write_text(json.dumps(value))
+                    with self.assertRaises(ValueError):
+                        review._validate_capture(run)
+
     def test_mac_sleep_assertion_is_owned_and_released_after_failure(self):
         with mock.patch.object(review.sys, "platform", "darwin"), mock.patch.object(review.subprocess, "Popen") as launch:
             guard = launch.return_value

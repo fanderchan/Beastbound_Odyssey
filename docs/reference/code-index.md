@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **955** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **956** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -297,7 +297,7 @@
 | [firebud_village_service_layout_check.gd](../../client/godot/scripts/qa/firebud_village_service_layout_check.gd) | 544 |
 | [guardian_battle_playthrough.gd](../../client/godot/scripts/qa/guardian_battle_playthrough.gd) | 254 |
 | [guardian_battle_presentation_check.gd](../../client/godot/scripts/qa/guardian_battle_presentation_check.gd) | 106 |
-| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 163 |
+| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 174 |
 | [hang_matchmaking_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_owner_review_capture.gd) | 716 |
 | [hang_matchmaking_world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd) | 1622 |
 | [map_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/map_awakened_owner_review_capture.gd) | 2654 |
@@ -960,7 +960,7 @@
 
 ## tools
 
-<details><summary>98 个文件</summary>
+<details><summary>99 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -1014,7 +1014,7 @@
 | [pet_rebirth_balance_audit.mjs](../../tools/pet_rebirth_balance_audit.mjs) | 260 |
 | [pet_rebirth_evaluation_audit.mjs](../../tools/pet_rebirth_evaluation_audit.mjs) | 338 |
 | [pet_wild_capture_growth_audit.mjs](../../tools/pet_wild_capture_growth_audit.mjs) | 330 |
-| [play_guardian_review.py](../../tools/play_guardian_review.py) | 163 |
+| [play_guardian_review.py](../../tools/play_guardian_review.py) | 173 |
 | [prepare_npc_blind_review_packet.py](../../tools/prepare_npc_blind_review_packet.py) | 648 |
 | [progression_leveling_soak.mjs](../../tools/progression_leveling_soak.mjs) | 45 |
 | [progression_route_audit.mjs](../../tools/progression_route_audit.mjs) | 46 |
@@ -1028,7 +1028,7 @@
 | [record_character_entry_owner_review.py](../../tools/record_character_entry_owner_review.py) | 724 |
 | [record_commerce_awakened_owner_review.py](../../tools/record_commerce_awakened_owner_review.py) | 769 |
 | [record_earth_vein_landmark_review.py](../../tools/record_earth_vein_landmark_review.py) | 399 |
-| [record_earth_vein_review_batch.py](../../tools/record_earth_vein_review_batch.py) | 2721 |
+| [record_earth_vein_review_batch.py](../../tools/record_earth_vein_review_batch.py) | 2708 |
 | [record_firebud_v2_owner_review.py](../../tools/record_firebud_v2_owner_review.py) | 1365 |
 | [record_hang_matchmaking_owner_review.py](../../tools/record_hang_matchmaking_owner_review.py) | 699 |
 | [record_hang_matchmaking_world_hud_owner_review.py](../../tools/record_hang_matchmaking_world_hud_owner_review.py) | 889 |
@@ -1047,6 +1047,7 @@
 | [register_fusion_pet_closed_assets.py](../../tools/register_fusion_pet_closed_assets.py) | 2254 |
 | [repack_chroma_sprite_grid.py](../../tools/repack_chroma_sprite_grid.py) | 221 |
 | [repository_guide.mjs](../../tools/repository_guide.mjs) | 204 |
+| [review_capture_render_continuity.py](../../tools/review_capture_render_continuity.py) | 31 |
 | [run_firebud_v2_performance_evidence.py](../../tools/run_firebud_v2_performance_evidence.py) | 537 |
 | [run_godot_auto_checks.mjs](../../tools/run_godot_auto_checks.mjs) | 3280 |
 | [run_local_ci.mjs](../../tools/run_local_ci.mjs) | 448 |
@@ -1101,7 +1102,7 @@
 | [tools/test/test_map_visual_release_tools.py](../../tools/test/test_map_visual_release_tools.py) | 484 |
 | [tools/test/test_pet_art_batch_audit.py](../../tools/test/test_pet_art_batch_audit.py) | 1793 |
 | [tools/test/test_pet_battle_export_gate.py](../../tools/test/test_pet_battle_export_gate.py) | 4927 |
-| [tools/test/test_play_guardian_review.py](../../tools/test/test_play_guardian_review.py) | 60 |
+| [tools/test/test_play_guardian_review.py](../../tools/test/test_play_guardian_review.py) | 83 |
 | [tools/test/test_prepare_npc_blind_review_packet.py](../../tools/test/test_prepare_npc_blind_review_packet.py) | 470 |
 | [tools/test/test_promote_pet_fusion_runtime_release.py](../../tools/test/test_promote_pet_fusion_runtime_release.py) | 274 |
 | [tools/test/test_record_backpack_awakened_owner_review.py](../../tools/test/test_record_backpack_awakened_owner_review.py) | 195 |

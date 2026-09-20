@@ -74,6 +74,8 @@ python3 tools/play_guardian_review.py --downed-owner-check --record
 
 试玩的 `states.ndjson` 保存事件流状态及重连计时，`backend/event-stream.ndjson` 按计数变化记录连接、拒绝原因和心跳失败，关闭后记录连接归零；均不包含会话 token。这些是本机诊断记录，不能单独替代整场客户端检查。计时修复见 [Phase 583](../docs/phase_583_event_stream_monotonic_clock.md)。
 
+试玩始终启用离线审片的连续绘制保护；窗口被系统遮挡时也更新真实 viewport，`render-continuity.json` 必须证明观察帧没有缺少绘制。该入口明确不提供性能验收，不能用录片 FPS 或补绘区段代替正常前台测量。见 [Phase 584](../docs/phase_584_guardian_review_render_continuity.md)。
+
 `--autoplay` 自动走一次遮挡、挑战、攻击、宠物冲撞、蓄力防御、自动战斗及胜利返回路线，并核对档案版本和地之戒到账。输入通过真实 Main 的 viewport 跨帧发送，报告明确 `computerUse=false`；这是自动操作回放，不代替原生鼠标或所有者验收。提前结束时，在该次输出目录创建 `stop` 文件；协程退出后再清理客户端和后端。实现与验证边界见 [Phase 547](../docs/phase_547_earth_guardian_battle_presentation.md)。
 
 夹具现含四套人物、五个独立站位；自动检查还覆盖静止定时刷新、世界／战斗外观和地面显隐。macOS 录制期间临时防止系统休眠，结束时释放，屏幕保持原状态。测试后端若意外退出，当前客户端会自动结束并保存失败原因；不会自动重发写请求。详见 [Phase 566](../docs/phase_566_authoritative_battle_appearances.md)。

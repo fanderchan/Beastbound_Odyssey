@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **568** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **569** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 584 | [Phase 584：守护战后台录制连续绘制](../phase_584_guardian_review_render_continuity.md) | 阶段记录 |
 | 583 | [Phase 583：事件流重连改用真实时间](../phase_583_event_stream_monotonic_clock.md) | 阶段记录 |
 | 582 | [Phase 582：修复战斗状态响应被丢弃](../phase_582_battle_response_ownership.md) | 阶段记录 |
 | 581 | [Phase 581：连续洞穴试玩与战斗结算点击修复](../phase_581_cave_journey_visuals_and_result_input.md) | 阶段记录 |
