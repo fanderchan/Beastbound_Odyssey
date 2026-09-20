@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **591** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **592** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 607 | [Phase 607：洞窟复审与捕捉容量提示修复](../phase_607_cave_review_and_capture_capacity.md) | 阶段记录 |
 | 606 | [Phase 606：设施名称避让玩家](../phase_606_world_marker_player_visibility.md) | 阶段记录 |
 | 605 | [Phase 605：顶层双共鸣台的交互名称](../phase_605_cave_landmark_identity.md) | 阶段记录 |
 | 604 | [Phase 604：连续遇敌的奖励浮层清理与排版](../phase_604_battle_outcome_lifecycle.md) | 阶段记录 |

@@ -6151,7 +6151,7 @@ func _run_auto_capture_tools_check() -> void:
 	var menu_open_ok = false
 	var server_main_capture_enabled_ok = false
 	var server_noncatchable_disabled_ok = false
-	var server_help_mentions_capture_ok = false
+	var server_assist_unavailable_ok = false
 	var empty_button_text := ""
 	var rope_button_text := ""
 	var net_button_text := ""
@@ -6268,9 +6268,10 @@ func _run_auto_capture_tools_check() -> void:
 		host._sync_battle_buttons()
 		host._on_battle_command_pressed("help")
 		var server_help_message = str(host.battle_state.get("message", ""))
-		server_help_mentions_capture_ok = (
-			server_help_message.find("精灵") >= 0
-			and server_help_message.find("捕捉") >= 0
+		server_assist_unavailable_ok = (
+			server_help_message == "当前编队没有可触发的援助技。"
+			and host.battle_command_owner == "player"
+			and str(host.battle_state.get("phase", "")) == "command"
 		)
 		host.player_profile = _capture_capacity_test_profile(5, 20)
 		host._set_battle_command_owner("player")
@@ -6478,8 +6479,8 @@ func _run_auto_capture_tools_check() -> void:
 	var saw_capture: bool = await host._auto_wait_for_event_type("capture", 1200)
 	var ui_success_ok = saw_capture and bool(host.battle_state.get("lastCaptureSuccess", false)) and str(host.battle_state.get("lastCaptureToolId", "")) == BattleModel.CAPTURE_TOOL_NET_REINFORCED
 	var reinforced_consumed_ok = PlayerProgressModel.capture_tool_count(host.player_profile, BattleModel.CAPTURE_TOOL_NET_REINFORCED) == 0
-	var status = "ok" if loaded and zone_found and capacity_model_matrix_ok and capacity_player_ui_ok and capacity_capture_tools_disabled_ok and capacity_item_reuse_ok and capacity_unknown_auto_safe_ok and server_main_capture_enabled_ok and server_noncatchable_disabled_ok and server_help_mentions_capture_ok and menu_open_ok and owned_filter_ok and auto_target_tool_fallback_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
-	print("capture tools check ready: status=%s capacity_model=%s capacity_player_ui=%s capacity_tools_disabled=%s capacity_item_reuse=%s capacity_unknown_auto_safe=%s server_main_capture=%s noncatchable_disabled=%s server_help_capture=%s menu=%s owned_filter=%s auto_target_fallback=%s auto_regular=%s auto_empty=%s auto_poison=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f poison_button=%s owned_texts=%s log=%s" % [
+	var status = "ok" if loaded and zone_found and capacity_model_matrix_ok and capacity_player_ui_ok and capacity_capture_tools_disabled_ok and capacity_item_reuse_ok and capacity_unknown_auto_safe_ok and server_main_capture_enabled_ok and server_noncatchable_disabled_ok and server_assist_unavailable_ok and menu_open_ok and owned_filter_ok and auto_target_tool_fallback_ok and empty_no_consume_ok and rope_fail_consumes_ok and chance_order_ok and ui_success_ok and reinforced_consumed_ok else "failed"
+	print("capture tools check ready: status=%s capacity_model=%s capacity_player_ui=%s capacity_tools_disabled=%s capacity_item_reuse=%s capacity_unknown_auto_safe=%s server_main_capture=%s noncatchable_disabled=%s server_assist_unavailable=%s menu=%s owned_filter=%s auto_target_fallback=%s auto_regular=%s auto_empty=%s auto_poison=%s empty_no_consume=%s rope_fail_consumes=%s chance_order=%s ui_success=%s reinforced_consumed=%s empty=%.3f rope=%.3f net=%.3f reinforced=%.3f sleep=%.3f roll=%.3f poison_button=%s owned_texts=%s log=%s" % [
 		status,
 		str(capacity_model_matrix_ok),
 		str(capacity_player_ui_ok),
@@ -6488,7 +6489,7 @@ func _run_auto_capture_tools_check() -> void:
 		str(capacity_unknown_auto_safe_ok),
 		str(server_main_capture_enabled_ok),
 		str(server_noncatchable_disabled_ok),
-		str(server_help_mentions_capture_ok),
+		str(server_assist_unavailable_ok),
 		str(menu_open_ok),
 		str(owned_filter_ok),
 		str(auto_target_tool_fallback_ok),

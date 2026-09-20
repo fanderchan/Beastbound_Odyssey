@@ -34,6 +34,7 @@ var _pet_options: Array[Dictionary] = []
 var _settings: Dictionary = {}
 var _battle_active := false
 var _commands_locked := true
+var _capture_capacity_requested := false
 var _applied_layout_signature := ""
 var _layout_apply_count := 0
 var _layout_skip_count := 0
@@ -111,6 +112,11 @@ func title_label() -> Label:
 
 func capture_capacity_label() -> Label:
 	return _capture_capacity_label
+
+
+func set_capture_capacity_visible(should_show: bool) -> void:
+	_capture_capacity_requested = should_show
+	_sync_capture_capacity_layout()
 
 
 func auto_button() -> Button:
@@ -200,6 +206,7 @@ func apply_command_state(owner: String, visible_ids: Array, ordered_ids: Array) 
 		_apply_pet_layout(visible_ids, ordered_ids)
 	else:
 		_apply_submenu_layout(visible_ids, ordered_ids)
+	_sync_capture_capacity_layout()
 	_sync_disabled_visuals()
 
 
@@ -338,8 +345,8 @@ func _build_view() -> void:
 	_capture_capacity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_capture_capacity_label.add_theme_font_size_override("font_size", 14)
 	_capture_capacity_label.add_theme_color_override("font_color", Color("ead08b"))
+	_capture_capacity_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_capture_capacity_label.visible = false
-	_command_layer.add_child(_capture_capacity_label)
 
 	_submenu_panel = PanelContainer.new()
 	_submenu_panel.name = "BattleCommandSubmenu"
@@ -347,6 +354,8 @@ func _build_view() -> void:
 	_submenu_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_submenu_panel.add_theme_stylebox_override("panel", VisualSkin.submenu_style())
 	_command_layer.add_child(_submenu_panel)
+	# The capacity text must draw over the submenu background, like its buttons.
+	_command_layer.add_child(_capture_capacity_label)
 
 	_managed_button = _synthetic_button("managed", "托管", "managed")
 	_managed_button.pressed.connect(_emit_pet_shortcut.bind("managed"))
@@ -655,9 +664,18 @@ func _apply_submenu_layout(visible_ids: Array, ordered_ids: Array) -> void:
 		var rect := Rect2(124 + column * 180, button_origin_y + row * 62, 170, 60)
 		_show_button(button, rect, true)
 		index += 1
-	_capture_capacity_label.position = Presenter.scaled_rect(Rect2(128, 260, 340, 24), size).position
-	_capture_capacity_label.size = Presenter.scaled_rect(Rect2(128, 260, 340, 24), size).size
-	_capture_capacity_label.visible = _owner == "capture"
+
+
+func _sync_capture_capacity_layout() -> void:
+	_capture_capacity_label.visible = (
+		_capture_capacity_requested and not _auto_enabled and _owner in ["player", "capture"]
+	)
+	if not _capture_capacity_label.visible:
+		return
+	var design_rect := Rect2(128, 260, 340, 24) if _owner == "capture" else Rect2(8, 198, 398, 24)
+	var rect := Presenter.scaled_rect(design_rect, size)
+	_capture_capacity_label.position = rect.position
+	_capture_capacity_label.size = rect.size
 
 
 func _apply_pet_skill_submenu(visible_ids: Array, ordered_ids: Array) -> void:

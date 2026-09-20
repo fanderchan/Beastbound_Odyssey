@@ -8549,11 +8549,15 @@ func _battle_capture_capacity_blocks_action(show_message: bool = true) -> bool:
 func _sync_battle_capture_capacity_label(capacity: Dictionary, has_capture_target: bool) -> void:
 	if battle_capture_capacity_label == null:
 		return
-	battle_capture_capacity_label.visible = battle_active and (
+	var should_show := battle_active and not battle_auto_attack_enabled and (
 		battle_command_owner == "capture"
 		or (battle_command_owner == "player" and has_capture_target)
 	)
-	if not battle_capture_capacity_label.visible:
+	if battle_command_awakened_view != null:
+		battle_command_awakened_view.set_capture_capacity_visible(should_show)
+	else:
+		battle_capture_capacity_label.visible = should_show
+	if not should_show:
 		return
 	battle_capture_capacity_label.text = str(capacity.get("label", BattleCaptureCapacityModel.SYNCING_TEXT))
 	var available := bool(capacity.get("known", false)) and bool(capacity.get("canCapture", false))

@@ -222,6 +222,18 @@ func run() -> void:
 	_expect_visual_contract(errors, "自动战斗", auto_snapshot)
 	if not host.battle_auto_attack_enabled:
 		errors.append("真实点击自动按钮后未开启自动战斗")
+	# Capacity belongs to manual capture controls, never the automatic trio.
+	# Repeat the host's refresh while the view can reuse its cached layout.
+	var capacity_owner: String = host.battle_command_owner
+	var capacity_snapshot: Dictionary = host._battle_capture_capacity_snapshot()
+	for owner in ["player", "capture"]:
+		host.battle_command_owner = owner
+		for refresh in range(3):
+			host._sync_battle_capture_capacity_label(capacity_snapshot, true)
+			if host.battle_capture_capacity_label.visible:
+				errors.append("自动战斗的%s上下文刷新%d泄漏捕捉容量文字" % [owner, refresh])
+	host.battle_command_owner = capacity_owner
+	host._sync_battle_buttons()
 
 	var player_strategy_click: Dictionary = await _real_click(view.auto_player_button())
 	var strategy_snapshot: Dictionary = view.snapshot()
@@ -270,6 +282,14 @@ func run() -> void:
 		restored_snapshot,
 		["咒术", "攻击", "道具", "托管", "逃跑", "援助", "抓捕", "召唤", "防御", "自动"]
 	)
+	_expect_capture_capacity_layout(errors, view, false)
+	var capture_click: Dictionary = await _real_click(host.battle_command_buttons.capture)
+	_expect_capture_capacity_layout(errors, view, true)
+	var capture_return_click: Dictionary = await _real_click(view.visible_button_with_label("返回"))
+	if not bool(capture_click.get("frameSeparated", false)) or not bool(capture_return_click.get("frameSeparated", false)):
+		errors.append("捕捉菜单往返没有经过真实跨帧点击")
+	host._sync_battle_buttons()
+	_expect_capture_capacity_layout(errors, view, false)
 
 	var player_to_pet_layout_before := int(
 		view.snapshot().get("layoutApplyCount", -1)
@@ -279,6 +299,8 @@ func run() -> void:
 		view.visible_button_with_label("防御")
 	)
 	var pet_snapshot: Dictionary = view.snapshot()
+	if host.battle_capture_capacity_label.visible:
+		errors.append("人物切换宠物回合后仍显示捕捉容量")
 	if (
 		player_to_pet_layout_before < 0
 		or int(pet_snapshot.get("layoutApplyCount", -2))
@@ -663,6 +685,32 @@ func _top_battle_layout_snapshot(view: Control) -> Dictionary:
 		"functionDrawerRect": drawer_rect,
 		"commandRect": command_rect,
 	}
+
+
+func _expect_capture_capacity_layout(errors: Array[String], view, in_submenu: bool) -> void:
+	var label := host.battle_capture_capacity_label as Label
+	var expected_owner := "capture" if in_submenu else "player"
+	if host.battle_command_owner != expected_owner or not label.is_visible_in_tree():
+		errors.append("%s菜单没有显示捕捉容量" % expected_owner)
+		return
+	var rect := label.get_global_rect()
+	if not view.get_global_rect().encloses(rect):
+		errors.append("捕捉容量超出指令区域")
+	for button in host.battle_command_buttons.values():
+		if button is Button and button.is_visible_in_tree() and rect.intersects(button.get_global_rect()):
+			errors.append("捕捉容量与可见指令重叠：%s" % button.text)
+	if in_submenu:
+		var panel := label.get_parent().get_node("BattleCommandSubmenu") as Control
+		if not panel.get_global_rect().encloses(rect):
+			errors.append("捕捉容量没有留在捕捉子菜单内")
+		if label.get_index() < panel.get_index() and label.z_index <= panel.z_index:
+			errors.append("捕捉容量被子菜单背景覆盖")
+	else:
+		var capture_rect: Rect2 = host.battle_command_buttons.capture.get_global_rect()
+		if rect.end.y > capture_rect.position.y or rect.position.y < capture_rect.position.y - 40.0:
+			errors.append("人物容量提示没有紧邻底部捕捉指令上方")
+	if label.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+		errors.append("捕捉容量文字拦截了战场输入")
 
 
 func _expect_labels(

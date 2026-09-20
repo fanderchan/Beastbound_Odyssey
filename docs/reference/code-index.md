@@ -12,10 +12,10 @@
 
 | 行数 | 文件 |
 | ---: | --- |
-| 33029 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
+| 33030 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
 | 28889 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27380 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
-| 19263 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
+| 19267 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
 | 8834 | [client/godot/scripts/progression/player_progress_model.gd](../../client/godot/scripts/progression/player_progress_model.gd) |
 | 8789 | [tools/build_pet_portrait.py](../../tools/build_pet_portrait.py) |
@@ -34,7 +34,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [main.gd](../../client/godot/scripts/main.gd) | 19263 |
+| [main.gd](../../client/godot/scripts/main.gd) | 19267 |
 
 </details>
 
@@ -273,11 +273,11 @@
 | [audio_runtime_check.gd](../../client/godot/scripts/qa/audio_runtime_check.gd) | 301 |
 | [audio_settings_panel_check.gd](../../client/godot/scripts/qa/audio_settings_panel_check.gd) | 102 |
 | [audio_world_context_check.gd](../../client/godot/scripts/qa/audio_world_context_check.gd) | 44 |
-| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33029 |
+| [auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) | 33030 |
 | [backpack_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture.gd) | 916 |
 | [backpack_awakened_owner_review_capture_check.gd](../../client/godot/scripts/qa/backpack_awakened_owner_review_capture_check.gd) | 218 |
 | [battle_command_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/battle_command_awakened_owner_review_capture.gd) | 435 |
-| [battle_command_awakened_view_check.gd](../../client/godot/scripts/qa/battle_command_awakened_view_check.gd) | 739 |
+| [battle_command_awakened_view_check.gd](../../client/godot/scripts/qa/battle_command_awakened_view_check.gd) | 787 |
 | [battle_counter_action_state_check.gd](../../client/godot/scripts/qa/battle_counter_action_state_check.gd) | 50 |
 | [battle_layout_owner_review_capture.gd](../../client/godot/scripts/qa/battle_layout_owner_review_capture.gd) | 3314 |
 | [battle_outcome_owner_review_capture.gd](../../client/godot/scripts/qa/battle_outcome_owner_review_capture.gd) | 494 |
@@ -390,7 +390,7 @@
 | [bank_awakened_panel.gd](../../client/godot/scripts/ui/bank_awakened_panel.gd) | 386 |
 | [battle_command_awakened_host.gd](../../client/godot/scripts/ui/battle_command_awakened_host.gd) | 296 |
 | [battle_command_awakened_presenter.gd](../../client/godot/scripts/ui/battle_command_awakened_presenter.gd) | 98 |
-| [battle_command_awakened_view.gd](../../client/godot/scripts/ui/battle_command_awakened_view.gd) | 881 |
+| [battle_command_awakened_view.gd](../../client/godot/scripts/ui/battle_command_awakened_view.gd) | 899 |
 | [battle_command_awakened_visual_skin.gd](../../client/godot/scripts/ui/battle_command_awakened_visual_skin.gd) | 125 |
 | [battle_function_drawer.gd](../../client/godot/scripts/ui/battle_function_drawer.gd) | 339 |
 | [battle_outcome_float_overlay.gd](../../client/godot/scripts/ui/battle_outcome_float_overlay.gd) | 352 |
