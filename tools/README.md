@@ -60,7 +60,7 @@ python3 tools/play_guardian_review.py --downed-owner-check --record
 
 角色从四层守护台附近开始。左键小地图，选择「岩脉守护兽」，在对话中选择「挑战」；人物和宠物分别选择指令，也可点「自动」。测试角色及宠物为 Lv100，角色数值是明确的 QA 档案：主控人物生命 520，四名测试队友生命各 1040，用来观察主控倒下后宠物仍能作战的分支；这不是正常角色成长或难度结论。宠物由既有 GM 发放及逐级升级接口产生。场景、敌人、技能、奖励和结算使用现有正式规则。
 
-关闭窗口会排空客户端资源并停止该后端；默认最长 15 分钟。启动时打印的 `.run/guardian-review/<timestamp>/` 保存生命周期、真实回合事件、结算前后档案和截图；`--record` 另生成 `guardian-1x.mp4`，不改变播放速度。`backend/fixture.json` 含临时会话，权限为 `600`，输出目录为 `700`；不提交或对外分享原始 fixture。
+关闭窗口会排空客户端资源并停止该后端；默认最长 15 分钟。启动时打印的 `.run/guardian-review/<timestamp>/` 保存生命周期、真实回合事件、结算前后档案和截图；`--record` 使用 `guardian.ogv` 录制，再导出原速 `guardian-1x.mp4`，避免长片超过 Godot AVI 的 4 GiB 上限。转码错误、全片解码和完整 30 FPS 时间线均须通过，详见 `media-validation.json`；失败保留日志和 `.partial.mp4`，不会输出有效成片名称或 `GUARDIAN_REVIEW_CLEAN`。实现见 [Phase 586](../docs/phase_586_guardian_recording_integrity.md)。`backend/fixture.json` 含临时会话，权限为 `600`，输出目录为 `700`；不提交或对外分享原始 fixture。
 
 本入口显示指定待审宠物与战场素材，普通玩家开关保持关闭。录像和测试通过只形成待审候选，不代表老板已经接受这些精确美术文件。
 

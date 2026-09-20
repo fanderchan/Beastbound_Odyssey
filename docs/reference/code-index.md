@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **957** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **959** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -961,7 +961,7 @@
 
 ## tools
 
-<details><summary>99 个文件</summary>
+<details><summary>100 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -986,6 +986,7 @@
 | [combine_npc_staged_review.py](../../tools/combine_npc_staged_review.py) | 602 |
 | [finalize_pet_identity_gate.py](../../tools/finalize_pet_identity_gate.py) | 1897 |
 | [godot_qa_user_data_lane.py](../../tools/godot_qa_user_data_lane.py) | 3729 |
+| [guardian_review_media.py](../../tools/guardian_review_media.py) | 102 |
 | [install_firebud_computer_use_evidence.py](../../tools/install_firebud_computer_use_evidence.py) | 510 |
 | [install_pet_battle_bundle.py](../../tools/install_pet_battle_bundle.py) | 1489 |
 | [lib/isolated-mysql-runtime.mjs](../../tools/lib/isolated-mysql-runtime.mjs) | 296 |
@@ -1015,7 +1016,7 @@
 | [pet_rebirth_balance_audit.mjs](../../tools/pet_rebirth_balance_audit.mjs) | 260 |
 | [pet_rebirth_evaluation_audit.mjs](../../tools/pet_rebirth_evaluation_audit.mjs) | 338 |
 | [pet_wild_capture_growth_audit.mjs](../../tools/pet_wild_capture_growth_audit.mjs) | 330 |
-| [play_guardian_review.py](../../tools/play_guardian_review.py) | 190 |
+| [play_guardian_review.py](../../tools/play_guardian_review.py) | 186 |
 | [prepare_npc_blind_review_packet.py](../../tools/prepare_npc_blind_review_packet.py) | 648 |
 | [progression_leveling_soak.mjs](../../tools/progression_leveling_soak.mjs) | 45 |
 | [progression_route_audit.mjs](../../tools/progression_route_audit.mjs) | 46 |
@@ -1069,7 +1070,7 @@
 
 ## tools/tests
 
-<details><summary>62 个文件</summary>
+<details><summary>63 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -1096,6 +1097,7 @@
 | [tools/test/test_combine_npc_staged_review.py](../../tools/test/test_combine_npc_staged_review.py) | 302 |
 | [tools/test/test_finalize_pet_identity_gate.py](../../tools/test/test_finalize_pet_identity_gate.py) | 1057 |
 | [tools/test/test_godot_qa_user_data_lane.py](../../tools/test/test_godot_qa_user_data_lane.py) | 2199 |
+| [tools/test/test_guardian_review_media.py](../../tools/test/test_guardian_review_media.py) | 129 |
 | [tools/test/test_install_firebud_computer_use_evidence.py](../../tools/test/test_install_firebud_computer_use_evidence.py) | 90 |
 | [tools/test/test_install_pet_battle_bundle.py](../../tools/test/test_install_pet_battle_bundle.py) | 1330 |
 | [tools/test/test_map_performance_batch.py](../../tools/test/test_map_performance_batch.py) | 179 |

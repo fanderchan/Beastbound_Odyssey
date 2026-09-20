@@ -20,6 +20,7 @@ import time
 from datetime import datetime, timezone
 
 import record_pet_management_owner_review as core
+from guardian_review_media import encode_review_movie
 from review_capture_render_continuity import validate_render_continuity
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -124,7 +125,8 @@ def main() -> None:
                 "res://scripts/qa/guardian_battle_review.gd", "--windowed", "--resolution", "1280x720",
                 "--single-window", "--audio-driver", "Dummy"]
             if args.record:
-                command += ["--write-movie", str(run / "guardian.avi"), "--fixed-fps", "30", "--max-fps", "30", "--disable-vsync"]
+                # OGV avoids Godot's 4 GiB AVI limit during longer interactive runs.
+                command += ["--write-movie", str(run / "guardian.ogv"), "--fixed-fps", "30", "--max-fps", "30", "--disable-vsync"]
             command += ["--", "--qa-viewport=1280x720", "--map-art-review-preview",
                 "--earth-guardian-review", "--auth-server-url=" + fixture["baseUrl"], core.QA_LANE_ARGUMENT]
             if args.cave_journey:
@@ -175,13 +177,7 @@ def main() -> None:
         if not (run / "backend/stopped.json").is_file():
             raise RuntimeError(f"QA backend did not complete its shutdown receipt; inspect {run / 'backend.log'}")
     if args.record:
-        subprocess.run(["ffmpeg", "-v", "error", "-i", str(run / "guardian.avi"),
-            "-c:v", "libx264", "-crf", "19", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
-            "-c:a", "aac", str(run / "guardian-1x.mp4")], check=True)
-        subprocess.run(["ffmpeg", "-v", "error", "-i", str(run / "guardian-1x.mp4"), "-f", "null", "-"], check=True)
-        probe = subprocess.check_output(["ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json",
-            str(run / "guardian-1x.mp4")], text=True)
-        (run / "media-probe.json").write_text(probe)
+        encode_review_movie(run / "guardian.ogv", run, timeout_seconds=args.timeout_seconds)
     print(f"GUARDIAN_REVIEW_CLEAN {run}", flush=True)
 
 
