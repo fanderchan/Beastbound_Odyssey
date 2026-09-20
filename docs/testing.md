@@ -102,6 +102,8 @@ Computer Use 点击报错后，先分别读取最新 UI 状态和当前进程日
 
 准备页超时会输出 `map performance foreground unavailable:`，分别记录未收到开始请求、失焦、不可绘制及渲染循环关闭的观察次数，同时保留最后状态与实际绘制进度。先据此区分缺少点击与可见性问题，不把通用失败码直接解释为锁屏。该日志不改变开始门槛或提供自动开始方式，实际负例见 [Phase 593](phase_593_native_performance_diagnostics.md)。
 
+正常时钟的进程 CPU、脚本区段耗时和实际绘制次数分别记录。[Phase 597](phase_597_idle_camera_render_diagnosis.md) 的静止相机消融在按需渲染下减少了绘制，属于独立诊断，未修改正式矩阵的逐帧绘制要求；不能将其样本导入正式性能回执，也不能把不可绘制或失焦当作收益。原型检查同时要求无脚本错误、预期用例数和非零实际帧数，不能只认 Godot 零退出码或 PASS 字符串。
+
 固定帧窗口结束后的 `perf probe runtime timing:` 将模拟 delta 与单调时钟实际间隔分开，详见 [Phase 562](phase_562_runtime_probe_wall_clock.md)。`wallProcessFramesPerSecond` 是处理帧率，不是显示 FPS 或 CPU 百分比；配置 `Engine.max_fps=30` 也不证明限帧有效，`--fixed-fps` 会跳过通常的等待。外部 runner 的 argv 才是引擎启动选项的依据。正常运行的 CPU/FPS 检查必须保留正常帧预算、VSync 和前台绘制条件，单独记录稳态进程占用；不能用固定步长压力运行的瞬时 CPU 替代。新增 timing 不改变既有性能门槛。
 
 截图审计保留录制时的原始提交号；后续仅提交文档/证据时，只要运行内容指纹相同且原提交是当前 HEAD 的祖先，就不要求无意义地重录。运行内容、工具源码、素材或录制表面真的变化时仍必须重证，不能手改旧回执的提交号。该边界及真实 Git 回归见 [Phase 551](phase_551_map_evidence_commit_provenance.md)。
