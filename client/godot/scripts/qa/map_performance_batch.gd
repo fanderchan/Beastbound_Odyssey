@@ -136,9 +136,19 @@ func _wait_for_foreground() -> bool:
 	# can retain focus while process frames run without rendering. Require a
 	# real start click, stable visibility and actual drawing before Main exists.
 	# Request activation once, never take focus back during measurement.
-	var deadline := Time.get_ticks_msec() + 120000
+	var wait_started := Time.get_ticks_msec()
+	var deadline := wait_started + 120000
 	var focused_since := -1
 	var first_draw_frame := 0
+	var wait_first_draw_frame := Engine.get_frames_drawn()
+	var observed_frames := 0
+	var blockers := {
+		"startNotRequested": 0, "unfocused": 0,
+		"notDrawable": 0, "renderLoopDisabled": 0,
+	}
+	var last_state := {}
+	var longest_stable_msec := 0
+	var most_stable_drawn_frames := 0
 	DisplayServer.window_move_to_foreground()
 	while Time.get_ticks_msec() < deadline:
 		# Fixed-FPS mode can busy-loop while occluded. This delay is confined to
@@ -146,14 +156,27 @@ func _wait_for_foreground() -> bool:
 		OS.delay_msec(10)
 		await process_frame
 		var now := Time.get_ticks_msec()
-		if (not _start_requested or not DisplayServer.window_is_focused()
-			or not root.can_draw() or not RenderingServer.is_render_loop_enabled()):
+		observed_frames += 1
+		last_state = {
+			"startRequested": _start_requested,
+			"focused": DisplayServer.window_is_focused(),
+			"canDraw": root.can_draw(),
+			"renderLoopEnabled": RenderingServer.is_render_loop_enabled(),
+		}
+		if not last_state.startRequested: blockers.startNotRequested += 1
+		if not last_state.focused: blockers.unfocused += 1
+		if not last_state.canDraw: blockers.notDrawable += 1
+		if not last_state.renderLoopEnabled: blockers.renderLoopDisabled += 1
+		if (not last_state.startRequested or not last_state.focused
+			or not last_state.canDraw or not last_state.renderLoopEnabled):
 			focused_since = -1
 			continue
 		if focused_since < 0:
 			focused_since = now
 			first_draw_frame = Engine.get_frames_drawn()
 		var drawn_frames := Engine.get_frames_drawn() - first_draw_frame
+		longest_stable_msec = maxi(longest_stable_msec, now - focused_since)
+		most_stable_drawn_frames = maxi(most_stable_drawn_frames, drawn_frames)
 		if now - focused_since >= 1000 and drawn_frames >= 30:
 			print("map performance foreground ready: %s" % JSON.stringify({
 				"stableMilliseconds": now - focused_since,
@@ -162,6 +185,16 @@ func _wait_for_foreground() -> bool:
 				"canDraw": root.can_draw(),
 			}))
 			return true
+	# Preparation diagnostics only: no Main exists and no performance sample has
+	# begun. Keep overlapping blockers so a missing click is not called lost focus.
+	print("map performance foreground unavailable: %s" % JSON.stringify({
+		"waitMilliseconds": Time.get_ticks_msec() - wait_started,
+		"observedFrames": observed_frames, "blockerFrames": blockers,
+		"lastState": last_state, "mainCount": _main_count(),
+		"drawnFrames": Engine.get_frames_drawn() - wait_first_draw_frame,
+		"longestStableMilliseconds": longest_stable_msec,
+		"mostStableDrawnFrames": most_stable_drawn_frames,
+	}))
 	return false
 
 

@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **577** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **578** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 593 | [Phase 593：原生性能归因与准备页失败诊断](../phase_593_native_performance_diagnostics.md) | 阶段记录 |
 | 592 | [Phase 592：守护战到火芽村的连续自动回归](../phase_592_cave_return_playthrough.md) | 阶段记录 |
 | 591 | [Phase 591：晒甲苔背兽候选战斗比例](../phase_591_sunbaked_candidate_battle_scale.md) | 阶段记录 |
 | 590 | [Phase 590：联网战斗超时保持服务器权威](../phase_590_authoritative_battle_timeout.md) | 阶段记录 |
