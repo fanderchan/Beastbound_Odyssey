@@ -2621,8 +2621,11 @@ func _update_runtime_frame_budget() -> void:
 	var active := _world_needs_active_fps()
 	_set_runtime_target_fps(ACTIVE_TARGET_FPS if active else IDLE_TARGET_FPS)
 	# Review tools may enable capture or profiling after Main has started.
-	# Keep their continuous-draw contract without changing their VSync policy.
-	world_idle_renderer.apply_runtime_budget(active, perf_probe_enabled or map_visual_review_capture)
+	# Fixed-frame probes stop collecting before audio cleanup; keep drawing
+	# until their Main exits, without changing their VSync policy.
+	world_idle_renderer.apply_runtime_budget(
+		active, perf_probe_enabled or map_visual_review_capture or perf_probe_clean_exit_frames > 0
+	)
 
 
 func _world_needs_active_fps() -> bool:

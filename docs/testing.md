@@ -104,7 +104,7 @@ Computer Use 点击报错后，先分别读取最新 UI 状态和当前进程日
 
 正常时钟的进程 CPU、脚本区段耗时和实际绘制次数分别记录。[Phase 597](phase_597_idle_camera_render_diagnosis.md) 的静止相机消融在按需渲染下减少了绘制，属于独立诊断，未修改正式矩阵的逐帧绘制要求；不能将其样本导入正式性能回执，也不能把不可绘制或失焦当作收益。原型检查同时要求无脚本错误、预期用例数和非零实际帧数，不能只认 Godot 零退出码或 PASS 字符串。
 
-世界按需渲染的生产回归纳入 `--auto-camera-check`：双视口相机对照之外，还检查真实 Main 的四层切换、首次跨帧鼠标移动、菜单及战斗往返。`Input.parse_input_event` 入队不等于宿主已收到输入；断言必须核对接收计数和首个已投递帧。普通运行允许静止时省略无变化的绘制；性能探针和审查捕获即使在启动后启用，也必须保持连续绘制，MovieWriter 则在启动时固定该要求。原有 VSync 策略分别保留，因此探针区段耗时不代表普通模式的整体节能收益。两种模式分别验证，不修改正式矩阵阈值，实测和复验见 [Phase 598](phase_598_world_idle_rendering.md)。
+世界按需渲染的生产回归纳入 `--auto-camera-check`：双视口相机对照之外，还检查真实 Main 的四层切换、首次跨帧鼠标移动、菜单及战斗往返。`Input.parse_input_event` 入队不等于宿主已收到输入；断言必须核对接收计数和首个已投递帧。普通运行允许静止时省略无变化的绘制；性能探针和审查捕获即使在启动后启用，也必须保持连续绘制，MovieWriter 则在启动时固定该要求。定长采样关闭统计不等于结束测试生命周期：从测量完成、音频清理到 Main 退出仍要连续绘制，见 [Phase 599](phase_599_performance_cleanup_rendering.md)。原有 VSync 策略分别保留，因此探针区段耗时不代表普通模式的整体节能收益。两种模式分别验证，不修改正式矩阵阈值，实测和复验见 [Phase 598](phase_598_world_idle_rendering.md)。
 
 固定帧窗口结束后的 `perf probe runtime timing:` 将模拟 delta 与单调时钟实际间隔分开，详见 [Phase 562](phase_562_runtime_probe_wall_clock.md)。`wallProcessFramesPerSecond` 是处理帧率，不是显示 FPS 或 CPU 百分比；配置 `Engine.max_fps=30` 也不证明限帧有效，`--fixed-fps` 会跳过通常的等待。外部 runner 的 argv 才是引擎启动选项的依据。正常运行的 CPU/FPS 检查必须保留正常帧预算、VSync 和前台绘制条件，单独记录稳态进程占用；不能用固定步长压力运行的瞬时 CPU 替代。新增 timing 不改变既有性能门槛。
 

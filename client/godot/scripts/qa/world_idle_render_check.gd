@@ -62,6 +62,28 @@ static func _check_main(host: Node) -> Dictionary:
 			await host.get_tree().process_frame
 		if not OS.low_processor_usage_mode:
 			errors.append("idle draw policy did not resume after late request: " + property)
+	# A fixed-frame probe stops collecting before its audio-drain coroutine
+	# completes. The whole visible probe lifecycle must keep drawing.
+	var previous_exit_frames: int = host.perf_probe_clean_exit_frames
+	var previous_complete: bool = host.perf_probe_measurement_complete
+	var previous_probe: bool = host.perf_probe_enabled
+	host.perf_probe_clean_exit_frames = 480
+	host.perf_probe_enabled = true
+	var completed_measurement: bool = host._complete_perf_probe_measurement("idle_render_cleanup_regression")
+	var cleanup_continuous_frames := 0
+	for frame in range(8):
+		await host.get_tree().process_frame
+		if not OS.low_processor_usage_mode:
+			cleanup_continuous_frames += 1
+	if not completed_measurement or host.perf_probe_enabled or cleanup_continuous_frames != 8:
+		errors.append("completed measurement did not retain continuous drawing through cleanup")
+	host.perf_probe_clean_exit_frames = previous_exit_frames
+	host.perf_probe_measurement_complete = previous_complete
+	host.perf_probe_enabled = previous_probe
+	for frame in range(2):
+		await host.get_tree().process_frame
+	if not OS.low_processor_usage_mode:
+		errors.append("ordinary idle policy did not resume after the probe lifecycle")
 	var start: Vector2 = host.player.global_position
 	var cell := IsoMap.world_to_grid(host.map_data, start) + Vector2i(0, -1)
 	var target := IsoMap.grid_to_world(host.map_data, cell)
@@ -140,6 +162,8 @@ static func _check_main(host: Node) -> Dictionary:
 		"maps": checked_maps, "inputEvents": input_events, "inputFrames": input_frames,
 		"inputWokeRenderer": input_woke_renderer,
 		"lateContinuousModes": late_modes,
+		"completedMeasurement": completed_measurement,
+		"cleanupContinuousFrames": cleanup_continuous_frames,
 		"movingFrames": moving_frames, "activeRenderMovingFrames": active_render_frames,
 		"arrived": arrived, "battleEntered": entered_battle, "battleReturned": returned,
 		"errors": errors,

@@ -15,7 +15,7 @@
 | 33028 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
 | 28888 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
 | 27380 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
-| 19258 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
+| 19261 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
 | 8834 | [client/godot/scripts/progression/player_progress_model.gd](../../client/godot/scripts/progression/player_progress_model.gd) |
 | 8789 | [tools/build_pet_portrait.py](../../tools/build_pet_portrait.py) |
@@ -34,7 +34,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [main.gd](../../client/godot/scripts/main.gd) | 19258 |
+| [main.gd](../../client/godot/scripts/main.gd) | 19261 |
 
 </details>
 
@@ -357,7 +357,7 @@
 | [world_depth_layer_check.gd](../../client/godot/scripts/qa/world_depth_layer_check.gd) | 553 |
 | [world_ground_layer_check.gd](../../client/godot/scripts/qa/world_ground_layer_check.gd) | 157 |
 | [world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/world_hud_owner_review_capture.gd) | 908 |
-| [world_idle_render_check.gd](../../client/godot/scripts/qa/world_idle_render_check.gd) | 296 |
+| [world_idle_render_check.gd](../../client/godot/scripts/qa/world_idle_render_check.gd) | 320 |
 | [world_presentation_profile_check.gd](../../client/godot/scripts/qa/world_presentation_profile_check.gd) | 341 |
 | [world_review_frame_parity.gd](../../client/godot/scripts/qa/world_review_frame_parity.gd) | 205 |
 
