@@ -890,6 +890,9 @@ Godot's own `Input.parse_input_event` evidence. Its `method` must be
 each manifest map, actions must contain exactly the five required kinds:
 `pointer`, `movement_path`, `warp`, `collision`, and `occlusion`.
 Unknown kinds and a duplicate action kind for the same map are invalid.
+Current macOS captures use `macOS OpenGL Compatibility`, matching the default
+`gl_compatibility / opengl3` renderer and its engine log. Keep historical receipts
+unchanged; do not relabel an old Metal capture as current-renderer evidence.
 
 ```json
 {
@@ -904,7 +907,7 @@ Unknown kinds and a duplicate action kind for the same map are invalid.
   "method": "computer_use",
   "scene": "res://scenes/Main.tscn",
   "viewport": [1280, 720],
-  "displayServer": "macOS Metal",
+  "displayServer": "macOS OpenGL Compatibility",
   "actions": [
     {
       "actionId": "firebud_village_gate_pointer",

@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **969** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **971** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -262,7 +262,7 @@
 
 ## client/godot/scripts/qa
 
-<details><summary>94 个文件</summary>
+<details><summary>96 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -283,7 +283,9 @@
 | [battle_outcome_owner_review_capture.gd](../../client/godot/scripts/qa/battle_outcome_owner_review_capture.gd) | 494 |
 | [battle_result_input_check.gd](../../client/godot/scripts/qa/battle_result_input_check.gd) | 90 |
 | [battle_visual_review_preview.gd](../../client/godot/scripts/qa/battle_visual_review_preview.gd) | 546 |
-| [cave_journey_playthrough.gd](../../client/godot/scripts/qa/cave_journey_playthrough.gd) | 122 |
+| [cave_journey_playthrough.gd](../../client/godot/scripts/qa/cave_journey_playthrough.gd) | 147 |
+| [cave_journey_wait_budget.gd](../../client/godot/scripts/qa/cave_journey_wait_budget.gd) | 52 |
+| [cave_journey_wait_budget_check.gd](../../client/godot/scripts/qa/cave_journey_wait_budget_check.gd) | 44 |
 | [character_creation_owner_review_capture.gd](../../client/godot/scripts/qa/character_creation_owner_review_capture.gd) | 187 |
 | [character_entry_flow_check.gd](../../client/godot/scripts/qa/character_entry_flow_check.gd) | 736 |
 | [character_entry_owner_review_capture.gd](../../client/godot/scripts/qa/character_entry_owner_review_capture.gd) | 779 |
@@ -301,8 +303,8 @@
 | [evolution_trial_dialog_check.gd](../../client/godot/scripts/qa/evolution_trial_dialog_check.gd) | 47 |
 | [firebud_village_service_layout_check.gd](../../client/godot/scripts/qa/firebud_village_service_layout_check.gd) | 544 |
 | [guardian_battle_playthrough.gd](../../client/godot/scripts/qa/guardian_battle_playthrough.gd) | 254 |
-| [guardian_battle_presentation_check.gd](../../client/godot/scripts/qa/guardian_battle_presentation_check.gd) | 107 |
-| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 212 |
+| [guardian_battle_presentation_check.gd](../../client/godot/scripts/qa/guardian_battle_presentation_check.gd) | 108 |
+| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 213 |
 | [hang_matchmaking_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_owner_review_capture.gd) | 716 |
 | [hang_matchmaking_world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd) | 1622 |
 | [map_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/map_awakened_owner_review_capture.gd) | 2654 |

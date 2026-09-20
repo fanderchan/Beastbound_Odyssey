@@ -2,36 +2,41 @@ extends RefCounted
 
 const Playthrough := preload("res://scripts/qa/guardian_battle_playthrough.gd")
 const Iso := preload("res://scripts/world/isometric_map_model.gd")
+const WaitBudget := preload("res://scripts/qa/cave_journey_wait_budget.gd")
 const RETURN_MAPS := ["earth_vein_cave_f3", "earth_vein_cave_f2", "earth_vein_cave", "firebud_village_gate"]
 
 
-static func run(host, output_dir: String, expected_world_players: Array) -> Dictionary:
+static func run(host, output_dir: String, expected_world_players: Array, deadline_ms: int) -> Dictionary:
 	var report: Dictionary = await Playthrough.run(host, output_dir, expected_world_players)
 	report["kind"] = "automated_cave_journey_viewport_input"
 	report["performanceEvidence"] = false
 	report["route"] = [_world_snapshot(host)]
 	report["ordinaryBattles"] = []
+	report["returnTiming"] = []
 	if report.status != "passed":
 		return report
 	report.status = "running"
 	for destination in RETURN_MAPS:
-		if not await _travel(host, output_dir, destination, report):
+		if not await _travel(host, output_dir, destination, report, deadline_ms):
 			return report
 	report["endMap"] = host.current_map_id
 	report["status"] = "passed" if report.errors.is_empty() else "failed"
 	return report
 
 
-static func _travel(host, output_dir: String, destination: String, report: Dictionary) -> bool:
+static func _travel(host, output_dir: String, destination: String, report: Dictionary, deadline_ms: int) -> bool:
 	var tree: SceneTree = host.get_tree()
 	var origin: String = host.current_map_id
-	var deadline := Time.get_ticks_msec() + 420000
+	var budget := WaitBudget.new(Time.get_ticks_msec(), deadline_ms)
 	var route_requested := false
 	var stopped_since := 0
 	var route_attempts := 0
-	while Time.get_ticks_msec() < deadline:
+	while true:
 		if FileAccess.file_exists(output_dir.path_join("stop")):
 			return _fail(report, "cave journey cancelled")
+		var timing_error := _sample_wait(host, budget)
+		if not timing_error.is_empty():
+			return _fail(report, timing_error + ": " + origin)
 		if host.battle_active:
 			var battle: Dictionary = host.battle_state
 			var room_id := str((battle.get("serverRoom", {}) as Dictionary).get("roomId", ""))
@@ -48,8 +53,16 @@ static func _travel(host, output_dir: String, destination: String, report: Dicti
 				return _fail(report, "route encounter did not enable normal auto button")
 			if host.battle_active and not host.battle_auto_attack_enabled:
 				await Playthrough._button(host, host.battle_command_awakened_view.auto_button(), "route automatic battle", report)
-			if not await Playthrough._until(tree, func() -> bool: return not host.battle_active, 240, output_dir):
-				return _fail(report, "route encounter did not finish: " + room_id)
+			while host.battle_active:
+				if FileAccess.file_exists(output_dir.path_join("stop")):
+					return _fail(report, "cave journey cancelled")
+				timing_error = _sample_wait(host, budget)
+				if not timing_error.is_empty():
+					return _fail(report, timing_error + ": " + room_id)
+				await tree.create_timer(0.1).timeout
+			timing_error = budget.sample(Time.get_ticks_msec())
+			if not timing_error.is_empty():
+				return _fail(report, timing_error + ": " + room_id)
 			route_requested = false
 			stopped_since = 0
 		elif host.battle_result_panel.visible:
@@ -62,6 +75,8 @@ static func _travel(host, output_dir: String, destination: String, report: Dicti
 			await tree.create_timer(0.5).timeout
 			var snapshot := _world_snapshot(host)
 			report.route.append(snapshot)
+			report.returnTiming.append({"from": origin, "to": destination,
+				"navigationElapsedMs": budget.navigation_elapsed_ms, "combatElapsedMs": budget.combat_elapsed_ms})
 			await Playthrough._capture(host, output_dir, "journey-" + destination)
 			if not snapshot.serverSession or snapshot.saving or not snapshot.groundVisible:
 				return _fail(report, "route lost server session or ground: " + destination)
@@ -102,7 +117,17 @@ static func _travel(host, output_dir: String, destination: String, report: Dicti
 			elif Time.get_ticks_msec() - stopped_since > 3000:
 				route_requested = false
 		await tree.create_timer(0.1).timeout
-	return _fail(report, "return route timed out: " + origin)
+	return false
+
+
+static func _sample_wait(host, budget: WaitBudget) -> String:
+	if not host.battle_active:
+		return budget.sample(Time.get_ticks_msec())
+	var battle: Dictionary = host.battle_state
+	var room_id := str((battle.get("serverRoom", {}) as Dictionary).get("roomId", ""))
+	if room_id.is_empty() or not battle.get("serverAuthority", false):
+		return "route encounter is not authoritative"
+	return budget.sample(Time.get_ticks_msec(), room_id, int(battle.get("round", 0)))
 
 
 static func _world_snapshot(host) -> Dictionary:

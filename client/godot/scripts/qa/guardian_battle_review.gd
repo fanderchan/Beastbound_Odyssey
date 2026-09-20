@@ -168,7 +168,8 @@ func _run() -> void:
 func _run_autoplay() -> void:
 	var result: Dictionary
 	if OS.get_cmdline_user_args().has(Arena.EARTH_CAVE_REVIEW_FLAG):
-		result = await preload("res://scripts/qa/cave_journey_playthrough.gd").run(host, out, expected_world_players)
+		var deadline_ms := started_msec + int(OS.get_environment("BEASTBOUND_GUARDIAN_REVIEW_SECONDS")) * 1000
+		result = await preload("res://scripts/qa/cave_journey_playthrough.gd").run(host, out, expected_world_players, deadline_ms)
 	else:
 		result = await preload("res://scripts/qa/guardian_battle_playthrough.gd").run(host, out, expected_world_players)
 	_write("autoplay.json", result)

@@ -227,7 +227,7 @@ The true-eight world evidence must show each direction twice: a readable idle ho
 - At 1280×720, events remain readable with the message/log panel ignored.
 - Both teams face the arena centre in the same real-client frame; rideable contracts additionally prove mounted actors and their same-side battle pets use identical final-facing mappings during idle, contact, return and down states.
 - No unit leaves a stale shadow/marker, crosses the wrong facing, slides home, or overlaps its target beyond the authored contact distance.
-- The MP4 comes from the real Godot Metal path, has verified metadata and decodes fully.
+- The MP4 comes from the real Main scene on the project's current default renderer, has verified metadata and decodes fully. Since Phase 601, macOS acceptance uses `gl_compatibility / opengl3` with the engine's OpenGL Compatibility log; old Metal captures remain historical evidence and cannot stand in for the current renderer. Preserve each capture's actual backend and revision.
 - Asset checks, catalog/manifest checks, relevant Godot pet-action/battle checks, mounted checks only for rideable contracts, and `git diff --check` pass.
 - Source, ownership, prompt, replacement path and QA evidence are recorded.
 - The project owner reviews representative screenshots/video when style, scale, motion, impact or sound cannot be proven by code.

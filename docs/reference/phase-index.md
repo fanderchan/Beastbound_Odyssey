@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **587** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **588** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 603 | [Phase 603：当前渲染路径完整返村与自动检查等待修复](../phase_603_cave_journey_wait_budget.md) | 阶段记录 |
 | 602 | [Phase 602：当前洞穴画面、鼠标操作与性能证据配对](../phase_602_current_cave_evidence.md) | 阶段记录 |
 | 601 | [Phase 601：PC 2D 渲染后端与原生性能复验](../phase_601_compatibility_renderer.md) | 阶段记录 |
 | 600 | [Phase 600：复用人物排序状态与分项耗时验证](../phase_600_retained_actor_depth_state.md) | 阶段记录 |
