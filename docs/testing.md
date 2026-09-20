@@ -78,7 +78,7 @@ Live 检查会创建账号或修改状态，只允许连接操作者明确创建
 
 加 `--cave-journey --timeout-seconds 1800` 可继续自动走完三层、二层、一层和村口，处理途中普通遭遇；核对每层贴图／镜头、实际输入、权威胜利及逐回合完整播放。该模式使用明确的高生命路线队伍，不是难度或原生鼠标验收，见 [Phase 592](phase_592_cave_return_playthrough.md)。
 
-手动操作省略 `--autoplay`。入口准备完成时只请求一次窗口激活；`state.json`／`states.ndjson` 的 `nativeWindow` 分别记录焦点、可绘制状态、渲染循环和绘制帧数。后台补绘也会增加帧数，不能据此判定窗口可操作；遇到旧截图，先核对状态时间与这些字段，不把录制成功当作鼠标通过。[Phase 594](phase_594_manual_cave_return_review.md) 保留了胜利、超时、逃跑和未完成返村的原始记录。
+手动操作省略 `--autoplay`。入口准备完成时只请求一次窗口激活；`state.json`／`states.ndjson` 的 `nativeWindow` 分别记录焦点、可绘制状态、渲染循环和绘制帧数。后台补绘也会增加帧数，不能据此判定窗口可操作；遇到旧截图，先核对状态时间与这些字段，不把录制成功当作鼠标通过。[Phase 594](phase_594_manual_cave_return_review.md) 保留了未完成返村和停画记录；[Phase 596](phase_596_manual_cave_return_completed.md) 已在新录制时钟下完成真实鼠标返村，实际结果含超时和逃跑，不冒充全胜，也不套用要求全胜的自动路线验证器。
 
 人工 `--record` 会额外校验真实帧间距，避免固定步长在活动／不可绘制状态下快于操作人与服务器时间。自动回归及未录制入口不启用该限速；限速报告不得用于正式性能接受。实际前后对照与最小化恢复操作见 [Phase 595](phase_595_manual_recording_clock.md)。
 
