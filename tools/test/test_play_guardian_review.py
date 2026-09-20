@@ -12,6 +12,30 @@ import play_guardian_review as review
 
 
 class GuardianBackendWatchTests(unittest.TestCase):
+    def test_arena_sampling_rejects_lost_final_round_context_and_unloaded_texture(self):
+        battle = {"battle": True, "frame": 13153, "serverRoomStatus": "closed",
+            "arenaEvidence": {"id": "earth_vein_sanctum"}, "arenaTextureReady": True}
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory)
+            def write(states):
+                (run / "states.ndjson").write_text("\n".join(json.dumps(state) for state in states))
+            write([{"battle": False}, battle])
+            result = review._validate_arena_samples(run)
+            self.assertEqual(result["status"], "passed")
+            self.assertEqual(result["battleSamples"], 1)
+            self.assertEqual(result["closedRoomPlaybackSamples"], 1)
+            for invalid in [{"arenaEvidence": {}}, {"arenaEvidence": None},
+                    {"arenaEvidence": {"id": "moss_meadow"}}, {"arenaTextureReady": False}]:
+                with self.subTest(invalid=invalid):
+                    write([battle, {**battle, **invalid}])
+                    with self.assertRaisesRegex(RuntimeError, "13153"):
+                        review._validate_arena_samples(run)
+            write([{"battle": False}])
+            self.assertEqual(review._validate_arena_samples(run)["status"], "not_observed")
+            write([])
+            with self.assertRaisesRegex(RuntimeError, "no observed states"):
+                review._validate_arena_samples(run)
+
     def test_autoplay_rejects_silent_reconnects_despite_successful_battle(self):
         ready = {"state": "open", "phase": "ready", "attempt": 0}
         metric = {"acceptedUpgrades": 1, "rejectedUpgrades": 0, "heartbeatTimeouts": 0,

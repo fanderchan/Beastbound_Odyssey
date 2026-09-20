@@ -14,7 +14,7 @@
 | ---: | --- |
 | 33027 | [client/godot/scripts/qa/auto_check_coordinator.gd](../../client/godot/scripts/qa/auto_check_coordinator.gd) |
 | 28888 | [client/godot/scripts/ui/panel_flow_coordinator.gd](../../client/godot/scripts/ui/panel_flow_coordinator.gd) |
-| 27376 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
+| 27380 | [server/node/src/auth-service.js](../../server/node/src/auth-service.js) |
 | 19231 | [client/godot/scripts/main.gd](../../client/godot/scripts/main.gd) |
 | 9250 | [server/node/src/mysql-store.js](../../server/node/src/mysql-store.js) |
 | 8834 | [client/godot/scripts/progression/player_progress_model.gd](../../client/godot/scripts/progression/player_progress_model.gd) |
@@ -298,7 +298,7 @@
 | [firebud_village_service_layout_check.gd](../../client/godot/scripts/qa/firebud_village_service_layout_check.gd) | 544 |
 | [guardian_battle_playthrough.gd](../../client/godot/scripts/qa/guardian_battle_playthrough.gd) | 254 |
 | [guardian_battle_presentation_check.gd](../../client/godot/scripts/qa/guardian_battle_presentation_check.gd) | 106 |
-| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 174 |
+| [guardian_battle_review.gd](../../client/godot/scripts/qa/guardian_battle_review.gd) | 175 |
 | [hang_matchmaking_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_owner_review_capture.gd) | 716 |
 | [hang_matchmaking_world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd) | 1622 |
 | [map_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/map_awakened_owner_review_capture.gd) | 2654 |
@@ -534,7 +534,7 @@
 
 | 文件 | 行数 |
 | --- | ---: |
-| [auth-service.js](../../server/node/src/auth-service.js) | 27376 |
+| [auth-service.js](../../server/node/src/auth-service.js) | 27380 |
 | [cluster-battle-router.js](../../server/node/src/cluster-battle-router.js) | 895 |
 | [cluster-event-runtime-config.js](../../server/node/src/cluster-event-runtime-config.js) | 333 |
 | [event-cluster-relay.js](../../server/node/src/event-cluster-relay.js) | 581 |
@@ -926,7 +926,7 @@
 | [reward-vault-pagination.test.js](../../server/node/test/reward-vault-pagination.test.js) | 140 |
 | [reward-vault-state.test.js](../../server/node/test/reward-vault-state.test.js) | 243 |
 | [runtime-battle-recovery.test.js](../../server/node/test/runtime-battle-recovery.test.js) | 114 |
-| [runtime-hot-collections-integration.test.js](../../server/node/test/runtime-hot-collections-integration.test.js) | 214 |
+| [runtime-hot-collections-integration.test.js](../../server/node/test/runtime-hot-collections-integration.test.js) | 228 |
 | [runtime-invite-boundary.test.js](../../server/node/test/runtime-invite-boundary.test.js) | 61 |
 | [server-ops-lifecycle.test.js](../../server/node/test/server-ops-lifecycle.test.js) | 628 |
 | [server-profile-public-v2-vector.test.js](../../server/node/test/server-profile-public-v2-vector.test.js) | 93 |
@@ -1016,7 +1016,7 @@
 | [pet_rebirth_balance_audit.mjs](../../tools/pet_rebirth_balance_audit.mjs) | 260 |
 | [pet_rebirth_evaluation_audit.mjs](../../tools/pet_rebirth_evaluation_audit.mjs) | 338 |
 | [pet_wild_capture_growth_audit.mjs](../../tools/pet_wild_capture_growth_audit.mjs) | 330 |
-| [play_guardian_review.py](../../tools/play_guardian_review.py) | 186 |
+| [play_guardian_review.py](../../tools/play_guardian_review.py) | 203 |
 | [prepare_npc_blind_review_packet.py](../../tools/prepare_npc_blind_review_packet.py) | 648 |
 | [progression_leveling_soak.mjs](../../tools/progression_leveling_soak.mjs) | 45 |
 | [progression_route_audit.mjs](../../tools/progression_route_audit.mjs) | 46 |
@@ -1105,7 +1105,7 @@
 | [tools/test/test_map_visual_release_tools.py](../../tools/test/test_map_visual_release_tools.py) | 484 |
 | [tools/test/test_pet_art_batch_audit.py](../../tools/test/test_pet_art_batch_audit.py) | 1793 |
 | [tools/test/test_pet_battle_export_gate.py](../../tools/test/test_pet_battle_export_gate.py) | 4927 |
-| [tools/test/test_play_guardian_review.py](../../tools/test/test_play_guardian_review.py) | 105 |
+| [tools/test/test_play_guardian_review.py](../../tools/test/test_play_guardian_review.py) | 129 |
 | [tools/test/test_prepare_npc_blind_review_packet.py](../../tools/test/test_prepare_npc_blind_review_packet.py) | 470 |
 | [tools/test/test_promote_pet_fusion_runtime_release.py](../../tools/test/test_promote_pet_fusion_runtime_release.py) | 274 |
 | [tools/test/test_record_backpack_awakened_owner_review.py](../../tools/test/test_record_backpack_awakened_owner_review.py) | 195 |

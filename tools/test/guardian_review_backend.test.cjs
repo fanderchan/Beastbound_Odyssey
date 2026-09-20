@@ -49,6 +49,16 @@ test("guardian review uses five HTTP accounts, authoritative encounters and sett
     }
     assert.equal(review.closedRoom()?.status, "closed", "normal commands must finish the real encounter");
     assert.ok(review.closedRoom().battle.result.winnerAccountId, "the prepared QA party must win without outcome injection");
+    for (let index = 0; index < 5; index++) {
+      const recovery = (await review.request(index, "/battle/state")).room;
+      assert.equal(recovery.roomId, start.room.roomId);
+      assert.equal(recovery.status, "closed");
+      assert.equal(recovery.mode, "party_pve");
+      assert.deepEqual(recovery.entry, {mapId: "earth_vein_cave_f4"},
+        "closed-room polling must not replace the final round's cave backdrop with gray");
+      assert.deepEqual(recovery.participants, []);
+      assert.equal(recovery.seed, "");
+    }
   } finally {
     const socketClosed = eventSocket ? once(eventSocket, "close") : Promise.resolve();
     await review.close();

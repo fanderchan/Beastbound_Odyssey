@@ -78,6 +78,8 @@ test("closed battle rooms are removed from the active root and compacted", () =>
   const service = createAuthService({allowPositionTeleport: true});
   const challenger = register(service, "hotrooma", "压缩甲");
   const opponent = register(service, "hotroomb", "压缩乙");
+  const events = [];
+  service.onEvent(event => events.push(event));
   position(service, challenger.session, 10);
   position(service, opponent.session, 11);
 
@@ -105,10 +107,22 @@ test("closed battle rooms are removed from the active root and compacted", () =>
   const diagnosticRecovery = service.snapshot().battleRooms[accepted.room.roomId];
   assert.equal(diagnosticRecovery.status, "closed");
   assert.equal(diagnosticRecovery.seed, "");
-  assert.equal(diagnosticRecovery.entry, null);
+  assert.deepEqual(diagnosticRecovery.entry, {mapId: "firebud_village_gate"},
+    "the final animation still needs its server-authoritative arena location");
   assert.deepEqual(diagnosticRecovery.participants, []);
   assert.equal(diagnosticRecovery.battle.captureCandidatesByActorId, undefined);
   assert.ok(JSON.stringify(diagnosticRecovery).length < activeDiagnosticBytes);
+  const closedEvent = events.find(event => event.type === "battle.room_closed");
+  assert.ok(closedEvent);
+  for (const participant of [challenger, opponent]) {
+    const projected = service.eventForSession(participant.session.token, closedEvent);
+    assert.equal(projected.ok, true);
+    assert.deepEqual(projected.event.room.entry, {mapId: accepted.room.entry.mapId});
+    const replay = service.listEventsForSession(participant.session.token, {afterSeq: 0});
+    const replayedClose = replay.events.find(event => event.type === "battle.room_closed");
+    assert.deepEqual(replayedClose.room.entry, {mapId: accepted.room.entry.mapId},
+      "cold event replay must retain the same bounded arena context");
+  }
 });
 
 test("event replay metadata exposes the retained global window", () => {

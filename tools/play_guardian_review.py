@@ -33,6 +33,22 @@ def _validate_capture(run: Path) -> dict:
     return validate_render_continuity(report)
 
 
+def _validate_arena_samples(run: Path) -> dict:
+    states = [json.loads(line) for line in (run / "states.ndjson").read_text().splitlines()]
+    if not states:
+        raise RuntimeError("Guardian review has no observed states")
+    battles = [state for state in states if state.get("battle") is True]
+    missing = [state.get("frame") for state in battles
+        if not isinstance(state.get("arenaEvidence"), dict)
+        or state["arenaEvidence"].get("id") != "earth_vein_sanctum"
+        or state.get("arenaTextureReady") is not True]
+    if missing:
+        raise RuntimeError(f"Guardian arena missing in {len(missing)} sampled battle states; first frames: {missing[:8]}")
+    return {"status": "passed" if battles else "not_observed", "battleSamples": len(battles),
+        "closedRoomPlaybackSamples": sum(state.get("serverRoomStatus") == "closed" for state in battles),
+        "scope": "sampled arena selection and prepared texture; native visual review remains required"}
+
+
 def _validate_event_stream(run: Path) -> dict:
     states = [json.loads(line)["eventStream"] for line in (run / "states.ndjson").read_text().splitlines()]
     metrics = [json.loads(line) for line in (run / "backend/event-stream.ndjson").read_text().splitlines()]
@@ -140,13 +156,14 @@ def main() -> None:
                         ("SCRIPT ERROR:", "ERROR:", "leaked at exit", "resources still in use at exit")):
                     raise RuntimeError(f"Main review or cleanup failed; inspect {log_path}")
                 continuity = _validate_capture(run)
+                arenas = _validate_arena_samples(run)
                 if args.autoplay:
                     report = json.loads((run / "autoplay.json").read_text())
                     if report.get("status") != "passed":
                         raise RuntimeError(f"Automated playthrough failed: {report.get('errors')}")
                     _validate_event_stream(run)
                 return {"status": "passed", "scope": "Main review capture; subjective owner acceptance pending",
-                    "performanceEvidence": False, "renderContinuity": continuity}
+                    "performanceEvidence": False, "renderContinuity": continuity, "arenaSamples": arenas}
 
             print(f"GUARDIAN_REVIEW_OUTPUT {run}", flush=True)
             finished = threading.Event()

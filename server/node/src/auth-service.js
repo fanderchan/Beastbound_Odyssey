@@ -12534,7 +12534,11 @@ function compactBattleRoomRecovery(room, recoveryAccountIds = []) {
       : [];
   }
   projected.seed = "";
-  projected.entry = null;
+  // The client may still be playing the last turn when this compact recovery
+  // replaces its active room. Keep the authoritative arena location without
+  // retaining the entry's participant positions or other admission details.
+  const mapId = typeof projected.entry?.mapId === "string" ? projected.entry.mapId : "";
+  projected.entry = mapId ? {mapId} : null;
   projected.participants = [];
   return projected;
 }
