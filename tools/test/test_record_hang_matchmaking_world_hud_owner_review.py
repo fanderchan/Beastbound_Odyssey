@@ -73,7 +73,7 @@ def _probe(
 
 def _godot_log() -> str:
     lines = [
-        "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
+        "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
         "Movie Maker mode enabled, recording movie in 1280x720 @ 30 FPS...",
         (
             "PHASE395_WORLD_PARTY_OWNER_REVIEW_START scene=Main.tscn "

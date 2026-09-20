@@ -2539,13 +2539,13 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
             raise Phase399MapPerfError(
                 f"Godot Phase399地图性能日志包含禁止内容：{forbidden}"
             )
-    if "Metal 4.0 - Forward Mobile" not in text:
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
         raise Phase399MapPerfError(
-            "Phase399地图性能验收没有使用真实Metal Forward Mobile"
+            "Phase399地图性能验收没有使用真实OpenGL Compatibility"
         )
     required_start = (
         f"{START_MARKER} scene=Main.tscn entry=MainSceneFlag "
-        "viewport=1280x720 renderer=Metal profile=isolated "
+        "viewport=1280x720 renderer=Compatibility profile=isolated "
         "backend_started=false profile_save=false foreground_start=true"
     )
     if required_start not in text:
@@ -2976,9 +2976,9 @@ def _validate_diagnostic_log(path: Path) -> dict[str, Any]:
             raise Phase399MapPerfError(
                 f"Godot Phase399地图渲染诊断日志包含禁止内容：{forbidden}"
             )
-    if "Metal 4.0 - Forward Mobile" not in text:
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
         raise Phase399MapPerfError(
-            "Phase399地图渲染诊断没有使用真实Metal Forward Mobile"
+            "Phase399地图渲染诊断没有使用真实OpenGL Compatibility"
         )
 
     marker_prefixes = (
@@ -3105,7 +3105,7 @@ def _validate_diagnostic_log(path: Path) -> dict[str, Any]:
         start_fields.get("scene") != "Main.tscn"
         or start_fields.get("entry") != "MainSceneFlag"
         or start_fields.get("viewport") != "1280x720"
-        or start_fields.get("renderer") != "Metal"
+        or start_fields.get("renderer") != "Compatibility"
         or start_fields.get("profile") != "fresh"
         or start_fields.get("status") != "observing"
         or _diagnostic_int(start_fields, "states") != len(DIAGNOSTIC_STATES)
@@ -3599,7 +3599,7 @@ def _run(
             "scene": MAIN_SCENE,
             "entryMode": "MainSceneFlag",
             "viewport": {"width": 1280, "height": 720},
-            "renderer": "Metal 4.0 - Forward Mobile",
+            "renderer": "OpenGL Compatibility",
             "command": CORE._redacted_command(command),
             "states": validation["states"],
             "gates": validation["gates"],
@@ -3729,7 +3729,7 @@ def _run_diagnostic(
             "scene": MAIN_SCENE,
             "entryMode": "MainSceneFlag",
             "viewport": {"width": 1280, "height": 720},
-            "renderer": "Metal 4.0 - Forward Mobile",
+            "renderer": "OpenGL Compatibility",
             "command": CORE._redacted_command(command),
             "states": validation["states"],
             "realInputLatency": validation["realInputLatency"],

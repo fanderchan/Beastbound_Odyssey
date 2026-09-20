@@ -242,9 +242,9 @@ def _validate_godot_perf_log(path: Path, *, mode: str) -> dict[str, Any]:
         raise FirebudV2PerformanceError(
             "Firebud 性能日志包含错误、警告或泄漏：" + ", ".join(found)
         )
-    if "Metal 4.0 - Forward Mobile" not in text:
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
         raise FirebudV2PerformanceError(
-            "Firebud 性能运行没有使用 Metal Forward Mobile"
+            "Firebud 性能运行没有使用 OpenGL Compatibility"
         )
     clean_exit_prefix = "perf probe clean exit: "
     clean_exit_lines = [
@@ -261,7 +261,7 @@ def _validate_godot_perf_log(path: Path, *, mode: str) -> dict[str, Any]:
     output = text[text.find("\n") + 1 :] if text.startswith("$ ") else text
     return {
         "status": "passed",
-        "renderer": "Metal 4.0 - Forward Mobile",
+        "renderer": "OpenGL Compatibility",
         "strictLogGate": "passed",
         "runtimeCleanup": clean_exit,
         "inGamePerfProbe": _parse_in_game_probe(output=output, mode=mode),

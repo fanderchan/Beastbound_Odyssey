@@ -128,7 +128,7 @@ CODEX_RECORDER_CONTRACT_FUNCTION_SHA256 = {
     "_record": "767b9f188430052d33d15506d5d7e1c161513986a0d82b4d20207792fe443ee5",
     "_record_into": "b46bdd64f0fa21b125f958e52e86d56446dd33972ffd826c566e6523138d02ad",
     "_require_main_hosted_capture_wiring": "0d91a34a49a1bfbd5cb77a13dc50bb6279b63a2c9dac3c2988ba061ff281d46a",
-    "_validate_godot_log": "4572b99c7af808747ff8be123736949004397a4a7161a1929172a32801920093",
+    "_validate_godot_log": "0871210178de38ba51bb7f61f9cf9d8876703546d00d20e20800224044784ff4",
     "_write_failure_summary": "264c02f992b9d325e4e190430738f96dd39b8218df51a8492ba4ea2fba9bc4b7",
 }
 BATTLE_LAYOUT_RECORDER_CONTRACT_FUNCTION_SHA256 = {
@@ -143,7 +143,7 @@ BATTLE_LAYOUT_RECORDER_CONTRACT_FUNCTION_SHA256 = {
     "_require_main_flag_wiring": "7a17b45f60b05eac2dc60465ee0edb9540ecdae824d7b38041287bc71f966c44",
     "_strict_json_loads": "a33e05e101212d81700eb07da12dc7f58063c0faed41e4075fe7270099d9369c",
     "_validate_arena_visual_marker": "6f9f06d4612e5abdc1e95c0edbc22e4773ff856638dad51b9841f7df3f29accc",
-    "_validate_godot_log": "621909751df4cc783433a80beabe520f605fe73451eb2d5f3c57700abf1de3c3",
+    "_validate_godot_log": "afddc1bfaf11253281a21bb01f4e6aef5dc5f958ac7b2d476c7f221dd47823f9",
     "_write_failure_summary": "9d4894314a1ed3530fcf1af3d0d1afcd6a7ba237882d13c0c2419832683136f1",
     "main": "9178120f6d68b5e9370fb05ca0fca57dd6cc7e0851a02113fcf56dafe7fe0176",
 }
@@ -157,7 +157,7 @@ BATTLE_LAYOUT_PERF_CONTRACT_FUNCTION_SHA256 = {
     "_parser": "b8fe2acb42ef6c249d78925d69ba16e272bc6ffa894c05f9e647b82ba2c06b7f",
     "_require_perf_wiring": "39bb047b8fffa9059fcb9a841e4630c7903de33c1fdc975710b8aac008b8a19f",
     "_strict_json_loads": "df3ccc478a7cae28e4e53d26115a060dbd73d15b9704e6ed07707a84f4e862dc",
-    "_validate_godot_log": "5826b6754fa1b4c3400381a844929e0e08db5e5625f1d410fcc09bfd7a858565",
+    "_validate_godot_log": "f3ec7fae7c04e3475cc04f9dae1d6332413662afca1c202e7b7af61f7c387789",
     "_write_failure_summary": "9d4894314a1ed3530fcf1af3d0d1afcd6a7ba237882d13c0c2419832683136f1",
     "_write_manifest": "19319ed92ab24c15d29ce555a6966c82807dafe5953a02722206e7f7ab8386a8",
     "main": "f50515d9c20c22b54ba2f25d955daf5c3dce1e3ed9602df4592e92c82f77330f",
@@ -166,7 +166,7 @@ RECORDER_TOP_LEVEL_CONTRACT_SHA256 = {
     "management recorder": "cc729f91ee89f859f510a1b8bcb145653cee973ced3b1210c71419cc20d4fba5",
     "pet codex recorder": "5e876d5d8bfe225583ee62bbfb911071e91a3927ec1987b7d0fcfa3468ddc58e",
     "battle layout recorder": "8ae2768df333ec963859a432006444d14acab0f81a986aab67fe03eef4d7522c",
-    "battle layout perf": "e0a10520ccaf6df3b8b07167ac87a5ec50b33415a923dac9fc8d85c2bc8204be",
+    "battle layout perf": "45864091b8dce6279b28ed344afd0fce422dcdbab8f6437fb72c9d30a296cbaa",
 }
 _LANE_HELPER_MODULE_NAME = "_beastbound_owner_review_lane_helper"
 

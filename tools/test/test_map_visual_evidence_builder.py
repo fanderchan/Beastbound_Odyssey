@@ -170,8 +170,8 @@ def _record_at_mean(
                 "processScopeMonitor": "process_priority_boundary_v1",
                 "processScopePriorities": [-1000000, 1000000],
                 "processScopeReady": True,
-                "renderingDriver": "metal",
-                "renderingMethod": "mobile",
+                "renderingDriver": "opengl3",
+                "renderingMethod": "gl_compatibility",
                 "sampleFrames": builder.PERF_SAMPLE_FRAMES,
                 "status": "passed",
                 "videoAdapterName": "Unit Test GPU",
@@ -467,6 +467,21 @@ class PerformanceParserTests(unittest.TestCase):
         record["stdout"] = "\n".join(lines) + "\n"
         with self.assertRaisesRegex(builder.EvidenceError, "exact 60-frame"):
             builder.parse_perf_run(record)
+
+    def test_repeated_run_rejects_nondefault_renderer(self) -> None:
+        for field, current, rejected in (
+            ("renderingDriver", "opengl3", "metal"),
+            ("renderingMethod", "gl_compatibility", "mobile"),
+        ):
+            record = _record_at_mean("map", "candidate", "idle", 1, 0.2)
+            original = f'"{field}":"{current}"'
+            self.assertIn(original, record["stdout"])
+            record["stdout"] = record["stdout"].replace(
+                original, f'"{field}":"{rejected}"', 1,
+            )
+            with self.subTest(field=field):
+                with self.assertRaises(builder.EvidenceError):
+                    builder.parse_perf_run(record)
 
     def test_repeated_run_rejects_30_fps_window(self) -> None:
         record = _record_at_mean("map", "candidate", "idle", 1, 0.2)

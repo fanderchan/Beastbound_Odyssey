@@ -82,9 +82,9 @@ class RunFirebudV2PerformanceEvidenceTest(unittest.TestCase):
         self.assertNotIn("--review-arg", source)
         self.assertNotIn("--server-url", source)
 
-    def test_strict_log_gate_accepts_clean_metal_and_rejects_warnings(self) -> None:
+    def test_strict_log_gate_accepts_clean_compatibility_and_rejects_warnings(self) -> None:
         clean = (
-            "$ godot\nMetal 4.0 - Forward Mobile\n"
+            "$ godot\nOpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5\n"
             + _output(moving=False)
             + '\nperf probe clean exit: {"status":"passed","audioStreamsDetached":true}\n'
         )

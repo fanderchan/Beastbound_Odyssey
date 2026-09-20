@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Record the first two fusion routes without opening fusion to players.
 
-The recorder launches a standalone QA sequence in a real macOS/Metal Godot
+The recorder launches a standalone QA sequence in a real macOS/OpenGL Compatibility Godot
 window.  It never starts Main, a backend, MySQL, or a player session.  Every
 run uses a disposable self-contained Godot app clone so ``user://`` is
 physically rooted under that run's evidence directory.  Godot's macOS runtime
@@ -151,7 +151,7 @@ FORBIDDEN_TIMING_OPTIONS = frozenset(
 SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
-METAL_LOG_RE = re.compile(r"(?m)^Metal [^\r\n]+$")
+RENDERER_LOG_RE = re.compile(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$")
 MOVIE_LOG_RE = re.compile(
     r"(?m)^Movie Maker mode enabled, recording movie in "
     r"1280[×x]720 @ 30 FPS\.\.\.$"
@@ -1369,8 +1369,10 @@ def _build_godot_command(
         str(GODOT_PROJECT),
         "--display-driver",
         "macos",
+        "--rendering-method",
+        "gl_compatibility",
         "--rendering-driver",
-        "metal",
+        "opengl3",
         "--audio-driver",
         "Dummy",
         "--windowed",
@@ -2086,8 +2088,12 @@ def _validate_sequence_report(
         errors.append("viewport")
     if str(report.get("displayServer", "")).lower() != "macos":
         errors.append("displayServer")
-    if report.get("renderingDriverRequiredByRecorder") != "metal":
+    if report.get("renderingDriverRequiredByRecorder") != "opengl3":
         errors.append("renderingDriverRequiredByRecorder")
+    if str(report.get("renderingDriver", "")).lower() != "opengl3":
+        errors.append("renderingDriver")
+    if report.get("renderingMethod") != "gl_compatibility":
+        errors.append("renderingMethod")
     if report.get("window") != {
         "mode": 0,
         "modeName": "windowed",
@@ -2267,11 +2273,11 @@ def _validate_sequence_report(
 
 def _validate_godot_capture_log(path: Path) -> dict[str, str]:
     text = path.read_text(encoding="utf-8", errors="replace")
-    metal = METAL_LOG_RE.search(text)
+    renderer = RENDERER_LOG_RE.search(text)
     movie = MOVIE_LOG_RE.search(text)
-    if metal is None:
+    if renderer is None:
         raise FusionReviewRecordingError(
-            "Godot 日志没有证明真实 Metal 渲染"
+            "Godot 日志没有证明真实 OpenGL Compatibility 渲染"
         )
     if movie is None:
         raise FusionReviewRecordingError(
@@ -2281,8 +2287,8 @@ def _validate_godot_capture_log(path: Path) -> dict[str, str]:
         raise FusionReviewRecordingError("正式融合录像不得使用 headless")
     return {
         "displayDriver": "macos",
-        "renderingDriver": "metal",
-        "metalEvidence": metal.group(0),
+        "renderingDriver": "opengl3",
+        "rendererEvidence": renderer.group(0),
         "movieWriterEvidence": movie.group(0),
     }
 
@@ -2942,7 +2948,7 @@ def _record_into(
             "normalPlayerEntryUsed": False,
             "standaloneQaSequence": True,
             "visibleMacosWindow": True,
-            "renderingDriver": "metal",
+            "renderingDriver": "opengl3",
             "width": EXPECTED_WIDTH,
             "height": EXPECTED_HEIGHT,
             "fps": float(EXPECTED_FPS),
@@ -3365,7 +3371,7 @@ def _record(args: argparse.Namespace) -> Path:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "在融合生产关闭态下，以真实 macOS/Metal Godot 窗口录制 "
+            "在融合生产关闭态下，以真实 macOS/OpenGL Compatibility Godot 窗口录制 "
             "1280x720、30fps、1.00x、无音频的两条融合路线验收视频。"
         )
     )

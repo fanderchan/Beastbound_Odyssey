@@ -320,7 +320,7 @@ func _run_render_diagnostic() -> void:
 	)
 	print(
 		"PHASE399_MAP_DIAGNOSTIC_START scene=Main.tscn "
-		+ "entry=MainSceneFlag viewport=1280x720 renderer=Metal "
+		+ "entry=MainSceneFlag viewport=1280x720 renderer=Compatibility "
 		+ "profile=fresh backend_started=false profile_save=false "
 		+ "status=observing states=5 warmup_frames=60 sample_frames=300"
 	)
@@ -1546,7 +1546,7 @@ func _run_perf_capture() -> void:
 		return
 	print(
 		"PHASE399_MAP_PERF_START scene=Main.tscn entry=MainSceneFlag "
-		+ "viewport=1280x720 renderer=Metal profile=isolated "
+		+ "viewport=1280x720 renderer=Compatibility profile=isolated "
 		+ "backend_started=false profile_save=false foreground_start=true"
 	)
 

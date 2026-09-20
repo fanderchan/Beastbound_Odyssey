@@ -258,8 +258,8 @@ def _validate_godot_log(path: Path, *, movie_mode: bool) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8", errors="replace")
     if "SCRIPT ERROR:" in text or "Parse Error:" in text:
         raise FirebudV2RecordingError("Godot Firebud v2 日志包含脚本错误")
-    if "Metal 4.0 - Forward Mobile" not in text:
-        raise FirebudV2RecordingError("Firebud v2 验收没有使用 Metal Forward Mobile")
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
+        raise FirebudV2RecordingError("Firebud v2 验收没有使用 OpenGL Compatibility")
     movie_marker = "Movie Maker mode enabled, recording movie in 1280×720 @ 30 FPS"
     if movie_mode and movie_marker not in text:
         raise FirebudV2RecordingError("Firebud v2 MovieWriter 合同缺失")
@@ -281,7 +281,7 @@ def _validate_godot_log(path: Path, *, movie_mode: bool) -> dict[str, Any]:
         raise FirebudV2RecordingError("Firebud v2 Godot 日志缺少 capture 回执")
     return {
         "status": "passed",
-        "renderer": "Metal 4.0 - Forward Mobile",
+        "renderer": "OpenGL Compatibility",
         "movieWriter": "1280x720@30fps" if movie_mode else "disabled",
         "runtimeLeakFree": True,
     }

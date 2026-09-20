@@ -480,7 +480,7 @@ class RecordFirebudV2OwnerReviewTest(unittest.TestCase):
 
     def test_godot_log_rejects_missing_movie_contract_and_runtime_leaks(self) -> None:
         clean_native = "\n".join((
-            "Metal 4.0 - Forward Mobile - Using Device #0",
+            "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
             "map visual review capture: {}",
         ))
         clean_movie = "\n".join((

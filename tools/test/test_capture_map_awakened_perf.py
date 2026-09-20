@@ -50,10 +50,10 @@ def _perf_log(
 ) -> str:
     lines = [
         "Godot Engine v4.7.stable.official",
-        "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
+        "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
         (
             "PHASE399_MAP_PERF_START scene=Main.tscn "
-            "entry=MainSceneFlag viewport=1280x720 renderer=Metal "
+            "entry=MainSceneFlag viewport=1280x720 renderer=Compatibility "
             "profile=isolated backend_started=false profile_save=false "
             f"foreground_start={str(foreground_start).lower()}"
         ),
@@ -205,7 +205,7 @@ def _diagnostic_log(
 
     lines = [
         "Godot Engine v4.7.stable.official",
-        "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
+        "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
         (
             "PHASE399_MAP_DIAGNOSTIC_FOCUS_SETUP status=observed "
             "autofill_guard=true focused_text_before=true "
@@ -217,7 +217,7 @@ def _diagnostic_log(
         ),
         (
             "PHASE399_MAP_DIAGNOSTIC_START scene=Main.tscn "
-            "entry=MainSceneFlag viewport=1280x720 renderer=Metal "
+            "entry=MainSceneFlag viewport=1280x720 renderer=Compatibility "
             "profile=fresh backend_started=false profile_save=false "
             "status=observing states=5 warmup_frames=60 sample_frames=300"
         ),

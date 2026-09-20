@@ -7,6 +7,8 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -73,7 +75,7 @@ def _godot_log() -> str:
         "return_world": 2.0,
     }
     lines = [
-        "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
+        "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
         "Movie Maker mode enabled, recording movie in 1280×720 @ 30 FPS...",
     ]
     for chapter in TOOL.EXPECTED_CHAPTERS:
@@ -91,10 +93,48 @@ def _godot_log() -> str:
 
 
 class RecordMarketAwakenedOwnerReviewTest(unittest.TestCase):
+    def test_native_preflight_and_movie_evidence_cannot_be_swapped(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "capture.log"
+            path.write_text(_godot_log(), encoding="utf-8")
+            movie = TOOL._validate_godot_log(path)
+            self.assertEqual(movie["movieWriter"], "1280x720@30fps")
+            with self.assertRaises(TOOL.MarketAwakenedRecordingError):
+                TOOL._validate_godot_log(path, movie_mode=False)
+            native = "\n".join(line for line in _godot_log().splitlines() if not line.startswith("Movie Maker mode enabled")) + "\n"
+            path.write_text(native, encoding="utf-8")
+            result = TOOL._validate_godot_log(path, movie_mode=False)
+            self.assertEqual(result["movieWriter"], "disabled")
+            with self.assertRaises(TOOL.MarketAwakenedRecordingError):
+                TOOL._validate_godot_log(path)
+
+    def test_recording_uses_owned_lane_and_stops_before_media_on_lane_failure(self) -> None:
+        class LaneStopped(RuntimeError):
+            pass
+
+        with tempfile.TemporaryDirectory() as temporary, \
+             patch.object(TOOL.CORE, "_require_executable", side_effect=lambda value, **_: value), \
+             patch.object(TOOL.CORE, "_isolated_environment", return_value={}), \
+             patch.object(TOOL.CORE, "_run_official_lane_godot_sequence", side_effect=LaneStopped) as owned, \
+             patch.object(TOOL.CORE, "_run_logged") as unowned:
+            args = SimpleNamespace(timeout_seconds=30, godot="godot", ffmpeg="ffmpeg", ffprobe="ffprobe", review_args=[])
+            with self.assertRaises(LaneStopped):
+                TOOL._record_into(args=args, run_id="test", run_dir=Path(temporary))
+            owned.assert_called_once()
+            options = owned.call_args.kwargs
+            native, movie = options["native_command"], options["movie_command"]
+            for command in (native, movie):
+                self.assertEqual(command.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
+                self.assertNotIn("--user-data-dir", command)
+                self.assertIn(TOOL.DEFAULT_CAPTURE_FLAG, command)
+            self.assertNotIn("--write-movie", native)
+            self.assertIn("--write-movie", movie)
+            unowned.assert_not_called()
+            self.assertFalse((Path(temporary) / "summary.json").exists())
+
     def test_command_uses_real_main_fixed_flag_and_media_timing(self) -> None:
         command = TOOL._build_godot_command(
             godot="/opt/godot",
-            user_data_dir=Path("/tmp/market-review-user"),
             avi_path=Path("/tmp/market-review.avi"),
         )
         separator = command.index("--")
@@ -102,7 +142,8 @@ class RecordMarketAwakenedOwnerReviewTest(unittest.TestCase):
         user = command[separator + 1 :]
         self.assertIn("--scene", engine)
         self.assertIn(TOOL.MAIN_SCENE, engine)
-        self.assertIn("--user-data-dir", engine)
+        self.assertNotIn("--user-data-dir", engine)
+        self.assertEqual(user.count(TOOL.CORE.QA_LANE_ARGUMENT), 1)
         self.assertIn("1280x720", engine)
         self.assertEqual(engine[engine.index("--fixed-fps") + 1], "30")
         self.assertEqual(engine[engine.index("--time-scale") + 1], "1.0")
@@ -167,7 +208,7 @@ class RecordMarketAwakenedOwnerReviewTest(unittest.TestCase):
                 ),
                 TOOL.FAILURE_MARKER + "\n" + _godot_log(),
                 _godot_log().replace(
-                    "Metal 4.0 - Forward Mobile",
+                    "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
                     "OpenGL Compatibility",
                 ),
                 _godot_log().replace(

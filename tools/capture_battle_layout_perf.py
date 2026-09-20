@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Capture Phase403 real-Main battle layout performance evidence.
 
-The runner opens the normal Metal ``Main.tscn`` path at 1280x720 and segments
+The runner opens the normal Compatibility ``Main.tscn`` path at 1280x720 and segments
 the built-in ``--perf-probe`` samples into idle, command selection, and real
 cross-frame adjacent-target switching.  It never starts a backend, writes a
 movie, or accepts extra Godot arguments.
@@ -593,13 +593,13 @@ def _validate_environment_payload(payload: dict[str, Any]) -> dict[str, Any]:
         )
         != 60
         or not math.isclose(time_scale, 1.0, abs_tol=1e-9)
-        or payload.get("renderingMethod") != "mobile"
-        or str(payload.get("renderingDriver", "")).lower() != "metal"
+        or payload.get("renderingMethod") != "gl_compatibility"
+        or str(payload.get("renderingDriver", "")).lower() != "opengl3"
         or not video_adapter
         or payload.get("hostPropertyCacheReady") is not True
     ):
         raise Phase403BattleLayoutPerfError(
-            "Phase403性能环境不是聚焦macOS/Metal Mobile/VSync/60FPS"
+            "Phase403性能环境不是聚焦macOS/OpenGL Compatibility/VSync/60FPS"
         )
     return {
         "stage": stage,
@@ -615,8 +615,8 @@ def _validate_environment_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "maxFps": 60,
         "physicsTicksPerSecond": 60,
         "timeScale": 1.0,
-        "renderingMethod": "mobile",
-        "renderingDriver": "metal",
+        "renderingMethod": "gl_compatibility",
+        "renderingDriver": "opengl3",
         "videoAdapter": video_adapter,
         "hostPropertyCacheReady": True,
     }
@@ -955,9 +955,9 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
             raise Phase403BattleLayoutPerfError(
                 f"Phase403性能日志包含禁止内容：{forbidden}"
             )
-    if "Metal 4.0 - Forward Mobile" not in text:
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
         raise Phase403BattleLayoutPerfError(
-            "Phase403性能验收没有使用Metal Forward Mobile"
+            "Phase403性能验收没有使用OpenGL Compatibility"
         )
 
     state_samples: dict[str, list[dict[str, float]]] = {
@@ -1477,7 +1477,7 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         "scene": MAIN_SCENE,
         "entryMode": "MainSceneFlag",
         "viewport": "1280x720",
-        "renderer": "Metal Forward Mobile",
+        "renderer": "OpenGL Compatibility",
         "environment": environment,
         "layoutIdentity": LAYOUT_IDENTITY,
         "states": states,

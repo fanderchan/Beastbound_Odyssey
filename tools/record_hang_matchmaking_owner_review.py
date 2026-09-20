@@ -186,9 +186,9 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         raise HangMatchmakingRecordingError(
             "Godot 挂机匹配验收日志包含脚本错误"
         )
-    if "Metal 4.0 - Forward Mobile" not in text:
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
         raise HangMatchmakingRecordingError(
-            "Godot 挂机匹配验收没有使用 Metal Forward Mobile"
+            "Godot 挂机匹配验收没有使用 OpenGL Compatibility"
         )
     if (
         "Movie Maker mode enabled, recording movie in "
@@ -321,7 +321,7 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
         "backendConnected": False,
         "realMainSceneInstantiated": True,
         "entryMode": "SceneTreeScript",
-        "renderer": "Metal 4.0 - Forward Mobile",
+        "renderer": "OpenGL Compatibility",
         "movieWriter": "1280x720@30fps",
     }
 

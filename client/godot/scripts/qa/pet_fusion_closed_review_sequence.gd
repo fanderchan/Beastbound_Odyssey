@@ -5,7 +5,7 @@ extends SceneTree
 ## This script is intentionally a standalone `--script` entry.  It never wires
 ## the fusion panel into Main, never opens the production runtime switch, and
 ## never owns a network client.  The companion Python recorder launches it with
-## a fresh process-local user-data root, Metal, 1280x720, fixed 30 fps and time
+## a fresh process-local user-data root, Compatibility, 1280x720, fixed 30 fps and time
 ## scale 1.0.
 
 const BalanceCatalogModel := preload(
@@ -163,7 +163,7 @@ func _run() -> void:
 		for _frame_index in range(post_draw_frame_count):
 			await process_frame
 			# `process_frame` resumes before this frame is drawn.  Count the
-			# chapter frame only after the visible Metal viewport completed its
+			# chapter frame only after the visible viewport completed its
 			# draw, otherwise the next chapter could steal the boundary frame.
 			await RenderingServer.frame_post_draw
 			_current_frame += 1
@@ -187,6 +187,11 @@ func _append_production_boundary_errors() -> void:
 		_errors.append("生产融合目录关闭文案不精确")
 	if DisplayServer.get_name().to_lower() != "macos":
 		_errors.append("正式录像必须使用可见 macOS DisplayServer")
+	if (
+		RenderingServer.get_current_rendering_method() != "gl_compatibility"
+		or RenderingServer.get_current_rendering_driver_name().to_lower() != "opengl3"
+	):
+		_errors.append("正式录像必须使用 OpenGL Compatibility 渲染")
 	if root.mode != Window.MODE_WINDOWED:
 		_errors.append("正式录像主窗口不是 windowed 模式")
 	if not root.visible:
@@ -470,7 +475,9 @@ func _finish(success: bool) -> void:
 			"height": VIEWPORT_SIZE.y,
 		},
 		"displayServer": DisplayServer.get_name(),
-		"renderingDriverRequiredByRecorder": "metal",
+		"renderingDriverRequiredByRecorder": "opengl3",
+		"renderingDriver": RenderingServer.get_current_rendering_driver_name(),
+		"renderingMethod": RenderingServer.get_current_rendering_method(),
 		"window": {
 			"mode": int(root.mode),
 			"modeName": (

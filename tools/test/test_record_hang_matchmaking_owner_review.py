@@ -66,7 +66,7 @@ def _probe(
 
 def _godot_log() -> str:
     lines = [
-        "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
+        "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
         "Movie Maker mode enabled, recording movie in 1280×720 @ 30 FPS...",
         (
             "HANG_MATCHMAKING_OWNER_REVIEW_START scene=Main.tscn "
@@ -181,7 +181,7 @@ class RecordHangMatchmakingOwnerReviewTest(unittest.TestCase):
                 _godot_log().replace("entry=SceneTreeScript", "entry=MainFlag"),
                 TOOL.FAILURE_MARKER + "\n" + _godot_log(),
                 _godot_log().replace(
-                    "Metal 4.0 - Forward Mobile",
+                    "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
                     "OpenGL Compatibility",
                 ),
                 _godot_log().replace(

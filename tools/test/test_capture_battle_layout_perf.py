@@ -258,8 +258,8 @@ def _environment_marker(stage: str, **updates: object) -> str:
         "maxFps": 60,
         "physicsTicksPerSecond": 60,
         "timeScale": 1.0,
-        "renderingMethod": "mobile",
-        "renderingDriver": "metal",
+        "renderingMethod": "gl_compatibility",
+        "renderingDriver": "opengl3",
         "videoAdapter": "Apple M5",
         "hostPropertyCacheReady": True,
     }
@@ -435,7 +435,7 @@ def _perf_log(
 ) -> str:
     lines = [
         "Godot Engine v4.7.stable.official",
-        "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
+        "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
         (
             "PHASE412_BATTLE_ARENA_VISUAL id=moss_meadow "
             "bundle=battle_review_arenas_v1 source_map=firebud_village_gate "
@@ -566,7 +566,7 @@ def _perf_log(
 
 
 class CaptureBattleLayoutPerfTest(unittest.TestCase):
-    def test_command_is_real_main_metal_probe_without_movie_or_bypass(self) -> None:
+    def test_command_is_real_main_compatibility_probe_without_movie_or_bypass(self) -> None:
         command = TOOL._build_godot_command(godot="/opt/godot")
         separator = command.index("--")
         engine = command[:separator]
@@ -2060,8 +2060,9 @@ class CaptureBattleLayoutPerfTest(unittest.TestCase):
             ("maxFps", 30),
             ("physicsTicksPerSecond", 30),
             ("timeScale", 0.5),
-            ("renderingMethod", "gl_compatibility"),
+            ("renderingMethod", "mobile"),
             ("renderingDriver", "vulkan"),
+            ("renderingDriver", "metal"),
             ("videoAdapter", ""),
             ("hostPropertyCacheReady", False),
             ("screenRefreshKnown", False),

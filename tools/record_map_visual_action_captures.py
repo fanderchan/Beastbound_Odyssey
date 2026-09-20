@@ -1099,8 +1099,8 @@ def _batch_receipt_from_log(
         raise MapActionCaptureError(
             "批量动作 Godot 日志存在错误或泄漏：" + ", ".join(found)
         )
-    if "Metal 4.0 - Forward Mobile" not in text:
-        raise MapActionCaptureError("批量动作取证没有使用 Metal Forward Mobile")
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
+        raise MapActionCaptureError("批量动作取证没有使用 OpenGL Compatibility")
     if "Movie Maker mode enabled" in text:
         raise MapActionCaptureError("批量动作取证意外进入 MovieWriter")
     action_receipts = [

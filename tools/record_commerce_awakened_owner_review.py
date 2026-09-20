@@ -216,9 +216,9 @@ def _validate_godot_log(
         raise CommerceAwakenedRecordingError(
             "Godot 商业页验收日志包含脚本错误"
         )
-    if "Metal 4.0 - Forward Mobile" not in text:
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
         raise CommerceAwakenedRecordingError(
-            "Godot 商业页验收没有使用 Metal Forward Mobile"
+            "Godot 商业页验收没有使用 OpenGL Compatibility"
         )
     movie_marker_present = (
         "Movie Maker mode enabled, recording movie in "
@@ -294,7 +294,7 @@ def _validate_godot_log(
         "playbackSpeed": 1.0,
         "profileIsolated": True,
         "backendConnected": False,
-        "renderer": "Metal 4.0 - Forward Mobile",
+        "renderer": "OpenGL Compatibility",
         "movieWriter": "1280x720@30fps" if movie_mode else "disabled",
     }
 

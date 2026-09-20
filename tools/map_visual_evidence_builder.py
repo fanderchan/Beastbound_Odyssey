@@ -1087,8 +1087,8 @@ def parse_perf_run(record: dict[str, Any]) -> dict[str, Any]:
             "processScopeMonitor": "process_priority_boundary_v1",
             "processScopePriorities": [-1000000, 1000000],
             "processScopeReady": True,
-            "renderingDriver": "metal",
-            "renderingMethod": "mobile",
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
             "sampleFrames": PERF_SAMPLE_FRAMES,
             "status": "passed",
             "videoAdapterName": runtime_report.get("videoAdapterName")
@@ -1100,7 +1100,7 @@ def parse_perf_run(record: dict[str, Any]) -> dict[str, Any]:
         if (
             not isinstance(runtime_report, dict)
             or set(runtime_report) != set(expected_runtime_report)
-            or str(runtime_report.get("renderingDriver", "")).lower() != "metal"
+            or str(runtime_report.get("renderingDriver", "")).lower() != "opengl3"
             or not str(runtime_report.get("videoAdapterName", "")).strip()
             or any(
                 runtime_report.get(key) != value
@@ -1875,7 +1875,7 @@ def build_performance_report(
         "generatedAtUtc": generated_at,
         "scene": GODOT_SCENE,
         "viewport": [1280, 720],
-        "displayServer": "macOS Metal",
+        "displayServer": "macOS OpenGL Compatibility",
         "movingInputDelivery": "Input.parse_input_event",
         "movingInputFrameSeparated": True,
         "controlledFixedStepFps": 60,
@@ -1899,7 +1899,7 @@ def build_performance_report(
             "sha256": _sha256(receipt),
         },
         "notes": [
-            f"All {len(records)} variants ran through the real Main.tscn non-headless Metal path.",
+            f"All {len(records)} variants ran through the real Main.tscn non-headless Compatibility path.",
             (
                 f"Each matrix cell used {len(repetitions)} fresh-Main samples; the reported mean is the median of sample means, while min/max preserve the full envelope."
                 if repeated

@@ -281,7 +281,7 @@ class EarthVeinLowDisturbanceRecorderTests(unittest.TestCase):
     def test_log_validator_requires_exact_single_process_receipt(self) -> None:
         native_lines = [
             "Godot Engine v4.7.stable.official",
-            "Metal 4.0 - Forward Mobile - Using Device #0",
+            "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
             "earth vein review batch capture: "
             + json.dumps(_final_payload("native")),
         ]

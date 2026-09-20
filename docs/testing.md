@@ -106,6 +106,8 @@ Computer Use 点击报错后，先分别读取最新 UI 状态和当前进程日
 
 分项回调计时用于定位，不能代替正式矩阵。临时包装节点必须保持原优先级和调用逻辑，记录实际帧数、焦点、可绘制状态、位置／排序及跨版本像素对照；它自身仍带测量开销。完整区段波动不应全部归因于某个查询，见 [Phase 600](phase_600_retained_actor_depth_state.md)。
 
+Phase 601 起，当前 macOS 原生验收固定要求默认 `gl_compatibility / opengl3`，并核对引擎 OpenGL Compatibility 日志。旧 Mobile／Metal 回执仅作历史；显式切换后端的比较必须单独标为诊断，不能混入默认路径的正式矩阵。地图／战斗的性能阈值、VSync、连续绘制、真实跨帧输入与前台条件不变。后端变更须同步 QA feature 隔离合同、地图／战斗／录片工具及负例；融合录片还核对实际方法和驱动。普通静止与移动 CPU 分别记录，包含退步项；截图容差必须报告实际差异，不能把近似图片称为逐像素一致。详见 [渲染迁移与验证](phase_601_compatibility_renderer.md)。
+
 世界按需渲染的生产回归纳入 `--auto-camera-check`：双视口相机对照之外，还检查真实 Main 的四层切换、首次跨帧鼠标移动、菜单及战斗往返。`Input.parse_input_event` 入队不等于宿主已收到输入；断言必须核对接收计数和首个已投递帧。普通运行允许静止时省略无变化的绘制；性能探针和审查捕获即使在启动后启用，也必须保持连续绘制，MovieWriter 则在启动时固定该要求。定长采样关闭统计不等于结束测试生命周期：从测量完成、音频清理到 Main 退出仍要连续绘制，见 [Phase 599](phase_599_performance_cleanup_rendering.md)。原有 VSync 策略分别保留，因此探针区段耗时不代表普通模式的整体节能收益。两种模式分别验证，不修改正式矩阵阈值，实测和复验见 [Phase 598](phase_598_world_idle_rendering.md)。
 
 固定帧窗口结束后的 `perf probe runtime timing:` 将模拟 delta 与单调时钟实际间隔分开，详见 [Phase 562](phase_562_runtime_probe_wall_clock.md)。`wallProcessFramesPerSecond` 是处理帧率，不是显示 FPS 或 CPU 百分比；配置 `Engine.max_fps=30` 也不证明限帧有效，`--fixed-fps` 会跳过通常的等待。外部 runner 的 argv 才是引擎启动选项的依据。正常运行的 CPU/FPS 检查必须保留正常帧预算、VSync 和前台绘制条件，单独记录稳态进程占用；不能用固定步长压力运行的瞬时 CPU 替代。新增 timing 不改变既有性能门槛。

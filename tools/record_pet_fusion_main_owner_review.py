@@ -775,8 +775,8 @@ def _validate_godot_log(
             "Godot 融合 Main 日志出现非基线警告："
             + " | ".join(unexpected_warnings or warning_lines)
         )
-    if "Metal 4.0 - Forward Mobile" not in text:
-        raise FusionMainRecordingError("Godot 融合 Main 验收没有使用 Metal")
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
+        raise FusionMainRecordingError("Godot 融合 Main 验收没有使用 OpenGL Compatibility")
     movie_marker = (
         "Movie Maker mode enabled, recording movie in "
         "1280×720 @ 30 FPS"
@@ -890,7 +890,7 @@ def _validate_godot_log(
     return {
         "status": "passed",
         "movieMode": movie_mode,
-        "renderer": "Metal 4.0 - Forward Mobile",
+        "renderer": "OpenGL Compatibility",
         "movieWriter": "1280x720@30fps" if movie_mode else None,
         "knownMainWarningCount": warning_lines.count(KNOWN_MAIN_WARNING),
         "performance": performance,

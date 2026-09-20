@@ -411,7 +411,7 @@ def install(raw_root: Path, generated_at_utc: str, *, replace: bool) -> dict[str
                 "scene": SCENE,
                 "viewport": [1280, 720],
                 "capturedWindowPoints": [640, 392],
-                "displayServer": "macOS Metal",
+                "displayServer": "macOS",
                 "steps": action_config["steps"],
                 "observations": action_config["observations"],
                 "before": before_ref,

@@ -138,7 +138,9 @@ def _sequence_report() -> dict:
         "result": "PASS",
         "viewport": {"width": 1280, "height": 720},
         "displayServer": "macos",
-        "renderingDriverRequiredByRecorder": "metal",
+        "renderingDriverRequiredByRecorder": "opengl3",
+        "renderingDriver": "opengl3",
+        "renderingMethod": "gl_compatibility",
         "window": {
             "mode": 0,
             "modeName": "windowed",
@@ -344,7 +346,7 @@ def _write_formal_portrait_fixture(repo_root: Path) -> Path:
 
 
 class FusionReviewRecorderTests(unittest.TestCase):
-    def test_godot_command_is_visible_metal_isolated_and_one_x(self) -> None:
+    def test_godot_command_is_visible_compatibility_isolated_and_one_x(self) -> None:
         command = TOOL._build_godot_command(
             godot="/opt/godot",
             expected_user_data_root=Path(
@@ -367,8 +369,12 @@ class FusionReviewRecorderTests(unittest.TestCase):
             "macos",
         )
         self.assertEqual(
+            command[command.index("--rendering-method") + 1],
+            "gl_compatibility",
+        )
+        self.assertEqual(
             command[command.index("--rendering-driver") + 1],
-            "metal",
+            "opengl3",
         )
         self.assertEqual(
             command[command.index("--resolution") + 1],
@@ -868,6 +874,19 @@ class FusionReviewRecorderTests(unittest.TestCase):
                 with self.assertRaises(TOOL.FusionReviewRecordingError):
                     TOOL._validate_sequence_report(report)
 
+    def test_sequence_report_requires_actual_compatibility_renderer(self) -> None:
+        for field, value in (
+            ("renderingDriver", "metal"),
+            ("renderingDriver", ""),
+            ("renderingMethod", "mobile"),
+            ("renderingMethod", ""),
+        ):
+            report = _sequence_report()
+            report[field] = value
+            with self.subTest(field=field, value=value):
+                with self.assertRaises(TOOL.FusionReviewRecordingError):
+                    TOOL._validate_sequence_report(report)
+
     def test_chapter_samples_use_each_reported_center(self) -> None:
         report = _sequence_report()
         samples = TOOL._chapter_sample_times(report)
@@ -878,18 +897,18 @@ class FusionReviewRecorderTests(unittest.TestCase):
         self.assertEqual(samples[0][1], 2.0)
         self.assertEqual(samples[-1][1], 28.0)
 
-    def test_capture_log_requires_metal_and_exact_movie_contract(self) -> None:
+    def test_capture_log_requires_compatibility_and_exact_movie_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "godot.log"
             path.write_text(
                 "Godot Engine v4.7\n"
-                "Metal 4.0 - Forward Mobile - Using Device #0: Apple\n"
+                "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5\n"
                 "Movie Maker mode enabled, recording movie in "
                 "1280×720 @ 30 FPS...\n",
                 encoding="utf-8",
             )
             evidence = TOOL._validate_godot_capture_log(path)
-            self.assertEqual(evidence["renderingDriver"], "metal")
+            self.assertEqual(evidence["renderingDriver"], "opengl3")
             path.write_text(
                 "Godot Engine v4.7\n"
                 "Movie Maker mode enabled, recording movie in "

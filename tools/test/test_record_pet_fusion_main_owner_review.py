@@ -221,7 +221,7 @@ def _godot_log(
 ) -> str:
     lines = [
         "Godot Engine v4.7.stable.official.5b4e0cb0f",
-        "Metal 4.0 - Forward Mobile - Using Device #0: Apple - Test",
+        "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
     ]
     if movie:
         lines.append(

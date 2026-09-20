@@ -131,7 +131,6 @@ def _new_run_id() -> str:
 def _build_godot_command(
     *,
     godot: str,
-    user_data_dir: Path,
     avi_path: Path,
     capture_flag: str = DEFAULT_CAPTURE_FLAG,
     review_args: Sequence[str] = (),
@@ -143,7 +142,6 @@ def _build_godot_command(
     try:
         return CORE._build_godot_command(
             godot=godot,
-            user_data_dir=user_data_dir,
             avi_path=avi_path,
             capture_flag=capture_flag,
             review_args=review_args,
@@ -227,7 +225,7 @@ def _validate_probe(probe: dict[str, Any]) -> dict[str, Any]:
     return metadata
 
 
-def _validate_godot_log(path: Path) -> dict[str, Any]:
+def _validate_godot_log(path: Path, *, movie_mode: bool = True) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8")
     if FAILURE_MARKER in text:
         raise Phase399MapRecordingError(
@@ -247,18 +245,21 @@ def _validate_godot_log(path: Path) -> dict[str, Any]:
             raise Phase399MapRecordingError(
                 f"Godot Phase399正式地图日志包含禁止内容：{forbidden}"
             )
-    if "Metal 4.0 - Forward Mobile" not in text:
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
         raise Phase399MapRecordingError(
-            "Godot Phase399正式地图录像没有使用Metal Forward Mobile"
+            "Godot Phase399正式地图录像没有使用OpenGL Compatibility"
         )
-    if re.search(
-        r"Movie Maker mode enabled, recording movie in "
-        r"1280(?:x|×)720 @ 30 FPS",
-        text,
-    ) is None:
-        raise Phase399MapRecordingError(
-            "Godot Phase399正式地图录像没有确认1280x720@30fps Movie Maker"
-        )
+    if movie_mode:
+        if re.search(
+            r"Movie Maker mode enabled, recording movie in "
+            r"1280(?:x|×)720 @ 30 FPS",
+            text,
+        ) is None:
+            raise Phase399MapRecordingError(
+                "Godot Phase399正式地图录像没有确认1280x720@30fps Movie Maker"
+            )
+    elif "Movie Maker mode enabled" in text:
+        raise Phase399MapRecordingError("原生预检不得进入 MovieWriter")
     required_fragments = (
         START_MARKER,
         "scene=Main.tscn entry=MainSceneFlag viewport=1280x720 "
@@ -539,28 +540,36 @@ def _record_into(
     godot = CORE._require_executable(args.godot, label="Godot")
     ffmpeg = CORE._require_executable(args.ffmpeg, label="ffmpeg")
     ffprobe = CORE._require_executable(args.ffprobe, label="ffprobe")
-    user_data_dir = run_dir / "user-data"
     temporary_dir = run_dir / "tmp"
-    user_data_dir.mkdir(parents=False, exist_ok=False)
     temporary_dir.mkdir(parents=False, exist_ok=False)
-    environment = CORE._isolated_environment(temporary_dir)
+    base_environment = CORE._isolated_environment(temporary_dir)
 
     avi_path = run_dir / "map-awakened-owner-review-1x.avi"
     video_path = run_dir / "map-awakened-owner-review-1x.mp4"
     godot_log = run_dir / "godot-recording.log"
     command = _build_godot_command(
         godot=godot,
-        user_data_dir=user_data_dir,
         avi_path=avi_path,
         capture_flag=DEFAULT_CAPTURE_FLAG,
     )
-    CORE._run_logged(
-        command,
-        log_path=godot_log,
-        timeout_seconds=timeout_seconds,
-        environment=environment,
+    native_log = run_dir / "godot-native.log"
+    native_command = CORE._build_native_godot_command(
+        godot=godot, capture_flag=DEFAULT_CAPTURE_FLAG, review_args=(),
     )
-    godot_sequence = _validate_godot_log(godot_log)
+    lane_evidence = CORE._run_official_lane_godot_sequence(
+        run_dir=run_dir,
+        godot=godot,
+        base_environment=base_environment,
+        native_command=native_command,
+        native_log=native_log,
+        native_log_validator=lambda path: _validate_godot_log(path, movie_mode=False),
+        movie_command=command,
+        movie_log=godot_log,
+        movie_log_validator=_validate_godot_log,
+        timeout_seconds=timeout_seconds,
+    )
+    environment = lane_evidence["environment"]
+    godot_sequence = lane_evidence["movie"]["logValidation"]
     raw_movie = CORE._artifact_record(avi_path)
 
     transcode_log = run_dir / "ffmpeg-transcode.log"
@@ -739,6 +748,11 @@ def _record_into(
     CORE._write_json(metadata_path, metadata)
 
     hash_paths = [
+        native_log,
+        Path(lane_evidence["lifecyclePath"]),
+        run_dir / "qa-lane-owner.json",
+        run_dir / "godot-version.log",
+        run_dir / "godot-help.log",
         avi_path,
         video_path,
         probe_path,
@@ -791,7 +805,15 @@ def _record_into(
             ],
         },
         "isolation": {
-            "userData": CORE._user_data_inventory(user_data_dir),
+            "qaLane": {
+                "lane": CORE.QA_LANE,
+                "feature": CORE.QA_LANE_FEATURE,
+                "owner": lane_evidence["session"]["owner"],
+                "laneRoot": lane_evidence["session"]["godotLaneRoot"],
+                "realBeforeSha256": lane_evidence["session"]["realInventorySha256"],
+            },
+            "laneFreshAtRecorderStart": True,
+            "qaLaneCleaned": True,
             "temporaryDirectory": CORE._repo_relative(temporary_dir),
             "normalPlayerSavePathUsed": False,
             "profileSaveEnabled": False,
@@ -804,7 +826,18 @@ def _record_into(
             "ffprobe": CORE._capture_version(ffprobe, ["-version"]),
             "python": sys.version.splitlines()[0],
         },
-        "command": CORE._redacted_command(command),
+        "commands": {
+            "native": CORE._redacted_command(native_command),
+            "movie30": CORE._redacted_command(command),
+        },
+        "qaLaneSourceCheck": lane_evidence["sourceCheck"],
+        "qaLaneInitialVerification": lane_evidence["initialVerification"],
+        "qaLaneNativeAttestation": lane_evidence["native"]["attestation"],
+        "qaLaneMovieAttestation": lane_evidence["movie"]["attestation"],
+        "qaLaneCleanup": lane_evidence["cleanup"],
+        "qaLanePostCleanupInspect": lane_evidence["postCleanupInspect"],
+        "qaLaneLifecycle": CORE._artifact_record(lane_evidence["lifecyclePath"]),
+        "nativeSequence": lane_evidence["native"]["logValidation"],
         "godotSequence": godot_sequence,
         "rawMovie": raw_movie,
         "video": video,
@@ -829,6 +862,7 @@ def _record_into(
         "sha256Manifest": CORE._artifact_record(hash_manifest_path),
         "logs": {
             "godot": CORE._artifact_record(godot_log),
+            "native": CORE._artifact_record(native_log),
             "transcode": CORE._artifact_record(transcode_log),
         },
         "ownerReviewStatus": "pending",

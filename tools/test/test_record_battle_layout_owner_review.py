@@ -245,7 +245,7 @@ def _attack_marker_lines(
 def _godot_log() -> str:
     lines = [
         "Godot Engine v4.7.stable.official",
-        "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
+        "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
         "Movie Maker mode enabled, recording movie in 1280x720 @ 30 FPS",
         (
             "PHASE412_BATTLE_ARENA_VISUAL id=moss_meadow "

@@ -2982,13 +2982,13 @@ func _print_perf_environment(stage: String) -> bool:
 		or int(snapshot.get("maxFps", 0)) != 60
 		or int(snapshot.get("physicsTicksPerSecond", 0)) != 60
 		or not is_equal_approx(float(snapshot.get("timeScale", 0.0)), 1.0)
-		or str(snapshot.get("renderingMethod", "")) != "mobile"
-		or str(snapshot.get("renderingDriver", "")).to_lower() != "metal"
+		or str(snapshot.get("renderingMethod", "")) != "gl_compatibility"
+		or str(snapshot.get("renderingDriver", "")).to_lower() != "opengl3"
 		or str(snapshot.get("videoAdapter", "")).strip_edges() == ""
 		or not bool(snapshot.get("hostPropertyCacheReady", false))
 	):
 		_fail_capture(
-			"性能窗口运行环境不是聚焦macOS/Metal Mobile/VSync/60FPS：%s"
+			"性能窗口运行环境不是聚焦macOS/OpenGL Compatibility/VSync/60FPS：%s"
 			% JSON.stringify(snapshot)
 		)
 		return false

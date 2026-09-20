@@ -6,7 +6,7 @@ config/name="Beastbound Odyssey / 万兽纪元"
 config/description="Godot 4.7 2D client prototype for a StoneAge-inspired pet adventure."
 run/main_scene="res://scenes/Main.tscn"
 run/max_fps=60
-config/features=PackedStringArray("4.7", "Mobile")
+config/features=PackedStringArray("4.7", "GL Compatibility")
 config/use_custom_user_dir.beastbound_qa_automation=true
 config/custom_user_dir_name.beastbound_qa_automation="BeastboundOdysseyQA_Automation"
 config/use_custom_user_dir.beastbound_qa_client1=true
@@ -48,6 +48,6 @@ sprint={
 
 [rendering]
 
-renderer/rendering_method="mobile"
+renderer/rendering_method="gl_compatibility"
 textures/canvas_textures/default_texture_filter=0
 textures/vram_compression/import_etc2_astc=true

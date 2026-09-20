@@ -785,9 +785,9 @@ def _require_perf_evidence_contract(capture_source: str) -> None:
         not in environment_print_source
         or 'is_equal_approx(float(snapshot.get("timeScale", 0.0)), 1.0)'
         not in environment_print_source
-        or 'str(snapshot.get("renderingMethod", "")) != "mobile"'
+        or 'str(snapshot.get("renderingMethod", "")) != "gl_compatibility"'
         not in environment_print_source
-        or 'str(snapshot.get("renderingDriver", "")).to_lower() != "metal"'
+        or 'str(snapshot.get("renderingDriver", "")).to_lower() != "opengl3"'
         not in environment_print_source
         or 'str(snapshot.get("videoAdapter", "")).strip_edges() == ""'
         not in environment_print_source
@@ -2890,9 +2890,9 @@ def _validate_godot_log(
             raise Phase403BattleLayoutRecordingError(
                 f"Godot Phase403录像日志包含禁止内容：{forbidden}"
             )
-    if "Metal 4.0 - Forward Mobile" not in text:
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
         raise Phase403BattleLayoutRecordingError(
-            "Phase403正式录像没有使用Metal Forward Mobile"
+            "Phase403正式录像没有使用OpenGL Compatibility"
         )
     movie_maker_present = re.search(
         r"Movie Maker mode enabled, recording movie in "

@@ -70,7 +70,7 @@ def _probe(
 def _godot_log(*, perf_mode: str = "movie30") -> str:
     fps = 60 if perf_mode == "native" else 30
     lines = [
-        "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
+        "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
     ]
     if perf_mode == "movie30":
         lines.append(

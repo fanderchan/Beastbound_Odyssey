@@ -1045,8 +1045,8 @@ def _payload_from_log(path: Path, *, movie_mode: bool) -> dict[str, Any]:
         raise EarthVeinBatchRecordingError(
             "Earth batch Godot 日志存在错误或泄漏：" + ", ".join(found)
         )
-    if "Metal 4.0 - Forward Mobile" not in text:
-        raise EarthVeinBatchRecordingError("Earth batch 没有使用 Metal Forward Mobile")
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
+        raise EarthVeinBatchRecordingError("Earth batch 没有使用 OpenGL Compatibility")
     movie_marker = "Movie Maker mode enabled, recording movie in 1280×720 @ 30 FPS"
     if movie_mode and movie_marker not in text:
         raise EarthVeinBatchRecordingError("Earth batch MovieWriter 合同缺失")

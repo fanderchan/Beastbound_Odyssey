@@ -547,7 +547,7 @@ class RecordMapVisualActionCapturesTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             log = Path(temp) / "godot.log"
             log.write_text(
-                "Metal 4.0 - Forward Mobile\n"
+                "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5\n"
                 + "\n".join(
                     TOOL.BATCH_PROGRESS_PREFIX
                     + json.dumps({
@@ -578,7 +578,7 @@ class RecordMapVisualActionCapturesTest(unittest.TestCase):
             self.assertEqual(actual, payload)
             payload["userVisibleWindowOpenCount"] = 20
             log.write_text(
-                "Metal 4.0 - Forward Mobile\n"
+                "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5\n"
                 + "\n".join(
                     TOOL.BATCH_PROGRESS_PREFIX + "{}"
                     for _index in range(40)
@@ -603,7 +603,7 @@ class RecordMapVisualActionCapturesTest(unittest.TestCase):
             payload["userVisibleWindowOpenCount"] = 1
             payload["status"] = "failed"
             log.write_text(
-                "Metal 4.0 - Forward Mobile\n"
+                "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5\n"
                 + "\n".join(
                     TOOL.BATCH_PROGRESS_PREFIX + "{}"
                     for _index in range(40)
@@ -1093,7 +1093,7 @@ class RecordMapVisualActionCapturesTest(unittest.TestCase):
                 "errors": ["later action failed"],
             }
             (batch_root / "godot.log").write_text(
-                "Metal 4.0 - Forward Mobile\n"
+                "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5\n"
                 + TOOL.BATCH_PROGRESS_PREFIX + "{}\n"
                 + TOOL.BATCH_PROGRESS_PREFIX + "{}\n"
                 + "map visual review capture: {}\n"

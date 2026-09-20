@@ -525,9 +525,9 @@ def _validate_godot_log(
             "Godot 图鉴验收日志未通过零错误／零警告／零泄漏门禁："
             + ", ".join(found)
         )
-    if "Metal 4.0 - Forward Mobile" not in text:
+    if re.search(r"(?m)^OpenGL API [^\r\n]+ - Compatibility - Using Device: [^\r\n]+$", text) is None:
         raise PetCodexRecordingError(
-            "Godot 图鉴验收没有使用 Metal Forward Mobile"
+            "Godot 图鉴验收没有使用 OpenGL Compatibility"
         )
     movie_marker = (
         "Movie Maker mode enabled, recording movie in "
@@ -723,7 +723,7 @@ def _validate_godot_log(
         "backendConnected": False,
         "realMainSceneInstantiated": True,
         "entryMode": "MainSceneFlag",
-        "renderer": "Metal 4.0 - Forward Mobile",
+        "renderer": "OpenGL Compatibility",
         "movieWriter": (
             "1280x720@30fps" if expected_perf_mode == "movie30" else None
         ),

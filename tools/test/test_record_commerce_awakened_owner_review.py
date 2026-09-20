@@ -73,7 +73,7 @@ def _godot_log(*, movie_mode: bool = True) -> str:
         "return_world": 2.5,
     }
     lines = [
-        "Metal 4.0 - Forward Mobile - Using Device #0: Apple",
+        "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
     ]
     if movie_mode:
         lines.append(
@@ -193,7 +193,7 @@ class RecordCommerceAwakenedOwnerReviewTest(unittest.TestCase):
                 ),
                 TOOL.FAILURE_MARKER + "\n" + _godot_log(),
                 _godot_log().replace(
-                    "Metal 4.0 - Forward Mobile",
+                    "OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5",
                     "OpenGL Compatibility",
                 ),
                 _godot_log().replace(

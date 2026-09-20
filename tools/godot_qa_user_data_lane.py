@@ -135,7 +135,7 @@ HELPER_CONTRACT_FUNCTION_SHA256 = {
     "recover_lane": "af5ef6a199f4b2f3f3644cf4329deb4bf5d90cfc571f663881454cd6e1d55f47",
     "recover_stale_lane": "c24fcccf3bf31910ec2c84e3d56222104c2d780dea9b50dd024c68d1af8946f9",
     "validate_repository_contract": "4ba4866c16485a47b930ab8ebb485c6106482da13f7705d10ed56f9737b4c746",
-    "validate_repository_sources": "966b7fb8e4c0f9e2992c24fe50aad2e55291444c0bee1afdb5d870766b36bf4e",
+    "validate_repository_sources": "3cd8e3eff6af7e9d52e732ee9f62d63ac9221b76ab4bdf2fe7d5896396646eda",
     "verify_lane": "daed73b13c70c4557a058a55440e10f2d7ea0c770efa8b8dec88cfdfb2e94313",
 }
 MAIN_CONTRACT_FUNCTION_SHA256: dict[str, str] = {
@@ -3079,7 +3079,7 @@ def validate_repository_sources(
         for line in project_text.splitlines()
         if line.strip().startswith("config/features=")
     ]
-    if actual_base_feature_lines != ['config/features=PackedStringArray("4.7", "Mobile")']:
+    if actual_base_feature_lines != ['config/features=PackedStringArray("4.7", "GL Compatibility")']:
         raise LaneSafetyError("project base features must not activate a reserved QA user-data lane")
     forbidden_main = (
         "--user-data-dir",

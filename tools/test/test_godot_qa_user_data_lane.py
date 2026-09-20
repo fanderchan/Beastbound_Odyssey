@@ -1680,14 +1680,14 @@ class GodotQaLaneSourceContractTests(unittest.TestCase):
                         self._validate(project=self.project_text.replace(f"{line}\n", "", 1))
 
     def test_reserved_lane_features_cannot_enter_project_base_features(self) -> None:
-        base_features = 'config/features=PackedStringArray("4.7", "Mobile")'
+        base_features = 'config/features=PackedStringArray("4.7", "GL Compatibility")'
         self.assertEqual(self.project_text.count(base_features), 1)
         for lane_record in LANES.values():
             feature = lane_record["feature"]
             with self.subTest(feature=feature):
                 mutated = self.project_text.replace(
                     base_features,
-                    f'config/features=PackedStringArray("4.7", "Mobile", "{feature}")',
+                    f'config/features=PackedStringArray("4.7", "GL Compatibility", "{feature}")',
                     1,
                 )
                 mutated += f"\n; retained old literal: {base_features}\n"

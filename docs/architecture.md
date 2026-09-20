@@ -20,6 +20,8 @@ flowchart TD
 
 [Main.tscn](../client/godot/scenes/Main.tscn) 有意保持为 bootstrap。运行时场景、面板和协调主要来自脚本；看见空场景不意味着系统缺失。
 
+PC 客户端默认使用 Godot Compatibility 渲染器。`project.godot` 同时声明 `GL Compatibility` 功能标记和 `gl_compatibility` 方法；当前 macOS 原生验证对应 `opengl3` 驱动。世界、人物、战斗和 UI 仍走原有 2D CanvasItem 路径，地图、比例、相机与玩法规则不随渲染后端改变。选择依据、普通 CPU 对照及当前验收范围见 [Phase 601](phase_601_compatibility_renderer.md)；不要把固定步长脚本耗时当作实际显示帧率或多人容量。
+
 ## 客户端的职责边界
 
 | 位置 | 职责与关键入口 |
