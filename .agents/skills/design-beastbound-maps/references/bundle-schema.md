@@ -432,10 +432,15 @@ The required `catalogContractCheck` is a frozen JSON report produced by the
 Godot runtime/catalog check. It uses report type
 `beastbound.map_visual_catalog_contract`, a valid UTC `generatedAtUtc`, matching
 `bundleId`, `result: "PASS"`, and `testedMapIds` exactly covering the bundle. It
-freezes the selected live catalog SHA in `catalogSha256`: released runtime art
+freezes the catalog SHA at capture time in `catalogSha256`: released runtime art
 uses `map_visual_catalog.json`, while an exact
 `owner_review_pending`/`pending`/`false`/`false` QA candidate uses
-`map_visual_review_catalog.json`. The review entry's `bundleManifest` and
+`map_visual_review_catalog.json`. This is a historical lowercase SHA-256, not a
+requirement that unrelated catalog entries remain unchanged forever. Both the
+Godot check and offline auditor independently verify the current target map's
+catalog membership, manifest path, binding bytes and authoritative map-data
+hashes. Never rewrite a frozen report to match an unrelated catalog change.
+The selected entry's `bundleManifest` and
 `bindingPath` must be in-project `res://` files resolving to the audited bundle
 and its byte-identical binding. A pending review report may be structurally
 `PASS`, but it never makes the bundle release-ready; owner acceptance, released
@@ -449,9 +454,16 @@ the bundle and each entry has positive `groundDraws`, `objects`, and
 against the real `mapId`, `blockedCells`, spawn cells, warp source/destination
 cells, and NPC approach/protected cells. Python verifies the report's own
 path/SHA and declared bundle/binding/map-data snapshots. The default strict
-Godot run validates the complete report type, timestamp, catalog SHA, map
+Godot run validates the complete report type, timestamp, historical catalog SHA, map
 summaries, check matrix, empty errors, and current authoritative hashes; Godot
 also owns the gameplay comparison and production of those hashes.
+
+The promotion tool stages only the selected bundle's maps into the primary
+catalog. Additional review-only candidates stay in the review catalog, whose
+bytes are not changed by promotion. The review catalog must still include all
+primary entries, and unrelated primary entries must remain identical. Target
+manifest/binding mismatches, undeclared aliases of the selected bundle and
+catalog changes between preparation and application are rejected.
 
 ```json
 {

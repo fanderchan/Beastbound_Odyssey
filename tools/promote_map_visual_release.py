@@ -257,12 +257,12 @@ def _prepare_primary_catalog_promotion(
         review_path,
         label=REVIEW_CATALOG_PATH.name,
     )
-    expected_review_ids = set(primary_entries) | map_ids
-    if set(review_entries) != expected_review_ids:
+    promoted_ids = set(primary_entries) | map_ids
+    missing_review_ids = promoted_ids - set(review_entries)
+    if missing_review_ids:
         raise PromotionError(
-            "review catalog 必须是完整的下一版正式目录；"
-            f"missing={sorted(expected_review_ids - set(review_entries))!r} "
-            f"extra={sorted(set(review_entries) - expected_review_ids)!r}"
+            "review catalog 必须包含完整的下一版正式目录；"
+            f"missing={sorted(missing_review_ids)!r}"
         )
     for map_id, primary_entry in primary_entries.items():
         if map_id not in map_ids and review_entries.get(map_id) != primary_entry:
@@ -274,6 +274,11 @@ def _prepare_primary_catalog_promotion(
     expected_manifest_path = (
         "res://" + (relative_bundle / MANIFEST_NAME).as_posix()
     )
+    for map_id, entry in review_entries.items():
+        if map_id not in map_ids and entry["bundleManifest"] == expected_manifest_path:
+            raise PromotionError(
+                f"review catalog 将本 bundle 绑定到未声明 mapId：{map_id}"
+            )
     manifest_bindings: dict[str, str] = {}
     bindings = manifest.get("mapBindings")
     if isinstance(bindings, list):
@@ -304,8 +309,20 @@ def _prepare_primary_catalog_promotion(
 
     primary_bytes = primary_path.read_bytes()
     review_bytes = review_path.read_bytes()
+    # Other pending bundles share this review queue. Promote only the requested
+    # maps while retaining every unrelated primary entry and the review bytes.
+    # Preserve the historical byte-exact result when the queue has no extras.
+    promoted_bytes = review_bytes
+    if set(review_entries) != promoted_ids:
+        promoted_bytes = _json_bytes({
+            "schemaVersion": 1,
+            "entries": [
+                entry for map_id, entry in review_entries.items()
+                if map_id in promoted_ids
+            ],
+        })
     return (
-        review_bytes,
+        promoted_bytes,
         _sha256_bytes(primary_bytes),
         _sha256_bytes(review_bytes),
     )

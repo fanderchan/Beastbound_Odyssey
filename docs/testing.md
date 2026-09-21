@@ -68,6 +68,8 @@ node tools/run_godot_auto_checks.mjs --only --auto-auth-check --fail-fast --time
 
 地图美术检查中的生命周期关闭只证明候选素材没有加载，不能证明玩法地图不可进入。验证首发延期的地图内容时，需独立覆盖普通客户端入口／导航、无传送捷径的服务端合法行走与切图、已有角色位置恢复及相关任务／挂机路线；显式 review preview 不替代普通启动。当前岩脉四层仍可正常传送但回退到网格，实证与复现边界见 [Phase610](phase_610_map_content_and_art_access.md)。
 
+地图提升按单个 bundle 准备目录，不能整份合并评审队列。目录报告的全局哈希是采集时的历史身份；当前目标地图的路径、素材和权威数据必须继续精确匹配。工具回归使用 `python3 -B -m unittest tools.test.test_map_visual_release_tools` 和 `python3 -B .agents/skills/design-beastbound-maps/tests/test_audit_map_bundle.py`，具体故障与修复见 [Phase614](phase_614_scoped_map_promotion_preflight.md)。所有者接受后仍须更新正式目录对应的 runtime canary，运行严格检查并验证普通 Main 的实际画面；只读目录预检不等于已启用。
+
 ## 联机 QA
 
 Live 检查会创建账号或修改状态，只允许连接操作者明确创建的一次性本地 QA 后端。普通玩家的本机 MySQL 服务也不是默认的 QA 写入目标。

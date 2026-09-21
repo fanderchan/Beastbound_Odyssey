@@ -1033,7 +1033,7 @@
 | [prepare_npc_blind_review_packet.py](../../tools/prepare_npc_blind_review_packet.py) | 648 |
 | [progression_leveling_soak.mjs](../../tools/progression_leveling_soak.mjs) | 45 |
 | [progression_route_audit.mjs](../../tools/progression_route_audit.mjs) | 46 |
-| [promote_map_visual_release.py](../../tools/promote_map_visual_release.py) | 1148 |
+| [promote_map_visual_release.py](../../tools/promote_map_visual_release.py) | 1165 |
 | [promote_npc_art_release.py](../../tools/promote_npc_art_release.py) | 1030 |
 | [promote_pet_battle_release_cache.py](../../tools/promote_pet_battle_release_cache.py) | 230 |
 | [promote_pet_fusion_runtime_release.py](../../tools/promote_pet_fusion_runtime_release.py) | 1269 |
@@ -1116,7 +1116,7 @@
 | [tools/test/test_install_pet_battle_bundle.py](../../tools/test/test_install_pet_battle_bundle.py) | 1330 |
 | [tools/test/test_map_performance_batch.py](../../tools/test/test_map_performance_batch.py) | 179 |
 | [tools/test/test_map_visual_evidence_builder.py](../../tools/test/test_map_visual_evidence_builder.py) | 1456 |
-| [tools/test/test_map_visual_release_tools.py](../../tools/test/test_map_visual_release_tools.py) | 484 |
+| [tools/test/test_map_visual_release_tools.py](../../tools/test/test_map_visual_release_tools.py) | 542 |
 | [tools/test/test_pet_art_batch_audit.py](../../tools/test/test_pet_art_batch_audit.py) | 1793 |
 | [tools/test/test_pet_battle_export_gate.py](../../tools/test/test_pet_battle_export_gate.py) | 4927 |
 | [tools/test/test_play_guardian_review.py](../../tools/test/test_play_guardian_review.py) | 187 |

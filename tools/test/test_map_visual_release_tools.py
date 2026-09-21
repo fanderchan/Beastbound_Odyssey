@@ -318,6 +318,64 @@ class MapVisualPromotionTest(unittest.TestCase):
                     reviewed_at="2026-07-23T12:00:00Z",
                 )
 
+    def test_other_review_only_candidate_is_not_promoted_or_rewritten(self) -> None:
+        for replacing in (False, True):
+            with self.subTest(replacing=replacing), tempfile.TemporaryDirectory() as temporary:
+                bundle = self._fixture(Path(temporary))
+                godot_root = promotion._find_godot_root(bundle)
+                primary_path = godot_root / promotion.PRIMARY_CATALOG_PATH
+                review_path = godot_root / promotion.REVIEW_CATALOG_PATH
+                primary = json.loads(primary_path.read_bytes())
+                if not replacing:
+                    primary["entries"] = [
+                        entry for entry in primary["entries"]
+                        if entry["mapId"] != "fixture_map"
+                    ]
+                    primary_path.write_bytes(promotion._json_bytes(primary))
+                original_primary_bytes = primary_path.read_bytes()
+                review = json.loads(review_path.read_bytes())
+                review["entries"].insert(0, {
+                    "mapId": "other_candidate",
+                    "bundleManifest": "res://assets/maps/other/map-visual-bundle.json",
+                    "bindingPath": "res://assets/maps/other/bindings/other_candidate.json",
+                })
+                review_bytes = promotion._json_bytes(review)
+                review_path.write_bytes(review_bytes)
+                expected_entries = [
+                    entry for entry in review["entries"]
+                    if entry["mapId"] != "other_candidate"
+                ]
+                with mock.patch.object(
+                    promotion, "_audit_snapshot", side_effect=self._fake_audit
+                ):
+                    candidate = promotion._prepare_candidate(
+                        bundle,
+                        reviewer="project-owner:test",
+                        reviewed_at="2026-07-23T12:00:00Z",
+                    )
+                    self.assertEqual(
+                        primary_path.read_bytes(), original_primary_bytes,
+                    )
+                    promotion._atomic_apply(bundle, candidate)
+                self.assertEqual(
+                    json.loads(primary_path.read_bytes())["entries"], expected_entries,
+                )
+                self.assertEqual(review_path.read_bytes(), review_bytes)
+                self.assertNotIn("other_candidate", {
+                    entry["mapId"] for entry in json.loads(primary_path.read_bytes())["entries"]
+                })
+
+    def test_review_candidate_cannot_alias_selected_bundle_outside_map_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle = self._fixture(Path(temporary))
+            review_path = promotion._find_godot_root(bundle) / promotion.REVIEW_CATALOG_PATH
+            review = json.loads(review_path.read_bytes())
+            alias = dict(review["entries"][0], mapId="undeclared_alias")
+            review["entries"].append(alias)
+            review_path.write_bytes(promotion._json_bytes(review))
+            with self.assertRaisesRegex(promotion.PromotionError, "未声明 mapId"):
+                promotion._prepare_primary_catalog_promotion(bundle)
+
     def test_partial_support_install_is_idempotently_resumable(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             bundle = self._fixture(Path(temporary))

@@ -2020,6 +2020,97 @@ class ReviewCatalogContractTests(unittest.TestCase):
         (root / "project.godot").write_text("[application]\n", encoding="utf-8")
         return manifest, manifest_path, binding_path, catalog_path
 
+    def _write_frozen_contract(self, root: Path, *, released: bool = False) -> tuple:
+        manifest, manifest_path, binding_path, catalog_path = self._write_candidate(root)
+        if released:
+            manifest.update(status="released", ownerReviewStatus="approved",
+                            releaseApproved=True, runtimeEnabled=True)
+            catalog_path = root / "data/map_visual_catalog.json"
+            catalog_path.write_bytes((root / "data/map_visual_review_catalog.json").read_bytes())
+        map_path = root / "data/solo_map.json"
+        map_path.write_text('{"id":"solo_map","blockedCells":[]}\n', encoding="utf-8")
+        source = root / "scripts/world/map_data_catalog.gd"
+        source.parent.mkdir(parents=True)
+        source.write_text('const MAPS := {"solo_map":"res://data/solo_map.json"}\n', encoding="utf-8")
+        binding_hashes = {"solo_map": hashlib.sha256(binding_path.read_bytes()).hexdigest()}
+        report = {
+            "schemaVersion": 1,
+            "reportType": AUDITOR.CATALOG_CONTRACT_REPORT_TYPE,
+            "generatedAtUtc": "2026-07-23T12:00:00Z",
+            "bundleId": manifest["bundleId"],
+            "result": "PASS", "testedMapIds": ["solo_map"],
+            "catalogSha256": hashlib.sha256(catalog_path.read_bytes()).hexdigest(),
+            "bindingHashes": binding_hashes,
+            "mapDataHashes": {"solo_map": hashlib.sha256(map_path.read_bytes()).hexdigest()},
+            "maps": [{"mapId": "solo_map", "groundDraws": 1, "objects": 1, "protectedCells": 1}],
+            "checks": {key: True for key in AUDITOR.CATALOG_CONTRACT_CHECKS},
+            "errors": [],
+        }
+        report_path = manifest_path.parent / "evidence/catalog.json"
+        report_path.parent.mkdir()
+        report_path.write_text(json.dumps(report) + "\n", encoding="utf-8")
+        manifest["catalogContractCheck"] = {
+            "path": "evidence/catalog.json",
+            "sha256": hashlib.sha256(report_path.read_bytes()).hexdigest(),
+        }
+        manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+        return manifest, manifest_path, binding_path, catalog_path, binding_hashes
+
+    def _validate_contract(self, fixture: tuple):
+        manifest, manifest_path, _binding, _catalog, hashes = fixture
+        audit = AUDITOR.Audit(manifest_path, manifest_path.parent)
+        AUDITOR.validate_catalog_contract_check(
+            audit, manifest["catalogContractCheck"], manifest["bundleId"],
+            {"solo_map"}, hashes, manifest,
+        )
+        return audit
+
+    def test_unrelated_catalog_changes_preserve_frozen_bundle_contract(self) -> None:
+        for released in (False, True):
+            with self.subTest(released=released), tempfile.TemporaryDirectory() as temporary:
+                fixture = self._write_frozen_contract(Path(temporary), released=released)
+                self.assertEqual([], self._validate_contract(fixture).errors)
+                catalog_path = fixture[3]
+                catalog = json.loads(catalog_path.read_bytes())
+                catalog["entries"].append({
+                    "mapId": "unrelated_candidate",
+                    "bundleManifest": "res://assets/maps/other/map-visual-bundle.json",
+                    "bindingPath": "res://assets/maps/other/bindings/unrelated_candidate.json",
+                })
+                catalog_path.write_text(json.dumps(catalog) + "\n", encoding="utf-8")
+                self.assertEqual([], self._validate_contract(fixture).errors)
+                catalog["entries"].pop()
+                catalog_path.write_text(json.dumps(catalog, indent=4) + "\n", encoding="utf-8")
+                self.assertEqual([], self._validate_contract(fixture).errors)
+
+    def test_historical_catalog_hash_does_not_allow_target_drift(self) -> None:
+        for kind in ("missing", "manifest", "binding", "map_data", "duplicate", "bad_digest"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                fixture = self._write_frozen_contract(root)
+                manifest, manifest_path, binding_path, catalog_path, _hashes = fixture
+                catalog = json.loads(catalog_path.read_bytes())
+                if kind == "missing":
+                    catalog["entries"].clear()
+                elif kind == "manifest":
+                    alternate = manifest_path.with_name("different-manifest.json")
+                    alternate.write_bytes(manifest_path.read_bytes())
+                    catalog["entries"][0]["bundleManifest"] = "res://" + alternate.relative_to(root).as_posix()
+                elif kind == "binding":
+                    binding_path.write_text('{"mapId":"changed"}\n', encoding="utf-8")
+                elif kind == "map_data":
+                    (root / "data/solo_map.json").write_text('{"id":"solo_map","blockedCells":[[1,1]]}\n', encoding="utf-8")
+                elif kind == "duplicate":
+                    catalog["entries"].append(dict(catalog["entries"][0]))
+                else:
+                    report_path = manifest_path.parent / "evidence/catalog.json"
+                    report = json.loads(report_path.read_bytes())
+                    report["catalogSha256"] = "invalid-digest"
+                    report_path.write_text(json.dumps(report) + "\n", encoding="utf-8")
+                    manifest["catalogContractCheck"]["sha256"] = hashlib.sha256(report_path.read_bytes()).hexdigest()
+                catalog_path.write_text(json.dumps(catalog) + "\n", encoding="utf-8")
+                self.assertNotEqual([], self._validate_contract(fixture).errors)
+
     def test_pending_candidate_paths_and_lifecycle_pass(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

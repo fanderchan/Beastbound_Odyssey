@@ -5025,25 +5025,15 @@ def validate_catalog_contract_check(
         catalog_path = godot_root / "data" / catalog_name
 
     catalog_digest = report.get("catalogSha256")
+    # This records the catalog at capture time, matching the Godot contract
+    # established in Phase540. Unrelated catalog entries may change later.
+    # validate_live_catalog_registration below still verifies this bundle's
+    # current membership, manifest path and binding bytes; map data is rehashed.
     if not isinstance(catalog_digest, str) or not SHA256_RE.fullmatch(catalog_digest):
         audit.error(
             "catalogContractCheck.catalogSha256",
             "expected 64 lowercase hex characters",
         )
-    elif catalog_path is not None:
-        try:
-            actual_catalog_digest = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
-        except OSError as exc:
-            audit.error(
-                "catalogContractCheck.catalogSha256",
-                f"cannot read the live map visual catalog ({exc})",
-            )
-        else:
-            if catalog_digest != actual_catalog_digest:
-                audit.error(
-                    "catalogContractCheck.catalogSha256",
-                    f"must equal the live {catalog_path.name} SHA-256",
-                )
 
     report_maps = _validate_report_map_entries(
         audit,
