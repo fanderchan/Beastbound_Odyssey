@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportType": "beastbound_map_computer_use_review",
-  "generatedAtUtc": "2026-09-20T21:08:41Z",
+  "generatedAtUtc": "2026-09-21T07:17:35Z",
   "bundleId": "earth_vein_cave_visual_v1",
   "result": "PASS",
   "testedMapIds": [
@@ -18,13 +18,13 @@
     1280,
     720
   ],
-  "displayServer": "macOS Metal",
+  "displayServer": "macOS OpenGL Compatibility",
   "actions": [
     {
       "actionId": "earth_vein_cave_pointer",
       "actionKind": "pointer",
       "mapId": "earth_vein_cave",
-      "description": "左键点击一层地面，角色由 (4,20) 到 (7,21)，人物与洞穴美术比例正常。",
+      "description": "左键点击一层地面，人物由 (4,20) 到 (7,21)，人物与场景比例保持正常。",
       "result": "PASS",
       "evidence": [
         {
@@ -33,143 +33,143 @@
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave/pointer-capture.json",
-          "sha256": "fac7a5a1a4aa3784095ef46cb6d70201be65be0a500586a8c1cd647c821c1d51"
+          "sha256": "e771fcfa0cdf1ae05280bf3888a5b2e3fa189234a9d545a5a10ec49813b2cf8d"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_pointer-before.jpeg",
-          "sha256": "b25fb1663b789c3fecff52e70b923ae1eba4c3804c5cdd6b490d43c564e5f3ad"
+          "sha256": "b48e2564996cd51fa76774b54d29ed99cf9986b15f734b32b0621450c631c8c0"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_pointer-after.jpeg",
-          "sha256": "ea8407c7d616aaf79e7a838cd9fdd37b76da5e80b4cd65b8b55e89797fafa83b"
+          "sha256": "9b00baef80fd435d7c8129b2175e93af46d2c68c10a8f269c0ba4b9534a1c80c"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_pointer.jsonl",
-        "sha256": "56d56ad806d354cbb14203cb0a34ff5fedc667225fe60a4f0d3c62f53843a085"
+        "sha256": "e0f894abeb2a501bfd130b749afe070e9992568ece21694ab2f4733387340d8d"
       }
     },
     {
       "actionId": "earth_vein_cave_movement_path",
       "actionKind": "movement_path",
       "mapId": "earth_vein_cave",
-      "description": "从地图选择一层练级区，观察黄色路线并实际到达 (6,8)。",
+      "description": "从地图的附近目标选择一层练级区，观察黄色路线并实际到达 (6,8)。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave/movement_path.png",
-          "sha256": "db280227b194964da7876600e09f0ae2aa443aec01906cff6edf29feb992f2d6"
+          "sha256": "43fbe1f63a33ca228fb3984d48239a079de2ea81f8ce890d07fbf5641be67890"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave/movement_path-capture.json",
-          "sha256": "e6a67e127c05b365b33b78342cb0a23017e0692f8195a899f002b5eb93da45f3"
+          "sha256": "98607b7df57724c34d2424af790fe19535652393a06686793b459bf481ea31e6"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_movement_path-before.jpeg",
-          "sha256": "cda7ef03098c4b9f7710f49892a48d1b2ee3ba6b006cb03fec10cf150ea1e2b9"
+          "sha256": "d8991ecfa2eafb2d7de9ca3eb6e8e61e9342875c120828f2dbffb4a079d8e76e"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_movement_path-after.jpeg",
-          "sha256": "b785887f37bc0a06a920ea8fc8143fe77e9177ce049189ced3ed6868ea50413c"
+          "sha256": "44e5d7b1a61c1cd087d2ac5a1ac762b62a0ad271798408d2aec7dfdab94d30d6"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_movement_path.jsonl",
-        "sha256": "00a794b432ef145124422bd50708fb7fecf463551aedfe43bca3bb6ac7856acc"
+        "sha256": "f956257fa5225e659e4c9128687ad4a6d481d09a52b8fe91da09b52866021b33"
       }
     },
     {
       "actionId": "earth_vein_cave_warp",
       "actionKind": "warp",
       "mapId": "earth_vein_cave",
-      "description": "从地图选择二层入口，经一层楼梯正常进入二层 (5,20)。",
+      "description": "从一层选择二层入口，沿真实路线跨楼梯进入二层 (5,20)。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave/warp.png",
-          "sha256": "4bf8320800a8836004940bf4e065448d7dd15c06dccbcc21ae4a550d2863cfd7"
+          "sha256": "3c6ddc3d3b9aee16c982aa8749431c2c37080b85f98884dd2247ea4ed2b65bec"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave/warp-capture.json",
-          "sha256": "05d64b70d7a37e1e51afa975677354e60ccb337057a01a3b5cb6331921e682e4"
+          "sha256": "2bb4289f0a43d0a4c62aa9d52cfd1ce4b5fccf85968c3021d23ee38f6d4f046d"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_warp-before.jpeg",
-          "sha256": "135ca509937f6f3d9c7efe7db45bd603b979e7cab7b106c2d4e246820118a431"
+          "sha256": "7f4f6f7f905a10bc401555eca35167479f74f3975e20980aed6833ff4dd79002"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_warp-after.jpeg",
-          "sha256": "8aa8fde08a7cebbf6711bf50c55947d9f881febdd564bbd758d9401b7b428b93"
+          "sha256": "f4ffd1f862516d7f99942ad5061a764554364378c18406b06c91035ee836c28f"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_warp.jsonl",
-        "sha256": "e49c5ca5576a72249292a2aebf39fd7bfbb87466530967201614c36b77df7b24"
+        "sha256": "e1121db31ce4996aae143be4fea0abb2747db87d7a6a9db75565d5de090fd68a"
       }
     },
     {
       "actionId": "earth_vein_cave_collision",
       "actionKind": "collision",
       "mapId": "earth_vein_cave",
-      "description": "点击一层矿柱可见基座，角色停在 (12,9)，没有进入矿柱阻挡格。",
+      "description": "点击一层矿柱基座后停在 (12,9)，未进入矿柱阻挡区。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave/collision.png",
-          "sha256": "d684773c44c417ef83bb188591158faf51f2879a76cdf193027b96fbd5f4828b"
+          "sha256": "3311bb4109812a4fe265966a457c07739a5ef6100b07eed1338a4b9984cffb31"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave/collision-capture.json",
-          "sha256": "9ca59adc77426c8aa7a8d258d4ecae27318a39a3eb1295134bae7a0f522006c3"
+          "sha256": "c8c2b3215ccb0a359d6e6c7100d86bf6c46d952b0e2ca83a93463e3cb310b048"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_collision-before.jpeg",
-          "sha256": "b785887f37bc0a06a920ea8fc8143fe77e9177ce049189ced3ed6868ea50413c"
+          "sha256": "44e5d7b1a61c1cd087d2ac5a1ac762b62a0ad271798408d2aec7dfdab94d30d6"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_collision-after.jpeg",
-          "sha256": "b1ab5021f336d42fad27a07dd0615c73d5e2224c5aefa549cf8634c3c4d92013"
+          "sha256": "78ce10ec456a71fa35f2442c757cd618a7483e1247bd0e2591bb3aa1c2db5ea7"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_collision.jsonl",
-        "sha256": "e47a6cacad46cc98680ae9678998b82d43271b8dccd89541ab1d1d6d27c141a9"
+        "sha256": "e16625c4ce7d085b191406e3ad73d48496d0913c1ae00d8c455c5cdf25181e08"
       }
     },
     {
       "actionId": "earth_vein_cave_occlusion",
       "actionKind": "occlusion",
       "mapId": "earth_vein_cave",
-      "description": "人物从入口岩墙后方 (6,23) 走到前方 (8,23)，岩墙由透明恢复为不透明。",
+      "description": "人物从岩墙后方 (7,21) 走到前方 (10,23)，高岩墙由透明恢复为完整墙体，人物持续可见。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave/occlusion.png",
-          "sha256": "e05ed5f3f01a7f533a11a1a80004ab76ed83ad9ff0f810e6238504a446a9d0c2"
+          "sha256": "bf0279fd4b368ab3517fc0edc24579d0bed13839b1667962382b8cd2e4aa18a1"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave/occlusion-capture.json",
-          "sha256": "5f4b128a679881be0cf81c5e0985556ecd6f920a3051f64b694198fbcbcc40c0"
+          "sha256": "67d8bf047714dedee8274d3c0ca9c63e0fdd643c4f594ce1b24a2cddb6d26010"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_occlusion-before.jpeg",
-          "sha256": "10c9e92b85b41762daebedab5841b6ce64628c2166e0683adc2a7fc3d139f77c"
+          "sha256": "9b00baef80fd435d7c8129b2175e93af46d2c68c10a8f269c0ba4b9534a1c80c"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_occlusion-after.jpeg",
-          "sha256": "84b2ad0b80b995bba7f8d9ca29fdc94c7413610a51f8789462e86d82bc1dd02d"
+          "sha256": "df8996875809854518ef1835052c549ed92013f41a50dc1183ecf7361e557eab"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_occlusion.jsonl",
-        "sha256": "3f508fcb25049a082a418a7de01f45e4b7066e482163f807ef855e4a0bcca3cb"
+        "sha256": "bb1e8e7b1b30e9017cbb16bcc8eee9b42083a5a740d35bc33f9f559b1bc86955"
       }
     },
     {
       "actionId": "earth_vein_cave_f2_pointer",
       "actionKind": "pointer",
       "mapId": "earth_vein_cave_f2",
-      "description": "左键点击二层地面，角色由 (5,20) 到 (8,23)，入口岩墙透明且人物清楚可见。",
+      "description": "左键点击二层地面，人物由 (5,20) 到 (8,23)，入口岩墙变透明且人物可见。",
       "result": "PASS",
       "evidence": [
         {
@@ -178,143 +178,143 @@
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/pointer-capture.json",
-          "sha256": "931b1c5023011eabf59a05d5b5a5c57f85f99eee5c7fa672f64b86567fbb4284"
+          "sha256": "23d7e46f626a43dce8d9186e361f90dd872f304e5c29e58def4f904f00780753"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_pointer-before.jpeg",
-          "sha256": "39d1055f1598f83d85ed65cf4b5ffcc32e1479f8a375bc7cec77d36811ffce15"
+          "sha256": "f4ffd1f862516d7f99942ad5061a764554364378c18406b06c91035ee836c28f"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_pointer-after.jpeg",
-          "sha256": "d5af08fb345c6208860a6d8c48b02caa3abac5a4f11970d1a073a9bfbaab2f86"
+          "sha256": "5e2dcc4cb318a89ffe2a2bb432dc0cdb28c098ad45951251c2d855ecc74f9982"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f2_pointer.jsonl",
-        "sha256": "a7f4c5b0fc972afa1436f7cddc7c4bfea761a9d124cb6d7575ab6e60d954cadc"
+        "sha256": "9f1ad11579d4a794bdf37e3a09f5b81bb7add179e1c88be5a0970ac3bc24a466"
       }
     },
     {
       "actionId": "earth_vein_cave_f2_movement_path",
       "actionKind": "movement_path",
       "mapId": "earth_vein_cave_f2",
-      "description": "从地图选择二层练级区，沿黄色路线实际到达 (6,8)。",
+      "description": "选择二层练级区，沿黄色路线实际到达 (6,8)。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/movement_path.png",
-          "sha256": "ecded6f18a0160af3e0ac644f4e535a4bae70c94d989374a2be40445b849c84e"
+          "sha256": "da6fa59a9d2887956e163cda5a0447a998ee42f834f4aa2611805a92b218098c"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/movement_path-capture.json",
-          "sha256": "318b0c3142c79f8b32921b02bb4349e88eadb98cd5b5bad0dd1f668f5cf7e807"
+          "sha256": "0d4ff71cb320aa79194036834acf1798fb4b7a37638d7bccf89fbc8b8ee6880a"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_movement_path-before.jpeg",
-          "sha256": "10f4454b31c02b8a37fb167b92bcef6fa34df40c62c7592b88adf93e6fae4d2c"
+          "sha256": "d25b6655649c124a78d7c95a6572c10a41c1c5790dc5dc93621fbd4c1a4d4e50"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_movement_path-after.jpeg",
-          "sha256": "3e78f621c9855aaa44f121fa3ada5641665cdec362ef14dc7f816c1dda53ec8a"
+          "sha256": "705711aefb41e923054a637870b40c7fbbea8f1e758ee0f7536f0eee497c575b"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f2_movement_path.jsonl",
-        "sha256": "cd16312ada0023ab3e2197d4b710f8b1038dd6e155cf3d415dbb01210797a2f0"
+        "sha256": "63a8a3a7e9f4ff264561a19e5c23991a20084ec80f4e3d6c03522a936ebea658"
       }
     },
     {
       "actionId": "earth_vein_cave_f2_warp",
       "actionKind": "warp",
       "mapId": "earth_vein_cave_f2",
-      "description": "从地图选择三层入口，经二层楼梯正常进入三层 (5,20)。",
+      "description": "选择三层入口，经二层楼梯正常进入三层 (5,20)。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/warp.png",
-          "sha256": "1070b5ae2fbd8df2daa082e06a602e7b72de13a96a4053c0307160860df0df5f"
+          "sha256": "3ff8e0b2bf498ca7278abe25fc7eaa08b8bc62b3f8d1df7e92d9a2956639c09d"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/warp-capture.json",
-          "sha256": "0807fcfb17778c87302f6a01a1a018215b181db96340c401e4dc2b81a9734a57"
+          "sha256": "ce7ae4679854270a66a9ae1c4e2bb0bc4f73e637d45b76b80c0c0d4ac64ff725"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_warp-before.jpeg",
-          "sha256": "73dcefd1b89d7c7309e7ca24413416605a01b8caf16ee50345e8e33496095fc7"
+          "sha256": "dc50c09d8b6dd2522627701ef3779ad016696ae4a49545059715d8d7ad8238a4"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_warp-after.jpeg",
-          "sha256": "b9af0e270a511a0eeb401b862a8c90e974f8dc012ecb16c7b93c2318028b1ef5"
+          "sha256": "5c25c0a8503e7a82913808ecbd0d26be9ecafbf444973864c5bff5166b5c83c6"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f2_warp.jsonl",
-        "sha256": "70ec08e673742244e8594b43877518adb132e5a21a3eee5b0cd9f3e074cd04d0"
+        "sha256": "79c235ba49c1ce432d622a5dc69f8044e73cb7a31e929f72172467c76b049072"
       }
     },
     {
       "actionId": "earth_vein_cave_f2_collision",
       "actionKind": "collision",
       "mapId": "earth_vein_cave_f2",
-      "description": "点击二层矿柱基座，角色停在 (10,11)，没有进入矿柱阻挡格。",
+      "description": "点击二层矿柱基座后停在 (10,11)，未穿过矿柱阻挡区。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/collision.png",
-          "sha256": "977ec48f2ba42427a903c85cab36eeff1b055e320b73de5c0ee49d56b38e4845"
+          "sha256": "c41c1cc3f9619f074b44aaf87327a1223b0441b41f4bef145daa8b13791208ef"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/collision-capture.json",
-          "sha256": "25d8e65b5f7eeb0bf9fbaa2ab26f629fe6db665cdaec54630fc840344eba3935"
+          "sha256": "298df8f8a82bfe704494dbe06e477fb637068cbbc7557bf3e64e8a7f962ff369"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_collision-before.jpeg",
-          "sha256": "3e78f621c9855aaa44f121fa3ada5641665cdec362ef14dc7f816c1dda53ec8a"
+          "sha256": "705711aefb41e923054a637870b40c7fbbea8f1e758ee0f7536f0eee497c575b"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_collision-after.jpeg",
-          "sha256": "d6d9414c6333dbf63d58107b82675fe19572f4c4a375195c9caeb2a9faa8f846"
+          "sha256": "e3f94619eb6ed4823f10a285e9d10dc632ec87a04e4e998eb2627907f085d501"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f2_collision.jsonl",
-        "sha256": "cbc95e6719d8d14d8e45c9120d428b868cefc15e08175ef3dfd51460ab9a81b2"
+        "sha256": "3b94a0246391145f51400eb6145cb4fa929084f3274e2b60f6ffb9dd1b98f0b7"
       }
     },
     {
       "actionId": "earth_vein_cave_f2_occlusion",
       "actionKind": "occlusion",
       "mapId": "earth_vein_cave_f2",
-      "description": "人物从岩墙后方 (8,23) 走到前方 (10,23)，岩墙恢复且人物一直可见。",
+      "description": "人物从高岩墙后方 (8,23) 绕到前方 (10,23)，墙体恢复显示且人物持续可见。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/occlusion.png",
-          "sha256": "6ac33981ad1c08b1ce2b07ca7d9894d4e16f26ca31e2670fa10d1d452d867baf"
+          "sha256": "083ec61d4f5a7768be73835fbbd6a6f8a31134b3c772e0689a0ca856382fe81b"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/occlusion-capture.json",
-          "sha256": "34d9ca77499dfffb16d5016ce53e39e2bb5b4fcf8348975063203e057d412525"
+          "sha256": "f1483121dbdef9c7df5da683d3775daed4d8d24cdb0709f3eea174297d92a398"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_occlusion-before.jpeg",
-          "sha256": "d5af08fb345c6208860a6d8c48b02caa3abac5a4f11970d1a073a9bfbaab2f86"
+          "sha256": "5e2dcc4cb318a89ffe2a2bb432dc0cdb28c098ad45951251c2d855ecc74f9982"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_occlusion-after.jpeg",
-          "sha256": "a88c1d8e124e135099bab7772cb3c98b5e94e31c8cfde8db5604a828256b02a4"
+          "sha256": "2c6bfbd684b0f807c4fd9c6e48abe330e6b3bf0864e69b846c68d03513b067aa"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f2_occlusion.jsonl",
-        "sha256": "181c29fb8f5dae2eca7eb36881b25555d833418ddf4d6c1b956979363e9aed8c"
+        "sha256": "3c57ccb692c3258a72eaf06083b274ce8a84b01e140c0a6e700472901890c174"
       }
     },
     {
       "actionId": "earth_vein_cave_f3_pointer",
       "actionKind": "pointer",
       "mapId": "earth_vein_cave_f3",
-      "description": "左键点击三层地面，角色由 (5,20) 到 (5,23)，入口岩墙不遮住人物。",
+      "description": "左键点击三层地面，人物由 (5,20) 到 (5,23)，高岩墙不挡住人物。",
       "result": "PASS",
       "evidence": [
         {
@@ -323,143 +323,143 @@
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/pointer-capture.json",
-          "sha256": "38bcb20370534d18719f2caa09b9c9d6241d614b5bcc2f88f964287d5fa85a86"
+          "sha256": "cfbcc2753ae27a9f435121cea3c098f93b3a6131dee105ba2ff429eef302e115"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_pointer-before.jpeg",
-          "sha256": "b9af0e270a511a0eeb401b862a8c90e974f8dc012ecb16c7b93c2318028b1ef5"
+          "sha256": "5c25c0a8503e7a82913808ecbd0d26be9ecafbf444973864c5bff5166b5c83c6"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_pointer-after.jpeg",
-          "sha256": "76e500ae502eec0860b18e2b544f7aceaaf4c124c1e78b1669d129df39084e05"
+          "sha256": "763e568c502d85dafc3f9ade647664d071e8e64cd41e018601f167627265028d"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f3_pointer.jsonl",
-        "sha256": "7d14e060e099631d9c686bfd83c8ea9f706713975e91924a68de5dc5befde1db"
+        "sha256": "43735f4f0004379e55d31565078bf41052f74c3dad4517da4879395e73570723"
       }
     },
     {
       "actionId": "earth_vein_cave_f3_movement_path",
       "actionKind": "movement_path",
       "mapId": "earth_vein_cave_f3",
-      "description": "从地图选择三层练级区，沿黄色路线实际到达 (6,8)。",
+      "description": "选择三层练级区，沿黄色路线实际到达 (6,8)。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/movement_path.png",
-          "sha256": "f384c963c1417c32fedf5af3bbf9b164f5daa2483650e8c33e8fc13a8d2dcf62"
+          "sha256": "7abc96c6b171b8281ba41bdc9ac323243908ebbdc36e83f480f6c358c10d85e9"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/movement_path-capture.json",
-          "sha256": "45d9d4374b921852d685fa3d4e31a9e61bd94658b4e80e94d44d808d764f5361"
+          "sha256": "4a4c42e4fbac381794b7370897dbb52be5d37c66b4bf66410ad60126264e89c8"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_movement_path-before.jpeg",
-          "sha256": "f0333f7f4098b2692b51fd4f058261564c53c8a03e5e270225348f49df679ae6"
+          "sha256": "597c5c3c9f93a8064e722131a462b86e37d74184ac395256c664353e7638101c"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_movement_path-after.jpeg",
-          "sha256": "d2aebf1d6158348326a24a483f38409cd19e169ff29bb1ddef34e6a73342a947"
+          "sha256": "ae340fc3c3f53fd432e6ec0adb3de01192e695ba055bd8bd444472dd4a3b0238"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f3_movement_path.jsonl",
-        "sha256": "9cb18c64579f174adfc201a6a8acf515e3133730f9c0bac0de94861d2eb0cce1"
+        "sha256": "c19884a779086c4a59ff2f50d8b01e6035900626f41a094bceb720cbac6f5b5b"
       }
     },
     {
       "actionId": "earth_vein_cave_f3_warp",
       "actionKind": "warp",
       "mapId": "earth_vein_cave_f3",
-      "description": "从地图选择四层入口，经三层楼梯正常进入四层 (5,22)。",
+      "description": "选择四层入口，经三层楼梯正常进入四层 (5,22)。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/warp.png",
-          "sha256": "9470f5293d570f83ee9ae7bdf70f71107d5e8e19f943dc6fa5b3f7ec7b10eda4"
+          "sha256": "0266b436b01c38567de4295abd9312f507c744df91564ab16eaa083a92c32f13"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/warp-capture.json",
-          "sha256": "a1f70d7db5bbf4e8c8674e2b25cfd70b61700b06254075508ebb7726a160dd21"
+          "sha256": "610facbb32ae26aa62832f8b91a52737925a7bb3e1f8dd3e38e49c6750abf8a3"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_warp-before.jpeg",
-          "sha256": "8656294d8849d8ccbc96f46f9c1e2633b812195efc5486b99cf34db9767d637b"
+          "sha256": "34f647966551afa1486bda49baf6556e883fc888daa5da00b8f78d7bac97ada1"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_warp-after.jpeg",
-          "sha256": "b71bbdcc2ec1783638d169522cdf6cb9718f7048aaba4c00778e494500103069"
+          "sha256": "2f88700b15ed599bad2491253f3ae6a89ac046c50dc69fd41b891007b72b1bb1"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f3_warp.jsonl",
-        "sha256": "e21d9e1e6a116680eff4dfa2080c14574796321e8eea233c4c1f0b5ca1400ea8"
+        "sha256": "5147dc0047d3a10d8d8ec49c67a164f1449866d102c2e8e282b6cba242cda916"
       }
     },
     {
       "actionId": "earth_vein_cave_f3_collision",
       "actionKind": "collision",
       "mapId": "earth_vein_cave_f3",
-      "description": "点击三层矿柱基座，角色停在 (11,13)，没有进入矿柱阻挡格。",
+      "description": "点击三层矿柱基座后停在 (11,13)，未进入矿柱阻挡区。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/collision.png",
-          "sha256": "e547ec56dd28629411dc96ec0cfcf8d86160b74fc4b92c7552cbc87ecc4c71e3"
+          "sha256": "b5401495e7c0045caad48c724fc0ba6cd877436148397fad15ab2250b07dcd6e"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/collision-capture.json",
-          "sha256": "e9b8b28164376f6fd00c2f1b27b480739a25614da751e81c97a7dca8956487c4"
+          "sha256": "4c4ceba25f48d48b79b50c3bc95c07837c807624a59109fbdbfd6274ac18d2b3"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_collision-before.jpeg",
-          "sha256": "d2aebf1d6158348326a24a483f38409cd19e169ff29bb1ddef34e6a73342a947"
+          "sha256": "ae340fc3c3f53fd432e6ec0adb3de01192e695ba055bd8bd444472dd4a3b0238"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_collision-after.jpeg",
-          "sha256": "f218f6354cbbdba3c87507c4d07fd379160dc95dd7e8c92e9f24008b7ced8a47"
+          "sha256": "a4001653b61484161790ccd8473e1eb389b269714a26b171d6b4623caa5d3956"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f3_collision.jsonl",
-        "sha256": "372af2ae8ae2dc1e459d77484e968cb5b2686f6b02ffa7ad7ea0f6366432deaf"
+        "sha256": "8eb436096bd2078d8c8412356426a6f9bce2f27d557af78f78176a5aa5f96a40"
       }
     },
     {
       "actionId": "earth_vein_cave_f3_occlusion",
       "actionKind": "occlusion",
       "mapId": "earth_vein_cave_f3",
-      "description": "人物从岩墙后方 (5,23) 走到前方 (7,23)，岩墙由透明恢复为不透明。",
+      "description": "人物从高岩墙后方 (5,23) 绕到前方 (7,23)，透明墙体恢复且人物持续可见。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/occlusion.png",
-          "sha256": "1d05b7a629bb7247992a984e57085a4c9bc8d99a3d7e30b58395b9d53acced5a"
+          "sha256": "4f0900b33fe413a18c36b45b53b6d0f1a806558232ebf7612a80ef2574988741"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/occlusion-capture.json",
-          "sha256": "3301441bc4280ab18b9b04fcc065b57d1dcb114fbde5bd42d1c6dec5edeb8ec6"
+          "sha256": "8fea4a6d875a68466704b1d45fed1ea2a9c708ec420e55057b0791babd22ce9f"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_occlusion-before.jpeg",
-          "sha256": "76e500ae502eec0860b18e2b544f7aceaaf4c124c1e78b1669d129df39084e05"
+          "sha256": "763e568c502d85dafc3f9ade647664d071e8e64cd41e018601f167627265028d"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_occlusion-after.jpeg",
-          "sha256": "7c5d844824e69ea83402533a59d8fb783013bbdbd9f6d283d7b38a264201c6e3"
+          "sha256": "edcafd287d37d2b5a4830714124ee34da84dfd95f36646c70874aa4d6b510e2a"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f3_occlusion.jsonl",
-        "sha256": "27a722553b09645a18c07893ada646a3fce782de67f62deb21cbaf6658e05bd6"
+        "sha256": "1a7b1f219c0b3490fc4069e3f78a1904532ddac4cc3189848aae097ff0772583"
       }
     },
     {
       "actionId": "earth_vein_cave_f4_pointer",
       "actionKind": "pointer",
       "mapId": "earth_vein_cave_f4",
-      "description": "左键点击四层地面，角色由 (5,22) 到 (7,25)，入口岩墙不遮住人物。",
+      "description": "左键点击顶层地面，人物由 (5,22) 到 (7,25)，入口岩墙变透明且人物可见。",
       "result": "PASS",
       "evidence": [
         {
@@ -468,56 +468,56 @@
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/pointer-capture.json",
-          "sha256": "28021193d265faa4b771dfa43f06c034aafa1e7c97d66541d04f73e187f89f60"
+          "sha256": "3cdc862f3e266204f885bef8b6d852d949e7eaf4ab648b9b365103881cd5915e"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_pointer-before.jpeg",
-          "sha256": "b71bbdcc2ec1783638d169522cdf6cb9718f7048aaba4c00778e494500103069"
+          "sha256": "2f88700b15ed599bad2491253f3ae6a89ac046c50dc69fd41b891007b72b1bb1"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_pointer-after.jpeg",
-          "sha256": "673377625bc10ab13419a40f19900e76b8d15d1ee9c5c3772216dd0a03e1e80f"
+          "sha256": "77832153053f457c502274a5492854c770b874d080deb8c031c3fb6aaf2c6699"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f4_pointer.jsonl",
-        "sha256": "af1977a7f966d1cec571eca0c8f3689f1923208be3bab88b90a225b0caf9ab82"
+        "sha256": "f12b2eb925a7bcd28aa38c16821263452640f5b1592d41cfff914a9db0f6a413"
       }
     },
     {
       "actionId": "earth_vein_cave_f4_movement_path",
       "actionKind": "movement_path",
       "mapId": "earth_vein_cave_f4",
-      "description": "从地图选择岩脉守护兽，经真实寻路到达 (20,8) 并打开对话，顶部守护台和人物保持可见。",
+      "description": "选择岩脉守护兽，真实寻路到达 (20,8) 并打开对应对话，名称与人物没有重叠。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/movement_path.png",
-          "sha256": "b600683f55cc49ba05a06e6a7825028a0c82e0e1478f1b34a789f78523bb94a4"
+          "sha256": "db1465084bec4cb0d336133f9c77430d9e139d5b71e1e1f501b7922376bb872a"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/movement_path-capture.json",
-          "sha256": "f106f74935c0be2ae830146b295b65e8161d5dad2aca3de427768972ab7b9305"
+          "sha256": "1a77adb39355618e4de7073cfc40b271c370778f2e721c64f26b6c0abdefe3ab"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_movement_path-before.jpeg",
-          "sha256": "f5e1c3cbd59a83f628e7c7ccabba2659b493758a9ba7385e5cabff833e814f91"
+          "sha256": "a63c7712a58d47150d547fab4c0c19a011c85d230d632260434326b098d41187"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_movement_path-after.jpeg",
-          "sha256": "b568a4ce007a2de8d8ace725c50cd82eadeb6bf6e29c6962199b5e842115a0db"
+          "sha256": "4b81086748889394c3f3ce0d9a1c366fc0752acf616503ee5274396187edcb6a"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f4_movement_path.jsonl",
-        "sha256": "303f3608b9b065ecb5bcc4352ec992850626f468b1f6ed4aa63d63e7d34e351b"
+        "sha256": "28a9499cf101359e400d0a443c766fe4fa4f1ca3ef5f9c7ce00faf958a7939e1"
       }
     },
     {
       "actionId": "earth_vein_cave_f4_warp",
       "actionKind": "warp",
       "mapId": "earth_vein_cave_f4",
-      "description": "从地图选择下楼，经四层入口正常返回三层 (21,7)。",
+      "description": "续验中选择下楼，沿四层入口正常返回三层 (21,7)。",
       "result": "PASS",
       "evidence": [
         {
@@ -526,79 +526,82 @@
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/warp-capture.json",
-          "sha256": "6b6717ee8f51b300257644593500dbfbd130ca2656c98cb1dfdc5e43ffeb2744"
+          "sha256": "54f3c103d5a84162c7b304627b007268a981d73102350aba534bb36de052c712"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_warp-before.jpeg",
-          "sha256": "bd91e5adb13e119911e6c778eb79cfa7298286b0f3569ab53b994c3da2525dd8"
+          "sha256": "4068ee5c6f57ec8a8351ccb47201b9b97f0dd3d5b361c2b5c0047627c2935404"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_warp-after.jpeg",
-          "sha256": "ed22ad41e0acf95d34252cfe4ae1890477b18ca75bcf0dc453591d35495879c1"
+          "sha256": "0f86757e5104f51789b33ae708752f38b413daf15c86cf978f5c950b2ce3cf33"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f4_warp.jsonl",
-        "sha256": "9eef27fcbc0171ab77b410ae8e45949d4f1618bcc4b91f8379c41bac21c04c3f"
+        "sha256": "2f2eb2d217886f2b3f0df89ffd7bb9c29a85c8ce9ca8b30dbe3f4d503f5025e6"
       }
     },
     {
       "actionId": "earth_vein_cave_f4_collision",
       "actionKind": "collision",
       "mapId": "earth_vein_cave_f4",
-      "description": "直接点击四层矿柱 (16,12) 后，角色停在邻近可行走格 (17,11)，没有进入阻挡格；随后地图观察再次显示坐标 17,11、目标 16,12（原始记录第 47 次工具调用）。",
+      "description": "从矿柱上侧 (16,9) 点击可见基座，人物停在相邻可走格 (15,11)，没有进入 (15,12)、(16,12)、(17,13) 阻挡格。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/collision.png",
-          "sha256": "677a44761993f6f588a97106aa01502de091a8a3f79074b76acb520ca9c74775"
+          "sha256": "3374b1d8719202e0b79b5c358a954ea3f3ea6a7e904ebc09ff36034ba77c656c"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/collision-capture.json",
-          "sha256": "9ccb41f353c905189bb19cebd5f3b8951de4aa7860e1fcb4a606331440491cbc"
+          "sha256": "94c43065425a4a03e9bb501ea8572f5e355f388d24b84521d6f8fa7d474c7dab"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_collision-before.jpeg",
-          "sha256": "9ac4336bcc98eb72d01fcfa84064199e5ee2a2f447fce544abf8596effb2e60e"
+          "sha256": "1cd0aecb30552867ad0600130ab783691132b1a112c85d271c50078c7455a4ba"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_collision-after.jpeg",
-          "sha256": "6512b2e5827b31b073b1c16d7447ee54d12ca3f17b253c5598dd58e75e2259ab"
+          "sha256": "d37c544a7d1a94ff7ff9ce09ab0461f2e6c1b4e778f3ce03d04896a86668bc7a"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f4_collision.jsonl",
-        "sha256": "f5e815a476b22939f6440b0497fe8ae7a237101aa2631010eab6a3d88efd1ace"
+        "sha256": "9ad35bd357caddd3414042ed32412f0e1c88415fad9e4ad34401e3f2faa26d04"
       }
     },
     {
       "actionId": "earth_vein_cave_f4_occlusion",
       "actionKind": "occlusion",
       "mapId": "earth_vein_cave_f4",
-      "description": "人物从岩墙后方 (7,25) 走到前方 (9,25)，岩墙恢复且人物一直可见。",
+      "description": "人物从高岩墙后方 (7,25) 绕到前方 (9,25)，墙体恢复显示且人物持续可见。",
       "result": "PASS",
       "evidence": [
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/occlusion.png",
-          "sha256": "689050b27075ab43df3bd671e003afb989c454e158ff2211ece300f188c90bd8"
+          "sha256": "8da4bed049e940e45669d463aaf610f5c44438c4d3602fb4f5fc609befe51110"
         },
         {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/occlusion-capture.json",
-          "sha256": "9789f5d9f903ff9300a7a7f41101d2445aa8aa55c64712aeefa4986c3ecaa67e"
+          "sha256": "fa5fbda649a43452bf3ad9bb86020974e81ab29ebeed918a7b065367bbf2d05c"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_occlusion-before.jpeg",
-          "sha256": "673377625bc10ab13419a40f19900e76b8d15d1ee9c5c3772216dd0a03e1e80f"
+          "sha256": "77832153053f457c502274a5492854c770b874d080deb8c031c3fb6aaf2c6699"
         },
         {
           "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_occlusion-after.jpeg",
-          "sha256": "e2f0992e4623dfbfbf34d701f9d5fc3a57504168b0d845c6333b7aae492583bf"
+          "sha256": "1609124f967bd0fddb169c0d43691206577ecb98d7d837beede3eb20ce37f95c"
         }
       ],
       "actionReceipt": {
         "path": "evidence/computer-use-actions/earth_vein_cave_f4_occlusion.jsonl",
-        "sha256": "41741126f562611c939febb3d8f2506b8c154369cd523ddb53233b76a7fa2a1c"
+        "sha256": "5329db95422aa401786a09f0db340cd77945903e4be74983901ce820a894b0ef"
       }
     }
-  ]
+  ],
+  "sessionBoundary": "Two actual Computer Use sessions with an explicit owner pause between them; first F1 to F4, resumed F4 to F1; not one continuous playthrough.",
+  "computerUseSessionCount": 2,
+  "buildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8"
 }

@@ -64,8 +64,8 @@
 			360.0
 		],
 		"playerScreenPoint": [
-			420.80419921875,
-			360.048889160156
+			420.804382324219,
+			360.052032470703
 		],
 		"playerAtEffectiveAnchor": true,
 		"taskHudVisible": true,
@@ -102,8 +102,8 @@
 		"playerClearOfFixedHud": true,
 		"playerAlphaBoundsSource": "formal_action_alpha_union",
 		"playerAlphaScreenRect": [
-			398.916198730469,
-			274.564117431641,
+			398.916381835938,
+			274.567260742188,
 			43.2288208007812,
 			123.119995117188
 		],
@@ -138,24 +138,24 @@
 					"earth_cave_vein_pillar": 2
 				},
 				"objectTypeAlphaHeightPx": {
-					"earth_cave_wall_ridge": 165.727783203125,
-					"earth_cave_wall_buttress": 267.121185302734,
-					"earth_cave_stair_arch": 319.123962402344,
-					"earth_cave_crystal_cluster": 117.81884765625,
+					"earth_cave_wall_ridge": 165.727767944336,
+					"earth_cave_wall_buttress": 267.121154785156,
+					"earth_cave_stair_arch": 319.123992919922,
+					"earth_cave_crystal_cluster": 117.818832397461,
 					"earth_cave_fungus_cluster": 105.594436645508,
-					"earth_cave_rock_pile": 127.628616333008,
-					"earth_cave_cairn": 121.125,
-					"earth_cave_vein_pillar": 276.449981689453
+					"earth_cave_rock_pile": 127.628601074219,
+					"earth_cave_cairn": 121.125015258789,
+					"earth_cave_vein_pillar": 276.450012207031
 				},
 				"objectTypeToPlayerRatio": {
-					"earth_cave_wall_ridge": 1.34606716841877,
-					"earth_cave_wall_buttress": 2.16960035653416,
-					"earth_cave_stair_arch": 2.59197510606296,
-					"earth_cave_crystal_cluster": 0.956943245035936,
+					"earth_cave_wall_ridge": 1.34606704448448,
+					"earth_cave_wall_buttress": 2.16960010866558,
+					"earth_cave_stair_arch": 2.59197535393154,
+					"earth_cave_crystal_cluster": 0.956943121101647,
 					"earth_cave_fungus_cluster": 0.857654652641932,
-					"earth_cave_rock_pile": 1.03661973192518,
-					"earth_cave_cairn": 0.983796335312647,
-					"earth_cave_vein_pillar": 2.24537031069831
+					"earth_cave_rock_pile": 1.03661960799089,
+					"earth_cave_cairn": 0.983796459246936,
+					"earth_cave_vein_pillar": 2.24537055856688
 				},
 				"expectedObjectTypeIds": [
 					"earth_cave_rock_pile",
@@ -178,7 +178,7 @@
 						1.1
 					],
 					"minimumRatio": 0.857654652641932,
-					"maximumRatio": 1.03661973192518,
+					"maximumRatio": 1.03661960799089,
 					"passed": true
 				},
 				"architecture": {
@@ -189,8 +189,8 @@
 						1.25,
 						2.75
 					],
-					"minimumRatio": 1.34606692055019,
-					"maximumRatio": 2.59197510606296,
+					"minimumRatio": 1.34606667268161,
+					"maximumRatio": 2.59197535393154,
 					"passed": true
 				},
 				"terminal": {
@@ -229,40 +229,40 @@
 		"safeKeyEnvironmentIds": [],
 		"keyEnvironmentAlphaScreenRects": {
 			"f3_lower_arch": [
-				365.378692626953,
-				-119.473114013672,
-				232.450958251953,
+				365.37890625,
+				-119.469970703125,
+				232.450927734375,
 				319.123962402344
 			],
 			"f3_rock_blocker_01": [
-				827.404174804688,
-				105.474594116211,
+				827.404418945312,
+				105.477752685547,
 				159.599975585938,
 				127.628601074219
 			],
 			"f3_pillar_blocker_01": [
-				1262.18969726562,
-				-16.8161010742188,
+				1262.18994140625,
+				-16.8129577636719,
 				141.228759765625,
 				276.450012207031
 			],
 			"f3_rock_blocker_02": [
-				1739.40417480469,
-				135.874588012695,
+				1739.40441894531,
+				135.877746582031,
 				159.599975585938,
-				127.628616333008
+				127.628601074219
 			],
 			"f3_upper_arch": [
-				2250.1787109375,
-				32.5268859863281,
+				2250.17895507812,
+				32.530029296875,
 				232.450927734375,
-				319.123962402344
+				319.123992919922
 			],
 			"f3_pillar_blocker_02": [
-				1870.18981933594,
-				165.583892822266,
-				141.228637695312,
-				276.449981689453
+				1870.18994140625,
+				165.587051391602,
+				141.228759765625,
+				276.450012207031
 			]
 		},
 		"hudOverlappingKeyEnvironmentIds": [],
@@ -277,8 +277,8 @@
 				20
 			],
 			"screenPoint": [
-				481.604187011719,
-				180.688888549805
+				481.604370117188,
+				180.692047119141
 			],
 			"edgeClear": true,
 			"insideSafeRect": true
@@ -317,8 +317,8 @@
 	"input": {
 		"eventClass": "InputEventMouseButton",
 		"delivery": "Input.parse_input_event",
-		"pressProcessFrame": 1598,
-		"releaseProcessFrame": 1600,
+		"pressProcessFrame": 1599,
+		"releaseProcessFrame": 1601,
 		"frameSeparated": true,
 		"screenPoint": [
 			420.800048828125,
@@ -326,10 +326,10 @@
 		]
 	},
 	"screenshotPath": "res://assets/maps/earth_vein_cave_visual_v1/evidence/runtime-actions/earth_vein_cave_f3/movement_path.png",
-	"screenshotSha256": "f384c963c1417c32fedf5af3bbf9b164f5daa2483650e8c33e8fc13a8d2dcf62",
+	"screenshotSha256": "7abc96c6b171b8281ba41bdc9ac323243908ebbdc36e83f480f6c358c10d85e9",
 	"screenshot": {
 		"path": "res://assets/maps/earth_vein_cave_visual_v1/evidence/runtime-actions/earth_vein_cave_f3/movement_path.png",
-		"sha256": "f384c963c1417c32fedf5af3bbf9b164f5daa2483650e8c33e8fc13a8d2dcf62",
+		"sha256": "7abc96c6b171b8281ba41bdc9ac323243908ebbdc36e83f480f6c358c10d85e9",
 		"width": 1280,
 		"height": 720
 	},
@@ -346,7 +346,7 @@
 	"errors": [],
 	"result": "PASS",
 	"ok": true,
-	"generatedAtUtc": "2026-09-20T20:49:53Z",
+	"generatedAtUtc": "2026-09-21T04:34:28Z",
 	"hudGlyphStability": {
 		"status": "not_applicable",
 		"passed": true,
@@ -358,15 +358,15 @@
 		"authorized": true,
 		"cliPreviewFlagPresent": false,
 		"controllerActivatedCandidatePreview": true,
-		"planSha256": "7d4f1db90d12cae143ca204ba419464526d89d3b1b03de69fd1428601c0f6360",
+		"planSha256": "993e8f7bf760cc18ad168be2b652a900ae5a1539f71b99209166b89f543a9098",
 		"bundleId": "earth_vein_cave_visual_v1",
 		"mapId": "earth_vein_cave_f3",
 		"actionKind": "movement_path",
-		"buildIdentity": "git:614ff4a4f048b0608dea7cd9b8d85287c778e4de+beastbound-map-runtime-surface-v2:cbef22faa06579f683a8a9778395442b61057f0f0744584f86da44a55cf5cf09",
+		"buildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8",
 		"bundleManifestSha256": "8b365cd58d2fd272b779aa8544d2503be9a19a55f690b114c3aad1c8128f1e9e",
-		"captureSurfaceIdentitySha256": "911270a1e513f95a7f621568cd6676d18d2f74cdf07a1976fcbfdacd056718ed"
+		"captureSurfaceIdentitySha256": "0cb0c9a57f515cc1f160aa0f50f1d42701e92e8bf2afcb88cc4a01139a80005c"
 	},
-	"batchPlanSha256": "7d4f1db90d12cae143ca204ba419464526d89d3b1b03de69fd1428601c0f6360",
+	"batchPlanSha256": "993e8f7bf760cc18ad168be2b652a900ae5a1539f71b99209166b89f543a9098",
 	"batchSourceIdentity": {
 		"orchestrator": {
 			"path": "repo://tools/record_map_visual_action_captures.py",
@@ -418,11 +418,11 @@
 		},
 		"mainHost": {
 			"path": "res://scripts/main.gd",
-			"sha256": "3f88bef2b0d93cb31f51f4560cf147132bfcca7eb8883495d1ea6ec122c04f0e"
+			"sha256": "9d52e72411c849d0beaa7d4c76b1bd8d55dcba4f3ffe09a25986f54ee20f71e7"
 		}
 	},
 	"batchRuntimeIdentity": {
-		"processId": 87723,
+		"processId": 15807,
 		"processFrameOrigin": 0,
 		"displayServer": "macOS",
 		"displayServerWindowCount": 1,
@@ -438,7 +438,7 @@
 			720
 		]
 	},
-	"batchBuildIdentity": "git:614ff4a4f048b0608dea7cd9b8d85287c778e4de+beastbound-map-runtime-surface-v2:cbef22faa06579f683a8a9778395442b61057f0f0744584f86da44a55cf5cf09",
+	"batchBuildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8",
 	"batchBundleManifestIdentity": {
 		"path": "client/godot/assets/maps/earth_vein_cave_visual_v1/map-visual-bundle.json",
 		"canonicalization": "map_runtime_subject_v1",
@@ -472,19 +472,19 @@
 		"client/godot/assets/maps/earth_vein_cave_visual_v1/runtime/objects/earth_cave_wall_ridge.png.import": "49b4651ea05820f39c78e32fb2c4c2bf42bcdd3f00d513cb6442b18af67b3141",
 		"client/godot/data/earth_vein_cave_f2_map.json": "9d59b59500b61efe65c17fe40b07729abf113222e1ceb32ab8b8c1d8ed74c314",
 		"client/godot/data/earth_vein_cave_f3_map.json": "305a787cd8101ec22dc46e50c2ae776a049450c99da62a5731213e62a565a15a",
-		"client/godot/data/earth_vein_cave_f4_map.json": "c6de465f36cf3c684b632d46d9236be47572421a8e7b79ecfe4c12155900c453",
+		"client/godot/data/earth_vein_cave_f4_map.json": "b72a39c662ce7e499b880e54a000a46a0eb7543877a502674e04f95e6364e028",
 		"client/godot/data/earth_vein_cave_map.json": "a3bff8c95e4315c409ac818656ee57a4d4ad1e26112bada4b3ab9ed6ce36c8cf",
 		"client/godot/data/map_visual_review_catalog.json": "662fa235c072f295aed084f2163934cb69a41ec0f8083801649242b1c47dbc3f",
 		"client/godot/scripts/world/map_data_catalog.gd": "786987c35f4d9f6ba397505000dc6aa33a011d2990c658105add79cb5b346a26",
 		"client/godot/scripts/world/map_visual_catalog.gd": "11e31780d170ec7a6a6f762a197ba33d0b247e62c58d11f91335fa2cb8c811cc",
 		"client/godot/scripts/world/map_visual_renderer.gd": "7df4d3b241ca80d8f980b52b81a9595ec6c0059a0a5d891939daebd7bb76b66f"
 	},
-	"batchCaptureSurfaceIdentitySha256": "911270a1e513f95a7f621568cd6676d18d2f74cdf07a1976fcbfdacd056718ed",
+	"batchCaptureSurfaceIdentitySha256": "0cb0c9a57f515cc1f160aa0f50f1d42701e92e8bf2afcb88cc4a01139a80005c",
 	"batchWindowIdentity": {
 		"rootWindowId": 0,
 		"before": {
 			"label": "earth_vein_cave_f3/movement_path:before",
-			"processFrame": 1566,
+			"processFrame": 1567,
 			"windowCount": 1,
 			"windowIds": [
 				0
@@ -493,7 +493,7 @@
 		},
 		"after": {
 			"label": "earth_vein_cave_f3/movement_path:after",
-			"processFrame": 1718,
+			"processFrame": 1719,
 			"windowCount": 1,
 			"windowIds": [
 				0
@@ -501,8 +501,8 @@
 			"rootWindowId": 0
 		}
 	},
-	"captureWritePath": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/map_visual_action_captures/earth_vein_cave_visual_v1/phase602-formal-actions-20260921/single-window-batch/staged-actions/earth_vein_cave_f3/movement_path.png",
-	"captureReportWritePath": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/map_visual_action_captures/earth_vein_cave_visual_v1/phase602-formal-actions-20260921/single-window-batch/staged-actions/earth_vein_cave_f3/movement_path-capture.json",
+	"captureWritePath": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/map_visual_action_captures/earth_vein_cave_visual_v1/phase608-current-actions-20260921/single-window-batch/staged-actions/earth_vein_cave_f3/movement_path.png",
+	"captureReportWritePath": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/map_visual_action_captures/earth_vein_cave_visual_v1/phase608-current-actions-20260921/single-window-batch/staged-actions/earth_vein_cave_f3/movement_path-capture.json",
 	"reportInstallPath": "res://assets/maps/earth_vein_cave_visual_v1/evidence/runtime-actions/earth_vein_cave_f3/movement_path-capture.json",
 	"batchReportSealed": true
 }

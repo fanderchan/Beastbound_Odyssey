@@ -7,7 +7,7 @@
   "aggregationMode": "median_of_independent_run_means_with_envelope_extrema",
   "repetitionCount": 3,
   "executionOrder": "repetition_then_rotated_map_then_mode_then_alternating_variant_order",
-  "generatedAtUtc": "2026-09-20T20:41:29.103Z",
+  "generatedAtUtc": "2026-09-21T04:32:11.956Z",
   "scene": "res://scenes/Main.tscn",
   "viewport": [
     1280,
@@ -43,9 +43,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.129,
-            0.231,
-            0.243
+            0.133,
+            0.202,
+            0.281
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -62,9 +62,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.145,
-              0.231,
-              0.234
+              0.14,
+              0.202,
+              0.231
             ],
             "drawWorldMs": [
               0.0,
@@ -77,9 +77,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.169,
-              0.273,
-              0.277
+              0.165,
+              0.237,
+              0.271
             ]
           },
           "runtimeIdentity": {
@@ -114,9 +114,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.151,
-            0.273,
-            0.287
+            0.158,
+            0.237,
+            0.331
           ]
         },
         "moving": {
@@ -128,14 +128,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.121,
-            0.222,
-            0.259
+            0.118,
+            0.197,
+            0.247
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.513,
-            2.063
+            0.376,
+            1.678
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -147,14 +147,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.142,
-              0.222,
-              0.234
+              0.145,
+              0.197,
+              0.209
             ],
             "drawWorldMs": [
-              0.3,
-              0.513,
-              0.591
+              0.321,
+              0.376,
+              0.484
             ],
             "measurementFrames": [
               480,
@@ -162,9 +162,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.174,
-              0.276,
-              0.293
+              0.178,
+              0.243,
+              0.26
             ]
           },
           "runtimeIdentity": {
@@ -199,16 +199,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.154,
-            0.276,
-            0.323
+            0.153,
+            0.243,
+            0.303
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
           "avgInputUs": 1,
-          "maxInputUs": 9,
+          "maxInputUs": 7,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -257,9 +257,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.057,
-            0.153,
-            0.215
+            0.067,
+            0.127,
+            0.184
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -276,9 +276,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.068,
-              0.153,
-              0.171
+              0.092,
+              0.137,
+              0.127
             ],
             "drawWorldMs": [
               0.0,
@@ -291,9 +291,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.088,
-              0.194,
-              0.218
+              0.117,
+              0.173,
+              0.16
             ]
           },
           "runtimeIdentity": {
@@ -328,9 +328,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.075,
-            0.194,
-            0.269
+            0.086,
+            0.16,
+            0.23
           ]
         },
         "moving": {
@@ -342,14 +342,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.054,
-            0.155,
-            0.349
+            0.067,
+            0.116,
+            0.257
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
             0.004,
-            0.022
+            0.019
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -361,14 +361,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.081,
-              0.172,
-              0.155
+              0.116,
+              0.111,
+              0.134
             ],
             "drawWorldMs": [
-              0.003,
               0.004,
-              0.006
+              0.004,
+              0.005
             ],
             "measurementFrames": [
               480,
@@ -376,9 +376,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.113,
-              0.233,
-              0.22
+              0.159,
+              0.154,
+              0.187
             ]
           },
           "runtimeIdentity": {
@@ -413,9 +413,9 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.071,
-            0.22,
-            0.496
+            0.087,
+            0.159,
+            0.361
           ],
           "clicks": 180,
           "accepted": 180,
@@ -462,8 +462,8 @@
       },
       "comparison": {
         "processScopeTotalMeanDeltaMs": {
-          "idle": -0.079,
-          "moving": -0.056
+          "idle": -0.077,
+          "moving": -0.084
         },
         "pairedAggregation": {
           "repetitions": [
@@ -473,19 +473,19 @@
           ],
           "processScopeTotalMeanDeltaMsByRepetition": {
             "idle": [
-              -0.081,
-              -0.079,
-              -0.059
+              -0.048,
+              -0.064,
+              -0.111
             ],
             "moving": [
-              -0.061,
-              -0.043,
+              -0.019,
+              -0.089,
               -0.073
             ]
           },
           "medianProcessScopeTotalMeanDeltaMs": {
-            "idle": -0.079,
-            "moving": -0.061
+            "idle": -0.064,
+            "moving": -0.073
           },
           "gates": {
             "idleRegressionWithinLimit": "PASS",
@@ -520,9 +520,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.129,
-            0.236,
-            0.268
+            0.13,
+            0.209,
+            0.259
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -539,9 +539,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.134,
-              0.253,
-              0.236
+              0.146,
+              0.209,
+              0.214
             ],
             "drawWorldMs": [
               0.0,
@@ -554,9 +554,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.158,
-              0.298,
-              0.279
+              0.172,
+              0.245,
+              0.252
             ]
           },
           "runtimeIdentity": {
@@ -591,9 +591,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.152,
-            0.279,
-            0.319
+            0.153,
+            0.245,
+            0.306
           ]
         },
         "moving": {
@@ -605,14 +605,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.13,
-            0.227,
-            0.291
+            0.102,
+            0.197,
+            0.235
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.592,
-            2.411
+            0.384,
+            1.781
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -624,14 +624,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.171,
-              0.254,
-              0.227
+              0.14,
+              0.197,
+              0.2
             ],
             "drawWorldMs": [
-              0.396,
-              0.66,
-              0.592
+              0.297,
+              0.384,
+              0.472
             ],
             "measurementFrames": [
               480,
@@ -639,9 +639,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.212,
-              0.319,
-              0.283
+              0.173,
+              0.244,
+              0.249
             ]
           },
           "runtimeIdentity": {
@@ -676,16 +676,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.155,
-            0.283,
-            0.349
+            0.146,
+            0.244,
+            0.301
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
-          "avgInputUs": 2,
-          "maxInputUs": 9,
+          "avgInputUs": 1,
+          "maxInputUs": 6,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -734,9 +734,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.065,
-            0.162,
-            0.327
+            0.071,
+            0.1,
+            0.218
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -753,9 +753,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.088,
-              0.202,
-              0.162
+              0.099,
+              0.12,
+              0.1
             ],
             "drawWorldMs": [
               0.0,
@@ -768,9 +768,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.112,
-              0.263,
-              0.205
+              0.125,
+              0.152,
+              0.127
             ]
           },
           "runtimeIdentity": {
@@ -805,9 +805,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.083,
-            0.205,
-            0.427
+            0.092,
+            0.127,
+            0.273
           ]
         },
         "moving": {
@@ -819,14 +819,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.055,
-            0.139,
-            0.361
+            0.065,
+            0.11,
+            0.229
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.005,
-            0.019
+            0.004,
+            0.014
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -838,14 +838,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.085,
-              0.143,
-              0.139
+              0.11,
+              0.163,
+              0.107
             ],
             "drawWorldMs": [
               0.003,
-              0.005,
-              0.005
+              0.004,
+              0.004
             ],
             "measurementFrames": [
               480,
@@ -853,9 +853,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.122,
-              0.207,
-              0.2
+              0.155,
+              0.222,
+              0.151
             ]
           },
           "runtimeIdentity": {
@@ -890,16 +890,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.073,
-            0.2,
-            0.538
+            0.083,
+            0.155,
+            0.32
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
           "avgInputUs": 1,
-          "maxInputUs": 5,
+          "maxInputUs": 3,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -939,8 +939,8 @@
       },
       "comparison": {
         "processScopeTotalMeanDeltaMs": {
-          "idle": -0.074,
-          "moving": -0.083
+          "idle": -0.118,
+          "moving": -0.089
         },
         "pairedAggregation": {
           "repetitions": [
@@ -950,19 +950,19 @@
           ],
           "processScopeTotalMeanDeltaMsByRepetition": {
             "idle": [
-              -0.046,
-              -0.035,
-              -0.074
+              -0.047,
+              -0.093,
+              -0.125
             ],
             "moving": [
-              -0.09,
-              -0.112,
-              -0.083
+              -0.018,
+              -0.022,
+              -0.098
             ]
           },
           "medianProcessScopeTotalMeanDeltaMs": {
-            "idle": -0.046,
-            "moving": -0.09
+            "idle": -0.093,
+            "moving": -0.022
           },
           "gates": {
             "idleRegressionWithinLimit": "PASS",
@@ -997,9 +997,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.167,
-            0.243,
-            0.264
+            0.141,
+            0.193,
+            0.231
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -1016,9 +1016,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.207,
-              0.243,
-              0.244
+              0.168,
+              0.203,
+              0.193
             ],
             "drawWorldMs": [
               0.0,
@@ -1031,9 +1031,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.244,
-              0.286,
-              0.287
+              0.198,
+              0.237,
+              0.227
             ]
           },
           "runtimeIdentity": {
@@ -1068,9 +1068,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.197,
-            0.286,
-            0.314
+            0.167,
+            0.227,
+            0.271
           ]
         },
         "moving": {
@@ -1082,14 +1082,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.19,
-            0.231,
-            0.278
+            0.135,
+            0.199,
+            0.247
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.539,
-            2.003
+            0.398,
+            1.477
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -1101,14 +1101,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.233,
-              0.218,
-              0.231
+              0.173,
+              0.199,
+              0.201
             ],
             "drawWorldMs": [
-              0.557,
-              0.531,
-              0.539
+              0.384,
+              0.398,
+              0.42
             ],
             "measurementFrames": [
               480,
@@ -1116,9 +1116,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.289,
-              0.273,
-              0.288
+              0.215,
+              0.246,
+              0.249
             ]
           },
           "runtimeIdentity": {
@@ -1153,16 +1153,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.252,
-            0.288,
-            0.347
+            0.166,
+            0.246,
+            0.293
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
-          "avgInputUs": 2,
-          "maxInputUs": 12,
+          "avgInputUs": 1,
+          "maxInputUs": 15,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -1211,9 +1211,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.079,
-            0.114,
-            0.211
+            0.073,
+            0.134,
+            0.218
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -1230,9 +1230,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.114,
-              0.163,
-              0.112
+              0.124,
+              0.134,
+              0.138
             ],
             "drawWorldMs": [
               0.0,
@@ -1245,9 +1245,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.146,
-              0.209,
-              0.143
+              0.157,
+              0.169,
+              0.173
             ]
           },
           "runtimeIdentity": {
@@ -1282,9 +1282,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.103,
-            0.146,
-            0.267
+            0.094,
+            0.169,
+            0.271
           ]
         },
         "moving": {
@@ -1296,14 +1296,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.076,
-            0.189,
-            0.551
+            0.066,
+            0.135,
+            0.254
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.005,
-            0.046
+            0.004,
+            0.016
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -1315,14 +1315,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.218,
-              0.189,
-              0.136
+              0.14,
+              0.115,
+              0.135
             ],
             "drawWorldMs": [
-              0.012,
-              0.005,
-              0.005
+              0.004,
+              0.003,
+              0.004
             ],
             "measurementFrames": [
               480,
@@ -1330,9 +1330,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.329,
-              0.266,
-              0.197
+              0.201,
+              0.162,
+              0.19
             ]
           },
           "runtimeIdentity": {
@@ -1367,16 +1367,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.1,
-            0.266,
-            0.846
+            0.084,
+            0.19,
+            0.377
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
-          "avgInputUs": 2,
-          "maxInputUs": 131,
+          "avgInputUs": 1,
+          "maxInputUs": 5,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -1416,8 +1416,8 @@
       },
       "comparison": {
         "processScopeTotalMeanDeltaMs": {
-          "idle": -0.14,
-          "moving": -0.022
+          "idle": -0.058,
+          "moving": -0.056
         },
         "pairedAggregation": {
           "repetitions": [
@@ -1427,19 +1427,19 @@
           ],
           "processScopeTotalMeanDeltaMsByRepetition": {
             "idle": [
-              -0.098,
-              -0.077,
-              -0.144
+              -0.041,
+              -0.068,
+              -0.054
             ],
             "moving": [
-              0.04,
-              -0.007,
-              -0.091
+              -0.014,
+              -0.084,
+              -0.059
             ]
           },
           "medianProcessScopeTotalMeanDeltaMs": {
-            "idle": -0.098,
-            "moving": -0.007
+            "idle": -0.054,
+            "moving": -0.059
           },
           "gates": {
             "idleRegressionWithinLimit": "PASS",
@@ -1474,9 +1474,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.221,
-            0.248,
-            0.283
+            0.147,
+            0.205,
+            0.259
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -1493,9 +1493,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.27,
-              0.234,
-              0.248
+              0.205,
+              0.206,
+              0.204
             ],
             "drawWorldMs": [
               0.0,
@@ -1508,9 +1508,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.318,
-              0.275,
-              0.292
+              0.252,
+              0.254,
+              0.252
             ]
           },
           "runtimeIdentity": {
@@ -1545,9 +1545,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.26,
-            0.292,
-            0.333
+            0.181,
+            0.252,
+            0.317
           ]
         },
         "moving": {
@@ -1559,14 +1559,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.209,
-            0.238,
-            0.352
+            0.133,
+            0.204,
+            0.286
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.539,
-            2.483
+            0.316,
+            1.72
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -1578,14 +1578,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.264,
-              0.238,
-              0.235
+              0.195,
+              0.204,
+              0.212
             ],
             "drawWorldMs": [
-              0.668,
-              0.53,
-              0.539
+              0.308,
+              0.316,
+              0.439
             ],
             "measurementFrames": [
               480,
@@ -1593,9 +1593,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.334,
-              0.297,
-              0.296
+              0.252,
+              0.263,
+              0.279
             ]
           },
           "runtimeIdentity": {
@@ -1630,16 +1630,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.25,
-            0.297,
-            0.461
+            0.208,
+            0.263,
+            0.402
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
-          "avgInputUs": 2,
-          "maxInputUs": 8,
+          "avgInputUs": 1,
+          "maxInputUs": 10,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -1688,9 +1688,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.082,
-            0.158,
-            0.247
+            0.06,
+            0.106,
+            0.236
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -1707,9 +1707,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.174,
-              0.158,
-              0.151
+              0.083,
+              0.106,
+              0.195
             ],
             "drawWorldMs": [
               0.0,
@@ -1722,9 +1722,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.222,
-              0.202,
-              0.192
+              0.109,
+              0.137,
+              0.252
             ]
           },
           "runtimeIdentity": {
@@ -1759,9 +1759,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.107,
-            0.202,
-            0.314
+            0.079,
+            0.137,
+            0.301
           ]
         },
         "moving": {
@@ -1773,14 +1773,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.077,
-            0.189,
-            0.466
+            0.064,
+            0.144,
+            0.347
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.004,
-            0.021
+            0.003,
+            0.013
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -1792,14 +1792,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.218,
-              0.137,
-              0.189
+              0.133,
+              0.163,
+              0.144
             ],
             "drawWorldMs": [
-              0.006,
               0.003,
-              0.004
+              0.004,
+              0.003
             ],
             "measurementFrames": [
               480,
@@ -1807,9 +1807,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.3,
-              0.187,
-              0.256
+              0.183,
+              0.224,
+              0.2
             ]
           },
           "runtimeIdentity": {
@@ -1844,16 +1844,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.1,
-            0.256,
-            0.628
+            0.087,
+            0.2,
+            0.477
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
           "avgInputUs": 1,
-          "maxInputUs": 6,
+          "maxInputUs": 7,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -1893,8 +1893,8 @@
       },
       "comparison": {
         "processScopeTotalMeanDeltaMs": {
-          "idle": -0.09,
-          "moving": -0.041
+          "idle": -0.115,
+          "moving": -0.063
         },
         "pairedAggregation": {
           "repetitions": [
@@ -1904,19 +1904,19 @@
           ],
           "processScopeTotalMeanDeltaMsByRepetition": {
             "idle": [
-              -0.096,
-              -0.073,
-              -0.1
+              -0.143,
+              -0.117,
+              0.0
             ],
             "moving": [
-              -0.034,
-              -0.11,
-              -0.04
+              -0.069,
+              -0.039,
+              -0.079
             ]
           },
           "medianProcessScopeTotalMeanDeltaMs": {
-            "idle": -0.096,
-            "moving": -0.04
+            "idle": -0.117,
+            "moving": -0.069
           },
           "gates": {
             "idleRegressionWithinLimit": "PASS",
@@ -1944,11 +1944,11 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:18ffa702cb35e6399fe899abd33e1cbf9e8628d8+beastbound-map-runtime-surface-v2:cbef22faa06579f683a8a9778395442b61057f0f0744584f86da44a55cf5cf09"
+    "buildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8"
   },
   "rawRunnerReceipt": {
     "path": "evidence/performance-runner-receipt.jsonl",
-    "sha256": "0ed4050972c3391329c1a83757270bc49915d043aab3ada12f0b02204e606990"
+    "sha256": "419466682676dc9a319dccd23ce1c5ff8a5b560fb14f05ca947cadedc9ab19d1"
   },
   "notes": [
     "All 48 variants ran through the real Main.tscn non-headless Compatibility path.",

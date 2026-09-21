@@ -339,7 +339,7 @@
 	"errors": [],
 	"result": "PASS",
 	"ok": true,
-	"generatedAtUtc": "2026-09-20T20:50:11Z",
+	"generatedAtUtc": "2026-09-21T04:34:47Z",
 	"hudGlyphStability": {
 		"status": "not_applicable",
 		"passed": true,
@@ -351,15 +351,15 @@
 		"authorized": true,
 		"cliPreviewFlagPresent": false,
 		"controllerActivatedCandidatePreview": true,
-		"planSha256": "7d4f1db90d12cae143ca204ba419464526d89d3b1b03de69fd1428601c0f6360",
+		"planSha256": "993e8f7bf760cc18ad168be2b652a900ae5a1539f71b99209166b89f543a9098",
 		"bundleId": "earth_vein_cave_visual_v1",
 		"mapId": "earth_vein_cave_f4",
 		"actionKind": "pointer",
-		"buildIdentity": "git:614ff4a4f048b0608dea7cd9b8d85287c778e4de+beastbound-map-runtime-surface-v2:cbef22faa06579f683a8a9778395442b61057f0f0744584f86da44a55cf5cf09",
+		"buildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8",
 		"bundleManifestSha256": "8b365cd58d2fd272b779aa8544d2503be9a19a55f690b114c3aad1c8128f1e9e",
-		"captureSurfaceIdentitySha256": "911270a1e513f95a7f621568cd6676d18d2f74cdf07a1976fcbfdacd056718ed"
+		"captureSurfaceIdentitySha256": "0cb0c9a57f515cc1f160aa0f50f1d42701e92e8bf2afcb88cc4a01139a80005c"
 	},
-	"batchPlanSha256": "7d4f1db90d12cae143ca204ba419464526d89d3b1b03de69fd1428601c0f6360",
+	"batchPlanSha256": "993e8f7bf760cc18ad168be2b652a900ae5a1539f71b99209166b89f543a9098",
 	"batchSourceIdentity": {
 		"orchestrator": {
 			"path": "repo://tools/record_map_visual_action_captures.py",
@@ -411,11 +411,11 @@
 		},
 		"mainHost": {
 			"path": "res://scripts/main.gd",
-			"sha256": "3f88bef2b0d93cb31f51f4560cf147132bfcca7eb8883495d1ea6ec122c04f0e"
+			"sha256": "9d52e72411c849d0beaa7d4c76b1bd8d55dcba4f3ffe09a25986f54ee20f71e7"
 		}
 	},
 	"batchRuntimeIdentity": {
-		"processId": 87723,
+		"processId": 15807,
 		"processFrameOrigin": 0,
 		"displayServer": "macOS",
 		"displayServerWindowCount": 1,
@@ -431,7 +431,7 @@
 			720
 		]
 	},
-	"batchBuildIdentity": "git:614ff4a4f048b0608dea7cd9b8d85287c778e4de+beastbound-map-runtime-surface-v2:cbef22faa06579f683a8a9778395442b61057f0f0744584f86da44a55cf5cf09",
+	"batchBuildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8",
 	"batchBundleManifestIdentity": {
 		"path": "client/godot/assets/maps/earth_vein_cave_visual_v1/map-visual-bundle.json",
 		"canonicalization": "map_runtime_subject_v1",
@@ -465,19 +465,19 @@
 		"client/godot/assets/maps/earth_vein_cave_visual_v1/runtime/objects/earth_cave_wall_ridge.png.import": "49b4651ea05820f39c78e32fb2c4c2bf42bcdd3f00d513cb6442b18af67b3141",
 		"client/godot/data/earth_vein_cave_f2_map.json": "9d59b59500b61efe65c17fe40b07729abf113222e1ceb32ab8b8c1d8ed74c314",
 		"client/godot/data/earth_vein_cave_f3_map.json": "305a787cd8101ec22dc46e50c2ae776a049450c99da62a5731213e62a565a15a",
-		"client/godot/data/earth_vein_cave_f4_map.json": "c6de465f36cf3c684b632d46d9236be47572421a8e7b79ecfe4c12155900c453",
+		"client/godot/data/earth_vein_cave_f4_map.json": "b72a39c662ce7e499b880e54a000a46a0eb7543877a502674e04f95e6364e028",
 		"client/godot/data/earth_vein_cave_map.json": "a3bff8c95e4315c409ac818656ee57a4d4ad1e26112bada4b3ab9ed6ce36c8cf",
 		"client/godot/data/map_visual_review_catalog.json": "662fa235c072f295aed084f2163934cb69a41ec0f8083801649242b1c47dbc3f",
 		"client/godot/scripts/world/map_data_catalog.gd": "786987c35f4d9f6ba397505000dc6aa33a011d2990c658105add79cb5b346a26",
 		"client/godot/scripts/world/map_visual_catalog.gd": "11e31780d170ec7a6a6f762a197ba33d0b247e62c58d11f91335fa2cb8c811cc",
 		"client/godot/scripts/world/map_visual_renderer.gd": "7df4d3b241ca80d8f980b52b81a9595ec6c0059a0a5d891939daebd7bb76b66f"
 	},
-	"batchCaptureSurfaceIdentitySha256": "911270a1e513f95a7f621568cd6676d18d2f74cdf07a1976fcbfdacd056718ed",
+	"batchCaptureSurfaceIdentitySha256": "0cb0c9a57f515cc1f160aa0f50f1d42701e92e8bf2afcb88cc4a01139a80005c",
 	"batchWindowIdentity": {
 		"rootWindowId": 0,
 		"before": {
 			"label": "earth_vein_cave_f4/pointer:before",
-			"processFrame": 2170,
+			"processFrame": 2171,
 			"windowCount": 1,
 			"windowIds": [
 				0
@@ -486,7 +486,7 @@
 		},
 		"after": {
 			"label": "earth_vein_cave_f4/pointer:after",
-			"processFrame": 2287,
+			"processFrame": 2288,
 			"windowCount": 1,
 			"windowIds": [
 				0
@@ -494,8 +494,8 @@
 			"rootWindowId": 0
 		}
 	},
-	"captureWritePath": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/map_visual_action_captures/earth_vein_cave_visual_v1/phase602-formal-actions-20260921/single-window-batch/staged-actions/earth_vein_cave_f4/pointer.png",
-	"captureReportWritePath": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/map_visual_action_captures/earth_vein_cave_visual_v1/phase602-formal-actions-20260921/single-window-batch/staged-actions/earth_vein_cave_f4/pointer-capture.json",
+	"captureWritePath": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/map_visual_action_captures/earth_vein_cave_visual_v1/phase608-current-actions-20260921/single-window-batch/staged-actions/earth_vein_cave_f4/pointer.png",
+	"captureReportWritePath": "/Users/fander/projects/Beastbound_Odyssey/.run/evidence/map_visual_action_captures/earth_vein_cave_visual_v1/phase608-current-actions-20260921/single-window-batch/staged-actions/earth_vein_cave_f4/pointer-capture.json",
 	"reportInstallPath": "res://assets/maps/earth_vein_cave_visual_v1/evidence/runtime-actions/earth_vein_cave_f4/pointer-capture.json",
 	"batchReportSealed": true
 }

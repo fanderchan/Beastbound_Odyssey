@@ -3,7 +3,7 @@
   "reportType": "beastbound_map_collision_audit",
   "bundleId": "earth_vein_cave_visual_v1",
   "result": "PASS",
-  "generatedAtUtc": "2026-09-20T22:27:33Z",
+  "generatedAtUtc": "2026-09-20T23:50:02Z",
   "scene": "res://scenes/Main.tscn",
   "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd -- --preview-map-visual-catalog-contract",
   "testedMapIds": [
@@ -68,26 +68,26 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:e8e9aaea9e64c6dae47283fb27cda1bbb9e21f3e+beastbound-map-runtime-surface-v2:d4493cf00321ccbb60c9f261c051963b068ef34ac4883df42a21cbefd30adb3a"
+    "buildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8"
   },
   "rawRunnerReceipt": {
     "path": "evidence/collision-runner-receipt.log",
-    "sha256": "0b371d8d3949df1541376210b60ad82c930e10db862c41a5c4acff40a7807d53"
+    "sha256": "b07a65dc497649471378dfcbb6f1b71d6c45f34dfc35bad712c5a29effb91aa2"
   },
   "notes": [
     "This report covers authoritative map, collision, protected-cell and exact-path contracts.",
     "Tall-object front/behind presentation is independently gated by the formal Computer Use occlusion action.",
-    "The raw receipt is the completed owned-QA wrapper output; Main attests the isolated lane before the unchanged runtime checker executes. Historical performance and action captures retain their original identities until the review batch is re-frozen."
+    "Logical checker delegated unchanged through the official QA-lane attestation wrapper; actual argv and wrapper hash are preserved in qaWrapperProvenance. Generated in staging and installed with matching Phase608 evidence; not visual or owner acceptance."
   ],
-  "qaExecution": {
-    "buildIdentity": "git:e8e9aaea9e64c6dae47283fb27cda1bbb9e21f3e+beastbound-map-runtime-surface-v2:d4493cf00321ccbb60c9f261c051963b068ef34ac4883df42a21cbefd30adb3a",
+  "qaWrapperProvenance": {
+    "buildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8",
     "argv": [
       "/Users/fander/projects/Beastbound_Odyssey/.run/phase584-native-review/Beastbound QA.app/Contents/MacOS/Godot",
       "--headless",
       "--path",
       "/Users/fander/projects/Beastbound_Odyssey/client/godot",
       "--script",
-      "/Users/fander/projects/Beastbound_Odyssey/.run/phase605-collision/collision_owned.gd",
+      "/Users/fander/projects/Beastbound_Odyssey/.run/phase608-collision-owned/collision_owned.gd",
       "--audio-driver",
       "Dummy",
       "--",
@@ -98,6 +98,6 @@
     "delegatedScript": "res://scripts/qa/map_visual_runtime_check.gd",
     "realUnchanged": true,
     "laneAbsentAfterCleanup": true,
-    "nativeLogSha256": "0b371d8d3949df1541376210b60ad82c930e10db862c41a5c4acff40a7807d53"
+    "nativeLogSha256": "b07a65dc497649471378dfcbb6f1b71d6c45f34dfc35bad712c5a29effb91aa2"
   }
 }
