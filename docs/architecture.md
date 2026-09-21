@@ -42,6 +42,8 @@ PC 客户端默认使用 Godot Compatibility 渲染器。`project.godot` 同时�
 
 启用美术的地图由 [WorldGroundLayer](../client/godot/scripts/world/world_ground_layer.gd) 保留背景和地面绘制。[MapGroundMesh](../client/godot/scripts/world/map_ground_mesh.gd) 按原图集与叠放顺序合并地面几何，只在地图修订变化时重建；背景范围变化只刷新绘制，特殊裁切／翻转和子图集继续走原区域绘制器。路径等动态反馈仍由 Main 绘制，人物与物件由 WorldDepthLayer 排序。未启用美术继续走原网格回退。变更地面数据时必须沿用地图修订失效链路，避免只重绘 Main 而留下旧缓存。
 
+地图内容访问与美术生命周期分开：MapDataCatalog／MapRoutePlanner 注册玩法地图和入口，MapVisualCatalog 只决定地表／物件是否加载。当前 `_load_map()` 在视觉准备为空时仍继续进入地图，服务端也不会因美术 `runtimeEnabled=false` 拒绝合法传送。岩脉四层普通入口实际可用，普通镜头为 `1.0×`，显式候选预览为 `1.52×`；地图内容若首发延期，必须另行协调入口、路线和权威访问规则。现有美术关闭检查不能证明区域不可达，见 [Phase610](phase_610_map_content_and_art_access.md)。
+
 WorldDepthLayer 为注册人物保留带类型的脚点深度与可见性记录，成员仅在注册时按 stableId 排序；晚序回调仍读取实时脚点方法／元数据，移动或显隐变化后生成原有三位小数签名。替换同名人物强制刷新，同帧释放多个节点也完整清理。不要把元数据或动态脚点当成永久常量；回归与前后证据见 [Phase 600](phase_600_retained_actor_depth_state.md)。
 
 [WorldOverlayLayer](../client/godot/scripts/world/world_overlay_layer.gd) 保留设施名称与原锚点，名称和玩家轮廓相交时上移避让，离开后恢复。读取玩家已有的轮廓缓存，几何不变时不遍历标签；文字实际控件尺寸及 `resized` 信号参与缓存失效，不能只用请求的最小高度。避让只移动显示节点，不改碰撞、点击位置或目标圈，见 [Phase 606](phase_606_world_marker_player_visibility.md)。

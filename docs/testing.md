@@ -66,6 +66,8 @@ node tools/run_godot_auto_checks.mjs --only --auto-auth-check --fail-fast --time
 
 同屏角色外观复用现有 `--auto-map-visual-runtime-check`，其中包含四外观、八方向、节点复用、碰撞隔离及点击范围检查；再运行 `--auto-character-runtime-appearance-check` 与 `--auto-camera-click-check`。服务端使用 `online-player-appearance.test.js` 和 `online-presence.test.js` 检查权威投影及提交后广播，完整命令和前后性能见 [Phase 563](phase_563_remote_player_appearance.md)。正式联机验收仍需真实客户端操作。
 
+地图美术检查中的生命周期关闭只证明候选素材没有加载，不能证明玩法地图不可进入。验证首发延期的地图内容时，需独立覆盖普通客户端入口／导航、无传送捷径的服务端合法行走与切图、已有角色位置恢复及相关任务／挂机路线；显式 review preview 不替代普通启动。当前岩脉四层仍可正常传送但回退到网格，实证与复现边界见 [Phase610](phase_610_map_content_and_art_access.md)。
+
 ## 联机 QA
 
 Live 检查会创建账号或修改状态，只允许连接操作者明确创建的一次性本地 QA 后端。普通玩家的本机 MySQL 服务也不是默认的 QA 写入目标。

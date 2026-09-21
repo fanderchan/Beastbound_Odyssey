@@ -12,6 +12,7 @@
 | 判断该跑哪些检查 | [测试指南](testing.md) |
 | 试玩最新洞穴和守护战、查看效果和成品差距 | [当前可玩内容与剩余门槛](project-status.md)、[当前四层影片与七战全胜返村](phase_609_current_cave_movies_and_return.md)、[四层／地标／五人战斗试玩入口](phase_569_current_four_floor_review.md)、[历史完整鼠标返村](phase_596_manual_cave_return_completed.md)、[人工录制时钟与恢复检查](phase_595_manual_recording_clock.md) |
 | 查看渲染与性能进度 | [当前四层画面／动作／性能证据](phase_608_current_cave_evidence_refreeze.md)、[Compatibility 后端与原生复验](phase_601_compatibility_renderer.md)、[人物排序优化与分项耗时](phase_600_retained_actor_depth_state.md)、[静止按需绘制](phase_598_world_idle_rendering.md) |
+| 普通启动为什么仍是网格、人物较小 | [地图入口与候选美术是两套边界](phase_610_map_content_and_art_access.md)；洞穴入口当前可用，美术仅显式预览，普通启动尚未交付相同画面 |
 | 继续整理大文件和技术债 | [维护清单](maintenance.md) |
 | 按文件找代码、数据、脚本 | [自动代码索引](reference/code-index.md) |
 | 查某项规则为何这样设计 | [自动阶段索引](reference/phase-index.md) |
