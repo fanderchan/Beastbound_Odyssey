@@ -85,13 +85,37 @@ func _run() -> void:
 		var observed_frames := 0
 		var unfocused_frames := 0
 		var non_drawable_frames := 0
+		var first_visibility_loss_recorded := false
+		var sample_started_usec := Time.get_ticks_usec()
 		while not _sample_done and Time.get_ticks_msec() < deadline:
 			await process_frame
 			observed_frames += 1
-			if not DisplayServer.window_is_focused():
+			var focused := DisplayServer.window_is_focused()
+			var drawable := root.can_draw()
+			var render_loop_enabled := RenderingServer.is_render_loop_enabled()
+			if not focused:
 				unfocused_frames += 1
-			if not root.can_draw() or not RenderingServer.is_render_loop_enabled():
+			if not drawable or not render_loop_enabled:
 				non_drawable_frames += 1
+			if not first_visibility_loss_recorded and (not focused or not drawable or not render_loop_enabled):
+				first_visibility_loss_recorded = true
+				# Diagnose only an already-invalid sample. Do not poll window
+				# geometry, write traces or try to restore focus on the healthy path.
+				print("map performance visibility lost: %s" % JSON.stringify({
+					"sampleIndex": index, "sample": sample,
+					"unixTime": Time.get_unix_time_from_system(),
+					"elapsedWallUsec": Time.get_ticks_usec() - sample_started_usec,
+					"observedFrames": observed_frames,
+					"processFrame": Engine.get_process_frames(),
+					"drawFrame": Engine.get_frames_drawn(),
+					"focused": focused, "canDraw": drawable,
+					"renderLoopEnabled": render_loop_enabled,
+					"rootVisible": root.visible,
+					"windowMode": DisplayServer.window_get_mode(),
+					"windowPosition": [root.position.x, root.position.y],
+					"windowSize": [root.size.x, root.size.y],
+					"currentScreen": root.current_screen,
+				}))
 		if not _sample_done:
 			_errors.append("sample_timeout_%d" % index)
 			_finish()

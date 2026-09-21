@@ -308,7 +308,7 @@
 | [hang_matchmaking_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_owner_review_capture.gd) | 716 |
 | [hang_matchmaking_world_hud_owner_review_capture.gd](../../client/godot/scripts/qa/hang_matchmaking_world_hud_owner_review_capture.gd) | 1622 |
 | [map_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/map_awakened_owner_review_capture.gd) | 2654 |
-| [map_performance_batch.gd](../../client/godot/scripts/qa/map_performance_batch.gd) | 327 |
+| [map_performance_batch.gd](../../client/godot/scripts/qa/map_performance_batch.gd) | 351 |
 | [map_visual_action_capture_batch.gd](../../client/godot/scripts/qa/map_visual_action_capture_batch.gd) | 1079 |
 | [map_visual_release_contract_check.gd](../../client/godot/scripts/qa/map_visual_release_contract_check.gd) | 475 |
 | [map_visual_review_capture.gd](../../client/godot/scripts/qa/map_visual_review_capture.gd) | 1826 |
