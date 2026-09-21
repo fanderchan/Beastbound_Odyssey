@@ -1355,7 +1355,10 @@
       "path": "evidence/collision-audit.json",
       "sha256": "c842743a13b16b711b26ff051eae0f0ea3bd226cb0b78d3316108968fe5a7472"
     },
-    "performanceReport": null,
+    "performanceReport": {
+      "path": "evidence/performance-report.json",
+      "sha256": "84260b4bc6dd2ee42434c671effb380b0204f804d158987be82103c92e4aa874"
+    },
     "ownerAcceptance": null
   }
 }

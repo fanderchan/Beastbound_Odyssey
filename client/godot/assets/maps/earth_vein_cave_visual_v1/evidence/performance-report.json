@@ -7,7 +7,7 @@
   "aggregationMode": "median_of_independent_run_means_with_envelope_extrema",
   "repetitionCount": 3,
   "executionOrder": "repetition_then_rotated_map_then_mode_then_alternating_variant_order",
-  "generatedAtUtc": "2026-09-21T04:32:11.956Z",
+  "generatedAtUtc": "2026-09-21T17:53:40.091Z",
   "scene": "res://scenes/Main.tscn",
   "viewport": [
     1280,
@@ -43,9 +43,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.133,
-            0.202,
-            0.281
+            0.119,
+            0.184,
+            0.257
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -62,9 +62,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.14,
-              0.202,
-              0.231
+              0.127,
+              0.184,
+              0.193
             ],
             "drawWorldMs": [
               0.0,
@@ -77,9 +77,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.165,
-              0.237,
-              0.271
+              0.15,
+              0.217,
+              0.227
             ]
           },
           "runtimeIdentity": {
@@ -114,9 +114,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.158,
-            0.237,
-            0.331
+            0.141,
+            0.217,
+            0.302
           ]
         },
         "moving": {
@@ -128,14 +128,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.118,
-            0.197,
-            0.247
+            0.106,
+            0.182,
+            0.214
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.376,
-            1.678
+            0.382,
+            1.498
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -147,14 +147,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.145,
-              0.197,
-              0.209
+              0.125,
+              0.182,
+              0.185
             ],
             "drawWorldMs": [
-              0.321,
-              0.376,
-              0.484
+              0.279,
+              0.43,
+              0.382
             ],
             "measurementFrames": [
               480,
@@ -162,9 +162,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.178,
-              0.243,
-              0.26
+              0.154,
+              0.227,
+              0.231
             ]
           },
           "runtimeIdentity": {
@@ -199,9 +199,9 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.153,
-            0.243,
-            0.303
+            0.136,
+            0.227,
+            0.281
           ],
           "clicks": 180,
           "accepted": 180,
@@ -257,9 +257,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.067,
-            0.127,
-            0.184
+            0.1,
+            0.144,
+            0.234
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -276,9 +276,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.092,
-              0.137,
-              0.127
+              0.125,
+              0.15,
+              0.144
             ],
             "drawWorldMs": [
               0.0,
@@ -291,9 +291,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.117,
-              0.173,
-              0.16
+              0.159,
+              0.189,
+              0.181
             ]
           },
           "runtimeIdentity": {
@@ -328,9 +328,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.086,
-            0.16,
-            0.23
+            0.128,
+            0.181,
+            0.289
           ]
         },
         "moving": {
@@ -342,14 +342,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.067,
-            0.116,
-            0.257
+            0.062,
+            0.148,
+            0.293
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
             0.004,
-            0.019
+            0.016
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -361,14 +361,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.116,
-              0.111,
-              0.134
+              0.148,
+              0.15,
+              0.132
             ],
             "drawWorldMs": [
               0.004,
-              0.004,
-              0.005
+              0.003,
+              0.004
             ],
             "measurementFrames": [
               480,
@@ -376,9 +376,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.159,
-              0.154,
-              0.187
+              0.214,
+              0.214,
+              0.198
             ]
           },
           "runtimeIdentity": {
@@ -413,16 +413,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.087,
-            0.159,
-            0.361
+            0.08,
+            0.214,
+            0.46
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
           "avgInputUs": 1,
-          "maxInputUs": 8,
+          "maxInputUs": 6,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -462,8 +462,8 @@
       },
       "comparison": {
         "processScopeTotalMeanDeltaMs": {
-          "idle": -0.077,
-          "moving": -0.084
+          "idle": -0.036,
+          "moving": -0.013
         },
         "pairedAggregation": {
           "repetitions": [
@@ -473,19 +473,19 @@
           ],
           "processScopeTotalMeanDeltaMsByRepetition": {
             "idle": [
-              -0.048,
-              -0.064,
-              -0.111
+              0.009,
+              -0.028,
+              -0.046
             ],
             "moving": [
-              -0.019,
-              -0.089,
-              -0.073
+              0.06,
+              -0.013,
+              -0.033
             ]
           },
           "medianProcessScopeTotalMeanDeltaMs": {
-            "idle": -0.064,
-            "moving": -0.073
+            "idle": -0.028,
+            "moving": -0.013
           },
           "gates": {
             "idleRegressionWithinLimit": "PASS",
@@ -520,9 +520,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.13,
-            0.209,
-            0.259
+            0.118,
+            0.127,
+            0.281
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -539,9 +539,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.146,
-              0.209,
-              0.214
+              0.127,
+              0.123,
+              0.215
             ],
             "drawWorldMs": [
               0.0,
@@ -554,8 +554,8 @@
               480
             ],
             "processScopeTotalMs": [
-              0.172,
-              0.245,
+              0.149,
+              0.145,
               0.252
             ]
           },
@@ -591,9 +591,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.153,
-            0.245,
-            0.306
+            0.139,
+            0.149,
+            0.331
           ]
         },
         "moving": {
@@ -605,14 +605,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.102,
-            0.197,
-            0.235
+            0.108,
+            0.12,
+            0.24
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.384,
-            1.781
+            0.286,
+            1.264
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -624,14 +624,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.14,
-              0.197,
-              0.2
+              0.12,
+              0.119,
+              0.195
             ],
             "drawWorldMs": [
-              0.297,
-              0.384,
-              0.472
+              0.285,
+              0.286,
+              0.372
             ],
             "measurementFrames": [
               480,
@@ -639,9 +639,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.173,
-              0.244,
-              0.249
+              0.149,
+              0.149,
+              0.241
             ]
           },
           "runtimeIdentity": {
@@ -676,9 +676,9 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.146,
-            0.244,
-            0.301
+            0.134,
+            0.149,
+            0.326
           ],
           "clicks": 180,
           "accepted": 180,
@@ -734,9 +734,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.071,
-            0.1,
-            0.218
+            0.074,
+            0.12,
+            0.21
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -753,9 +753,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.099,
               0.12,
-              0.1
+              0.119,
+              0.172
             ],
             "drawWorldMs": [
               0.0,
@@ -768,9 +768,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.125,
-              0.152,
-              0.127
+              0.153,
+              0.151,
+              0.216
             ]
           },
           "runtimeIdentity": {
@@ -805,9 +805,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.092,
-            0.127,
-            0.273
+            0.096,
+            0.153,
+            0.259
           ]
         },
         "moving": {
@@ -819,9 +819,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.065,
-            0.11,
-            0.229
+            0.082,
+            0.14,
+            0.261
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -838,12 +838,12 @@
               60.0
             ],
             "processTotalMs": [
-              0.11,
-              0.163,
-              0.107
+              0.124,
+              0.155,
+              0.14
             ],
             "drawWorldMs": [
-              0.003,
+              0.004,
               0.004,
               0.004
             ],
@@ -853,9 +853,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.155,
-              0.222,
-              0.151
+              0.187,
+              0.227,
+              0.208
             ]
           },
           "runtimeIdentity": {
@@ -890,16 +890,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.083,
-            0.155,
-            0.32
+            0.105,
+            0.208,
+            0.417
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
           "avgInputUs": 1,
-          "maxInputUs": 3,
+          "maxInputUs": 8,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -939,8 +939,8 @@
       },
       "comparison": {
         "processScopeTotalMeanDeltaMs": {
-          "idle": -0.118,
-          "moving": -0.089
+          "idle": 0.004,
+          "moving": 0.059
         },
         "pairedAggregation": {
           "repetitions": [
@@ -950,19 +950,19 @@
           ],
           "processScopeTotalMeanDeltaMsByRepetition": {
             "idle": [
-              -0.047,
-              -0.093,
-              -0.125
+              0.004,
+              0.006,
+              -0.036
             ],
             "moving": [
-              -0.018,
-              -0.022,
-              -0.098
+              0.038,
+              0.078,
+              -0.033
             ]
           },
           "medianProcessScopeTotalMeanDeltaMs": {
-            "idle": -0.093,
-            "moving": -0.022
+            "idle": 0.004,
+            "moving": 0.038
           },
           "gates": {
             "idleRegressionWithinLimit": "PASS",
@@ -997,9 +997,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.141,
-            0.193,
-            0.231
+            0.118,
+            0.135,
+            0.252
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -1016,9 +1016,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.168,
-              0.203,
-              0.193
+              0.125,
+              0.135,
+              0.21
             ],
             "drawWorldMs": [
               0.0,
@@ -1031,9 +1031,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.198,
-              0.237,
-              0.227
+              0.147,
+              0.159,
+              0.247
             ]
           },
           "runtimeIdentity": {
@@ -1068,9 +1068,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.167,
-            0.227,
-            0.271
+            0.139,
+            0.159,
+            0.297
           ]
         },
         "moving": {
@@ -1082,14 +1082,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.135,
-            0.199,
-            0.247
+            0.108,
+            0.151,
+            0.236
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.398,
-            1.477
+            0.292,
+            1.629
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -1101,14 +1101,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.173,
-              0.199,
-              0.201
+              0.123,
+              0.151,
+              0.192
             ],
             "drawWorldMs": [
-              0.384,
-              0.398,
-              0.42
+              0.284,
+              0.292,
+              0.443
             ],
             "measurementFrames": [
               480,
@@ -1116,9 +1116,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.215,
-              0.246,
-              0.249
+              0.152,
+              0.187,
+              0.239
             ]
           },
           "runtimeIdentity": {
@@ -1153,223 +1153,9 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.166,
-            0.246,
-            0.293
-          ],
-          "clicks": 180,
-          "accepted": 180,
-          "resolved": 69,
-          "applied": 54,
-          "avgInputUs": 1,
-          "maxInputUs": 15,
-          "moved": true,
-          "coalesced": true,
-          "settled": true,
-          "finalTargetMatched": true,
-          "battle": false,
-          "encounter": false,
-          "workloadIdentityByRepetition": [
-            {
-              "sequenceId": "spawn_adjacent_pair_v1",
-              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
-              "startCell": "5,20",
-              "actualStartCell": "5,20",
-              "finalCell": "6,20",
-              "clicks": 60,
-              "mouseEvents": 120
-            },
-            {
-              "sequenceId": "spawn_adjacent_pair_v1",
-              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
-              "startCell": "5,20",
-              "actualStartCell": "5,20",
-              "finalCell": "6,20",
-              "clicks": 60,
-              "mouseEvents": 120
-            },
-            {
-              "sequenceId": "spawn_adjacent_pair_v1",
-              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
-              "startCell": "5,20",
-              "actualStartCell": "5,20",
-              "finalCell": "6,20",
-              "clicks": 60,
-              "mouseEvents": 120
-            }
-          ]
-        }
-      },
-      "candidate": {
-        "renderer": "map_visual_candidate",
-        "idle": {
-          "samples": 24,
-          "measurementFrames": 1440,
-          "fpsMinMeanMax": [
-            60.0,
-            60.0,
-            60.0
-          ],
-          "processTotalMsMinMeanMax": [
-            0.073,
-            0.134,
-            0.218
-          ],
-          "drawWorldMsMinMeanMax": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "drawWorldObservedSampleCount": 0,
-          "repetitionCount": 3,
-          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
-          "runMeanValues": {
-            "fps": [
-              60.0,
-              60.0,
-              60.0
-            ],
-            "processTotalMs": [
-              0.124,
-              0.134,
-              0.138
-            ],
-            "drawWorldMs": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "measurementFrames": [
-              480,
-              480,
-              480
-            ],
-            "processScopeTotalMs": [
-              0.157,
-              0.169,
-              0.173
-            ]
-          },
-          "runtimeIdentity": {
-            "candidateEnabled": true,
-            "displayServer": "macOS",
-            "engineVersion": "4.7-stable (official)",
-            "engineVersionHash": "5b4e0cb0f",
-            "mapId": "earth_vein_cave_f3",
-            "mapVisualActive": true,
-            "mapVisualBundleId": "earth_vein_cave_visual_v1",
-            "mapVisualCatalogSource": "review",
-            "mapVisualMapId": "earth_vein_cave_f3",
-            "mapVisualQaPreview": true,
-            "mapVisualReviewCandidate": true,
-            "mapVisualStatus": "owner_review_pending",
-            "processScopeMonitor": "process_priority_boundary_v1",
-            "processScopePriorities": [
-              -1000000,
-              1000000
-            ],
-            "processScopeReady": true,
-            "renderingDriver": "opengl3",
-            "renderingMethod": "gl_compatibility",
-            "sampleFrames": 60,
-            "status": "passed",
-            "videoAdapterName": "Apple M5",
-            "viewportSize": [
-              1280,
-              720
-            ],
-            "vsyncMode": 0
-          },
-          "measurementBoundary": "post_warmup_fixed_frames",
-          "processScopeTotalMsMinMeanMax": [
-            0.094,
-            0.169,
-            0.271
-          ]
-        },
-        "moving": {
-          "samples": 24,
-          "measurementFrames": 1440,
-          "fpsMinMeanMax": [
-            60.0,
-            60.0,
-            60.0
-          ],
-          "processTotalMsMinMeanMax": [
-            0.066,
-            0.135,
-            0.254
-          ],
-          "drawWorldMsMinMeanMax": [
-            0.0,
-            0.004,
-            0.016
-          ],
-          "drawWorldObservedSampleCount": 9,
-          "repetitionCount": 3,
-          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
-          "runMeanValues": {
-            "fps": [
-              60.0,
-              60.0,
-              60.0
-            ],
-            "processTotalMs": [
-              0.14,
-              0.115,
-              0.135
-            ],
-            "drawWorldMs": [
-              0.004,
-              0.003,
-              0.004
-            ],
-            "measurementFrames": [
-              480,
-              480,
-              480
-            ],
-            "processScopeTotalMs": [
-              0.201,
-              0.162,
-              0.19
-            ]
-          },
-          "runtimeIdentity": {
-            "candidateEnabled": true,
-            "displayServer": "macOS",
-            "engineVersion": "4.7-stable (official)",
-            "engineVersionHash": "5b4e0cb0f",
-            "mapId": "earth_vein_cave_f3",
-            "mapVisualActive": true,
-            "mapVisualBundleId": "earth_vein_cave_visual_v1",
-            "mapVisualCatalogSource": "review",
-            "mapVisualMapId": "earth_vein_cave_f3",
-            "mapVisualQaPreview": true,
-            "mapVisualReviewCandidate": true,
-            "mapVisualStatus": "owner_review_pending",
-            "processScopeMonitor": "process_priority_boundary_v1",
-            "processScopePriorities": [
-              -1000000,
-              1000000
-            ],
-            "processScopeReady": true,
-            "renderingDriver": "opengl3",
-            "renderingMethod": "gl_compatibility",
-            "sampleFrames": 60,
-            "status": "passed",
-            "videoAdapterName": "Apple M5",
-            "viewportSize": [
-              1280,
-              720
-            ],
-            "vsyncMode": 0
-          },
-          "measurementBoundary": "shared_input_then_fixed_frames",
-          "processScopeTotalMsMinMeanMax": [
-            0.084,
-            0.19,
-            0.377
+            0.138,
+            0.187,
+            0.281
           ],
           "clicks": 180,
           "accepted": 180,
@@ -1414,10 +1200,224 @@
           ]
         }
       },
+      "candidate": {
+        "renderer": "map_visual_candidate",
+        "idle": {
+          "samples": 24,
+          "measurementFrames": 1440,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.07,
+            0.126,
+            0.202
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "drawWorldObservedSampleCount": 0,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.115,
+              0.126,
+              0.149
+            ],
+            "drawWorldMs": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.146,
+              0.16,
+              0.187
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": true,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f3",
+            "mapVisualActive": true,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1",
+            "mapVisualCatalogSource": "review",
+            "mapVisualMapId": "earth_vein_cave_f3",
+            "mapVisualQaPreview": true,
+            "mapVisualReviewCandidate": true,
+            "mapVisualStatus": "owner_review_pending",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "post_warmup_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.09,
+            0.16,
+            0.253
+          ]
+        },
+        "moving": {
+          "samples": 24,
+          "measurementFrames": 1440,
+          "fpsMinMeanMax": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "processTotalMsMinMeanMax": [
+            0.099,
+            0.153,
+            0.292
+          ],
+          "drawWorldMsMinMeanMax": [
+            0.0,
+            0.004,
+            0.015
+          ],
+          "drawWorldObservedSampleCount": 9,
+          "repetitionCount": 3,
+          "aggregationMethod": "median_of_independent_run_means_with_envelope_extrema",
+          "runMeanValues": {
+            "fps": [
+              60.0,
+              60.0,
+              60.0
+            ],
+            "processTotalMs": [
+              0.153,
+              0.14,
+              0.154
+            ],
+            "drawWorldMs": [
+              0.004,
+              0.004,
+              0.004
+            ],
+            "measurementFrames": [
+              480,
+              480,
+              480
+            ],
+            "processScopeTotalMs": [
+              0.226,
+              0.209,
+              0.227
+            ]
+          },
+          "runtimeIdentity": {
+            "candidateEnabled": true,
+            "displayServer": "macOS",
+            "engineVersion": "4.7-stable (official)",
+            "engineVersionHash": "5b4e0cb0f",
+            "mapId": "earth_vein_cave_f3",
+            "mapVisualActive": true,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1",
+            "mapVisualCatalogSource": "review",
+            "mapVisualMapId": "earth_vein_cave_f3",
+            "mapVisualQaPreview": true,
+            "mapVisualReviewCandidate": true,
+            "mapVisualStatus": "owner_review_pending",
+            "processScopeMonitor": "process_priority_boundary_v1",
+            "processScopePriorities": [
+              -1000000,
+              1000000
+            ],
+            "processScopeReady": true,
+            "renderingDriver": "opengl3",
+            "renderingMethod": "gl_compatibility",
+            "sampleFrames": 60,
+            "status": "passed",
+            "videoAdapterName": "Apple M5",
+            "viewportSize": [
+              1280,
+              720
+            ],
+            "vsyncMode": 0
+          },
+          "measurementBoundary": "shared_input_then_fixed_frames",
+          "processScopeTotalMsMinMeanMax": [
+            0.124,
+            0.226,
+            0.465
+          ],
+          "clicks": 180,
+          "accepted": 180,
+          "resolved": 69,
+          "applied": 54,
+          "avgInputUs": 1,
+          "maxInputUs": 4,
+          "moved": true,
+          "coalesced": true,
+          "settled": true,
+          "finalTargetMatched": true,
+          "battle": false,
+          "encounter": false,
+          "workloadIdentityByRepetition": [
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            },
+            {
+              "sequenceId": "spawn_adjacent_pair_v1",
+              "sequenceSha256": "e1e8fa28f147b65dc936d957f66834c8fc933e252ae480d090ecbac100ab6fb5",
+              "startCell": "5,20",
+              "actualStartCell": "5,20",
+              "finalCell": "6,20",
+              "clicks": 60,
+              "mouseEvents": 120
+            }
+          ]
+        }
+      },
       "comparison": {
         "processScopeTotalMeanDeltaMs": {
-          "idle": -0.058,
-          "moving": -0.056
+          "idle": 0.001,
+          "moving": 0.039
         },
         "pairedAggregation": {
           "repetitions": [
@@ -1427,19 +1427,19 @@
           ],
           "processScopeTotalMeanDeltaMsByRepetition": {
             "idle": [
-              -0.041,
-              -0.068,
-              -0.054
+              -0.001,
+              0.001,
+              -0.06
             ],
             "moving": [
-              -0.014,
-              -0.084,
-              -0.059
+              0.074,
+              0.022,
+              -0.012
             ]
           },
           "medianProcessScopeTotalMeanDeltaMs": {
-            "idle": -0.054,
-            "moving": -0.059
+            "idle": -0.001,
+            "moving": 0.022
           },
           "gates": {
             "idleRegressionWithinLimit": "PASS",
@@ -1474,9 +1474,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.147,
-            0.205,
-            0.259
+            0.116,
+            0.161,
+            0.286
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -1493,9 +1493,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.205,
-              0.206,
-              0.204
+              0.122,
+              0.161,
+              0.218
             ],
             "drawWorldMs": [
               0.0,
@@ -1508,9 +1508,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.252,
-              0.254,
-              0.252
+              0.15,
+              0.197,
+              0.269
             ]
           },
           "runtimeIdentity": {
@@ -1545,9 +1545,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.181,
-            0.252,
-            0.317
+            0.142,
+            0.197,
+            0.354
           ]
         },
         "moving": {
@@ -1559,14 +1559,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.133,
-            0.204,
-            0.286
+            0.113,
+            0.21,
+            0.293
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
-            0.316,
-            1.72
+            0.308,
+            1.211
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -1578,14 +1578,14 @@
               60.0
             ],
             "processTotalMs": [
-              0.195,
-              0.204,
-              0.212
+              0.127,
+              0.21,
+              0.222
             ],
             "drawWorldMs": [
+              0.258,
               0.308,
-              0.316,
-              0.439
+              0.347
             ],
             "measurementFrames": [
               480,
@@ -1593,9 +1593,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.252,
-              0.263,
-              0.279
+              0.166,
+              0.272,
+              0.289
             ]
           },
           "runtimeIdentity": {
@@ -1630,16 +1630,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.208,
-            0.263,
-            0.402
+            0.143,
+            0.272,
+            0.392
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
           "avgInputUs": 1,
-          "maxInputUs": 10,
+          "maxInputUs": 9,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -1688,9 +1688,9 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.06,
-            0.106,
-            0.236
+            0.081,
+            0.129,
+            0.171
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
@@ -1707,9 +1707,9 @@
               60.0
             ],
             "processTotalMs": [
-              0.083,
-              0.106,
-              0.195
+              0.125,
+              0.132,
+              0.129
             ],
             "drawWorldMs": [
               0.0,
@@ -1722,9 +1722,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.109,
-              0.137,
-              0.252
+              0.163,
+              0.171,
+              0.167
             ]
           },
           "runtimeIdentity": {
@@ -1759,9 +1759,9 @@
           },
           "measurementBoundary": "post_warmup_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.079,
-            0.137,
-            0.301
+            0.106,
+            0.167,
+            0.221
           ]
         },
         "moving": {
@@ -1773,14 +1773,14 @@
             60.0
           ],
           "processTotalMsMinMeanMax": [
-            0.064,
-            0.144,
-            0.347
+            0.096,
+            0.147,
+            0.303
           ],
           "drawWorldMsMinMeanMax": [
             0.0,
             0.003,
-            0.013
+            0.012
           ],
           "drawWorldObservedSampleCount": 9,
           "repetitionCount": 3,
@@ -1792,13 +1792,13 @@
               60.0
             ],
             "processTotalMs": [
-              0.133,
-              0.163,
-              0.144
+              0.147,
+              0.142,
+              0.183
             ],
             "drawWorldMs": [
               0.003,
-              0.004,
+              0.003,
               0.003
             ],
             "measurementFrames": [
@@ -1807,9 +1807,9 @@
               480
             ],
             "processScopeTotalMs": [
-              0.183,
-              0.224,
-              0.2
+              0.217,
+              0.207,
+              0.267
             ]
           },
           "runtimeIdentity": {
@@ -1844,16 +1844,16 @@
           },
           "measurementBoundary": "shared_input_then_fixed_frames",
           "processScopeTotalMsMinMeanMax": [
-            0.087,
-            0.2,
-            0.477
+            0.126,
+            0.217,
+            0.463
           ],
           "clicks": 180,
           "accepted": 180,
           "resolved": 69,
           "applied": 54,
           "avgInputUs": 1,
-          "maxInputUs": 7,
+          "maxInputUs": 6,
           "moved": true,
           "coalesced": true,
           "settled": true,
@@ -1893,8 +1893,8 @@
       },
       "comparison": {
         "processScopeTotalMeanDeltaMs": {
-          "idle": -0.115,
-          "moving": -0.063
+          "idle": -0.03,
+          "moving": -0.055
         },
         "pairedAggregation": {
           "repetitions": [
@@ -1904,19 +1904,19 @@
           ],
           "processScopeTotalMeanDeltaMsByRepetition": {
             "idle": [
-              -0.143,
-              -0.117,
-              0.0
+              0.013,
+              -0.026,
+              -0.102
             ],
             "moving": [
-              -0.069,
-              -0.039,
-              -0.079
+              0.051,
+              -0.065,
+              -0.022
             ]
           },
           "medianProcessScopeTotalMeanDeltaMs": {
-            "idle": -0.117,
-            "moving": -0.069
+            "idle": -0.026,
+            "moving": -0.022
           },
           "gates": {
             "idleRegressionWithinLimit": "PASS",
@@ -1944,11 +1944,11 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8"
+    "buildIdentity": "git:a518fda4bb2eb4f451e4568aa262be9d742edc67+beastbound-map-runtime-surface-v2:28dbd813cd8e1c24165fcefc1f299970dedd02a6715253b9b4446e057f54a43d"
   },
   "rawRunnerReceipt": {
     "path": "evidence/performance-runner-receipt.jsonl",
-    "sha256": "419466682676dc9a319dccd23ce1c5ff8a5b560fb14f05ca947cadedc9ab19d1"
+    "sha256": "f538726dd6a31467039b38d1ce4d3db12b7ae438af5efe7a0e7005204072b98b"
   },
   "notes": [
     "All 48 variants ran through the real Main.tscn non-headless Compatibility path.",

@@ -2,7 +2,7 @@
 
 > 自动生成：`node tools/repository_guide.mjs refresh`。原始文件和历史路径保持不变。
 
-当前工作区可见 **597** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
+当前工作区可见 **598** 份阶段记录。阶段编号表示历史顺序，不代表当前版本或发布状态；同号文件分别保留。
 
 先看 [项目现状](../project-status.md) 和 [文档导航](../README.md)。这里按每 50 个编号分组；文件标题可用于页面搜索。
 
@@ -10,6 +10,7 @@
 
 | 编号 | 记录 | 位置 |
 | ---: | --- | --- |
+| 613 | [Phase613：新版洞穴完整性能通过，进入外观验收](../phase_613_natural_cave_performance_complete.md) | 阶段记录 |
 | 612 | [Phase612：洞穴性能补测的窗口诊断](../phase_612_cave_performance_visibility_diagnostics.md) | 阶段记录 |
 | 611 | [Phase611：按所有者选项 2 重做洞穴地表与围合](../phase_611_natural_cave_visual_revision.md) | 阶段记录 |
 | 610 | [Phase 610：普通地图入口与候选美术边界核对](../phase_610_map_content_and_art_access.md) | 阶段记录 |

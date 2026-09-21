@@ -102,6 +102,8 @@ godot --path client/godot --scene res://scenes/Main.tscn
 
 Computer Use 点击报错后，先分别读取最新 UI 状态和当前进程日志，确认动作是否已生效，再决定恢复操作；不要把 `noWindowsAvailable` 当作“点击没有发送”。一旦样本开始，停止追加 Raise、按键或点击。若已在测量期间加入额外操作，该批只作诊断，另开新批次取正式证据。明确检测到锁屏时等待用户手动解锁，不反复激活窗口。实际案例见 [Phase 574](phase_574_player_position_updates.md)。
 
+已知目标是原生 QA 游戏时，在正式 runner 启动后直接用 `cua.getApp()` 连接其已知 bundle ID；需要原生应用清单时用 `cua.listApps()`。包含浏览器在内的 `cua.getState()` 汇总查询超时，不足以证明原生游戏操作也失效；先缩小到任务需要的接口验证。不要在 runner 未启动时靠 `getApp()` 裸启动 QA app，以免绕过隔离车道。Phase613 通过该路径完成了整轮 48 组，未重启服务或改变权限，见 [实际恢复与完整性能结果](phase_613_natural_cave_performance_complete.md)。
+
 准备页超时会输出 `map performance foreground unavailable:`，分别记录未收到开始请求、失焦、不可绘制及渲染循环关闭的观察次数，同时保留最后状态与实际绘制进度。先据此区分缺少点击与可见性问题，不把通用失败码直接解释为锁屏。该日志不改变开始门槛或提供自动开始方式，实际负例见 [Phase 593](phase_593_native_performance_diagnostics.md)。
 
 正常时钟的进程 CPU、脚本区段耗时和实际绘制次数分别记录。[Phase 597](phase_597_idle_camera_render_diagnosis.md) 的静止相机消融在按需渲染下减少了绘制，属于独立诊断，未修改正式矩阵的逐帧绘制要求；不能将其样本导入正式性能回执，也不能把不可绘制或失焦当作收益。原型检查同时要求无脚本错误、预期用例数和非零实际帧数，不能只认 Godot 零退出码或 PASS 字符串。
