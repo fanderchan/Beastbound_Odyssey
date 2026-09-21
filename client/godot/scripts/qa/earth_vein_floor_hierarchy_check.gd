@@ -21,6 +21,8 @@ const COMPACT_OBJECT_IDS: Array[String] = [
 const BOUNDARY_OBJECT_IDS: Array[String] = [
 	"earth_cave_wall_ridge",
 	"earth_cave_wall_buttress",
+	"earth_cave_wall_downright",
+	"earth_cave_wall_upright",
 ]
 const BINDING_PATHS := {
 	"earth_vein_cave": "res://assets/maps/earth_vein_cave_visual_v1/bindings/earth_vein_cave.json",
@@ -39,7 +41,7 @@ const EXPECTED_PROFILES := {
 		"compactDecorativeCount": 4,
 		"blockingLandmarkCount": 4,
 		"interactionLandmarkCount": 2,
-		"boundarySceneryCount": 4,
+		"boundarySceneryCount": 20,
 	},
 	"earth_vein_cave_f2": {
 		"hierarchyStage": 2,
@@ -51,7 +53,7 @@ const EXPECTED_PROFILES := {
 		"compactDecorativeCount": 7,
 		"blockingLandmarkCount": 4,
 		"interactionLandmarkCount": 2,
-		"boundarySceneryCount": 4,
+		"boundarySceneryCount": 20,
 	},
 	"earth_vein_cave_f3": {
 		"hierarchyStage": 3,
@@ -63,7 +65,7 @@ const EXPECTED_PROFILES := {
 		"compactDecorativeCount": 9,
 		"blockingLandmarkCount": 4,
 		"interactionLandmarkCount": 2,
-		"boundarySceneryCount": 4,
+		"boundarySceneryCount": 20,
 	},
 	"earth_vein_cave_f4": {
 		"hierarchyStage": 4,
@@ -75,7 +77,7 @@ const EXPECTED_PROFILES := {
 		"compactDecorativeCount": 4,
 		"blockingLandmarkCount": 3,
 		"interactionLandmarkCount": 3,
-		"boundarySceneryCount": 4,
+		"boundarySceneryCount": 20,
 	},
 }
 const SCENARIOS: Array[Dictionary] = [
@@ -215,6 +217,17 @@ func _validate_static_contract(errors: Array[String]) -> Array[Dictionary]:
 				interaction_links.append(str(placement.get("interactionLink", "")))
 			if BOUNDARY_OBJECT_IDS.has(object_id):
 				boundary_count += 1
+				var grid: Array = placement.get("grid", [])
+				var grid_size: Array = binding.get("mapGridSize", [])
+				if grid.size() != 2 or grid_size.size() != 2:
+					floor_errors.append("boundary grid must be explicit")
+				elif (
+					int(grid[0]) >= 0 and int(grid[0]) < int(grid_size[0])
+					and int(grid[1]) >= 0 and int(grid[1]) < int(grid_size[1])
+				):
+					floor_errors.append("boundary scenery must stay outside playable cells")
+				if role != "decorative" or not (placement.get("collisionFootprint", []) as Array).is_empty():
+					floor_errors.append("boundary scenery must not change collision")
 			var anchor_key := "%s@%s" % [str(placement.get("grid", [])), str(placement.get("offset", []))]
 			if anchors.has(anchor_key):
 				floor_errors.append("物件 anchor/offset 完全重叠：%s" % anchor_key)

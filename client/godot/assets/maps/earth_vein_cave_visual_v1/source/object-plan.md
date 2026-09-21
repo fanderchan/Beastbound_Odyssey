@@ -14,6 +14,26 @@ The ground atlas and dressed reference establish style only. Runtime uses the fo
 
 All placements keep spawns, warps, NPC approaches, encounter access and the lower-left to upper-right critical route clear. Gameplay collision remains authoritative in the existing four map JSON files.
 
+## Owner-directed natural cave revision (Phase611)
+
+The owner selected option 2: revise the cave visuals before acceptance. The twelve
+new ground swatches add four independent dry-floor patterns, worn-path pairs,
+damp-floor pairs and a worn sanctum pair. The original six atlas cells remain
+available for historical compatibility; the four current bindings use the new
+material IDs. No map topology, collision, encounter or reward data changes.
+
+Two independently generated diagonal basalt runs follow the two isometric axes.
+Each floor has sixteen new off-grid wall segments plus its four existing boundary
+pieces. Their empty collision footprints preserve all playable cells. The walls
+use normal world depth and actor-occlusion fading, with a ground-contact anchor
+at `(0.5, 0.68)`. They are independently authored images, never mirrored copies.
+The same kit encloses all floors while the established cairn, fungus, crystal and
+dual-plinth motifs keep their route-density hierarchy. Source prompts and raw
+PNGs are retained, and both extraction and atlas normalization are reproducible.
+
+This revision remains `owner_review_pending`. Earlier visual/performance receipts
+describe the old pixels and are superseded until fresh evidence is installed.
+
 ## Four-floor presentation hierarchy
 
 The four bindings deliberately share this original cave kit but no longer copy the same five-prop route rhythm:

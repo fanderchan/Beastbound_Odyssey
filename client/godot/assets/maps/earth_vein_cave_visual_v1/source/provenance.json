@@ -16,7 +16,10 @@
     {
       "path": "source/raw/earth-vein-ground-v1-original.png",
       "sha256": "24098373005546da4eaa31271d1acb7a90aaf350ca5c17f488dcc4997c0b1d63",
-      "dimensions": [1536, 1024],
+      "dimensions": [
+        1536,
+        1024
+      ],
       "generationCallId": "exec-c0cfb177-81b1-4270-9893-5cd2b1c5d741",
       "generatedAt": "2026-08-15T23:17:49+08:00",
       "promptPath": "source/prompts/earth-vein-ground-v1.md",
@@ -28,7 +31,10 @@
     {
       "path": "source/raw/earth-vein-ground-v2-alpha-attempt.png",
       "sha256": "be29611c00d7747e46fe210291fcb870cf764d1684cc49dc8bd44d1453a99e56",
-      "dimensions": [1536, 1024],
+      "dimensions": [
+        1536,
+        1024
+      ],
       "generationCallId": "exec-d2055a60-1283-497c-827f-937ef366ffde",
       "generatedAt": "2026-08-15T23:19:11+08:00",
       "promptPath": "source/prompts/earth-vein-ground-v2-alpha-edit.md",
@@ -40,7 +46,10 @@
     {
       "path": "source/raw/earth-vein-ground-v3-chroma.png",
       "sha256": "041bc5cc70281f6cb37cd421306e391f740ff05a28e2a5597e4637c22c51f5b5",
-      "dimensions": [1536, 1024],
+      "dimensions": [
+        1536,
+        1024
+      ],
       "generationCallId": "exec-a7f8cca7-5ed6-4f40-b2fd-85956b88be3d",
       "generatedAt": "2026-08-15T23:21:34+08:00",
       "promptPath": "source/prompts/earth-vein-ground-v3-chroma-edit.md",
@@ -52,7 +61,10 @@
     {
       "path": "source/raw/earth-vein-ground-v4-restraint.png",
       "sha256": "7b914c8c5a9b816bc62c1b8eb0d93fd40fa824871ecbe33ac7389b54eb392cc5",
-      "dimensions": [1536, 1024],
+      "dimensions": [
+        1536,
+        1024
+      ],
       "generationCallId": "exec-951b68eb-0603-49a1-93ce-17a50a6d6a9d",
       "generatedAt": "2026-08-16T00:26:12+08:00",
       "promptPath": "source/prompts/earth-vein-ground-v4-restraint.md",
@@ -63,7 +75,10 @@
     {
       "path": "source/raw/earth-vein-compact-props-v1.png",
       "sha256": "d5f4380ae8f68d0b2e71b8e39f0cce70f57a76dcfeaa8c9718dc722dc513a9d7",
-      "dimensions": [1254, 1254],
+      "dimensions": [
+        1254,
+        1254
+      ],
       "generationCallId": "exec-d80bb33e-005b-41bc-b5c0-dd7374cfd2d2",
       "generatedAt": "2026-08-15T23:33:41+08:00",
       "promptPath": "source/prompts/earth-vein-compact-props-v1.md",
@@ -73,7 +88,10 @@
     {
       "path": "source/raw/earth-vein-pillar-v1.png",
       "sha256": "656ed0c53bd85b0f63d5250cb8f54451c876ece784647a262fc0af004a1a2a62",
-      "dimensions": [1023, 1537],
+      "dimensions": [
+        1023,
+        1537
+      ],
       "generationCallId": "exec-fd375328-82d4-4e01-ba09-e02282b25fca",
       "generatedAt": "2026-08-15T23:36:16+08:00",
       "promptPath": "source/prompts/earth-vein-pillar-v1.md",
@@ -83,7 +101,10 @@
     {
       "path": "source/raw/earth-vein-stair-arch-v1.png",
       "sha256": "375598918a157f411625136dbddfc4efc5267885be9fbfbe9482e20aab933a78",
-      "dimensions": [1536, 1024],
+      "dimensions": [
+        1536,
+        1024
+      ],
       "generationCallId": "exec-7fe8b0af-b063-40d2-a8fa-fbda8091c175",
       "generatedAt": "2026-08-15T23:38:32+08:00",
       "promptPath": "source/prompts/earth-vein-stair-arch-v1.md",
@@ -93,7 +114,10 @@
     {
       "path": "source/raw/earth-vein-resonance-plinth-v1.png",
       "sha256": "4a7139a18921936d2d2de761de32bf576ed033924766bf8a6c4c6673e2a272c5",
-      "dimensions": [1536, 1024],
+      "dimensions": [
+        1536,
+        1024
+      ],
       "generationCallId": "exec-cdd36d26-d3c0-4b1c-b76c-6cf1167181ea",
       "generatedAt": "2026-08-15T23:40:40+08:00",
       "promptPath": "source/prompts/earth-vein-resonance-plinth-v1.md",
@@ -103,7 +127,10 @@
     {
       "path": "source/raw/earth-vein-boundary-props-v1-layout-rejected.png",
       "sha256": "da336ded7076557e848b53fa689d7ca9f05aad7f2daa13c9858efcbf0f396646",
-      "dimensions": [1536, 1024],
+      "dimensions": [
+        1536,
+        1024
+      ],
       "generationCallId": "exec-1d191948-9fa4-4cd4-88df-586598a1922d",
       "generatedAt": "2026-08-16T00:50:21+08:00",
       "promptPath": "source/prompts/earth-vein-boundary-props-v1.md",
@@ -115,20 +142,69 @@
     {
       "path": "source/raw/earth-vein-boundary-props-v2.png",
       "sha256": "a6ca92f7966cf41838f7909ee872d01bb11372edd9fa9653b383c5098d71bca5",
-      "dimensions": [1536, 1024],
+      "dimensions": [
+        1536,
+        1024
+      ],
       "generationCallId": "exec-8690e0f2-1bb2-4545-8586-79cd43b40eee",
       "generatedAt": "2026-08-16T00:50:21+08:00",
       "promptPath": "source/prompts/earth-vein-boundary-props-v2-layout-edit.md",
       "acceptedForRuntime": true,
       "lineageRole": "accepted_boundary_object_source",
       "generatedOriginal": true
+    },
+    {
+      "path": "source/raw/earth-vein-ground-v5-natural-original.png",
+      "sha256": "c195f2413558ca4d255e36362d389ccb82e2c18ec5ee7ca36f450f05e09aadb8",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "acceptedForRuntime": true,
+      "generationCallId": "exec-d8f2149c-51a4-4cae-82ab-129102440194",
+      "generatedAt": "2026-09-21T15:56:22.675907+00:00",
+      "promptPath": "source/prompts/earth-vein-ground-v5-natural.md",
+      "generatedOriginal": true,
+      "lineageRole": "independently_authored_natural_ground_variants",
+      "timestampBasis": "generation output file creation time",
+      "referenceInputs": [
+        {
+          "path": "source/raw/earth-vein-ground-v4-restraint.png",
+          "sha256": "7b914c8c5a9b816bc62c1b8eb0d93fd40fa824871ecbe33ac7389b54eb392cc5",
+          "usage": "existing cave material and palette only"
+        }
+      ]
+    },
+    {
+      "path": "source/raw/earth-vein-diagonal-walls-v1-original.png",
+      "sha256": "f053c94e2d63aed374d776953778f0ea4f8895e30b01ecc87fb89676f9d40f3f",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "acceptedForRuntime": true,
+      "generationCallId": "exec-c69ca5a8-2037-448b-895c-719e326144cb",
+      "generatedAt": "2026-09-21T16:07:23.998688+00:00",
+      "promptPath": "source/prompts/earth-vein-diagonal-walls-v1.md",
+      "generatedOriginal": true,
+      "lineageRole": "independently_authored_opposing_diagonal_boundaries",
+      "referenceInputs": [
+        {
+          "path": "runtime/objects/earth_cave_wall_ridge.png",
+          "sha256": "a8b8485261c6ed05c421509eca71157cc3a3361f45dd2c85d4fe938b9f831ef1",
+          "usage": "existing basalt material and palette only; independently authored diagonal geometry"
+        }
+      ]
     }
   ],
   "referenceImages": [
     {
       "path": "evidence/foundation-reference.png",
       "sha256": "a9f2a1ad4734347c63cfeda2da5b6590f1784b30f9d2f9f08902e843cc899d04",
-      "dimensions": [1536, 1024],
+      "dimensions": [
+        1536,
+        1024
+      ],
       "generationCallId": "exec-e236de3b-8e52-4be9-90fe-7ec6ea320cdb",
       "generatedAt": "2026-08-15T23:25:25+08:00",
       "promptPath": "source/prompts/earth-vein-foundation-reference-v1.md",
@@ -137,7 +213,10 @@
     {
       "path": "evidence/dressed-reference.png",
       "sha256": "04e930b910f3b7023adc956984a3e5c01870d844adf2bd1ab54913c2b8aaba5a",
-      "dimensions": [1536, 1024],
+      "dimensions": [
+        1536,
+        1024
+      ],
       "generationCallId": "exec-5025e6c0-a32d-46f7-bd4c-c0b0cc04ade2",
       "generatedAt": "2026-08-15T23:27:28+08:00",
       "promptPath": "source/prompts/earth-vein-dressed-reference-v1.md",
@@ -148,7 +227,10 @@
     {
       "path": "source/processed/earth-vein-ground-v3-alpha.png",
       "sha256": "2dcd3458fdf1316ded3d0355a679d9de48d5970ae7254d7fdbb9e7c120da25e8",
-      "dimensions": [1536, 1024]
+      "dimensions": [
+        1536,
+        1024
+      ]
     },
     {
       "path": "source/processed/earth-vein-ground-v3-build-manifest.json",
@@ -157,7 +239,10 @@
     {
       "path": "source/processed/earth-vein-ground-v4-restraint-alpha.png",
       "sha256": "583301ec1e2a14668d6b5b2c39f2c74e7e95ec868e1038c3485a8226dc825417",
-      "dimensions": [1536, 1024]
+      "dimensions": [
+        1536,
+        1024
+      ]
     },
     {
       "path": "source/processed/earth-vein-ground-v4-restraint-build-manifest.json",
@@ -166,7 +251,10 @@
     {
       "path": "source/processed/earth-vein-compact-props-v1-alpha.png",
       "sha256": "74b17aa1723ed47c620c21211969756217ff7b42ade5ac08d1e32a0e48e9c15a",
-      "dimensions": [1254, 1254]
+      "dimensions": [
+        1254,
+        1254
+      ]
     },
     {
       "path": "source/processed/earth-vein-compact-props-v1-objects-manifest.json",
@@ -175,7 +263,10 @@
     {
       "path": "source/processed/earth-vein-pillar-v1-alpha.png",
       "sha256": "bdb5b99bb354ff39ec1f696f1f07482ced63969fb23e40dc80e74a8d250b7986",
-      "dimensions": [1023, 1537]
+      "dimensions": [
+        1023,
+        1537
+      ]
     },
     {
       "path": "source/processed/earth-vein-pillar-v1-objects-manifest.json",
@@ -184,7 +275,10 @@
     {
       "path": "source/processed/earth-vein-stair-arch-v1-alpha.png",
       "sha256": "07e01e8d523dad281a6fbe1e139b30e0b1ef68a73e0d44c2f43eabe811563975",
-      "dimensions": [1536, 1024]
+      "dimensions": [
+        1536,
+        1024
+      ]
     },
     {
       "path": "source/processed/earth-vein-stair-arch-v1-objects-manifest.json",
@@ -193,7 +287,10 @@
     {
       "path": "source/processed/earth-vein-resonance-plinth-v1-alpha.png",
       "sha256": "cf1e60a20c3133eb92e98068a99c93bffaeda912fe4d43f4a54f689290b85194",
-      "dimensions": [1536, 1024]
+      "dimensions": [
+        1536,
+        1024
+      ]
     },
     {
       "path": "source/processed/earth-vein-resonance-plinth-v1-objects-manifest.json",
@@ -202,41 +299,68 @@
     {
       "path": "source/processed/earth-vein-boundary-props-v2-alpha.png",
       "sha256": "79466c4ec19ec7e44609422575b6fffd99d098053de047cefe9cd97b04ad03cb",
-      "dimensions": [1536, 1024]
+      "dimensions": [
+        1536,
+        1024
+      ]
     },
     {
       "path": "source/processed/earth-vein-boundary-props-v2-objects-manifest.json",
       "sha256": "42619e6317bc1f03dfe673def01397992bc8d11afecf57fc240c470f3c1d68bd"
+    },
+    {
+      "path": "source/processed/earth-vein-ground-v5-build-manifest.json",
+      "sha256": "20c9408ba2cfb12e8a9a67903ac45d0af16dc952abfc14f273e412cb5039a903"
+    },
+    {
+      "path": "source/processed/earth-vein-diagonal-walls-v1-manifest.json",
+      "sha256": "77c76686ca976c8e073ee7f0bf5f125c77c35c495eb6bedd243e5cc057c1a985"
     }
   ],
   "assets": [
     {
       "assetId": "earth_cave_ground_atlas",
       "path": "runtime/ground/atlas.png",
-      "sha256": "efe1ada759bbffeeae95df124300efb827cd2efdd87c9e393652317fafe8a65a",
-      "dimensions": [240, 80],
-      "tileSize": [80, 40],
-      "atlasColumns": 3,
+      "sha256": "d20a7f00069f7216f07660bc37a886967e6f6b1cf7982e433f56113d8f8fa1c9",
+      "dimensions": [
+        480,
+        120
+      ],
+      "tileSize": [
+        80,
+        40
+      ],
+      "atlasColumns": 6,
       "tileIds": [
         "earth_cave_floor_a",
         "earth_cave_floor_b",
         "earth_cave_path_a",
         "earth_cave_blocked_a",
         "earth_cave_mineral_a",
-        "earth_cave_edge_a"
+        "earth_cave_edge_a",
+        "earth_cave_natural_floor_a",
+        "earth_cave_natural_floor_b",
+        "earth_cave_natural_floor_c",
+        "earth_cave_natural_floor_d",
+        "earth_cave_natural_path_a",
+        "earth_cave_natural_path_b",
+        "earth_cave_natural_blocked_a",
+        "earth_cave_natural_mineral_a",
+        "earth_cave_natural_damp_a",
+        "earth_cave_natural_damp_b",
+        "earth_cave_natural_sanctum_a",
+        "earth_cave_natural_sanctum_b"
       ],
       "tool": "OpenAI image_gen edit plus deterministic repository scripts",
-      "promptPath": "source/prompts/earth-vein-ground-v4-restraint.md",
-      "rawPath": "source/raw/earth-vein-ground-v4-restraint.png",
-      "generatedAt": "2026-08-16T00:26:12+08:00",
+      "promptPath": "source/prompts/earth-vein-ground-v5-natural.md",
+      "rawPath": "source/raw/earth-vein-ground-v5-natural-original.png",
+      "generatedAt": "2026-09-21T15:56:22.675907+00:00",
       "operations": [
-        "border-sampled chroma key #ef0be5 with soft matte, two-pixel edge contraction and despill",
-        "deterministic 2x3 source-cell extraction",
-        "matte-safe RGB downsample to six 80x40 diamonds",
-        "10 percent secondary-source blend into floor_b to suppress macro checkerboard contrast",
-        "restrained semantic blends over the primary floor: path 30 percent, blocked 42 percent, mineral 20 percent",
-        "deterministic supersampled full-diamond alpha with one-pixel overlap",
-        "deterministic 3-column atlas assembly"
+        "retain the six v4 cells byte-exact during migration",
+        "remove one fully transparent final source row; independently crop twelve authored cells using alpha >16",
+        "matte-safe resample to 80x40; match the four dry-floor median colours without blending their patterns",
+        "reuse the supersampled full-diamond mask with one-pixel overlap",
+        "assemble 18 tiles in six columns"
       ]
     },
     {
@@ -247,7 +371,13 @@
       "rawPath": "source/raw/earth-vein-compact-props-v1.png",
       "tool": "OpenAI image_gen plus deterministic repository scripts",
       "generatedAt": "2026-08-15T23:33:41+08:00",
-      "operations": ["border-sampled chroma cleanup", "2x2 cell extraction", "alpha bbox crop", "premultiplied-alpha resize", "transparent padding"]
+      "operations": [
+        "border-sampled chroma cleanup",
+        "2x2 cell extraction",
+        "alpha bbox crop",
+        "premultiplied-alpha resize",
+        "transparent padding"
+      ]
     },
     {
       "assetId": "earth_cave_crystal_cluster",
@@ -257,7 +387,13 @@
       "rawPath": "source/raw/earth-vein-compact-props-v1.png",
       "tool": "OpenAI image_gen plus deterministic repository scripts",
       "generatedAt": "2026-08-15T23:33:41+08:00",
-      "operations": ["border-sampled chroma cleanup", "2x2 cell extraction", "alpha bbox crop", "premultiplied-alpha resize", "transparent padding"]
+      "operations": [
+        "border-sampled chroma cleanup",
+        "2x2 cell extraction",
+        "alpha bbox crop",
+        "premultiplied-alpha resize",
+        "transparent padding"
+      ]
     },
     {
       "assetId": "earth_cave_fungus_cluster",
@@ -267,7 +403,13 @@
       "rawPath": "source/raw/earth-vein-compact-props-v1.png",
       "tool": "OpenAI image_gen plus deterministic repository scripts",
       "generatedAt": "2026-08-15T23:33:41+08:00",
-      "operations": ["border-sampled chroma cleanup", "2x2 cell extraction", "alpha bbox crop", "premultiplied-alpha resize", "transparent padding"]
+      "operations": [
+        "border-sampled chroma cleanup",
+        "2x2 cell extraction",
+        "alpha bbox crop",
+        "premultiplied-alpha resize",
+        "transparent padding"
+      ]
     },
     {
       "assetId": "earth_cave_cairn",
@@ -277,7 +419,13 @@
       "rawPath": "source/raw/earth-vein-compact-props-v1.png",
       "tool": "OpenAI image_gen plus deterministic repository scripts",
       "generatedAt": "2026-08-15T23:33:41+08:00",
-      "operations": ["border-sampled chroma cleanup", "2x2 cell extraction", "alpha bbox crop", "premultiplied-alpha resize", "transparent padding"]
+      "operations": [
+        "border-sampled chroma cleanup",
+        "2x2 cell extraction",
+        "alpha bbox crop",
+        "premultiplied-alpha resize",
+        "transparent padding"
+      ]
     },
     {
       "assetId": "earth_cave_vein_pillar",
@@ -287,7 +435,12 @@
       "rawPath": "source/raw/earth-vein-pillar-v1.png",
       "tool": "OpenAI image_gen plus deterministic repository scripts",
       "generatedAt": "2026-08-15T23:36:16+08:00",
-      "operations": ["border-sampled chroma cleanup", "alpha bbox crop", "premultiplied-alpha resize", "transparent padding"]
+      "operations": [
+        "border-sampled chroma cleanup",
+        "alpha bbox crop",
+        "premultiplied-alpha resize",
+        "transparent padding"
+      ]
     },
     {
       "assetId": "earth_cave_stair_arch",
@@ -297,7 +450,12 @@
       "rawPath": "source/raw/earth-vein-stair-arch-v1.png",
       "tool": "OpenAI image_gen plus deterministic repository scripts",
       "generatedAt": "2026-08-15T23:38:32+08:00",
-      "operations": ["border-sampled chroma cleanup", "alpha bbox crop", "premultiplied-alpha resize", "transparent padding"]
+      "operations": [
+        "border-sampled chroma cleanup",
+        "alpha bbox crop",
+        "premultiplied-alpha resize",
+        "transparent padding"
+      ]
     },
     {
       "assetId": "earth_cave_resonance_plinth",
@@ -307,7 +465,12 @@
       "rawPath": "source/raw/earth-vein-resonance-plinth-v1.png",
       "tool": "OpenAI image_gen plus deterministic repository scripts",
       "generatedAt": "2026-08-15T23:40:40+08:00",
-      "operations": ["border-sampled chroma cleanup", "alpha bbox crop", "premultiplied-alpha resize", "transparent padding"]
+      "operations": [
+        "border-sampled chroma cleanup",
+        "alpha bbox crop",
+        "premultiplied-alpha resize",
+        "transparent padding"
+      ]
     },
     {
       "assetId": "earth_cave_wall_ridge",
@@ -317,7 +480,13 @@
       "rawPath": "source/raw/earth-vein-boundary-props-v2.png",
       "tool": "OpenAI image_gen edit plus deterministic repository scripts",
       "generatedAt": "2026-08-16T00:50:21+08:00",
-      "operations": ["border-sampled chroma cleanup", "1x2 cell extraction", "alpha bbox crop", "premultiplied-alpha resize", "transparent padding"]
+      "operations": [
+        "border-sampled chroma cleanup",
+        "1x2 cell extraction",
+        "alpha bbox crop",
+        "premultiplied-alpha resize",
+        "transparent padding"
+      ]
     },
     {
       "assetId": "earth_cave_wall_buttress",
@@ -327,7 +496,53 @@
       "rawPath": "source/raw/earth-vein-boundary-props-v2.png",
       "tool": "OpenAI image_gen edit plus deterministic repository scripts",
       "generatedAt": "2026-08-16T00:50:21+08:00",
-      "operations": ["border-sampled chroma cleanup", "1x2 cell extraction", "alpha bbox crop", "premultiplied-alpha resize", "transparent padding"]
+      "operations": [
+        "border-sampled chroma cleanup",
+        "1x2 cell extraction",
+        "alpha bbox crop",
+        "premultiplied-alpha resize",
+        "transparent padding"
+      ]
+    },
+    {
+      "path": "runtime/objects/earth_cave_wall_downright.png",
+      "sha256": "bd35905139d1c5b742040329f1afe621f17b30629016afb00bd79375175e8b8e",
+      "dimensions": [
+        755,
+        569
+      ],
+      "alphaMode": "mixed",
+      "sourceRaw": "source/raw/earth-vein-diagonal-walls-v1-original.png",
+      "processing": "extract 1x2 sheet; alpha bbox threshold 32; 8px padding; no mirroring",
+      "assetId": "earth_cave_wall_downright",
+      "tool": "OpenAI image_gen plus deterministic repository extraction",
+      "promptPath": "source/prompts/earth-vein-diagonal-walls-v1.md",
+      "rawPath": "source/raw/earth-vein-diagonal-walls-v1-original.png",
+      "generatedAt": "2026-09-21T16:07:23.998688+00:00",
+      "operations": [
+        "independent extraction from its authored cell in a 1x2 source grid",
+        "alpha bbox threshold 32; 8px transparent padding; no upscaling"
+      ]
+    },
+    {
+      "path": "runtime/objects/earth_cave_wall_upright.png",
+      "sha256": "3da94a6ec426eefb3c82c273cd69c9049f7ee6c64578a6f8ba2f22ec52401d76",
+      "dimensions": [
+        749,
+        559
+      ],
+      "alphaMode": "mixed",
+      "sourceRaw": "source/raw/earth-vein-diagonal-walls-v1-original.png",
+      "processing": "extract 1x2 sheet; alpha bbox threshold 32; 8px padding; no mirroring",
+      "assetId": "earth_cave_wall_upright",
+      "tool": "OpenAI image_gen plus deterministic repository extraction",
+      "promptPath": "source/prompts/earth-vein-diagonal-walls-v1.md",
+      "rawPath": "source/raw/earth-vein-diagonal-walls-v1-original.png",
+      "generatedAt": "2026-09-21T16:07:23.998688+00:00",
+      "operations": [
+        "independent extraction from its authored cell in a 1x2 source grid",
+        "alpha bbox threshold 32; 8px transparent padding; no upscaling"
+      ]
     }
   ],
   "toolchain": {
@@ -343,6 +558,11 @@
     "externalChromaKeyTool": {
       "path": "source/tools/remove_chroma_key.py",
       "sha256": "3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e",
+      "repositoryOwned": true
+    },
+    "naturalGroundAtlasTool": {
+      "path": "source/tools/build_natural_ground_atlas.py",
+      "sha256": "2a1584e38a01507f0b2d3a83e19eb94a4750ac2fb865582ac1063fe194f6c3e8",
       "repositoryOwned": true
     }
   },
@@ -360,7 +580,9 @@
     "python3 client/godot/assets/maps/earth_vein_cave_visual_v1/source/tools/remove_chroma_key.py --input client/godot/assets/maps/earth_vein_cave_visual_v1/source/raw/earth-vein-resonance-plinth-v1.png --out client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-resonance-plinth-v1-alpha.png --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 64 --edge-contract 1 --despill",
     "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-resonance-plinth-v1-alpha.png --rows 1 --columns 1 --labels earth_cave_resonance_plinth --output-dir .run/map-build/earth-vein-resonance-plinth-v1-a --padding 8 --max-dimension 256 --alpha-threshold 0 --anchor 0.5 1.0",
     "python3 client/godot/assets/maps/earth_vein_cave_visual_v1/source/tools/remove_chroma_key.py --input client/godot/assets/maps/earth_vein_cave_visual_v1/source/raw/earth-vein-boundary-props-v2.png --out client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-boundary-props-v2-alpha.png --auto-key border --soft-matte --transparent-threshold 16 --opaque-threshold 96 --edge-contract 1 --despill",
-    "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-boundary-props-v2-alpha.png --rows 1 --columns 2 --labels earth_cave_wall_ridge earth_cave_wall_buttress --output-dir .run/map-build/earth-vein-boundary-props-v2-a --padding 8 --max-dimension 512 --alpha-threshold 0 --anchor 0.5 1.0"
+    "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-boundary-props-v2-alpha.png --rows 1 --columns 2 --labels earth_cave_wall_ridge earth_cave_wall_buttress --output-dir .run/map-build/earth-vein-boundary-props-v2-a --padding 8 --max-dimension 512 --alpha-threshold 0 --anchor 0.5 1.0",
+    "python3 client/godot/assets/maps/earth_vein_cave_visual_v1/source/tools/build_natural_ground_atlas.py client/godot/assets/maps/earth_vein_cave_visual_v1/source/raw/earth-vein-ground-v5-natural-original.png --legacy-source client/godot/assets/maps/earth_vein_cave_visual_v1/source/processed/earth-vein-ground-v4-restraint-alpha.png --output-dir .run/map-build/earth-vein-ground-v5-natural",
+    "python3 .agents/skills/design-beastbound-maps/scripts/extract_object_sheet.py client/godot/assets/maps/earth_vein_cave_visual_v1/source/raw/earth-vein-diagonal-walls-v1-original.png --rows 1 --columns 2 --labels earth_cave_wall_downright earth_cave_wall_upright --output-dir .run/map-build/earth-vein-diagonal-walls-v1 --padding 8 --max-dimension 768 --alpha-threshold 32 --anchor 0.5 0.68"
   ],
   "reproducibility": {
     "rawToProcessedByteExact": true,

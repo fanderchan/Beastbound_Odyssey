@@ -296,7 +296,7 @@
 | [character_runtime_appearance_check.gd](../../client/godot/scripts/qa/character_runtime_appearance_check.gd) | 421 |
 | [commerce_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/commerce_awakened_owner_review_capture.gd) | 492 |
 | [earth_vein_camera_composition_check.gd](../../client/godot/scripts/qa/earth_vein_camera_composition_check.gd) | 364 |
-| [earth_vein_floor_hierarchy_check.gd](../../client/godot/scripts/qa/earth_vein_floor_hierarchy_check.gd) | 481 |
+| [earth_vein_floor_hierarchy_check.gd](../../client/godot/scripts/qa/earth_vein_floor_hierarchy_check.gd) | 494 |
 | [earth_vein_landmark_review_capture.gd](../../client/godot/scripts/qa/earth_vein_landmark_review_capture.gd) | 398 |
 | [earth_vein_review_batch_capture.gd](../../client/godot/scripts/qa/earth_vein_review_batch_capture.gd) | 1462 |
 | [earth_vein_review_contract_check.gd](../../client/godot/scripts/qa/earth_vein_review_contract_check.gd) | 113 |
@@ -311,7 +311,7 @@
 | [map_performance_batch.gd](../../client/godot/scripts/qa/map_performance_batch.gd) | 327 |
 | [map_visual_action_capture_batch.gd](../../client/godot/scripts/qa/map_visual_action_capture_batch.gd) | 1079 |
 | [map_visual_release_contract_check.gd](../../client/godot/scripts/qa/map_visual_release_contract_check.gd) | 475 |
-| [map_visual_review_capture.gd](../../client/godot/scripts/qa/map_visual_review_capture.gd) | 1824 |
+| [map_visual_review_capture.gd](../../client/godot/scripts/qa/map_visual_review_capture.gd) | 1826 |
 | [map_visual_review_catalog_check.gd](../../client/godot/scripts/qa/map_visual_review_catalog_check.gd) | 1039 |
 | [map_visual_review_showcase_profile.gd](../../client/godot/scripts/qa/map_visual_review_showcase_profile.gd) | 78 |
 | [map_visual_review_showcase_profile_check.gd](../../client/godot/scripts/qa/map_visual_review_showcase_profile_check.gd) | 80 |

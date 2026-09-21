@@ -1,0 +1,89 @@
+{
+  "cellEdgePolicy": {
+    "overrideFlag": "",
+    "overrideUsed": false,
+    "visibleAlphaMustBeInsideCell": true
+  },
+  "defaultAnchor": [
+    0.5,
+    0.68
+  ],
+  "maxDimension": 768,
+  "objects": [
+    {
+      "anchor": [
+        0.5,
+        0.68
+      ],
+      "dimensions": [
+        755,
+        569
+      ],
+      "label": "earth_cave_wall_downright",
+      "path": "earth_cave_wall_downright.png",
+      "sha256": "bd35905139d1c5b742040329f1afe621f17b30629016afb00bd79375175e8b8e",
+      "sourceBbox": [
+        16,
+        251,
+        739,
+        553
+      ],
+      "sourceCell": [
+        0,
+        0,
+        768,
+        1024
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        0
+      ]
+    },
+    {
+      "anchor": [
+        0.5,
+        0.68
+      ],
+      "dimensions": [
+        749,
+        559
+      ],
+      "label": "earth_cave_wall_upright",
+      "path": "earth_cave_wall_upright.png",
+      "sha256": "3da94a6ec426eefb3c82c273cd69c9049f7ee6c64578a6f8ba2f22ec52401d76",
+      "sourceBbox": [
+        788,
+        261,
+        733,
+        543
+      ],
+      "sourceCell": [
+        768,
+        0,
+        768,
+        1024
+      ],
+      "sourceCellEdgesTouched": [],
+      "sourceGrid": [
+        0,
+        1
+      ]
+    }
+  ],
+  "padding": 8,
+  "schemaVersion": 1,
+  "source": {
+    "alphaThreshold": 32,
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "grid": {
+      "columns": 2,
+      "rows": 1
+    },
+    "path": "../../../client/godot/assets/maps/earth_vein_cave_visual_v1/source/raw/earth-vein-diagonal-walls-v1-original.png",
+    "sha256": "f053c94e2d63aed374d776953778f0ea4f8895e30b01ecc87fb89676f9d40f3f"
+  }
+}

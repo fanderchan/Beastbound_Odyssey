@@ -1,9 +1,9 @@
 {
 	"bindingHashes": {
-		"earth_vein_cave": "a1c8d1ab2b9f7a2c7e59c9771ffa132c925fef11133f58b71d608f19dc681ec6",
-		"earth_vein_cave_f2": "051272df93ecc7355a7927d64ed3bbf06394479cf150d8622895454b8b3bc62e",
-		"earth_vein_cave_f3": "bbf36bc8dd5386a5863b24b34478f5c6a246798837c07e0a5c52bebd2cd7c68e",
-		"earth_vein_cave_f4": "d4e5c531757fa8f8ce46578b4dfe854237fbd48112722acb070c2433cb5886a8"
+		"earth_vein_cave": "5e28696de0ba1ba0349210cd78e77aac82b703cc6b9fdda3be2b50427567414d",
+		"earth_vein_cave_f2": "cd0ddffcb910dd49864a92ab49fe52ddbb6bad5ab5b65b42419ed92e8b62322e",
+		"earth_vein_cave_f3": "f1461afb2932cd007f8f1f492c7865419c26c82d17c1de4c78c66ee668698446",
+		"earth_vein_cave_f4": "e769e1a91efd760f5313bb139e6e731310b1828b12a01c4cf8ad4de5c1cba437"
 	},
 	"bundleId": "earth_vein_cave_visual_v1",
 	"catalogSha256": "662fa235c072f295aed084f2163934cb69a41ec0f8083801649242b1c47dbc3f",
@@ -20,7 +20,7 @@
 		"unknownMapFailedClosed": true
 	},
 	"errors": [],
-	"generatedAtUtc": "2026-09-20T22:27:10Z",
+	"generatedAtUtc": "2026-09-21T16:17:01Z",
 	"mapDataHashes": {
 		"earth_vein_cave": "a3bff8c95e4315c409ac818656ee57a4d4ad1e26112bada4b3ab9ed6ce36c8cf",
 		"earth_vein_cave_f2": "9d59b59500b61efe65c17fe40b07729abf113222e1ceb32ab8b8c1d8ed74c314",
@@ -31,25 +31,25 @@
 		{
 			"groundDraws": 672,
 			"mapId": "earth_vein_cave",
-			"objects": 14,
+			"objects": 30,
 			"protectedCells": 213
 		},
 		{
 			"groundDraws": 672,
 			"mapId": "earth_vein_cave_f2",
-			"objects": 17,
+			"objects": 33,
 			"protectedCells": 259
 		},
 		{
 			"groundDraws": 672,
 			"mapId": "earth_vein_cave_f3",
-			"objects": 19,
+			"objects": 35,
 			"protectedCells": 259
 		},
 		{
 			"groundDraws": 780,
 			"mapId": "earth_vein_cave_f4",
-			"objects": 14,
+			"objects": 30,
 			"protectedCells": 130
 		}
 	],

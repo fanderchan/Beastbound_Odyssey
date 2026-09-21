@@ -1,6 +1,6 @@
 # 项目现状与下一步
 
-核对日期：2026-09-21。日常开发统一使用 **`/Users/fander/projects/Beastbound_Odyssey`**。老板只需要从这个目录打开项目和本文；版本整理、实现、测试和文档同步由开发者负责。
+核对日期：2026-09-22。日常开发统一使用 **`/Users/fander/projects/Beastbound_Odyssey`**。老板只需要从这个目录打开项目和本文；版本整理、实现、测试和文档同步由开发者负责。
 
 ## 游戏已经有什么
 
@@ -41,9 +41,9 @@ git log -5 --oneline
 产品范围由 [总路线图](../stoneage_gap_plan.md) 负责，逐步交付由 [生产发布计划](../production_release_loop_plan.md) 负责。两者现在都以主目录为准，旧目录的游标不再驱动开发。
 
 1. **统一基线已恢复**：历史成果和文档导航已核对；完整服务端 1984 项通过、0 失败、1 项因未配置独立 Valkey 环境跳过，客户端定向 8/8 通过。
-2. **洞穴守护战到村口已有自动与真实鼠标返程证明**：[Phase 592](phase_592_cave_return_playthrough.md) 完成守护战、三场普通遭遇全胜及返村，55 个权威回合完整播放；[Phase 596](phase_596_manual_cave_return_completed.md) 用真实鼠标完成守护战后返村，实际为一胜、一超时、五逃跑，15 个回合完整播放。两轮均为旧后端、高生命 QA 队伍。[Phase 602](phase_602_current_cave_evidence.md) 完成当前后端的四层鼠标往返、20 组画面／动作和 48 组性能配对；[Phase 603](phase_603_cave_journey_wait_budget.md) 补齐同一运行内容的守护战、两场普通遭遇全胜及逐层返村，52 个回合完整播放。R1.W024 完成，当前进入 `R1.W025` 受委托复审；正常难度与所有者美术接受仍待完成。
+2. **洞穴守护战到村口已有自动与真实鼠标返程证明**：[Phase 592](phase_592_cave_return_playthrough.md) 完成守护战、三场普通遭遇全胜及返村，55 个权威回合完整播放；[Phase 596](phase_596_manual_cave_return_completed.md) 用真实鼠标完成守护战后返村，实际为一胜、一超时、五逃跑，15 个回合完整播放。两轮均为旧后端、高生命 QA 队伍。[Phase 602](phase_602_current_cave_evidence.md) 完成当前后端的四层鼠标往返、20 组画面／动作和 48 组性能配对；[Phase 603](phase_603_cave_journey_wait_budget.md) 补齐同一运行内容的守护战、两场普通遭遇全胜及逐层返村，52 个回合完整播放。R1.W024 完成；所有者已选择继续打磨洞穴，当前返工进展见 Phase611，正常难度与所有者美术接受仍待完成。
 3. **首次切战卡顿已明显改善，代码已同步 GitHub**：[Phase 548](phase_548_battle_hotpaths_and_authoritative_completion.md) 修复了人物击飞后提前胜利并减少绘制开销；[Phase 549](phase_549_battle_texture_prefetch_and_github_sync.md) 增加有界后台贴图预取，同一五人守护战的新进程首次准备由约 1002 ms 降到两轮约 10 ms。两场权威胜利与五账号奖励到账通过，严格原生前台性能两次通过，最终世界性能探针 `5/5`。此前各阶段已按功能提交推送 GitHub main；107 项旧本地地图证据已在 Phase602 完整备份并更新为当前配对。未知形态或立即开战仍可能走同步加载，不能把这个场景的结果推广成全游戏无卡顿。
-4. **依次推进成品门槛**：[Phase604](phase_604_battle_outcome_lifecycle.md)～[Phase607](phase_607_cave_review_and_capture_capacity.md) 已修复旧奖励残留、双台名称混淆、名称挡人及捕捉容量提示的误显示和布局。[Phase608](phase_608_current_cave_evidence_refreeze.md) 冻结最终代码的 20 组画面／动作、48 组性能与碰撞证据；[Phase609](phase_609_current_cave_movies_and_return.md) 补齐同运行版本的四层／地标影片与七战全胜返村，并完成受委托审看。当前建议内部试玩冻结，R1.W025 等待所有者首发采用／继续返工结论；之后推进剩余视听验收、首发内容、玩法／经济、运营基础设施、正式构建和封测。
+4. **依次推进成品门槛**：[Phase604](phase_604_battle_outcome_lifecycle.md)～[Phase607](phase_607_cave_review_and_capture_capacity.md) 已修复旧奖励残留、双台名称混淆、名称挡人及捕捉容量提示的误显示和布局。[Phase608](phase_608_current_cave_evidence_refreeze.md) 冻结最终代码的 20 组画面／动作、48 组性能与碰撞证据；[Phase609](phase_609_current_cave_movies_and_return.md) 补齐同运行版本的四层／地标影片与七战全胜返村，并完成受委托审看。老板现已选择继续打磨洞穴；R1.W025 记录返工结论，[Phase611](phase_611_natural_cave_visual_revision.md) 已接入十二块新地表与两种原创斜向岩壁，四层 20 项自动实机检查通过；四层真实鼠标 20 项与新影片已通过；完整性能配对因原生窗口停止绘制仍待补测；之后推进剩余视听验收、首发内容、玩法／经济、运营基础设施、正式构建和封测。
 
 下面按当前问题汇总证据。详细测试数字和当时失败记录保留在 Phase 文档；旧记录中的“下一步”不再作为当前游标。
 
@@ -61,7 +61,7 @@ git log -5 --oneline
 
 [Phase 595](phase_595_manual_recording_clock.md) 修复了人工录制的时钟加速，并验证最小化／恢复／关闭地图。[Phase 596](phase_596_manual_cave_return_completed.md) 在该条件下完成完整鼠标返村：56 次工具调用／54 张图零错误，2028 次窗口采样均可绘制，本轮未再停画。限速仅用于人工录制，未改变游戏性能或阈值；一次成功长流程不代表所有系统窗口条件都已覆盖。
 
-**接下来的顺序**：Phase608～609 已把 `e9d93013…` 的正式画面、真实动作、48 组性能、严格碰撞、四层／地标片和七战全胜返村配齐；受委托审看未发现新的阻断缺陷。建议内部试玩冻结，避免无具体问题地反复重录。R1.W025 等待老板对当前画面作出首发采用或继续返工的结论；生命周期保持 pending，P2.1a 不提前勾选。地面重复、细节偏稀仍是品质限制，Phase607 失败原件和 Phase608 两次鼠标会话边界均保留，见 [当前可查看的影片与复审结果](phase_609_current_cave_movies_and_return.md)。
+**接下来的顺序**：老板选择选项 2 后，[Phase611](phase_611_natural_cave_visual_revision.md) 已重做十二块地表、两种斜向岩壁和四层围合，保留全部玩法地图字节。二十组原生动作、二十项真实鼠标、碰撞、四层与双台影片均已保存，提供 [前后对比页](../.run/phase611-working/review/index.html)。当前只缺稳定可绘制前台环境下的完整 48 组性能：三次尝试未通过，不能拼接或借用旧报告。游标保留 R1.W026，W026–W028 不提前勾选；补完后进入 W029 外观验收，P2.1a 继续 pending。下一次不要重做素材、重复有效动作或恢复旧游标。
 
 普通启动的岩脉四层以及潮回等地图仍有网格占位，不能把岩脉候选预览当作正式画面已完成。Firebud v2、融合、环境声和 Bui VFX 已有返工或延期决定，不从旧主目录的 `R1.01` 重做；其中 Firebud v2 的美术延期保留既有地图玩法回退，不代表村庄关闭。Earth Vein 仍为待验收候选；若选择洞穴内容首发延期，R1.10 还需处理入口、关联玩法与权威访问，当前未执行关闭。测试和内部审查不等于老板亲自批准精确美术资产。
 

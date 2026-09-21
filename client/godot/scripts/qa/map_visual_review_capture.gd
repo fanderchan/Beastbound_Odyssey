@@ -70,6 +70,8 @@ const EARTH_VEIN_ARCHITECTURE_OBJECT_IDS: Array[String] = [
 	"earth_cave_stair_arch",
 	"earth_cave_wall_ridge",
 	"earth_cave_wall_buttress",
+	"earth_cave_wall_downright",
+	"earth_cave_wall_upright",
 ]
 const EARTH_VEIN_TERMINAL_OBJECT_IDS: Array[String] = [
 	"earth_cave_resonance_plinth",

@@ -3,7 +3,7 @@
   "reportType": "beastbound_map_collision_audit",
   "bundleId": "earth_vein_cave_visual_v1",
   "result": "PASS",
-  "generatedAtUtc": "2026-09-20T23:50:02Z",
+  "generatedAtUtc": "2026-09-21T16:19:39Z",
   "scene": "res://scenes/Main.tscn",
   "command": "godot --headless --path client/godot --script res://scripts/qa/map_visual_runtime_check.gd -- --preview-map-visual-catalog-contract",
   "testedMapIds": [
@@ -26,35 +26,35 @@
     {
       "mapId": "earth_vein_cave",
       "groundDraws": 672,
-      "objectCount": 14,
+      "objectCount": 30,
       "protectedCells": 213
     },
     {
       "mapId": "earth_vein_cave_f2",
       "groundDraws": 672,
-      "objectCount": 17,
+      "objectCount": 33,
       "protectedCells": 259
     },
     {
       "mapId": "earth_vein_cave_f3",
       "groundDraws": 672,
-      "objectCount": 19,
+      "objectCount": 35,
       "protectedCells": 259
     },
     {
       "mapId": "earth_vein_cave_f4",
       "groundDraws": 780,
-      "objectCount": 14,
+      "objectCount": 30,
       "protectedCells": 130
     }
   ],
   "authoritySnapshot": {
-    "catalogContractSha256": "c51db4c3c6b8ed2e9d78df10279e1b5fe9a75d10e29e3ea126e414eab402002b",
+    "catalogContractSha256": "c07dd393945dde4496ed376221b932349f8bd7b6b594621f0e839ac16ba9f863",
     "bindingHashes": {
-      "earth_vein_cave": "a1c8d1ab2b9f7a2c7e59c9771ffa132c925fef11133f58b71d608f19dc681ec6",
-      "earth_vein_cave_f2": "051272df93ecc7355a7927d64ed3bbf06394479cf150d8622895454b8b3bc62e",
-      "earth_vein_cave_f3": "bbf36bc8dd5386a5863b24b34478f5c6a246798837c07e0a5c52bebd2cd7c68e",
-      "earth_vein_cave_f4": "d4e5c531757fa8f8ce46578b4dfe854237fbd48112722acb070c2433cb5886a8"
+      "earth_vein_cave": "5e28696de0ba1ba0349210cd78e77aac82b703cc6b9fdda3be2b50427567414d",
+      "earth_vein_cave_f2": "cd0ddffcb910dd49864a92ab49fe52ddbb6bad5ab5b65b42419ed92e8b62322e",
+      "earth_vein_cave_f3": "f1461afb2932cd007f8f1f492c7865419c26c82d17c1de4c78c66ee668698446",
+      "earth_vein_cave_f4": "e769e1a91efd760f5313bb139e6e731310b1828b12a01c4cf8ad4de5c1cba437"
     },
     "mapDataHashes": {
       "earth_vein_cave": "a3bff8c95e4315c409ac818656ee57a4d4ad1e26112bada4b3ab9ed6ce36c8cf",
@@ -68,26 +68,26 @@
   "runnerIdentity": {
     "runner": "godot",
     "runnerVersion": "4.7.stable.official.5b4e0cb0f",
-    "buildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8"
+    "buildIdentity": "git:699dc9ac3a9067b2c5b388d177fe1bd5101f8bcb+beastbound-map-runtime-surface-v2:28dbd813cd8e1c24165fcefc1f299970dedd02a6715253b9b4446e057f54a43d"
   },
   "rawRunnerReceipt": {
     "path": "evidence/collision-runner-receipt.log",
-    "sha256": "b07a65dc497649471378dfcbb6f1b71d6c45f34dfc35bad712c5a29effb91aa2"
+    "sha256": "caf99e5383b03df5038dd49e794992f59afe95ab6fa607d21e9e8aa8871824ca"
   },
   "notes": [
     "This report covers authoritative map, collision, protected-cell and exact-path contracts.",
     "Tall-object front/behind presentation is independently gated by the formal Computer Use occlusion action.",
-    "Logical checker delegated unchanged through the official QA-lane attestation wrapper; actual argv and wrapper hash are preserved in qaWrapperProvenance. Generated in staging and installed with matching Phase608 evidence; not visual or owner acceptance."
+    "Logical checker delegated unchanged through the official QA-lane attestation wrapper; actual argv and wrapper SHA-256 are retained in qaWrapperProvenance. This is contract validation, not visual acceptance."
   ],
   "qaWrapperProvenance": {
-    "buildIdentity": "git:c704075a06268a73168db920a5fbd909c27eafc2+beastbound-map-runtime-surface-v2:e9d93013ecd418761ee177751fc727bd109c3ced8d7b81f36e5c52fc2f1a74c8",
+    "buildIdentity": "git:699dc9ac3a9067b2c5b388d177fe1bd5101f8bcb+beastbound-map-runtime-surface-v2:28dbd813cd8e1c24165fcefc1f299970dedd02a6715253b9b4446e057f54a43d",
     "argv": [
       "/Users/fander/projects/Beastbound_Odyssey/.run/phase584-native-review/Beastbound QA.app/Contents/MacOS/Godot",
       "--headless",
       "--path",
       "/Users/fander/projects/Beastbound_Odyssey/client/godot",
       "--script",
-      "/Users/fander/projects/Beastbound_Odyssey/.run/phase608-collision-owned/collision_owned.gd",
+      "/Users/fander/projects/Beastbound_Odyssey/.run/phase611-collision-owned/collision_owned.gd",
       "--audio-driver",
       "Dummy",
       "--",
@@ -98,6 +98,6 @@
     "delegatedScript": "res://scripts/qa/map_visual_runtime_check.gd",
     "realUnchanged": true,
     "laneAbsentAfterCleanup": true,
-    "nativeLogSha256": "b07a65dc497649471378dfcbb6f1b71d6c45f34dfc35bad712c5a29effb91aa2"
+    "nativeLogSha256": "caf99e5383b03df5038dd49e794992f59afe95ab6fa607d21e9e8aa8871824ca"
   }
 }

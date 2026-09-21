@@ -19,7 +19,7 @@
   ],
   "catalogContractCheck": {
     "path": "evidence/catalog-contract-check.json",
-    "sha256": "c51db4c3c6b8ed2e9d78df10279e1b5fe9a75d10e29e3ea126e414eab402002b"
+    "sha256": "c07dd393945dde4496ed376221b932349f8bd7b6b594621f0e839ac16ba9f863"
   },
   "source": {
     "origin": "AI-generated original",
@@ -117,6 +117,24 @@
           1024
         ],
         "acceptedForRuntime": true
+      },
+      {
+        "path": "source/raw/earth-vein-ground-v5-natural-original.png",
+        "sha256": "c195f2413558ca4d255e36362d389ccb82e2c18ec5ee7ca36f450f05e09aadb8",
+        "dimensions": [
+          1536,
+          1024
+        ],
+        "acceptedForRuntime": true
+      },
+      {
+        "path": "source/raw/earth-vein-diagonal-walls-v1-original.png",
+        "sha256": "f053c94e2d63aed374d776953778f0ea4f8895e30b01ecc87fb89676f9d40f3f",
+        "dimensions": [
+          1536,
+          1024
+        ],
+        "acceptedForRuntime": true
       }
     ],
     "buildArtifacts": [
@@ -203,6 +221,14 @@
       {
         "path": "source/processed/earth-vein-boundary-props-v2-objects-manifest.json",
         "sha256": "42619e6317bc1f03dfe673def01397992bc8d11afecf57fc240c470f3c1d68bd"
+      },
+      {
+        "path": "source/processed/earth-vein-ground-v5-build-manifest.json",
+        "sha256": "20c9408ba2cfb12e8a9a67903ac45d0af16dc952abfc14f273e412cb5039a903"
+      },
+      {
+        "path": "source/processed/earth-vein-diagonal-walls-v1-manifest.json",
+        "sha256": "77c76686ca976c8e073ee7f0bf5f125c77c35c495eb6bedd243e5cc057c1a985"
       }
     ],
     "promptFiles": [
@@ -253,19 +279,27 @@
       {
         "path": "source/prompts/earth-vein-boundary-props-v2-layout-edit.md",
         "sha256": "c73b17bbc748b6dd64259ed56633010380ff3327fcb64a80073550bb48f19f05"
+      },
+      {
+        "path": "source/prompts/earth-vein-ground-v5-natural.md",
+        "sha256": "dfbe88ed0f48a982a15d033deb24750efa3689d9f478945c5653cfe73506b90c"
+      },
+      {
+        "path": "source/prompts/earth-vein-diagonal-walls-v1.md",
+        "sha256": "4d541c838953186d4fc343bd9dd6a28b2ce1b1b2e605807d852d82a300329781"
       }
     ],
     "provenance": {
       "path": "source/provenance.json",
-      "sha256": "9d2a7a43dc9e15f08d1a8c4e92f4b9054ba42d50dd63ad668bcf36b378e77da0"
+      "sha256": "96cc5d019f52fe43b7c498c298a8946a9055244939c3cf1f5cd07555e1f699ae"
     }
   },
   "groundAtlas": {
     "path": "runtime/ground/atlas.png",
-    "sha256": "efe1ada759bbffeeae95df124300efb827cd2efdd87c9e393652317fafe8a65a",
+    "sha256": "d20a7f00069f7216f07660bc37a886967e6f6b1cf7982e433f56113d8f8fa1c9",
     "dimensions": [
-      240,
-      80
+      480,
+      120
     ],
     "alphaMode": "mixed"
   },
@@ -303,8 +337,8 @@
     {
       "tileId": "earth_cave_blocked_a",
       "rect": [
+        240,
         0,
-        40,
         80,
         40
       ],
@@ -313,8 +347,8 @@
     {
       "tileId": "earth_cave_mineral_a",
       "rect": [
-        80,
-        40,
+        320,
+        0,
         80,
         40
       ],
@@ -323,12 +357,132 @@
     {
       "tileId": "earth_cave_edge_a",
       "rect": [
+        400,
+        0,
+        80,
+        40
+      ],
+      "role": "edge_skirt"
+    },
+    {
+      "tileId": "earth_cave_natural_floor_a",
+      "rect": [
+        0,
+        40,
+        80,
+        40
+      ],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_floor_b",
+      "rect": [
+        80,
+        40,
+        80,
+        40
+      ],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_floor_c",
+      "rect": [
         160,
         40,
         80,
         40
       ],
-      "role": "edge_skirt"
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_floor_d",
+      "rect": [
+        240,
+        40,
+        80,
+        40
+      ],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_path_a",
+      "rect": [
+        320,
+        40,
+        80,
+        40
+      ],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_path_b",
+      "rect": [
+        400,
+        40,
+        80,
+        40
+      ],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_blocked_a",
+      "rect": [
+        0,
+        80,
+        80,
+        40
+      ],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_mineral_a",
+      "rect": [
+        80,
+        80,
+        80,
+        40
+      ],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_damp_a",
+      "rect": [
+        160,
+        80,
+        80,
+        40
+      ],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_damp_b",
+      "rect": [
+        240,
+        80,
+        80,
+        40
+      ],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_sanctum_a",
+      "rect": [
+        320,
+        80,
+        80,
+        40
+      ],
+      "role": "ground_variant"
+    },
+    {
+      "tileId": "earth_cave_natural_sanctum_b",
+      "rect": [
+        400,
+        80,
+        80,
+        40
+      ],
+      "role": "ground_variant"
     }
   ],
   "objects": [
@@ -724,6 +878,82 @@
         "mode": "none",
         "points": []
       }
+    },
+    {
+      "objectId": "earth_cave_wall_downright",
+      "asset": {
+        "path": "runtime/objects/earth_cave_wall_downright.png",
+        "sha256": "bd35905139d1c5b742040329f1afe621f17b30629016afb00bd79375175e8b8e",
+        "dimensions": [
+          755,
+          569
+        ],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [
+        304,
+        229
+      ],
+      "renderLayer": "world",
+      "collisionRole": "decorative",
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "anchor": [
+        0.5,
+        0.68
+      ],
+      "sortPoint": [
+        0.5,
+        0.68
+      ],
+      "sort": {
+        "mode": "y",
+        "offset": -4
+      },
+      "collision": {
+        "mode": "none",
+        "points": []
+      }
+    },
+    {
+      "objectId": "earth_cave_wall_upright",
+      "asset": {
+        "path": "runtime/objects/earth_cave_wall_upright.png",
+        "sha256": "3da94a6ec426eefb3c82c273cd69c9049f7ee6c64578a6f8ba2f22ec52401d76",
+        "dimensions": [
+          749,
+          559
+        ],
+        "alphaMode": "mixed"
+      },
+      "displaySize": [
+        304,
+        227
+      ],
+      "renderLayer": "world",
+      "collisionRole": "decorative",
+      "scale": [
+        1.0,
+        1.0
+      ],
+      "anchor": [
+        0.5,
+        0.68
+      ],
+      "sortPoint": [
+        0.5,
+        0.68
+      ],
+      "sort": {
+        "mode": "y",
+        "offset": -4
+      },
+      "collision": {
+        "mode": "none",
+        "points": []
+      }
     }
   ],
   "mapBindings": [
@@ -731,35 +961,35 @@
       "mapId": "earth_vein_cave",
       "binding": {
         "path": "bindings/earth_vein_cave.json",
-        "sha256": "a1c8d1ab2b9f7a2c7e59c9771ffa132c925fef11133f58b71d608f19dc681ec6"
+        "sha256": "5e28696de0ba1ba0349210cd78e77aac82b703cc6b9fdda3be2b50427567414d"
       }
     },
     {
       "mapId": "earth_vein_cave_f2",
       "binding": {
         "path": "bindings/earth_vein_cave_f2.json",
-        "sha256": "051272df93ecc7355a7927d64ed3bbf06394479cf150d8622895454b8b3bc62e"
+        "sha256": "cd0ddffcb910dd49864a92ab49fe52ddbb6bad5ab5b65b42419ed92e8b62322e"
       }
     },
     {
       "mapId": "earth_vein_cave_f3",
       "binding": {
         "path": "bindings/earth_vein_cave_f3.json",
-        "sha256": "bbf36bc8dd5386a5863b24b34478f5c6a246798837c07e0a5c52bebd2cd7c68e"
+        "sha256": "f1461afb2932cd007f8f1f492c7865419c26c82d17c1de4c78c66ee668698446"
       }
     },
     {
       "mapId": "earth_vein_cave_f4",
       "binding": {
         "path": "bindings/earth_vein_cave_f4.json",
-        "sha256": "d4e5c531757fa8f8ce46578b4dfe854237fbd48112722acb070c2433cb5886a8"
+        "sha256": "e769e1a91efd760f5313bb139e6e731310b1828b12a01c4cf8ad4de5c1cba437"
       }
     }
   ],
   "evidence": {
     "dressedReference": {
       "path": "evidence/runtime-actions/earth_vein_cave/pointer.png",
-      "sha256": "d23a5cac4c1d7432331ecf8faa44ca31ac229d7fe6d96b10ec4d51c9224176e2",
+      "sha256": "8b4e2a798ae3c24a4ae70be8f6cd299d005250f979852dde6873453c1c5f6c3b",
       "dimensions": [
         1280,
         720
@@ -768,7 +998,7 @@
     },
     "layeredPreview": {
       "path": "evidence/runtime-actions/earth_vein_cave_f4/collision.png",
-      "sha256": "3374b1d8719202e0b79b5c358a954ea3f3ea6a7e904ebc09ff36034ba77c656c",
+      "sha256": "65978a2e339eec0b16020f45841b14933e8aedce706aef47a9949f148928259a",
       "dimensions": [
         1280,
         720
@@ -781,7 +1011,7 @@
         "mode": "idle",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave/pointer.png",
-          "sha256": "d23a5cac4c1d7432331ecf8faa44ca31ac229d7fe6d96b10ec4d51c9224176e2",
+          "sha256": "8b4e2a798ae3c24a4ae70be8f6cd299d005250f979852dde6873453c1c5f6c3b",
           "dimensions": [
             1280,
             720
@@ -790,7 +1020,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave/pointer-capture.json",
-          "sha256": "e771fcfa0cdf1ae05280bf3888a5b2e3fa189234a9d545a5a10ec49813b2cf8d"
+          "sha256": "5d09ab3be1583132ac6ac96af24648ea20efe77f86c636f7cb9007c2b3fce023"
         }
       },
       {
@@ -798,7 +1028,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave/movement_path.png",
-          "sha256": "43fbe1f63a33ca228fb3984d48239a079de2ea81f8ce890d07fbf5641be67890",
+          "sha256": "d0250b6f83c9fe552908f13cefffb777565b92271d4b7a9ad5ce2b8d87e27ec7",
           "dimensions": [
             1280,
             720
@@ -807,7 +1037,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave/movement_path-capture.json",
-          "sha256": "98607b7df57724c34d2424af790fe19535652393a06686793b459bf481ea31e6"
+          "sha256": "da52896b651c66b6ed0eb60afb383bef362ee3fcd21a1c6aaad6dddf6a3e4cb3"
         }
       },
       {
@@ -815,7 +1045,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave/warp.png",
-          "sha256": "3c6ddc3d3b9aee16c982aa8749431c2c37080b85f98884dd2247ea4ed2b65bec",
+          "sha256": "68ed9296661eaed9a87c80e6aa992905f54fc71b300d55b5a83841a0c69295f6",
           "dimensions": [
             1280,
             720
@@ -824,7 +1054,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave/warp-capture.json",
-          "sha256": "2bb4289f0a43d0a4c62aa9d52cfd1ce4b5fccf85968c3021d23ee38f6d4f046d"
+          "sha256": "8690c38605cbf492b82ce918ee1860bffb0b479228c66deb4d3a7350e608f39f"
         }
       },
       {
@@ -832,7 +1062,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave/collision.png",
-          "sha256": "3311bb4109812a4fe265966a457c07739a5ef6100b07eed1338a4b9984cffb31",
+          "sha256": "e187cfdd2710111ea3a6a22ee63d6463d895c7e7b8642c248e4da6377d46f611",
           "dimensions": [
             1280,
             720
@@ -841,7 +1071,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave/collision-capture.json",
-          "sha256": "c8c2b3215ccb0a359d6e6c7100d86bf6c46d952b0e2ca83a93463e3cb310b048"
+          "sha256": "05c01fe14a4f0e39e7d528623ea3dd1cdd16bf17c6a1b1f78794b9f249334bf8"
         }
       },
       {
@@ -849,7 +1079,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave/occlusion.png",
-          "sha256": "bf0279fd4b368ab3517fc0edc24579d0bed13839b1667962382b8cd2e4aa18a1",
+          "sha256": "e1ca9dbba5d3c66063d478b72ef1a2aaf1b155360ee99137a1ef084882b51303",
           "dimensions": [
             1280,
             720
@@ -858,7 +1088,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave/occlusion-capture.json",
-          "sha256": "67d8bf047714dedee8274d3c0ca9c63e0fdd643c4f594ce1b24a2cddb6d26010"
+          "sha256": "e631aec15b080630751544b86d323bff239a08e38fca9821b557fa330589f5ca"
         }
       },
       {
@@ -866,7 +1096,7 @@
         "mode": "idle",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/pointer.png",
-          "sha256": "3f2f891013c1b56059cb518dd64c29c9c61e72f0c5be665fe897872fc6d09e04",
+          "sha256": "fab86d000383a624602195022b4c966edfcb1ae31f180a1836ec740947d23357",
           "dimensions": [
             1280,
             720
@@ -875,7 +1105,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/pointer-capture.json",
-          "sha256": "23d7e46f626a43dce8d9186e361f90dd872f304e5c29e58def4f904f00780753"
+          "sha256": "bf9c6eb46ec0a10b137aa18c7afdc070ab9263ca4ca7d43fed164a1e16f521af"
         }
       },
       {
@@ -883,7 +1113,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/movement_path.png",
-          "sha256": "da6fa59a9d2887956e163cda5a0447a998ee42f834f4aa2611805a92b218098c",
+          "sha256": "fdaa331dd47ba9f330846c2cde8ec207590f7b680510e16c1937fda3a81cfef1",
           "dimensions": [
             1280,
             720
@@ -892,7 +1122,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/movement_path-capture.json",
-          "sha256": "0d4ff71cb320aa79194036834acf1798fb4b7a37638d7bccf89fbc8b8ee6880a"
+          "sha256": "543be8753ace3694f8aaa188a1edd1a949382b84727b92f403b1106bde999dd9"
         }
       },
       {
@@ -900,7 +1130,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/warp.png",
-          "sha256": "3ff8e0b2bf498ca7278abe25fc7eaa08b8bc62b3f8d1df7e92d9a2956639c09d",
+          "sha256": "1999cab879c5d0ec939c2e633a1bca55a409b33f98a39d867d4d47ff9be45cab",
           "dimensions": [
             1280,
             720
@@ -909,7 +1139,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/warp-capture.json",
-          "sha256": "ce7ae4679854270a66a9ae1c4e2bb0bc4f73e637d45b76b80c0c0d4ac64ff725"
+          "sha256": "09fc42fc02ce7749df7a0d2f220cded77686213ba59437f54a751310a28517a3"
         }
       },
       {
@@ -917,7 +1147,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/collision.png",
-          "sha256": "c41c1cc3f9619f074b44aaf87327a1223b0441b41f4bef145daa8b13791208ef",
+          "sha256": "36450fc1990da06bb7384427044f2d8cf7948d52e690306ec07eeaa7eaa5fa59",
           "dimensions": [
             1280,
             720
@@ -926,7 +1156,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/collision-capture.json",
-          "sha256": "298df8f8a82bfe704494dbe06e477fb637068cbbc7557bf3e64e8a7f962ff369"
+          "sha256": "564e424c03c413a767e92f322f93fb9f19eeeaddec2882410a898ab2fd1c14ff"
         }
       },
       {
@@ -934,7 +1164,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/occlusion.png",
-          "sha256": "083ec61d4f5a7768be73835fbbd6a6f8a31134b3c772e0689a0ca856382fe81b",
+          "sha256": "a8b0b98296e24ec438ff622caa3a2ef8b7f966ae11c566302b12127220689b8b",
           "dimensions": [
             1280,
             720
@@ -943,7 +1173,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f2/occlusion-capture.json",
-          "sha256": "f1483121dbdef9c7df5da683d3775daed4d8d24cdb0709f3eea174297d92a398"
+          "sha256": "2abcf8c1ea94d962a12a9a2f5d74352da48813f011b63a08c6c7e6b96a287e98"
         }
       },
       {
@@ -951,7 +1181,7 @@
         "mode": "idle",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/pointer.png",
-          "sha256": "3333991e0806d1edf683812776303bd023228de7fa1e195578b49e80b0b8ebec",
+          "sha256": "9c12ba800a45cb202f7c38753024a598088d27bb175269137c5ffe8828a59161",
           "dimensions": [
             1280,
             720
@@ -960,7 +1190,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/pointer-capture.json",
-          "sha256": "cfbcc2753ae27a9f435121cea3c098f93b3a6131dee105ba2ff429eef302e115"
+          "sha256": "9ec922ab2d6bdc54e183011aa5534946355ede94de073cfca155a8486d21b0c2"
         }
       },
       {
@@ -968,7 +1198,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/movement_path.png",
-          "sha256": "7abc96c6b171b8281ba41bdc9ac323243908ebbdc36e83f480f6c358c10d85e9",
+          "sha256": "80581ca0bda6640b0adfc4da467090187915421759408160886bc67c810480b5",
           "dimensions": [
             1280,
             720
@@ -977,7 +1207,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/movement_path-capture.json",
-          "sha256": "4a4c42e4fbac381794b7370897dbb52be5d37c66b4bf66410ad60126264e89c8"
+          "sha256": "6699dac406f5404aae78e3cdf78e2cf25da85425c0e1d247561fc02365fa37e8"
         }
       },
       {
@@ -985,7 +1215,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/warp.png",
-          "sha256": "0266b436b01c38567de4295abd9312f507c744df91564ab16eaa083a92c32f13",
+          "sha256": "ed0f21bf3ba738735a4ca47072810f9893c18e28370324d848f61641d2618f47",
           "dimensions": [
             1280,
             720
@@ -994,7 +1224,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/warp-capture.json",
-          "sha256": "610facbb32ae26aa62832f8b91a52737925a7bb3e1f8dd3e38e49c6750abf8a3"
+          "sha256": "6feb13493a96ada729596326578825123695e14104a35435cad5d1653b94cb82"
         }
       },
       {
@@ -1002,7 +1232,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/collision.png",
-          "sha256": "b5401495e7c0045caad48c724fc0ba6cd877436148397fad15ab2250b07dcd6e",
+          "sha256": "166b0ce661e46b0b16fe58b59663f2e18164e27f351850898080e1fcd22f1a3d",
           "dimensions": [
             1280,
             720
@@ -1011,7 +1241,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/collision-capture.json",
-          "sha256": "4c4ceba25f48d48b79b50c3bc95c07837c807624a59109fbdbfd6274ac18d2b3"
+          "sha256": "f2061519e5e57c295342b667b4f8aad229925da7bb5848871891616d5d49d0c4"
         }
       },
       {
@@ -1019,7 +1249,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/occlusion.png",
-          "sha256": "4f0900b33fe413a18c36b45b53b6d0f1a806558232ebf7612a80ef2574988741",
+          "sha256": "8a446b4f9349ac56e6a5881c45feb56ec60e5b4ca9922301115fb701043275ab",
           "dimensions": [
             1280,
             720
@@ -1028,7 +1258,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f3/occlusion-capture.json",
-          "sha256": "8fea4a6d875a68466704b1d45fed1ea2a9c708ec420e55057b0791babd22ce9f"
+          "sha256": "a56cd0907caf8817cd5ae7df8d8af19701133a80f9ff553de3068ba1049662f9"
         }
       },
       {
@@ -1036,7 +1266,7 @@
         "mode": "idle",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/pointer.png",
-          "sha256": "c09a41f8692fa385d9d769c2e543a293917c8d648f197aba76ab867d2381e335",
+          "sha256": "ecff24fda3447a6ce27de94c5fa0ac639e8616202137afece498bdb18b0ff624",
           "dimensions": [
             1280,
             720
@@ -1045,7 +1275,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/pointer-capture.json",
-          "sha256": "3cdc862f3e266204f885bef8b6d852d949e7eaf4ab648b9b365103881cd5915e"
+          "sha256": "b7ac06cf33bc5bf8b336a9d05ca0703fd3f1adee5d0df0d4e357fbf97bc2d8c5"
         }
       },
       {
@@ -1053,7 +1283,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/movement_path.png",
-          "sha256": "db1465084bec4cb0d336133f9c77430d9e139d5b71e1e1f501b7922376bb872a",
+          "sha256": "2c00c16886f3ed6250c8f1ce0b9732f8e444cef6603393c1635e23120095be66",
           "dimensions": [
             1280,
             720
@@ -1062,7 +1292,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/movement_path-capture.json",
-          "sha256": "1a77adb39355618e4de7073cfc40b271c370778f2e721c64f26b6c0abdefe3ab"
+          "sha256": "e65974e4a6ed21a6623f7578cdbccf6e68262e399fd870106dd240d08433b933"
         }
       },
       {
@@ -1070,7 +1300,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/warp.png",
-          "sha256": "a2f986919a0b8b9015fddfa4899b0a195faa0984f1bf7aa72fd3ef0001b3bcb9",
+          "sha256": "5bb0a87eefd2b2eb383c7ee2e6546cf1dc8fef2c548c44d96932af4ae72b6c03",
           "dimensions": [
             1280,
             720
@@ -1079,7 +1309,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/warp-capture.json",
-          "sha256": "54f3c103d5a84162c7b304627b007268a981d73102350aba534bb36de052c712"
+          "sha256": "cd84740b2565a68b52790405b0f4dc2b7003b54c80006c07be20ca2e6191a732"
         }
       },
       {
@@ -1087,7 +1317,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/collision.png",
-          "sha256": "3374b1d8719202e0b79b5c358a954ea3f3ea6a7e904ebc09ff36034ba77c656c",
+          "sha256": "65978a2e339eec0b16020f45841b14933e8aedce706aef47a9949f148928259a",
           "dimensions": [
             1280,
             720
@@ -1096,7 +1326,7 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/collision-capture.json",
-          "sha256": "94c43065425a4a03e9bb501ea8572f5e355f388d24b84521d6f8fa7d474c7dab"
+          "sha256": "205015beace219aa7de57ff01a5fff1b3b5d0de872e29ebfe07bd2225bed1e80"
         }
       },
       {
@@ -1104,7 +1334,7 @@
         "mode": "moving",
         "image": {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/occlusion.png",
-          "sha256": "8da4bed049e940e45669d463aaf610f5c44438c4d3602fb4f5fc609befe51110",
+          "sha256": "15a8544a8d33efc6c7a318343d9039b09f6137962e82a18a0d73bcc3eb7fb6b4",
           "dimensions": [
             1280,
             720
@@ -1113,22 +1343,19 @@
         },
         "captureReport": {
           "path": "evidence/runtime-actions/earth_vein_cave_f4/occlusion-capture.json",
-          "sha256": "fa5fbda649a43452bf3ad9bb86020974e81ab29ebeed918a7b065367bbf2d05c"
+          "sha256": "558c47e574b637df8c824165c5ea711ca876f4429743db55dc1f82ca2b960ff5"
         }
       }
     ],
     "computerUseReport": {
       "path": "evidence/computer-use-review.json",
-      "sha256": "87b96514ba0ef7dfa2b251467fad24d6bd9d7912b4f90f00846feb894e2bd5d0"
+      "sha256": "2806e7733930460bc2adbe7867c6cba8b8f9d176cc8afc8c48b7b6ac82f6d2c2"
     },
     "collisionAudit": {
       "path": "evidence/collision-audit.json",
-      "sha256": "fcbc3b2cf6bd3d0eceff3e8ee38f80b8aaeb113eeeac442902788afe44f66718"
+      "sha256": "c842743a13b16b711b26ff051eae0f0ea3bd226cb0b78d3316108968fe5a7472"
     },
-    "performanceReport": {
-      "path": "evidence/performance-report.json",
-      "sha256": "6db915188e77cef9d6505720f85adb6d65f93fa8036a209ddcd98f5ce4f467de"
-    },
+    "performanceReport": null,
     "ownerAcceptance": null
   }
 }
