@@ -12,6 +12,42 @@ import play_guardian_review as review
 
 
 class GuardianBackendWatchTests(unittest.TestCase):
+    def test_normal_map_traversal_rejects_preview_fallback_scale_and_missing_floors(self):
+        states = [{"map": map_id, "cell": [5 + step, 10], "battle": False,
+            "artPreview": False, "mapVisualActive": True,
+            "mapVisualBundleId": "earth_vein_cave_visual_v1", "mapVisualStatus": "released",
+            "mapVisualCatalogSource": "normal", "mapVisualQaPreview": False,
+            "serverSession": True, "saving": False, "cameraZoom": [1.51999998092651] * 2}
+            for map_id in review.RETURN_MAPS[:-1] for step in range(2)]
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory)
+            path = run / "states.ndjson"
+            def validate(rows):
+                path.write_text("\n".join(map(json.dumps, rows)))
+                return review._validate_normal_cave_maps(run)
+            self.assertEqual(validate(states)["status"], "passed")
+            for change in [{"artPreview": True}, {"mapVisualActive": False},
+                    {"mapVisualBundleId": "other"}, {"mapVisualStatus": "owner_review_pending"},
+                    {"mapVisualCatalogSource": "review"}, {"mapVisualQaPreview": True},
+                    {"serverSession": False}, {"saving": True}, {"cameraZoom": [1, 1]},
+                    {"cell": [False, 10]}, {"cell": None}]:
+                with self.subTest(change=change), self.assertRaises(RuntimeError):
+                    validate([{**states[0], **change}, *states[1:]])
+            for rows in [[], states[:-2], states[::2], list(reversed(states)),
+                    [{**state, "battle": True} for state in states]]:
+                with self.subTest(rows=rows), self.assertRaises(RuntimeError):
+                    validate(rows)
+
+    def test_normal_maps_require_the_manual_cave_fixture(self):
+        for flags in [[], ["--autoplay"], ["--cave-journey", "--autoplay"],
+                ["--downed-owner-check"]]:
+            with self.subTest(flags=flags), mock.patch.object(review.sys, "argv",
+                    ["play_guardian_review.py", "--normal-map-visuals", *flags]), \
+                    mock.patch.object(review.subprocess, "Popen") as launch, \
+                    mock.patch("sys.stderr"), self.assertRaises(SystemExit):
+                review.main()
+            launch.assert_not_called()
+
     def test_manual_recording_requires_real_time_spacing_without_retiming_slow_frames(self):
         receipt = {"policy": "manual_recording_no_catch_up_v1", "performanceEvidence": False,
             "captureFps": 30, "intervalUsec": 33334, "pacedFrames": 300,

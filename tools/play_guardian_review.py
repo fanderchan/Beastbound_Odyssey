@@ -24,9 +24,44 @@ import record_pet_management_owner_review as core
 from guardian_review_media import encode_review_movie
 from guardian_review_playback import validate_turn_playback
 from guardian_review_journey import validate_cave_journey
+from guardian_review_journey import RETURN_MAPS, _camera_zoom_matches
 from review_capture_render_continuity import validate_render_continuity
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _validate_normal_cave_maps(run: Path) -> dict:
+    """Prove this traversal selected released maps without the preview switch."""
+    states = [json.loads(line) for line in (run / "states.ndjson").read_text().splitlines()]
+    maps = RETURN_MAPS[:-1]
+    route = []
+    cells = {map_id: set() for map_id in maps}
+    for state in states:
+        map_id = state.get("map")
+        if map_id not in maps:
+            continue
+        if (state.get("artPreview") is not False or state.get("mapVisualActive") is not True
+                or state.get("mapVisualBundleId") != "earth_vein_cave_visual_v1"
+                or state.get("mapVisualStatus") != "released"
+                or state.get("mapVisualCatalogSource") != "normal"
+                or state.get("mapVisualQaPreview") is not False
+                or state.get("serverSession") is not True or state.get("saving") is not False
+                or not _camera_zoom_matches(state.get("cameraZoom"))):
+            raise RuntimeError(f"Normal cave traversal used fallback or preview visuals: {map_id}")
+        if not route or route[-1] != map_id:
+            route.append(map_id)
+        cell = state.get("cell")
+        if (not isinstance(cell, list) or len(cell) != 2
+                or any(type(axis) is not int for axis in cell)):
+            raise RuntimeError("Normal cave traversal has invalid cell evidence")
+        if state.get("battle") is False:
+            cells[map_id].add(tuple(cell))
+    if route != maps or any(len(observed) < 2 for observed in cells.values()):
+        raise RuntimeError("Normal cave traversal must visit and move on all four floors in order")
+    return {"status": "passed", "maps": route,
+        "distinctWorldCells": {map_id: len(observed) for map_id, observed in cells.items()},
+        "performanceEvidence": False,
+        "scope": "released primary maps in Main with an isolated authoritative party; battle art and difficulty remain QA fixtures"}
 
 
 def _validate_capture(run: Path) -> dict:
@@ -129,6 +164,7 @@ def main() -> None:
     parser.add_argument("--record", action="store_true", help="record a 30 FPS engine timeline; manual runs are capped in real time, autoplay keeps its offline clock")
     parser.add_argument("--autoplay", action="store_true", help="run disclosed in-engine input checks; with --cave-journey also return through all floors; not Computer Use acceptance")
     parser.add_argument("--cave-journey", action="store_true", help="use a disclosed 10400-HP route party and preview existing candidate art across cave encounters; not balance acceptance")
+    parser.add_argument("--normal-map-visuals", action="store_true", help="manually traverse four released cave floors without the map preview switch; requires --cave-journey")
     parser.add_argument("--downed-owner-check", action="store_true", help="use fixed actor identities and battle seeds, leader at 1/10400 HP and leader pet at 1 HP; healthy teammates keep fighting")
     parser.add_argument("--timeout-seconds", type=int, default=900)
     args = parser.parse_args()
@@ -136,6 +172,8 @@ def main() -> None:
         parser.error("timeout must be between 30 and 3600 seconds")
     if args.downed_owner_check and (args.cave_journey or args.autoplay):
         parser.error("--downed-owner-check is a separate interactive regression fixture")
+    if args.normal_map_visuals and (not args.cave_journey or args.autoplay or args.downed_owner_check):
+        parser.error("--normal-map-visuals requires a manual --cave-journey")
     godot = shutil.which(args.godot)
     if not godot:
         parser.error("Godot executable not found")
@@ -171,8 +209,9 @@ def main() -> None:
             if args.record:
                 # OGV avoids Godot's 4 GiB AVI limit during longer interactive runs.
                 command += ["--write-movie", str(run / "guardian.ogv"), "--fixed-fps", "30", "--max-fps", "30", "--disable-vsync"]
-            command += ["--", "--qa-viewport=1280x720", "--map-art-review-preview",
+            command += ["--", "--qa-viewport=1280x720",
                 "--earth-guardian-review", "--auth-server-url=" + fixture["baseUrl"], core.QA_LANE_ARGUMENT]
+            command.append("--normal-map-visuals" if args.normal_map_visuals else "--map-art-review-preview")
             if args.cave_journey:
                 command.append("--earth-cave-review")
 
@@ -187,6 +226,9 @@ def main() -> None:
                 arenas = _validate_arena_samples(run)
                 playback = validate_turn_playback(run)
                 pacing = _validate_frame_pacing(run, expected=args.record and not args.autoplay)
+                if args.normal_map_visuals:
+                    normal_maps = _validate_normal_cave_maps(run)
+                    (run / "normal-map-validation.json").write_text(json.dumps(normal_maps, indent=2))
                 if args.autoplay:
                     report = json.loads((run / "autoplay.json").read_text())
                     if report.get("status") != "passed":

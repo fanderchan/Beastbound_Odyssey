@@ -7,14 +7,23 @@ const MapVisualRenderer := preload("res://scripts/world/map_visual_renderer.gd")
 
 const EXPECTED_MAP_IDS: Array[String] = [
 	"mistcap_marsh",
+	"earth_vein_cave",
+	"earth_vein_cave_f2",
+	"earth_vein_cave_f3",
+	"earth_vein_cave_f4",
 ]
 const TILE_SIZE := Vector2i(80, 40)
 const COLLISION_ROLES: Array[String] = ["none", "decorative", "blocking", "interaction"]
 const BINDING_PATHS := {
 	"mistcap_marsh": "res://assets/maps/mistcap_marsh_visual_v1/bindings/mistcap_marsh.json",
+	"earth_vein_cave": "res://assets/maps/earth_vein_cave_visual_v1/bindings/earth_vein_cave.json",
+	"earth_vein_cave_f2": "res://assets/maps/earth_vein_cave_visual_v1/bindings/earth_vein_cave_f2.json",
+	"earth_vein_cave_f3": "res://assets/maps/earth_vein_cave_visual_v1/bindings/earth_vein_cave_f3.json",
+	"earth_vein_cave_f4": "res://assets/maps/earth_vein_cave_visual_v1/bindings/earth_vein_cave_f4.json",
 }
 const BUNDLE_MAP_IDS := {
 	"mistcap_marsh_visual_v1": ["mistcap_marsh"],
+	"earth_vein_cave_visual_v1": ["earth_vein_cave", "earth_vein_cave_f2", "earth_vein_cave_f3", "earth_vein_cave_f4"],
 }
 const GENERATE_CATALOG_CONTRACT_FLAG := "--generate-map-visual-catalog-contract"
 const GENERATE_REVIEW_CATALOG_CONTRACT_PREFIX := "--generate-map-visual-review-catalog-contract="

@@ -1,0 +1,679 @@
+{
+  "schemaVersion": 1,
+  "recordType": "beastbound_map_visual_owner_acceptance",
+  "bundleId": "earth_vein_cave_visual_v1",
+  "approved": true,
+  "reviewer": "project-owner:conversation-user",
+  "reviewedAt": "2026-09-22T04:37:21+00:00",
+  "manifestReviewSubjectSha256": "474ad7eb91213827df8279f3553d71202cd9778941dbaab944e72b64f265ac23",
+  "acceptedFiles": [
+    {
+      "path": "bindings/earth_vein_cave.json",
+      "sha256": "5e28696de0ba1ba0349210cd78e77aac82b703cc6b9fdda3be2b50427567414d"
+    },
+    {
+      "path": "bindings/earth_vein_cave_f2.json",
+      "sha256": "cd0ddffcb910dd49864a92ab49fe52ddbb6bad5ab5b65b42419ed92e8b62322e"
+    },
+    {
+      "path": "bindings/earth_vein_cave_f3.json",
+      "sha256": "f1461afb2932cd007f8f1f492c7865419c26c82d17c1de4c78c66ee668698446"
+    },
+    {
+      "path": "bindings/earth_vein_cave_f4.json",
+      "sha256": "e769e1a91efd760f5313bb139e6e731310b1828b12a01c4cf8ad4de5c1cba437"
+    },
+    {
+      "path": "evidence/catalog-contract-check.json",
+      "sha256": "c07dd393945dde4496ed376221b932349f8bd7b6b594621f0e839ac16ba9f863"
+    },
+    {
+      "path": "evidence/collision-audit.json",
+      "sha256": "c842743a13b16b711b26ff051eae0f0ea3bd226cb0b78d3316108968fe5a7472"
+    },
+    {
+      "path": "evidence/collision-runner-receipt.log",
+      "sha256": "caf99e5383b03df5038dd49e794992f59afe95ab6fa607d21e9e8aa8871824ca"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_collision.jsonl",
+      "sha256": "b8eb4fdd645ea7d1d688153410159fd6f2a4865ff88ceed51c00b16a6c68a9cc"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f2_collision.jsonl",
+      "sha256": "39b971ec00037a16fbfaff59e9c7d5ff7ce4f3d24090ff20281c7b754a863eb3"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f2_movement_path.jsonl",
+      "sha256": "f4332eacec28a80c0a898c0dfe7e0565064bf5f5096d539f190908a6f8ba03d4"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f2_occlusion.jsonl",
+      "sha256": "7f88511ad97e9a9b9b390f02d67798f464755dfb5c83455a9d538c15f1eb583d"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f2_pointer.jsonl",
+      "sha256": "b6a8bd8c9513a56dc3a352014b2d176348d37b4e429e284ebd7ab7a5e0d35c34"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f2_warp.jsonl",
+      "sha256": "b99ea528f73ebeb70b08adec14748ff1bc46ecea499f76cbc49d40a18752636b"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f3_collision.jsonl",
+      "sha256": "c6a7150c5be56437d772b4a7a7e19abd6f5debed021744ecbf5faebda31adc6e"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f3_movement_path.jsonl",
+      "sha256": "00d29ace745f78c47f56db4d1e94f599bdb411fdb66064f64dc5919ca746fe38"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f3_occlusion.jsonl",
+      "sha256": "a853dc080d3fcef2d6c6d4072b7e04fb535951eb5aa50274b8ff8e3aefd79ed2"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f3_pointer.jsonl",
+      "sha256": "3b1713730cbe5940524ab03b1ef42758471d0753ef8a417f46c8e625423b399d"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f3_warp.jsonl",
+      "sha256": "39fcefe40077059a898013b191c60d132c3d3715c9507d8087140d4048d3e5db"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f4_collision.jsonl",
+      "sha256": "f4720181ec3d583873721b18e6549bfc11bc2eafe0ebc8458868ae7556901aa0"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f4_movement_path.jsonl",
+      "sha256": "f364212c7541f52ae7ae08b0459d65b9b041d4be494a1f120f1e79d6deeb7f0d"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f4_occlusion.jsonl",
+      "sha256": "d4ab4a458e97f6a945d545f7589cd67885c239ebc1f2350eeeff107c7c2db99d"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f4_pointer.jsonl",
+      "sha256": "b3cc762d7989853c142ab214f84361591dd960d2c5ad99a3e9a906d866aae713"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_f4_warp.jsonl",
+      "sha256": "10233fcac148279edeff187b505243a96bdd2d2aef10f522b65b5b724f08f2fd"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_movement_path.jsonl",
+      "sha256": "f20a960b80a31f4b5ede4657f2925e94b319306137a558cad2f71255afaaff27"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_occlusion.jsonl",
+      "sha256": "0e99ff4da8151b32b3ae935b6ddfdef84c60f6213dfae94889216eb1bac68e4e"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_pointer.jsonl",
+      "sha256": "01f020de6e957a0505c3aa98762099f74440dfef2f28dd8248fbe176370052f3"
+    },
+    {
+      "path": "evidence/computer-use-actions/earth_vein_cave_warp.jsonl",
+      "sha256": "2ca4214a3b9b9aff4a0d5ac373b3039a2e9b4052fd54e30aad8ca817e6fb4b66"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_collision-after.jpeg",
+      "sha256": "2952f8d9309293717bd0c15d1511545db8f1ad4cbbe0a09ce97af2026d4e2e6d"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_collision-before.jpeg",
+      "sha256": "fb336fe6c76db293483aeef536fc43c23e38049a42866e84da09bbbb889aafd2"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_collision-after.jpeg",
+      "sha256": "8f297ffccebd227648fe02c9feb86e8a3a188424520bf58e437631adfd54d01d"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_collision-before.jpeg",
+      "sha256": "ce0df661fb4dac27cf348a10fa73ef7e1dd6d11f4c0bf5f0894d946012040607"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_movement_path-after.jpeg",
+      "sha256": "ce0df661fb4dac27cf348a10fa73ef7e1dd6d11f4c0bf5f0894d946012040607"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_movement_path-before.jpeg",
+      "sha256": "7fd410e47137532bdfce2173ff61a2fceba69d8de01545c05cae562664d94a59"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_occlusion-after.jpeg",
+      "sha256": "985204001fb3d7374b295b229ae4f41ed3a7b4482b4a43a9cfdf7d507c0c9384"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_occlusion-before.jpeg",
+      "sha256": "eab27c49c2e6c3760bb46d64f3ec2e3c16b0215bf2132581e28ff4db30714ee7"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_pointer-after.jpeg",
+      "sha256": "eab27c49c2e6c3760bb46d64f3ec2e3c16b0215bf2132581e28ff4db30714ee7"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_pointer-before.jpeg",
+      "sha256": "d01469671c0fb8a43ae1ed93195e6546e49d6ad4314995940cf88ce242e733ea"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_warp-after.jpeg",
+      "sha256": "c32cdff97c557326dccca5cfdf8e36e1082889891dbdb8b97d76e1453e50b25c"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f2_warp-before.jpeg",
+      "sha256": "84a2d9f11bddc8ab2c1feffe713a8360ca30735740a1ed1c68eebe111fef7bef"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_collision-after.jpeg",
+      "sha256": "f72cad672da1bfb7430ff8fff9a582ed100cc07f217b23048ed7b29cbe77d1ad"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_collision-before.jpeg",
+      "sha256": "51fac9e647e3e0ba10b29ffc4975e60dbba440c543f0212080e1623f71d2944e"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_movement_path-after.jpeg",
+      "sha256": "51fac9e647e3e0ba10b29ffc4975e60dbba440c543f0212080e1623f71d2944e"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_movement_path-before.jpeg",
+      "sha256": "113a274e6f01633d6449e722e89081efa30ffe3e69276e973b4d5df80669ecc1"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_occlusion-after.jpeg",
+      "sha256": "a8119f2f67bcfa6d57d17d796bf33876b9e070ce2202368072f6e184c91edf6b"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_occlusion-before.jpeg",
+      "sha256": "c8f2ad5726297e5828ed59a54ed2283fb9e9513934fa69ebef0af224fd86fcca"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_pointer-after.jpeg",
+      "sha256": "c8f2ad5726297e5828ed59a54ed2283fb9e9513934fa69ebef0af224fd86fcca"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_pointer-before.jpeg",
+      "sha256": "c32cdff97c557326dccca5cfdf8e36e1082889891dbdb8b97d76e1453e50b25c"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_warp-after.jpeg",
+      "sha256": "df29a1d7e89b97a2a4d9e9286aba4ca77255a20456fb60082786998b49909f19"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f3_warp-before.jpeg",
+      "sha256": "68b067a63c43334070b85dd54bd34a38b1dd963621b71cb2565a0c73a690d49d"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_collision-after.jpeg",
+      "sha256": "06b178500a174d3211af20c19e7d750df291ecd1b9243318e1ec7699f6839430"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_collision-before.jpeg",
+      "sha256": "fcb046ede01c0bcaa6c07280593df054c0a406264ebea6fb5cef82a56f33103c"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_movement_path-after.jpeg",
+      "sha256": "a3ee2a12f86c4ec8fb22c6f4c76e15f142d47099a7b09617ef31557724af8c1a"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_movement_path-before.jpeg",
+      "sha256": "13aaa2f9d82cd6b8f840f39a4e041472a79ada399922128fb1c15dacdf284e88"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_occlusion-after.jpeg",
+      "sha256": "0955bb0ef187f77d427f1a2ebbb91c2d0320a20404cd0170c73b3fab83432032"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_occlusion-before.jpeg",
+      "sha256": "b45cec8e315f008c3f106df6511d41f4b09f50397e9e1d2bdb947a6a1ff833b6"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_pointer-after.jpeg",
+      "sha256": "b45cec8e315f008c3f106df6511d41f4b09f50397e9e1d2bdb947a6a1ff833b6"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_pointer-before.jpeg",
+      "sha256": "ea99d3a7e34e8bc5b440f58c574bbea75ea8ef4fe2efc9c85df5c519a58bd7bf"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_warp-after.jpeg",
+      "sha256": "e1120b1ed3b282ebca9b7d9595b13534f23052ab9bcc8bf487129cc370db0f85"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_f4_warp-before.jpeg",
+      "sha256": "e6bb6f0957d384bf6397c692673878228bd95079545848293b1f8703e70e44da"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_movement_path-after.jpeg",
+      "sha256": "fb336fe6c76db293483aeef536fc43c23e38049a42866e84da09bbbb889aafd2"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_movement_path-before.jpeg",
+      "sha256": "5c9535435df58726694d5b7751db78693dd0e598959d1260af548b571e8d21da"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_occlusion-after.jpeg",
+      "sha256": "7b99af34b0419c6386e47c6be0e542fe0676556fd138f5ebe6c0e3c36f730dad"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_occlusion-before.jpeg",
+      "sha256": "b93e3889201bd2b76d3dfba6f8a3fcdb8ea225232f787fa8dabf3f82770c6b14"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_pointer-after.jpeg",
+      "sha256": "b93e3889201bd2b76d3dfba6f8a3fcdb8ea225232f787fa8dabf3f82770c6b14"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_pointer-before.jpeg",
+      "sha256": "3691288e290ad055647365747b3210ca0622bdcbcb9ae6a384293c75cd4246c1"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_warp-after.jpeg",
+      "sha256": "d01469671c0fb8a43ae1ed93195e6546e49d6ad4314995940cf88ce242e733ea"
+    },
+    {
+      "path": "evidence/computer-use-actions/raw/earth_vein_cave_warp-before.jpeg",
+      "sha256": "fac3d40f6c584ec202638fc720aaf81eff1f6d22c52c2423cecf7e2a7115a84b"
+    },
+    {
+      "path": "evidence/computer-use-review.json",
+      "sha256": "2806e7733930460bc2adbe7867c6cba8b8f9d176cc8afc8c48b7b6ac82f6d2c2"
+    },
+    {
+      "path": "evidence/performance-report.json",
+      "sha256": "84260b4bc6dd2ee42434c671effb380b0204f804d158987be82103c92e4aa874"
+    },
+    {
+      "path": "evidence/performance-runner-receipt.jsonl",
+      "sha256": "f538726dd6a31467039b38d1ce4d3db12b7ae438af5efe7a0e7005204072b98b"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave/collision-capture.json",
+      "sha256": "05c01fe14a4f0e39e7d528623ea3dd1cdd16bf17c6a1b1f78794b9f249334bf8"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave/collision.png",
+      "sha256": "e187cfdd2710111ea3a6a22ee63d6463d895c7e7b8642c248e4da6377d46f611"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave/movement_path-capture.json",
+      "sha256": "da52896b651c66b6ed0eb60afb383bef362ee3fcd21a1c6aaad6dddf6a3e4cb3"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave/movement_path.png",
+      "sha256": "d0250b6f83c9fe552908f13cefffb777565b92271d4b7a9ad5ce2b8d87e27ec7"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave/occlusion-capture.json",
+      "sha256": "e631aec15b080630751544b86d323bff239a08e38fca9821b557fa330589f5ca"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave/occlusion.png",
+      "sha256": "e1ca9dbba5d3c66063d478b72ef1a2aaf1b155360ee99137a1ef084882b51303"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave/pointer-capture.json",
+      "sha256": "5d09ab3be1583132ac6ac96af24648ea20efe77f86c636f7cb9007c2b3fce023"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave/pointer.png",
+      "sha256": "8b4e2a798ae3c24a4ae70be8f6cd299d005250f979852dde6873453c1c5f6c3b"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave/warp-capture.json",
+      "sha256": "8690c38605cbf492b82ce918ee1860bffb0b479228c66deb4d3a7350e608f39f"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave/warp.png",
+      "sha256": "68ed9296661eaed9a87c80e6aa992905f54fc71b300d55b5a83841a0c69295f6"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f2/collision-capture.json",
+      "sha256": "564e424c03c413a767e92f322f93fb9f19eeeaddec2882410a898ab2fd1c14ff"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f2/collision.png",
+      "sha256": "36450fc1990da06bb7384427044f2d8cf7948d52e690306ec07eeaa7eaa5fa59"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f2/movement_path-capture.json",
+      "sha256": "543be8753ace3694f8aaa188a1edd1a949382b84727b92f403b1106bde999dd9"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f2/movement_path.png",
+      "sha256": "fdaa331dd47ba9f330846c2cde8ec207590f7b680510e16c1937fda3a81cfef1"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f2/occlusion-capture.json",
+      "sha256": "2abcf8c1ea94d962a12a9a2f5d74352da48813f011b63a08c6c7e6b96a287e98"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f2/occlusion.png",
+      "sha256": "a8b0b98296e24ec438ff622caa3a2ef8b7f966ae11c566302b12127220689b8b"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f2/pointer-capture.json",
+      "sha256": "bf9c6eb46ec0a10b137aa18c7afdc070ab9263ca4ca7d43fed164a1e16f521af"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f2/pointer.png",
+      "sha256": "fab86d000383a624602195022b4c966edfcb1ae31f180a1836ec740947d23357"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f2/warp-capture.json",
+      "sha256": "09fc42fc02ce7749df7a0d2f220cded77686213ba59437f54a751310a28517a3"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f2/warp.png",
+      "sha256": "1999cab879c5d0ec939c2e633a1bca55a409b33f98a39d867d4d47ff9be45cab"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f3/collision-capture.json",
+      "sha256": "f2061519e5e57c295342b667b4f8aad229925da7bb5848871891616d5d49d0c4"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f3/collision.png",
+      "sha256": "166b0ce661e46b0b16fe58b59663f2e18164e27f351850898080e1fcd22f1a3d"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f3/movement_path-capture.json",
+      "sha256": "6699dac406f5404aae78e3cdf78e2cf25da85425c0e1d247561fc02365fa37e8"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f3/movement_path.png",
+      "sha256": "80581ca0bda6640b0adfc4da467090187915421759408160886bc67c810480b5"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f3/occlusion-capture.json",
+      "sha256": "a56cd0907caf8817cd5ae7df8d8af19701133a80f9ff553de3068ba1049662f9"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f3/occlusion.png",
+      "sha256": "8a446b4f9349ac56e6a5881c45feb56ec60e5b4ca9922301115fb701043275ab"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f3/pointer-capture.json",
+      "sha256": "9ec922ab2d6bdc54e183011aa5534946355ede94de073cfca155a8486d21b0c2"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f3/pointer.png",
+      "sha256": "9c12ba800a45cb202f7c38753024a598088d27bb175269137c5ffe8828a59161"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f3/warp-capture.json",
+      "sha256": "6feb13493a96ada729596326578825123695e14104a35435cad5d1653b94cb82"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f3/warp.png",
+      "sha256": "ed0f21bf3ba738735a4ca47072810f9893c18e28370324d848f61641d2618f47"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f4/collision-capture.json",
+      "sha256": "205015beace219aa7de57ff01a5fff1b3b5d0de872e29ebfe07bd2225bed1e80"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f4/collision.png",
+      "sha256": "65978a2e339eec0b16020f45841b14933e8aedce706aef47a9949f148928259a"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f4/movement_path-capture.json",
+      "sha256": "e65974e4a6ed21a6623f7578cdbccf6e68262e399fd870106dd240d08433b933"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f4/movement_path.png",
+      "sha256": "2c00c16886f3ed6250c8f1ce0b9732f8e444cef6603393c1635e23120095be66"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f4/occlusion-capture.json",
+      "sha256": "558c47e574b637df8c824165c5ea711ca876f4429743db55dc1f82ca2b960ff5"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f4/occlusion.png",
+      "sha256": "15a8544a8d33efc6c7a318343d9039b09f6137962e82a18a0d73bcc3eb7fb6b4"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f4/pointer-capture.json",
+      "sha256": "b7ac06cf33bc5bf8b336a9d05ca0703fd3f1adee5d0df0d4e357fbf97bc2d8c5"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f4/pointer.png",
+      "sha256": "ecff24fda3447a6ce27de94c5fa0ac639e8616202137afece498bdb18b0ff624"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f4/warp-capture.json",
+      "sha256": "cd84740b2565a68b52790405b0f4dc2b7003b54c80006c07be20ca2e6191a732"
+    },
+    {
+      "path": "evidence/runtime-actions/earth_vein_cave_f4/warp.png",
+      "sha256": "5bb0a87eefd2b2eb383c7ee2e6546cf1dc8fef2c548c44d96932af4ae72b6c03"
+    },
+    {
+      "path": "release-attestation.json",
+      "sha256": "1f0d5639657cf97a62ea6ce816a75c9583a560e9f85aacf54503ed80c4044e58"
+    },
+    {
+      "path": "runtime/ground/atlas.png",
+      "sha256": "d20a7f00069f7216f07660bc37a886967e6f6b1cf7982e433f56113d8f8fa1c9"
+    },
+    {
+      "path": "runtime/objects/earth_cave_cairn.png",
+      "sha256": "f67abaf7dc9019bcf95a74fa55816ef6e6870f8929414939705f9f4051744e99"
+    },
+    {
+      "path": "runtime/objects/earth_cave_crystal_cluster.png",
+      "sha256": "a519448c645b86e001861d2141a6cc46a4e4f864e2112732165120c62ae14551"
+    },
+    {
+      "path": "runtime/objects/earth_cave_fungus_cluster.png",
+      "sha256": "72129d962f4b2d9a027127731489e3b9e4d941dff1c40e4b6ebe26e7e8eb7350"
+    },
+    {
+      "path": "runtime/objects/earth_cave_resonance_plinth.png",
+      "sha256": "967685e94ea548ca05e5f3393674572f623f1363bdf169e8028058e7fe7477a7"
+    },
+    {
+      "path": "runtime/objects/earth_cave_rock_pile.png",
+      "sha256": "9d6d76723db0dfc6abb9e151e9c6c99cd5b8c7eb8e8cb1f37f02c95f001af87d"
+    },
+    {
+      "path": "runtime/objects/earth_cave_stair_arch.png",
+      "sha256": "e9f7adf9bf6e9fbb913d9ff37023f50cb6be78865803b7e90600e9567615ab2a"
+    },
+    {
+      "path": "runtime/objects/earth_cave_vein_pillar.png",
+      "sha256": "1197aecb24d2eae99e5dee6aa86be508e23f7543563d6e8a1c8f1832e9e76a68"
+    },
+    {
+      "path": "runtime/objects/earth_cave_wall_buttress.png",
+      "sha256": "b0dbece8a4219b22fbb574e1b12f5e338f56e269b29eceaa19405103cbf9f0c7"
+    },
+    {
+      "path": "runtime/objects/earth_cave_wall_downright.png",
+      "sha256": "bd35905139d1c5b742040329f1afe621f17b30629016afb00bd79375175e8b8e"
+    },
+    {
+      "path": "runtime/objects/earth_cave_wall_ridge.png",
+      "sha256": "a8b8485261c6ed05c421509eca71157cc3a3361f45dd2c85d4fe938b9f831ef1"
+    },
+    {
+      "path": "runtime/objects/earth_cave_wall_upright.png",
+      "sha256": "3da94a6ec426eefb3c82c273cd69c9049f7ee6c64578a6f8ba2f22ec52401d76"
+    },
+    {
+      "path": "source/processed/earth-vein-boundary-props-v2-alpha.png",
+      "sha256": "79466c4ec19ec7e44609422575b6fffd99d098053de047cefe9cd97b04ad03cb"
+    },
+    {
+      "path": "source/processed/earth-vein-boundary-props-v2-objects-manifest.json",
+      "sha256": "42619e6317bc1f03dfe673def01397992bc8d11afecf57fc240c470f3c1d68bd"
+    },
+    {
+      "path": "source/processed/earth-vein-compact-props-v1-alpha.png",
+      "sha256": "74b17aa1723ed47c620c21211969756217ff7b42ade5ac08d1e32a0e48e9c15a"
+    },
+    {
+      "path": "source/processed/earth-vein-compact-props-v1-objects-manifest.json",
+      "sha256": "56f3c28c1e53e89e271e31b3b9840a1be7a12393b60599035b00190ab72ddde9"
+    },
+    {
+      "path": "source/processed/earth-vein-diagonal-walls-v1-manifest.json",
+      "sha256": "77c76686ca976c8e073ee7f0bf5f125c77c35c495eb6bedd243e5cc057c1a985"
+    },
+    {
+      "path": "source/processed/earth-vein-ground-v3-alpha.png",
+      "sha256": "2dcd3458fdf1316ded3d0355a679d9de48d5970ae7254d7fdbb9e7c120da25e8"
+    },
+    {
+      "path": "source/processed/earth-vein-ground-v3-build-manifest.json",
+      "sha256": "abfe28329e2af042b460041966bee303c982804e056d43bdb78b8309cc6296cb"
+    },
+    {
+      "path": "source/processed/earth-vein-ground-v4-restraint-alpha.png",
+      "sha256": "583301ec1e2a14668d6b5b2c39f2c74e7e95ec868e1038c3485a8226dc825417"
+    },
+    {
+      "path": "source/processed/earth-vein-ground-v4-restraint-build-manifest.json",
+      "sha256": "54684cafb340fa60b86302526725615b18047bd4eb60c5c1104c62e1e05f4f3b"
+    },
+    {
+      "path": "source/processed/earth-vein-ground-v5-build-manifest.json",
+      "sha256": "20c9408ba2cfb12e8a9a67903ac45d0af16dc952abfc14f273e412cb5039a903"
+    },
+    {
+      "path": "source/processed/earth-vein-pillar-v1-alpha.png",
+      "sha256": "bdb5b99bb354ff39ec1f696f1f07482ced63969fb23e40dc80e74a8d250b7986"
+    },
+    {
+      "path": "source/processed/earth-vein-pillar-v1-objects-manifest.json",
+      "sha256": "2944fd4f166f3fcf235c92b6e240aaa1f5b08fedf496b7db2f42d373c40cb76c"
+    },
+    {
+      "path": "source/processed/earth-vein-resonance-plinth-v1-alpha.png",
+      "sha256": "cf1e60a20c3133eb92e98068a99c93bffaeda912fe4d43f4a54f689290b85194"
+    },
+    {
+      "path": "source/processed/earth-vein-resonance-plinth-v1-objects-manifest.json",
+      "sha256": "262a68bfd41120dcb21dca69e6a1b7fc4fc9a11f20f1d9298cd39944fc6ae66e"
+    },
+    {
+      "path": "source/processed/earth-vein-stair-arch-v1-alpha.png",
+      "sha256": "07e01e8d523dad281a6fbe1e139b30e0b1ef68a73e0d44c2f43eabe811563975"
+    },
+    {
+      "path": "source/processed/earth-vein-stair-arch-v1-objects-manifest.json",
+      "sha256": "baf39934f7df926fd217dc1b416a3b84d403d49bfd6f1a947b2d4f4046a96adb"
+    },
+    {
+      "path": "source/prompts/earth-vein-boundary-props-v1.md",
+      "sha256": "21bbc3a0aa64445a956d30f6ef81d46d7ffe17cd8ab34dbf33d47ca27e8d9400"
+    },
+    {
+      "path": "source/prompts/earth-vein-boundary-props-v2-layout-edit.md",
+      "sha256": "c73b17bbc748b6dd64259ed56633010380ff3327fcb64a80073550bb48f19f05"
+    },
+    {
+      "path": "source/prompts/earth-vein-compact-props-v1.md",
+      "sha256": "8965327f19c3db1155e8b00b79ff5ca9622d1f7617ba61212237e7f7e3272d24"
+    },
+    {
+      "path": "source/prompts/earth-vein-diagonal-walls-v1.md",
+      "sha256": "4d541c838953186d4fc343bd9dd6a28b2ce1b1b2e605807d852d82a300329781"
+    },
+    {
+      "path": "source/prompts/earth-vein-dressed-reference-v1.md",
+      "sha256": "9b072f50abefb6efb0da25c33747816c9fcf617a07dc50ebd24d9c36da0f1520"
+    },
+    {
+      "path": "source/prompts/earth-vein-foundation-reference-v1.md",
+      "sha256": "663bd33f888cf9429e2029e69e5b45c2218766e39b0a17c645fac1997f2050dc"
+    },
+    {
+      "path": "source/prompts/earth-vein-ground-v1.md",
+      "sha256": "2c2c6a4db49519c3424150010f26cddc6c967d994dc8e53416cc76fb0508d618"
+    },
+    {
+      "path": "source/prompts/earth-vein-ground-v2-alpha-edit.md",
+      "sha256": "df996c703044354b45285ca2bd5cacc6f7245a1c03138fbd9c9a23556a33c96a"
+    },
+    {
+      "path": "source/prompts/earth-vein-ground-v3-chroma-edit.md",
+      "sha256": "bd88280d785190b3eeff2ed87f6c0a371ad07bea49706d9032e09f1bb30e26b2"
+    },
+    {
+      "path": "source/prompts/earth-vein-ground-v4-restraint.md",
+      "sha256": "5e4337b7594ad703fd91bc4493da5ec4d2cf4d3a036a75e2cea3f25d94830f2e"
+    },
+    {
+      "path": "source/prompts/earth-vein-ground-v5-natural.md",
+      "sha256": "dfbe88ed0f48a982a15d033deb24750efa3689d9f478945c5653cfe73506b90c"
+    },
+    {
+      "path": "source/prompts/earth-vein-pillar-v1.md",
+      "sha256": "8822531ebdde5677dfcc2950bb36fe7ddca616048ab298343712b96f68ba3903"
+    },
+    {
+      "path": "source/prompts/earth-vein-resonance-plinth-v1.md",
+      "sha256": "041579464cd3ca50048d397fb2c9a83dd3e478103720f35f83677aceccb6ab0b"
+    },
+    {
+      "path": "source/prompts/earth-vein-stair-arch-v1.md",
+      "sha256": "04925b01a1d5fc494759f7bf0e6ac7cbb6b5ec8d65c102f6c8070636959639db"
+    },
+    {
+      "path": "source/provenance.json",
+      "sha256": "96cc5d019f52fe43b7c498c298a8946a9055244939c3cf1f5cd07555e1f699ae"
+    },
+    {
+      "path": "source/raw/earth-vein-boundary-props-v1-layout-rejected.png",
+      "sha256": "da336ded7076557e848b53fa689d7ca9f05aad7f2daa13c9858efcbf0f396646"
+    },
+    {
+      "path": "source/raw/earth-vein-boundary-props-v2.png",
+      "sha256": "a6ca92f7966cf41838f7909ee872d01bb11372edd9fa9653b383c5098d71bca5"
+    },
+    {
+      "path": "source/raw/earth-vein-compact-props-v1.png",
+      "sha256": "d5f4380ae8f68d0b2e71b8e39f0cce70f57a76dcfeaa8c9718dc722dc513a9d7"
+    },
+    {
+      "path": "source/raw/earth-vein-diagonal-walls-v1-original.png",
+      "sha256": "f053c94e2d63aed374d776953778f0ea4f8895e30b01ecc87fb89676f9d40f3f"
+    },
+    {
+      "path": "source/raw/earth-vein-ground-v1-original.png",
+      "sha256": "24098373005546da4eaa31271d1acb7a90aaf350ca5c17f488dcc4997c0b1d63"
+    },
+    {
+      "path": "source/raw/earth-vein-ground-v2-alpha-attempt.png",
+      "sha256": "be29611c00d7747e46fe210291fcb870cf764d1684cc49dc8bd44d1453a99e56"
+    },
+    {
+      "path": "source/raw/earth-vein-ground-v3-chroma.png",
+      "sha256": "041bc5cc70281f6cb37cd421306e391f740ff05a28e2a5597e4637c22c51f5b5"
+    },
+    {
+      "path": "source/raw/earth-vein-ground-v4-restraint.png",
+      "sha256": "7b914c8c5a9b816bc62c1b8eb0d93fd40fa824871ecbe33ac7389b54eb392cc5"
+    },
+    {
+      "path": "source/raw/earth-vein-ground-v5-natural-original.png",
+      "sha256": "c195f2413558ca4d255e36362d389ccb82e2c18ec5ee7ca36f450f05e09aadb8"
+    },
+    {
+      "path": "source/raw/earth-vein-pillar-v1.png",
+      "sha256": "656ed0c53bd85b0f63d5250cb8f54451c876ece784647a262fc0af004a1a2a62"
+    },
+    {
+      "path": "source/raw/earth-vein-resonance-plinth-v1.png",
+      "sha256": "4a7139a18921936d2d2de761de32bf576ed033924766bf8a6c4c6673e2a272c5"
+    },
+    {
+      "path": "source/raw/earth-vein-stair-arch-v1.png",
+      "sha256": "375598918a157f411625136dbddfc4efc5267885be9fbfbe9482e20aab933a78"
+    },
+    {
+      "path": "source/tools/remove_chroma_key.py",
+      "sha256": "3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e"
+    }
+  ]
+}

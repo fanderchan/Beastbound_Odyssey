@@ -53,6 +53,7 @@ python3 tools/play_guardian_review.py
 python3 tools/play_guardian_review.py --record
 python3 tools/play_guardian_review.py --record --autoplay
 python3 tools/play_guardian_review.py --cave-journey --timeout-seconds 1200
+python3 tools/play_guardian_review.py --cave-journey --normal-map-visuals --timeout-seconds 1800
 python3 tools/play_guardian_review.py --cave-journey --autoplay --record --timeout-seconds 1800
 python3 tools/play_guardian_review.py --downed-owner-check --record
 ```
@@ -71,7 +72,9 @@ python3 tools/play_guardian_review.py --downed-owner-check --record
 
 与 `--autoplay` 合用时，守护战成功后通过正常按钮逐层回到火芽村，并自动处理途中遭遇。`autoplay.json` 保存输入和楼层快照；`journey-validation.json` 交叉核对实际采样、镜头、贴图和权威胜利，超时、逃跑或跳层均失败。它仍明确 `computerUse=false / performanceEvidence=false`。当前完整自动返程证据见 [Phase 592](../docs/phase_592_cave_return_playthrough.md)。
 
-联网移动本身会领取服务器遇敌票据，无需切换美术模式。试玩入口在换层时持续保留候选地图与相机比例；旧的 `encounters-on/off` 文件控制已移除，避免下层退回网格与默认缩放。
+`--normal-map-visuals` 用于已启用地图的人工检查，只能与 `--cave-journey` 合用，不接受 `--autoplay` 或倒地夹具。它关闭地图预览开关，要求按四层→三层→二层→一层完成实际通行，并在每层观察到移动；全部样本必须使用正式 released 地图与一致镜头。`normal-map-validation.json` 保存结果。战斗预览和高生命路线夹具仍保留，不把它称为正常难度或全素材发布；当前证据见 [Phase615](../docs/phase_615_cave_normal_release.md)。
+
+联网移动本身会领取服务器遇敌票据，无需切换美术模式。换层时保持本轮选择的地图模式与相机比例；旧的 `encounters-on/off` 文件控制已移除，避免下层退回网格与默认缩放。
 
 测试队友在每场结束后继续参与后续房间。`backend/closed-rooms.ndjson` 保留每场原始结算，`backend/closed-room.json` 保留最后一场；验证特定守护奖励时应按房间与遭遇来源选择记录，不能把最后一场普通遭遇当作守护战。测试角色的生命会按真实战斗消耗，连续试玩不自动补满或伪造胜利。
 

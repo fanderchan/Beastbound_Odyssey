@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "attestationType": "beastbound_map_runtime_release_attestation",
+  "status": "passed",
+  "bundleId": "earth_vein_cave_visual_v1",
+  "mapStyleId": "earth_vein_amber_slate_v1",
+  "mapIds": [
+    "earth_vein_cave",
+    "earth_vein_cave_f2",
+    "earth_vein_cave_f3",
+    "earth_vein_cave_f4"
+  ],
+  "manifest": {
+    "path": "map-visual-bundle.json",
+    "summarySha256": "ce8241ddc1a2a8723a5296175881c0f867ef17ecc72662126978cf159ea2606d"
+  },
+  "lifecycle": {
+    "status": "released",
+    "ownerReviewStatus": "approved",
+    "releaseApproved": true,
+    "runtimeEnabled": true
+  },
+  "offlineAudit": {
+    "status": "PASS",
+    "releaseReady": true,
+    "missingReleaseGates": []
+  },
+  "summaries": {
+    "evidenceSha256": "f970ea47ec1a14a9ff6c1d9524716341e448d16a6c5fdc1686a47965f0154d68",
+    "assetSha256": "252ba2f3c9eeb417227626742bdf14065913f3c2d5128097ea2703bd89abbeda",
+    "bundleSha256": "bef3587f4385db4c20333f1a5cc892c8e02b0e6ef065dbe305ede55533a9dd5b"
+  }
+}

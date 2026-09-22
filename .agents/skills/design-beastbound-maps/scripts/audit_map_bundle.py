@@ -5268,7 +5268,18 @@ def _map_runtime_identity_matches_current(captured: str, current: str) -> bool:
     captured_git, captured_surface = captured.split("+", 1)
     current_git, current_surface = current.split("+", 1)
     if captured_surface != current_surface:
-        return False
+        spec = importlib.util.spec_from_file_location(
+            "_map_visual_promotion_identity",
+            REPOSITORY_ROOT / "tools/map_visual_promotion_identity.py",
+        )
+        if spec is None or spec.loader is None:
+            return False
+        promotion_identity = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(promotion_identity)
+        except (OSError, ImportError):
+            return False
+        return promotion_identity.matches_catalog_promotion(captured, current, REPOSITORY_ROOT)
     if captured_git == current_git:
         return True
     # Evidence/docs commits necessarily change HEAD. Preserve the capture's
@@ -6084,6 +6095,9 @@ def evaluate_release_readiness(
 
 
 def audit_manifest(manifest_path: Path) -> Audit:
+    # One promoter audits before and after installing the catalog in the same
+    # process. Never reuse the pre-install filesystem identity for that check.
+    _current_map_runtime_build_identity.cache_clear()
     root = manifest_path.parent.resolve()
     audit = Audit(manifest_path=manifest_path.resolve(), root=root)
     try:

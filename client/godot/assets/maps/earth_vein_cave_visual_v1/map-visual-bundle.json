@@ -8,11 +8,14 @@
     "earth_vein_cave_f3",
     "earth_vein_cave_f4"
   ],
-  "status": "owner_review_pending",
-  "ownerReviewStatus": "pending",
-  "releaseApproved": false,
-  "runtimeEnabled": false,
-  "releaseAttestation": null,
+  "status": "released",
+  "ownerReviewStatus": "approved",
+  "releaseApproved": true,
+  "runtimeEnabled": true,
+  "releaseAttestation": {
+    "path": "release-attestation.json",
+    "sha256": "1f0d5639657cf97a62ea6ce816a75c9583a560e9f85aacf54503ed80c4044e58"
+  },
   "tileSize": [
     80,
     40
@@ -1359,6 +1362,9 @@
       "path": "evidence/performance-report.json",
       "sha256": "84260b4bc6dd2ee42434c671effb380b0204f804d158987be82103c92e4aa874"
     },
-    "ownerAcceptance": null
+    "ownerAcceptance": {
+      "path": "evidence/owner-acceptance.json",
+      "sha256": "918cff40db57838ae366951395c4e09fb221720a01c8b575a2e35b33df74dc0b"
+    }
   }
 }

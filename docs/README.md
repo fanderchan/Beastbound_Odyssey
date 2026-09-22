@@ -11,9 +11,9 @@
 | 启动项目、开始下一轮开发 | [开发流程](development.md) |
 | 判断该跑哪些检查 | [测试指南](testing.md) |
 | 试玩最新洞穴和守护战、查看效果和成品差距 | [当前可玩内容与剩余门槛](project-status.md)、[新版地表／洞壁、四层影片与前后对比](phase_611_natural_cave_visual_revision.md)、[旧美术下七战全胜返村](phase_609_current_cave_movies_and_return.md)、[四层／地标／五人战斗试玩入口](phase_569_current_four_floor_review.md) |
-| 查看渲染与性能进度 | [新版洞穴完整性能通过与外观验收](phase_613_natural_cave_performance_complete.md)、[先前窗口诊断](phase_612_cave_performance_visibility_diagnostics.md)、[Compatibility 后端与原生复验](phase_601_compatibility_renderer.md)、[人物排序优化](phase_600_retained_actor_depth_state.md)、[静止按需绘制](phase_598_world_idle_rendering.md) |
-| 普通启动为什么仍是网格、人物较小 | [地图入口与候选美术是两套边界](phase_610_map_content_and_art_access.md)；洞穴入口当前可用，美术仅显式预览，普通启动尚未交付相同画面 |
-| 审看通过后如何单独启用地图 | [单包提升与目录审计修复](phase_614_scoped_map_promotion_preflight.md)；其他候选保留，正式启用仍须普通客户端复验 |
+| 查看渲染与性能进度 | [普通启用后的完整性能与实际截图](phase_615_cave_normal_release.md)、[新版洞穴完整性能通过与外观验收](phase_613_natural_cave_performance_complete.md)、[先前窗口诊断](phase_612_cave_performance_visibility_diagnostics.md)、[Compatibility 后端与原生复验](phase_601_compatibility_renderer.md)、[人物排序优化](phase_600_retained_actor_depth_state.md)、[静止按需绘制](phase_598_world_idle_rendering.md) |
+| 普通洞穴现在是什么效果 | [新版洞穴启用与四层实际截图](phase_615_cave_normal_release.md)；普通地图已加载正式贴图与统一人物比例，旧网格问题的历史原因见 [Phase610](phase_610_map_content_and_art_access.md) |
+| 审看通过后如何单独启用地图 | [单包提升与目录审计修复](phase_614_scoped_map_promotion_preflight.md)、[接受意见、精确提升与普通 Main 验证](phase_615_cave_normal_release.md) |
 | 继续整理大文件和技术债 | [维护清单](maintenance.md) |
 | 按文件找代码、数据、脚本 | [自动代码索引](reference/code-index.md) |
 | 查某项规则为何这样设计 | [自动阶段索引](reference/phase-index.md) |

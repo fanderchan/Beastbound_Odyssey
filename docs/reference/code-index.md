@@ -4,7 +4,7 @@
 
 只统计当前工作区 Git 可见的代码与共享 JSON（含未提交文件），排除忽略文件、缓存和美术制作档案。存在不代表已提交、已测试或已发布。
 
-共 **973** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
+共 **975** 个代码/测试文件、**88** 个共享 JSON。职责与修改路线见 [架构说明](../architecture.md)，阶段背景见 [阶段索引](phase-index.md)。
 
 ## 大文件定位
 
@@ -315,7 +315,7 @@
 | [map_visual_review_catalog_check.gd](../../client/godot/scripts/qa/map_visual_review_catalog_check.gd) | 1039 |
 | [map_visual_review_showcase_profile.gd](../../client/godot/scripts/qa/map_visual_review_showcase_profile.gd) | 78 |
 | [map_visual_review_showcase_profile_check.gd](../../client/godot/scripts/qa/map_visual_review_showcase_profile_check.gd) | 80 |
-| [map_visual_runtime_check.gd](../../client/godot/scripts/qa/map_visual_runtime_check.gd) | 2281 |
+| [map_visual_runtime_check.gd](../../client/godot/scripts/qa/map_visual_runtime_check.gd) | 2290 |
 | [market_awakened_owner_review_capture.gd](../../client/godot/scripts/qa/market_awakened_owner_review_capture.gd) | 595 |
 | [mounted_action_asset_check.gd](../../client/godot/scripts/qa/mounted_action_asset_check.gd) | 187 |
 | [movement_spam_probe_plan.gd](../../client/godot/scripts/qa/movement_spam_probe_plan.gd) | 70 |
@@ -972,7 +972,7 @@
 
 ## tools
 
-<details><summary>102 个文件</summary>
+<details><summary>103 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -1008,6 +1008,7 @@
 | [map_performance_batch.py](../../tools/map_performance_batch.py) | 204 |
 | [map_performance_batch_contract.py](../../tools/map_performance_batch_contract.py) | 173 |
 | [map_visual_evidence_builder.py](../../tools/map_visual_evidence_builder.py) | 2062 |
+| [map_visual_promotion_identity.py](../../tools/map_visual_promotion_identity.py) | 192 |
 | [normalize_mounted_sprite_frames.py](../../tools/normalize_mounted_sprite_frames.py) | 198 |
 | [p0_6_equipment_ownership_registry_gate.mjs](../../tools/p0_6_equipment_ownership_registry_gate.mjs) | 316 |
 | [p0_6_large_collection_journal_gate.mjs](../../tools/p0_6_large_collection_journal_gate.mjs) | 778 |
@@ -1029,7 +1030,7 @@
 | [pet_rebirth_balance_audit.mjs](../../tools/pet_rebirth_balance_audit.mjs) | 260 |
 | [pet_rebirth_evaluation_audit.mjs](../../tools/pet_rebirth_evaluation_audit.mjs) | 338 |
 | [pet_wild_capture_growth_audit.mjs](../../tools/pet_wild_capture_growth_audit.mjs) | 330 |
-| [play_guardian_review.py](../../tools/play_guardian_review.py) | 237 |
+| [play_guardian_review.py](../../tools/play_guardian_review.py) | 279 |
 | [prepare_npc_blind_review_packet.py](../../tools/prepare_npc_blind_review_packet.py) | 648 |
 | [progression_leveling_soak.mjs](../../tools/progression_leveling_soak.mjs) | 45 |
 | [progression_route_audit.mjs](../../tools/progression_route_audit.mjs) | 46 |
@@ -1083,7 +1084,7 @@
 
 ## tools/tests
 
-<details><summary>64 个文件</summary>
+<details><summary>65 个文件</summary>
 
 | 文件 | 行数 |
 | --- | ---: |
@@ -1116,10 +1117,11 @@
 | [tools/test/test_install_pet_battle_bundle.py](../../tools/test/test_install_pet_battle_bundle.py) | 1330 |
 | [tools/test/test_map_performance_batch.py](../../tools/test/test_map_performance_batch.py) | 179 |
 | [tools/test/test_map_visual_evidence_builder.py](../../tools/test/test_map_visual_evidence_builder.py) | 1456 |
+| [tools/test/test_map_visual_promotion_identity.py](../../tools/test/test_map_visual_promotion_identity.py) | 155 |
 | [tools/test/test_map_visual_release_tools.py](../../tools/test/test_map_visual_release_tools.py) | 542 |
 | [tools/test/test_pet_art_batch_audit.py](../../tools/test/test_pet_art_batch_audit.py) | 1793 |
 | [tools/test/test_pet_battle_export_gate.py](../../tools/test/test_pet_battle_export_gate.py) | 4927 |
-| [tools/test/test_play_guardian_review.py](../../tools/test/test_play_guardian_review.py) | 187 |
+| [tools/test/test_play_guardian_review.py](../../tools/test/test_play_guardian_review.py) | 223 |
 | [tools/test/test_prepare_npc_blind_review_packet.py](../../tools/test/test_prepare_npc_blind_review_packet.py) | 470 |
 | [tools/test/test_promote_pet_fusion_runtime_release.py](../../tools/test/test_promote_pet_fusion_runtime_release.py) | 274 |
 | [tools/test/test_record_backpack_awakened_owner_review.py](../../tools/test/test_record_backpack_awakened_owner_review.py) | 195 |

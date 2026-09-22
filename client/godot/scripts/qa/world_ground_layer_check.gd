@@ -76,7 +76,7 @@ static func run(host: Node) -> Dictionary:
 	if not battle_hidden or not battle_restored or not map_hidden or not map_restored:
 		errors.append("战斗／全屏地图的地面显隐不一致")
 	host.map_art_review_preview = false
-	host._load_map("earth_vein_cave_f2")
+	host._load_map("firebud_training_yard")
 	await _settle(host)
 	var fallback: bool = not layer.has_ground() and not layer.visible and layer.get("_ground_mesh") == null
 	if not fallback:

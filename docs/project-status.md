@@ -10,7 +10,7 @@
 
 目前是有完整系统基础的开发版，**尚未达到可收费上线的成品标准**。剩余方向包括正式视听与首发内容、核心循环和长期经济、Boss/PvP、社交/新手体验、真实支付、生产运维、200 人同图容量证据、桌面正式包和封测。不能用已关闭 Bug 数量或测试通过数量计算“上线完成率”。
 
-**普通启动与审查预览目前仍有画面差异。** 岩脉四层入口已可正常进入，但候选美术只在显式审查预览加载：普通模式仍是网格地面和 `1.0×` 镜头，预览才有洞穴贴图和 `1.52×` 镜头，人物屏幕尺寸也随之改变。Phase610 在严格位置规则下复现 207 步、8 次传送的四层往返，纠正旧记录里笼统的“普通玩家不可达”。现有影片不代表普通启动已交付同样效果，详见 [地图入口与美术边界](phase_610_map_content_and_art_access.md)。
+**新版洞穴已接入普通客户端。** 老板有保留地接受 Phase611 的具体画面后，[Phase615](phase_615_cave_normal_release.md) 已正式启用岩脉四层：普通模式直接加载洞穴贴图，人物和镜头统一为 `1.52×`。真实鼠标完成四层到一层通行，启用后 48 组性能通过。重复纹理和轮廓仍有改进空间；这次完成的是洞穴地图，不是整款游戏发版。
 
 ## 版本已经统一
 
@@ -41,31 +41,31 @@ git log -5 --oneline
 产品范围由 [总路线图](../stoneage_gap_plan.md) 负责，逐步交付由 [生产发布计划](../production_release_loop_plan.md) 负责。两者现在都以主目录为准，旧目录的游标不再驱动开发。
 
 1. **统一基线已恢复**：历史成果和文档导航已核对；完整服务端 1984 项通过、0 失败、1 项因未配置独立 Valkey 环境跳过，客户端定向 8/8 通过。
-2. **洞穴守护战到村口已有自动与真实鼠标返程证明**：[Phase 592](phase_592_cave_return_playthrough.md) 完成守护战、三场普通遭遇全胜及返村，55 个权威回合完整播放；[Phase 596](phase_596_manual_cave_return_completed.md) 用真实鼠标完成守护战后返村，实际为一胜、一超时、五逃跑，15 个回合完整播放。两轮均为旧后端、高生命 QA 队伍。[Phase 602](phase_602_current_cave_evidence.md) 完成当前后端的四层鼠标往返、20 组画面／动作和 48 组性能配对；[Phase 603](phase_603_cave_journey_wait_budget.md) 补齐同一运行内容的守护战、两场普通遭遇全胜及逐层返村，52 个回合完整播放。R1.W024 完成；所有者已选择继续打磨洞穴，当前返工进展见 Phase611，正常难度与所有者美术接受仍待完成。
+2. **洞穴守护战到村口已有自动与真实鼠标返程证明**：[Phase 592](phase_592_cave_return_playthrough.md) 完成守护战、三场普通遭遇全胜及返村，55 个权威回合完整播放；[Phase 596](phase_596_manual_cave_return_completed.md) 用真实鼠标完成守护战后返村，实际为一胜、一超时、五逃跑，15 个回合完整播放。两轮均为旧后端、高生命 QA 队伍。[Phase 602](phase_602_current_cave_evidence.md) 完成当前后端的四层鼠标往返、20 组画面／动作和 48 组性能配对；[Phase 603](phase_603_cave_journey_wait_budget.md) 补齐同一运行内容的守护战、两场普通遭遇全胜及逐层返村，52 个回合完整播放。R1.W024 完成；所有者已选择继续打磨洞穴，Phase611 返工已于 Phase615 被有保留地接受并正式启用，正常难度与其他战斗素材验收仍待完成。
 3. **首次切战卡顿已明显改善，代码已同步 GitHub**：[Phase 548](phase_548_battle_hotpaths_and_authoritative_completion.md) 修复了人物击飞后提前胜利并减少绘制开销；[Phase 549](phase_549_battle_texture_prefetch_and_github_sync.md) 增加有界后台贴图预取，同一五人守护战的新进程首次准备由约 1002 ms 降到两轮约 10 ms。两场权威胜利与五账号奖励到账通过，严格原生前台性能两次通过，最终世界性能探针 `5/5`。此前各阶段已按功能提交推送 GitHub main；107 项旧本地地图证据已在 Phase602 完整备份并更新为当前配对。未知形态或立即开战仍可能走同步加载，不能把这个场景的结果推广成全游戏无卡顿。
-4. **依次推进成品门槛**：[Phase604](phase_604_battle_outcome_lifecycle.md)～[Phase607](phase_607_cave_review_and_capture_capacity.md) 已修复旧奖励残留、双台名称混淆、名称挡人及捕捉容量提示的误显示和布局。[Phase608](phase_608_current_cave_evidence_refreeze.md) 冻结最终代码的 20 组画面／动作、48 组性能与碰撞证据；[Phase609](phase_609_current_cave_movies_and_return.md) 补齐同运行版本的四层／地标影片与七战全胜返村，并完成受委托审看。老板现已选择继续打磨洞穴；R1.W025 记录返工结论，[Phase611](phase_611_natural_cave_visual_revision.md) 已接入十二块新地表与两种原创斜向岩壁，四层 20 项自动实机检查通过；四层真实鼠标 20 项与新影片已通过；[Phase613](phase_613_natural_cave_performance_complete.md) 已补齐完整 48 组性能并通过全部门槛，W026–W028 完成，进入 W029 外观验收；之后推进剩余视听验收、首发内容、玩法／经济、运营基础设施、正式构建和封测。
+4. **依次推进成品门槛**：[Phase604](phase_604_battle_outcome_lifecycle.md)～[Phase607](phase_607_cave_review_and_capture_capacity.md) 已修复旧奖励残留、双台名称混淆、名称挡人及捕捉容量提示的误显示和布局。[Phase608](phase_608_current_cave_evidence_refreeze.md) 冻结最终代码的 20 组画面／动作、48 组性能与碰撞证据；[Phase609](phase_609_current_cave_movies_and_return.md) 补齐同运行版本的四层／地标影片与七战全胜返村，并完成受委托审看。此前老板选择继续打磨洞穴，R1.W025 保留当时返工结论；[Phase611](phase_611_natural_cave_visual_revision.md) 已接入十二块新地表与两种原创斜向岩壁，四层 20 项自动实机检查通过；四层真实鼠标 20 项与新影片已通过；[Phase613](phase_613_natural_cave_performance_complete.md) 已补齐完整 48 组性能并通过全部门槛，[Phase615](phase_615_cave_normal_release.md) 完成 W029 的有保留接受和 R1.10 普通启用，当前下一项为 R1.11 Boss 表现验收；之后推进剩余视听、首发内容、玩法／经济、运营基础设施、正式构建和封测。
 
 下面按当前问题汇总证据。详细测试数字和当时失败记录保留在 Phase 文档；旧记录中的“下一步”不再作为当前游标。
 
 | 当前事项 | 已有证据 | 仍需完成 |
 | --- | --- | --- |
-| 人物比例、遮挡与地标构图 | [Phase 555](phase_555_world_prop_player_visibility.md)／[Phase 556](phase_556_guardian_navigation_camera.md) 修复挡人与裁切；[Phase 605](phase_605_cave_landmark_identity.md)／[Phase 606](phase_606_world_marker_player_visibility.md) 修复双台名称和标记挡人；[Phase611](phase_611_natural_cave_visual_revision.md) 已在新版地表／岩壁上完成四层 20 组自动画面及 20 项真实鼠标，楼梯、阻挡与遮挡可复核 | 所有者接受仍待完成；围壁轮廓和地表纹理仍有重复，外围环境物件不能冒充全部无遮挡 |
-| 四层路线与五人守护战 | [Phase609](phase_609_current_cave_movies_and_return.md) 在旧美术上完成守护战＋六场普通遭遇全胜返村；114 个回合完整播放，五账号各地之戒 +1／石币 +2507，1048.467 秒原速录像完整解码，171 张关键帧已审看；Phase611 保持权威地图字节不变并另验新版四层鼠标操作 | Phase609 严格全胜门 **PASS**，Phase607 失败原件仍保留；新版操作不能改标为同一完整返程录像，高生命 QA 不替代正常难度、五真人联机或所有者接受 |
+| 人物比例、遮挡与地标构图 | [Phase 555](phase_555_world_prop_player_visibility.md)／[Phase 556](phase_556_guardian_navigation_camera.md) 修复挡人与裁切；[Phase 605](phase_605_cave_landmark_identity.md)／[Phase 606](phase_606_world_marker_player_visibility.md) 修复双台名称和标记挡人；[Phase611](phase_611_natural_cave_visual_revision.md) 已在新版地表／岩壁上完成四层 20 组自动画面及 20 项真实鼠标，楼梯、阻挡与遮挡可复核 | 当前画面已被有保留地接受；围壁轮廓和地表纹理仍有重复，外围环境物件不能冒充全部无遮挡 |
+| 四层路线与五人守护战 | [Phase609](phase_609_current_cave_movies_and_return.md) 在旧美术上完成守护战＋六场普通遭遇全胜返村；114 个回合完整播放，五账号各地之戒 +1／石币 +2507，1048.467 秒原速录像完整解码，171 张关键帧已审看；Phase611 保持权威地图字节不变并另验新版四层鼠标操作 | Phase609 严格全胜门 **PASS**，Phase607 失败原件仍保留；新版操作不能改标为同一完整返程录像，高生命 QA 不替代正常难度、五真人联机或其他战斗素材接受 |
 | 同屏队友外观与持续可见性 | [Phase 563](phase_563_remote_player_appearance.md) 接通权威外观、八向动画、相同比例、点击范围和提交后骑乘通知；[Phase 564](phase_564_idle_online_presence_refresh.md) 修复静止定时刷新误隐藏人物，真实 HTTP/WS 旁观回归通过，服务端 `48/48`、客户端 `5/5` | 补做当前联网客户端点击、上下骑和切图的人工视觉复核；自动回归及展示片不代表五真人联机或 200 人容量 |
 | 四套战斗人物与首场加载 | [Phase 566](phase_566_authoritative_battle_appearances.md) 修复权威外观丢失；[Phase 567](phase_567_nearby_character_battle_prefetch.md) 补齐同图人物预取，首次准备 `430.989→9.700ms`，客户端 `4/4`，完整原生五账号奖励再次通过；录制休眠中断已处理 | 立刻开战或尚未进入预取的人物仍可能同步加载；原生鼠标、正常前台性能和所有者接受继续待完成 |
 | 关闭客户端的资源回收 | [Phase 570](phase_570_prefetch_request_cleanup.md) 修复退出及加载失败时未回收后台贴图请求，提前退出由四个泄漏变为零；定向 `4/4`、原生请求回收和完整五账号胜利通过，五人各获地之戒、人物倒下后的宠物指令再次验证 | 当前自动试玩不替代真实鼠标、前台性能或所有者接受 |
-| 原生地图性能 | [Phase613](phase_613_natural_cave_performance_complete.md) 完成新版 48/48 组完整配对，36,768 帧零失焦／失绘，绝对与配对增量门槛全部 **PASS**；候选静止 0.153–0.181ms、移动 0.208–0.226ms，正式报告已安装。Phase611／612 失败原件保留 | 当前数值是处理区间均值中位数，不是整进程 CPU 或显示 FPS；Windows 与多人容量未测。先前失绘根因未确认，本轮仅证明完整可见绘制成功 |
+| 原生地图性能 | [Phase613](phase_613_natural_cave_performance_complete.md) 完成新版 48/48 组完整配对，36,768 帧零失焦／失绘，绝对与配对增量门槛全部 **PASS**；候选静止 0.153–0.181ms、移动 0.208–0.226ms，正式报告已安装；[Phase615](phase_615_cave_normal_release.md) 另验启用后 48/48 组，普通静止 0.136–0.166ms、移动 0.176–0.201ms，全门槛通过。Phase611／612 失败原件保留 | 当前数值是处理区间均值中位数，不是整进程 CPU 或显示 FPS；Windows 与多人容量未测。先前失绘根因未确认，本轮仅证明完整可见绘制成功 |
 | 运行优化 | [Phase 559](phase_559_world_depth_and_bounds_hotpaths.md) 精简范围／排序；[Phase 561](phase_561_camera_score_pruning.md) 剪去无效镜头评分；[Phase 565](phase_565_retained_world_ground.md) 缓存静态地面；[Phase 568](phase_568_cached_ground_geometry.md) 合并保留地面几何，十对画面逐像素一致，原生录片渲染器 CPU 均值 `0.08→0.04–0.05ms`，当时五账号奖励和地图恢复再次通过 | 新版地图的完整性能结论见 Phase613；各阶段局部收益不能分别当作 FPS 提升或多人容量证明 |
 | 相机与外观的重复计算 | [Phase 577](phase_577_player_appearance_selection_cache.md) 复用未变化的外观选择；[Phase 578](phase_578_camera_policy_dispatch.md) 合并相机资格判断，384 种状态及定向回归通过；[Phase 598](phase_598_world_idle_rendering.md) 已补相机休眠的正常时钟 CPU 对照及 19 项／1050 帧相机与坐标换算回归 | 本轮对照只验证相机休眠与按需绘制的收益，不能归因给早期缓存，也不证明整体性能或 200 人容量 |
 | 取证可靠性与时间口径 | [Phase 551](phase_551_map_evidence_commit_provenance.md) 绑定运行内容和祖先提交；[Phase 558](phase_558_native_performance_visibility.md) 验证前台绘制；[Phase 562](phase_562_runtime_probe_wall_clock.md) 区分模拟／实际时间；Phase 576 正常 30 FPS 下美术约 `7.784% CPU`、网格约 `22.366%`；[Phase 580](phase_580_current_guardian_mouse_review.md) 关闭详细计时并明确运行时 VSync 后仍测得约 `0.150ms` 静止增量，未采用无收益的调用方式微调 | 同版渲染路径对照不是修改前后收益；脚本区段增量不等于整进程 CPU 增量。普通启动会覆盖命令行 VSync 设置，不能混用不同条件的数据或据此放宽性能门 |
 
 [Phase 595](phase_595_manual_recording_clock.md) 修复了人工录制的时钟加速，并验证最小化／恢复／关闭地图。[Phase 596](phase_596_manual_cave_return_completed.md) 在该条件下完成完整鼠标返村：56 次工具调用／54 张图零错误，2028 次窗口采样均可绘制，本轮未再停画。限速仅用于人工录制，未改变游戏性能或阈值；一次成功长流程不代表所有系统窗口条件都已覆盖。
 
-**接下来的顺序**：[Phase611](phase_611_natural_cave_visual_revision.md) 已完成十二块地表、两种斜向岩壁、四层围合、二十组原生动作、二十项真实鼠标、碰撞与两支影片；[Phase613](phase_613_natural_cave_performance_complete.md) 已完成单轮 48 组性能及独立审计。W026–W028 现已完成，游标进入 **R1.W029：老板审看并决定采用、继续返工或延期**。采用后才执行 R1.10 精确提升并验证普通启动的画面与人物比例，P2.1a 继续 pending。既有 [前后对比页](../.run/phase611-working/review/index.html) 与 Phase611 原速影片仍对应当前像素，不重复制作或改写旧身份。
+**接下来的顺序**：W026–W029 和 R1.10 已完成，当前游标为 **R1.11：Ember pressure Boss 表现验收**。应先准备正常玩家能看懂的实际效果，再取得该项具体结论，不能沿用洞穴的接受代替其他素材批准。[Phase615](phase_615_cave_normal_release.md) 集中保存本次接受原话、四层普通截图、实际通行和性能结果。
 
-普通启动的岩脉四层以及潮回等地图仍有网格占位，不能把岩脉候选预览当作正式画面已完成。Firebud v2、融合、环境声和 Bui VFX 已有返工或延期决定，不从旧主目录的 `R1.01` 重做；其中 Firebud v2 的美术延期保留既有地图玩法回退，不代表村庄关闭。Earth Vein 仍为待验收候选；若选择洞穴内容首发延期，R1.10 还需处理入口、关联玩法与权威访问，当前未执行关闭。测试和内部审查不等于老板亲自批准精确美术资产。
+岩脉四层已正常启用；潮回等其他未启用地图仍有网格占位。Firebud v2、融合、环境声和 Bui VFX 的既有返工或延期决定保持，不从旧主目录的 `R1.01` 重做；其中美术延期不等于玩法地图关闭。全游戏首发内容边界继续按发布计划执行。
 
-[Phase614](phase_614_scoped_map_promotion_preflight.md) 已修复启用工具被其他待审地图阻断、Python 审计误把历史全目录哈希当成当前要求的问题。64 项工具测试、3 项 Godot 检查及真实素材审计通过；只读预检仅拟新增洞穴四层，正式目录与美术接受状态尚未改变。
+地图工具的单包目录处理见 [Phase614](phase_614_scoped_map_promotion_preflight.md)；旧捕获身份与本次正式登记如何准确衔接见 [Phase615](phase_615_cave_normal_release.md)。技术测试与老板的具体接受分别记录，不能互相代替。
 
 全局发布结论仍为 **BLOCKED**。R0 曾有完整候选验证历史，但不能把历史通过、当前开发目录和正式发布混为一谈。
 
